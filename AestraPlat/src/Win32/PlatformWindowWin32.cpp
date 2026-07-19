@@ -959,6 +959,33 @@ void PlatformWindowWin32::setCursorPosition(int x, int y) {
     SetCursorPos(pt.x, pt.y);
 }
 
+void PlatformWindowWin32::setCursorClipRect(int x, int y, int w, int h) {
+    if (!m_hwnd) return;
+    // Client-relative rect -> screen rect for ClipCursor.
+    POINT tl{x, y};
+    POINT br{x + w, y + h};
+    ClientToScreen(m_hwnd, &tl);
+    ClientToScreen(m_hwnd, &br);
+    RECT clip{tl.x, tl.y, br.x, br.y};
+    ClipCursor(&clip);
+}
+
+void PlatformWindowWin32::setCursorClip(bool clipped) {
+    if (clipped) {
+        RECT rc;
+        if (m_hwnd && GetClientRect(m_hwnd, &rc)) {
+            POINT tl{rc.left, rc.top};
+            POINT br{rc.right, rc.bottom};
+            ClientToScreen(m_hwnd, &tl);
+            ClientToScreen(m_hwnd, &br);
+            RECT clip{tl.x, tl.y, br.x, br.y};
+            ClipCursor(&clip);
+        }
+    } else {
+        ClipCursor(nullptr);
+    }
+}
+
 void PlatformWindowWin32::getCursorPosition(int& x, int& y) const {
     // Symmetric with setCursorPosition: report window-relative client coords.
     POINT pt{}; // zero-init: a failed GetCursorPos (secure desktop switch) must not return garbage

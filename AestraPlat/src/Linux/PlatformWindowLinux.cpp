@@ -434,6 +434,13 @@ void PlatformWindowLinux::setCursorClip(bool clipped) {
     }
 }
 
+void PlatformWindowLinux::setCursorClipRect(int x, int y, int w, int h) {
+    if (m_window) {
+        SDL_Rect rect = {x, y, w, h}; // window-relative, matches SDL_WarpMouseInWindow
+        SDL_SetWindowMouseRect(m_window, &rect);
+    }
+}
+
 KeyModifiers PlatformWindowLinux::getCurrentModifiers() const {
     KeyModifiers mods = getModifiers(SDL_GetModState());
     if (m_syntheticShiftForHorizontalWheel) {

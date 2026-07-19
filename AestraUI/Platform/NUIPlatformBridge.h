@@ -155,7 +155,21 @@ private:
         void hostShowCursor() override { m_bridge.applyCursorStyle(NUICursorStyle::Arrow); }
         void hostWarpCursor(int x, int y) override { m_bridge.setCursorPosition(x, y); }
         void hostSetPointerGrab(bool grabbed) override {
-            if (m_bridge.m_window) m_bridge.m_window->setCursorClip(grabbed);
+            if (!m_bridge.m_window) return;
+            if (grabbed) {
+                // Confine to a SMALL rect around the anchor, not the whole
+                // window — the title bar and in-window panels are inside the
+                // window, so a whole-window clip lets the hidden pointer roam
+                // over them (foreign hover, escape from the control). The
+                // per-frame recenter keeps the pointer at the anchor; this rect
+                // is the hard backstop that locks it to the control.
+                const int ax = m_bridge.m_cursorService.anchorX();
+                const int ay = m_bridge.m_cursorService.anchorY();
+                constexpr int kHalf = 8; // 16x16 px lock box around the anchor
+                m_bridge.m_window->setCursorClipRect(ax - kHalf, ay - kHalf, kHalf * 2, kHalf * 2);
+            } else {
+                m_bridge.m_window->setCursorClip(false);
+            }
         }
 
     private:
