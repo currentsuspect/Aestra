@@ -90,8 +90,18 @@ API:    beginDragCapture(DragCaptureSpec) -> CaptureToken
    per-frame `getCursorStyle()` polling.
 
 ### Open questions before phase 1
-- Census: exact list of drag surfaces for phase 3 (grep `onMouseEvent` +
-  drag-state members across AestraUI/Widgets + Source/Components).
+- ~~Census~~ **DONE 2026-07-19** (owner confirmed symptom: "some plugin knobs
+  still use the old rotary mouse"):
+  - **NUISlider-based → phase-1 magic free once merged**: AestraVerbEditor,
+    AestraDelayEditor, AestraCompEditor, AestraLimitEditor, NUIMixerWidgets,
+    UIMixerPanel.
+  - **Hand-rolled rotary drag, NO hide (phase-3 targets)**: AestraLFOEditor,
+    AestraSatEditor, RumblePluginEditor, AestraEQEditor, AestraFilterEditor,
+    AestraOTTEditor, AestraDriftEditor — all 7 have their own delta-drag code
+    and zero Hidden/capture usage.
+  - **Phase-2 targets** (own hide+warp copies to delete): UIMixerKnob,
+    UIMixerFader.
+  - FileBrowser drag = spatial (scroll) → keeps normal cursor per rule.
 - Should linear sliders hide at all, or only rotary? (Current: NUISlider
   hides only in rotary mode; fader hides. Decide the product rule.)
 - ~~Wayland: verify warp works on Hyprland~~ **RESOLVED 2026-07-19, empirical
