@@ -148,7 +148,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                 if (isRotary && platformBridge_)
                 {
                     // Check modifier state for fine-tuning (can change mid-drag)
-                    isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
+                    isFineDrag_ = (event.modifiers & NUIModifiers::Shift) != 0;  // Shift = fine (unified across all knobs/sliders)
 
                     // Service-owned delta (recentered; no absolute-coord read).
                     float dy = event.delta.y;
@@ -187,7 +187,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             m_lastDragY = event.position.y;
 
             // Check for fine-tuning modifier at drag start
-            isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
+            isFineDrag_ = (event.modifiers & NUIModifiers::Shift) != 0;  // Shift = fine (unified across all knobs/sliders)
 
             // Begin cursor capture (this gives the "infinite travel" feel):
             // hides the cursor and confines the pointer to the window so the

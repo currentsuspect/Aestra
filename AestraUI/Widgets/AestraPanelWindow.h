@@ -26,7 +26,6 @@ class NUIPlatformBridge;
 class AestraPanelWindow : public NUIComponent {
 public:
     AestraPanelWindow();
-    ~AestraPanelWindow() override = default;
 
     void onRender(NUIRenderer& renderer) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
@@ -68,7 +67,26 @@ public:
 
     void onUpdate(double deltaTime) override;
 
+    ~AestraPanelWindow() override; // cancels an active knob capture (see .cpp)
+
 protected:
+    // Shared infinite-drag capture for editor knobs. Continuous parameter
+    // knobs call beginKnobCapture() on press (hides + confines + routes here)
+    // and endKnobCapture() on release (restores the cursor at the knob
+    // center). During the drag, read the vertical delta from event.delta.y
+    // (service-owned; do NOT read absolute cursor position). No-op when no
+    // platform bridge is attached.
+    void beginKnobCapture(const NUIPoint& knobCenter, const NUIPoint& grabPos);
+    void endKnobCapture();
+    // Center the active capture will restore to.
+    NUIPoint m_captureKnobCenter;
+
+    // Normalized vertical step for a knob drag during capture (up = positive).
+    // rangePx = pixels of travel for the full 0..1 range. Scaled down while
+    // Shift is held — opt-in fine/precision drag; the default (unmodified)
+    // feel is unchanged. Add to the current value each drag frame.
+    float knobDragStep(const NUIMouseEvent& event, float rangePx) const;
+
     // Window dragging from title bar
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos;
