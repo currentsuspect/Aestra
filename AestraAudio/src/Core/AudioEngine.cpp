@@ -949,7 +949,12 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     mixTestTone(numFrames, currentSampleRate);
 
-    const double duckGain = computePreviewDuckGain(numFrames, currentSampleRate, isPlaying);
+    // Preview duck gain ramps per-sample across the block (see gainDelta below),
+    // so the 50ms/120ms fade is interpolated rather than block-stepped (issue #565).
+    const PreviewDuckRamp duckRamp = computePreviewDuckGain(numFrames, currentSampleRate, isPlaying);
+    const double duckGainDelta =
+        numFrames > 0 ? (duckRamp.end - duckRamp.start) / static_cast<double>(numFrames) : 0.0;
+    double duckGain = duckRamp.start;
 
     // === Final Output Stage (double -> float with processing) ===
     // Pre-compute master gain for this block (avoid per-sample target update)
@@ -1106,6 +1111,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
 
         gain += gainDelta;
+        duckGain += duckGainDelta;
     }
 
     // Update atomic counters (once per block, not per sample)
@@ -1276,7 +1282,8 @@ void AudioEngine::mixTestTone(uint32_t numFrames, uint32_t currentSampleRate) {
     }
 }
 
-double AudioEngine::computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying) {
+AudioEngine::PreviewDuckRamp AudioEngine::computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate,
+                                                                 bool isPlaying) {
     // === Preview Ducking Gain Calculation ===
     // Duck transport only while preview has produced audible output. PreviewEngine
     // may exist, decode, or be selected without being audible.
@@ -1305,8 +1312,11 @@ double AudioEngine::computePreviewDuckGain(uint32_t numFrames, uint32_t currentS
     const double duckFadeSamples = static_cast<double>(currentSampleRate) * fadeSeconds;
     const double duckFadeDelta = static_cast<double>(numFrames) / std::max(duckFadeSamples, 1.0);
 
-    // Smooth the duck gain transition
-    double duckGain = m_smoothedPreviewDuckGain;
+    // Smooth the duck gain transition. Capture the start-of-block value so the
+    // master output stage can ramp per-sample from `startDuckGain` to `duckGain`
+    // instead of applying the block-end value as a constant (issue #565).
+    const double startDuckGain = m_smoothedPreviewDuckGain;
+    double duckGain = startDuckGain;
     if (duckGain < targetDuckGain) {
         duckGain += duckFadeDelta;
         if (duckGain > targetDuckGain)
@@ -1318,13 +1328,13 @@ double AudioEngine::computePreviewDuckGain(uint32_t numFrames, uint32_t currentS
     }
     m_smoothedPreviewDuckGain = duckGain;
 
-    // Publish smoothed gain for external queries
+    // Publish the block-end smoothed gain for external queries.
     m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
     m_previewDuckSource.store(static_cast<uint8_t>((shouldDuckForPreview || duckGain < 0.995)
                                                        ? PreviewDuckSource::BrowserPreview
                                                        : PreviewDuckSource::None),
                               std::memory_order_relaxed);
-    return duckGain;
+    return {startDuckGain, duckGain};
 }
 
 void AudioEngine::mixMetronomeClicks(float* outputBuffer, uint32_t numFrames) {
