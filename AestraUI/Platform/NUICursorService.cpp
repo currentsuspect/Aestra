@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICursorService.h"
+#include <cstdio>
 
 namespace AestraUI {
 
