@@ -205,7 +205,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
     src/Models/AudioClip.cpp
-    src/Models/PlaylistTrack.cpp
 
     # DSP
     src/DSP/AudioProcessor.cpp
@@ -349,7 +348,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/ClipInstance.h
     include/Models/PatternManager.h
     include/IO/MiniAudioDecoder.h
-    include/Models/PlaylistTrack.h
     # Multi-clip playlist system
     include/Models/TimeTypes.h
     include/Models/ClipSource.h
@@ -357,7 +355,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PlaylistRuntimeSnapshot.h
     include/Models/PlaylistMixer.h
     include/IO/WaveformCache.h
-    include/Models/PlaylistSerializer.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
 
