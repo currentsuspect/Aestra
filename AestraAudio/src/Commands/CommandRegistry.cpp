@@ -108,8 +108,6 @@ std::optional<uint64_t> safeStoull(std::string_view s) {
     }
 }
 
-AudioEngine* s_audioEngine = nullptr;
-
 // Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
 thread_local std::string t_lastBuildError;
 } // namespace
@@ -136,30 +134,22 @@ void CommandRegistry::registerCommand(const std::string& verb, Factory factory) 
 
 std::unique_ptr<ICommand> CommandRegistry::build(
     const std::string& verb,
-    const std::unordered_map<std::string, std::string>& flags)
+    const std::unordered_map<std::string, std::string>& flags,
+    const CommandContext& context)
 {
     t_lastBuildError.clear();
     auto it = m_factories.find(verb);
     if (it == m_factories.end())
         return nullptr;
-    return it->second(flags);
+    return it->second(flags, context);
 }
 
-void CommandRegistry::setAudioEngine(AudioEngine* engine) {
-    s_audioEngine = engine;
-}
-
-AudioEngine* CommandRegistry::getAudioEngine() {
-    return s_audioEngine;
-}
-
-void CommandRegistry::initialize(TrackManager* trackManager) {
+void CommandRegistry::initialize() {
     auto& reg = instance();
-    auto* pm = trackManager ? &trackManager->getPlaylistModel() : nullptr;
 
     // ===== Transport (3) =====
-    reg.registerCommand("set_bpm", [](const auto& flags) -> std::unique_ptr<ICommand> {
-        AudioEngine* engine = getAudioEngine();
+    reg.registerCommand("set_bpm", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        AudioEngine* engine = ctx.engine;
         if (!engine) return nullptr;
         auto valueRaw = requireFlag(flags, "value");
         if (!valueRaw) return nullptr;
@@ -168,61 +158,35 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<SetBpmCommand>(*engine, *valueOpt);
     });
 
-    reg.registerCommand("play", [](const auto&) -> std::unique_ptr<ICommand> {
-        AudioEngine* engine = getAudioEngine();
+    reg.registerCommand("play", [](const auto&, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        AudioEngine* engine = ctx.engine;
         if (!engine) return nullptr;
         return std::make_unique<PlayCommand>(*engine);
     });
 
-    reg.registerCommand("stop", [](const auto&) -> std::unique_ptr<ICommand> {
-        AudioEngine* engine = getAudioEngine();
+    reg.registerCommand("stop", [](const auto&, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        AudioEngine* engine = ctx.engine;
         if (!engine) return nullptr;
         return std::make_unique<StopCommand>(*engine);
     });
 
     // ===== Track (8) =====
-    if (!trackManager) {
-        // Register no-op factories when no TrackManager available
-        auto noopTrack = [](const auto&) -> std::unique_ptr<ICommand> { return nullptr; };
-        reg.registerCommand("add_track", noopTrack);
-        reg.registerCommand("delete_track", noopTrack);
-        reg.registerCommand("rename_track", noopTrack);
-        reg.registerCommand("mute_track", noopTrack);
-        reg.registerCommand("solo_track", noopTrack);
-        reg.registerCommand("set_volume", noopTrack);
-        reg.registerCommand("set_pan", noopTrack);
-        reg.registerCommand("add_clip", noopTrack);
-        reg.registerCommand("delete_clip", noopTrack);
-        reg.registerCommand("move_clip", noopTrack);
-        reg.registerCommand("duplicate_clip", noopTrack);
-        reg.registerCommand("trim_clip", noopTrack);
-        reg.registerCommand("add_unit", noopTrack);
-        reg.registerCommand("load_sample", noopTrack);
-        reg.registerCommand("set_unit_gain", noopTrack);
-        reg.registerCommand("add_note", noopTrack);
-        reg.registerCommand("delete_note", noopTrack);
-        reg.registerCommand("move_note", noopTrack);
-        reg.registerCommand("set_note", noopTrack);
-        reg.registerCommand("arrange_pattern", noopTrack);
-        reg.registerCommand("set_steps", noopTrack);
-        reg.registerCommand("quantize_pattern", noopTrack);
-        reg.registerCommand("transpose_pattern", noopTrack);
-        reg.registerCommand("clone_pattern", noopTrack);
-        reg.registerCommand("set_pattern_length", noopTrack);
-        reg.registerCommand("add_effect", noopTrack);
-        reg.registerCommand("remove_effect", noopTrack);
-        reg.registerCommand("bypass_effect", noopTrack);
-        reg.registerCommand("set_effect_param", noopTrack);
-        return;
-    }
+    // Every track/clip/unit/pattern/effect factory needs the track model. When
+    // the session has none (a headless registry with no TrackManager) the
+    // factory refuses to build — the same no-op the old null-TrackManager
+    // registration produced, now expressed as a per-factory guard on ctx.
 
-    reg.registerCommand("add_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto it = flags.find("name");
         std::string name = (it != flags.end()) ? it->second : "";
         return std::make_unique<AddChannelCommand>(*tm, name);
     });
 
-    reg.registerCommand("delete_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("delete_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -232,7 +196,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<DeleteTrackCommand>(*tm, *trackOpt);
     });
 
-    reg.registerCommand("rename_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("rename_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -244,7 +210,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<RenameTrackCommand>(*tm, *trackOpt, nameIt->second);
     });
 
-    reg.registerCommand("mute_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("mute_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -258,7 +226,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<SetMuteCommand>(*ch, state);
     });
 
-    reg.registerCommand("solo_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("solo_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -272,7 +242,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<SetSoloCommand>(*ch, state);
     });
 
-    reg.registerCommand("set_volume", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_volume", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -287,7 +259,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<SetVolumeCommand>(*ch, *valueOpt);
     });
 
-    reg.registerCommand("set_pan", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_pan", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -303,7 +277,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     // ===== Clip (5) =====
-    reg.registerCommand("add_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
@@ -336,7 +311,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<AddClipCommand>(*pm, laneId, clip);
     });
 
-    reg.registerCommand("delete_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("delete_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
@@ -348,7 +324,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<RemoveClipCommand>(*pm, clipId);
     });
 
-    reg.registerCommand("move_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("move_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
@@ -370,7 +347,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<MoveClipCommand>(*pm, clipId, *startOpt, laneId);
     });
 
-    reg.registerCommand("duplicate_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("duplicate_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
@@ -386,7 +364,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(*barOpt));
     });
 
-    reg.registerCommand("trim_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("trim_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
@@ -407,7 +386,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     // ===== Unit (2) =====
-    reg.registerCommand("add_unit", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_unit", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto nameIt = flags.find("name");
         std::string name = (nameIt != flags.end()) ? nameIt->second : "";
         UnitType type = UnitType::Sampler;
@@ -423,7 +404,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<AddUnitCommand>(tm->getUnitManager(), name, type);
     });
 
-    reg.registerCommand("load_sample", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("load_sample", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto unitRaw = requireFlag(flags, "unit");
         if (!unitRaw) return nullptr;
         auto unitOpt = safeStoull(*unitRaw);
@@ -439,7 +422,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<LoadSampleCommand>(tm->getUnitManager(), *unitOpt, std::string(*fileRaw));
     });
 
-    reg.registerCommand("set_unit_gain", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_unit_gain", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto unitRaw = requireFlag(flags, "unit");
         if (!unitRaw) return nullptr;
         auto unitOpt = safeStoull(*unitRaw);
@@ -499,7 +484,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return NoteKey{PatternID{*patternOpt}, *unitOpt, *pitchOpt, static_cast<double>(*startOpt)};
     };
 
-    reg.registerCommand("add_note", [tm = trackManager, parseNoteKey](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_note", [parseNoteKey](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto durationRaw = requireFlag(flags, "duration");
@@ -537,7 +524,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<AddNoteCommand>(tm->getPatternManager(), key->patternId, note);
     });
 
-    reg.registerCommand("delete_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("delete_note", [parseNoteKey, findNote](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
@@ -550,7 +539,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<RemoveNoteCommand>(tm->getPatternManager(), key->patternId, *note);
     });
 
-    reg.registerCommand("move_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("move_note", [parseNoteKey, findNote](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto toStartRaw = requireFlag(flags, "to_start");
@@ -576,7 +567,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                  static_cast<double>(*toStartOpt), toPitch);
     });
 
-    reg.registerCommand("arrange_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("arrange_pattern", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -616,7 +609,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                        static_cast<double>(*startOpt));
     });
 
-    reg.registerCommand("set_steps", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_steps", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -705,7 +700,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                  rowLengthBeats);
     });
 
-    reg.registerCommand("quantize_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("quantize_pattern", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -738,7 +735,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                         unitId);
     });
 
-    reg.registerCommand("transpose_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("transpose_pattern", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -786,7 +785,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return true;
     };
 
-    reg.registerCommand("add_effect", [tm = trackManager, equalsIgnoreCase](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_effect", [equalsIgnoreCase](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -837,7 +838,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                   match->name);
     });
 
-    reg.registerCommand("remove_effect", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("remove_effect", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -854,7 +857,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<RemoveEffectCommand>(*tm, *ch, static_cast<size_t>(*slotOpt));
     });
 
-    reg.registerCommand("bypass_effect", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("bypass_effect", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -874,7 +879,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                         parseFlagBool(*stateRaw));
     });
 
-    reg.registerCommand("set_effect_param", [tm = trackManager, equalsIgnoreCase](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_effect_param", [equalsIgnoreCase](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -927,7 +934,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<SetEffectParamCommand>(plugin, target->id, *valueOpt);
     });
 
-    reg.registerCommand("clone_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("clone_pattern", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -938,7 +947,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<ClonePatternCommand>(tm->getPatternManager(), patternId);
     });
 
-    reg.registerCommand("set_pattern_length", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_pattern_length", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto patternRaw = requireFlag(flags, "pattern");
         if (!patternRaw) return nullptr;
         auto patternOpt = safeStoull(*patternRaw);
@@ -954,7 +965,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                                                          static_cast<double>(*beatsOpt));
     });
 
-    reg.registerCommand("set_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("set_note", [parseNoteKey, findNote](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);

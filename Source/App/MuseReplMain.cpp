@@ -107,8 +107,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    CommandRegistry::initialize(trackManager.get());
-    CommandRegistry::setAudioEngine(&engine);
+    CommandRegistry::initialize();
 
     MuseService service(trackManager.get(), &engine);
 

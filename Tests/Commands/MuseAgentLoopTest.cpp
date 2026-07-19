@@ -103,8 +103,7 @@ int main() {
     trackManager->getUnitManager().setPatternManager(&trackManager->getPatternManager());
     AudioEngine engine;
     engine.setSampleRate(48000);
-    CommandRegistry::initialize(trackManager.get());
-    CommandRegistry::setAudioEngine(&engine);
+    CommandRegistry::initialize();
     MuseService service(trackManager.get(), &engine);
 
     const AgentLoop::Transport transport = [&service](const std::string& line) {

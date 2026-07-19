@@ -874,7 +874,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
 
                 CommandStatus buildStatus = CommandStatus::Success;
                 std::string buildMessage;
-                auto built = parser.buildValidated(subVerb, flags, buildStatus, buildMessage);
+                const CommandContext ctx{m_engine, m_trackManager};
+                auto built = parser.buildValidated(subVerb, flags, buildStatus, buildMessage, ctx);
                 if (!built) {
                     return failBatch(statusName(buildStatus), prefix + buildMessage);
                 }
@@ -1210,8 +1211,9 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         }
 
         CommandParser parser;
+        const CommandContext ctx{m_engine, m_trackManager};
         CommandResult cmdResult =
-            parser.execute(verb, flags, m_trackManager->getCommandHistory());
+            parser.execute(verb, flags, m_trackManager->getCommandHistory(), ctx);
 
         JSON response = JSON::object();
         response.set("id", JSON(id));

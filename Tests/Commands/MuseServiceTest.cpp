@@ -131,8 +131,7 @@ int main() {
         return 1;
     }
 
-    CommandRegistry::initialize(trackManager.get());
-    CommandRegistry::setAudioEngine(&engine);
+    CommandRegistry::initialize();
     MuseService service(trackManager.get(), &engine);
 
     // --- Protocol: malformed input never crashes, always structured error ---
