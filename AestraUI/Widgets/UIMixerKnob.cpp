@@ -261,6 +261,14 @@ void UIMixerKnob::setPlatformBridge(NUIPlatformBridge* bridge)
     m_platformBridge = bridge;
 }
 
+UIMixerKnob::~UIMixerKnob() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
 bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
@@ -284,12 +292,13 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragStartValue = m_value;
         m_dragAxis = DragAxis::Undecided;
 
-        // Cursor-warp setup for infinite drag
+        // Cursor capture for infinite drag: service hides + confines and will
+        // restore at the knob center on release.
         if (m_platformBridge) {
-            // Initialize drag origin and tracking
-            m_warpOrigin = event.position;
             m_lastDragY = event.position.y;
-            m_platformBridge->setCursorStyle(NUICursorStyle::Hidden);
+            m_platformBridge->beginCursorCapture(
+                this, NUICursorRestorePolicy::KnobCenter,
+                static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 
         updateGlobalTooltip();
@@ -302,12 +311,14 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragAxis = DragAxis::Undecided;
 
         if (m_platformBridge) {
-            // Warp cursor to knob center (matches current value position)
+            // End capture: service warps to the VISUAL knob-cap center (the
+            // cap is centered in height - LABEL_H, shifted up to leave room for
+            // the micro-label), unhides, releases confinement — in that order.
             auto bounds = getBounds();
-            m_platformBridge->setCursorPosition(
+            const float knobAreaH = std::max(1.0f, bounds.height - LABEL_H);
+            m_platformBridge->endCursorCapture(
                 static_cast<int>(bounds.x + bounds.width * 0.5f),
-                static_cast<int>(bounds.y + bounds.height * 0.5f));
-            m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+                static_cast<int>(bounds.y + knobAreaH * 0.5f));
         }
 
         NUIComponent::hideRemoteTooltip(this);
