@@ -13,6 +13,31 @@ AestraPanelWindow::AestraPanelWindow()
     cacheThemeColors();
 }
 
+AestraPanelWindow::~AestraPanelWindow()
+{
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
+void AestraPanelWindow::beginKnobCapture(const NUIPoint& knobCenter, const NUIPoint& grabPos)
+{
+    if (!m_platformBridge) return;
+    m_captureKnobCenter = knobCenter;
+    m_platformBridge->beginCursorCapture(
+        this, AestraUI::NUICursorRestorePolicy::KnobCenter,
+        static_cast<int>(grabPos.x), static_cast<int>(grabPos.y));
+}
+
+void AestraPanelWindow::endKnobCapture()
+{
+    if (!m_platformBridge) return;
+    m_platformBridge->endCursorCapture(
+        static_cast<int>(m_captureKnobCenter.x), static_cast<int>(m_captureKnobCenter.y));
+}
+
 void AestraPanelWindow::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
