@@ -64,6 +64,26 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/EngineOutputStageCharacterizationTest.cpp
     )
 endif()
 
+# Headless export session invariance (exportTo must not mutate live transport)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HeadlessExportSessionInvarianceTest.cpp")
+    add_executable(HeadlessExportSessionInvarianceTest
+        HeadlessExportSessionInvarianceTest.cpp
+    )
+    target_link_libraries(HeadlessExportSessionInvarianceTest PRIVATE AestraAudio)
+    target_include_directories(HeadlessExportSessionInvarianceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME HeadlessExportSessionInvarianceTest
+        COMMAND HeadlessExportSessionInvarianceTest
+    )
+    set_tests_properties(HeadlessExportSessionInvarianceTest PROPERTIES
+        LABELS "headless;export;engine"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Rumble DSP Quality Contract
 if(AESTRA_ENABLE_TEST_LICENSES AND TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleQualityTest.cpp")

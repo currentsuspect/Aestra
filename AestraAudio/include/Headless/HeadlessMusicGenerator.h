@@ -282,7 +282,17 @@ private:
     
     void commitPatternsToManager();
     void commitPlaylistToModel();
-    
+
+    // #556 headless-render helpers.
+    // Writes a short synthetic sine WAV that the built-in sampler loads as its
+    // source — the license-free way to make MIDI audible in a shipping headless
+    // build (com.Aestrastudios.sampler is the only always-available instrument).
+    bool prepareToneSample();
+    // Get-or-create the mixer channel + playlist lane + sampler unit that plays
+    // MIDI placed on `laneIndex`, routed to that timeline lane and on to master.
+    // Returns the unit id, or 0 on failure.
+    uint64_t ensureLaneInstrument(uint32_t laneIndex);
+
 private:
     AudioEngine& m_engine;
     TrackManager& m_trackManager;
@@ -303,6 +313,12 @@ private:
     
     // Mixer
     std::vector<std::string> m_channelNames;
+
+    // #556 render wiring — populated by the commit layer once per project.
+    bool m_committed = false;                      // guards against duplicate commits on re-export
+    std::string m_toneSamplePath;                 // synthetic sampler source (temp file)
+    std::map<uint32_t, uint64_t> m_laneUnits;     // laneIndex -> sampler UnitID
+    std::map<uint32_t, PlaylistLaneID> m_laneIds; // laneIndex -> playlist lane
 };
 
 } // namespace Audio

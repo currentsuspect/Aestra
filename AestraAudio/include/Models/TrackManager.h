@@ -697,6 +697,21 @@ public:
      */
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
     bool isPaused() const { return m_isPaused.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Schedule the committed timeline's MIDI clips into the pattern-playback
+     *        engine for an offline render, without touching live transport state.
+     *
+     * play() also schedules these instances, but as a side effect of starting the
+     * live transport (playing flag, position, transport command). An offline
+     * render (headless export) drives the engine's own transport instead, so it
+     * only needs the scheduling — this leaves isPlaying/isPaused/position
+     * untouched. Callers flush() the pattern engine before and after so the
+     * render's scheduled instances do not leak into the caller's session.
+     */
+    void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
+        scheduleTimelinePatternInstances(playStartPositionSeconds);
+    }
     bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
 
     /**
