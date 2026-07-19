@@ -224,10 +224,19 @@ public:
     // Thread requirements: MUST be called from the same thread that created the window (window thread).
     virtual void setCursorVisible(bool visible) = 0;
 
-    /** @brief Warp the cursor to a screen-space position. */
+    /**
+     * @brief Warp the cursor to a WINDOW-RELATIVE position (client-area coords).
+     *
+     * Contract: callers (NUI widgets, window manager) pass UI/window
+     * coordinates. Backends convert to whatever the OS API expects (Win32
+     * SetCursorPos is screen-space -> ClientToScreen; SDL warp is already
+     * window-relative). This doc previously said "screen-space", which only
+     * the Win32 backend believed — that mismatch sent every drag-release
+     * warp-back on Windows to the wrong screen position.
+     */
     virtual void setCursorPosition(int x, int y) = 0;
 
-    /** @brief Query the current cursor position in screen-space coordinates. */
+    /** @brief Query the current cursor position in WINDOW-RELATIVE coordinates. */
     virtual void getCursorPosition(int& x, int& y) const = 0;
 
     /** @brief Capture or release the mouse for drag operations outside the window. */
