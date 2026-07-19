@@ -57,8 +57,13 @@ class NUICursorService {
 public:
     explicit NUICursorService(NUICursorHost& host) : m_host(host) {}
 
-    /** Begin an infinite-drag capture: hides the cursor and confines the pointer. */
-    void beginDragCapture(NUICursorRestorePolicy policy, int grabOriginX, int grabOriginY);
+    /**
+     * Begin an infinite-drag capture: hides the cursor and confines the pointer.
+     * @return false (no capture started) when called reentrantly from an
+     * end/cancel host callback — the old capture must fully transition to
+     * idle before a new one may begin.
+     */
+    bool beginDragCapture(NUICursorRestorePolicy policy, int grabOriginX, int grabOriginY);
 
     /**
      * End the capture: warp to the restore point, then unhide, then release
@@ -90,6 +95,7 @@ public:
 private:
     NUICursorHost& m_host;
     bool m_captured = false;
+    bool m_inTransition = false; // guards against re-begin from end/cancel callbacks
     NUICursorRestorePolicy m_policy = NUICursorRestorePolicy::GrabOrigin;
     int m_grabOriginX = 0;
     int m_grabOriginY = 0;
