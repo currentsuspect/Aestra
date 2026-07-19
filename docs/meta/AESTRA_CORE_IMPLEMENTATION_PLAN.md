@@ -1078,14 +1078,12 @@ class OptimizedNUIRenderer : public NUIRenderer {
 public:
     void render() override;
     void markRegionDirty(const NUIRect& region) override;
-    void setBatchingEnabled(bool enabled) override { m_batchingEnabled = enabled; }
     
 private:
     void renderDirtyRegions();
     void batchRenderComponents(const std::vector<NUIRect>& regions);
     
     DirtyRegionTracker m_dirtyTracker;
-    bool m_batchingEnabled = true;
     std::vector<NUIComponent*> m_culledComponents;
 };
 
