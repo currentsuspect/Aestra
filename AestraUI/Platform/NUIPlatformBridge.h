@@ -138,6 +138,10 @@ public:
     void endCursorCapture(int x, int y);
     /** Abort without warping (focus loss, owner teardown). */
     void cancelCursorCapture();
+    /** True iff @p c owns the currently active capture (for owner-specific teardown). */
+    bool isCursorCaptureOwner(const NUIComponent* c) const {
+        return m_cursorService.isCaptured() && m_cursorCaptureOwner == c;
+    }
 
 private:
     // NUICursorHost backing for m_cursorService: hide/show ride the existing
@@ -186,6 +190,10 @@ private:
     // Component that owns the active capture; all mouse events route here
     // while the service is captured.
     NUIComponent* m_cursorCaptureOwner = nullptr;
+    // Set when a capture ends/cancels: next processEvents() dispatches one
+    // synthetic Move at the restored cursor position so hover and cursor
+    // style re-resolve from where the cursor actually reappeared.
+    bool m_pendingStyleResolve = false;
 
     // The style channel with no capture guard — used by the cursor host so the
     // service itself can hide/unhide while external calls are locked out.

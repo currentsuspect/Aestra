@@ -961,7 +961,7 @@ void PlatformWindowWin32::setCursorPosition(int x, int y) {
 
 void PlatformWindowWin32::getCursorPosition(int& x, int& y) const {
     // Symmetric with setCursorPosition: report window-relative client coords.
-    POINT pt;
+    POINT pt{}; // zero-init: a failed GetCursorPos (secure desktop switch) must not return garbage
     GetCursorPos(&pt);
     if (m_hwnd) {
         ScreenToClient(m_hwnd, &pt);

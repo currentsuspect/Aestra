@@ -98,6 +98,39 @@ void testBeginWhileCapturedRecovers() {
     std::puts("  begin-while-captured recovery: ok");
 }
 
+void testReentrantBeginRefused() {
+    struct EvilHost : NUICursorHost {
+        NUICursorService* svc = nullptr;
+        bool reentrantResult = true;
+        std::vector<std::string> calls;
+        void hostHideCursor() override { calls.push_back("hide"); }
+        void hostShowCursor() override {
+            calls.push_back("show");
+            // Fires during end/cancel transition: a begin here must be REFUSED
+            // so the old capture fully reaches idle first.
+            if (svc) reentrantResult = svc->beginDragCapture(NUICursorRestorePolicy::KnobCenter, 5, 5);
+        }
+        void hostWarpCursor(int x, int y) override {
+            calls.push_back("warp:" + std::to_string(x) + "," + std::to_string(y));
+        }
+        void hostSetPointerGrab(bool g) override { calls.push_back(g ? "grab" : "ungrab"); }
+    };
+    EvilHost host;
+    NUICursorService svc(host);
+    host.svc = &svc;
+    CHECK(svc.beginDragCapture(NUICursorRestorePolicy::KnobCenter, 1, 1));
+    svc.endDragCapture(9, 9);
+    CHECK(host.reentrantResult == false); // the mid-transition begin was refused
+    CHECK(!svc.isCaptured());             // and the service ended at idle
+    // Full, uncorrupted end sequence despite the reentrant attempt.
+    CHECK((host.calls == std::vector<std::string>{"hide", "grab", "warp:9,9", "show", "ungrab"}));
+    // After the transition completes, a fresh begin works again.
+    host.svc = nullptr;
+    CHECK(svc.beginDragCapture(NUICursorRestorePolicy::GrabOrigin, 2, 2));
+    CHECK(svc.isCaptured());
+    std::puts("  reentrant-begin refused: ok");
+}
+
 } // namespace
 
 int main() {
@@ -106,6 +139,7 @@ int main() {
     testGrabOriginPolicy();
     testCancelDoesNotWarp();
     testBeginWhileCapturedRecovers();
+    testReentrantBeginRefused();
     if (g_failures == 0) {
         std::puts("CursorServiceTest: PASS");
         return 0;

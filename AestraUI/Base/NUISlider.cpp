@@ -37,7 +37,7 @@ NUISlider::~NUISlider()
 {
     // Torn down mid-drag: cancel the capture so the bridge never routes to a
     // dangling owner and the cursor is never stranded hidden.
-    if (isDragging_ && platformBridge_ && platformBridge_->cursorService().isCaptured()) {
+    if (platformBridge_ && platformBridge_->isCursorCaptureOwner(this)) {
         platformBridge_->cancelCursorCapture();
     }
 }
