@@ -79,6 +79,37 @@ API:    beginDragCapture(DragCaptureSpec) -> CaptureToken
   hidden or mispositioned cursor.
 - `event.cursorCaptured` stamped from service state (single source).
 
+### Amended capture invariant (owner, 2026-07-19)
+
+> While captured, the physical pointer may generate deltas but no longer
+> participates in normal UI hover or hit-testing. `NUICursorService` owns
+> hover arbitration and exposes an anchored logical cursor position. Normal
+> widget hit-testing, hover transitions, tooltips, and style-provider changes
+> are suspended until capture ends or cancels.
+
+Implemented in phase 1 (bridge level):
+- **Routed dispatch**: motion/button/wheel events go ONLY to the capture
+  owner while captured; the rest of the tree never sees the wandering
+  pointer. (`s_cursorCaptureActive` already froze `setHovered` globally;
+  routing removes every other reaction class.)
+- **Style-steal guard**: external `setCursorStyle` calls are ignored during
+  capture (previously any widget under the hidden pointer could overwrite
+  `Hidden`, which un-clipped and broke the un-hide — the "cursor lost in
+  another panel" glitch). The service bypasses the guard internally.
+- **Anchored logical position**: `getCursorPosition()` and wheel-event
+  positions pin to the capture anchor (grab origin on the control);
+  physical position feeds deltas only.
+- **Focus-loss cancel**: synthetic release to the owner at the anchor, then
+  cancel (unhide in place, no warp) — the safe fallback.
+- **Owner-teardown guard**: widget dtors cancel an active capture so the
+  bridge never routes to a dangling owner.
+
+Deferred (phase 2.5, polish): small-rect confinement around the anchor +
+per-frame recenter warp with synthetic-motion suppression. Removes delta
+saturation when the hidden pointer reaches the window edge on very long
+drags (pre-existing limitation). Requires moving widgets from event-position
+deltas to service-provided deltas; do after phases 1-2 are validated by ear.
+
 ### Migration phases (each behavior-neutral, separately PR'd)
 1. **Service + NUISlider(rotary)** migrated as reference implementation;
    Win32 ClientToScreen fix lands here (inside the service, one place).

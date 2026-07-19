@@ -120,10 +120,24 @@ public:
 
     /**
      * Single owner of infinite-drag cursor capture (hide + confine + warp-back).
-     * Continuous parameter controls call this instead of hand-rolling
-     * setCursorStyle(Hidden)/setCursorPosition sequences.
+     * Continuous parameter controls call the begin/end/cancel wrappers below;
+     * the service accessor is for state queries (isCaptured, anchor).
      */
     NUICursorService& cursorService() { return m_cursorService; }
+
+    /**
+     * Begin an infinite-drag capture owned by @p owner. While captured:
+     *  - motion/button/wheel events route ONLY to the owner (the rest of the
+     *    tree neither hit-tests nor hovers under the hidden pointer),
+     *  - external setCursorStyle calls are ignored (no style-steal can unhide
+     *    or unclip mid-drag),
+     *  - the logical cursor position is pinned to the capture anchor.
+     */
+    void beginCursorCapture(NUIComponent* owner, NUICursorRestorePolicy policy, int x, int y);
+    /** End the capture, restoring at (x, y) per the begin policy. */
+    void endCursorCapture(int x, int y);
+    /** Abort without warping (focus loss, owner teardown). */
+    void cancelCursorCapture();
 
 private:
     // NUICursorHost backing for m_cursorService: hide/show ride the existing
@@ -133,8 +147,8 @@ private:
     class CursorHostImpl : public NUICursorHost {
     public:
         explicit CursorHostImpl(NUIPlatformBridge& bridge) : m_bridge(bridge) {}
-        void hostHideCursor() override { m_bridge.setCursorStyle(NUICursorStyle::Hidden); }
-        void hostShowCursor() override { m_bridge.setCursorStyle(NUICursorStyle::Arrow); }
+        void hostHideCursor() override { m_bridge.applyCursorStyle(NUICursorStyle::Hidden); }
+        void hostShowCursor() override { m_bridge.applyCursorStyle(NUICursorStyle::Arrow); }
         void hostWarpCursor(int x, int y) override { m_bridge.setCursorPosition(x, y); }
         void hostSetPointerGrab(bool grabbed) override {
             if (m_bridge.m_window) m_bridge.m_window->setCursorClip(grabbed);
@@ -169,6 +183,13 @@ private:
     // service holds a reference to the host).
     CursorHostImpl m_cursorHost{*this};
     NUICursorService m_cursorService{m_cursorHost};
+    // Component that owns the active capture; all mouse events route here
+    // while the service is captured.
+    NUIComponent* m_cursorCaptureOwner = nullptr;
+
+    // The style channel with no capture guard — used by the cursor host so the
+    // service itself can hide/unhide while external calls are locked out.
+    void applyCursorStyle(NUICursorStyle style);
     
     // AestraUI-style callbacks
     std::function<void(int, int)> m_mouseMoveCallback;

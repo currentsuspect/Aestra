@@ -33,6 +33,15 @@ NUISlider::NUISlider(const std::string& name)
     setSize(100, 6); // Modern 6px height for horizontal slider
 }
 
+NUISlider::~NUISlider()
+{
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (isDragging_ && platformBridge_ && platformBridge_->cursorService().isCaptured()) {
+        platformBridge_->cancelCursorCapture();
+    }
+}
+
 void NUISlider::onRender(NUIRenderer& renderer)
 {
     if (!isVisible()) return;
@@ -101,7 +110,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                     // knob center (cursor reappears where the knob is), then
                     // unhides, then releases confinement, in that order.
                     auto bounds = getBounds();
-                    platformBridge_->cursorService().endDragCapture(
+                    platformBridge_->endCursorCapture(
                         static_cast<int>(bounds.x + bounds.width * 0.5f),
                         static_cast<int>(bounds.y + bounds.height * 0.5f));
                 } else {
@@ -185,8 +194,8 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             // hides the cursor and confines the pointer to the window so the
             // release-warp is always valid (native Wayland warps silently
             // no-op once the hidden pointer drifts out and loses focus).
-            platformBridge_->cursorService().beginDragCapture(
-                NUICursorRestorePolicy::KnobCenter,
+            platformBridge_->beginCursorCapture(
+                this, NUICursorRestorePolicy::KnobCenter,
                 static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 

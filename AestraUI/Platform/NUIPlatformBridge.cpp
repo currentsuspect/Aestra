@@ -131,7 +131,14 @@ void NUIPlatformBridge::setupEventBridges() {
                 event.modifiers = convertModifiers(mods);
             }
 
-            m_rootComponent->onMouseEvent(event);
+            // Routed dispatch: while captured, ONLY the capture owner sees
+            // motion — the rest of the tree must not hit-test, hover, or
+            // react to the hidden wandering pointer.
+            if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
+                m_cursorCaptureOwner->onMouseEvent(event);
+            } else {
+                m_rootComponent->onMouseEvent(event);
+            }
         }
     });
 
@@ -174,7 +181,11 @@ void NUIPlatformBridge::setupEventBridges() {
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
                 event.modifiers = convertModifiers(mods);
             }
-            m_rootComponent->onMouseEvent(event);
+            if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
+                m_cursorCaptureOwner->onMouseEvent(event);
+            } else {
+                m_rootComponent->onMouseEvent(event);
+            }
         }
     });
 
@@ -192,7 +203,10 @@ void NUIPlatformBridge::setupEventBridges() {
         if (m_rootComponent) {
             NUIMouseEvent event;
             event.type = NUIMouseEventType::Scroll;
-            event.position = {static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY)};
+            event.position = m_cursorService.isCaptured()
+                ? NUIPoint{static_cast<float>(m_cursorService.anchorX()),
+                           static_cast<float>(m_cursorService.anchorY())}
+                : NUIPoint{static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY)};
             event.button = NUIMouseButton::None;
             event.pressed = false;
             event.released = false;
@@ -204,7 +218,11 @@ void NUIPlatformBridge::setupEventBridges() {
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
                 event.modifiers = convertModifiers(mods);
             }
-            m_rootComponent->onMouseEvent(event);
+            if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
+                m_cursorCaptureOwner->onMouseEvent(event);
+            } else {
+                m_rootComponent->onMouseEvent(event);
+            }
         }
     });
 
@@ -271,6 +289,28 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Window focus
     m_window->setFocusCallback([this](bool focused) {
+        // Focus loss mid-capture: the release event may never arrive and a
+        // warp can no longer land. Cancel (unhide in place, drop confinement)
+        // BEFORE forwarding, so downstream focus handling sees a sane cursor.
+        if (!focused && m_cursorService.isCaptured()) {
+            if (m_cursorCaptureOwner) {
+                // Let the owner terminate its drag state with a synthetic
+                // release at the anchor (value stays where the drag left it).
+                NUIMouseEvent event;
+                event.type = NUIMouseEventType::Up;
+                event.position = {static_cast<float>(m_cursorService.anchorX()),
+                                  static_cast<float>(m_cursorService.anchorY())};
+                event.button = NUIMouseButton::Left;
+                event.pressed = false;
+                event.released = true;
+                event.wheelDelta = 0.0f;
+                event.cursorCaptured = true;
+                m_cursorCaptureOwner->onMouseEvent(event);
+            }
+            // If the owner's release path already ended the capture (normal
+            // case), this is a no-op; otherwise it is the safety net.
+            cancelCursorCapture();
+        }
         if (m_focusCallback) {
             m_focusCallback(focused);
         }
@@ -502,11 +542,32 @@ void NUIPlatformBridge::setCursorPosition(int x, int y) {
 }
 
 NUIPoint NUIPlatformBridge::getCursorPosition() const {
+    // While captured, the logical cursor is pinned to the capture anchor —
+    // the physical pointer only exists to produce deltas.
+    if (m_cursorService.isCaptured()) {
+        return NUIPoint(static_cast<float>(m_cursorService.anchorX()),
+                        static_cast<float>(m_cursorService.anchorY()));
+    }
     int x = 0, y = 0;
     if (m_window) {
         m_window->getCursorPosition(x, y);
     }
     return NUIPoint(static_cast<float>(x), static_cast<float>(y));
+}
+
+void NUIPlatformBridge::beginCursorCapture(NUIComponent* owner, NUICursorRestorePolicy policy, int x, int y) {
+    m_cursorCaptureOwner = owner;
+    m_cursorService.beginDragCapture(policy, x, y);
+}
+
+void NUIPlatformBridge::endCursorCapture(int x, int y) {
+    m_cursorService.endDragCapture(x, y);
+    m_cursorCaptureOwner = nullptr;
+}
+
+void NUIPlatformBridge::cancelCursorCapture() {
+    m_cursorService.cancelDragCapture();
+    m_cursorCaptureOwner = nullptr;
 }
 
 void NUIPlatformBridge::setMouseCapture(bool captured) {
@@ -516,6 +577,17 @@ void NUIPlatformBridge::setMouseCapture(bool captured) {
 }
 
 void NUIPlatformBridge::setCursorStyle(NUICursorStyle style) {
+    // Style-steal guard: while a drag capture is active, widgets under the
+    // hidden wandering pointer must not change the cursor style — doing so
+    // would unhide/unclip mid-drag and break the capture. The service itself
+    // bypasses this via applyCursorStyle (see CursorHostImpl).
+    if (m_cursorService.isCaptured() && style != NUICursorStyle::Hidden) {
+        return;
+    }
+    applyCursorStyle(style);
+}
+
+void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
     m_currentCursorStyle = style;
     
 #ifdef _WIN32

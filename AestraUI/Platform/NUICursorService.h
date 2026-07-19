@@ -78,6 +78,15 @@ public:
     bool isCaptured() const { return m_captured; }
     NUICursorRestorePolicy activePolicy() const { return m_policy; }
 
+    /**
+     * Anchored logical cursor position while captured (the grab origin — a
+     * point on the control). The physical pointer only produces deltas during
+     * capture; anything that needs "where the cursor is" (wheel routing,
+     * position queries) should see the anchor, not the drifting pointer.
+     */
+    int anchorX() const { return m_grabOriginX; }
+    int anchorY() const { return m_grabOriginY; }
+
 private:
     NUICursorHost& m_host;
     bool m_captured = false;
