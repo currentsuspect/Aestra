@@ -181,6 +181,14 @@ void UIMixerFader::setPlatformBridge(NUIPlatformBridge* bridge)
     m_platformBridge = bridge;
 }
 
+UIMixerFader::~UIMixerFader() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
 bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
@@ -222,12 +230,13 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
         m_dragStartDb = m_valueDb;
 
-        // Cursor-warp setup for infinite drag
+        // Cursor capture for infinite drag: service hides + confines and will
+        // restore at the fader handle on release.
         if (m_platformBridge) {
-            // Initialize drag origin and tracking
-            m_warpOrigin = event.position;
             m_lastDragY = event.position.y;
-            m_platformBridge->setCursorStyle(NUICursorStyle::Hidden);
+            m_platformBridge->beginCursorCapture(
+                this, NUICursorRestorePolicy::ThumbPosition,
+                static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 
         return true;
@@ -252,10 +261,11 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             const float handleW = 32.0f;
             const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
 
-            m_platformBridge->setCursorPosition(
+            // End capture: service warps to the handle, unhides, releases
+            // confinement — in that order.
+            m_platformBridge->endCursorCapture(
                 static_cast<int>(handleX + handleW * 0.5f),
                 static_cast<int>(handleY + HANDLE_HEIGHT * 0.5f));
-            m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
         }
 
         return true;

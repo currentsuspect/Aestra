@@ -22,6 +22,7 @@ class NUIPlatformBridge;
 class UIMixerFader : public NUIComponent {
 public:
     UIMixerFader();
+    ~UIMixerFader() override; // cancels an active cursor capture (see .cpp)
 
     void onRender(NUIRenderer& renderer) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
@@ -56,7 +57,6 @@ private:
 
     // Cursor-warp state (infinite drag)
     NUIPlatformBridge* m_platformBridge = nullptr;
-    NUIPoint m_warpOrigin{};      // Integer-snapped window position at drag start
     float m_lastDragY;            // Last cursor Y position for frame-to-frame delta
 
     // Cached value string (updated only on value change)
