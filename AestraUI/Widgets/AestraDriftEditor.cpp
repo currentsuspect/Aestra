@@ -342,6 +342,9 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
                            m_mixBounds.height - 14.0f);
     if (event.released) {
         const bool wasDragging = m_draggingPitch || m_draggingMix || m_draggingKnob >= 0;
+        // Pitch wheel + knobs capture the cursor; the mix track does not.
+        if (m_draggingPitch || m_draggingKnob >= 0)
+            endKnobCapture();
         m_draggingPitch = false;
         m_draggingMix = false;
         m_draggingKnob = -1;
@@ -375,8 +378,7 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (m_pitchWheelBounds.contains(event.position)) {
             m_draggingPitch = true;
-            m_dragStartY = event.position.y;
-            m_dragStartValue = m_instance->getParameter(Drift::kPitch);
+            beginKnobCapture(m_pitchWheelBounds.center(), event.position);
             return true;
         }
         if (mixTrack.contains(event.position)) {
@@ -387,15 +389,16 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         const int knob = hitTestKnob(event.position);
         if (knob >= 0) {
             m_draggingKnob = knob;
-            m_dragStartY = event.position.y;
-            m_dragStartValue = m_instance->getParameter(m_knobs[static_cast<size_t>(knob)].parameterId);
+            beginKnobCapture(m_knobs[static_cast<size_t>(knob)].bounds.center(), event.position);
             return true;
         }
     }
 
     if (event.type == NUIMouseEventType::Move || event.button == NUIMouseButton::None) {
         if (m_draggingPitch) {
-            setParameter(Drift::kPitch, m_dragStartValue + (m_dragStartY - event.position.y) / kDragRangePixels);
+            // Service-owned frame delta (up = increase), accumulated into value.
+            setParameter(Drift::kPitch,
+                         m_instance->getParameter(Drift::kPitch) + (-event.delta.y) / kDragRangePixels);
             return true;
         }
         if (m_draggingMix) {
@@ -404,7 +407,8 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (m_draggingKnob >= 0) {
             const auto& knob = m_knobs[static_cast<size_t>(m_draggingKnob)];
-            setParameter(knob.parameterId, m_dragStartValue + (m_dragStartY - event.position.y) / kDragRangePixels);
+            setParameter(knob.parameterId,
+                         m_instance->getParameter(knob.parameterId) + (-event.delta.y) / kDragRangePixels);
             return true;
         }
         m_pitchHovered = m_pitchWheelBounds.contains(event.position);
