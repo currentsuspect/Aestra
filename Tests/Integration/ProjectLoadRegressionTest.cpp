@@ -163,8 +163,8 @@ void testTrailingJsonObjectIsRejectedNonDestructively() {
     std::cout << "[PASS] Trailing JSON object is rejected non-destructively" << std::endl;
 }
 
-void testMissingPatternReference() {
-    std::cout << "[TEST] Missing pattern reference preserves placeholder..." << std::endl;
+void testRecoverablePatternReferences() {
+    std::cout << "[TEST] Missing or unresolved pattern references preserve placeholders..." << std::endl;
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
@@ -177,7 +177,8 @@ void testMissingPatternReference() {
         "playhead": 0.0,
         "sources": [],
         "patterns": [
-            {"id": 1, "name": "Existing Pattern", "type": "midi", "length": 4.0, "notes": []}
+            {"id": 1, "name": "Existing Pattern", "type": "midi", "length": 4.0, "notes": []},
+            {"id": 2, "name": "Missing Audio Source", "type": "audio", "length": 2.0, "sourceId": 77}
         ],
         "lanes": [
             {
@@ -186,7 +187,8 @@ void testMissingPatternReference() {
                 "volume": 1.0,
                 "pan": 0.0,
                 "clips": [
-                    {"id": "clip-1", "patternId": 999, "start": 0.0, "duration": 4.0, "name": "Missing Ref Clip"}
+                    {"id": "clip-1", "patternId": 999, "start": 0.0, "duration": 4.0, "name": "Missing Ref Clip"},
+                    {"id": "clip-2", "patternId": 2, "start": 4.0, "duration": 2.0, "name": "Missing Source Clip"}
                 ]
             }
         ],
@@ -202,19 +204,77 @@ void testMissingPatternReference() {
 
     assert(result.ok);
 
-    // Should have warning about missing pattern (report may contain warnings)
-    if (result.report) {
-        bool foundWarning = false;
-        for (const auto& issue : result.report->issues) {
-            if (issue.category == "clip" && issue.referenceId == "999") {
-                foundWarning = true;
-                break;
-            }
+    assert(result.report);
+    bool foundMissingPatternWarning = false;
+    bool foundMissingSourceWarning = false;
+    for (const auto& issue : result.report->issues) {
+        if (issue.category == "clip" && issue.referenceId == "999") {
+            foundMissingPatternWarning = true;
         }
-        assert(foundWarning);
+        if (issue.category == "clip" && issue.referenceId == "2") {
+            foundMissingSourceWarning = true;
+        }
     }
+    assert(foundMissingPatternWarning);
+    assert(foundMissingSourceWarning);
 
-    std::cout << "[PASS] Missing pattern reference preserves placeholder" << std::endl;
+    const auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(laneIds.size() == 1);
+    const auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->clips.size() == 2);
+    assert(lane->clips[0].name == "Missing Ref Clip");
+    assert(std::abs(lane->clips[0].startBeat) < 1e-9);
+    assert(std::abs(lane->clips[0].durationBeats - 4.0) < 1e-9);
+
+    const PatternID placeholderId = lane->clips[0].patternId;
+    assert(placeholderId.value == 999);
+    const auto* placeholder = trackManager->getPatternManager().getPattern(placeholderId);
+    assert(placeholder);
+    assert(placeholder->isMidi());
+    assert(placeholder->name == "[Missing Pattern 999]");
+    assert(placeholder->getMidiNotes().empty());
+
+    assert(lane->clips[1].name == "Missing Source Clip");
+    assert(std::abs(lane->clips[1].startBeat - 4.0) < 1e-9);
+    assert(std::abs(lane->clips[1].durationBeats - 2.0) < 1e-9);
+    assert(lane->clips[1].patternId.value == 2);
+    const auto* missingSourcePlaceholder =
+        trackManager->getPatternManager().getPattern(lane->clips[1].patternId);
+    assert(missingSourcePlaceholder);
+    assert(missingSourcePlaceholder->isMidi());
+    assert(missingSourcePlaceholder->name == "[Missing Pattern 2] Missing Audio Source");
+    assert(missingSourcePlaceholder->getMidiNotes().empty());
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "roundtrip.aes";
+    std::ofstream roundTripOut(roundTripPath);
+    roundTripOut << serialized.contents;
+    roundTripOut.close();
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    const auto roundTripLaneIds = roundTripManager->getPlaylistModel().getLaneIDs();
+    assert(roundTripLaneIds.size() == 1);
+    const auto* roundTripLane = roundTripManager->getPlaylistModel().getLane(roundTripLaneIds[0]);
+    assert(roundTripLane);
+    assert(roundTripLane->clips.size() == 2);
+    assert(roundTripLane->clips[0].name == "Missing Ref Clip");
+    assert(roundTripLane->clips[0].patternId.value == 999);
+    const auto* roundTripPlaceholder =
+        roundTripManager->getPatternManager().getPattern(roundTripLane->clips[0].patternId);
+    assert(roundTripPlaceholder);
+    assert(roundTripPlaceholder->name == "[Missing Pattern 999]");
+    assert(roundTripLane->clips[1].name == "Missing Source Clip");
+    assert(roundTripLane->clips[1].patternId.value == 2);
+    const auto* roundTripMissingSourcePlaceholder =
+        roundTripManager->getPatternManager().getPattern(roundTripLane->clips[1].patternId);
+    assert(roundTripMissingSourcePlaceholder);
+    assert(roundTripMissingSourcePlaceholder->name == "[Missing Pattern 2] Missing Audio Source");
+
+    std::cout << "[PASS] Missing or unresolved pattern references preserve placeholders" << std::endl;
 }
 
 void testMissingArsenalUnitReference() {
@@ -860,7 +920,7 @@ int main() {
 
     testValidProjectLoad();
     testTrailingJsonObjectIsRejectedNonDestructively();
-    testMissingPatternReference();
+    testRecoverablePatternReferences();
     testMissingArsenalUnitReference();
     testFailedValidationDoesNotClear();
     testUnitManagerSurvivesFailedLoad();

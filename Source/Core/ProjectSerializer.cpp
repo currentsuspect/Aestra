@@ -1144,7 +1144,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_set<uint64_t> allUnitIds;
     std::unordered_set<uint32_t> allSourceIds;
     std::unordered_map<uint64_t, std::string> patternNames;
-    std::unordered_set<uint64_t> orphanClipPatternIds;
+    std::unordered_set<uint64_t> unloadablePatternIds;
+    std::unordered_set<uint64_t> recoverableClipPatternIds;
     std::unordered_set<uint64_t> orphanNoteUnitIds;
     ProjectLoadWarningLimiter warningLimiter;
 
@@ -1163,6 +1164,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             if (id != 0) {
                 allPatternIds.insert(id);
                 patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
+                const std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
+                if (type == "audio") {
+                    const uint32_t sourceId = static_cast<uint32_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    if (sourceId == 0 || !allSourceIds.count(sourceId)) {
+                        unloadablePatternIds.insert(id);
+                    }
+                }
             }
         }
     }
@@ -1188,13 +1197,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (!cj[c].isObject()) continue;
                 uint64_t patternId = static_cast<uint64_t>(
                     finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
-                if (patternId != 0 && !allPatternIds.count(patternId)) {
-                    orphanClipPatternIds.insert(patternId);
+                if (patternId != 0 &&
+                    (!allPatternIds.count(patternId) || unloadablePatternIds.count(patternId))) {
+                    recoverableClipPatternIds.insert(patternId);
                     warningLimiter.warning(
                         ProjectLoadWarningCategory::ReferenceClip,
-                        "[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
+                        "[ProjectLoad] Clip references missing or unresolved pattern " + std::to_string(patternId) +
                             " - clip will be preserved with placeholder",
-                        "[ProjectLoad] Additional missing-pattern clip reference warnings suppressed.");
+                        "[ProjectLoad] Additional recoverable clip-pattern warnings suppressed.");
                 }
             }
         }
@@ -1224,7 +1234,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     }
 
     // Build structured report for reference validation issues
-    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
+    if (!recoverableClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
         result.integrity == LoadIntegrity::Mismatch) {
         auto report = std::make_unique<ProjectLoadReport>();
         if (result.integrity == LoadIntegrity::Mismatch) {
@@ -1238,11 +1248,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 ""
             });
         }
-        for (const auto& pid : orphanClipPatternIds) {
+        for (const auto& pid : recoverableClipPatternIds) {
             report->issues.push_back({
                 LoadIssueSeverity::Warning,
                 "clip",
-                "Clip references missing pattern - clip will be preserved with placeholder",
+                "Clip references missing or unresolved pattern - clip will be preserved with placeholder",
                 pid,
                 std::to_string(pid),
                 ""
@@ -1545,6 +1555,22 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     }
                 }
             }
+        }
+
+        // Preserve clip placement when a project references a pattern record
+        // that is missing from the file. The empty MIDI placeholder keeps the
+        // serialized pattern identity recoverable and deliberately renders
+        // silence until the user replaces or repairs the missing pattern.
+        for (uint64_t oldId : recoverableClipPatternIds) {
+            MidiPayload placeholderPayload;
+            std::string placeholderName = "[Missing Pattern " + std::to_string(oldId) + "]";
+            const auto originalName = patternNames.find(oldId);
+            if (originalName != patternNames.end() && !originalName->second.empty()) {
+                placeholderName += " " + originalName->second;
+            }
+            const PatternID placeholderId = patternManager.createMidiPatternWithId(
+                PatternID{oldId}, placeholderName, 4.0, placeholderPayload);
+            patternMap[oldId] = placeholderId;
         }
 
         // Arsenal unit default patterns are serialized with project-file IDs.
