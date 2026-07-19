@@ -375,14 +375,24 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     // UnitManager*, an owned slot map and a graph copy, none of which may
     // outlive this call. The render is fully synchronous: no callback or
     // retained object can touch this wiring once exportTo returns.
-    struct EngineWiringGuard {
+    // Restores everything this render mutates on every exit path, so a
+    // synchronous export leaves the caller's engine and session unchanged:
+    //  - engine wiring (weak TrackManager ref, raw UnitManager*, owned slot map,
+    //    graph copy, pattern-engine pointer) is cleared;
+    //  - the pattern-playback engine is flushed so the timeline instances this
+    //    render scheduled do not leak into the caller's TrackManager.
+    // The transport flags/position are never touched (see
+    // scheduleTimelineForOfflineRender below), so there is nothing else to undo.
+    struct RenderStateGuard {
         AudioEngine& engine;
-        ~EngineWiringGuard() {
+        TrackManager& trackManager;
+        ~RenderStateGuard() {
             engine.setGraph(AudioGraph{});
             engine.setPatternPlaybackEngine(nullptr);
             engine.setUnitManager(nullptr);
             engine.setChannelSlotMap(nullptr);
             engine.setTrackManager(nullptr);
+            trackManager.getPatternPlaybackEngine().flush();
         }
     };
 
@@ -390,7 +400,7 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     // but the caller owns m_trackManager and guarantees it outlives this render.
     // The no-op deleter means the borrowed TrackManager is never freed here.
     std::shared_ptr<TrackManager> borrowedTrackManager(&m_trackManager, [](TrackManager*) {});
-    EngineWiringGuard wiringGuard{m_engine}; // destroyed before borrowedTrackManager
+    RenderStateGuard renderGuard{m_engine, m_trackManager}; // destroyed before borrowedTrackManager
 
     m_engine.setSampleRate(effectiveRate);
     m_engine.setBufferConfig(512, 2);
@@ -407,10 +417,12 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
 
     // MIDI clips reach their units through the pattern-playback engine
     // (AudioEngine::processBlock pops scheduled notes into unit MIDI routes).
-    // play() flushes the engine and schedules the committed timeline clips from
-    // the current position (0 on this fresh manager), which is what makes the
-    // render emit the notes rather than silence.
-    m_trackManager.play();
+    // Schedule the committed timeline into it WITHOUT starting live transport —
+    // the exporter drives the engine's own transport, so we must not mutate the
+    // caller's playing flag / position. flush() first clears any prior contents;
+    // the render guard flushes again on exit so these instances don't leak.
+    m_trackManager.getPatternPlaybackEngine().flush();
+    m_trackManager.scheduleTimelineForOfflineRender(0.0);
 
     // Setup exporter
     AudioExporter exporter(m_engine, m_trackManager);
