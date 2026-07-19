@@ -230,8 +230,9 @@ AestraContent::AestraContent()
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
 
-    // Initialize Muse command registry with TrackManager dependencies
-    Aestra::Audio::CommandRegistry::initialize(m_trackManager.get());
+    // Register the Muse command factories once. They are stateless; the engine
+    // and track model are supplied per command via CommandContext at parse time.
+    Aestra::Audio::CommandRegistry::initialize();
 
     // TrackManager is owned by AestraContent, and the destructor clears this stored callback before teardown.
     m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
@@ -3023,7 +3024,6 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     }
     m_audioEngine = engine;
     m_musicalTyping.setTargetUnit(m_sequencerPanel ? m_sequencerPanel->getSelectedUnitId() : 0);
-    Aestra::Audio::CommandRegistry::setAudioEngine(engine);
     if (m_audioEngine && m_previewEngine) {
         m_audioEngine->setPreviewEngine(m_previewEngine.get());
     }
@@ -4031,7 +4031,8 @@ Aestra::Audio::CommandResult AestraContent::executeMuseCommand(const std::string
     }
 
     auto& history = m_trackManager->getCommandHistory();
-    Aestra::Audio::CommandResult result = m_commandParser.parse(input, history);
+    const Aestra::Audio::CommandContext ctx{m_audioEngine, m_trackManager.get()};
+    Aestra::Audio::CommandResult result = m_commandParser.parse(input, history, ctx);
 
     if (m_sessionLog) {
         // Build resolved args map from the parsed input

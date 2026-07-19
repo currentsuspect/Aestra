@@ -1,9 +1,10 @@
 # Self-test for no_audioengine_singleton.cmake — pins the guard's contract.
 #
 # Materializes fixture trees in WORK_DIR and runs the real guard against each,
-# asserting it fails on every forbidden shape (including renamed mechanisms)
-# and passes on benign ownership patterns, the prefix-type control, and the
-# tracked CommandRegistry exemption (#559).
+# asserting it fails on every forbidden shape (including renamed mechanisms) and
+# passes on benign ownership patterns and the prefix-type control. Since #559
+# retired the CommandRegistry exemption, it also pins that the former-exempt
+# path is now enforced like everywhere else.
 #
 # Required -D args:
 #   GUARD_SCRIPT  absolute path to no_audioengine_singleton.cmake
@@ -64,12 +65,14 @@ run_fixture(stack-local "Tests/K.cpp"
 run_fixture(prefix-type-control "Source/L.cpp"
     "static AudioEngineDiagnosticsHelper s_helper\;" PASS)
 
-# ── Exemption semantics (#559): waived for pattern 4/5 only, path-exact ─────
-run_fixture(exempt-path-static-ok "AestraAudio/include/Commands/CommandRegistry.h"
-    "class CommandRegistry { static AudioEngine* s_engine\; }\;" PASS)
-run_fixture(exempt-path-legacy-still-fails "AestraAudio/src/Commands/CommandRegistry.cpp"
+# ── Exemption removed (#559): CommandRegistry is enforced like anywhere else ─
+# The path that used to be waived for pattern 4/5 now fails on the same static
+# pointer shape — proving the exemption is gone, not just unused.
+run_fixture(former-exempt-path-now-fails "AestraAudio/include/Commands/CommandRegistry.h"
+    "class CommandRegistry { static AudioEngine* s_engine\; }\;" FAIL)
+run_fixture(former-exempt-path-legacy-fails "AestraAudio/src/Commands/CommandRegistry.cpp"
     "static AudioEngine* g_audioEngineInstance = nullptr\;" FAIL)
-run_fixture(non-exempt-path-same-shape "AestraAudio/src/Commands/OtherFile.cpp"
+run_fixture(commands-dir-same-shape-fails "AestraAudio/src/Commands/OtherFile.cpp"
     "static AudioEngine* s_engine = nullptr\;" FAIL)
 
 file(REMOVE_RECURSE "${WORK_DIR}/tree")

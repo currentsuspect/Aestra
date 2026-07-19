@@ -121,7 +121,7 @@ std::string pumpAndRead(MuseSocketServer& server, MuseService& service, SocketHa
 int main() {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->getUnitManager().setPatternManager(&trackManager->getPatternManager());
-    CommandRegistry::initialize(trackManager.get());
+    CommandRegistry::initialize();
     MuseService service(trackManager.get(), nullptr);
 
     MuseSocketServer server;
