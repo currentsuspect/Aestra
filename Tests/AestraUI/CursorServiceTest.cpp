@@ -131,6 +131,45 @@ void testReentrantBeginRefused() {
     std::puts("  reentrant-begin refused: ok");
 }
 
+void testFeedMotionDeltaAndRecenter() {
+    FakeHost host;
+    NUICursorService svc(host);
+    svc.beginDragCapture(NUICursorRestorePolicy::KnobCenter, 100, 100);
+    host.calls.clear();
+
+    // Physical pointer moves 100,100 -> 100,90 (up 10). Delta is measured from
+    // the anchor; the service recenters back to the anchor.
+    auto d1 = svc.feedPhysicalMotion(100, 90);
+    CHECK(d1.dx == 0 && d1.dy == -10);
+    CHECK((host.calls == std::vector<std::string>{"warp:100,100"})); // recentered
+
+    // The recenter warp's own synthetic event (lands on the anchor) is a zero
+    // delta and does NOT recenter again.
+    auto dSynthetic = svc.feedPhysicalMotion(100, 100);
+    CHECK(dSynthetic.dx == 0 && dSynthetic.dy == 0);
+    CHECK((host.calls == std::vector<std::string>{"warp:100,100"})); // unchanged
+
+    // Next real motion is again measured from the anchor (pointer was pinned
+    // there) — so a second up-10 gives the same delta regardless of how far
+    // the drag has travelled. This is what defeats window-edge saturation.
+    auto d2 = svc.feedPhysicalMotion(100, 90);
+    CHECK(d2.dx == 0 && d2.dy == -10);
+    CHECK((host.calls == std::vector<std::string>{"warp:100,100", "warp:100,100"}));
+
+    // Zero motion neither deltas nor warps (no spam while idle).
+    auto d3 = svc.feedPhysicalMotion(100, 100);
+    // (100,100 == anchor but m_expectRecenterEvent was cleared by dSynthetic and
+    // re-set by d2; this lands as the d2 recenter's synthetic -> zero, no warp.)
+    CHECK(d3.dx == 0 && d3.dy == 0);
+    CHECK(host.calls.size() == 2);
+
+    // After capture ends, motion is ignored.
+    svc.endDragCapture(100, 100);
+    auto d4 = svc.feedPhysicalMotion(50, 50);
+    CHECK(d4.dx == 0 && d4.dy == 0);
+    std::puts("  feed-motion delta + recenter: ok");
+}
+
 } // namespace
 
 int main() {
@@ -140,6 +179,7 @@ int main() {
     testCancelDoesNotWarp();
     testBeginWhileCapturedRecovers();
     testReentrantBeginRefused();
+    testFeedMotionDeltaAndRecenter();
     if (g_failures == 0) {
         std::puts("CursorServiceTest: PASS");
         return 0;

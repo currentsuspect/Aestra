@@ -92,6 +92,21 @@ public:
     int anchorX() const { return m_grabOriginX; }
     int anchorY() const { return m_grabOriginY; }
 
+    /** Semantic drag delta returned by feedPhysicalMotion(). */
+    struct Delta { int dx = 0; int dy = 0; };
+
+    /**
+     * Feed one raw physical pointer position while captured. Returns the
+     * semantic drag delta (motion since the last recenter) and, as a side
+     * effect, recenters the physical pointer to the anchor via the host so it
+     * can never reach the window edge (which would saturate deltas on long
+     * drags). The synthetic motion produced by that recenter warp is detected
+     * and returned as a zero delta — so the OS pointer becomes a pure
+     * implementation detail; widgets consume only the delta.
+     * No-op returning {0,0} when not captured.
+     */
+    Delta feedPhysicalMotion(int physX, int physY);
+
 private:
     NUICursorHost& m_host;
     bool m_captured = false;
@@ -99,6 +114,10 @@ private:
     NUICursorRestorePolicy m_policy = NUICursorRestorePolicy::GrabOrigin;
     int m_grabOriginX = 0;
     int m_grabOriginY = 0;
+    // Delta/recenter accounting (feedPhysicalMotion):
+    int m_lastPhysX = 0;
+    int m_lastPhysY = 0;
+    bool m_expectRecenterEvent = false; // next motion to the anchor is our own warp
 };
 
 } // namespace AestraUI
