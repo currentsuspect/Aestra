@@ -615,6 +615,7 @@ void NUIRendererGL::beginFrame() {
     indices_.clear();
     frameCounter_++;
     drawCallCount_ = 0;  // Reset draw call counter each frame
+    submittedQuadCount_ = 0;
     // Reset primitive state so the first non-rounded draw in a frame does not inherit rounded settings
     currentPrimitiveType_ = 0;
     currentRadius_ = 0.0f;
@@ -627,8 +628,6 @@ void NUIRendererGL::beginFrame() {
     // This enables true incremental rendering where only changed areas are redrawn
     // dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
     
-    // Clear batch manager
-    batchManager_.clearAll();
 }
 
 void NUIRendererGL::endFrame() {
@@ -2830,6 +2829,7 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUniform1i(primitiveShader_.textureLoc, 0);
     glUniform1i(primitiveShader_.useTextureLoc, 1);
 
+    submittedQuadCount_ += indices_.size() / 6;
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
     drawCallCount_++;
     if (Aestra::Profiler::getInstance().isEnabled()) {
@@ -2901,6 +2901,7 @@ void NUIRendererGL::drawTextureFlippedV(uint32_t textureId, const NUIRect& destR
     glUniform1i(primitiveShader_.textureLoc, 0);
     glUniform1i(primitiveShader_.useTextureLoc, 1);
 
+    submittedQuadCount_ += indices_.size() / 6;
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
     drawCallCount_++;
     if (Aestra::Profiler::getInstance().isEnabled()) {
@@ -3177,6 +3178,7 @@ void NUIRendererGL::flush() {
     }
     
     // Draw
+    submittedQuadCount_ += indices_.size() / 6;
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
     drawCallCount_++;  // Track draw call
     // Record with global profiler
@@ -3466,10 +3468,6 @@ bool NUIRendererGL::renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destR
     return true;
 }
 
-void NUIRendererGL::setBatchingEnabled(bool enabled) {
-    batchManager_.setEnabled(enabled);
-}
-
 void NUIRendererGL::setDirtyRegionTrackingEnabled(bool enabled) {
     dirtyRegionManager_.setEnabled(enabled);
 }
@@ -3480,7 +3478,7 @@ void NUIRendererGL::setCachingEnabled(bool enabled) {
 
 void NUIRendererGL::getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
                                         size_t& cachedWidgets, size_t& cacheMemoryBytes) {
-    batchedQuads = batchManager_.getTotalQuads();
+    batchedQuads = submittedQuadCount_ + indices_.size() / 6;
     dirtyRegions = dirtyRegionManager_.getDirtyRegionCount();
     cachedWidgets = renderCache_.getCacheCount();
     cacheMemoryBytes = renderCache_.getMemoryUsage();

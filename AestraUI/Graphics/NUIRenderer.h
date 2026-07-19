@@ -7,7 +7,6 @@
 
 // Forward declarations for optimization systems
 namespace AestraUI {
-    class NUIRenderBatch;
     class NUIDirtyRegionManager;
     class NUIRenderCache;
 }
@@ -341,11 +340,6 @@ public:
     // ========================================================================
     // Performance Optimizations
     // ========================================================================
-    
-    /**
-     * Enable/disable render batching.
-     */
-    virtual void setBatchingEnabled(bool enabled) = 0;
     
     /**
      * Enable/disable dirty region tracking.
