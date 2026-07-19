@@ -79,6 +79,12 @@ class EffectChain {
 public:
     static constexpr size_t MAX_SLOTS = 10;
 
+    // Serialized-state format version (byte 3 of the "NEC" header). Bump when the
+    // on-disk layout changes and add a migration branch in loadState() so older
+    // chains keep loading. loadState() reads this byte and dispatches on it rather
+    // than hard-rejecting anything != the current version.
+    static constexpr uint8_t kStateFormatVersion = 1;
+
     EffectChain();
     ~EffectChain();
 

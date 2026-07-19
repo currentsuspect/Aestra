@@ -585,8 +585,8 @@ std::vector<uint8_t> EffectChain::saveState() const {
     // Write header
     state.push_back('N');
     state.push_back('E');
-    state.push_back('C'); // Aestra Effect Chain
-    state.push_back(1);   // Version
+    state.push_back('C');                  // Aestra Effect Chain magic
+    state.push_back(kStateFormatVersion);  // Format version (see loadState dispatch)
 
     // Write slot count
     state.push_back(static_cast<uint8_t>(MAX_SLOTS));
@@ -636,8 +636,21 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         return false;
     }
 
-    // Check header
-    if (state[0] != 'N' || state[1] != 'E' || state[2] != 'C' || state[3] != 1) {
+    // Check magic separately from version so a version mismatch is diagnosable
+    // and future formats have a migration point (rather than being rejected as
+    // if the data were not an effect chain at all).
+    if (state[0] != 'N' || state[1] != 'E' || state[2] != 'C') {
+        return false;
+    }
+
+    const uint8_t version = state[3];
+    if (version == 0 || version > kStateFormatVersion) {
+        // Unknown/future format: refuse rather than misparse. When a v2 layout is
+        // added, dispatch here (e.g. `if (version >= 2) return loadStateV2(...)`)
+        // while keeping the v1 path below so older chains still load.
+        Aestra::Log::warning("[EffectChain] Unsupported effect-chain state version " + std::to_string(version) +
+                             " (this build supports up to " + std::to_string(kStateFormatVersion) +
+                             "); skipping restore.");
         return false;
     }
 
@@ -680,10 +693,17 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         // Read bypass state
         bool bypassed = state[offset++] != 0;
 
-        // Read dry/wet
+        // Read dry/wet. Guard against a corrupted/NaN blob: a non-finite mix
+        // would multiply into the audio path. Fall back to fully-wet (the
+        // default) and clamp to the valid [0,1] range the setter enforces.
         float dryWet;
         std::memcpy(&dryWet, &state[offset], sizeof(dryWet));
         offset += sizeof(dryWet);
+        if (!std::isfinite(dryWet)) {
+            dryWet = 1.0f;
+        } else {
+            dryWet = std::clamp(dryWet, 0.0f, 1.0f);
+        }
 
         // Read plugin state length
         uint32_t stateLen;

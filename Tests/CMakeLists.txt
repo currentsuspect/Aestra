@@ -914,6 +914,15 @@ target_include_directories(AestraEffectChainSnapshotTest PRIVATE
 add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
 set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin")
 
+add_executable(AestraEffectChainStateVersionTest AestraAudio/EffectChainStateVersionTest.cpp)
+target_link_libraries(AestraEffectChainStateVersionTest PRIVATE AestraAudio)
+target_include_directories(AestraEffectChainStateVersionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEffectChainStateVersionTest COMMAND AestraEffectChainStateVersionTest)
+set_tests_properties(AestraEffectChainStateVersionTest PROPERTIES LABELS "audio;plugin;serialization")
+
 # AudioEngine EffectChain prepare regression test
 add_executable(AestraAudioEngineEffectChainPrepareTest AestraAudio/AudioEngineEffectChainPrepareTest.cpp)
 target_link_libraries(AestraAudioEngineEffectChainPrepareTest PRIVATE AestraAudio)
