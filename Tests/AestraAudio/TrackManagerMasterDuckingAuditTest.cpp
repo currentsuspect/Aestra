@@ -261,7 +261,20 @@ int main() {
     engine.setPreviewEngine(&audiblePreview);
     primePreviewAudibility(audiblePreview);
 
-    const Readout settledDucked = renderLastBlock(engine, meters, 6);
+    std::vector<float> duckOnsetBlock(static_cast<size_t>(kBlockSize) * kChannels, 0.0f);
+    engine.processBlock(duckOnsetBlock.data(), nullptr, kBlockSize, 0.0);
+    const float duckOnsetFirstRatio =
+        std::abs(duckOnsetBlock.front()) / std::max(baseline.engineOutputPeak, 1.0e-9f);
+    const float duckOnsetLastRatio =
+        std::abs(duckOnsetBlock[(kBlockSize - 1) * kChannels]) / std::max(baseline.engineOutputPeak, 1.0e-9f);
+    float duckOnsetMaxStep = 0.0f;
+    for (uint32_t frame = 1; frame < kBlockSize; ++frame) {
+        const float previous = duckOnsetBlock[(frame - 1) * kChannels];
+        const float current = duckOnsetBlock[frame * kChannels];
+        duckOnsetMaxStep = std::max(duckOnsetMaxStep, std::abs(current - previous));
+    }
+
+    const Readout settledDucked = renderLastBlock(engine, meters, 5);
     const auto duckSource = engine.getPreviewDuckSource();
 
     audiblePreview.stop();
@@ -298,6 +311,9 @@ int main() {
     std::cout << "settled_ducked_track_peak=" << settledDucked.trackPeak << "\n";
     std::cout << "settled_ducked_master_peak=" << settledDucked.masterPeak << "\n";
     std::cout << "settled_ducked_output_peak=" << settledDucked.engineOutputPeak << "\n";
+    std::cout << "duck_onset_first_ratio=" << duckOnsetFirstRatio << "\n";
+    std::cout << "duck_onset_last_ratio=" << duckOnsetLastRatio << "\n";
+    std::cout << "duck_onset_max_step=" << duckOnsetMaxStep << "\n";
     std::cout << "settled_track_ratio=" << settledTrackRatio << "\n";
     std::cout << "settled_master_ratio=" << settledMasterRatio << "\n";
     std::cout << "held_after_stop_master_ratio=" << heldMasterRatio << "\n";
@@ -321,6 +337,12 @@ int main() {
             "silent preview ducked the master");
     require(settledTrackRatio > 0.99f && settledTrackRatio < 1.01f,
             "settled track meter changed while preview ducking was active");
+    require(duckOnsetFirstRatio > 0.99f && duckOnsetFirstRatio < 1.01f,
+            "preview duck onset did not start continuously from the prior block gain");
+    require(duckOnsetLastRatio > 0.88f && duckOnsetLastRatio < 0.91f,
+            "preview duck onset did not ramp across the first block");
+    require(duckOnsetMaxStep < 0.0002f,
+            "preview duck onset contains a block-sized gain step");
     require(settledMasterRatio > 0.49f && settledMasterRatio < 0.51f,
             "audible preview did not duck to the expected 0.5 gain within the 50ms fade window");
     require(duckSource == AudioEngine::PreviewDuckSource::BrowserPreview,
