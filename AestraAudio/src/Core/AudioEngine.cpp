@@ -2498,159 +2498,19 @@ float AudioEngine::processTrackEffects(const TrackRenderState& track, uint32_t t
     return trackSidechainPeak;
 }
 
-void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
-                              bool& srcActiveThisBlock) {
-    // Unpack the block-stable render context under the names this body has
-    // always used; renderGraph() derives these once per block.
+void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot,
+                                   TrackRTState& state, std::vector<double>& buffer, const RenderContext& ctx,
+                                   double volTarget, double panTarget, float trackSidechainPeak, bool muted,
+                                   bool audibleEligible) {
+    // Verbatim output stage moved out of renderTrack(): plugin-delay
+    // compensation, routing to master/destination + sends (with the peak/RMS
+    // accumulation interleaved in the mix loop), and the meter snapshot write.
     const uint32_t numFrames = ctx.numFrames;
     double* const masterBuf = ctx.masterBuf;
     const size_t availableTracks = ctx.availableTracks;
-    const uint64_t blockStart = ctx.blockStart;
-    const uint64_t blockEnd = ctx.blockEnd;
-    const bool isPlaying = ctx.isPlaying;
     const bool anySolo = ctx.anySolo;
-    const uint32_t cachedSampleRate = ctx.cachedSampleRate;
-    const ChannelSlotMap* const cachedSlotMap = ctx.cachedSlotMap;
-    ContinuousParamBuffer* const cachedParams = ctx.cachedParams;
     MeterSnapshotBuffer* const cachedSnaps = ctx.cachedSnaps;
-    const bool cachedPatternMode = ctx.cachedPatternMode;
-    const Interpolators::InterpolationQuality cachedInterpQuality = ctx.cachedInterpQuality;
-    const AudioArsenalSnapshot* const unitSnapshot = ctx.unitSnapshot;
-    const PatternPlaybackEngine::UnitMidiRoute* const unitMidiRoutes = ctx.unitMidiRoutes;
-    const size_t unitMidiRouteCount = ctx.unitMidiRouteCount;
-
-    const auto& track = graph.tracks[orderedIndex];
-    const uint32_t trackIdx = track.trackIndex;
-    if (static_cast<size_t>(trackIdx) >= availableTracks) {
-        m_telemetry.incrementOverruns();
-        return;
-    }
-    auto& state = ensureTrackState(trackIdx);
-
-    // Compute continuous params (slot-indexed) and apply to targets.
-    float faderDb = 0.0f;
-    float panParam = 0.0f;
-    float trimDb = 0.0f;
-    uint32_t slot = ChannelSlotMap::INVALID_SLOT;
-
-    auto* slotMap = cachedSlotMap;
-    if (slotMap) {
-        slot = slotMap->getSlotIndex(track.trackId);
-        auto* params = cachedParams;
-        if (slot != ChannelSlotMap::INVALID_SLOT && params) {
-            params->read(slot, faderDb, panParam, trimDb);
-        }
-    }
-
-    const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
-    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-    const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
-
-    double volTarget = static_cast<double>(track.volume) * gain;
-    double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
-
-    // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
-    // interpolates on point beats directly, so tempo changes and UI point
-    // drags (which edit beats) stay musically aligned.
-    if (!track.automationCurves.empty() && cachedSampleRate > 0) {
-        uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-        double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
-        for (const auto& curve : track.automationCurves) {
-            if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                volTarget = curve.getValueAtBeat(currentBeat);
-            } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
-            } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
-                // Plugin-parameter automation. Internal-format plugins only:
-                // their parameter storage is atomic, so a per-block
-                // setParameter from this thread is lock-free and RT-safe.
-                // Third-party formats are skipped until host param queues
-                // exist (#467). Applied before the effect chain processes
-                // this block, so the value is in effect for these frames.
-                //
-                // Smoothing policy: the *plugin* owns parameter smoothing.
-                // setParameter only stores a target; each internal plugin's
-                // process() ramps toward it — the same contract used for UI
-                // knob moves. We deliberately hand the raw target over once
-                // per block instead of ramping engine-side, so automation
-                // and manual edits share one smoother and never cascade into
-                // double-smoothing. Every internal effect honors this (Drift
-                // was the last to gain per-sample Mix/Pitch smoothing).
-                if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
-                    const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
-                    if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
-                        const float value = curve.getValueAtBeat(currentBeat);
-                        if (std::isfinite(value)) {
-                            slot.plugin->setParameter(curve.paramId, value);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Skip early (solo suppression only).
-    // Muted tracks still render so meters keep moving, but they don't mix into master.
-    const bool muted = track.mute || state.mute;
-    const bool audibleEligible =
-        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
-    const bool processActive =
-        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
-
-    // Initialize send gain smoothers when send count changes.
-    // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
-    // so we never resize here — only update the active entries.
-    const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
-    if (state.lastActiveSendCount != sendCount) {
-        state.lastActiveSendCount = sendCount;
-        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-            double targetL = 0.0;
-            double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-            state.sendGainL[sendIndex].current = targetL;
-            state.sendGainL[sendIndex].target = targetL;
-            state.sendGainR[sendIndex].current = targetR;
-            state.sendGainR[sendIndex].target = targetR;
-        }
-    }
-
-    if (!muted) {
-        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-            if (track.sends[sendIndex].mute) {
-                continue;
-            }
-            double targetL = 0.0;
-            double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-            state.sendGainL[sendIndex].setTarget(targetL);
-            state.sendGainR[sendIndex].setTarget(targetR);
-            state.sendGainL[sendIndex].beginRamp(numFrames);
-            state.sendGainR[sendIndex].beginRamp(numFrames);
-        }
-    }
-
-    if (!processActive) {
-        auto* snaps = cachedSnaps;
-        if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
-            snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
-            snaps->writeSidechainPeak(slot, 0.0f);
-        }
-        return;
-    }
-
-    // Buffers were already cleared up front so destination tracks can receive
-    // routed audio before their own clips/effects are processed.
-    auto& buffer = m_trackBuffersD[trackIdx];
-
-    // Clip rendering, Arsenal units, and the effect chain are verbatim phase
-    // extractions — see the helpers directly above renderTrack().
-    renderTrackClips(track, buffer, ctx, srcActiveThisBlock);
-
-    renderTrackUnits(trackIdx, buffer, ctx);
-
-    float trackSidechainPeak = processTrackEffects(track, trackIdx, buffer, numFrames);
+    const ChannelSlotMap* const slotMap = ctx.cachedSlotMap;
 
     // === Apply Plugin Delay Compensation ===
     // Compensation must apply to dry tracks too; those are often the tracks
@@ -2906,6 +2766,166 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
             snaps->setClip(slot, peakL >= 1.0f, peakR >= 1.0f);
         }
     }
+}
+
+void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
+                              bool& srcActiveThisBlock) {
+    // Unpack the block-stable render context under the names this body has
+    // always used; renderGraph() derives these once per block.
+    const uint32_t numFrames = ctx.numFrames;
+    double* const masterBuf = ctx.masterBuf;
+    const size_t availableTracks = ctx.availableTracks;
+    const uint64_t blockStart = ctx.blockStart;
+    const uint64_t blockEnd = ctx.blockEnd;
+    const bool isPlaying = ctx.isPlaying;
+    const bool anySolo = ctx.anySolo;
+    const uint32_t cachedSampleRate = ctx.cachedSampleRate;
+    const ChannelSlotMap* const cachedSlotMap = ctx.cachedSlotMap;
+    ContinuousParamBuffer* const cachedParams = ctx.cachedParams;
+    MeterSnapshotBuffer* const cachedSnaps = ctx.cachedSnaps;
+    const bool cachedPatternMode = ctx.cachedPatternMode;
+    const Interpolators::InterpolationQuality cachedInterpQuality = ctx.cachedInterpQuality;
+    const AudioArsenalSnapshot* const unitSnapshot = ctx.unitSnapshot;
+    const PatternPlaybackEngine::UnitMidiRoute* const unitMidiRoutes = ctx.unitMidiRoutes;
+    const size_t unitMidiRouteCount = ctx.unitMidiRouteCount;
+
+    const auto& track = graph.tracks[orderedIndex];
+    const uint32_t trackIdx = track.trackIndex;
+    if (static_cast<size_t>(trackIdx) >= availableTracks) {
+        m_telemetry.incrementOverruns();
+        return;
+    }
+    auto& state = ensureTrackState(trackIdx);
+
+    // Compute continuous params (slot-indexed) and apply to targets.
+    float faderDb = 0.0f;
+    float panParam = 0.0f;
+    float trimDb = 0.0f;
+    uint32_t slot = ChannelSlotMap::INVALID_SLOT;
+
+    auto* slotMap = cachedSlotMap;
+    if (slotMap) {
+        slot = slotMap->getSlotIndex(track.trackId);
+        auto* params = cachedParams;
+        if (slot != ChannelSlotMap::INVALID_SLOT && params) {
+            params->read(slot, faderDb, panParam, trimDb);
+        }
+    }
+
+    const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
+    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+    const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+
+    double volTarget = static_cast<double>(track.volume) * gain;
+    double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
+
+    // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
+    // interpolates on point beats directly, so tempo changes and UI point
+    // drags (which edit beats) stay musically aligned.
+    if (!track.automationCurves.empty() && cachedSampleRate > 0) {
+        uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
+        double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
+        for (const auto& curve : track.automationCurves) {
+            if (curve.getAutomationTarget() == AutomationTarget::Volume) {
+                volTarget = curve.getValueAtBeat(currentBeat);
+            } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
+                panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+            } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
+                // Plugin-parameter automation. Internal-format plugins only:
+                // their parameter storage is atomic, so a per-block
+                // setParameter from this thread is lock-free and RT-safe.
+                // Third-party formats are skipped until host param queues
+                // exist (#467). Applied before the effect chain processes
+                // this block, so the value is in effect for these frames.
+                //
+                // Smoothing policy: the *plugin* owns parameter smoothing.
+                // setParameter only stores a target; each internal plugin's
+                // process() ramps toward it — the same contract used for UI
+                // knob moves. We deliberately hand the raw target over once
+                // per block instead of ramping engine-side, so automation
+                // and manual edits share one smoother and never cascade into
+                // double-smoothing. Every internal effect honors this (Drift
+                // was the last to gain per-sample Mix/Pitch smoothing).
+                if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
+                    const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
+                    if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
+                        const float value = curve.getValueAtBeat(currentBeat);
+                        if (std::isfinite(value)) {
+                            slot.plugin->setParameter(curve.paramId, value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Skip early (solo suppression only).
+    // Muted tracks still render so meters keep moving, but they don't mix into master.
+    const bool muted = track.mute || state.mute;
+    const bool audibleEligible =
+        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
+    const bool processActive =
+        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
+
+    // Initialize send gain smoothers when send count changes.
+    // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
+    // so we never resize here — only update the active entries.
+    const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
+    if (state.lastActiveSendCount != sendCount) {
+        state.lastActiveSendCount = sendCount;
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+            double targetL = 0.0;
+            double targetR = 0.0;
+            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            state.sendGainL[sendIndex].current = targetL;
+            state.sendGainL[sendIndex].target = targetL;
+            state.sendGainR[sendIndex].current = targetR;
+            state.sendGainR[sendIndex].target = targetR;
+        }
+    }
+
+    if (!muted) {
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+            if (track.sends[sendIndex].mute) {
+                continue;
+            }
+            double targetL = 0.0;
+            double targetR = 0.0;
+            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            state.sendGainL[sendIndex].setTarget(targetL);
+            state.sendGainR[sendIndex].setTarget(targetR);
+            state.sendGainL[sendIndex].beginRamp(numFrames);
+            state.sendGainR[sendIndex].beginRamp(numFrames);
+        }
+    }
+
+    if (!processActive) {
+        auto* snaps = cachedSnaps;
+        if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
+            snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
+            snaps->writeSidechainPeak(slot, 0.0f);
+        }
+        return;
+    }
+
+    // Buffers were already cleared up front so destination tracks can receive
+    // routed audio before their own clips/effects are processed.
+    auto& buffer = m_trackBuffersD[trackIdx];
+
+    // Clip rendering, Arsenal units, and the effect chain are verbatim phase
+    // extractions — see the helpers directly above renderTrack().
+    renderTrackClips(track, buffer, ctx, srcActiveThisBlock);
+
+    renderTrackUnits(trackIdx, buffer, ctx);
+
+    float trackSidechainPeak = processTrackEffects(track, trackIdx, buffer, numFrames);
+
+    // Output stage (PDC + routing/sends + metering) — verbatim extraction,
+    // see mixAndMeterTrack() directly above.
+    mixAndMeterTrack(track, trackIdx, slot, state, buffer, ctx, volTarget, panTarget, trackSidechainPeak, muted,
+                     audibleEligible);
 }
 
 TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
