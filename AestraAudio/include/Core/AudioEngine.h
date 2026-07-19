@@ -716,7 +716,7 @@ private:
     // extraction of a self-contained section of processBlock; state lives in
     // the members they always used.
     void mixTestTone(uint32_t numFrames, uint32_t currentSampleRate);
-    // Returns the smoothed duck gain the master output stage applies this block.
+    // Advances and returns the preview-duck gain at the end of this block.
     double computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
     void mixMetronomeClicks(float* outputBuffer, uint32_t numFrames);
     void updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels);

@@ -949,7 +949,10 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     mixTestTone(numFrames, currentSampleRate);
 
-    const double duckGain = computePreviewDuckGain(numFrames, currentSampleRate, isPlaying);
+    const double duckGainStart = static_cast<double>(m_smoothedPreviewDuckGain);
+    const double duckGainEnd = computePreviewDuckGain(numFrames, currentSampleRate, isPlaying);
+    const double duckGainDelta = (duckGainEnd - duckGainStart) / static_cast<double>(numFrames);
+    double duckGain = duckGainStart;
 
     // === Final Output Stage (double -> float with processing) ===
     // Pre-compute master gain for this block (avoid per-sample target update)
@@ -1106,6 +1109,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
 
         gain += gainDelta;
+        duckGain += duckGainDelta;
     }
 
     // Update atomic counters (once per block, not per sample)
