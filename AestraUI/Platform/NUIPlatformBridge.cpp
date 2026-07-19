@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPlatformBridge.h"
+#include <cstdio>
 #include "NUITypes.h"
 #include "NUIComponent.h"
 #include "NUIRenderer.h"
@@ -656,7 +657,10 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         case NUICursorStyle::Grabbing:   cursor = :: LoadCursor(NULL, IDC_HAND); break;
         case NUICursorStyle::Hidden:
             NUIComponent::setCursorCaptureActive(true);
-            if (m_window) m_window->setCursorClip(true);
+            // Don't re-assert a whole-window clip while a drag capture owns the
+            // pointer — the service confines to a small anchor rect (see
+            // hostSetPointerGrab); a whole-window clip here would clobber it.
+            if (m_window && !m_cursorService.isCaptured()) m_window->setCursorClip(true);
             ::SetCursor(NULL);
             return;
         default: cursor = ::LoadCursor(NULL, IDC_ARROW); break;
@@ -673,7 +677,9 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         NUIComponent::setCursorCaptureActive(true);
         if (m_window) {
             m_window->setCursorVisible(false);
-            m_window->setCursorClip(true);
+            // See Win32 branch: the service owns a small anchor-rect clip during
+            // capture; don't clobber it with a whole-window clip.
+            if (!m_cursorService.isCaptured()) m_window->setCursorClip(true);
         }
         return;
     }
