@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIConfigLoader.h"
 #include "../../AestraCore/include/AestraJSON.h"
+#include <cmath>
 #include <sstream>
 #include <regex>
 #include <algorithm>
@@ -86,6 +87,9 @@ void NUIConfigLoader::saveConfig(const std::string& filePath) {
     layout.set("trackControlsWidth", theme.layout.trackControlsWidth);
     layout.set("fileBrowserWidth", theme.layout.fileBrowserWidth);
     layout.set("transportBarHeight", theme.layout.transportBarHeight);
+    layout.set("titleBarHeight", theme.layout.titleBarHeight);
+    layout.set("viewToggleWidth", theme.layout.viewToggleWidth);
+    layout.set("viewToggleHeight", theme.layout.viewToggleHeight);
     config.set("layout", layout);
 
     // Save spacing
@@ -241,16 +245,44 @@ void NUIConfigLoader::applyLayout(const Aestra::JSON& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     auto& theme = themeManager.getCurrentThemeMutable();
 
-    if (layout.has("trackHeight")) theme.layout.trackHeight = parseDimension(layout["trackHeight"]);
-    if (layout.has("trackControlsWidth")) theme.layout.trackControlsWidth = parseDimension(layout["trackControlsWidth"]);
-    if (layout.has("fileBrowserWidth")) theme.layout.fileBrowserWidth = parseDimension(layout["fileBrowserWidth"]);
-    if (layout.has("transportBarHeight")) theme.layout.transportBarHeight = parseDimension(layout["transportBarHeight"]);
-    if (layout.has("transportButtonSize")) theme.layout.transportButtonSize = parseDimension(layout["transportButtonSize"]);
-    if (layout.has("controlButtonWidth")) theme.layout.controlButtonWidth = parseDimension(layout["controlButtonWidth"]);
-    if (layout.has("controlButtonHeight")) theme.layout.controlButtonHeight = parseDimension(layout["controlButtonHeight"]);
-    if (layout.has("gridLineSpacing")) theme.layout.gridLineSpacing = parseDimension(layout["gridLineSpacing"]);
-    if (layout.has("panelMargin")) theme.layout.panelMargin = parseDimension(layout["panelMargin"]);
-    if (layout.has("componentPadding")) theme.layout.componentPadding = parseDimension(layout["componentPadding"]);
+    // Only override a layout value when the JSON supplies a usable one.
+    // parseDimension() returns 0.0f for malformed input (non-numeric, NaN, "px"
+    // typos), so both helpers reject non-finite values and keep the current
+    // default rather than silently clobbering it.
+    //
+    // The zero policy differs by role:
+    //  - applyExtent: dimensions that must occupy space (title bar, view toggle,
+    //    control sizes). Zero collapses the layout, so require strictly > 0.
+    //  - applySpacingDim: margins/padding where zero is a legitimate value
+    //    (a flush, no-gap layout), so accept finite >= 0.
+    const auto applyExtent = [&](const char* key, float& target) {
+        if (!layout.has(key)) return;
+        const float value = parseDimension(layout[key]);
+        if (std::isfinite(value) && value > 0.0f) {
+            target = value;
+        }
+    };
+    const auto applySpacingDim = [&](const char* key, float& target) {
+        if (!layout.has(key)) return;
+        const float value = parseDimension(layout[key]);
+        if (std::isfinite(value) && value >= 0.0f) {
+            target = value;
+        }
+    };
+
+    applyExtent("trackHeight", theme.layout.trackHeight);
+    applyExtent("trackControlsWidth", theme.layout.trackControlsWidth);
+    applyExtent("fileBrowserWidth", theme.layout.fileBrowserWidth);
+    applyExtent("transportBarHeight", theme.layout.transportBarHeight);
+    applyExtent("titleBarHeight", theme.layout.titleBarHeight);
+    applyExtent("viewToggleWidth", theme.layout.viewToggleWidth);
+    applyExtent("viewToggleHeight", theme.layout.viewToggleHeight);
+    applyExtent("transportButtonSize", theme.layout.transportButtonSize);
+    applyExtent("controlButtonWidth", theme.layout.controlButtonWidth);
+    applyExtent("controlButtonHeight", theme.layout.controlButtonHeight);
+    applyExtent("gridLineSpacing", theme.layout.gridLineSpacing);
+    applySpacingDim("panelMargin", theme.layout.panelMargin);
+    applySpacingDim("componentPadding", theme.layout.componentPadding);
 }
 
 void NUIConfigLoader::applySpacing(const Aestra::JSON& spacing) {

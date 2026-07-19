@@ -167,6 +167,9 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     dimension("trackControlsWidth", target.layout.trackControlsWidth);
     dimension("trackHeight", target.layout.trackHeight);
     dimension("transportBarHeight", target.layout.transportBarHeight);
+    dimension("titleBarHeight", target.layout.titleBarHeight);
+    dimension("viewToggleWidth", target.layout.viewToggleWidth);
+    dimension("viewToggleHeight", target.layout.viewToggleHeight);
 
     const auto fontSize = [&](const char* name, float& value) {
         if (source.hasFontSizeOverride(name))
@@ -654,6 +657,11 @@ float NUIThemeManager::getLayoutDimension(const std::string& dimensionName) cons
     if (dimensionName == "transportBarHeight") return layout.transportBarHeight;
     if (dimensionName == "transportButtonSize") return layout.transportButtonSize;
     if (dimensionName == "transportButtonSpacing") return layout.transportButtonSpacing;
+
+    // Application chrome dimensions
+    if (dimensionName == "titleBarHeight") return layout.titleBarHeight;
+    if (dimensionName == "viewToggleWidth") return layout.viewToggleWidth;
+    if (dimensionName == "viewToggleHeight") return layout.viewToggleHeight;
 
     // Control dimensions
     if (dimensionName == "controlButtonWidth") return layout.controlButtonWidth;
