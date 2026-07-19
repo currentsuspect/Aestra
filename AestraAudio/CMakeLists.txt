@@ -185,7 +185,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/LatencyTopology.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
-    src/Core/ProjectValidator.cpp
     src/Core/EngineSupervisor.cpp
     src/Core/AsyncCleanupManager.cpp
     src/Core/RTGuard.cpp
@@ -321,7 +320,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AestraAudio.h
     include/Core/AudioDeviceManager.h
     include/Core/AutosaveManager.h
-    include/Core/ProjectValidator.h
     include/Core/AudioEngineDiagnostics.h
     include/Core/EngineSupervisor.h
     include/Core/AsyncCleanupManager.h
