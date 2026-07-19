@@ -4884,8 +4884,9 @@ bool AestraEQEditor::handlePress(const NUIMouseEvent& event) {
         }
         if (m_outputGainRect.contains(event.position)) {
             m_draggingOutputGain = true;
-            m_dragStartY = event.position.y;
-            m_dragStartValue = outputGain();
+            // Relative vertical drag → cursor capture (the graph nodes and card
+            // lanes are absolute-position and stay on the visible cursor).
+            beginKnobCapture(m_outputGainRect.center(), event.position);
             return true;
         }
         Knob knob = Knob::None;
@@ -4959,9 +4960,12 @@ bool AestraEQEditor::handleDragUpdate(const NUIMouseEvent& event) {
         return true;
     }
     if (m_draggingOutputGain) {
-        setOutputGain(m_dragStartValue + (m_dragStartY - event.position.y) / 180.0f);
-        if (!event.pressed && event.button == NUIMouseButton::Left)
+        // Service-owned frame delta (up = increase), accumulated into value.
+        setOutputGain(outputGain() + knobDragStep(event, 180.0f));
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            endKnobCapture();
             m_draggingOutputGain = false;
+        }
         return true;
     }
     if (m_draggingCardBand >= 0) {
