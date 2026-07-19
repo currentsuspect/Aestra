@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Commands/CommandContext.h"
 #include "Commands/CommandResult.h"
 #include "Commands/MuseGrammar.h"
 
@@ -16,7 +17,10 @@ class ICommand;
 
 class CommandParser {
 public:
-    CommandResult parse(const std::string& input, CommandHistory& history);
+    // The parser is stateless: the live session dependencies a command needs to
+    // build (engine + track model) arrive per call via CommandContext, borrowed
+    // from the caller that owns them, and are threaded straight to the registry.
+    CommandResult parse(const std::string& input, CommandHistory& history, const CommandContext& context);
 
     /**
      * @brief Execute a verb from an already-tokenised flag map.
@@ -28,7 +32,8 @@ public:
      */
     CommandResult execute(const std::string& verb,
                           const std::unordered_map<std::string, std::string>& flags,
-                          CommandHistory& history);
+                          CommandHistory& history,
+                          const CommandContext& context);
 
     /**
      * @brief Validate and build a command without executing it.
@@ -42,7 +47,8 @@ public:
         const std::string& verb,
         const std::unordered_map<std::string, std::string>& flags,
         CommandStatus& outStatus,
-        std::string& outMessage);
+        std::string& outMessage,
+        const CommandContext& context);
 
 private:
     std::unordered_map<std::string, std::string> tokeniseFlags(

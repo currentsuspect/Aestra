@@ -25,11 +25,11 @@
 # the *realistic* reintroductions — a renamed static pointer or accessor —
 # cannot land silently.
 #
-# Exemption (single, tracked): CommandRegistry.{h,cpp} carry an explicitly
-# injected static AudioEngine* for Muse transport commands. That is a distinct
-# (still undesirable) mechanism scheduled for context-injection migration in
-# issue #559; patterns 1-3 remain enforced there, only pattern 4/5 is waived.
-# Do not add further exemptions — remove this one via #559.
+# Exemptions: none. CommandRegistry.{h,cpp} formerly carried an injected static
+# AudioEngine* for Muse transport commands; issue #559 migrated that to explicit
+# CommandContext injection through CommandRegistry::build, so the last exemption
+# was removed and every pattern (1-5) is now enforced everywhere. Do not add new
+# exemptions — thread dependencies through the owner instead.
 #
 # Required -D args:
 #   REPO_ROOT  absolute path to the repository root
@@ -49,10 +49,10 @@ set(scan_dirs
     aestra-core
 )
 
-set(exempt_static_pattern
-    "AestraAudio/include/Commands/CommandRegistry.h"
-    "AestraAudio/src/Commands/CommandRegistry.cpp"
-)
+# No files are exempt from the structural static/global engine shapes (#559
+# retired the last exemption). Kept as an empty list so the FIND below stays
+# well-formed and a future exemption is a deliberate, reviewable edit.
+set(exempt_static_pattern "")
 
 set(violations "")
 foreach(dir ${scan_dirs})
