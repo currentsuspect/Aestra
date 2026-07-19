@@ -346,6 +346,24 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
     set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;regression;routing")
 endif()
 
+# Project History Cap (issue #274 — .history directory disk-usage bound)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectHistoryCapTest.cpp")
+    add_executable(ProjectHistoryCapTest
+        Integration/ProjectHistoryCapTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectHistoryCapTest PRIVATE AestraAudio)
+    target_include_directories(ProjectHistoryCapTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME ProjectHistoryCapTest COMMAND ProjectHistoryCapTest)
+    set_tests_properties(ProjectHistoryCapTest PROPERTIES LABELS "integration;project;serialization")
+endif()
+
 # Takes manifest/snapshot regression test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerTest.cpp")
     add_executable(TakeManagerTest
