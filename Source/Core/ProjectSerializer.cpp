@@ -39,7 +39,16 @@ namespace {
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
     constexpr int PROJECT_VERSION_CURRENT = 2;
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
-    constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
+    constexpr size_t PROJECT_HISTORY_DEFAULT_MAX_ENTRIES = 50;
+    // Total on-disk cap for a project's .history directory. A large project can
+    // produce multi-MB snapshots, so a count-only limit (50) let history grow to
+    // GBs (issue #274). Newest snapshots are always kept; older ones are pruned
+    // once either the count or this byte budget is exceeded. Both limits are
+    // runtime-configurable via ProjectSerializer::setHistoryLimits().
+    constexpr uintmax_t PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES = 512ull * 1024ull * 1024ull; // 512 MB
+
+    std::atomic<size_t> g_historyMaxEntries{PROJECT_HISTORY_DEFAULT_MAX_ENTRIES};
+    std::atomic<uintmax_t> g_historyMaxTotalBytes{PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES};
     constexpr uintmax_t PROJECT_MAX_FILE_BYTES = 64ull * 1024ull * 1024ull;
     constexpr size_t PROJECT_MAX_SOURCES = 10000;
     constexpr size_t PROJECT_MAX_PATTERNS = 100000;
@@ -624,27 +633,58 @@ static void pruneHistorySnapshots(const std::filesystem::path& historyDir) {
     }
 
     std::vector<fs::directory_entry> entries;
+    uintmax_t totalBytes = 0;
     for (const auto& entry : fs::directory_iterator(historyDir, ec)) {
         if (ec) {
             return;
         }
         if (entry.is_regular_file(ec) && entry.path().extension() == ".aes") {
             entries.push_back(entry);
+            std::error_code sizeEc;
+            totalBytes += fs::file_size(entry.path(), sizeEc);
         }
     }
 
-    if (entries.size() <= PROJECT_HISTORY_MAX_ENTRIES) {
+    const size_t maxEntries = g_historyMaxEntries.load(std::memory_order_relaxed);
+    const uintmax_t maxTotalBytes = g_historyMaxTotalBytes.load(std::memory_order_relaxed);
+    if (entries.size() <= maxEntries && totalBytes <= maxTotalBytes) {
         return;
     }
 
+    // Newest first, so the retained prefix is always the most recent snapshots.
     std::sort(entries.begin(), entries.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
         std::error_code aec;
         std::error_code bec;
         return fs::last_write_time(a.path(), aec) > fs::last_write_time(b.path(), bec);
     });
 
-    for (size_t i = PROJECT_HISTORY_MAX_ENTRIES; i < entries.size(); ++i) {
+    // Keep snapshots while they fit both the count cap and the cumulative byte
+    // budget; remove everything past the first cap hit. The newest snapshot is
+    // always retained even if it alone exceeds the budget — losing it would
+    // defeat the point of writing history at all.
+    uintmax_t keptBytes = 0;
+    size_t kept = 0;
+    bool prunedForSize = false;
+    for (size_t i = 0; i < entries.size(); ++i) {
+        std::error_code sizeEc;
+        const uintmax_t entryBytes = fs::file_size(entries[i].path(), sizeEc);
+        const bool withinCount = kept < maxEntries;
+        const bool withinBytes = kept == 0 || keptBytes + entryBytes <= maxTotalBytes;
+        if (withinCount && withinBytes) {
+            keptBytes += entryBytes;
+            ++kept;
+            continue;
+        }
+        if (!withinBytes) {
+            prunedForSize = true;
+        }
         fs::remove(entries[i].path(), ec);
+    }
+
+    if (prunedForSize) {
+        Log::warning("Project history exceeded its " +
+                     std::to_string(maxTotalBytes / (1024ull * 1024ull)) +
+                     " MB budget; pruned oldest snapshots in " + historyDir.string());
     }
 }
 
@@ -1953,6 +1993,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     result.ok = true;
     Log::info("Project loaded: " + path);
     return result;
+}
+
+void ProjectSerializer::setHistoryLimits(size_t maxEntries, uintmax_t maxTotalBytes) {
+    // A zero cap would delete all history (or all-but-newest); guard against it
+    // so a misconfiguration can't silently disable history entirely.
+    g_historyMaxEntries.store(maxEntries == 0 ? PROJECT_HISTORY_DEFAULT_MAX_ENTRIES : maxEntries,
+                              std::memory_order_relaxed);
+    g_historyMaxTotalBytes.store(maxTotalBytes == 0 ? PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES : maxTotalBytes,
+                                 std::memory_order_relaxed);
 }
 
 std::string ProjectSerializer::getHistoryDirectory(const std::string& projectPath) {

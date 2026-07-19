@@ -141,4 +141,14 @@ public:
 
     static std::string getHistoryDirectory(const std::string& projectPath);
     static std::vector<HistoryEntry> listHistory(const std::string& projectPath);
+
+    /**
+     * @brief Configure the .history directory caps (issue #274).
+     *
+     * History snapshots are pruned so the directory keeps at most @p maxEntries
+     * snapshots AND stays within @p maxTotalBytes on disk, whichever is hit
+     * first; the newest snapshot is always retained. Defaults are 50 entries /
+     * 512 MB. Applies to subsequent saves. Thread-safe.
+     */
+    static void setHistoryLimits(size_t maxEntries, uintmax_t maxTotalBytes);
 };
