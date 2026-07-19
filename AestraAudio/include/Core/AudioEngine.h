@@ -35,6 +35,7 @@ namespace Aestra {
 namespace Audio {
 
 class UnitManager;
+struct AudioArsenalSnapshot;
 class PatternPlaybackEngine;
 class AuditionEngine;
 class PreviewEngine;
@@ -668,6 +669,34 @@ private:
 
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
+    // Block-stable values renderGraph() derives once per call and every
+    // per-track render reads. Bundled so renderTrack() takes them as one
+    // argument instead of re-loading atomics per track.
+    struct RenderContext {
+        uint32_t numFrames;
+        double* masterBuf;
+        size_t availableTracks;
+        uint64_t blockStart;
+        uint64_t blockEnd;
+        bool isPlaying;
+        bool anySolo;
+        uint32_t cachedSampleRate;
+        const ChannelSlotMap* cachedSlotMap;
+        ContinuousParamBuffer* cachedParams;
+        MeterSnapshotBuffer* cachedSnaps;
+        bool cachedPatternMode;
+        Interpolators::InterpolationQuality cachedInterpQuality;
+        const AudioArsenalSnapshot* unitSnapshot;
+        const PatternPlaybackEngine::UnitMidiRoute* unitMidiRoutes;
+        size_t unitMidiRouteCount;
+    };
+    // Renders one track of graph.topologicalOrder (audio thread only):
+    // params/automation, clips, unit render, effect chain, PDC, routing to
+    // master/destination/sends, meter publication. Verbatim extraction of the
+    // renderGraph() per-track loop body; srcActiveThisBlock is the loop-carried
+    // "any resampling happened" telemetry flag.
+    void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
+                     bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();

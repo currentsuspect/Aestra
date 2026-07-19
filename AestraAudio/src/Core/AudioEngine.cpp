@@ -2055,748 +2055,24 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const bool cachedPatternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
     const auto cachedInterpQuality = m_interpQuality.load(std::memory_order_relaxed);
 
+    const RenderContext ctx{numFrames,
+                            masterBuf,
+                            availableTracks,
+                            blockStart,
+                            blockEnd,
+                            isPlaying,
+                            anySolo,
+                            cachedSampleRate,
+                            cachedSlotMap,
+                            cachedParams,
+                            cachedSnaps,
+                            cachedPatternMode,
+                            cachedInterpQuality,
+                            unitSnapshot.get(),
+                            unitMidiRoutes.data(),
+                            unitMidiRouteCount};
     for (const size_t orderedIndex : graph.topologicalOrder) {
-        const auto& track = graph.tracks[orderedIndex];
-        const uint32_t trackIdx = track.trackIndex;
-        if (static_cast<size_t>(trackIdx) >= availableTracks) {
-            m_telemetry.incrementOverruns();
-            continue;
-        }
-        auto& state = ensureTrackState(trackIdx);
-
-        // Compute continuous params (slot-indexed) and apply to targets.
-        float faderDb = 0.0f;
-        float panParam = 0.0f;
-        float trimDb = 0.0f;
-        uint32_t slot = ChannelSlotMap::INVALID_SLOT;
-
-        auto* slotMap = cachedSlotMap;
-        if (slotMap) {
-            slot = slotMap->getSlotIndex(track.trackId);
-            auto* params = cachedParams;
-            if (slot != ChannelSlotMap::INVALID_SLOT && params) {
-                params->read(slot, faderDb, panParam, trimDb);
-            }
-        }
-
-        const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
-        const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-        const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
-
-        double volTarget = static_cast<double>(track.volume) * gain;
-        double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
-
-        // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
-        // interpolates on point beats directly, so tempo changes and UI point
-        // drags (which edit beats) stay musically aligned.
-        if (!track.automationCurves.empty() && cachedSampleRate > 0) {
-            uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-            double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
-            for (const auto& curve : track.automationCurves) {
-                if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                    volTarget = curve.getValueAtBeat(currentBeat);
-                } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                    panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
-                } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
-                    // Plugin-parameter automation. Internal-format plugins only:
-                    // their parameter storage is atomic, so a per-block
-                    // setParameter from this thread is lock-free and RT-safe.
-                    // Third-party formats are skipped until host param queues
-                    // exist (#467). Applied before the effect chain processes
-                    // this block, so the value is in effect for these frames.
-                    //
-                    // Smoothing policy: the *plugin* owns parameter smoothing.
-                    // setParameter only stores a target; each internal plugin's
-                    // process() ramps toward it — the same contract used for UI
-                    // knob moves. We deliberately hand the raw target over once
-                    // per block instead of ramping engine-side, so automation
-                    // and manual edits share one smoother and never cascade into
-                    // double-smoothing. Every internal effect honors this (Drift
-                    // was the last to gain per-sample Mix/Pitch smoothing).
-                    if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
-                        const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
-                        if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
-                            const float value = curve.getValueAtBeat(currentBeat);
-                            if (std::isfinite(value)) {
-                                slot.plugin->setParameter(curve.paramId, value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Skip early (solo suppression only).
-        // Muted tracks still render so meters keep moving, but they don't mix into master.
-        const bool muted = track.mute || state.mute;
-        const bool audibleEligible =
-            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
-        const bool processActive =
-            !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
-
-        // Initialize send gain smoothers when send count changes.
-        // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
-        // so we never resize here — only update the active entries.
-        const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
-        if (state.lastActiveSendCount != sendCount) {
-            state.lastActiveSendCount = sendCount;
-            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-                double targetL = 0.0;
-                double targetR = 0.0;
-                fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                              static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-                state.sendGainL[sendIndex].current = targetL;
-                state.sendGainL[sendIndex].target = targetL;
-                state.sendGainR[sendIndex].current = targetR;
-                state.sendGainR[sendIndex].target = targetR;
-            }
-        }
-
-        if (!muted) {
-            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-                if (track.sends[sendIndex].mute) {
-                    continue;
-                }
-                double targetL = 0.0;
-                double targetR = 0.0;
-                fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                              static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-                state.sendGainL[sendIndex].setTarget(targetL);
-                state.sendGainR[sendIndex].setTarget(targetR);
-                state.sendGainL[sendIndex].beginRamp(numFrames);
-                state.sendGainR[sendIndex].beginRamp(numFrames);
-            }
-        }
-
-        if (!processActive) {
-            auto* snaps = cachedSnaps;
-            if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
-                snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
-                snaps->writeSidechainPeak(slot, 0.0f);
-            }
-            continue;
-        }
-
-        // Buffers were already cleared up front so destination tracks can receive
-        // routed audio before their own clips/effects are processed.
-        auto& buffer = m_trackBuffersD[trackIdx];
-
-        // Check isPlaying inside loop to avoid brace wrapping issues
-        // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
-        bool patternMode = cachedPatternMode;
-
-        if (!patternMode) {
-            for (const auto& clip : track.clips) {
-                if (!isPlaying)
-                    continue;
-                if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
-                    continue;
-                }
-
-                const uint64_t start = std::max(blockStart, clip.startSample);
-                const uint64_t end = std::min(blockEnd, clip.endSample);
-                const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
-                uint32_t framesToRender = static_cast<uint32_t>(end - start);
-
-                // Sample rate ratio
-                const double outputRate = static_cast<double>(cachedSampleRate);
-                const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
-                const double ratio = srcRate / outputRate;
-
-                // Source position
-                const double outputFrameOffset = static_cast<double>(start - clip.startSample);
-                double phase = clip.sampleOffset + outputFrameOffset * ratio;
-
-                // Bounds
-                const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);
-                const uint64_t totalFrameCount = static_cast<uint64_t>(totalFrames);
-                if (totalFrames > 0 && phase >= static_cast<double>(totalFrames)) {
-                    continue;
-                }
-                if (totalFrames > 0) {
-                    const double remaining = static_cast<double>(totalFrames) - phase;
-                    const uint32_t maxFrames = static_cast<uint32_t>(remaining / ratio);
-                    framesToRender = std::min(framesToRender, maxFrames);
-                }
-                if (framesToRender == 0)
-                    continue;
-
-                const uint32_t channels = clip.channels;
-                const uint32_t stride = channels;
-
-                double* dstBase = buffer.data();
-                const float* data = clip.audioData;
-                double* dst = dstBase + static_cast<size_t>(localOffset) * 2;
-
-                const uint64_t fadeLen = CLIP_EDGE_FADE_SAMPLES;
-
-                // Fast path: matching sample rates - direct copy to double
-                if (std::abs(ratio - 1.0) < 1e-9) {
-                    const uint64_t srcStart = static_cast<uint64_t>(phase);
-                    const float* src = data + srcStart * stride;
-                    const double clipGain = static_cast<double>(clip.gain);
-                    for (uint32_t i = 0; i < framesToRender; ++i) {
-                        // Micro-fade at clip edges to avoid clicks/crackles.
-                        double fade = 1.0;
-                        const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-
-                        double sL, sR;
-                        if (channels == 1) {
-                            sL = static_cast<double>(src[i]);
-                            sR = sL;
-                        } else {
-                            sL = static_cast<double>(src[i * 2]);
-                            sR = static_cast<double>(src[i * 2 + 1]);
-                        }
-
-                        dst[i * 2] += sL * clipGain * fade;
-                        dst[i * 2 + 1] += sR * clipGain * fade;
-                    }
-                } else {
-                    srcActiveThisBlock = true;
-                    // Resampling - use selected quality, pre-compute end condition
-                    const double phaseEnd = static_cast<double>(totalFrames);
-
-                    if (channels == 1) {
-                        // Mono Resampling — use the same quality interpolators as stereo.
-                        // The mono path reads a single float per frame, so we duplicate to L/R.
-                        switch (cachedInterpQuality) {
-                        case Interpolators::InterpolationQuality::Cubic:
-                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                                double fade = 1.0;
-                                const uint64_t projectSample = start + i;
-                                if (fadeLen > 0) {
-                                    if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                                  static_cast<double>(fadeLen));
-                                    if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                                  static_cast<double>(fadeLen));
-                                }
-                                double clipGain = static_cast<double>(clip.gain);
-                                float sample = 0.0f;
-                                uint64_t idx = static_cast<uint64_t>(phase);
-                                double frac = phase - static_cast<double>(idx);
-                                // Catmull-Rom 4-point on mono data
-                                float s0 = (idx > 0) ? data[idx - 1] : data[idx];
-                                float s1 = data[idx];
-                                float s2 = (idx + 1 < totalFrameCount) ? data[idx + 1] : data[idx];
-                                float s3 = (idx + 2 < totalFrameCount) ? data[idx + 2] : s2;
-                                double f = frac;
-                                sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
-                                                                   (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
-                                                                   (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
-                                dst[i * 2] += sample * clipGain * fade;
-                                dst[i * 2 + 1] += sample * clipGain * fade;
-                                phase += ratio;
-                            }
-                            continue;
-                        case Interpolators::InterpolationQuality::Sinc8:
-                        case Interpolators::InterpolationQuality::Sinc16:
-                        case Interpolators::InterpolationQuality::Sinc32:
-                        case Interpolators::InterpolationQuality::Sinc64:
-                            // Sinc on mono: compute weighted sum, duplicate to L/R
-                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                                double fade = 1.0;
-                                const uint64_t projectSample = start + i;
-                                if (fadeLen > 0) {
-                                    if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                                  static_cast<double>(fadeLen));
-                                    if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                                  static_cast<double>(fadeLen));
-                                }
-                                double clipGain = static_cast<double>(clip.gain);
-                                double val =
-                                    Interpolators::sincInterpolateMono(data, totalFrames, phase, cachedInterpQuality);
-                                dst[i * 2] += val * clipGain * fade;
-                                dst[i * 2 + 1] += val * clipGain * fade;
-                                phase += ratio;
-                            }
-                            continue;
-                        default:
-                            // Linear fallback
-                            for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                                double fade = 1.0;
-                                const uint64_t projectSample = start + i;
-                                if (fadeLen > 0) {
-                                    if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                                  static_cast<double>(fadeLen));
-                                    if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                                  static_cast<double>(fadeLen));
-                                }
-                                double clipGain = static_cast<double>(clip.gain);
-                                uint64_t idx = static_cast<uint64_t>(phase);
-                                double frac = phase - static_cast<double>(idx);
-                                float s0 = data[idx];
-                                float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
-                                double val = s0 + frac * (s1 - s0);
-                                dst[i * 2] += val * clipGain * fade;
-                                dst[i * 2 + 1] += val * clipGain * fade;
-                                phase += ratio;
-                            }
-                            continue;
-                        }
-                    }
-
-                    // Select interpolator at block level, not per-sample
-                    switch (m_interpQuality.load(std::memory_order_relaxed)) {
-                    case Interpolators::InterpolationQuality::Cubic:
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            float outL, outR;
-                            Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                            }
-                            const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
-                            phase += ratio;
-                        }
-                        break;
-                    case Interpolators::InterpolationQuality::Sinc8:
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            float outL, outR;
-                            Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                            }
-                            const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
-                            phase += ratio;
-                        }
-                        break;
-                    case Interpolators::InterpolationQuality::Sinc16:
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            float outL, outR;
-                            Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                            }
-                            const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
-                            phase += ratio;
-                        }
-                        break;
-                    case Interpolators::InterpolationQuality::Sinc32:
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            float outL, outR;
-                            Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                            }
-                            const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
-                            phase += ratio;
-                        }
-                        break;
-                    case Interpolators::InterpolationQuality::Sinc64:
-                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            float outL, outR;
-                            Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                            double fade = 1.0;
-                            const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen) {
-                                    fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                                if (projectSample + fadeLen > clip.endSample) {
-                                    fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                           static_cast<double>(fadeLen)));
-                                }
-                            }
-                            const double clipGain = static_cast<double>(clip.gain);
-                            dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                            dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
-                            phase += ratio;
-                        }
-                        break;
-                    }
-                }
-            } // End pattern mode check
-        }
-
-        // === ANTIGRAVITY UNIT RENDER (v3.1) ===
-        // Render any units routed to this track
-        if (unitSnapshot) {
-            for (const auto& unit : unitSnapshot->units) {
-                if (static_cast<uint32_t>(unit.routeId) == trackIdx && unit.enabled && unit.plugin) {
-                    // Found unit for this track
-                    MidiBuffer* midiBuf = nullptr;
-                    for (size_t r = 0; r < unitMidiRouteCount; ++r) {
-                        if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
-                            midiBuf = unitMidiRoutes[r].midiBuffer;
-                            break;
-                        }
-                    }
-
-                    // Render to scratch
-                    // Note: Inputs are nullptr (Generator)
-                    if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
-                        // Should not happen (pre-sized in setBufferConfig); fail-safe
-                        continue;
-                    }
-
-                    float* outputs[2] = {m_scratchL.data(), m_scratchR.data()};
-
-                    // Process Plugin
-                    unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
-
-                    // Mix to Track Buffer (Double Precision)
-                    const double unitGain = static_cast<double>(unit.gain);
-                    double* dDst = buffer.data();
-                    for (uint32_t k = 0; k < numFrames; ++k) {
-                        dDst[k * 2] += static_cast<double>(outputs[0][k]) * unitGain;
-                        dDst[k * 2 + 1] += static_cast<double>(outputs[1][k]) * unitGain;
-                    }
-                }
-            }
-        }
-
-        // === Plugin Processing (EffectChain Snapshot) ===
-        float trackSidechainPeak = 0.0f;
-        if (track.effectChainSnapshot && track.effectChainSnapshot->getActiveSlotCount() > 0) {
-            // Check if scratches are large enough (should be from setBufferConfig)
-            if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
-                m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames &&
-                m_dryBuffer.size() >= static_cast<size_t>(numFrames) * 2) {
-                // 1. De-interleave Double -> Float
-                const double* dBuf = buffer.data();
-                const double* dScBuf = m_trackSidechainBuffersD[trackIdx].data();
-                float* fL = m_scratchL.data();
-                float* fR = m_scratchR.data();
-                float* scL = m_sidechainScratchL.data();
-                float* scR = m_sidechainScratchR.data();
-                // Allow vectorization
-                for (uint32_t k = 0; k < numFrames; ++k) {
-                    fL[k] = static_cast<float>(dBuf[k * 2]);
-                    fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
-                    scL[k] = static_cast<float>(dScBuf[k * 2]);
-                    scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
-                    trackSidechainPeak = std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
-                }
-
-                // 2. Process using snapshot (RT-safe)
-                float* channels[2] = {fL, fR};
-                const float* sidechainChannels[2] = {scL, scR};
-                track.effectChainSnapshot->process(channels, 2, numFrames, sidechainChannels, 2, m_dryBuffer.data());
-
-                // 3. Re-interleave Float -> Double
-                double* dOut = buffer.data();
-                for (uint32_t k = 0; k < numFrames; ++k) {
-                    dOut[k * 2] = static_cast<double>(fL[k]);
-                    dOut[k * 2 + 1] = static_cast<double>(fR[k]);
-                }
-            }
-        }
-
-        // === Apply Plugin Delay Compensation ===
-        // Compensation must apply to dry tracks too; those are often the tracks
-        // delayed to align with a parallel latent path elsewhere in the graph.
-        if (state.compensationEnabled && state.compensationDelaySamples > 0) {
-            const uint32_t delay = state.compensationDelaySamples;
-            const uint32_t capacity = static_cast<uint32_t>(state.compensationBuffer.size() / 2);
-            if (delay < capacity) {
-                double* dOut = buffer.data();
-                for (uint32_t k = 0; k < numFrames; ++k) {
-                    const uint32_t writePos = state.compensationWritePos;
-                    const uint32_t readPos = (writePos + capacity - delay) % capacity;
-
-                    state.compensationBuffer[writePos * 2] = static_cast<float>(dOut[k * 2]);
-                    state.compensationBuffer[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
-
-                    dOut[k * 2] = static_cast<double>(state.compensationBuffer[readPos * 2]);
-                    dOut[k * 2 + 1] = static_cast<double>(state.compensationBuffer[readPos * 2 + 1]);
-
-                    state.compensationWritePos = (writePos + 1) % capacity;
-                }
-            }
-        }
-
-        // Route post-fader output to the selected main destination and any audible sends.
-        double tL, tR;
-        fastPanGainsD(panTarget, volTarget, tL, tR);
-        state.gainL.setTarget(tL);
-        state.gainR.setTarget(tR);
-        state.gainL.beginRamp(numFrames);
-        state.gainR.beginRamp(numFrames);
-
-        const double* trackData = buffer.data();
-        double peakTrackL = 0.0;
-        double peakTrackR = 0.0;
-        double rmsAccTrackL = 0.0;
-        double rmsAccTrackR = 0.0;
-        double lowAccTrackL = 0.0;
-        double lowAccTrackR = 0.0;
-        double sumLRTrack = 0.0; // Correlation accumulator
-
-        auto* snaps = cachedSnaps;
-        const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
-        if (publishTrackSnapshot) {
-            snaps->writeSidechainPeak(slot, trackSidechainPeak);
-        }
-        double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
-        double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
-
-        const bool routesMainToMaster = track.mainOutputId == 0xFFFFFFFFu;
-        double* mainDestBuffer = nullptr;
-        if (!routesMainToMaster && audibleEligible && slotMap) {
-            const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
-            if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
-                (!anySolo || m_rtAudibleEligible[destSlot])) {
-                mainDestBuffer = m_trackBuffersD[destSlot].data();
-            }
-        }
-
-        bool hasPreFaderSend = std::any_of(track.sends.begin(), track.sends.end(),
-                                           [](const auto& send) { return !send.mute && !send.postFader; });
-        const size_t preFaderSize = static_cast<size_t>(numFrames) * 2u;
-        // Guard: only resize if capacity is already reserved by setBufferConfig().
-        // If the audio thread delivers a larger block than we reserved for,
-        // skip pre-fader sends rather than allocate on the RT thread.
-        if (hasPreFaderSend && state.preFaderBuffer.capacity() >= preFaderSize) {
-            state.preFaderBuffer.resize(preFaderSize);
-            std::memcpy(state.preFaderBuffer.data(), trackData, preFaderSize * sizeof(double));
-        } else if (hasPreFaderSend) {
-            // Capacity insufficient — pre-fader sends will be silenced for this block.
-            // This should never happen in normal operation (setBufferConfig reserves
-            // to maxBufferFrames). Flag for diagnostics.
-            hasPreFaderSend = false;
-        } else {
-            state.preFaderBuffer.clear();
-        }
-
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            // Apply smoothed gain
-            const double leftGain = state.gainL.next();
-            const double rightGain = state.gainR.next();
-
-            const double preL = trackData[i * 2];
-            const double preR = trackData[i * 2 + 1];
-            const double outL = preL * leftGain;
-            const double outR = preR * rightGain;
-
-            buffer[i * 2] = outL;
-            buffer[i * 2 + 1] = outR;
-
-            if (!muted) {
-                if (audibleEligible && routesMainToMaster) {
-                    masterBuf[i * 2] += outL;
-                    masterBuf[i * 2 + 1] += outR;
-                } else if (mainDestBuffer) {
-                    mainDestBuffer[i * 2] += outL;
-                    mainDestBuffer[i * 2 + 1] += outR;
-                }
-            }
-
-            const double absL = (outL >= 0.0) ? outL : -outL;
-            const double absR = (outR >= 0.0) ? outR : -outR;
-            if (absL > peakTrackL)
-                peakTrackL = absL;
-            if (absR > peakTrackR)
-                peakTrackR = absR;
-
-            if (publishTrackSnapshot) {
-                rmsAccTrackL += outL * outL;
-                rmsAccTrackR += outR * outR;
-
-                const double lpL = *lfStateL + m_meterLfCoeff * (outL - *lfStateL);
-                const double lpR = *lfStateR + m_meterLfCoeff * (outR - *lfStateR);
-                *lfStateL = lpL;
-                *lfStateR = lpR;
-                lowAccTrackL += lpL * lpL;
-                lowAccTrackR += lpR * lpR;
-                sumLRTrack += outL * outR;
-            }
-        }
-
-        if (!muted) {
-            // Use pre-allocated member scratch buffer (no heap allocation in RT path).
-            m_preparedRoutesScratch.clear();
-            const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
-            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-                const auto& send = track.sends[sendIndex];
-                if (send.mute) {
-                    continue;
-                }
-                if (!send.postFader && !hasPreFaderSend) {
-                    continue;
-                }
-
-                PreparedSendRoute route;
-                route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
-                route.gainL = &state.sendGainL[sendIndex];
-                route.gainR = &state.sendGainR[sendIndex];
-                // PDC v2 (P4b.3): look up the per-edge compensation slot for
-                // this send. nullptr means "no compensation"; treated as a fast
-                // path in the consume loop below.
-                route.edgeDelay =
-                    (sendIndex < state.sendEdgeDelays.size()) ? state.sendEdgeDelays[sendIndex].get() : nullptr;
-
-                if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
-                    const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
-                    if (scDestSlot != ChannelSlotMap::INVALID_SLOT && scDestSlot < availableTracks &&
-                        scDestSlot != trackIdx) {
-                        route.dest = m_trackSidechainBuffersD[scDestSlot].data();
-                        m_preparedRoutesScratch.push_back(route);
-                    }
-                    continue;
-                }
-
-                if (!audibleEligible) {
-                    continue;
-                }
-
-                if (send.targetChannelId == 0xFFFFFFFFu) {
-                    route.dest = masterBuf;
-                    m_preparedRoutesScratch.push_back(route);
-                    continue;
-                }
-
-                if (!slotMap) {
-                    continue;
-                }
-
-                const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
-                if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
-                    sendDestSlot != trackIdx && (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
-                    route.dest = m_trackBuffersD[sendDestSlot].data();
-                    m_preparedRoutesScratch.push_back(route);
-                }
-            }
-
-            for (const auto& route : m_preparedRoutesScratch) {
-                // Fast path: no per-edge compensation. v1 behavior.
-                EdgeDelayState* const edge = route.edgeDelay;
-                const uint32_t edgeComp = edge ? edge->compensationSamples.load(std::memory_order_acquire) : 0u;
-                if (!edge || edgeComp == 0u) {
-                    for (uint32_t i = 0; i < numFrames; ++i) {
-                        const double sendGainL = route.gainL->next();
-                        const double sendGainR = route.gainR->next();
-                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
-                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
-                    }
-                    continue;
-                }
-
-                // PDC v2 (P4b.3): per-edge ring-buffer delay path.
-                // Acquire the buffer pointer + mask in one block-stable snapshot.
-                float* const buf = edge->bufferPtr.load(std::memory_order_acquire);
-                const uint32_t mask = edge->capacityMask.load(std::memory_order_acquire);
-                if (!buf || mask == 0u) {
-                    // Buffer not yet committed; fall back to direct mix this block.
-                    for (uint32_t i = 0; i < numFrames; ++i) {
-                        const double sendGainL = route.gainL->next();
-                        const double sendGainR = route.gainR->next();
-                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
-                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
-                    }
-                    continue;
-                }
-                const uint32_t capacityFrames = mask + 1u;
-                if (edgeComp >= capacityFrames) {
-                    // Defensive: requested delay exceeds buffer (should not
-                    // happen — off-RT sizes buffer to delay + headroom). Fall
-                    // back to direct mix rather than read garbage.
-                    for (uint32_t i = 0; i < numFrames; ++i) {
-                        const double sendGainL = route.gainL->next();
-                        const double sendGainR = route.gainR->next();
-                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
-                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
-                    }
-                    continue;
-                }
-                uint32_t writePos = edge->writePos.load(std::memory_order_relaxed);
-                for (uint32_t i = 0; i < numFrames; ++i) {
-                    const double sendGainL = route.gainL->next();
-                    const double sendGainR = route.gainR->next();
-                    const uint32_t w = writePos & mask;
-                    buf[w * 2] = static_cast<float>(route.source[i * 2]);
-                    buf[w * 2 + 1] = static_cast<float>(route.source[i * 2 + 1]);
-                    const uint32_t r = (writePos + capacityFrames - edgeComp) & mask;
-                    const double delayedL = static_cast<double>(buf[r * 2]);
-                    const double delayedR = static_cast<double>(buf[r * 2 + 1]);
-                    route.dest[i * 2] += delayedL * sendGainL;
-                    route.dest[i * 2 + 1] += delayedR * sendGainR;
-                    ++writePos;
-                }
-                edge->writePos.store(writePos, std::memory_order_release);
-            }
-        }
-
-        if (publishTrackSnapshot && numFrames > 0) {
-            const float peakL = static_cast<float>(peakTrackL);
-            const float peakR = static_cast<float>(peakTrackR);
-            const double invN = 1.0 / static_cast<double>(numFrames);
-            const float rmsL = static_cast<float>(std::sqrt(rmsAccTrackL * invN));
-            const float rmsR = static_cast<float>(std::sqrt(rmsAccTrackR * invN));
-            const float lowL = static_cast<float>(std::sqrt(lowAccTrackL * invN));
-            const float lowR = static_cast<float>(std::sqrt(lowAccTrackR * invN));
-
-            float trackCorr = 0.0f;
-            const double den = std::sqrt(rmsAccTrackL * rmsAccTrackR); // rmsAcc is sumSq
-            if (den > 1e-9) {
-                trackCorr = static_cast<float>(sumLRTrack / den);
-            }
-
-            snaps->writeLevels(slot, peakL, peakR, rmsL, rmsR, lowL, lowR, trackCorr);
-            if (peakL >= 1.0f || peakR >= 1.0f) {
-                snaps->setClip(slot, peakL >= 1.0f, peakR >= 1.0f);
-            }
-        }
+        renderTrack(graph, orderedIndex, ctx, srcActiveThisBlock);
     }
 
     if (unitSnapshot) {
@@ -2829,6 +2105,770 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     if (srcActiveThisBlock) {
         m_telemetry.incrementSrcActiveBlocks();
+    }
+}
+
+void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
+                              bool& srcActiveThisBlock) {
+    // Unpack the block-stable render context under the names this body has
+    // always used; renderGraph() derives these once per block.
+    const uint32_t numFrames = ctx.numFrames;
+    double* const masterBuf = ctx.masterBuf;
+    const size_t availableTracks = ctx.availableTracks;
+    const uint64_t blockStart = ctx.blockStart;
+    const uint64_t blockEnd = ctx.blockEnd;
+    const bool isPlaying = ctx.isPlaying;
+    const bool anySolo = ctx.anySolo;
+    const uint32_t cachedSampleRate = ctx.cachedSampleRate;
+    const ChannelSlotMap* const cachedSlotMap = ctx.cachedSlotMap;
+    ContinuousParamBuffer* const cachedParams = ctx.cachedParams;
+    MeterSnapshotBuffer* const cachedSnaps = ctx.cachedSnaps;
+    const bool cachedPatternMode = ctx.cachedPatternMode;
+    const Interpolators::InterpolationQuality cachedInterpQuality = ctx.cachedInterpQuality;
+    const AudioArsenalSnapshot* const unitSnapshot = ctx.unitSnapshot;
+    const PatternPlaybackEngine::UnitMidiRoute* const unitMidiRoutes = ctx.unitMidiRoutes;
+    const size_t unitMidiRouteCount = ctx.unitMidiRouteCount;
+
+    const auto& track = graph.tracks[orderedIndex];
+    const uint32_t trackIdx = track.trackIndex;
+    if (static_cast<size_t>(trackIdx) >= availableTracks) {
+        m_telemetry.incrementOverruns();
+        return;
+    }
+    auto& state = ensureTrackState(trackIdx);
+
+    // Compute continuous params (slot-indexed) and apply to targets.
+    float faderDb = 0.0f;
+    float panParam = 0.0f;
+    float trimDb = 0.0f;
+    uint32_t slot = ChannelSlotMap::INVALID_SLOT;
+
+    auto* slotMap = cachedSlotMap;
+    if (slotMap) {
+        slot = slotMap->getSlotIndex(track.trackId);
+        auto* params = cachedParams;
+        if (slot != ChannelSlotMap::INVALID_SLOT && params) {
+            params->read(slot, faderDb, panParam, trimDb);
+        }
+    }
+
+    const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
+    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+    const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+
+    double volTarget = static_cast<double>(track.volume) * gain;
+    double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
+
+    // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
+    // interpolates on point beats directly, so tempo changes and UI point
+    // drags (which edit beats) stay musically aligned.
+    if (!track.automationCurves.empty() && cachedSampleRate > 0) {
+        uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
+        double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
+        for (const auto& curve : track.automationCurves) {
+            if (curve.getAutomationTarget() == AutomationTarget::Volume) {
+                volTarget = curve.getValueAtBeat(currentBeat);
+            } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
+                panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+            } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
+                // Plugin-parameter automation. Internal-format plugins only:
+                // their parameter storage is atomic, so a per-block
+                // setParameter from this thread is lock-free and RT-safe.
+                // Third-party formats are skipped until host param queues
+                // exist (#467). Applied before the effect chain processes
+                // this block, so the value is in effect for these frames.
+                //
+                // Smoothing policy: the *plugin* owns parameter smoothing.
+                // setParameter only stores a target; each internal plugin's
+                // process() ramps toward it — the same contract used for UI
+                // knob moves. We deliberately hand the raw target over once
+                // per block instead of ramping engine-side, so automation
+                // and manual edits share one smoother and never cascade into
+                // double-smoothing. Every internal effect honors this (Drift
+                // was the last to gain per-sample Mix/Pitch smoothing).
+                if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
+                    const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
+                    if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
+                        const float value = curve.getValueAtBeat(currentBeat);
+                        if (std::isfinite(value)) {
+                            slot.plugin->setParameter(curve.paramId, value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Skip early (solo suppression only).
+    // Muted tracks still render so meters keep moving, but they don't mix into master.
+    const bool muted = track.mute || state.mute;
+    const bool audibleEligible =
+        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
+    const bool processActive =
+        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
+
+    // Initialize send gain smoothers when send count changes.
+    // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
+    // so we never resize here — only update the active entries.
+    const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
+    if (state.lastActiveSendCount != sendCount) {
+        state.lastActiveSendCount = sendCount;
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+            double targetL = 0.0;
+            double targetR = 0.0;
+            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            state.sendGainL[sendIndex].current = targetL;
+            state.sendGainL[sendIndex].target = targetL;
+            state.sendGainR[sendIndex].current = targetR;
+            state.sendGainR[sendIndex].target = targetR;
+        }
+    }
+
+    if (!muted) {
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+            if (track.sends[sendIndex].mute) {
+                continue;
+            }
+            double targetL = 0.0;
+            double targetR = 0.0;
+            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            state.sendGainL[sendIndex].setTarget(targetL);
+            state.sendGainR[sendIndex].setTarget(targetR);
+            state.sendGainL[sendIndex].beginRamp(numFrames);
+            state.sendGainR[sendIndex].beginRamp(numFrames);
+        }
+    }
+
+    if (!processActive) {
+        auto* snaps = cachedSnaps;
+        if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
+            snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
+            snaps->writeSidechainPeak(slot, 0.0f);
+        }
+        return;
+    }
+
+    // Buffers were already cleared up front so destination tracks can receive
+    // routed audio before their own clips/effects are processed.
+    auto& buffer = m_trackBuffersD[trackIdx];
+
+    // Check isPlaying inside loop to avoid brace wrapping issues
+    // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
+    bool patternMode = cachedPatternMode;
+
+    if (!patternMode) {
+        for (const auto& clip : track.clips) {
+            if (!isPlaying)
+                continue;
+            if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
+                continue;
+            }
+
+            const uint64_t start = std::max(blockStart, clip.startSample);
+            const uint64_t end = std::min(blockEnd, clip.endSample);
+            const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
+            uint32_t framesToRender = static_cast<uint32_t>(end - start);
+
+            // Sample rate ratio
+            const double outputRate = static_cast<double>(cachedSampleRate);
+            const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
+            const double ratio = srcRate / outputRate;
+
+            // Source position
+            const double outputFrameOffset = static_cast<double>(start - clip.startSample);
+            double phase = clip.sampleOffset + outputFrameOffset * ratio;
+
+            // Bounds
+            const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);
+            const uint64_t totalFrameCount = static_cast<uint64_t>(totalFrames);
+            if (totalFrames > 0 && phase >= static_cast<double>(totalFrames)) {
+                continue;
+            }
+            if (totalFrames > 0) {
+                const double remaining = static_cast<double>(totalFrames) - phase;
+                const uint32_t maxFrames = static_cast<uint32_t>(remaining / ratio);
+                framesToRender = std::min(framesToRender, maxFrames);
+            }
+            if (framesToRender == 0)
+                continue;
+
+            const uint32_t channels = clip.channels;
+            const uint32_t stride = channels;
+
+            double* dstBase = buffer.data();
+            const float* data = clip.audioData;
+            double* dst = dstBase + static_cast<size_t>(localOffset) * 2;
+
+            const uint64_t fadeLen = CLIP_EDGE_FADE_SAMPLES;
+
+            // Fast path: matching sample rates - direct copy to double
+            if (std::abs(ratio - 1.0) < 1e-9) {
+                const uint64_t srcStart = static_cast<uint64_t>(phase);
+                const float* src = data + srcStart * stride;
+                const double clipGain = static_cast<double>(clip.gain);
+                for (uint32_t i = 0; i < framesToRender; ++i) {
+                    // Micro-fade at clip edges to avoid clicks/crackles.
+                    double fade = 1.0;
+                    const uint64_t projectSample = start + i;
+                    if (fadeLen > 0) {
+                        if (projectSample < clip.startSample + fadeLen) {
+                            fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                   static_cast<double>(fadeLen)));
+                        }
+                        if (projectSample + fadeLen > clip.endSample) {
+                            fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                   static_cast<double>(fadeLen)));
+                        }
+                    }
+
+                    double sL, sR;
+                    if (channels == 1) {
+                        sL = static_cast<double>(src[i]);
+                        sR = sL;
+                    } else {
+                        sL = static_cast<double>(src[i * 2]);
+                        sR = static_cast<double>(src[i * 2 + 1]);
+                    }
+
+                    dst[i * 2] += sL * clipGain * fade;
+                    dst[i * 2 + 1] += sR * clipGain * fade;
+                }
+            } else {
+                srcActiveThisBlock = true;
+                // Resampling - use selected quality, pre-compute end condition
+                const double phaseEnd = static_cast<double>(totalFrames);
+
+                if (channels == 1) {
+                    // Mono Resampling — use the same quality interpolators as stereo.
+                    // The mono path reads a single float per frame, so we duplicate to L/R.
+                    switch (cachedInterpQuality) {
+                    case Interpolators::InterpolationQuality::Cubic:
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen)
+                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                              static_cast<double>(fadeLen));
+                                if (projectSample + fadeLen > clip.endSample)
+                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                              static_cast<double>(fadeLen));
+                            }
+                            double clipGain = static_cast<double>(clip.gain);
+                            float sample = 0.0f;
+                            uint64_t idx = static_cast<uint64_t>(phase);
+                            double frac = phase - static_cast<double>(idx);
+                            // Catmull-Rom 4-point on mono data
+                            float s0 = (idx > 0) ? data[idx - 1] : data[idx];
+                            float s1 = data[idx];
+                            float s2 = (idx + 1 < totalFrameCount) ? data[idx + 1] : data[idx];
+                            float s3 = (idx + 2 < totalFrameCount) ? data[idx + 2] : s2;
+                            double f = frac;
+                            sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
+                                                               (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
+                                                               (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
+                            dst[i * 2] += sample * clipGain * fade;
+                            dst[i * 2 + 1] += sample * clipGain * fade;
+                            phase += ratio;
+                        }
+                        continue;
+                    case Interpolators::InterpolationQuality::Sinc8:
+                    case Interpolators::InterpolationQuality::Sinc16:
+                    case Interpolators::InterpolationQuality::Sinc32:
+                    case Interpolators::InterpolationQuality::Sinc64:
+                        // Sinc on mono: compute weighted sum, duplicate to L/R
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen)
+                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                              static_cast<double>(fadeLen));
+                                if (projectSample + fadeLen > clip.endSample)
+                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                              static_cast<double>(fadeLen));
+                            }
+                            double clipGain = static_cast<double>(clip.gain);
+                            double val =
+                                Interpolators::sincInterpolateMono(data, totalFrames, phase, cachedInterpQuality);
+                            dst[i * 2] += val * clipGain * fade;
+                            dst[i * 2 + 1] += val * clipGain * fade;
+                            phase += ratio;
+                        }
+                        continue;
+                    default:
+                        // Linear fallback
+                        for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                            double fade = 1.0;
+                            const uint64_t projectSample = start + i;
+                            if (fadeLen > 0) {
+                                if (projectSample < clip.startSample + fadeLen)
+                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                              static_cast<double>(fadeLen));
+                                if (projectSample + fadeLen > clip.endSample)
+                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                              static_cast<double>(fadeLen));
+                            }
+                            double clipGain = static_cast<double>(clip.gain);
+                            uint64_t idx = static_cast<uint64_t>(phase);
+                            double frac = phase - static_cast<double>(idx);
+                            float s0 = data[idx];
+                            float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
+                            double val = s0 + frac * (s1 - s0);
+                            dst[i * 2] += val * clipGain * fade;
+                            dst[i * 2 + 1] += val * clipGain * fade;
+                            phase += ratio;
+                        }
+                        continue;
+                    }
+                }
+
+                // Select interpolator at block level, not per-sample
+                switch (m_interpQuality.load(std::memory_order_relaxed)) {
+                case Interpolators::InterpolationQuality::Cubic:
+                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                        float outL, outR;
+                        Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
+                        double fade = 1.0;
+                        const uint64_t projectSample = start + i;
+                        if (fadeLen > 0) {
+                            if (projectSample < clip.startSample + fadeLen) {
+                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                            if (projectSample + fadeLen > clip.endSample) {
+                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                        }
+                        const double clipGain = static_cast<double>(clip.gain);
+                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        phase += ratio;
+                    }
+                    break;
+                case Interpolators::InterpolationQuality::Sinc8:
+                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                        float outL, outR;
+                        Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                        double fade = 1.0;
+                        const uint64_t projectSample = start + i;
+                        if (fadeLen > 0) {
+                            if (projectSample < clip.startSample + fadeLen) {
+                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                            if (projectSample + fadeLen > clip.endSample) {
+                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                        }
+                        const double clipGain = static_cast<double>(clip.gain);
+                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        phase += ratio;
+                    }
+                    break;
+                case Interpolators::InterpolationQuality::Sinc16:
+                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                        float outL, outR;
+                        Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                        double fade = 1.0;
+                        const uint64_t projectSample = start + i;
+                        if (fadeLen > 0) {
+                            if (projectSample < clip.startSample + fadeLen) {
+                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                            if (projectSample + fadeLen > clip.endSample) {
+                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                        }
+                        const double clipGain = static_cast<double>(clip.gain);
+                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        phase += ratio;
+                    }
+                    break;
+                case Interpolators::InterpolationQuality::Sinc32:
+                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                        float outL, outR;
+                        Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                        double fade = 1.0;
+                        const uint64_t projectSample = start + i;
+                        if (fadeLen > 0) {
+                            if (projectSample < clip.startSample + fadeLen) {
+                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                            if (projectSample + fadeLen > clip.endSample) {
+                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                        }
+                        const double clipGain = static_cast<double>(clip.gain);
+                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        phase += ratio;
+                    }
+                    break;
+                case Interpolators::InterpolationQuality::Sinc64:
+                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                        float outL, outR;
+                        Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
+                        double fade = 1.0;
+                        const uint64_t projectSample = start + i;
+                        if (fadeLen > 0) {
+                            if (projectSample < clip.startSample + fadeLen) {
+                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                            if (projectSample + fadeLen > clip.endSample) {
+                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
+                                                       static_cast<double>(fadeLen)));
+                            }
+                        }
+                        const double clipGain = static_cast<double>(clip.gain);
+                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        phase += ratio;
+                    }
+                    break;
+                }
+            }
+        } // End pattern mode check
+    }
+
+    // === ANTIGRAVITY UNIT RENDER (v3.1) ===
+    // Render any units routed to this track
+    if (unitSnapshot) {
+        for (const auto& unit : unitSnapshot->units) {
+            if (static_cast<uint32_t>(unit.routeId) == trackIdx && unit.enabled && unit.plugin) {
+                // Found unit for this track
+                MidiBuffer* midiBuf = nullptr;
+                for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+                    if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
+                        midiBuf = unitMidiRoutes[r].midiBuffer;
+                        break;
+                    }
+                }
+
+                // Render to scratch
+                // Note: Inputs are nullptr (Generator)
+                if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
+                    // Should not happen (pre-sized in setBufferConfig); fail-safe
+                    continue;
+                }
+
+                float* outputs[2] = {m_scratchL.data(), m_scratchR.data()};
+
+                // Process Plugin
+                unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
+
+                // Mix to Track Buffer (Double Precision)
+                const double unitGain = static_cast<double>(unit.gain);
+                double* dDst = buffer.data();
+                for (uint32_t k = 0; k < numFrames; ++k) {
+                    dDst[k * 2] += static_cast<double>(outputs[0][k]) * unitGain;
+                    dDst[k * 2 + 1] += static_cast<double>(outputs[1][k]) * unitGain;
+                }
+            }
+        }
+    }
+
+    // === Plugin Processing (EffectChain Snapshot) ===
+    float trackSidechainPeak = 0.0f;
+    if (track.effectChainSnapshot && track.effectChainSnapshot->getActiveSlotCount() > 0) {
+        // Check if scratches are large enough (should be from setBufferConfig)
+        if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
+            m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames &&
+            m_dryBuffer.size() >= static_cast<size_t>(numFrames) * 2) {
+            // 1. De-interleave Double -> Float
+            const double* dBuf = buffer.data();
+            const double* dScBuf = m_trackSidechainBuffersD[trackIdx].data();
+            float* fL = m_scratchL.data();
+            float* fR = m_scratchR.data();
+            float* scL = m_sidechainScratchL.data();
+            float* scR = m_sidechainScratchR.data();
+            // Allow vectorization
+            for (uint32_t k = 0; k < numFrames; ++k) {
+                fL[k] = static_cast<float>(dBuf[k * 2]);
+                fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
+                scL[k] = static_cast<float>(dScBuf[k * 2]);
+                scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
+                trackSidechainPeak = std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
+            }
+
+            // 2. Process using snapshot (RT-safe)
+            float* channels[2] = {fL, fR};
+            const float* sidechainChannels[2] = {scL, scR};
+            track.effectChainSnapshot->process(channels, 2, numFrames, sidechainChannels, 2, m_dryBuffer.data());
+
+            // 3. Re-interleave Float -> Double
+            double* dOut = buffer.data();
+            for (uint32_t k = 0; k < numFrames; ++k) {
+                dOut[k * 2] = static_cast<double>(fL[k]);
+                dOut[k * 2 + 1] = static_cast<double>(fR[k]);
+            }
+        }
+    }
+
+    // === Apply Plugin Delay Compensation ===
+    // Compensation must apply to dry tracks too; those are often the tracks
+    // delayed to align with a parallel latent path elsewhere in the graph.
+    if (state.compensationEnabled && state.compensationDelaySamples > 0) {
+        const uint32_t delay = state.compensationDelaySamples;
+        const uint32_t capacity = static_cast<uint32_t>(state.compensationBuffer.size() / 2);
+        if (delay < capacity) {
+            double* dOut = buffer.data();
+            for (uint32_t k = 0; k < numFrames; ++k) {
+                const uint32_t writePos = state.compensationWritePos;
+                const uint32_t readPos = (writePos + capacity - delay) % capacity;
+
+                state.compensationBuffer[writePos * 2] = static_cast<float>(dOut[k * 2]);
+                state.compensationBuffer[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
+
+                dOut[k * 2] = static_cast<double>(state.compensationBuffer[readPos * 2]);
+                dOut[k * 2 + 1] = static_cast<double>(state.compensationBuffer[readPos * 2 + 1]);
+
+                state.compensationWritePos = (writePos + 1) % capacity;
+            }
+        }
+    }
+
+    // Route post-fader output to the selected main destination and any audible sends.
+    double tL, tR;
+    fastPanGainsD(panTarget, volTarget, tL, tR);
+    state.gainL.setTarget(tL);
+    state.gainR.setTarget(tR);
+    state.gainL.beginRamp(numFrames);
+    state.gainR.beginRamp(numFrames);
+
+    const double* trackData = buffer.data();
+    double peakTrackL = 0.0;
+    double peakTrackR = 0.0;
+    double rmsAccTrackL = 0.0;
+    double rmsAccTrackR = 0.0;
+    double lowAccTrackL = 0.0;
+    double lowAccTrackR = 0.0;
+    double sumLRTrack = 0.0; // Correlation accumulator
+
+    auto* snaps = cachedSnaps;
+    const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
+    if (publishTrackSnapshot) {
+        snaps->writeSidechainPeak(slot, trackSidechainPeak);
+    }
+    double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
+    double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
+
+    const bool routesMainToMaster = track.mainOutputId == 0xFFFFFFFFu;
+    double* mainDestBuffer = nullptr;
+    if (!routesMainToMaster && audibleEligible && slotMap) {
+        const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
+        if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
+            (!anySolo || m_rtAudibleEligible[destSlot])) {
+            mainDestBuffer = m_trackBuffersD[destSlot].data();
+        }
+    }
+
+    bool hasPreFaderSend = std::any_of(track.sends.begin(), track.sends.end(),
+                                       [](const auto& send) { return !send.mute && !send.postFader; });
+    const size_t preFaderSize = static_cast<size_t>(numFrames) * 2u;
+    // Guard: only resize if capacity is already reserved by setBufferConfig().
+    // If the audio thread delivers a larger block than we reserved for,
+    // skip pre-fader sends rather than allocate on the RT thread.
+    if (hasPreFaderSend && state.preFaderBuffer.capacity() >= preFaderSize) {
+        state.preFaderBuffer.resize(preFaderSize);
+        std::memcpy(state.preFaderBuffer.data(), trackData, preFaderSize * sizeof(double));
+    } else if (hasPreFaderSend) {
+        // Capacity insufficient — pre-fader sends will be silenced for this block.
+        // This should never happen in normal operation (setBufferConfig reserves
+        // to maxBufferFrames). Flag for diagnostics.
+        hasPreFaderSend = false;
+    } else {
+        state.preFaderBuffer.clear();
+    }
+
+    for (uint32_t i = 0; i < numFrames; ++i) {
+        // Apply smoothed gain
+        const double leftGain = state.gainL.next();
+        const double rightGain = state.gainR.next();
+
+        const double preL = trackData[i * 2];
+        const double preR = trackData[i * 2 + 1];
+        const double outL = preL * leftGain;
+        const double outR = preR * rightGain;
+
+        buffer[i * 2] = outL;
+        buffer[i * 2 + 1] = outR;
+
+        if (!muted) {
+            if (audibleEligible && routesMainToMaster) {
+                masterBuf[i * 2] += outL;
+                masterBuf[i * 2 + 1] += outR;
+            } else if (mainDestBuffer) {
+                mainDestBuffer[i * 2] += outL;
+                mainDestBuffer[i * 2 + 1] += outR;
+            }
+        }
+
+        const double absL = (outL >= 0.0) ? outL : -outL;
+        const double absR = (outR >= 0.0) ? outR : -outR;
+        if (absL > peakTrackL)
+            peakTrackL = absL;
+        if (absR > peakTrackR)
+            peakTrackR = absR;
+
+        if (publishTrackSnapshot) {
+            rmsAccTrackL += outL * outL;
+            rmsAccTrackR += outR * outR;
+
+            const double lpL = *lfStateL + m_meterLfCoeff * (outL - *lfStateL);
+            const double lpR = *lfStateR + m_meterLfCoeff * (outR - *lfStateR);
+            *lfStateL = lpL;
+            *lfStateR = lpR;
+            lowAccTrackL += lpL * lpL;
+            lowAccTrackR += lpR * lpR;
+            sumLRTrack += outL * outR;
+        }
+    }
+
+    if (!muted) {
+        // Use pre-allocated member scratch buffer (no heap allocation in RT path).
+        m_preparedRoutesScratch.clear();
+        const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+            const auto& send = track.sends[sendIndex];
+            if (send.mute) {
+                continue;
+            }
+            if (!send.postFader && !hasPreFaderSend) {
+                continue;
+            }
+
+            PreparedSendRoute route;
+            route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
+            route.gainL = &state.sendGainL[sendIndex];
+            route.gainR = &state.sendGainR[sendIndex];
+            // PDC v2 (P4b.3): look up the per-edge compensation slot for
+            // this send. nullptr means "no compensation"; treated as a fast
+            // path in the consume loop below.
+            route.edgeDelay =
+                (sendIndex < state.sendEdgeDelays.size()) ? state.sendEdgeDelays[sendIndex].get() : nullptr;
+
+            if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
+                const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+                if (scDestSlot != ChannelSlotMap::INVALID_SLOT && scDestSlot < availableTracks &&
+                    scDestSlot != trackIdx) {
+                    route.dest = m_trackSidechainBuffersD[scDestSlot].data();
+                    m_preparedRoutesScratch.push_back(route);
+                }
+                continue;
+            }
+
+            if (!audibleEligible) {
+                continue;
+            }
+
+            if (send.targetChannelId == 0xFFFFFFFFu) {
+                route.dest = masterBuf;
+                m_preparedRoutesScratch.push_back(route);
+                continue;
+            }
+
+            if (!slotMap) {
+                continue;
+            }
+
+            const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
+            if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
+                sendDestSlot != trackIdx && (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
+                route.dest = m_trackBuffersD[sendDestSlot].data();
+                m_preparedRoutesScratch.push_back(route);
+            }
+        }
+
+        for (const auto& route : m_preparedRoutesScratch) {
+            // Fast path: no per-edge compensation. v1 behavior.
+            EdgeDelayState* const edge = route.edgeDelay;
+            const uint32_t edgeComp = edge ? edge->compensationSamples.load(std::memory_order_acquire) : 0u;
+            if (!edge || edgeComp == 0u) {
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    const double sendGainL = route.gainL->next();
+                    const double sendGainR = route.gainR->next();
+                    route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                    route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                }
+                continue;
+            }
+
+            // PDC v2 (P4b.3): per-edge ring-buffer delay path.
+            // Acquire the buffer pointer + mask in one block-stable snapshot.
+            float* const buf = edge->bufferPtr.load(std::memory_order_acquire);
+            const uint32_t mask = edge->capacityMask.load(std::memory_order_acquire);
+            if (!buf || mask == 0u) {
+                // Buffer not yet committed; fall back to direct mix this block.
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    const double sendGainL = route.gainL->next();
+                    const double sendGainR = route.gainR->next();
+                    route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                    route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                }
+                continue;
+            }
+            const uint32_t capacityFrames = mask + 1u;
+            if (edgeComp >= capacityFrames) {
+                // Defensive: requested delay exceeds buffer (should not
+                // happen — off-RT sizes buffer to delay + headroom). Fall
+                // back to direct mix rather than read garbage.
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    const double sendGainL = route.gainL->next();
+                    const double sendGainR = route.gainR->next();
+                    route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                    route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                }
+                continue;
+            }
+            uint32_t writePos = edge->writePos.load(std::memory_order_relaxed);
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                const double sendGainL = route.gainL->next();
+                const double sendGainR = route.gainR->next();
+                const uint32_t w = writePos & mask;
+                buf[w * 2] = static_cast<float>(route.source[i * 2]);
+                buf[w * 2 + 1] = static_cast<float>(route.source[i * 2 + 1]);
+                const uint32_t r = (writePos + capacityFrames - edgeComp) & mask;
+                const double delayedL = static_cast<double>(buf[r * 2]);
+                const double delayedR = static_cast<double>(buf[r * 2 + 1]);
+                route.dest[i * 2] += delayedL * sendGainL;
+                route.dest[i * 2 + 1] += delayedR * sendGainR;
+                ++writePos;
+            }
+            edge->writePos.store(writePos, std::memory_order_release);
+        }
+    }
+
+    if (publishTrackSnapshot && numFrames > 0) {
+        const float peakL = static_cast<float>(peakTrackL);
+        const float peakR = static_cast<float>(peakTrackR);
+        const double invN = 1.0 / static_cast<double>(numFrames);
+        const float rmsL = static_cast<float>(std::sqrt(rmsAccTrackL * invN));
+        const float rmsR = static_cast<float>(std::sqrt(rmsAccTrackR * invN));
+        const float lowL = static_cast<float>(std::sqrt(lowAccTrackL * invN));
+        const float lowR = static_cast<float>(std::sqrt(lowAccTrackR * invN));
+
+        float trackCorr = 0.0f;
+        const double den = std::sqrt(rmsAccTrackL * rmsAccTrackR); // rmsAcc is sumSq
+        if (den > 1e-9) {
+            trackCorr = static_cast<float>(sumLRTrack / den);
+        }
+
+        snaps->writeLevels(slot, peakL, peakR, rmsL, rmsR, lowL, lowR, trackCorr);
+        if (peakL >= 1.0f || peakR >= 1.0f) {
+            snaps->setClip(slot, peakL >= 1.0f, peakR >= 1.0f);
+        }
     }
 }
 
