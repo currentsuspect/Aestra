@@ -2,6 +2,7 @@
 #pragma once
 
 #include "../../AestraPlat/include/AestraPlatform.h"
+#include "NUICursorService.h"
 #include "NUITypes.h"
 #include <functional>
 
@@ -117,7 +118,32 @@ public:
     // Mouse Capture
     void setMouseCapture(bool captured);
 
+    /**
+     * Single owner of infinite-drag cursor capture (hide + confine + warp-back).
+     * Continuous parameter controls call this instead of hand-rolling
+     * setCursorStyle(Hidden)/setCursorPosition sequences.
+     */
+    NUICursorService& cursorService() { return m_cursorService; }
+
 private:
+    // NUICursorHost backing for m_cursorService: hide/show ride the existing
+    // style channel (which already clips/unclips and stamps cursorCaptured on
+    // events); the explicit grab call is belt-and-braces confinement so the
+    // service's contract holds even if the style path changes.
+    class CursorHostImpl : public NUICursorHost {
+    public:
+        explicit CursorHostImpl(NUIPlatformBridge& bridge) : m_bridge(bridge) {}
+        void hostHideCursor() override { m_bridge.setCursorStyle(NUICursorStyle::Hidden); }
+        void hostShowCursor() override { m_bridge.setCursorStyle(NUICursorStyle::Arrow); }
+        void hostWarpCursor(int x, int y) override { m_bridge.setCursorPosition(x, y); }
+        void hostSetPointerGrab(bool grabbed) override {
+            if (m_bridge.m_window) m_bridge.m_window->setCursorClip(grabbed);
+        }
+
+    private:
+        NUIPlatformBridge& m_bridge;
+    };
+
     // Convert AestraPlat events to AestraUI events
     void setupEventBridges();
     int convertMouseButton(Aestra::MouseButton button);
@@ -138,6 +164,11 @@ private:
     
     // Cursor style tracking
     NUICursorStyle m_currentCursorStyle = NUICursorStyle::Arrow;
+
+    // Cursor capture service (declaration order: host before service — the
+    // service holds a reference to the host).
+    CursorHostImpl m_cursorHost{*this};
+    NUICursorService m_cursorService{m_cursorHost};
     
     // AestraUI-style callbacks
     std::function<void(int, int)> m_mouseMoveCallback;
