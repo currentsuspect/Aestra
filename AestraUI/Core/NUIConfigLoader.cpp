@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIConfigLoader.h"
 #include "../../AestraCore/include/AestraJSON.h"
+#include <cmath>
 #include <sstream>
 #include <regex>
 #include <algorithm>
@@ -244,19 +245,32 @@ void NUIConfigLoader::applyLayout(const Aestra::JSON& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     auto& theme = themeManager.getCurrentThemeMutable();
 
-    if (layout.has("trackHeight")) theme.layout.trackHeight = parseDimension(layout["trackHeight"]);
-    if (layout.has("trackControlsWidth")) theme.layout.trackControlsWidth = parseDimension(layout["trackControlsWidth"]);
-    if (layout.has("fileBrowserWidth")) theme.layout.fileBrowserWidth = parseDimension(layout["fileBrowserWidth"]);
-    if (layout.has("transportBarHeight")) theme.layout.transportBarHeight = parseDimension(layout["transportBarHeight"]);
-    if (layout.has("titleBarHeight")) theme.layout.titleBarHeight = parseDimension(layout["titleBarHeight"]);
-    if (layout.has("viewToggleWidth")) theme.layout.viewToggleWidth = parseDimension(layout["viewToggleWidth"]);
-    if (layout.has("viewToggleHeight")) theme.layout.viewToggleHeight = parseDimension(layout["viewToggleHeight"]);
-    if (layout.has("transportButtonSize")) theme.layout.transportButtonSize = parseDimension(layout["transportButtonSize"]);
-    if (layout.has("controlButtonWidth")) theme.layout.controlButtonWidth = parseDimension(layout["controlButtonWidth"]);
-    if (layout.has("controlButtonHeight")) theme.layout.controlButtonHeight = parseDimension(layout["controlButtonHeight"]);
-    if (layout.has("gridLineSpacing")) theme.layout.gridLineSpacing = parseDimension(layout["gridLineSpacing"]);
-    if (layout.has("panelMargin")) theme.layout.panelMargin = parseDimension(layout["panelMargin"]);
-    if (layout.has("componentPadding")) theme.layout.componentPadding = parseDimension(layout["componentPadding"]);
+    // Only override a layout dimension when the JSON supplies a usable value.
+    // parseDimension() returns 0.0f for malformed input (non-numeric, NaN, "px"
+    // typos), and a zero/negative dimension is never valid — applying it would
+    // silently clobber the theme default and collapse the layout. Reject those
+    // and keep the current value instead.
+    const auto applyDim = [&](const char* key, float& target) {
+        if (!layout.has(key)) return;
+        const float value = parseDimension(layout[key]);
+        if (std::isfinite(value) && value > 0.0f) {
+            target = value;
+        }
+    };
+
+    applyDim("trackHeight", theme.layout.trackHeight);
+    applyDim("trackControlsWidth", theme.layout.trackControlsWidth);
+    applyDim("fileBrowserWidth", theme.layout.fileBrowserWidth);
+    applyDim("transportBarHeight", theme.layout.transportBarHeight);
+    applyDim("titleBarHeight", theme.layout.titleBarHeight);
+    applyDim("viewToggleWidth", theme.layout.viewToggleWidth);
+    applyDim("viewToggleHeight", theme.layout.viewToggleHeight);
+    applyDim("transportButtonSize", theme.layout.transportButtonSize);
+    applyDim("controlButtonWidth", theme.layout.controlButtonWidth);
+    applyDim("controlButtonHeight", theme.layout.controlButtonHeight);
+    applyDim("gridLineSpacing", theme.layout.gridLineSpacing);
+    applyDim("panelMargin", theme.layout.panelMargin);
+    applyDim("componentPadding", theme.layout.componentPadding);
 }
 
 void NUIConfigLoader::applySpacing(const Aestra::JSON& spacing) {

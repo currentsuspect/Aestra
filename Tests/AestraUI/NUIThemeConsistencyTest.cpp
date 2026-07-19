@@ -2,6 +2,7 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIComponent.h"
+#include "NUIConfigLoader.h"
 
 #include <algorithm>
 #include <cmath>
@@ -297,6 +298,50 @@ void testHighContrastPreset() {
           "high-contrast grid hierarchy is stronger without flattening major/minor distinction");
 }
 
+// #582 review: the chrome layout dimensions must flow through NUIConfigLoader's
+// config parse+apply path, and malformed values must not clobber the theme
+// defaults with zero (see the applyLayout validation guard).
+void testChromeDimensionConfigLoad() {
+    std::cout << "[Test] chrome dimensions load through NUIConfigLoader and reject invalid values\n";
+    auto& manager = NUIThemeManager::getInstance();
+    auto& configLoader = NUIConfigLoader::getInstance();
+
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.titleBarHeight = 30.0f;
+        theme.layout.viewToggleWidth = 300.0f;
+        theme.layout.viewToggleHeight = 24.0f;
+    }
+
+    // Valid values apply. loadConfigFromString parses the config document with
+    // the loader's own parser, exercising applyLayout for the new chrome keys.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 41.0\n"
+              "  viewToggleWidth: 321.0\n"
+              "  viewToggleHeight: 27.0\n"),
+          "config with chrome dimensions parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "titleBarHeight applied from config");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "viewToggleWidth applied from config");
+        check(nearlyEqual(t.layout.viewToggleHeight, 27.0f), "viewToggleHeight applied from config");
+    }
+
+    // Invalid (non-positive) values are rejected: the previously applied value
+    // is retained instead of being zeroed by parseDimension()'s 0.0f fallback.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 0\n"
+              "  viewToggleWidth: -5\n"),
+          "config with invalid chrome dimensions still parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "zero titleBarHeight is rejected, default retained");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "negative viewToggleWidth is rejected, default retained");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -306,6 +351,7 @@ int main() {
     testThemeChangeResolution();
     testIndependentSubscriptionsAndAtomicSwitching();
     testLiveJSONThemeRegistration();
+    testChromeDimensionConfigLoad();
     testHierarchyInvalidation();
     testCompatibilityAliases();
     testLightPresetCompleteness();
