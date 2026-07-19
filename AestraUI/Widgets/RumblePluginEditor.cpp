@@ -547,13 +547,15 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     // pointer when it re-enters.
     if (m_draggingControl >= 0) {
         if (event.released) {
+            endKnobCapture();
             m_draggingControl = -1;
             setDirty(true);
             return true;
         }
         if (event.button == NUIMouseButton::None || event.type == NUIMouseEventType::Drag) {
-            const float delta = (m_dragStartY - event.position.y) / kDragRangePixels;
-            setControlValue(m_draggingControl, m_dragStartValue + delta);
+            // Service-owned frame delta (up = increase), accumulated into value.
+            const float cur = m_controls[static_cast<size_t>(m_draggingControl)].normalizedValue;
+            setControlValue(m_draggingControl, cur + knobDragStep(event, kDragRangePixels));
             return true;
         }
     }
@@ -613,8 +615,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
                 return true;
             }
             m_draggingControl = controlIndex;
-            m_dragStartY = event.position.y;
-            m_dragStartValue = m_controls[static_cast<size_t>(controlIndex)].normalizedValue;
+            beginKnobCapture(m_controls[static_cast<size_t>(controlIndex)].knobBounds.center(), event.position);
             return true;
         }
     }
