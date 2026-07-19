@@ -674,6 +674,14 @@ private:
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
                              double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+    // processBlock leaf phases (audio thread only). Each is a verbatim
+    // extraction of a self-contained section of processBlock; state lives in
+    // the members they always used.
+    void mixTestTone(uint32_t numFrames, uint32_t currentSampleRate);
+    // Returns the smoothed duck gain the master output stage applies this block.
+    double computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
+    void mixMetronomeClicks(float* outputBuffer, uint32_t numFrames);
+    void updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels);
     void resetCachedSamplerVoicesRt() noexcept;
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
