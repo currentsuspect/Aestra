@@ -1804,6 +1804,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
+# NUICursorService state machine (cursor unification phase 1). Compiles the
+# service .cpp directly (dependency-free) so it also runs in headless builds.
+add_executable(CursorServiceTest
+    AestraUI/CursorServiceTest.cpp
+    ${CMAKE_SOURCE_DIR}/AestraUI/Platform/NUICursorService.cpp
+)
+add_test(NAME CursorServiceTest COMMAND CursorServiceTest)
+set_tests_properties(CursorServiceTest PROPERTIES LABELS "ui;cursor;regression" TIMEOUT 60)
+
 # NUITheme JSON loading test (Issue #259)
 # Compiles NUITheme.cpp directly (its only deps are header-only: NUITypes.h,
 # AestraJSON.h, AestraLog.h) so the test also runs in headless builds where

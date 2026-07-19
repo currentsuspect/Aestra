@@ -948,12 +948,24 @@ void PlatformWindowWin32::getPosition(int& x, int& y) const {
 }
 
 void PlatformWindowWin32::setCursorPosition(int x, int y) {
-    SetCursorPos(x, y);
+    // Interface contract is WINDOW-RELATIVE client coords (see AestraPlatform.h).
+    // SetCursorPos wants screen coords; convert. Client coords are physical
+    // pixels for a per-monitor-DPI-aware process, so ClientToScreen is the
+    // complete, DPI-correct conversion (mouse events arrive in the same space).
+    POINT pt{x, y};
+    if (m_hwnd) {
+        ClientToScreen(m_hwnd, &pt);
+    }
+    SetCursorPos(pt.x, pt.y);
 }
 
 void PlatformWindowWin32::getCursorPosition(int& x, int& y) const {
+    // Symmetric with setCursorPosition: report window-relative client coords.
     POINT pt;
     GetCursorPos(&pt);
+    if (m_hwnd) {
+        ScreenToClient(m_hwnd, &pt);
+    }
     x = pt.x;
     y = pt.y;
 }

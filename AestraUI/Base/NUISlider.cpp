@@ -97,13 +97,17 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             if (platformBridge_)
             {
                 if (isRotary) {
-                    // Knob: warp to center — cursor appears where the knob is
+                    // Knob: end capture via the cursor service — warps to the
+                    // knob center (cursor reappears where the knob is), then
+                    // unhides, then releases confinement, in that order.
                     auto bounds = getBounds();
-                    platformBridge_->setCursorPosition(
+                    platformBridge_->cursorService().endDragCapture(
                         static_cast<int>(bounds.x + bounds.width * 0.5f),
                         static_cast<int>(bounds.y + bounds.height * 0.5f));
                 } else {
-                    // Linear: warp to thumb position (matches current value)
+                    // Linear: warp to thumb position (matches current value).
+                    // Linear drags never hide the cursor today; adoption of the
+                    // capture service here is a later migration phase.
                     auto b = getBounds();
                     if (orientation_ == Orientation::Horizontal) {
                         float inset = std::min(sliderRadius_, b.width * 0.5f);
@@ -118,8 +122,8 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                             static_cast<int>(b.x + b.width * 0.5f),
                             static_cast<int>(b.y + inset + usableHeight * (1.0f - valueToProportionOfLength(value_))));
                     }
+                    platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
                 }
-                platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             }
 
             isDragging_ = false;
@@ -177,8 +181,13 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             // Check for fine-tuning modifier at drag start
             isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
-            // Hide cursor (this gives the "infinite travel" feel)
-            platformBridge_->setCursorStyle(NUICursorStyle::Hidden);
+            // Begin cursor capture (this gives the "infinite travel" feel):
+            // hides the cursor and confines the pointer to the window so the
+            // release-warp is always valid (native Wayland warps silently
+            // no-op once the hidden pointer drifts out and loses focus).
+            platformBridge_->cursorService().beginDragCapture(
+                NUICursorRestorePolicy::KnobCenter,
+                static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 
         // Click mode updates only on click, drag mode updates only while dragging.

@@ -351,6 +351,8 @@ endif()
 set(AESTRAUI_PLATFORM_SOURCES
     Platform/NUIPlatformBridge.h
     Platform/NUIPlatformBridge.cpp
+    Platform/NUICursorService.h
+    Platform/NUICursorService.cpp
 )
 
 # Platform name for logging
