@@ -239,6 +239,11 @@ struct NUIThemeProperties {
         float transportButtonSize = 28.0f;
         float transportButtonSpacing = 8.0f;
 
+        // Application chrome dimensions
+        float titleBarHeight = 32.0f;
+        float viewToggleWidth = 310.0f;
+        float viewToggleHeight = 24.0f;
+
         // Control button dimensions
         float controlButtonWidth = 32.0f;
         float controlButtonHeight = 20.0f;

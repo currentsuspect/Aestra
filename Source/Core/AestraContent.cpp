@@ -1438,18 +1438,16 @@ void AestraContent::onResize(int width, int height) {
     }
 
     if (m_viewToggle) {
-        // The view toggle is parented to the custom title bar (32px tall by default).
+        // The view toggle is parented to the custom title bar.
         // Center it horizontally in the window and vertically in the title bar.
-        constexpr float kViewToggleWidth = 310.0f;
-        constexpr float kViewToggleHeight = 24.0f;
-        constexpr float kTitleBarHeight = 32.0f;
-        const float yPos = std::round((kTitleBarHeight - kViewToggleHeight) * 0.5f);
+        const float yPos = std::round((layout.titleBarHeight - layout.viewToggleHeight) * 0.5f);
 
         const auto rootBounds = getBounds();
         const float centerX = rootBounds.width * 0.5f;
-        const float startX = std::round(centerX - kViewToggleWidth * 0.5f);
+        const float startX = std::round(centerX - layout.viewToggleWidth * 0.5f);
 
-        m_viewToggle->setBounds(AestraUI::NUIRect(startX, yPos, kViewToggleWidth, kViewToggleHeight));
+        m_viewToggle->setBounds(
+            AestraUI::NUIRect(startX, yPos, layout.viewToggleWidth, layout.viewToggleHeight));
     }
 
     if (m_scopeLabel) {

@@ -2,6 +2,7 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIComponent.h"
+#include "NUIConfigLoader.h"
 
 #include <algorithm>
 #include <cmath>
@@ -82,6 +83,9 @@ void testSemanticDefaults() {
           "compact controls meet the minimum hit area");
     check(theme.layout.transportButtonSize == theme.layout.standardControlHeight,
           "transport and standard controls share the 28 px metric");
+    check(theme.layout.titleBarHeight == 32.0f && theme.layout.viewToggleWidth == 310.0f &&
+              theme.layout.viewToggleHeight == theme.layout.compactControlHeight,
+          "application chrome defaults use the shared compact metric");
     check(theme.layout.standardMenuRowHeight == theme.layout.standardRowHeight,
           "ordinary menu and list rows share a metric");
 }
@@ -179,7 +183,12 @@ void testLiveJSONThemeRegistration() {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         out << R"({
             "colors": { "accent": "#2468ac", "focusRing": "#abcdef" },
-            "dimensions": { "standardControlHeight": 30.0 },
+            "dimensions": {
+                "standardControlHeight": 30.0,
+                "titleBarHeight": 34.0,
+                "viewToggleWidth": 300.0,
+                "viewToggleHeight": 26.0
+            },
             "fontSizes": { "normal": 13.0 }
         })";
     }
@@ -193,6 +202,10 @@ void testLiveJSONThemeRegistration() {
     check(colorsEqual(loaded.focusRing, NUIColor::fromHex(0xabcdef)), "semantic focus ring maps into live state");
     check(colorsEqual(loaded.backgroundPrimary, base.backgroundPrimary), "missing live token inherits the base preset");
     check(nearlyEqual(loaded.layout.standardControlHeight, 30.0f), "live control dimension is overridden");
+    check(nearlyEqual(manager.getLayoutDimension("titleBarHeight"), 34.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleWidth"), 300.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleHeight"), 26.0f),
+          "application chrome dimensions are overridden and exposed through the manager");
     check(nearlyEqual(loaded.fontSizeM, 13.0f), "legacy normal font size maps to live body text");
 
     int reloadCount = 0;
@@ -285,6 +298,77 @@ void testHighContrastPreset() {
           "high-contrast grid hierarchy is stronger without flattening major/minor distinction");
 }
 
+// #582 review: the chrome layout dimensions must flow through NUIConfigLoader's
+// config parse+apply path, and malformed values must not clobber the theme
+// defaults with zero (see the applyLayout validation guard).
+void testChromeDimensionConfigLoad() {
+    std::cout << "[Test] chrome dimensions load through NUIConfigLoader and reject invalid values\n";
+    auto& manager = NUIThemeManager::getInstance();
+    auto& configLoader = NUIConfigLoader::getInstance();
+
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.titleBarHeight = 30.0f;
+        theme.layout.viewToggleWidth = 300.0f;
+        theme.layout.viewToggleHeight = 24.0f;
+    }
+
+    // Valid values apply. loadConfigFromString parses the config document with
+    // the loader's own parser, exercising applyLayout for the new chrome keys.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 41.0\n"
+              "  viewToggleWidth: 321.0\n"
+              "  viewToggleHeight: 27.0\n"),
+          "config with chrome dimensions parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "titleBarHeight applied from config");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "viewToggleWidth applied from config");
+        check(nearlyEqual(t.layout.viewToggleHeight, 27.0f), "viewToggleHeight applied from config");
+    }
+
+    // Invalid (non-positive) values are rejected: the previously applied value
+    // is retained instead of being zeroed by parseDimension()'s 0.0f fallback.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 0\n"
+              "  viewToggleWidth: -5\n"),
+          "config with invalid chrome dimensions still parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "zero titleBarHeight is rejected, default retained");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "negative viewToggleWidth is rejected, default retained");
+    }
+
+    // Non-numeric input hits parseDimension()'s 0.0f fallback; an extent
+    // dimension must reject it and keep the current value (CR #582 follow-up).
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  viewToggleHeight: bad\n"),
+          "config with a non-numeric chrome dimension still parses");
+    check(nearlyEqual(manager.getCurrentTheme().layout.viewToggleHeight, 27.0f),
+          "non-numeric viewToggleHeight is rejected, default retained");
+
+    // Spacing tokens differ from extents: zero is a legitimate flush layout, so
+    // panelMargin/componentPadding accept 0 rather than being rejected.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.panelMargin = 12.0f;
+        theme.layout.componentPadding = 8.0f;
+    }
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  panelMargin: 0\n"
+              "  componentPadding: 0\n"),
+          "config with zero spacing parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.panelMargin, 0.0f), "zero panelMargin is accepted (flush layout)");
+        check(nearlyEqual(t.layout.componentPadding, 0.0f), "zero componentPadding is accepted (flush layout)");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -294,6 +378,7 @@ int main() {
     testThemeChangeResolution();
     testIndependentSubscriptionsAndAtomicSwitching();
     testLiveJSONThemeRegistration();
+    testChromeDimensionConfigLoad();
     testHierarchyInvalidation();
     testCompatibilityAliases();
     testLightPresetCompleteness();
