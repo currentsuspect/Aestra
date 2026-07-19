@@ -219,6 +219,7 @@ void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
         if (strip) strip->setPlatformBridge(bridge);
     }
     if (m_masterStrip) m_masterStrip->setPlatformBridge(bridge);
+    if (m_inspector) m_inspector->setPlatformBridge(bridge);
 }
 
 void UIMixerPanel::layoutMeters()

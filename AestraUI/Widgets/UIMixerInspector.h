@@ -24,8 +24,13 @@ class EffectChainRack;
  * Displays simple tabs (Inserts/Sends/IO). Inserts tab includes an "Add FX"
  * placeholder button.
  */
+class NUIPlatformBridge;
+
 class UIMixerInspector : public NUIComponent {
 public:
+    /** Forward the platform bridge to the insert rack (dry/wet knob capture). */
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
     enum class Tab { Inserts = 0, Sends = 1, IO = 2 };
 
     explicit UIMixerInspector(Aestra::MixerViewModel* viewModel);

@@ -271,6 +271,8 @@ private:
  * - Click to open plugin editor
  * - Slot context menu
  */
+class NUIPlatformBridge;
+
 class EffectChainRack : public NUIComponent {
 public:
     static constexpr int MAX_SLOTS = 10;
@@ -285,7 +287,10 @@ public:
     };
 
     EffectChainRack();
-    ~EffectChainRack() override = default;
+    ~EffectChainRack() override; // cancels an active knob capture (see .cpp)
+
+    /** Platform bridge for dry/wet knob cursor capture (may be null in tests). */
+    void setPlatformBridge(NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -321,6 +326,7 @@ private:
     int hitTestSlot(float y) const;
     NUIRect slotRectForTop(float slotY) const;
 
+    NUIPlatformBridge* m_platformBridge = nullptr;
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
     std::array<int, MAX_SLOTS> m_bypassOverride; // -1=None, 0=Active, 1=Bypassed
     int m_hoveredSlot = -1;
@@ -332,8 +338,7 @@ private:
 
     // Drag Interaction State
     int m_activeKnobSlot = -1;
-    NUIPoint m_dragStartPos{};
-    float m_dragStartValue = 0.0f;
+    NUIPoint m_dragStartPos{}; // slot-reorder drag origin (knob drag uses service deltas)
 
     std::function<void(int)> m_onSlotClicked;
     std::function<void(int, bool)> m_onSlotBypassToggled;

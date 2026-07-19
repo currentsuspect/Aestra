@@ -1007,4 +1007,9 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     return b.contains(event.position);
 }
 
+void UIMixerInspector::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    if (m_effectRack) m_effectRack->setPlatformBridge(bridge);
+}
+
 } // namespace AestraUI
