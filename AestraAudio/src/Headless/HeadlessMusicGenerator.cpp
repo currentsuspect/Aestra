@@ -2,8 +2,15 @@
 
 #include "Headless/HeadlessMusicGenerator.h"
 #include "AestraLog.h"
+#include "Core/AudioGraphBuilder.h"
+#include "Models/UnitManager.h"
+#include "Models/PatternSource.h"
+#include "Plugin/PluginManager.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <numeric>
 
 namespace Aestra {
@@ -29,6 +36,10 @@ HeadlessMusicGenerator& HeadlessMusicGenerator::createProject(const std::string&
     m_playlistClips.clear();
     m_channelNames.clear();
     m_currentPatternName.clear();
+    m_committed = false;
+    m_toneSamplePath.clear();
+    m_laneUnits.clear();
+    m_laneIds.clear();
     
     // Reset track manager
     m_trackManager.getPlaylistModel().clear();
@@ -345,13 +356,91 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
         Log::error("[HeadlessGenerator] Validation failed: " + error);
         return false;
     }
-    
+
+    // Reconcile the render sample rate before committing so the sampler
+    // instruments are initialized at the same rate the engine renders at (the
+    // exportTo sampleRate argument overrides the configured project rate).
+    const uint32_t effectiveRate = sampleRate > 0 ? sampleRate : m_sampleRate;
+    m_sampleRate = effectiveRate;
+
     // Commit patterns to track manager
     commitPatternsToManager();
-    
+
     // Commit playlist
     commitPlaylistToModel();
-    
+
+    // Remove the temp tone sample on every exit path, including an exception
+    // out of render() (the sampler decoded it into memory at load time).
+    struct ToneSampleCleanup {
+        const std::string& path;
+        ~ToneSampleCleanup() {
+            if (!path.empty()) {
+                std::error_code ec;
+                std::filesystem::remove(path, ec);
+            }
+        }
+    } toneCleanup{m_toneSamplePath};
+
+    // --- Wire the export engine to render the committed timeline ---------------
+    // AudioExporter::render drives AudioEngine::processBlock — the same path the
+    // live engine uses — so the committed MIDI clips synthesize through their
+    // sampler units (live/export parity, AGENTS.md §20).
+    //
+    // setTrackManager stores a weak_ptr, so `borrowedTrackManager` must stay
+    // alive for the whole render. The guard restores the engine to an unwired
+    // state on every exit path (including failures) — the engine keeps a raw
+    // UnitManager*, an owned slot map and a graph copy, none of which may
+    // outlive this call. The render is fully synchronous: no callback or
+    // retained object can touch this wiring once exportTo returns.
+    // Restores everything this render mutates on every exit path, so a
+    // synchronous export leaves the caller's engine and session unchanged:
+    //  - engine wiring (weak TrackManager ref, raw UnitManager*, owned slot map,
+    //    graph copy, pattern-engine pointer) is cleared;
+    //  - the pattern-playback engine is flushed so the timeline instances this
+    //    render scheduled do not leak into the caller's TrackManager.
+    // The transport flags/position are never touched (see
+    // scheduleTimelineForOfflineRender below), so there is nothing else to undo.
+    struct RenderStateGuard {
+        AudioEngine& engine;
+        TrackManager& trackManager;
+        ~RenderStateGuard() {
+            engine.setGraph(AudioGraph{});
+            engine.setPatternPlaybackEngine(nullptr);
+            engine.setUnitManager(nullptr);
+            engine.setChannelSlotMap(nullptr);
+            engine.setTrackManager(nullptr);
+            trackManager.getPatternPlaybackEngine().flush();
+        }
+    };
+
+    // Non-owning shared_ptr: setTrackManager currently requires shared ownership,
+    // but the caller owns m_trackManager and guarantees it outlives this render.
+    // The no-op deleter means the borrowed TrackManager is never freed here.
+    std::shared_ptr<TrackManager> borrowedTrackManager(&m_trackManager, [](TrackManager*) {});
+    RenderStateGuard renderGuard{m_engine, m_trackManager}; // destroyed before borrowedTrackManager
+
+    m_engine.setSampleRate(effectiveRate);
+    m_engine.setBufferConfig(512, 2);
+    m_engine.setBPM(static_cast<float>(m_tempo));
+    m_engine.setTrackManager(borrowedTrackManager);
+    m_engine.setUnitManager(&m_trackManager.getUnitManager());
+    m_engine.setPatternPlaybackEngine(&m_trackManager.getPatternPlaybackEngine());
+    m_trackManager.buildAndShareSlotMap();
+    if (auto slotMap = m_trackManager.getChannelSlotMapShared()) {
+        m_engine.setChannelSlotMap(slotMap);
+    }
+    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
+    m_engine.initialize();
+
+    // MIDI clips reach their units through the pattern-playback engine
+    // (AudioEngine::processBlock pops scheduled notes into unit MIDI routes).
+    // Schedule the committed timeline into it WITHOUT starting live transport —
+    // the exporter drives the engine's own transport, so we must not mutate the
+    // caller's playing flag / position. flush() first clears any prior contents;
+    // the render guard flushes again on exit so these instances don't leak.
+    m_trackManager.getPatternPlaybackEngine().flush();
+    m_trackManager.scheduleTimelineForOfflineRender(0.0);
+
     // Setup exporter
     AudioExporter exporter(m_engine, m_trackManager);
     
@@ -367,8 +456,8 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     
     // Render
     Log::info("[HeadlessGenerator] Exporting to: " + outputPath);
-    auto result = exporter.render(config);
-    
+    auto result = exporter.render(config); // toneCleanup removes the temp sample on scope exit
+
     if (result.success) {
         Log::info("[HeadlessGenerator] Export complete: " + 
                   std::to_string(result.durationSeconds) + "s, peak: " +
@@ -446,33 +535,167 @@ HeadlessMusicGenerator::PatternData* HeadlessMusicGenerator::findPattern(const s
     return nullptr;
 }
 
+// Steps map to sixteenth notes — 16 steps per 4/4 bar — matching the set_steps
+// Muse command and the header's fluent-API examples.
+static constexpr double kStepBeats = 0.25;
+
+bool HeadlessMusicGenerator::prepareToneSample() {
+    // A short synthetic sine the built-in sampler loads as its source and
+    // pitch-shifts per MIDI note. Written to a unique temp file because the
+    // sampler loads by path (UnitManager::setUnitAudioClip -> loadSample).
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path dir = fs::temp_directory_path(ec);
+    if (ec) {
+        Log::error("[HeadlessGenerator] No temp directory for tone sample: " + ec.message());
+        return false;
+    }
+    const fs::path path =
+        dir / ("aestra_headless_tone_" + std::to_string(reinterpret_cast<uintptr_t>(this)) + ".wav");
+
+    const uint32_t rate = m_sampleRate > 0 ? m_sampleRate : 48000u;
+    const uint32_t frames = rate / 2; // 0.5 s
+    const double freq = 440.0;
+    const double twoPi = 6.283185307179586;
+
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        Log::error("[HeadlessGenerator] Cannot write tone sample: " + path.string());
+        return false;
+    }
+    auto w16 = [&](uint16_t v) { out.put(static_cast<char>(v & 0xff)); out.put(static_cast<char>((v >> 8) & 0xff)); };
+    auto w32 = [&](uint32_t v) {
+        out.put(static_cast<char>(v & 0xff));
+        out.put(static_cast<char>((v >> 8) & 0xff));
+        out.put(static_cast<char>((v >> 16) & 0xff));
+        out.put(static_cast<char>((v >> 24) & 0xff));
+    };
+    const uint32_t dataBytes = frames * 2; // mono, 16-bit
+    out.write("RIFF", 4); w32(36 + dataBytes); out.write("WAVE", 4);
+    out.write("fmt ", 4); w32(16); w16(1); w16(1); w32(rate); w32(rate * 2); w16(2); w16(16);
+    out.write("data", 4); w32(dataBytes);
+    for (uint32_t i = 0; i < frames; ++i) {
+        // Short fades at both ends so the looped/one-shot sample has no click.
+        double env = 1.0;
+        const uint32_t fade = rate / 100; // 10 ms
+        if (i < fade) env = static_cast<double>(i) / fade;
+        else if (i >= frames - fade) env = static_cast<double>(frames - i) / fade;
+        const double s = std::sin(twoPi * freq * static_cast<double>(i) / rate) * 0.8 * env;
+        w16(static_cast<uint16_t>(static_cast<int16_t>(std::clamp(s, -1.0, 1.0) * 32767.0)));
+    }
+    if (!out.good()) {
+        Log::error("[HeadlessGenerator] Failed writing tone sample: " + path.string());
+        return false;
+    }
+    m_toneSamplePath = path.string();
+    return true;
+}
+
+uint64_t HeadlessMusicGenerator::ensureLaneInstrument(uint32_t laneIndex) {
+    if (auto it = m_laneUnits.find(laneIndex); it != m_laneUnits.end()) {
+        return it->second;
+    }
+
+    auto& um = m_trackManager.getUnitManager();
+    const std::string label = "Lane " + std::to_string(laneIndex + 1);
+
+    // Mixer channel that carries this lane's instrument to the master bus.
+    const size_t channelIndex = m_trackManager.getChannelCount();
+    m_trackManager.addChannel(label);
+
+    // Playlist lane the clips are placed on.
+    PlaylistLaneID laneId = m_trackManager.getPlaylistModel().createLane(label);
+    m_laneIds[laneIndex] = laneId;
+
+    // Built-in sampler — the only always-available (license-free) instrument.
+    auto& pluginManager = PluginManager::getInstance();
+    pluginManager.initialize();
+    auto sampler = pluginManager.createInstanceById("com.Aestrastudios.sampler");
+    if (!sampler) {
+        Log::error("[HeadlessGenerator] Failed to create built-in sampler instrument");
+        return 0;
+    }
+    sampler->initialize(m_sampleRate > 0 ? m_sampleRate : 48000u, 512);
+    sampler->activate();
+
+    const UnitID unit = um.createUnit("Instrument " + std::to_string(laneIndex + 1), UnitType::Sampler);
+    um.attachPlugin(unit, "com.Aestrastudios.sampler", sampler);
+    um.setUnitEnabled(unit, true);
+    if (!m_toneSamplePath.empty()) {
+        um.setUnitAudioClip(unit, m_toneSamplePath); // loads the tone into the sampler
+    }
+    um.setUnitMixerChannel(unit, static_cast<int>(channelIndex));
+    um.assignUnitToTimelineLane(unit, static_cast<int>(laneIndex));
+
+    m_laneUnits[laneIndex] = unit;
+    return unit;
+}
+
 void HeadlessMusicGenerator::commitPatternsToManager() {
-    auto& patternManager = m_trackManager.getPatternManager();
-    
-    // TODO: Convert PatternData to PatternSource and add to manager
-    // This is a simplified version - real implementation would create actual PatternSource objects
-    Log::info("[HeadlessGenerator] Committed " + std::to_string(m_patterns.size()) + " patterns");
+    // Commit once per project: re-committing would append duplicate lanes,
+    // units and clips to the TrackManager on a second exportTo() call. State is
+    // reset by createProject(). The MIDI PatternSources themselves are created
+    // in commitPlaylistToModel(): each note routes to the sampler unit backing
+    // the lane its clip is placed on, so the routed pattern can only be built
+    // once the placement (and thus the lane instrument) is known. Here we just
+    // prepare the shared sampler source.
+    if (m_committed) {
+        return;
+    }
+    if (!prepareToneSample()) {
+        Log::warning("[HeadlessGenerator] Tone sample unavailable — render will be silent");
+    }
+    Log::info("[HeadlessGenerator] Prepared " + std::to_string(m_patterns.size()) +
+              " patterns for placement");
 }
 
 void HeadlessMusicGenerator::commitPlaylistToModel() {
+    if (m_committed) {
+        return;
+    }
+    auto& patternManager = m_trackManager.getPatternManager();
     auto& playlist = m_trackManager.getPlaylistModel();
-    
-    // Ensure we have enough lanes
-    uint32_t maxLane = 0;
+
+    size_t committed = 0;
     for (const auto& clip : m_playlistClips) {
-        maxLane = std::max(maxLane, clip.laneIndex);
+        auto patternIt = m_patterns.find(clip.patternName);
+        if (patternIt == m_patterns.end()) {
+            continue; // validate() already rejected unknown patterns
+        }
+        const PatternData& data = patternIt->second;
+
+        const uint64_t unitId = ensureLaneInstrument(clip.laneIndex);
+        if (unitId == 0) {
+            continue;
+        }
+
+        // Convert the step-grid notes to beat-domain MidiNotes routed to the
+        // lane's sampler unit.
+        MidiPayload payload;
+        payload.notes.reserve(data.notes.size());
+        for (const auto& n : data.notes) {
+            MidiNote mn;
+            mn.pitch = n.pitch;
+            mn.startBeat = static_cast<double>(n.step) * kStepBeats;
+            mn.durationBeats = n.duration * kStepBeats;
+            mn.velocity = std::clamp(static_cast<float>(n.velocity) / 127.0f, 0.0f, 1.0f);
+            mn.unitId = unitId;
+            payload.notes.push_back(mn);
+        }
+
+        const double lengthBeats = static_cast<double>(data.length) * kStepBeats;
+        const PatternID patternId = patternManager.createMidiPattern(clip.patternName, lengthBeats, payload);
+
+        auto laneIt = m_laneIds.find(clip.laneIndex);
+        if (laneIt == m_laneIds.end()) {
+            continue;
+        }
+        playlist.addClipFromPattern(laneIt->second, patternId, clip.startBeat, clip.durationBeats);
+        ++committed;
     }
-    
-    // Create lanes
-    for (uint32_t i = 0; i <= maxLane; ++i) {
-        playlist.createLane("Lane " + std::to_string(i + 1));
-    }
-    
-    // Add clips to playlist
-    // TODO: Convert to actual ClipInstance and add to playlist
-    // This requires PatternIDs from commitPatternsToManager
-    
-    Log::info("[HeadlessGenerator] Committed " + std::to_string(m_playlistClips.size()) + " clips to playlist");
+
+    m_committed = true;
+    Log::info("[HeadlessGenerator] Committed " + std::to_string(committed) + " clips to playlist");
 }
 
 } // namespace Audio
