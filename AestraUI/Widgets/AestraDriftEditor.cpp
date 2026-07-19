@@ -398,7 +398,7 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (m_draggingPitch) {
             // Service-owned frame delta (up = increase), accumulated into value.
             setParameter(Drift::kPitch,
-                         m_instance->getParameter(Drift::kPitch) + (-event.delta.y) / kDragRangePixels);
+                         m_instance->getParameter(Drift::kPitch) + knobDragStep(event, kDragRangePixels));
             return true;
         }
         if (m_draggingMix) {
@@ -408,7 +408,7 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (m_draggingKnob >= 0) {
             const auto& knob = m_knobs[static_cast<size_t>(m_draggingKnob)];
             setParameter(knob.parameterId,
-                         m_instance->getParameter(knob.parameterId) + (-event.delta.y) / kDragRangePixels);
+                         m_instance->getParameter(knob.parameterId) + knobDragStep(event, kDragRangePixels));
             return true;
         }
         m_pitchHovered = m_pitchWheelBounds.contains(event.position);

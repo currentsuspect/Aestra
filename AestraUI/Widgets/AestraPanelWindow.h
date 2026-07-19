@@ -81,6 +81,12 @@ protected:
     // Center the active capture will restore to.
     NUIPoint m_captureKnobCenter;
 
+    // Normalized vertical step for a knob drag during capture (up = positive).
+    // rangePx = pixels of travel for the full 0..1 range. Scaled down while
+    // Shift is held — opt-in fine/precision drag; the default (unmodified)
+    // feel is unchanged. Add to the current value each drag frame.
+    float knobDragStep(const NUIMouseEvent& event, float rangePx) const;
+
     // Window dragging from title bar
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos;

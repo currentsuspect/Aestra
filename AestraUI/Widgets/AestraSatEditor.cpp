@@ -230,7 +230,7 @@ bool AestraSatEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (event.button == NUIMouseButton::None) {
             // Service-owned frame delta (up = increase); accumulates into the
             // current value, so total travel matches the old absolute mapping.
-            const float step = -event.delta.y / kDragRangePx;
+            const float step = knobDragStep(event, kDragRangePx);
             const float cur = m_instance->getParameter(static_cast<uint32_t>(m_draggingParam));
             m_instance->setParameter(static_cast<uint32_t>(m_draggingParam),
                                      std::clamp(cur + step, 0.0f, 1.0f));

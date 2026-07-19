@@ -38,6 +38,15 @@ void AestraPanelWindow::endKnobCapture()
         static_cast<int>(m_captureKnobCenter.x), static_cast<int>(m_captureKnobCenter.y));
 }
 
+float AestraPanelWindow::knobDragStep(const NUIMouseEvent& event, float rangePx) const
+{
+    // Shift = surgical precision (quarter speed). Held state is read per frame
+    // so it can be toggled mid-drag. Default (no modifier) speed is unchanged.
+    constexpr float kFineDragScale = 0.25f;
+    const float fine = (event.modifiers & NUIModifiers::Shift) ? kFineDragScale : 1.0f;
+    return (-event.delta.y / rangePx) * fine;
+}
+
 void AestraPanelWindow::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
