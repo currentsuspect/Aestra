@@ -716,8 +716,16 @@ private:
     // extraction of a self-contained section of processBlock; state lives in
     // the members they always used.
     void mixTestTone(uint32_t numFrames, uint32_t currentSampleRate);
-    // Returns the smoothed duck gain the master output stage applies this block.
-    double computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
+    // Per-block preview duck-gain ramp. The master output stage interpolates duck
+    // gain from `start` (the previous block's end value) to `end` (this block's
+    // smoothed target) once per sample — mirroring the master fader's per-sample
+    // ramp — so the 50ms/120ms fade never steps at block boundaries (zipper noise).
+    struct PreviewDuckRamp {
+        double start = 1.0;
+        double end = 1.0;
+    };
+    // Advances the smoothed duck gain one block and returns its start/end for the ramp.
+    PreviewDuckRamp computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
     void mixMetronomeClicks(float* outputBuffer, uint32_t numFrames);
     void updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels);
     void resetCachedSamplerVoicesRt() noexcept;
