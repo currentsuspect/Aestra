@@ -41,7 +41,7 @@ public:
     };
 
     NUISlider(const std::string& name = "");
-    ~NUISlider() override = default;
+    ~NUISlider() override; // cancels an active cursor capture (see .cpp)
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
