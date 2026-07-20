@@ -64,6 +64,16 @@ public:
     // tests since setParameter itself is void (#238).
     uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
 
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+    // Send a raw command to the helper and return its reply. Test-only: used by the
+    // #244 CLAP-note e2e test to read the fake plugin's recorded events (TESTNOTES).
+    std::string sendRawCommandForTest(const std::string& command) {
+        std::string response;
+        sendCommand(command, &response, std::chrono::seconds(2));
+        return response;
+    }
+#endif
+
 private:
     bool sendCommand(const std::string& command, std::string* response = nullptr,
                      std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
