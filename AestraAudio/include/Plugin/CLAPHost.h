@@ -13,6 +13,14 @@ struct clap_plugin;
 struct clap_plugin_entry;
 struct clap_host;
 
+// Event structs are needed by value for the reusable per-block scratch storage
+// below. They are only pulled in (and the scratch members only exist) when the
+// CLAP SDK is present — this header is also included by the plugin factory/scanner
+// in CLAP-off builds, which must stay SDK-free (#244).
+#ifdef AESTRA_HAS_CLAP
+#include <clap/events.h>
+#endif
+
 namespace Aestra {
 namespace Audio {
 
@@ -113,6 +121,19 @@ private:
     uint32_t m_noteDialect = 2 /* ClapNote::kDialectMidi */;
     bool m_rawMidiAllowed = true;
     bool m_noteDialectFromLegacyFallback = true;
+
+    // Reusable per-block note-event scratch, sized once in initialize() so the
+    // audio thread never allocates and never puts ~70KB of event arrays on the
+    // stack (#244 review). One capacity governs the backing vectors, the ordered
+    // header view, and the per-block accept cap. Safe as instance members because
+    // a single plugin instance's process() is only ever called by the one render
+    // thread — never re-entered or run concurrently for the same instance.
+    static constexpr size_t kMaxNoteEventsPerBlock = 1024;
+#ifdef AESTRA_HAS_CLAP
+    std::vector<clap_event_note> m_noteEvents;
+    std::vector<clap_event_midi> m_midiEvents;
+    std::vector<const clap_event_header*> m_eventOrder;
+#endif
 
     // CLAP types (using void* to avoid header pollution)
     void* m_library = nullptr; // DLL/dylib handle

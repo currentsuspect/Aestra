@@ -356,6 +356,12 @@ bool CLAPPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
     m_sampleRate = sampleRate;
     m_maxBlockSize = maxBlockSize;
 
+    // Reserve the reusable per-block event scratch now, off the audio thread, so
+    // process() is allocation-free and keeps large arrays off the stack (#244).
+    m_noteEvents.reserve(kMaxNoteEventsPerBlock);
+    m_midiEvents.reserve(kMaxNoteEventsPerBlock);
+    m_eventOrder.reserve(kMaxNoteEventsPerBlock);
+
     // Decide the note-input dialect once, here (loaded, not yet activated, main
     // thread) — never on the audio thread. Uses the shared rules so the in-process
     // and OOP hosts cannot drift (#244).
@@ -420,16 +426,16 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
     // (clap_event_midi) on a MIDI port; noteDialect==0 drops notes. Non-note MIDI
     // rides the raw dialect only when the port advertises it. Order is preserved.
     namespace ClapNote = Aestra::Audio::ClapNote;
-    static constexpr size_t kMaxClapMidiEvents = 1024;
-    std::array<clap_event_note, kMaxClapMidiEvents> noteEvents{};
-    std::array<clap_event_midi, kMaxClapMidiEvents> midiEvents{};
-    std::array<const clap_event_header*, kMaxClapMidiEvents> eventOrder{};
+    // Reusable members (reserved in initialize()) — no allocation, no big stack
+    // arrays. Reserved capacity means the header pointers recorded in m_eventOrder
+    // stay valid for the whole call (no reallocation).
+    m_noteEvents.clear();
+    m_midiEvents.clear();
+    m_eventOrder.clear();
     ClapInputEventList inputEventList{};
-    size_t noteCount = 0;
-    size_t midiCount = 0;
     if (midiInput) {
-        const size_t eventCount = std::min(midiInput->getEventCount(), kMaxClapMidiEvents);
-        for (size_t i = 0; i < eventCount && inputEventList.count < kMaxClapMidiEvents; ++i) {
+        const size_t eventCount = std::min(midiInput->getEventCount(), kMaxNoteEventsPerBlock);
+        for (size_t i = 0; i < eventCount && m_eventOrder.size() < kMaxNoteEventsPerBlock; ++i) {
             const auto& event = midiInput->getEvent(i);
             if (event.size != 3) {
                 continue;
@@ -440,33 +446,34 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
                                 note.kind == ClapNote::MidiNoteKind::NoteOff;
 
             if (isNote && m_noteDialect == ClapNote::kDialectClap) {
-                clap_event_note& ev = noteEvents[noteCount++];
+                clap_event_note ev{};
                 ev.header.size = sizeof(ev);
                 ev.header.time = time;
                 ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
                 ev.header.type = note.kind == ClapNote::MidiNoteKind::NoteOn ? CLAP_EVENT_NOTE_ON
                                                                              : CLAP_EVENT_NOTE_OFF;
-                ev.header.flags = 0;
                 ev.note_id = -1;
                 ev.port_index = 0;
                 ev.channel = note.channel;
                 ev.key = note.key;
                 ev.velocity = ClapNote::normalizedVelocity(note.velocity);
-                eventOrder[inputEventList.count++] = &ev.header;
+                m_noteEvents.push_back(ev);
+                m_eventOrder.push_back(&m_noteEvents.back().header);
             } else if (isNote ? (m_noteDialect == ClapNote::kDialectMidi) : m_rawMidiAllowed) {
-                clap_event_midi& ev = midiEvents[midiCount++];
+                clap_event_midi ev{};
                 ev.header.size = sizeof(ev);
                 ev.header.time = time;
                 ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
                 ev.header.type = CLAP_EVENT_MIDI;
-                ev.header.flags = 0;
                 ev.port_index = 0;
                 std::memcpy(ev.data, event.data, sizeof(ev.data));
-                eventOrder[inputEventList.count++] = &ev.header;
+                m_midiEvents.push_back(ev);
+                m_eventOrder.push_back(&m_midiEvents.back().header);
             }
             // else: note on a no-shared-dialect port, or CC on a CLAP-only port — dropped.
         }
-        inputEventList.order = eventOrder.data();
+        inputEventList.order = m_eventOrder.data();
+        inputEventList.count = static_cast<uint32_t>(m_eventOrder.size());
     }
     clap_input_events inputEvents = {&inputEventList, inputEventsSize, inputEventsGet};
     clap_output_events outputEvents = {nullptr, dropOutputEvent};
