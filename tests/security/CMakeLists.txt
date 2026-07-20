@@ -187,6 +187,9 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraAudio/include/Plugin
         ${REPO_ROOT}/AestraCore/include
     )
+    # Enables the OutOfProcessPluginInstance TESTNOTES accessor used by the #244
+    # CLAP-note e2e checks (matches the AestraPluginHost test-hooks build).
+    target_compile_definitions(SecOutOfProcessPluginHost PRIVATE AESTRA_ENABLE_TEST_HOOKS)
     target_link_libraries(SecOutOfProcessPluginHost PRIVATE AestraAudio)
 
     target_include_directories(SecPluginScanIsolation PRIVATE

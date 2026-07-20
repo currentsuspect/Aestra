@@ -2245,6 +2245,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DCBlockerTest.cpp")
     set_tests_properties(DCBlockerTest PROPERTIES LABELS "audio;dsp;dc-removal")
 endif()
 
+# Shared CLAP note-conversion rules (#244) — SDK-free, header-only
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClapNoteConversionTest.cpp")
+    add_executable(ClapNoteConversionTest AestraAudio/ClapNoteConversionTest.cpp)
+    target_include_directories(ClapNoteConversionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClapNoteConversionTest COMMAND ClapNoteConversionTest)
+    set_tests_properties(ClapNoteConversionTest PROPERTIES LABELS "audio;plugin;clap")
+endif()
+
 # Transport pause preserves the authoritative playhead (#590)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositionTest.cpp")
     add_executable(TransportPausePreservesPositionTest AestraAudio/TransportPausePreservesPositionTest.cpp)
