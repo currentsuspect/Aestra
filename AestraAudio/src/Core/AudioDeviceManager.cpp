@@ -743,9 +743,21 @@ void AudioDeviceManager::checkAndAutoScaleBuffer() {
                             stopStreamLocked();
                         }
                         closeStreamLocked();
+                        // Roll back like setBufferSize: on reopen failure, restore the
+                        // previous size so m_currentConfig never advertises a buffer
+                        // with no live stream behind it (CR review, #391 coherence).
+                        const uint32_t previousBuffer = m_currentConfig.bufferSize;
                         m_currentConfig.bufferSize = newBuffer;
-                        if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && wasRunning) {
-                            startStreamLocked();
+                        if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                            if (wasRunning) {
+                                startStreamLocked();
+                            }
+                        } else {
+                            m_currentConfig.bufferSize = previousBuffer;
+                            if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) &&
+                                wasRunning) {
+                                startStreamLocked();
+                            }
                         }
                     }
                 }
@@ -787,8 +799,8 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
     }
 
     if (dummy->openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        m_activeDriver = dummy;
         if (dummy->startStream()) {
+            m_activeDriver = dummy;
             AESTRA_LOG_WARNING("Safety fallback ACTIVE — audio engine still running");
             // Capture the notification; the caller fires it after unlocking so the
             // callback can safely re-enter a manager getter (#391 constraint 6).
@@ -798,7 +810,12 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
             outPending.reason = "Hardware stall/disconnect: fallback to safety driver";
             return true;
         }
+        // Opened but could not start: close it and leave no active driver rather
+        // than a half-live dummy (CR review, #391 coherence). m_activeDriver stays
+        // null (cleared above), so no silent driver change is reported.
+        dummy->closeStream();
     }
+    m_activeDriver = nullptr;
     return false;
 }
 

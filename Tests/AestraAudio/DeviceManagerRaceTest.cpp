@@ -57,6 +57,7 @@ public:
     // --- test controls ---
     std::atomic<bool> m_openShouldFail{false};
     std::atomic<int64_t> m_failDeviceId{-1}; // fail openStream for this deviceId (-1 = none)
+    std::atomic<bool> m_startShouldFail{false};
     std::atomic<int> m_openCount{0};
 
     // Enumeration barrier: when armed, getDevices() blocks until released, so a
@@ -118,7 +119,7 @@ public:
         m_running = false;
     }
     bool startStream() override {
-        if (!m_open) {
+        if (!m_open || m_startShouldFail.load()) {
             return false;
         }
         m_running = true;
@@ -184,6 +185,7 @@ AudioStreamConfig baseConfig() {
 struct Harness {
     AudioDeviceManager mgr;
     FakeDriver* primary = nullptr;
+    FakeDriver* dummy = nullptr;
 };
 
 std::unique_ptr<Harness> makeHarness(bool withDummy = true) {
@@ -194,7 +196,9 @@ std::unique_ptr<Harness> makeHarness(bool withDummy = true) {
     // The DUMMY safety driver is present for most scenarios; the rollback test
     // omits it so an open failure is not silently absorbed by a fallback driver.
     if (withDummy) {
-        h->mgr.addDriver(std::make_unique<FakeDriver>(AudioDriverType::DUMMY));
+        auto dummy = std::make_unique<FakeDriver>(AudioDriverType::DUMMY);
+        h->dummy = dummy.get();
+        h->mgr.addDriver(std::move(dummy));
     }
     // Preferred = SHARED so the primary is not treated as a fallback.
     h->mgr.setPreferredDriverType(AudioDriverType::WASAPI_SHARED);
@@ -369,6 +373,27 @@ void testFailedReopenRollsBack() {
     h->mgr.shutdown();
 }
 
+// 7. Safety-driver open succeeds but start fails: no half-live driver is left,
+//    and no misleading mode-change is reported (CR review, #391 coherence).
+void testSafetyDriverStartFailure() {
+    auto h = makeHarness();
+    std::atomic<bool> callbackRan{false};
+    h->mgr.setDriverModeChangeCallback(
+        [&](AudioDriverType, AudioDriverType, const std::string&) { callbackRan.store(true); });
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+
+    // The dummy opens but refuses to start.
+    h->dummy->m_startShouldFail.store(true);
+    const bool ok = h->mgr.switchToSafetyDriver();
+
+    check(!ok, "safety switch reports failure when the dummy cannot start");
+    check(h->mgr.getActiveDriverType() != AudioDriverType::DUMMY,
+          "no half-live dummy is left active after a start failure");
+    check(!callbackRan.load(), "no mode-change notification is fired when the safety switch fails");
+    h->mgr.shutdown();
+}
+
 } // namespace
 
 int main() {
@@ -379,6 +404,7 @@ int main() {
     testCallbackOutsideLock();
     testShutdownVsGetter();
     testFailedReopenRollsBack();
+    testSafetyDriverStartFailure();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;
