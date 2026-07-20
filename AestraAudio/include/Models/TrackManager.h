@@ -677,7 +677,10 @@ public:
     void pause() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(true, std::memory_order_relaxed);
-        pushTransportCommand(0.0f, m_position.load(std::memory_order_relaxed));
+        // Pause in place: preserve the audio thread's authoritative playhead rather
+        // than committing the UI-cached m_position, which lags playback by up to a
+        // few buffers and would rewind the transport under rapid toggles (#590).
+        pushTransportCommandSamples(0.0f, kTransportPreservePosition);
     }
 
     /**
@@ -894,12 +897,22 @@ public:
     /**
      * @brief Apply the transport state once it has been forwarded to the live engine.
      * @param playing True when the engine transport is now rolling.
-     * @param positionSeconds Transport position used for the command.
+     * @param samplePos Absolute sample position from the command, or the
+     *        kTransportPreservePosition sentinel for a pause-in-place (#590).
+     * @param sampleRate Engine sample rate used to convert samplePos to seconds.
      */
-    void onTransportStateApplied(bool playing, double positionSeconds) {
+    void onTransportStateApplied(bool playing, uint64_t samplePos, double sampleRate) {
         m_transportPlayingConfirmed.store(playing, std::memory_order_relaxed);
         if (!playing) {
-            m_position.store(positionSeconds, std::memory_order_relaxed);
+            // A pause requests kTransportPreservePosition so the audio thread keeps
+            // its authoritative playhead (#590). In that case leave the cached UI
+            // position untouched — syncPositionFromEngine refreshes it from the
+            // engine — instead of clobbering it with the sentinel. An explicit
+            // stop/seek carries a real sample position and updates the cache.
+            if (samplePos != kTransportPreservePosition) {
+                const double sr = std::max(1.0, sampleRate);
+                m_position.store(static_cast<double>(samplePos) / sr, std::memory_order_relaxed);
+            }
             clearDeferredRecordingStartBeat();
             if (m_isCapturing.load(std::memory_order_relaxed)) {
                 finalizeCaptureSession();
@@ -1490,6 +1503,13 @@ private:
     }
 
     void pushTransportCommand(float playing, double positionSeconds) {
+        pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
+    }
+
+    // Lower-level transport push that carries an absolute sample position (or the
+    // kTransportPreservePosition sentinel) verbatim, without the seconds→samples
+    // conversion that would mangle the sentinel.
+    void pushTransportCommandSamples(float playing, uint64_t samplePos) {
         if (!m_commandSink) {
             return;
         }
@@ -1497,7 +1517,7 @@ private:
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing;
-        cmd.samplePos = static_cast<uint64_t>(positionSeconds * m_outputSampleRate);
+        cmd.samplePos = samplePos;
         m_commandSink(cmd);
     }
 

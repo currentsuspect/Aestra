@@ -2245,6 +2245,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DCBlockerTest.cpp")
     set_tests_properties(DCBlockerTest PROPERTIES LABELS "audio;dsp;dc-removal")
 endif()
 
+# Transport pause preserves the authoritative playhead (#590)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositionTest.cpp")
+    add_executable(TransportPausePreservesPositionTest AestraAudio/TransportPausePreservesPositionTest.cpp)
+    target_link_libraries(TransportPausePreservesPositionTest PRIVATE AestraAudio)
+    target_include_directories(TransportPausePreservesPositionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TransportPausePreservesPositionTest COMMAND TransportPausePreservesPositionTest)
+    set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety")
+endif()
+
 # AudioEngine Diagnostics Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cpp")
     add_executable(AudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
