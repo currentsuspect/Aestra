@@ -189,6 +189,11 @@ void AestraAudioController::shutdown() {
         stopStream();
         closeStream();
     }
+    // Join the cycle-Hz calibration worker before tearing down the engine it
+    // writes telemetry into.
+    if (m_cycleHzWorker.joinable()) {
+        m_cycleHzWorker.join();
+    }
     if (m_audioEngine) {
         m_audioEngine->drainDeferredResourcesForShutdown();
     }
@@ -351,11 +356,19 @@ bool AestraAudioController::startStream() {
             }
         }, this);
 
-        // Setup Telemetry
-        const uint64_t hz = estimateCycleHz();
-        if (hz > 0) {
-            m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
+        // Setup Telemetry. estimateCycleHz() sleeps 50ms to calibrate the TSC
+        // frequency, and it only feeds diagnostics — so compute it off this
+        // (UI) thread that starts the stream. shutdown() joins the worker before
+        // m_audioEngine is destroyed, so the telemetry target stays valid.
+        if (m_cycleHzWorker.joinable()) {
+            m_cycleHzWorker.join();
         }
+        m_cycleHzWorker = std::thread([this]() {
+            const uint64_t hz = estimateCycleHz();
+            if (hz > 0 && m_audioEngine) {
+                m_audioEngine->telemetry().cycleHz.store(hz, std::memory_order_relaxed);
+            }
+        });
 
         m_audioEngine->loadMetronomeClicks(
             "AestraAudio/assets/Aestra_metronome.wav",
