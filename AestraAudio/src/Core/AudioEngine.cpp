@@ -218,11 +218,13 @@ void AudioEngine::applyPendingCommands() {
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
             const bool nextPlaying = (cmd.value1 != 0.0f);
             // A pause carries kTransportPreservePosition: keep the authoritative
-            // playhead this thread already advanced instead of seeking to a stale
-            // UI snapshot, which would rewind under rapid pause/play toggles (#590).
-            const uint64_t nextPos = (cmd.samplePos == kTransportPreservePosition)
-                                         ? m_globalSamplePos.load(std::memory_order_relaxed)
-                                         : cmd.samplePos;
+            // playhead instead of seeking to a stale UI snapshot, which would
+            // rewind under rapid pause/play toggles (#590). Resolve against the
+            // in-block accumulator transportPos (seeded from m_globalSamplePos and
+            // updated per command) so a seek earlier in the SAME drain block is
+            // honored — m_globalSamplePos is only stored back after the loop.
+            const uint64_t nextPos =
+                (cmd.samplePos == kTransportPreservePosition) ? transportPos : cmd.samplePos;
             const bool posChanged = (nextPos != transportPos);
 
             if (nextPlaying && (!transportPlaying || posChanged)) {

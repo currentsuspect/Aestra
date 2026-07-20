@@ -143,6 +143,16 @@ void enginePreservesPlayheadOnPause() {
     engine.processBlock(out.data(), nullptr, kFrames, 0.0);
     check(engine.getGlobalSamplePos() == seekPos,
           "an explicit stop/seek to a real position still moves the playhead");
+
+    // A seek immediately followed by a pause in the SAME command block must honor
+    // the seek: the sentinel resolves against the in-block accumulator, not the
+    // pre-block playhead, so the preceding seek is not reverted.
+    const uint64_t sameBlockSeek = seekPos + 500;
+    pushTransport(1.0f, sameBlockSeek);
+    pushTransport(0.0f, kTransportPreservePosition);
+    engine.processBlock(out.data(), nullptr, kFrames, 0.0);
+    check(engine.getGlobalSamplePos() == sameBlockSeek,
+          "pause following a seek in the same block preserves the seek position");
 }
 
 } // namespace
