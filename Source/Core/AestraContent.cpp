@@ -3049,8 +3049,11 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                     if (m_trackManager) {
                         const double engineSampleRate =
                             std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
-                        const double positionSeconds = static_cast<double>(cmd.samplePos) / engineSampleRate;
-                        m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, positionSeconds);
+                        // Pass the raw sample position through: onTransportStateApplied
+                        // resolves the kTransportPreservePosition pause sentinel and the
+                        // seconds conversion in one place (#590).
+                        m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, cmd.samplePos,
+                                                                engineSampleRate);
                     }
                 } else {
                     m_audioEngine->commandQueue().push(cmd);

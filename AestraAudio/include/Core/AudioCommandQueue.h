@@ -30,6 +30,19 @@ enum class AudioQueueCommandType : uint8_t {
     AuditionUnit, // trackIndex = unitId, value1 = velocity
 };
 
+/**
+ * @brief Sentinel samplePos for a SetTransportState stop that must preserve the
+ *        audio thread's current playhead rather than seek.
+ *
+ * A pause has to stop transport without moving position. The UI-cached position
+ * lags the audio thread by up to a few buffers, so committing it would rewind the
+ * transport under rapid pause/play toggling (#590). Pause therefore sends this
+ * sentinel; the audio thread resolves it to its own authoritative m_globalSamplePos
+ * and the UI-side echo leaves the cached position for the next engine sync. No real
+ * seek ever targets UINT64_MAX (~12 million years at 48 kHz), so it is unambiguous.
+ */
+inline constexpr uint64_t kTransportPreservePosition = UINT64_MAX;
+
 // Ensure cache-friendly alignment for RT path
 struct alignas(32) AudioQueueCommand {
     AudioQueueCommandType type{AudioQueueCommandType::None};

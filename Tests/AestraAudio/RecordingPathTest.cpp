@@ -64,15 +64,16 @@ bool testRecordingSessionLifecycle() {
     if (!tm->isRecordArmed()) { std::cerr << "FAILED: not armed\n"; return false; }
 
     // Transport starts playing → begins capture session
-    tm->onTransportStateApplied(true, 0.0);
+    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
     if (!tm->isRecording()) {
         // isRecording checks m_isCapturing which should be set by beginCaptureSession
         std::cerr << "FAILED: not recording after transport play\n";
         return false;
     }
 
-    // Transport stops → finalizes capture session
-    tm->onTransportStateApplied(false, 2.0);
+    // Transport stops → finalizes capture session (position 2.0s)
+    tm->onTransportStateApplied(false, static_cast<uint64_t>(2.0 * kSampleRate),
+                                static_cast<double>(kSampleRate));
     if (tm->isRecording()) {
         std::cerr << "FAILED: still recording after transport stop\n";
         return false;
@@ -95,7 +96,7 @@ bool testUnarmedNoCapture() {
 
     // Even if we toggle record arm and start transport, no armed tracks = no capture
     tm->record();
-    tm->onTransportStateApplied(true, 0.0);
+    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
 
     // Since no tracks are armed, isRecording should be false
     if (tm->isRecording()) {
@@ -103,7 +104,8 @@ bool testUnarmedNoCapture() {
         return false;
     }
 
-    tm->onTransportStateApplied(false, 1.0);
+    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
+                                static_cast<double>(kSampleRate));
     tm->record(); // disarm
 
     std::cout << "PASSED\n";
