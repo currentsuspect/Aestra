@@ -59,6 +59,11 @@ public:
     bool isBypassedByWatchdog() const override;
     bool isCrashed() const override { return m_crashed.load(std::memory_order_acquire); }
 
+    // Number of parameter changes dropped because the queue was full. Non-zero
+    // means setParameter outran the worker's drain — surfaced for diagnostics and
+    // tests since setParameter itself is void (#238).
+    uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
+
 private:
     bool sendCommand(const std::string& command, std::string* response = nullptr,
                      std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
@@ -118,7 +123,13 @@ private:
         uint32_t id{0};
         float value{0.0f};
     };
-    static constexpr size_t kParamQueueCapacity = 512;
+    // Sized to comfortably absorb a full-preset burst (hundreds of distinct
+    // parameters applied in a tight loop) before the worker drains it.
+    static constexpr size_t kParamQueueCapacity = 4096;
+    // Cap per worker pass so a large burst against a slow child cannot monopolize
+    // the worker and starve PROCESS (which would make the RT callback fall back to
+    // audible passThrough). The remainder stays queued for the next pass.
+    static constexpr size_t kMaxParamDrainPerPass = 64;
     LockFreeRingBuffer<ParamChange, kParamQueueCapacity> m_paramQueue;
     std::atomic<uint64_t> m_paramDrops{0};
 

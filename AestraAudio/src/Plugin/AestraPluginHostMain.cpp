@@ -150,7 +150,7 @@ struct ClapEventParamValue {
     ClapEventHeader header;
     uint32_t paramId;
     void* cookie;
-    int16_t noteId;
+    int32_t noteId; // clap_event_param_value_t::note_id is int32_t (not int16_t)
     int16_t portIndex;
     int16_t channel;
     int16_t key;
