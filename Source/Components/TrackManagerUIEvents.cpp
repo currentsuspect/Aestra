@@ -172,7 +172,66 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return true;
     }
 
+    // Close the inter-row seam: a left press between two rows reaches here
+    // unhandled (it is inside no track's bounds). Split has its own gap-free
+    // mapping above, so this only needs to cover ordinary selection.
+    if (handleTrackSeamSelect(event, localPos)) {
+        return true;
+    }
+
     return handled;
+}
+
+bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
+                                           const AestraUI::NUIPoint& localPos) {
+    if (!m_playlistVisible || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+        return false;
+    }
+    // Split owns seam clicks in split mode (handleSplitToolClick already ran).
+    if (m_currentTool == PlaylistTool::Split) {
+        return false;
+    }
+
+    const float headerHeight = kTimelineHeaderHeight;
+    const float rulerHeight = kTimelineRulerHeight;
+    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    const float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+    if (localPos.y < trackAreaTop) {
+        return false; // header / ruler / horizontal scrollbar
+    }
+
+    const float stride = static_cast<float>(m_trackHeight + m_trackSpacing);
+    if (stride <= 0.0f) {
+        return false;
+    }
+    const float relativeY = localPos.y - trackAreaTop + m_scrollOffset;
+    if (relativeY < 0.0f) {
+        return false;
+    }
+    const int idx = static_cast<int>(relativeY / stride);
+    if (idx < 0 || idx >= static_cast<int>(m_trackUIComponents.size())) {
+        return false;
+    }
+
+    auto& trackUI = m_trackUIComponents[idx];
+    if (!trackUI || !trackUI->isVisible()) {
+        return false;
+    }
+    // Only genuine seam clicks reach here; inside the row the child consumes it.
+    const AestraUI::NUIRect tb = trackUI->getBounds();
+    if (tb.contains(event.position)) {
+        return false;
+    }
+    // Stay within the row's horizontal extent (exclude the scrollbar gutter).
+    if (event.position.x < tb.x || event.position.x > tb.x + tb.width) {
+        return false;
+    }
+
+    const bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
+                       (event.modifiers & AestraUI::NUIModifiers::CapsLock);
+    selectTrack(trackUI.get(), shift);
+    invalidateCache();
+    return true;
 }
 
 void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
