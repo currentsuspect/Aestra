@@ -133,6 +133,76 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // --- Host->child parameter delivery (#238) --------------------------------
+    // setParameter must reach the child and be applied to the hosted plugin. The
+    // echo helper treats parameter 0 as an output gain, so a delivered change is
+    // observable in the returned audio, not just a recorded log. Parameter changes
+    // flow through a lock-free queue drained by the proxy's worker thread, so a
+    // settle interval is needed (matching the process double-buffer above).
+    const float paramIn[4] = {0.4f, 0.5f, 0.6f, 0.7f};
+    const float* paramInputs[2] = {paramIn, paramIn};
+
+    instance->setParameter(0, 0.5f); // half gain
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    std::memset(outL, 0, sizeof(outL));
+    std::memset(outR, 0, sizeof(outR));
+    instance->process(paramInputs, outputs, 2, 2, 4); // submit block under the new gain
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    instance->process(paramInputs, outputs, 2, 2, 4); // retrieve the gained block
+    for (int i = 0; i < 4; ++i) {
+        const float expected = paramIn[i] * 0.5f;
+        if (std::fabs(outL[i] - expected) > 1e-5f || std::fabs(outR[i] - expected) > 1e-5f) {
+            std::cerr << "parameter change did not reach and gain the child plugin (frame " << i
+                      << ": got " << outL[i] << " expected " << expected << ")\n";
+            return 1;
+        }
+    }
+
+    // Successive changes arrive in order — the last write to a parameter wins.
+    instance->setParameter(0, 0.25f);
+    instance->setParameter(0, 0.75f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    std::memset(outL, 0, sizeof(outL));
+    std::memset(outR, 0, sizeof(outR));
+    instance->process(paramInputs, outputs, 2, 2, 4);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    instance->process(paramInputs, outputs, 2, 2, 4);
+    for (int i = 0; i < 4; ++i) {
+        const float expected = paramIn[i] * 0.75f;
+        if (std::fabs(outL[i] - expected) > 1e-5f) {
+            std::cerr << "ordered parameter changes did not settle on the last value (frame " << i
+                      << ": got " << outL[i] << " expected " << expected << ")\n";
+            return 1;
+        }
+    }
+
+    // An out-of-range parameter id is rejected by the child but must not crash the
+    // proxy: the change is dropped and the instance keeps working.
+    instance->setParameter(99999u, 0.5f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    if (instance->isCrashed()) {
+        std::cerr << "out-of-range parameter id crashed the isolated plugin proxy\n";
+        return 1;
+    }
+    // Restore unity gain and confirm the proxy still processes after the bad id.
+    instance->setParameter(0, 1.0f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    std::memset(outL, 0, sizeof(outL));
+    std::memset(outR, 0, sizeof(outR));
+    instance->process(paramInputs, outputs, 2, 2, 4);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    instance->process(paramInputs, outputs, 2, 2, 4);
+    if (instance->isCrashed()) {
+        std::cerr << "isolated plugin proxy did not survive parameter stress\n";
+        return 1;
+    }
+    for (int i = 0; i < 4; ++i) {
+        if (std::fabs(outL[i] - paramIn[i]) > 1e-5f) {
+            std::cerr << "unity gain not restored after out-of-range parameter id\n";
+            return 1;
+        }
+    }
+
     auto missingVst3 = create(factory, makeInfo("com.aestra.missing-vst3"));
     if (missingVst3) {
         std::cerr << "missing real VST3 plugin should not fall back to echo processing\n";

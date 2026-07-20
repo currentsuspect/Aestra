@@ -3,6 +3,8 @@
 
 #include "PluginHost.h"
 
+#include "AestraThreading.h"
+
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -100,6 +102,27 @@ private:
     std::atomic<uint32_t> m_readyFrames{0};
     std::atomic<uint8_t> m_pendingState{0};
     std::atomic<uint8_t> m_readyState{0};
+
+    // Host->child parameter changes. setParameter() only pushes onto this
+    // lock-free queue (no IPC, no lock, no allocation, never blocks); the worker
+    // thread (single consumer) drains it and forwards each change to the child as
+    // an ordered SETPARAM command, keeping the realtime callback free of parameter
+    // IPC (#238). The ring is SPSC: setParameter must be called from one producer
+    // thread. Today that is the UI/message thread — automation gates plugin-
+    // parameter curves to Internal-format plugins in AudioEngine, so the render
+    // thread never reaches OOP setParameter. Because the push itself never blocks,
+    // a future single RT producer (e.g. third-party automation, #467) would remain
+    // realtime-safe; adding a *second* concurrent producer would require an MPSC
+    // queue instead.
+    struct ParamChange {
+        uint32_t id{0};
+        float value{0.0f};
+    };
+    static constexpr size_t kParamQueueCapacity = 512;
+    LockFreeRingBuffer<ParamChange, kParamQueueCapacity> m_paramQueue;
+    std::atomic<uint64_t> m_paramDrops{0};
+
+    void drainParamQueueToChild();
 };
 
 } // namespace Audio

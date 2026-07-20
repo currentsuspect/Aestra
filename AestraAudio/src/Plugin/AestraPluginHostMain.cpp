@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
@@ -142,6 +144,21 @@ struct ClapEventMidi {
     uint8_t data[3];
 };
 
+// clap_event_param_value ABI (clap/events.h). Host-driven parameter changes are
+// delivered to a CLAP plugin as this event through params.flush() (#238).
+struct ClapEventParamValue {
+    ClapEventHeader header;
+    uint32_t paramId;
+    void* cookie;
+    int16_t noteId;
+    int16_t portIndex;
+    int16_t channel;
+    int16_t key;
+    double value;
+};
+
+constexpr uint16_t kClapEventParamValue = 5;
+
 struct ClapOstream {
     void* ctx;
     int64_t (*write)(const ClapOstream* stream, const void* buffer, uint64_t size);
@@ -223,6 +240,19 @@ bool dropOutputEvent(const ClapOutputEvents* list, const ClapEventHeader* event)
     (void)list;
     (void)event;
     return true;
+}
+
+// Single clap_event_param_value input list, used to deliver a host-driven
+// parameter change to a CLAP plugin via params.flush() (#238).
+uint32_t singleParamEventSize(const ClapInputEvents* list) {
+    return (list && list->ctx) ? 1u : 0u;
+}
+
+const ClapEventHeader* singleParamEventGet(const ClapInputEvents* list, uint32_t index) {
+    if (!list || !list->ctx || index != 0) {
+        return nullptr;
+    }
+    return &static_cast<const ClapEventParamValue*>(list->ctx)->header;
 }
 
 int64_t writeStateStream(const ClapOstream* stream, const void* buffer, uint64_t size) {
@@ -438,6 +468,37 @@ struct ClapModule {
             }
         }
         active = false;
+    }
+
+    // Deliver a host-driven parameter change to the plugin. CLAP has no direct
+    // setter; the host queues a param-value event and calls params.flush(), which
+    // the plugin applies on its main thread (#238). Returns false if the plugin
+    // has no params extension or the id is out of range.
+    bool setParameter(uint32_t paramId, double value) {
+        if (!plugin || !paramsExt || !paramsExt->flush) {
+            return false;
+        }
+        if (paramsExt->count && paramId >= paramsExt->count(plugin)) {
+            return false;
+        }
+        ClapEventParamValue event{};
+        event.header.size = sizeof(event);
+        event.header.time = 0;
+        event.header.spaceId = kClapCoreEventSpaceId;
+        event.header.type = kClapEventParamValue;
+        event.header.flags = 0;
+        event.paramId = paramId;
+        event.cookie = nullptr;
+        event.noteId = -1;
+        event.portIndex = -1;
+        event.channel = -1;
+        event.key = -1;
+        event.value = value;
+
+        ClapInputEvents inEvents = {&event, singleParamEventSize, singleParamEventGet};
+        ClapOutputEvents outEvents = {nullptr, dropOutputEvent};
+        paramsExt->flush(plugin, &inEvents, &outEvents);
+        return true;
     }
 
     bool process(const std::vector<float>& interleavedInput, uint32_t channels, uint32_t frames,
@@ -845,6 +906,16 @@ int main(int argc, char** argv) {
     std::vector<uint8_t> midiBuffer;
     std::vector<uint8_t> stateBuffer;
     std::string line;
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+    // The __aestra_test_echo__ fake plugin has no real module; it records applied
+    // parameters so tests can prove host->child parameter delivery end to end.
+    // Parameter 0 is treated as an output gain applied to the echoed audio, so a
+    // test can observe the change behaviorally rather than trusting a log (#238).
+    bool echoPlugin = false;
+    std::array<float, 16> echoParams{};
+    echoParams.fill(0.0f);
+    echoParams[0] = 1.0f; // unity gain until set
+#endif
 #ifndef _WIN32
     ClapModule clapModule;
 #endif
@@ -946,6 +1017,9 @@ int main(int argc, char** argv) {
             }
 #endif
             loaded = true;
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+            echoPlugin = (id == "__aestra_test_echo__");
+#endif
             reply("OK LOADED");
         } else if (command == "INIT") {
             if (!loaded) {
@@ -999,6 +1073,46 @@ int main(int argc, char** argv) {
             vst3Module.deactivate();
 #endif
             reply("OK INACTIVE");
+        } else if (command == "SETPARAM") {
+            if (!loaded) {
+                reply("ERR not-loaded");
+                continue;
+            }
+            uint32_t paramId = 0;
+            double value = 0.0;
+            if (!(input >> paramId >> value)) {
+                reply("ERR invalid-setparam");
+                continue;
+            }
+            if (!std::isfinite(value)) {
+                reply("ERR non-finite-value");
+                continue;
+            }
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+            if (echoPlugin) {
+                if (paramId >= echoParams.size()) {
+                    reply("ERR param-id-out-of-range");
+                    continue;
+                }
+                echoParams[paramId] = static_cast<float>(value);
+                reply("OK SETPARAM");
+                continue;
+            }
+#endif
+#ifndef _WIN32
+            if (clapModule.plugin) {
+                reply(clapModule.setParameter(paramId, value) ? "OK SETPARAM" : "ERR setparam-failed");
+                continue;
+            }
+#endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) {
+                vst3Module.plugin->setParameter(paramId, static_cast<float>(value));
+                reply("OK SETPARAM");
+                continue;
+            }
+#endif
+            reply("ERR no-plugin");
         } else if (command == "SAVESTATE") {
             if (!loaded) {
                 reply("ERR not-loaded");
@@ -1132,6 +1246,16 @@ int main(int argc, char** argv) {
 #endif
 
             const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+            // Echo fake plugin: apply parameter 0 as an output gain so a test can
+            // observe host->child parameter delivery through the audio itself (#238).
+            if (echoPlugin && echoParams[0] != 1.0f) {
+                const size_t sampleCount = static_cast<size_t>(channels) * frames;
+                for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {
+                    processBuffer[i] *= echoParams[0];
+                }
+            }
+#endif
             reply("OK " + hexEncodeBytes(processBuffer.data(), byteCount));
         } else {
             reply("ERR unknown-command");
