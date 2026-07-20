@@ -164,6 +164,9 @@ void RtAudioDriver::closeStream() {
 
 #ifdef __linux__
     stopRealtimePriorityWorker();
+    if (m_memLockWorker.joinable()) {
+        m_memLockWorker.join();
+    }
 #endif
     if (m_rtAudio->isStreamRunning()) {
         stopStream();
@@ -197,14 +200,25 @@ bool RtAudioDriver::startStream() {
     if (m_telemetry) {
         m_telemetry->clearThreadPriorityStatus();
     }
-    // mlockall is process-wide and can be requested from the starter thread.
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
-        if (m_telemetry) {
-            m_telemetry->setThreadPriorityBit(0x02); // mlockall success
-        }
-    } else if (m_telemetry) {
-        m_telemetry->updateLinuxRtPriorityErrno(errno);
+    // mlockall(MCL_CURRENT | MCL_FUTURE) locks every resident page and pre-faults
+    // future ones; on a large process (plugins, GL, UI) it costs 0.3-4s and was
+    // blocking the UI thread that starts the stream, freezing startup. The audio
+    // device itself starts in microseconds, so lock memory asynchronously: the
+    // stream goes live immediately and the lock lands shortly after (the RT
+    // callback only risks a few page-fault glitches in that brief window). The
+    // worker is joined in closeStream(), so it never outlives the driver.
+    if (m_memLockWorker.joinable()) {
+        m_memLockWorker.join();
     }
+    m_memLockWorker = std::thread([this]() {
+        if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
+            if (m_telemetry) {
+                m_telemetry->setThreadPriorityBit(0x02); // mlockall success
+            }
+        } else if (m_telemetry) {
+            m_telemetry->updateLinuxRtPriorityErrno(errno);
+        }
+    });
 #endif
 
     RtAudioErrorType error = m_rtAudio->startStream();
