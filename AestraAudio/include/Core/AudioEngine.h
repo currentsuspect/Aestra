@@ -770,7 +770,6 @@ private:
     std::atomic<bool> m_transportPlaying{false};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
-    uint64_t m_rtLastTransportPos{0};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
     std::atomic<bool> m_transportRestartRequested{false};
     std::atomic<bool> m_transportStopRequested{false};
