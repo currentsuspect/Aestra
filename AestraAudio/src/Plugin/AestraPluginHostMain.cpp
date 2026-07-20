@@ -13,23 +13,25 @@
 #include <string>
 #include <vector>
 
-#include "Plugin/ClapNoteConversion.h"
-
 #ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
 #endif
 
+// CLAP hosting in this child is POSIX-only (dlopen). The shared note-conversion
+// rules are only needed there, so keep the include off the Windows build, where
+// this header is not on the include path.
 #ifndef _WIN32
+#include "Plugin/ClapNoteConversion.h"
 #include <dlfcn.h>
 #endif
 
 namespace {
 
+#ifndef _WIN32
 // The shared CLAP note-conversion rules live in Aestra::Audio::ClapNote; this
 // file is in the global namespace, so alias it for brevity (#244).
 namespace ClapNote = Aestra::Audio::ClapNote;
 
-#ifndef _WIN32
 struct ClapVersion {
     uint32_t major;
     uint32_t minor;
@@ -485,6 +487,11 @@ struct ClapModule {
     uint32_t noteDialect = ClapNote::kDialectMidi;
     bool rawMidiAllowed = true;
     bool noteDialectFromLegacyFallback = true;
+    // One capacity governs all note-event storage: the midi/note backing vectors,
+    // the heterogeneous event-order view, and the per-block accept cap. The
+    // backing vectors are reserved to this once (initialize), so the header
+    // pointers recorded in noteEventOrder stay valid for the whole process() call.
+    static constexpr size_t kMaxNoteEventsPerBlock = 1024;
     std::vector<ClapEventNote> noteEvents;
     // Heterogeneous in-order view over midiEvents/noteEvents for process.in_events.
     std::vector<const ClapEventHeader*> noteEventOrder;
@@ -662,9 +669,9 @@ struct ClapModule {
         for (auto& storage : outputStorage) {
             storage.assign(maxBlockSize, 0.0f);
         }
-        midiEvents.reserve(1024);
-        noteEvents.reserve(1024);
-        noteEventOrder.reserve(1024);
+        midiEvents.reserve(kMaxNoteEventsPerBlock);
+        noteEvents.reserve(kMaxNoteEventsPerBlock);
+        noteEventOrder.reserve(kMaxNoteEventsPerBlock);
         inputPlanes[0] = inputStorage[0].data();
         inputPlanes[1] = inputStorage[1].data();
         outputPlanes[0] = outputStorage[0].data();
@@ -744,12 +751,11 @@ struct ClapModule {
         // supports CLAP, else raw CLAP_EVENT_MIDI. Non-note messages stay raw MIDI.
         // noteEventOrder preserves original stream order across both event types;
         // backing vectors are reserved so the recorded header pointers stay valid.
-        static constexpr size_t kMaxNoteEvents = 1024;
         midiEvents.clear();
         noteEvents.clear();
         noteEventOrder.clear();
         if (midiData && midiBytes <= midiData->size() && (midiBytes % 8) == 0) {
-            for (size_t offset = 0; offset < midiBytes && noteEventOrder.size() < kMaxNoteEvents;
+            for (size_t offset = 0; offset < midiBytes && noteEventOrder.size() < kMaxNoteEventsPerBlock;
                  offset += 8) {
                 const uint8_t size = (*midiData)[offset + 4];
                 if (size != 3) {

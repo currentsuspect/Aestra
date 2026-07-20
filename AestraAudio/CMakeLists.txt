@@ -544,6 +544,11 @@ add_executable(AestraPluginHost
     src/Plugin/AestraPluginHostMain.cpp
 )
 
+# The helper is otherwise self-contained (hand-mirrored plugin ABIs), but it now
+# includes the shared Plugin/ClapNoteConversion.h header, so it needs AestraAudio's
+# include root on every config — not only when VST3 links AestraAudioCore (#244).
+target_include_directories(AestraPluginHost PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 set_target_properties(AestraPluginHost PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
