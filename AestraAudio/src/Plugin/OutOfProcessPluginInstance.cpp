@@ -469,8 +469,41 @@ float OutOfProcessPluginInstance::getParameter(uint32_t id) const {
 }
 
 void OutOfProcessPluginInstance::setParameter(uint32_t id, float value) {
-    (void)id;
-    (void)value;
+    // Non-blocking by design: enqueue and return. No IPC, lock, or allocation
+    // here. The worker thread forwards the change to the child in order (#238).
+    // The queue is single-producer (see the header) — call from one thread. A
+    // full queue drops the newest change and bumps a diagnostic counter
+    // (parameterDropCount) rather than blocking; the first drop is logged so the
+    // loss is observable instead of silent.
+    if (!m_paramQueue.push(ParamChange{id, value})) {
+        if (m_paramDrops.fetch_add(1, std::memory_order_relaxed) == 0) {
+            Log::warning("[PluginHost] parameter queue full for " + m_info.name +
+                         "; dropping changes (raise kParamQueueCapacity if this recurs)");
+        }
+    }
+}
+
+void OutOfProcessPluginInstance::drainParamQueueToChild() {
+    // Worker-thread only. Each change is a single SETPARAM round-trip on the IPC
+    // channel this thread owns. Bounded per pass (kMaxParamDrainPerPass) so a big
+    // burst against a slow child cannot starve PROCESS; the remainder drains on
+    // the next worker iteration, in order.
+    ParamChange change;
+    for (size_t drained = 0; drained < kMaxParamDrainPerPass && m_paramQueue.pop(change); ++drained) {
+        std::ostringstream command;
+        command << "SETPARAM " << change.id << " " << change.value;
+        std::string response;
+        if (!sendCommand(command.str(), &response) || response.find("OK") != 0) {
+            // A dead/unresponsive child fails the whole instance safely; a plugin
+            // that rejects one parameter (ERR) is logged but does not crash us.
+            if (!m_process || !m_process->isRunning()) {
+                markCrashed();
+                return;
+            }
+            Log::warning("[PluginHost] SETPARAM rejected for " + m_info.name + " (id=" +
+                         std::to_string(change.id) + ")");
+        }
+    }
 }
 
 std::string OutOfProcessPluginInstance::getParameterDisplay(uint32_t id) const {
@@ -585,6 +618,15 @@ void OutOfProcessPluginInstance::workerLoop() {
     while (!m_workerStop.load(std::memory_order_acquire)) {
         if (m_crashed.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            continue;
+        }
+
+        // Forward any queued parameter changes to the child first, so a change
+        // requested before this block takes effect for it. Runs every iteration
+        // (even with no audio pending) so knob moves apply while transport is
+        // stopped too (#238).
+        drainParamQueueToChild();
+        if (m_crashed.load(std::memory_order_acquire)) {
             continue;
         }
 
