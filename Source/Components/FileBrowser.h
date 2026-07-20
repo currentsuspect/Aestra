@@ -145,6 +145,11 @@ public:
     void applyFilter();
     std::string getSearchQuery() const;
     bool isSearchBoxFocused() const;
+    // Drop search-box focus when a press at `pos` lands outside it. The content
+    // root calls this on every left-press so clicks in sibling panels (which
+    // consume the event before it ever reaches the browser) still dismiss the
+    // search caret. Returns true if focus was actually cleared.
+    bool blurSearchIfPressOutside(const NUIPoint& pos);
     
     // Preview panel
     void setPreviewPanelVisible(bool visible);

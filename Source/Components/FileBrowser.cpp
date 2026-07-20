@@ -4528,6 +4528,14 @@ bool FileBrowser::isSearchBoxFocused() const {
     return searchInput_ ? searchInput_->isFocused() : false;
 }
 
+bool FileBrowser::blurSearchIfPressOutside(const NUIPoint& pos) {
+    if (searchInput_ && searchInput_->isFocused() && !searchInput_->getBounds().contains(pos)) {
+        searchInput_->setFocused(false);
+        return true;
+    }
+    return false;
+}
+
 // === PERSISTENT STATE SAVE/LOAD ===
 
 void FileBrowser::saveState(const std::string& filePath) {

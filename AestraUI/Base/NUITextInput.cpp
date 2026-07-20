@@ -640,7 +640,19 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
 
     int start = std::max(0, std::min(selectionStart_, selectionEnd_));
     int end = std::max(0, std::max(selectionStart_, selectionEnd_));
-    
+
+    // Single-line vertical metrics must mirror drawText(), which positions the
+    // glyphs via renderer.calculateTextY() using the real font line height.
+    // getLineRenderY() approximates that centering with lineHeight = fontSize,
+    // so on renderers whose lineHeight exceeds fontSize the highlight otherwise
+    // lands below the text and covers only its lower half.
+    const bool singleLine = (!multiline_ || layoutLines_.size() <= 1);
+    const float fontSize = NUIThemeManager::getInstance().getFontSize("m");
+    const float singleLineTop = std::round(renderer.calculateTextY(textRect, fontSize));
+    float singleLineHeight = renderer.getFontMetrics(fontSize).lineHeight;
+    if (singleLineHeight <= 0.0f)
+        singleLineHeight = fontSize;
+
     // Find lines that intersect with selection
     for (const auto& line : layoutLines_)
     {
@@ -666,9 +678,9 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
         
         NUIRect selectionRect;
         selectionRect.x = textRect.x + startX;
-        selectionRect.y = std::round(getLineRenderY(line));
+        selectionRect.y = singleLine ? singleLineTop : std::round(getLineRenderY(line));
         selectionRect.width = endX - startX;
-        selectionRect.height = line.height;
+        selectionRect.height = singleLine ? singleLineHeight : line.height;
         
         // Draw selection highlight
         renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));

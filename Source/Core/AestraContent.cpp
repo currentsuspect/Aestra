@@ -1698,6 +1698,15 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return false;
     }
 
+    // Any left-press outside the file-browser search box dismisses its caret.
+    // The browser's own outside-click blur only fires when the event reaches
+    // the browser, but a press in another panel is consumed by that panel
+    // first — so drop search focus here, before routing, where every press is
+    // visible regardless of which sibling ends up handling it.
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_fileBrowser) {
+        m_fileBrowser->blurSearchIfPressOutside(event.position);
+    }
+
     // Wheel events need explicit hit routing because workspace siblings overlap
     // the browser's screen area and the generic child dispatcher only follows
     // z-order. Keep floating overlays first, then route the visible browser view
