@@ -572,6 +572,11 @@ private:
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    // Rows render m_trackHeight tall on an m_trackHeight+m_trackSpacing stride,
+    // leaving an m_trackSpacing-px seam between them that lands inside no track's
+    // bounds. Map an otherwise-unhandled left press in that seam back to its row
+    // and select it, so clicks between rows are not silently swallowed.
+    bool handleTrackSeamSelect(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 
     // Split tool
