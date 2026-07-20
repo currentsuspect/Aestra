@@ -3,6 +3,8 @@
 
 #include "PluginHost.h"
 
+#include "AestraThreading.h"
+
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -57,6 +59,11 @@ public:
     bool isBypassedByWatchdog() const override;
     bool isCrashed() const override { return m_crashed.load(std::memory_order_acquire); }
 
+    // Number of parameter changes dropped because the queue was full. Non-zero
+    // means setParameter outran the worker's drain — surfaced for diagnostics and
+    // tests since setParameter itself is void (#238).
+    uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
+
 private:
     bool sendCommand(const std::string& command, std::string* response = nullptr,
                      std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
@@ -100,6 +107,33 @@ private:
     std::atomic<uint32_t> m_readyFrames{0};
     std::atomic<uint8_t> m_pendingState{0};
     std::atomic<uint8_t> m_readyState{0};
+
+    // Host->child parameter changes. setParameter() only pushes onto this
+    // lock-free queue (no IPC, no lock, no allocation, never blocks); the worker
+    // thread (single consumer) drains it and forwards each change to the child as
+    // an ordered SETPARAM command, keeping the realtime callback free of parameter
+    // IPC (#238). The ring is SPSC: setParameter must be called from one producer
+    // thread. Today that is the UI/message thread — automation gates plugin-
+    // parameter curves to Internal-format plugins in AudioEngine, so the render
+    // thread never reaches OOP setParameter. Because the push itself never blocks,
+    // a future single RT producer (e.g. third-party automation, #467) would remain
+    // realtime-safe; adding a *second* concurrent producer would require an MPSC
+    // queue instead.
+    struct ParamChange {
+        uint32_t id{0};
+        float value{0.0f};
+    };
+    // Sized to comfortably absorb a full-preset burst (hundreds of distinct
+    // parameters applied in a tight loop) before the worker drains it.
+    static constexpr size_t kParamQueueCapacity = 4096;
+    // Cap per worker pass so a large burst against a slow child cannot monopolize
+    // the worker and starve PROCESS (which would make the RT callback fall back to
+    // audible passThrough). The remainder stays queued for the next pass.
+    static constexpr size_t kMaxParamDrainPerPass = 64;
+    LockFreeRingBuffer<ParamChange, kParamQueueCapacity> m_paramQueue;
+    std::atomic<uint64_t> m_paramDrops{0};
+
+    void drainParamQueueToChild();
 };
 
 } // namespace Audio
