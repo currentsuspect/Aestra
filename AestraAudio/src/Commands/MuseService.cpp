@@ -112,8 +112,9 @@ void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackM
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
             const double sampleRate =
                 std::max(1.0, static_cast<double>(enginePtr->getSampleRate()));
-            tm->onTransportStateApplied(cmd.value1 != 0.0f,
-                                        static_cast<double>(cmd.samplePos) / sampleRate);
+            // onTransportStateApplied resolves the kTransportPreservePosition pause
+            // sentinel and the seconds conversion in one place (#590).
+            tm->onTransportStateApplied(cmd.value1 != 0.0f, cmd.samplePos, sampleRate);
         }
     });
 }
