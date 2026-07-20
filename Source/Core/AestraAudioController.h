@@ -9,6 +9,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 // Forward declarations
@@ -65,6 +66,11 @@ private:
     Aestra::Audio::AudioStreamConfig m_streamConfig;
     bool m_initialized{false};
     bool m_isAudioRunning{false};
+
+    // estimateCycleHz() sleeps 50ms to calibrate the TSC frequency for telemetry
+    // only; it runs on this worker so it never blocks the UI thread that starts
+    // the stream. Joined in shutdown() before m_audioEngine is destroyed.
+    std::thread m_cycleHzWorker;
 
     // Weak UI reference plus atomically published ownership for callback routing.
     std::weak_ptr<AestraContent> m_content;
