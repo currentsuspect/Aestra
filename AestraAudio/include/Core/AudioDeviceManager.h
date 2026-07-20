@@ -8,6 +8,8 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -31,9 +33,13 @@ public:
 
     /**
      * @brief Initialize audio system
+     * @param registerPlatformDrivers When true (default), registers the platform
+     *        audio backends. Pass false to initialize using only drivers already
+     *        added via addDriver() — used by dependency-injection tests that must
+     *        run against a controlled driver set with no real hardware.
      * @return True when at least one driver backend was initialized successfully.
      */
-    bool initialize();
+    bool initialize(bool registerPlatformDrivers = true);
 
     /**
      * @brief Shutdown audio system
@@ -121,8 +127,11 @@ public:
 
     /**
      * @brief Get current configuration
+     * @return A value snapshot of the current stream configuration. Never a
+     *         reference into mutable shared state — the returned copy stays
+     *         coherent even as another thread reconfigures the stream (#391).
      */
-    const AudioStreamConfig& getCurrentConfig() const { return m_currentConfig; }
+    AudioStreamConfig getCurrentConfig() const;
 
     /**
      * @brief Switch to a different audio device
@@ -225,13 +234,13 @@ public:
      *
      * Use this to show info bars or notifications in the UI.
      */
-    void setDriverModeChangeCallback(DriverModeChangeCallback callback) { m_driverModeChangeCallback = callback; }
+    void setDriverModeChangeCallback(DriverModeChangeCallback callback);
 
     /**
      * @brief Get reason for current fallback (if any)
      * @return Human-readable reason, or empty string if using preferred driver
      */
-    std::string getFallbackReason() const { return m_fallbackReason; }
+    std::string getFallbackReason() const;
 
     /**
      * @brief Add a driver to the manager (Dependency Injection)
@@ -293,9 +302,30 @@ public:
     /**
      * @brief Check if dithering is enabled (preference)
      */
-    bool isDitheringEnabled() const { return m_ditherEnabled; }
+    bool isDitheringEnabled() const;
 
 private:
+    // -------------------------------------------------------------------------
+    // Synchronization policy (#391)
+    //
+    // m_mutex guards ALL non-atomic manager state below (drivers, active driver,
+    // current config/callback, preferences, fallback reason, driver-mode callback,
+    // auto-scale bookkeeping, health-monitor bookkeeping). Public methods acquire
+    // it and delegate to *Locked() helpers that assume it is held; the helpers
+    // compose without re-locking. Rules that keep this deadlock-free:
+    //   - The health-monitor thread is only ever started/stopped (joined) at the
+    //     public boundary, never while m_mutex is held. checkDriverHealthLocked
+    //     runs under the lock but never joins itself.
+    //   - m_driverModeChangeCallback is captured under the lock and invoked only
+    //     after the lock is released (it may re-enter a manager getter).
+    //   - The realtime audio callback never touches this manager, so m_mutex is
+    //     never acquired from the audio thread.
+    //   - m_activeDriver is a borrowed pointer into m_drivers; m_drivers is only
+    //     cleared under the lock (shutdown), so the pointer is valid for the whole
+    //     of any locked section and is never used outside one.
+    // -------------------------------------------------------------------------
+    mutable std::mutex m_mutex;
+
     // Driver management
     std::vector<std::unique_ptr<IAudioDriver>> m_drivers;
     IAudioDriver* m_activeDriver = nullptr;
@@ -321,14 +351,46 @@ private:
     uint64_t m_lastUnderrunCount = 0;
     std::chrono::steady_clock::time_point m_lastUnderrunCheck;
 
-    // K-002: Driver health monitoring thread
+    // Driver-health stall detection state (was function-local statics — now
+    // per-instance and guarded by m_mutex like the rest of the manager state).
+    uint64_t m_healthLastCallbackCount = 0;
+    std::chrono::steady_clock::time_point m_healthLastUpdateTime;
+    bool m_healthTrackingInitialized = false;
+
+    // K-002: Driver health monitoring thread.
+    // m_healthMonitorMutex serializes the monitor's lifecycle (thread handle +
+    // running flag) independently of m_mutex. It is a leaf lock — never acquired
+    // while m_mutex is held — so joining under it cannot deadlock (the monitor
+    // thread only ever wants m_mutex, never this one).
+    std::mutex m_healthMonitorMutex;
     std::atomic<bool> m_healthMonitorRunning{false};
     std::thread m_healthMonitorThread;
     void healthMonitorLoop();
+    void startHealthMonitorIfStopped();
 
-    // Helper methods
+    // A pending driver-mode-change notification captured while holding m_mutex,
+    // to be fired by the caller after the lock is released (#391 constraint 6).
+    struct PendingModeChange {
+        bool valid = false;
+        AudioDriverType preferred{};
+        AudioDriverType actual{};
+        std::string reason;
+    };
+    void fireModeChange(const PendingModeChange& pending) const;
+
+    // Locked helpers: caller must hold m_mutex. These do NOT touch the health
+    // monitor thread and do NOT fire callbacks (see synchronization policy).
+    std::vector<AudioDeviceInfo> getDevicesLocked() const;
+    bool isStreamRunningLocked() const;
+    bool openStreamLocked(const AudioStreamConfig& config, AudioCallback callback, void* userData);
+    void closeStreamLocked();
+    bool startStreamLocked();
+    void stopStreamLocked();
+    bool validateDeviceConfigLocked(uint32_t deviceId, uint32_t sampleRate) const;
+    bool validateStreamConfigLocked(const AudioStreamConfig& config) const;
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
-    bool validateStreamConfig(const AudioStreamConfig& config) const;
+    void checkDriverHealthLocked(PendingModeChange& outPending);
+    bool switchToSafetyDriverLocked(PendingModeChange& outPending);
 };
 
 // =============================================================================

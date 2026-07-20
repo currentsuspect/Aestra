@@ -982,6 +982,20 @@ target_include_directories(AestraAudioEngineDiagnosticsTest PRIVATE
 add_test(NAME AestraAudioEngineDiagnosticsTest COMMAND AestraAudioEngineDiagnosticsTest)
 set_tests_properties(AestraAudioEngineDiagnosticsTest PROPERTIES LABELS "audio;diagnostics;rt-safety")
 
+# AudioDeviceManager race/coherence coverage with a deterministic fake driver (#391)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
+    add_executable(DeviceManagerRaceTest AestraAudio/DeviceManagerRaceTest.cpp)
+    target_link_libraries(DeviceManagerRaceTest PRIVATE AestraAudio)
+    target_include_directories(DeviceManagerRaceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    find_package(Threads REQUIRED)
+    target_link_libraries(DeviceManagerRaceTest PRIVATE Threads::Threads)
+    add_test(NAME DeviceManagerRaceTest COMMAND DeviceManagerRaceTest)
+    set_tests_properties(DeviceManagerRaceTest PROPERTIES LABELS "audio;device;rt-safety;concurrency" TIMEOUT 60)
+endif()
+
 # PathologicalChaosStressTest
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/PathologicalChaosStressTest.cpp")
     add_executable(AestraPathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
