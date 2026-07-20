@@ -28,9 +28,31 @@ bool NUIConfigLoader::loadConfig(const std::string& filePath) {
     return loadConfigFromString(content);
 }
 
-bool NUIConfigLoader::loadConfigFromString(const std::string& yamlContent) {
+bool NUIConfigLoader::loadConfigFromString(const std::string& content) {
     config_ = Aestra::JSON::object();
-    configLoaded_ = parseYAML(yamlContent);
+
+    // saveConfig() serializes the theme as JSON (Aestra::JSON::toString), but the
+    // hand-authored config assets under AestraUI/Config/ are YAML. Detect which
+    // format we were handed: a JSON document must be parsed with the JSON parser,
+    // a YAML document with the line-based parseYAML(). Feeding JSON to parseYAML()
+    // silently restored nothing — loadConfig() returned true but applied no values,
+    // so a saved config never round-tripped. See issue #585.
+    const size_t firstNonSpace = content.find_first_not_of(" \t\r\n");
+    const bool looksLikeJson =
+        firstNonSpace != std::string::npos && content[firstNonSpace] == '{';
+
+    if (looksLikeJson) {
+        Aestra::JSON parsed = Aestra::JSON::parse(content);
+        // parse() yields a null (non-object) JSON on malformed input; accept only a
+        // real object so a truncated or corrupt file fails loudly instead of
+        // wiping the live theme with an empty config.
+        configLoaded_ = parsed.isObject();
+        if (configLoaded_) {
+            config_ = std::move(parsed);
+        }
+    } else {
+        configLoaded_ = parseYAML(content);
+    }
 
     if (configLoaded_) {
         applyConfig();
