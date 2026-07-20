@@ -472,19 +472,24 @@ void OutOfProcessPluginInstance::setParameter(uint32_t id, float value) {
     // Non-blocking by design: enqueue and return. No IPC, lock, or allocation
     // here. The worker thread forwards the change to the child in order (#238).
     // The queue is single-producer (see the header) — call from one thread. A
-    // full queue drops the newest change (a later setParameter for the same id
-    // supersedes it anyway) and bumps a diagnostic counter rather than blocking.
+    // full queue drops the newest change and bumps a diagnostic counter
+    // (parameterDropCount) rather than blocking; the first drop is logged so the
+    // loss is observable instead of silent.
     if (!m_paramQueue.push(ParamChange{id, value})) {
-        m_paramDrops.fetch_add(1, std::memory_order_relaxed);
+        if (m_paramDrops.fetch_add(1, std::memory_order_relaxed) == 0) {
+            Log::warning("[PluginHost] parameter queue full for " + m_info.name +
+                         "; dropping changes (raise kParamQueueCapacity if this recurs)");
+        }
     }
 }
 
 void OutOfProcessPluginInstance::drainParamQueueToChild() {
-    // Worker-thread only. Bounded: at most kParamQueueCapacity entries exist, and
-    // no producer can outpace an unbounded drain here because push is O(1). Each
-    // change is a single SETPARAM round-trip on the IPC channel this thread owns.
+    // Worker-thread only. Each change is a single SETPARAM round-trip on the IPC
+    // channel this thread owns. Bounded per pass (kMaxParamDrainPerPass) so a big
+    // burst against a slow child cannot starve PROCESS; the remainder drains on
+    // the next worker iteration, in order.
     ParamChange change;
-    while (m_paramQueue.pop(change)) {
+    for (size_t drained = 0; drained < kMaxParamDrainPerPass && m_paramQueue.pop(change); ++drained) {
         std::ostringstream command;
         command << "SETPARAM " << change.id << " " << change.value;
         std::string response;
