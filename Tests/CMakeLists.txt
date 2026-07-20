@@ -1524,6 +1524,19 @@ target_include_directories(GoldenAudioRegressionTest PRIVATE
 add_test(NAME GoldenAudioRegressionTest COMMAND GoldenAudioRegressionTest)
 set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier" TIMEOUT 180)
 
+# Metronome restart regression — transport restart edges must clear retained
+# click tails and rebase beat scheduling from the applied RT transport position.
+add_executable(MetronomeRestartTest AestraAudio/MetronomeRestartTest.cpp)
+target_link_libraries(MetronomeRestartTest PRIVATE AestraAudio)
+target_include_directories(MetronomeRestartTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MetronomeRestartTest COMMAND MetronomeRestartTest)
+set_tests_properties(MetronomeRestartTest PROPERTIES LABELS "audio;metronome;transport;regression" TIMEOUT 120)
+
 # Realtime/Export Parity — realtime processBlock output vs offline
 # bounceRangeToWav output for the same session, plus the preview-ducking
 # export-contamination probe. Doc: AestraDocs/audio-integrity-infrastructure.md.

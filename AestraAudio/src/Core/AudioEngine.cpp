@@ -202,10 +202,12 @@ void AudioEngine::applyPendingCommands() {
 
     // Track transport transitions within this block even though we coalesce
     // the final transport state (stop->play can otherwise be missed).
-    // [FIX] Use RT-side tracked state, NOT the atomic (which UI updates immediately).
-    // This avoids race condition where UI sets m_transportPlaying before RT reads it.
+    // Use RT-side tracked playing state, NOT the atomic (which UI updates immediately).
+    // Read position from the current audio-thread authority: the previous command
+    // position does not advance with uninterrupted playback and cannot detect a
+    // seek back to that same numerical position.
     bool transportPlaying = m_rtLastTransportPlaying;
-    uint64_t transportPos = m_rtLastTransportPos;
+    uint64_t transportPos = m_globalSamplePos.load(std::memory_order_relaxed);
     bool sawRestartEdge = false;
     bool sawStopEdge = false;
     bool sawHardStopEdge = false;
@@ -340,7 +342,6 @@ void AudioEngine::applyPendingCommands() {
 
         // Update RT-side state tracking (used for edge detection next block)
         m_rtLastTransportPlaying = transportPlaying;
-        m_rtLastTransportPos = transportPos;
 
         m_transportPlaying.store(transportPlaying, std::memory_order_relaxed);
         m_globalSamplePos.store(transportPos, std::memory_order_relaxed);
@@ -711,6 +712,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     const bool patternModeNow = m_patternPlaybackMode.load(std::memory_order_relaxed);
     if (patternModeNow && (transportStop || transportRestart)) {
         m_globalSamplePos.store(0, std::memory_order_relaxed);
+    }
+
+    // A transport restart is a semantic metronome discontinuity even when the
+    // numerical position is unchanged (pause -> play at the same sample).
+    // Rebase from the position applied on the audio thread so an old click tail
+    // or next-beat schedule cannot leak into the new playback run.
+    if (transportRestart) {
+        m_metronomeEngine.reset(m_globalSamplePos.load(std::memory_order_relaxed), currentSampleRate);
     }
 
     // Restart/hard-stop should also send MIDI panic (helps for VST/CLAP instruments).
