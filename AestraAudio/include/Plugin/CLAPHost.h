@@ -104,6 +104,16 @@ private:
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 512;
 
+    // Note-input dialect decided once at initialize() (deactivated, main thread),
+    // shared with the OOP host via Plugin/ClapNoteConversion.h (#244).
+    //  - m_noteDialect: kDialectClap / kDialectMidi, or 0 for "no shared dialect".
+    //  - m_rawMidiAllowed: may we send raw CLAP_EVENT_MIDI on this port?
+    //  - m_noteDialectFromLegacyFallback: plugin exposes no clap.note-ports; we send
+    //    raw MIDI for back-compat (a named legacy fallback, not a compliant result).
+    uint32_t m_noteDialect = 2 /* ClapNote::kDialectMidi */;
+    bool m_rawMidiAllowed = true;
+    bool m_noteDialectFromLegacyFallback = true;
+
     // CLAP types (using void* to avoid header pollution)
     void* m_library = nullptr; // DLL/dylib handle
     const clap_plugin_entry* m_entry = nullptr;
@@ -116,7 +126,9 @@ private:
     mutable bool m_parameterCacheValid = false;
 
     void buildParameterCache() const;
-    static clap_host* createHost();
+    // Non-static: populates the instance's m_hostStorage. (Was erroneously declared
+    // static; latent because CLAPHost.cpp is not built without the CLAP SDK.)
+    clap_host* createHost();
 };
 
 /**

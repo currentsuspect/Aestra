@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "Plugin/ClapNoteConversion.h"
+
 #ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
 #endif
@@ -22,6 +24,10 @@
 #endif
 
 namespace {
+
+// The shared CLAP note-conversion rules live in Aestra::Audio::ClapNote; this
+// file is in the global namespace, so alias it for brevity (#244).
+namespace ClapNote = Aestra::Audio::ClapNote;
 
 #ifndef _WIN32
 struct ClapVersion {
@@ -159,6 +165,35 @@ struct ClapEventParamValue {
 
 constexpr uint16_t kClapEventParamValue = 5;
 
+// clap_event_note ABI (clap/events.h) — native CLAP note-on/off events (#244).
+struct ClapEventNote {
+    ClapEventHeader header;
+    int32_t noteId;    // -1 if unspecified
+    int16_t portIndex; // note input port
+    int16_t channel;   // 0..15
+    int16_t key;       // 0..127
+    double velocity;   // 0..1
+};
+
+constexpr uint16_t kClapEventNoteOn = 0;
+constexpr uint16_t kClapEventNoteOff = 1;
+
+// clap.note-ports extension ABI (clap/ext/note-ports.h) — lets the host learn a
+// plugin's note input ports and which note dialects each accepts (#244).
+struct ClapNotePortInfo {
+    uint32_t id;
+    uint32_t supportedDialects;
+    uint32_t preferredDialect;
+    char name[256];
+};
+
+struct ClapPluginNotePorts {
+    uint32_t (*count)(const ClapPlugin* plugin, bool isInput);
+    bool (*get)(const ClapPlugin* plugin, uint32_t index, bool isInput, ClapNotePortInfo* info);
+};
+
+constexpr const char* kClapExtNotePorts = "clap.note-ports";
+
 struct ClapOstream {
     void* ctx;
     int64_t (*write)(const ClapOstream* stream, const void* buffer, uint64_t size);
@@ -255,6 +290,24 @@ const ClapEventHeader* singleParamEventGet(const ClapInputEvents* list, uint32_t
     return &static_cast<const ClapEventParamValue*>(list->ctx)->header;
 }
 
+// Heterogeneous, order-preserving input-event list: ctx is a vector of event
+// header pointers into stable backing storage. Lets note-on/off (CLAP dialect)
+// and raw MIDI events (CC etc.) be delivered in their original stream order (#244).
+uint32_t orderedEventsSize(const ClapInputEvents* list) {
+    const auto* order =
+        list ? static_cast<const std::vector<const ClapEventHeader*>*>(list->ctx) : nullptr;
+    return order ? static_cast<uint32_t>(order->size()) : 0;
+}
+
+const ClapEventHeader* orderedEventsGet(const ClapInputEvents* list, uint32_t index) {
+    const auto* order =
+        list ? static_cast<const std::vector<const ClapEventHeader*>*>(list->ctx) : nullptr;
+    if (!order || index >= order->size()) {
+        return nullptr;
+    }
+    return (*order)[index];
+}
+
 int64_t writeStateStream(const ClapOstream* stream, const void* buffer, uint64_t size) {
     auto* out = stream ? static_cast<std::vector<uint8_t>*>(stream->ctx) : nullptr;
     if (!out || (!buffer && size != 0)) {
@@ -302,6 +355,101 @@ void hostRequestCallback(const ClapHost* host) {
     (void)host;
 }
 
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+// A fake CLAP plugin used by the #244 headless tests. It advertises a
+// configurable note-input dialect and records every event actually delivered
+// through process.in_events, so a test can drive the REAL ClapModule::process
+// conversion boundary and assert exactly what dialect/payload the plugin received.
+namespace fakeclap {
+
+struct Recorded {
+    uint16_t type{0}; // kClapEventNoteOn / kClapEventNoteOff / kClapEventMidi
+    uint32_t time{0};
+    int16_t portIndex{0};
+    int16_t channel{0};
+    int16_t key{0};
+    double velocity{0.0};
+    uint8_t midi[3]{0, 0, 0};
+};
+
+struct State {
+    bool exposeNotePorts{true};
+    uint32_t supportedDialects{ClapNote::kDialectMidi};
+    uint32_t preferredDialect{0};
+    std::vector<Recorded> events;
+};
+State g_state;
+
+uint32_t notePortsCount(const ClapPlugin*, bool isInput) { return isInput ? 1u : 0u; }
+
+bool notePortsGet(const ClapPlugin*, uint32_t index, bool isInput, ClapNotePortInfo* info) {
+    if (!isInput || index != 0 || !info) {
+        return false;
+    }
+    *info = {};
+    info->id = 0;
+    info->supportedDialects = g_state.supportedDialects;
+    info->preferredDialect = g_state.preferredDialect;
+    std::snprintf(info->name, sizeof(info->name), "%s", "fake-note-in");
+    return true;
+}
+
+ClapPluginNotePorts g_notePorts = {notePortsCount, notePortsGet};
+
+bool init(const ClapPlugin*) { return true; }
+void destroy(const ClapPlugin*) {}
+bool activate(const ClapPlugin*, double, uint32_t, uint32_t) { return true; }
+void deactivate(const ClapPlugin*) {}
+bool startProcessing(const ClapPlugin*) { return true; }
+void stopProcessing(const ClapPlugin*) {}
+void reset(const ClapPlugin*) {}
+
+ClapProcessStatus process(const ClapPlugin*, const ClapProcess* proc) {
+    if (proc && proc->inEvents && proc->inEvents->size && proc->inEvents->get) {
+        const uint32_t n = proc->inEvents->size(proc->inEvents);
+        for (uint32_t i = 0; i < n; ++i) {
+            const ClapEventHeader* h = proc->inEvents->get(proc->inEvents, i);
+            if (!h) {
+                continue;
+            }
+            Recorded rec{};
+            rec.type = h->type;
+            rec.time = h->time;
+            if (h->type == kClapEventNoteOn || h->type == kClapEventNoteOff) {
+                const auto* note = reinterpret_cast<const ClapEventNote*>(h);
+                rec.portIndex = note->portIndex;
+                rec.channel = note->channel;
+                rec.key = note->key;
+                rec.velocity = note->velocity;
+            } else if (h->type == kClapEventMidi) {
+                const auto* midi = reinterpret_cast<const ClapEventMidi*>(h);
+                rec.portIndex = static_cast<int16_t>(midi->portIndex);
+                std::memcpy(rec.midi, midi->data, 3);
+            }
+            g_state.events.push_back(rec);
+        }
+    }
+    return kClapProcessError + 1; // CLAP_PROCESS_CONTINUE (non-error)
+}
+
+const void* getExtension(const ClapPlugin*, const char* id) {
+    if (g_state.exposeNotePorts && id && std::strcmp(id, kClapExtNotePorts) == 0) {
+        return &g_notePorts;
+    }
+    return nullptr;
+}
+
+void onMainThread(const ClapPlugin*) {}
+
+ClapPluginDescriptor g_descriptor = {};
+ClapPlugin g_plugin = {&g_descriptor, nullptr,        init,
+                       destroy,       activate,       deactivate,
+                       startProcessing, stopProcessing, reset,
+                       process,       getExtension,   onMainThread};
+
+} // namespace fakeclap
+#endif // AESTRA_ENABLE_TEST_HOOKS
+
 struct ClapModule {
     void* library = nullptr;
     const ClapPluginEntry* entry = nullptr;
@@ -321,6 +469,25 @@ struct ClapModule {
     ClapInputEvents emptyInputEvents = {nullptr, emptyInputEventsSize, emptyInputEventsGet};
     ClapOutputEvents outputEvents = {nullptr, dropOutputEvent};
     const ClapPluginParams* paramsExt = nullptr;
+    const ClapPluginNotePorts* notePortsExt = nullptr;
+    // Note-delivery decision for input port 0, computed once at load (#244).
+    //  - noteDialect: kDialectClap / kDialectMidi, or 0 meaning "no mutually
+    //    supported dialect" → deliver no notes.
+    //  - rawMidiAllowed: may we send a raw CLAP_EVENT_MIDI on this port? True only
+    //    when the port advertises the MIDI dialect (or under the legacy fallback).
+    //    Non-note MIDI (CC etc.) on a CLAP-only port is dropped, never emitted as a
+    //    MIDI dialect the port did not advertise.
+    //  - noteDialectFromLegacyFallback: the plugin exposes no clap.note-ports
+    //    extension. Per the CLAP contract that means "no note ports"; Aestra
+    //    nonetheless sends raw MIDI to avoid regressing plugins that worked before
+    //    note-ports negotiation existed. This is a named legacy compatibility
+    //    fallback, NOT a standards-compliant negotiation result.
+    uint32_t noteDialect = ClapNote::kDialectMidi;
+    bool rawMidiAllowed = true;
+    bool noteDialectFromLegacyFallback = true;
+    std::vector<ClapEventNote> noteEvents;
+    // Heterogeneous in-order view over midiEvents/noteEvents for process.in_events.
+    std::vector<const ClapEventHeader*> noteEventOrder;
 
     ~ClapModule() { close(); }
 
@@ -331,6 +498,10 @@ struct ClapModule {
     void close() {
         deactivate();
         paramsExt = nullptr;
+        notePortsExt = nullptr;
+        noteDialect = ClapNote::kDialectMidi;
+        rawMidiAllowed = true;
+        noteDialectFromLegacyFallback = true;
         if (plugin && plugin->destroy) {
             plugin->destroy(plugin);
         }
@@ -423,9 +594,61 @@ struct ClapModule {
         }
         if (plugin->getExtension) {
             paramsExt = static_cast<const ClapPluginParams*>(plugin->getExtension(plugin, kClapExtParams));
+            notePortsExt =
+                static_cast<const ClapPluginNotePorts*>(plugin->getExtension(plugin, kClapExtNotePorts));
         }
+        resolveNoteDialect();
         return true;
     }
+
+    // Decide, once (on the main thread, while deactivated — never on the RT path),
+    // how to deliver notes on input port 0. Advertised note-ports drive real
+    // negotiation; a missing extension is the named legacy compatibility fallback
+    // (Aestra sends raw MIDI as it always has, which is NOT the CLAP-compliant
+    // result — absence of the extension means "no note ports") (#244). Assumes
+    // plugin and notePortsExt are already resolved.
+    void resolveNoteDialect() {
+        const bool hasNotePort = plugin && notePortsExt && notePortsExt->count && notePortsExt->get &&
+                                 notePortsExt->count(plugin, /*isInput=*/true) > 0;
+        if (hasNotePort) {
+            noteDialectFromLegacyFallback = false;
+            ClapNotePortInfo info{};
+            if (notePortsExt->get(plugin, 0, /*isInput=*/true, &info)) {
+                noteDialect = ClapNote::selectDialect(info.supportedDialects, info.preferredDialect);
+                rawMidiAllowed = (info.supportedDialects & ClapNote::kDialectMidi) != 0;
+                if (noteDialect == 0) {
+                    std::cerr << "[AestraPluginHost] note port 0 advertises no host-supported "
+                                 "dialect; delivering no notes\n";
+                }
+            } else {
+                // Extension present but the port could not be read — deliver nothing
+                // rather than guess a dialect the plugin did not advertise.
+                noteDialect = 0;
+                rawMidiAllowed = false;
+            }
+        } else {
+            noteDialectFromLegacyFallback = true;
+            noteDialect = ClapNote::kDialectMidi;
+            rawMidiAllowed = true;
+        }
+    }
+
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+    // Wire the fake CLAP plugin in place of a dlopen'd module and run the SAME
+    // note-ports resolution the real path uses, so tests exercise the production
+    // conversion boundary (#244). The fake's note-ports configuration is set on
+    // fakeclap::g_state before calling this.
+    void loadFakeForTest() {
+        close();
+        plugin = &fakeclap::g_plugin;
+        paramsExt = nullptr;
+        notePortsExt = plugin->getExtension
+                           ? static_cast<const ClapPluginNotePorts*>(
+                                 plugin->getExtension(plugin, kClapExtNotePorts))
+                           : nullptr;
+        resolveNoteDialect();
+    }
+#endif
 
     bool initialize(double sampleRate, uint32_t blockSize, std::string& error) {
         if (!plugin || sampleRate <= 0.0 || blockSize == 0 || blockSize > 65536) {
@@ -440,6 +663,8 @@ struct ClapModule {
             storage.assign(maxBlockSize, 0.0f);
         }
         midiEvents.reserve(1024);
+        noteEvents.reserve(1024);
+        noteEventOrder.reserve(1024);
         inputPlanes[0] = inputStorage[0].data();
         inputPlanes[1] = inputStorage[1].data();
         outputPlanes[0] = outputStorage[0].data();
@@ -514,27 +739,79 @@ struct ClapModule {
             }
         }
 
+        // Convert incoming raw MIDI to the note dialect selected for this plugin's
+        // input port (#244): native CLAP note-on/off when the port prefers/only
+        // supports CLAP, else raw CLAP_EVENT_MIDI. Non-note messages stay raw MIDI.
+        // noteEventOrder preserves original stream order across both event types;
+        // backing vectors are reserved so the recorded header pointers stay valid.
+        static constexpr size_t kMaxNoteEvents = 1024;
         midiEvents.clear();
+        noteEvents.clear();
+        noteEventOrder.clear();
         if (midiData && midiBytes <= midiData->size() && (midiBytes % 8) == 0) {
-            for (size_t offset = 0; offset < midiBytes; offset += 8) {
+            for (size_t offset = 0; offset < midiBytes && noteEventOrder.size() < kMaxNoteEvents;
+                 offset += 8) {
                 const uint8_t size = (*midiData)[offset + 4];
                 if (size != 3) {
                     continue;
                 }
                 uint32_t sampleOffset = 0;
                 std::memcpy(&sampleOffset, midiData->data() + offset, sizeof(sampleOffset));
-                ClapEventMidi event{};
-                event.header.size = sizeof(event);
-                event.header.time = std::min<uint32_t>(sampleOffset, frames > 0 ? frames - 1 : 0);
-                event.header.spaceId = kClapCoreEventSpaceId;
-                event.header.type = kClapEventMidi;
-                event.header.flags = 0;
-                event.portIndex = 0;
-                std::memcpy(event.data, midiData->data() + offset + 5, 3);
-                midiEvents.push_back(event);
+                const uint32_t time = std::min<uint32_t>(sampleOffset, frames > 0 ? frames - 1 : 0);
+                const uint8_t* bytes = midiData->data() + offset + 5;
+                const ClapNote::DecodedNote note = ClapNote::decodeMidiMessage(bytes);
+                const bool isNote = note.kind == ClapNote::MidiNoteKind::NoteOn ||
+                                    note.kind == ClapNote::MidiNoteKind::NoteOff;
+
+                if (isNote) {
+                    // A note goes out in the selected dialect. noteDialect==0 means
+                    // the port shares no dialect with us — drop rather than guess.
+                    if (noteDialect == ClapNote::kDialectClap) {
+                        ClapEventNote event{};
+                        event.header.size = sizeof(event);
+                        event.header.time = time;
+                        event.header.spaceId = kClapCoreEventSpaceId;
+                        event.header.type = note.kind == ClapNote::MidiNoteKind::NoteOn ? kClapEventNoteOn
+                                                                                       : kClapEventNoteOff;
+                        event.header.flags = 0;
+                        event.noteId = -1;
+                        event.portIndex = 0;
+                        event.channel = static_cast<int16_t>(note.channel);
+                        event.key = static_cast<int16_t>(note.key);
+                        event.velocity = ClapNote::normalizedVelocity(note.velocity);
+                        noteEvents.push_back(event);
+                        noteEventOrder.push_back(&noteEvents.back().header);
+                    } else if (noteDialect == ClapNote::kDialectMidi) {
+                        ClapEventMidi event{};
+                        event.header.size = sizeof(event);
+                        event.header.time = time;
+                        event.header.spaceId = kClapCoreEventSpaceId;
+                        event.header.type = kClapEventMidi;
+                        event.header.flags = 0;
+                        event.portIndex = 0;
+                        std::memcpy(event.data, bytes, 3);
+                        midiEvents.push_back(event);
+                        noteEventOrder.push_back(&midiEvents.back().header);
+                    }
+                    // else noteDialect == 0: no mutually supported dialect, drop.
+                } else if (rawMidiAllowed) {
+                    // Non-note MIDI (CC, pitch bend…) rides the raw-MIDI dialect only
+                    // when the port advertises it. On a CLAP-only port it is dropped
+                    // deliberately — never emitted as a dialect the port did not accept.
+                    ClapEventMidi event{};
+                    event.header.size = sizeof(event);
+                    event.header.time = time;
+                    event.header.spaceId = kClapCoreEventSpaceId;
+                    event.header.type = kClapEventMidi;
+                    event.header.flags = 0;
+                    event.portIndex = 0;
+                    std::memcpy(event.data, bytes, 3);
+                    midiEvents.push_back(event);
+                    noteEventOrder.push_back(&midiEvents.back().header);
+                }
             }
         }
-        ClapInputEvents midiInputEvents = {&midiEvents, midiInputEventsSize, midiInputEventsGet};
+        ClapInputEvents midiInputEvents = {&noteEventOrder, orderedEventsSize, orderedEventsGet};
 
         ClapAudioBuffer inputBuffer = {};
         inputBuffer.data32 = inputPlanes;
@@ -556,7 +833,7 @@ struct ClapModule {
         processData.audioOutputs = &outputBuffer;
         processData.audioInputsCount = 1;
         processData.audioOutputsCount = 1;
-        processData.inEvents = midiEvents.empty() ? &emptyInputEvents : &midiInputEvents;
+        processData.inEvents = noteEventOrder.empty() ? &emptyInputEvents : &midiInputEvents;
         processData.outEvents = &outputEvents;
 
         if (plugin->process(plugin, &processData) == kClapProcessError) {
@@ -979,6 +1256,37 @@ int main(int argc, char** argv) {
             if (id == "__aestra_test_crash__") {
                 std::abort();
             }
+#ifndef _WIN32
+            // Fake CLAP note endpoints (#244): configure the fake's advertised note
+            // dialect, then wire it through the REAL ClapModule so the test exercises
+            // the production note-conversion boundary. g_state also records events.
+            {
+                bool isFakeClap = true;
+                fakeclap::g_state = {}; // reset config + clear recorded events
+                if (id == "__aestra_test_clap_note__") {
+                    fakeclap::g_state.supportedDialects = ClapNote::kDialectClap;
+                    fakeclap::g_state.preferredDialect = ClapNote::kDialectClap;
+                } else if (id == "__aestra_test_clap_midi__") {
+                    fakeclap::g_state.supportedDialects = ClapNote::kDialectMidi;
+                    fakeclap::g_state.preferredDialect = ClapNote::kDialectMidi;
+                } else if (id == "__aestra_test_clap_dual_pref_clap__") {
+                    fakeclap::g_state.supportedDialects =
+                        ClapNote::kDialectClap | ClapNote::kDialectMidi;
+                    fakeclap::g_state.preferredDialect = ClapNote::kDialectClap;
+                } else if (id == "__aestra_test_clap_legacy__") {
+                    fakeclap::g_state.exposeNotePorts = false; // no note-ports extension
+                } else {
+                    isFakeClap = false;
+                }
+                if (isFakeClap) {
+                    clapModule.loadFakeForTest();
+                    loaded = true;
+                    echoPlugin = false;
+                    reply("OK LOADED");
+                    continue;
+                }
+            }
+#endif
 #endif
             if (format != "vst3" && format != "clap") {
                 reply("ERR unsupported-format");
@@ -1113,6 +1421,21 @@ int main(int argc, char** argv) {
             }
 #endif
             reply("ERR no-plugin");
+#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
+        } else if (command == "TESTNOTES") {
+            // Dump the events the fake CLAP plugin actually received through
+            // process.in_events (#244). Format: "OK <n>" then one token per event:
+            //   type:time:port:channel:key:velocity:m0:m1:m2
+            // (channel/key/velocity are the note fields; m0..m2 the raw MIDI bytes).
+            std::ostringstream out;
+            out << "OK " << fakeclap::g_state.events.size();
+            for (const auto& e : fakeclap::g_state.events) {
+                out << ' ' << e.type << ':' << e.time << ':' << e.portIndex << ':' << e.channel << ':'
+                    << e.key << ':' << e.velocity << ':' << static_cast<int>(e.midi[0]) << ':'
+                    << static_cast<int>(e.midi[1]) << ':' << static_cast<int>(e.midi[2]);
+            }
+            reply(out.str());
+#endif
         } else if (command == "SAVESTATE") {
             if (!loaded) {
                 reply("ERR not-loaded");
