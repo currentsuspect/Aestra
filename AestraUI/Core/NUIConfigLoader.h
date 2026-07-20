@@ -27,11 +27,13 @@ public:
     bool loadConfig(const std::string& filePath);
 
     /**
-     * Load configuration from YAML string
-     * @param yamlContent YAML content as string
+     * Load configuration from a config string. Accepts either JSON (as emitted by
+     * saveConfig) or the legacy hand-authored YAML format; the format is detected
+     * from the content. See issue #585.
+     * @param content JSON or YAML configuration content as a string
      * @return true if loaded successfully, false otherwise
      */
-    bool loadConfigFromString(const std::string& yamlContent);
+    bool loadConfigFromString(const std::string& content);
 
     /**
      * Apply loaded configuration to current theme
