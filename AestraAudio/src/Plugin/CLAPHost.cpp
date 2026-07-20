@@ -13,7 +13,11 @@
 // CLAP SDK includes
 #include <clap/clap.h>
 #include <clap/events.h>
+#include <clap/ext/note-ports.h>
 #include <clap/ext/state.h>
+
+// Shared note-dialect rules (also used by the OOP child) — must agree (#244).
+#include "Plugin/ClapNoteConversion.h"
 
 #include <algorithm>
 #include <array>
@@ -80,8 +84,10 @@ static clap_host_params createHostParams() {
 }
 static clap_host_params g_hostParams = createHostParams();
 
+// Order-preserving view over heterogeneous input events (native notes + raw MIDI),
+// mirroring the OOP child so both hosts deliver identical event streams (#244).
 struct ClapInputEventList {
-    const clap_event_midi* events{nullptr};
+    const clap_event_header* const* order{nullptr};
     uint32_t count{0};
 };
 
@@ -97,10 +103,10 @@ uint32_t inputEventsSize(const clap_input_events* list) {
 
 const clap_event_header* inputEventsGet(const clap_input_events* list, uint32_t index) {
     const auto* ctx = list ? static_cast<const ClapInputEventList*>(list->ctx) : nullptr;
-    if (!ctx || !ctx->events || index >= ctx->count) {
+    if (!ctx || !ctx->order || index >= ctx->count) {
         return nullptr;
     }
-    return &ctx->events[index].header;
+    return ctx->order[index];
 }
 
 bool dropOutputEvent(const clap_output_events*, const clap_event_header*) {
@@ -350,6 +356,34 @@ bool CLAPPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
     m_sampleRate = sampleRate;
     m_maxBlockSize = maxBlockSize;
 
+    // Reserve the reusable per-block event scratch now, off the audio thread, so
+    // process() is allocation-free and keeps large arrays off the stack (#244).
+    m_noteEvents.reserve(kMaxNoteEventsPerBlock);
+    m_midiEvents.reserve(kMaxNoteEventsPerBlock);
+    m_eventOrder.reserve(kMaxNoteEventsPerBlock);
+
+    // Decide the note-input dialect once, here (loaded, not yet activated, main
+    // thread) — never on the audio thread. Uses the shared rules so the in-process
+    // and OOP hosts cannot drift (#244).
+    m_noteDialect = Aestra::Audio::ClapNote::kDialectMidi;
+    m_rawMidiAllowed = true;
+    m_noteDialectFromLegacyFallback = true;
+    const auto* notePorts =
+        static_cast<const clap_plugin_note_ports*>(m_plugin->get_extension(m_plugin, CLAP_EXT_NOTE_PORTS));
+    if (notePorts && notePorts->count && notePorts->get && notePorts->count(m_plugin, true) > 0) {
+        m_noteDialectFromLegacyFallback = false;
+        clap_note_port_info_t info{};
+        if (notePorts->get(m_plugin, 0, true, &info)) {
+            m_noteDialect =
+                Aestra::Audio::ClapNote::selectDialect(info.supported_dialects, info.preferred_dialect);
+            m_rawMidiAllowed = (info.supported_dialects & Aestra::Audio::ClapNote::kDialectMidi) != 0;
+        } else {
+            m_noteDialect = 0;
+            m_rawMidiAllowed = false;
+        }
+    }
+    // else: legacy compatibility fallback (no note-ports extension) — keep raw MIDI.
+
     return true;
 }
 
@@ -387,26 +421,59 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
 
     (void)midiOutput;
 
-    static constexpr size_t kMaxClapMidiEvents = 1024;
-    std::array<clap_event_midi, kMaxClapMidiEvents> midiEvents{};
+    // Convert MIDI to the negotiated note dialect (#244), shared with the OOP
+    // child via ClapNote. Notes go native (clap_event_note) on a CLAP port, raw
+    // (clap_event_midi) on a MIDI port; noteDialect==0 drops notes. Non-note MIDI
+    // rides the raw dialect only when the port advertises it. Order is preserved.
+    namespace ClapNote = Aestra::Audio::ClapNote;
+    // Reusable members (reserved in initialize()) — no allocation, no big stack
+    // arrays. Reserved capacity means the header pointers recorded in m_eventOrder
+    // stay valid for the whole call (no reallocation).
+    m_noteEvents.clear();
+    m_midiEvents.clear();
+    m_eventOrder.clear();
     ClapInputEventList inputEventList{};
     if (midiInput) {
-        const size_t eventCount = std::min(midiInput->getEventCount(), kMaxClapMidiEvents);
-        for (size_t i = 0; i < eventCount; ++i) {
+        const size_t eventCount = std::min(midiInput->getEventCount(), kMaxNoteEventsPerBlock);
+        for (size_t i = 0; i < eventCount && m_eventOrder.size() < kMaxNoteEventsPerBlock; ++i) {
             const auto& event = midiInput->getEvent(i);
             if (event.size != 3) {
                 continue;
             }
-            clap_event_midi& clapEvent = midiEvents[inputEventList.count++];
-            clapEvent.header.size = sizeof(clapEvent);
-            clapEvent.header.time = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
-            clapEvent.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            clapEvent.header.type = CLAP_EVENT_MIDI;
-            clapEvent.header.flags = 0;
-            clapEvent.port_index = 0;
-            std::memcpy(clapEvent.data, event.data, sizeof(clapEvent.data));
+            const uint32_t time = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
+            const ClapNote::DecodedNote note = ClapNote::decodeMidiMessage(event.data);
+            const bool isNote = note.kind == ClapNote::MidiNoteKind::NoteOn ||
+                                note.kind == ClapNote::MidiNoteKind::NoteOff;
+
+            if (isNote && m_noteDialect == ClapNote::kDialectClap) {
+                clap_event_note ev{};
+                ev.header.size = sizeof(ev);
+                ev.header.time = time;
+                ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                ev.header.type = note.kind == ClapNote::MidiNoteKind::NoteOn ? CLAP_EVENT_NOTE_ON
+                                                                             : CLAP_EVENT_NOTE_OFF;
+                ev.note_id = -1;
+                ev.port_index = 0;
+                ev.channel = note.channel;
+                ev.key = note.key;
+                ev.velocity = ClapNote::normalizedVelocity(note.velocity);
+                m_noteEvents.push_back(ev);
+                m_eventOrder.push_back(&m_noteEvents.back().header);
+            } else if (isNote ? (m_noteDialect == ClapNote::kDialectMidi) : m_rawMidiAllowed) {
+                clap_event_midi ev{};
+                ev.header.size = sizeof(ev);
+                ev.header.time = time;
+                ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                ev.header.type = CLAP_EVENT_MIDI;
+                ev.port_index = 0;
+                std::memcpy(ev.data, event.data, sizeof(ev.data));
+                m_midiEvents.push_back(ev);
+                m_eventOrder.push_back(&m_midiEvents.back().header);
+            }
+            // else: note on a no-shared-dialect port, or CC on a CLAP-only port — dropped.
         }
-        inputEventList.events = midiEvents.data();
+        inputEventList.order = m_eventOrder.data();
+        inputEventList.count = static_cast<uint32_t>(m_eventOrder.size());
     }
     clap_input_events inputEvents = {&inputEventList, inputEventsSize, inputEventsGet};
     clap_output_events outputEvents = {nullptr, dropOutputEvent};
