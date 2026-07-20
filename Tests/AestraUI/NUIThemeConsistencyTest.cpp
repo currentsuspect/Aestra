@@ -7,9 +7,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <system_error>
 
 using namespace AestraUI;
 
@@ -369,6 +371,63 @@ void testChromeDimensionConfigLoad() {
     }
 }
 
+// #585 regression: saveConfig() serializes the theme as JSON, so loadConfig()
+// must parse JSON. Before the format-detecting loader, loadConfig() ran the JSON
+// document through the YAML line-parser, returned true, and applied nothing — a
+// saved config silently failed to restore. This drives the real file round-trip
+// (saveConfig -> clobber -> loadConfig), which must fail without the fix.
+void testConfigSaveLoadRoundtrip() {
+    std::cout << "[Test] saveConfig -> loadConfig round-trips through JSON (#585)\n";
+    auto& manager = NUIThemeManager::getInstance();
+    auto& configLoader = NUIConfigLoader::getInstance();
+
+    // Known, distinct values to persist. The color uses fromHex so it survives
+    // the hex serialization exactly.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.trackHeight = 63.0f;
+        theme.layout.titleBarHeight = 37.0f;
+        theme.layout.viewToggleWidth = 311.0f;
+        theme.layout.viewToggleHeight = 29.0f;
+        theme.spacingM = 17.0f;
+        theme.spacingS = 9.0f;
+        theme.primary = NUIColor::fromHex(0xBB86FC);
+    }
+
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "aestra_nuiconfig_roundtrip_585.cfg";
+    std::error_code ec;
+    std::filesystem::remove(tmp, ec); // clear any stale leftover
+    configLoader.saveConfig(tmp.string());
+
+    // Clobber every persisted value in memory so a no-op load is detectable: if
+    // loadConfig applies nothing, these sentinels survive and the checks fail.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.trackHeight = 1.0f;
+        theme.layout.titleBarHeight = 1.0f;
+        theme.layout.viewToggleWidth = 1.0f;
+        theme.layout.viewToggleHeight = 1.0f;
+        theme.spacingM = 1.0f;
+        theme.spacingS = 1.0f;
+        theme.primary = NUIColor::fromHex(0x010203);
+    }
+
+    check(configLoader.loadConfig(tmp.string()), "saved config file loads");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.trackHeight, 63.0f), "trackHeight restored from saved config");
+        check(nearlyEqual(t.layout.titleBarHeight, 37.0f), "titleBarHeight restored from saved config");
+        check(nearlyEqual(t.layout.viewToggleWidth, 311.0f), "viewToggleWidth restored from saved config");
+        check(nearlyEqual(t.layout.viewToggleHeight, 29.0f), "viewToggleHeight restored from saved config");
+        check(nearlyEqual(t.spacingM, 17.0f), "panelMargin (spacingM) restored from saved config");
+        check(nearlyEqual(t.spacingS, 9.0f), "componentPadding (spacingS) restored from saved config");
+        check(colorsEqual(t.primary, NUIColor::fromHex(0xBB86FC)), "primary color restored from saved config");
+    }
+
+    std::filesystem::remove(tmp, ec);
+}
+
 } // namespace
 
 int main() {
@@ -379,6 +438,7 @@ int main() {
     testIndependentSubscriptionsAndAtomicSwitching();
     testLiveJSONThemeRegistration();
     testChromeDimensionConfigLoad();
+    testConfigSaveLoadRoundtrip();
     testHierarchyInvalidation();
     testCompatibilityAliases();
     testLightPresetCompleteness();
