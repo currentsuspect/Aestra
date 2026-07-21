@@ -169,9 +169,14 @@ public:
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     void setPatternLengthBeats(double beats);
     void setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue);
+    /** @brief Populate the unit switcher (reuses the PatternChoice value/label shape). */
+    void setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) { onAdjustPatternLength_ = std::move(cb); }
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
         onPatternChoiceSelected_ = std::move(cb);
+    }
+    void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
+        onUnitChoiceSelected_ = std::move(cb);
     }
     /** @brief Set callback fired by the menu's "Keyboard Shortcuts" item. */
     void setOnShowShortcutHelp(std::function<void()> cb) { onShowShortcutHelp_ = std::move(cb); }
@@ -193,8 +198,11 @@ private:
     std::shared_ptr<NUIButton> m_lengthDownBtn;
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIDropdown> m_patternDropdown;
-    
+    std::shared_ptr<NUIDropdown> m_unitDropdown;
+    std::shared_ptr<NUIDropdown> m_snapDropdown;
+
     GlobalTool activeTool_ = GlobalTool::Pencil;
+    void applySnap(SnapGrid snap);
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_menuIcon;
@@ -210,8 +218,11 @@ private:
     std::shared_ptr<NUIComponent> m_activeContextMenu;
     std::function<void(int barsDelta)> onAdjustPatternLength_;
     std::function<void(int patternValue)> onPatternChoiceSelected_;
+    std::function<void(int unitValue)> onUnitChoiceSelected_;
     std::function<void()> onShowShortcutHelp_;
     bool m_updatingPatternDropdown = false;
+    bool m_updatingUnitDropdown = false;
+    bool m_updatingSnapDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
 
     void closeActiveContextMenu();
@@ -616,6 +627,7 @@ public:
     const std::vector<MidiNote>& getNotes() const;
     void setPatternName(const std::string& name);
     void setPatternChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);
+    void setUnitChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     void setTotalDurationBeats(double beats);
@@ -636,6 +648,7 @@ public:
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb);
+    void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb);
     void setOnPlayheadScrubbed(std::function<void(double beat, bool active)> cb);
 
     void setPixelsPerBeat(float ppb);

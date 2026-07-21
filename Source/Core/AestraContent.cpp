@@ -848,6 +848,14 @@ void AestraContent::setupPianoRollPanel() {
         }
         updatePatternLoopLength(patternId);
     });
+    m_pianoRollPanel->setOnEditingUnitChanged([this](UnitID unitId) {
+        // The Piano Roll's own unit switcher changed the editing unit — route it
+        // through the Arsenal's selection choke point so hardware MIDI, musical
+        // typing, and the Arsenal highlight all follow the same unit.
+        if (m_sequencerPanel) {
+            m_sequencerPanel->setSelectedUnit(unitId);
+        }
+    });
     m_pianoRollPanel->setOnClose([this]() {
         m_pianoRollPanel->savePattern();
         toggleView(Audio::ViewType::PianoRoll);
@@ -1040,9 +1048,11 @@ void AestraContent::setupArsenalPanels() {
                 onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
             });
 
-            // 2. Perform Load
+            // 2. Perform Load — do NOT auto-open the sample editor; loading a
+            // sample should just arm the unit. The editor is opened explicitly
+            // via the gear / double-click "edit" action.
             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            loadSampleIntoUnitAsync(id, file.path, true);
+            loadSampleIntoUnitAsync(id, file.path, false);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -1055,7 +1065,7 @@ void AestraContent::setupArsenalPanels() {
     m_sequencerPanel->setOnPluginDroppedToUnit(
         [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, true); });
+        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
@@ -1080,6 +1090,13 @@ void AestraContent::setupArsenalPanels() {
         if (m_trackManagerUI) {
             m_trackManagerUI->refreshTracks();
             m_trackManagerUI->invalidateCache();
+        }
+        // Re-prepare the pattern so the playback engine re-schedules the notes
+        // just edited in the Arsenal grid. Without this, newly placed steps stay
+        // silent during pattern playback until some other path flushes (e.g.
+        // editing the same pattern in the Piano Roll). Mirrors setActivePattern.
+        if (m_trackManager) {
+            m_trackManager->preparePatternForArsenal(patternId);
         }
         // Update audio engine loop length to match actual pattern length
         updatePatternLoopLength(patternId);

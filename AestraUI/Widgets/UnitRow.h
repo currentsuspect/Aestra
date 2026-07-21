@@ -179,6 +179,11 @@ private:
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);
     void drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds);
     bool shouldUseNoteRoll() const;
+    // Current playhead position within the active pattern (looped), in beats.
+    // Returns -1 when the transport is not driving the Arsenal (not pattern
+    // mode) so callers can skip the live-step highlight. Mirrors the Arsenal
+    // progress-header playhead so the row highlight stays in sync with it.
+    double playheadBeatInPattern() const;
 
     void handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds);
     void handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds);

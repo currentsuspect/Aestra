@@ -422,6 +422,12 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     std::sort(activeSteps.begin(), activeSteps.end());
     activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
 
+    // Live playhead within the pattern — used to light up the step / note the
+    // transport is currently over so the user can track it and time their edits.
+    const double playBeat = playheadBeatInPattern();
+    const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
+    const NUIColor playheadAccent = theme.getColor("accentPrimary");
+
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
         const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
@@ -439,9 +445,18 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             }
 
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            const bool isPlayhead = (step == playStep);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
-            renderer.fillRoundedRect(cellRect, cellRadius, isActive ? activeFill : inactiveFill);
+            NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (isPlayhead && isActive) {
+                cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
+            }
+            renderer.fillRoundedRect(cellRect, cellRadius, cellFill);
             renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
+            if (isPlayhead) {
+                renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
+                                           playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+            }
 
             if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
                 const float markerX = cellRect.right() + (cellGap * 0.5f);
@@ -472,9 +487,18 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 continue;
             }
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            const bool isPlayhead = (step == playStep);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
-            renderer.fillRoundedRect(cellRect, 3.0f, isActive ? activeFill : inactiveFill);
+            NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (isPlayhead && isActive) {
+                cellFill = activeFill.lightened(0.35f);
+            }
+            renderer.fillRoundedRect(cellRect, 3.0f, cellFill);
             renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
+            if (isPlayhead) {
+                renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f,
+                                           playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+            }
 
             const NUIRect pitchRect(cellX, pitchY, cellWidth, pitchLaneHeight);
             if (stepPitch[step] >= 0) {
@@ -541,8 +565,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             float normalizedPitch = static_cast<float>(span.pitch - minPitch) / static_cast<float>(pitchRange);
             float noteY = timelineStrip.bottom() - 2.0f - (normalizedPitch * (timelineStrip.height - noteHeight - 4.0f)) - noteHeight;
             NUIRect noteRect(startX, noteY, width, noteHeight);
-            renderer.fillRoundedRect(noteRect, 2.0f, noteFill);
-            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, noteStroke);
+            const bool isPlaying = (playBeat >= 0.0 && playBeat >= span.startBeat && playBeat < span.endBeat);
+            renderer.fillRoundedRect(noteRect, 2.0f, isPlaying ? playheadAccent : noteFill);
+            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, isPlaying ? playheadAccent : noteStroke);
         }
     } else if (m_type == Aestra::Audio::UnitType::Audio) {
         if (!m_audioPreviewWaveform.empty()) {
@@ -574,6 +599,26 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                                   9.0f,
                                   theme.getColor("textSecondary").withAlpha(0.72f));
     }
+}
+
+double UnitRow::playheadBeatInPattern() const {
+    if (!m_trackManager || !m_trackManager->isPatternMode()) {
+        return -1.0;
+    }
+    double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
+    if (m_patternId.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId)) {
+            lengthBeats = std::max(lengthBeats, pattern->lengthBeats);
+        }
+    }
+    if (lengthBeats <= 0.0) {
+        return -1.0;
+    }
+    const double bpm = m_trackManager->getTimelineClock().getCurrentTempo();
+    double beat = m_trackManager->getPosition() * (bpm / 60.0);
+    beat = std::fmod(beat, lengthBeats);
+    if (beat < 0.0) beat += lengthBeats;
+    return beat;
 }
 
 bool UnitRow::shouldUseNoteRoll() const {
@@ -886,7 +931,17 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             }
 
             const int defaultPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
-            midi.notes.push_back({defaultPitch, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
+            // NB: set fields explicitly — positional aggregate init would drop
+            // m_unitId into MidiNote::pan (the field before unitId) and leave
+            // unitId=0, which auditions/displays fine but is silently dropped by
+            // the playback router (routes require unitId != 0). Cf. AudioSlice #447.
+            Aestra::Audio::MidiNote note;
+            note.pitch = defaultPitch;
+            note.startBeat = targetBeat;
+            note.durationBeats = 0.25;
+            note.velocity = 100.0f / 127.0f;
+            note.unitId = m_unitId;
+            midi.notes.push_back(note);
         });
 
         if (removedExisting) {
@@ -898,10 +953,16 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             m_stepEditStart = stepIndex;
             m_stepEditEndExclusive = stepIndex + 1;
 
+            // Audible feedback for the step just placed. The engine reads
+            // value1 as the MIDI note and value2 as normalized velocity
+            // (0..1, scaled by 127). Match the note we just wrote so the
+            // click actually plays the sampler instead of note 0 at v1.
+            const int auditionPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
             Aestra::Audio::AudioQueueCommand audCmd;
             audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
             audCmd.trackIndex = m_unitId;
-            audCmd.value1 = 0.8f;
+            audCmd.value1 = static_cast<float>(auditionPitch);
+            audCmd.value2 = 100.0f / 127.0f;
             if (m_trackManager) {
                 m_trackManager->pushAudioCommand(audCmd);
             }

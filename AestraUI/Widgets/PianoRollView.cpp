@@ -665,6 +665,12 @@ void PianoRollView::setPatternChoices(const std::vector<PianoRollToolbar::Patter
     }
 }
 
+void PianoRollView::setUnitChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue) {
+    if (m_toolbar) {
+        m_toolbar->setUnitChoices(choices, selectedValue);
+    }
+}
+
 void PianoRollView::setPatternLengthBeats(double beats) {
     m_patternLengthBeats = std::max(8.0, beats);
     if (m_toolbar) {
@@ -719,6 +725,12 @@ void PianoRollView::setOnAdjustPatternLength(std::function<void(int barsDelta)> 
 void PianoRollView::setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
     if (m_toolbar) {
         m_toolbar->setOnPatternChoiceSelected(std::move(cb));
+    }
+}
+
+void PianoRollView::setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnUnitChoiceSelected(std::move(cb));
     }
 }
 

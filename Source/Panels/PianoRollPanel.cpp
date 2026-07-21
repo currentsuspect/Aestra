@@ -87,6 +87,25 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         loadPattern(patternId);
     });
 
+    m_pianoRoll->setOnUnitChoiceSelected([this](int unitValue) {
+        if (unitValue <= 0 || !m_trackManager) {
+            return;
+        }
+        const UnitID unitId = static_cast<UnitID>(unitValue);
+        if (unitId == m_editingUnitId) {
+            return;
+        }
+        if (!m_trackManager->getUnitManager().getUnit(unitId)) {
+            return;
+        }
+        setEditingUnit(unitId);
+        // Let the rest of the app follow the switch (Arsenal selection, hardware
+        // MIDI + musical-typing target) via the same choke point Arsenal uses.
+        if (m_onEditingUnitChanged) {
+            m_onEditingUnitChanged(unitId);
+        }
+    });
+
     // Setup playback state check and note preview
     m_pianoRoll->setIsPlayingCallback([this]() {
         return m_trackManager && m_trackManager->isPlaying();
@@ -400,12 +419,41 @@ void PianoRollPanel::setEditingUnit(UnitID unitId) {
     if (m_pianoRoll) {
         m_pianoRoll->setDefaultUnitId(unitId);
     }
+    // Keep the toolbar's unit + pattern switchers reflecting the active unit.
+    rebuildUnitSwitcher();
+    rebuildPatternSwitcher();
+}
+
+void PianoRollPanel::rebuildUnitSwitcher() {
+    if (!m_trackManager || !m_pianoRoll) {
+        return;
+    }
+
+    std::vector<AestraUI::PianoRollToolbar::PatternChoice> choices;
+    const auto unitIds = m_trackManager->getUnitManager().getAllUnitIDs();
+    choices.reserve(unitIds.size());
+    for (const auto unitId : unitIds) {
+        if (unitId == 0 || unitId > static_cast<UnitID>(std::numeric_limits<int>::max())) {
+            continue;
+        }
+        const auto* unit = m_trackManager->getUnitManager().getUnit(unitId);
+        std::string label = (unit && !unit->name.empty()) ? unit->name
+                                                          : ("Unit " + std::to_string(unitId));
+        choices.push_back({static_cast<int>(unitId), std::move(label)});
+    }
+
+    const int selectedValue = (m_editingUnitId != 0 &&
+                               m_editingUnitId <= static_cast<UnitID>(std::numeric_limits<int>::max()))
+                                  ? static_cast<int>(m_editingUnitId)
+                                  : -1;
+    m_pianoRoll->setUnitChoices(choices, selectedValue);
 }
 
 void PianoRollPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
     if (isVisible() && !m_wasVisible) {
         rebuildPatternSwitcher();
+        rebuildUnitSwitcher();
     }
     m_wasVisible = isVisible();
     if (isVisible()) {
@@ -433,8 +481,15 @@ void PianoRollPanel::onUpdate(double deltaTime) {
             }
 
             m_pianoRoll->setPlayheadBeat(playheadBeat, follow);
-            m_pianoRoll->repaint();
-
+            // Only force a redraw when the playhead is actually moving. Editing
+            // gestures (placing/dragging notes, hover) trigger their own
+            // repaints, so an unconditional per-frame repaint just pins a core
+            // at 100% while the panel sits idle. This was the Piano Roll heat.
+            const bool playheadMoved = std::abs(playheadBeat - m_lastPlayheadBeat) > 1e-6;
+            if (follow || playheadMoved) {
+                m_pianoRoll->repaint();
+            }
+            m_lastPlayheadBeat = playheadBeat;
         }
     }
 }

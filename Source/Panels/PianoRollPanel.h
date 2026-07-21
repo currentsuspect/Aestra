@@ -63,6 +63,11 @@ public:
      */
     void setOnPatternEdited(std::function<void(PatternID)> callback) { m_onPatternEdited = std::move(callback); }
     /**
+     * @brief Set the callback fired when the editing unit is switched from the
+     *        Piano Roll's own unit dropdown (so the rest of the app can follow).
+     */
+    void setOnEditingUnitChanged(std::function<void(UnitID)> callback) { m_onEditingUnitChanged = std::move(callback); }
+    /**
      * @brief Get the currently loaded pattern.
      * @return Active pattern identifier.
      */
@@ -89,6 +94,7 @@ public:
 private:
     void adjustPatternLengthBars(int barsDelta);
     void rebuildPatternSwitcher();
+    void rebuildUnitSwitcher();
     void updateGhostChannels();
     void rebuildTimelineMinimap();
     void layoutTimelineMinimap();
@@ -102,12 +108,14 @@ private:
     PatternID m_currentPatternId;
     UnitID m_editingUnitId{0};
     std::function<void(PatternID)> m_onPatternEdited;
+    std::function<void(UnitID)> m_onEditingUnitChanged;
     double m_patternDurationBeats{8.0};
 
     // Undo/redo support
     std::vector<MidiNote> m_notesBeforeEdit; // Captured state before user edits
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
     bool m_wasVisible{false};
+    double m_lastPlayheadBeat{-1.0}; // Gates idle repaint; only redraw when the playhead actually moves
 };
 
 } // namespace Audio
