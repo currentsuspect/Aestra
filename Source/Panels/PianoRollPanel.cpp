@@ -205,11 +205,20 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             m_pianoRoll->setSnapToScale(false);
         }
 
-        // Convert backend notes to UI notes
+        // Convert backend notes to UI notes. Only the editing unit's notes are
+        // editable in the roll; other units' notes are stashed and rendered as
+        // colored unit ghosts (and merged back untouched on save), so switching
+        // the unit dropdown visibly switches what you're editing.
         const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
         std::vector<AestraUI::MidiNote> uiNotes;
-        
+        m_otherUnitNotes.clear();
+        const bool filterByUnit = m_editingUnitId != 0;
+
         for (const auto& vn : midiPayload.notes) {
+            if (filterByUnit && vn.unitId != 0 && vn.unitId != m_editingUnitId) {
+                m_otherUnitNotes.push_back(vn);
+                continue;
+            }
             AestraUI::MidiNote uiNote;
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
@@ -285,6 +294,10 @@ void PianoRollPanel::savePattern() {
         currentNotes.push_back(backendNote);
     }
 
+    // Other units' notes are hidden from the editor but still belong to the
+    // pattern — merge them back so the diff/revert below can't drop them.
+    currentNotes.insert(currentNotes.end(), m_otherUnitNotes.begin(), m_otherUnitNotes.end());
+
     // Diff the before/after states using the dedicated diff function.
     // diffNotes handles same-position/different-duration disambiguation via
     // a two-pass algorithm: exact full-field matching first, then position
@@ -344,10 +357,14 @@ void PianoRollPanel::savePattern() {
         m_applyingUndoRedo = false;
     }
 
-    // Update captured state for next edit
+    // Update captured state for next edit — BEFORE notifying listeners, so a
+    // reentrant savePattern (Arsenal refresh echo) diffs as empty and stops.
     m_notesBeforeEdit = currentNotes;
 
-    if (m_onPatternEdited) {
+    // Only notify when something actually changed: unconditional notification
+    // caused an Arsenal-refresh/refreshTracks storm on every no-op save and
+    // fed the setEditingUnit recursion.
+    if (!diff.empty() && m_onPatternEdited) {
         m_onPatternEdited(m_currentPatternId);
     }
 
@@ -415,9 +432,27 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
 }
 
 void PianoRollPanel::setEditingUnit(UnitID unitId) {
+    // Hard reentrancy guard: savePattern() below fires onPatternEdited, which
+    // walks through Arsenal refreshUnits -> onSelectedUnitChanged and back
+    // into setEditingUnit while m_editingUnitId is still the old id — without
+    // this flag that echo recurses until the stack blows (SIGSEGV in the wild).
+    if (m_switchingUnit) {
+        return;
+    }
+    const bool changed = unitId != m_editingUnitId;
+    if (changed && m_currentPatternId.isValid()) {
+        m_switchingUnit = true;
+        savePattern(); // Commit pending edits under the old unit before re-filtering
+        m_switchingUnit = false;
+    }
     m_editingUnitId = unitId;
     if (m_pianoRoll) {
         m_pianoRoll->setDefaultUnitId(unitId);
+    }
+    if (changed && m_currentPatternId.isValid()) {
+        // Re-split foreground notes vs unit ghosts for the new editing unit.
+        loadPattern(m_currentPatternId);
+        updateGhostChannels();
     }
     // Keep the toolbar's unit + pattern switchers reflecting the active unit.
     rebuildUnitSwitcher();
@@ -586,6 +621,40 @@ void PianoRollPanel::updateGhostChannels() {
         }
         ghosts.push_back(gp);
     }
-    
+
+    // Same-pattern notes belonging to other units: draw them in their unit's
+    // Arsenal color, stronger than cross-pattern ghosts, so switching the unit
+    // dropdown reads instantly (foreground = editing unit, tinted = the rest).
+    if (!m_otherUnitNotes.empty()) {
+        auto& unitMgr = m_trackManager->getUnitManager();
+        std::unordered_map<UnitID, AestraUI::PianoRollNoteLayer::GhostPattern> unitGhosts;
+        for (const auto& vn : m_otherUnitNotes) {
+            auto& gp = unitGhosts[vn.unitId];
+            if (gp.notes.empty()) {
+                uint32_t colorValue = 0x8892a6; // fallback slate
+                if (const auto* unit = unitMgr.getUnit(vn.unitId)) {
+                    colorValue = unit->color;
+                }
+                const float scale = 1.0f / 255.0f;
+                gp.color = AestraUI::NUIColor(((colorValue >> 16) & 0xff) * scale,
+                                              ((colorValue >> 8) & 0xff) * scale,
+                                              (colorValue & 0xff) * scale, 1.0f);
+                gp.fillAlpha = 0.30f;
+                gp.strokeAlpha = 0.55f;
+            }
+            AestraUI::MidiNote uiNote;
+            uiNote.pitch = vn.pitch;
+            uiNote.startBeat = vn.startBeat;
+            uiNote.durationBeats = vn.durationBeats;
+            uiNote.velocity = vn.velocity;
+            uiNote.selected = false;
+            uiNote.isDeleted = false;
+            gp.notes.push_back(uiNote);
+        }
+        for (auto& [unitId, gp] : unitGhosts) {
+            ghosts.push_back(std::move(gp));
+        }
+    }
+
     m_pianoRoll->setGhostPatterns(ghosts);
 }

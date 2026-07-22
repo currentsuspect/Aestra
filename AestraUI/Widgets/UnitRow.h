@@ -98,6 +98,33 @@ public:
     int getStepCount() const { return m_stepCount; }
     
     /**
+     * @brief Set the horizontal grid scroll offset (shared across rows by the panel).
+     * @param x Scroll offset in pixels (>= 0).
+     */
+    void setScrollX(float x) {
+        x = x < 0.0f ? 0.0f : x;
+        if (x != m_scrollX) { m_scrollX = x; invalidateVisuals(); }
+    }
+    /**
+     * @brief Get the horizontal grid scroll offset.
+     * @return Scroll offset in pixels.
+     */
+    float getScrollX() const { return m_scrollX; }
+    /**
+     * @brief Set the callback fired when the user wheel-scrolls the step grid.
+     * When set, the panel owns the scroll offset and pushes it back via setScrollX
+     * so every row (and the progress header) stays in lockstep.
+     * @param cb Callback receiving the requested scroll delta in pixels.
+     */
+    void setOnGridScroll(std::function<void(float)> cb) { m_onGridScroll = std::move(cb); }
+    /**
+     * @brief Restrict rendering and hit-testing to the panel's list viewport.
+     * Rows partially outside are clipped; rows fully outside skip rendering and
+     * ignore pointer events. An empty rect disables the restriction.
+     * @param viewport Viewport rect in window-absolute coordinates.
+     */
+    void setViewport(const NUIRect& viewport) { m_viewport = viewport; }
+    /**
      * @brief Get the unit identifier represented by this row.
      * @return Backing unit identifier.
      */
@@ -124,6 +151,7 @@ private:
     uint32_t m_color;
     Aestra::Audio::UnitGroup m_group;
     Aestra::Audio::UnitType m_type{Aestra::Audio::UnitType::Sampler};
+    int m_rootMidiNote = 60; // Pitch that plays the unit's sample untransposed
     bool m_isEnabled = true;
     bool m_isArmed = false;
     bool m_isMuted = false;
@@ -156,6 +184,8 @@ private:
     // Step sequencer
     int m_stepCount = 16;
     float m_scrollX = 0.0f;
+    std::function<void(float)> m_onGridScroll; // Panel-owned shared scroll (see setOnGridScroll)
+    NUIRect m_viewport{}; // Panel list viewport; empty = unrestricted
     int m_hoveredStep = -1;
     
     // Minimap pitch scroll

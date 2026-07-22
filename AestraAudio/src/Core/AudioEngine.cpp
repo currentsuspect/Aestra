@@ -1258,9 +1258,11 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
 
-        // Handle Loop Metronome Reset
+        // Handle Loop Metronome Reset. skipCurrentBeat: the boundary beat
+        // already clicked in the pre-wrap part of this block.
         if (loopSplitFrame < numFrames) {
-            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)));
+            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
+                                    true);
         }
     }
 

@@ -113,7 +113,11 @@ private:
 
     // Undo/redo support
     std::vector<MidiNote> m_notesBeforeEdit; // Captured state before user edits
+    // Current pattern's notes owned by other units: hidden from editing,
+    // rendered as unit-colored ghosts, merged back verbatim on save.
+    std::vector<MidiNote> m_otherUnitNotes;
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
+    bool m_switchingUnit{false};              // Guards setEditingUnit against save-echo recursion
     bool m_wasVisible{false};
     double m_lastPlayheadBeat{-1.0}; // Gates idle repaint; only redraw when the playhead actually moves
 };

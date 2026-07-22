@@ -179,9 +179,70 @@ void ArsenalPanel::createLayout() {
     // The content of this method has been moved to the constructor or is handled by the base class.
 }
 
+int ArsenalPanel::computeLoopStepCount() const {
+    // One step per 1/16 note (0.25 beat), spanning the whole loop so the grid
+    // shows every bar of the pattern instead of a fixed single bar.
+    double lengthBeats = 4.0;
+    if (m_trackManager && m_activePatternID.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+            lengthBeats = std::max(4.0, pattern->lengthBeats);
+        }
+    }
+    const int steps = static_cast<int>(std::lround(lengthBeats / 0.25));
+    return std::clamp(steps, 16, 256);
+}
+
+float ArsenalPanel::computeGridMaxScrollX() const {
+    // Mirrors the UnitRow grid geometry (control block + context paddings +
+    // min 20px pads) so the shared scroll clamps against the real content.
+    const float width = m_progressHeaderRect.width;
+    if (width <= 0.0f) return 0.0f;
+    const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
+    const float availWidth = std::max(1.0f, width - controlWidth - 26.0f);
+    const float stepWidth = std::max(availWidth / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+    return std::max(0.0f, stepWidth * static_cast<float>(m_stepCount) - availWidth);
+}
+
+void ArsenalPanel::scrollGridBy(float deltaPx) {
+    const float clamped = std::clamp(m_gridScrollX + deltaPx, 0.0f, computeGridMaxScrollX());
+    m_gridScrollX = clamped;
+    for (auto& row : m_unitRows) {
+        if (row) row->setScrollX(clamped);
+    }
+    repaint();
+}
+
+void ArsenalPanel::followGridPlayhead() {
+    const int playStep = calculateCurrentStep();
+    if (playStep < 0) {
+        m_gridFollowSuspended = false; // Transport stopped: resume following next play
+        return;
+    }
+    const float width = m_progressHeaderRect.width;
+    if (width <= 0.0f) return;
+    const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
+    const float availWidth = std::max(1.0f, width - controlWidth - 26.0f);
+    const float stepWidth = std::max(availWidth / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+    const float maxScroll = std::max(0.0f, stepWidth * static_cast<float>(m_stepCount) - availWidth);
+    if (maxScroll <= 0.0f) return; // Whole loop fits: nothing to follow
+
+    const float stepLeft = static_cast<float>(playStep) * stepWidth;
+    const bool visible = stepLeft >= m_gridScrollX &&
+                         stepLeft + stepWidth <= m_gridScrollX + availWidth;
+    if (visible) {
+        m_gridFollowSuspended = false; // Playhead in view again: re-arm following
+        return;
+    }
+    if (m_gridFollowSuspended) return; // Don't fight a deliberate manual scroll
+    // Page to the playing bar's start so a full musical bar reads at once.
+    const float barLeft = static_cast<float>((playStep / 16) * 16) * stepWidth;
+    scrollGridBy(std::clamp(barLeft, 0.0f, maxScroll) - m_gridScrollX);
+}
+
 void ArsenalPanel::refreshUnits() {
     if (!m_listContainer || !m_trackManager) return;
     auto& theme = NUIThemeManager::getInstance();
+    m_stepCount = computeLoopStepCount();
     const bool shouldRestoreDropTargets = m_dropTargetRegistered;
     if (shouldRestoreDropTargets) {
         unregisterDropTargets();
@@ -208,7 +269,15 @@ void ArsenalPanel::refreshUnits() {
         
         // Set step count
         row->setStepCount(m_stepCount);
-        
+
+        // Shared horizontal grid scroll: the panel owns the offset so the
+        // progress header and every row stay in lockstep.
+        row->setScrollX(m_gridScrollX);
+        row->setOnGridScroll([this](float deltaPx) {
+            m_gridFollowSuspended = true; // Manual scroll wins over playhead follow
+            scrollGridBy(deltaPx);
+        });
+
         // Set up callbacks for drag-drop and color picker
         row->setOnDragStart([this](UnitID id) {
             onUnitDragStart(id);
@@ -307,6 +376,7 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(m_addUnitBtn);
     
     layoutUnits();
+    scrollGridBy(0.0f); // Re-clamp the shared scroll for the (possibly new) loop length
     syncRowSelection();
     if (shouldRestoreDropTargets) {
         registerDropTargets(true);
@@ -599,15 +669,22 @@ void ArsenalPanel::layoutUnits() {
     float yPos = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
     float spacing = 8.0f;
     float rowHeight = 56.0f;
-    
+
+    // Rows may only draw / take clicks between the progress header and the
+    // panel bottom; anything scrolled past that is clipped by the row itself.
+    const float viewportTop = m_progressHeaderRect.bottom() + 4.0f;
+    const float viewportBottom = bounds.bottom() - 6.0f;
+    m_listViewportRect = {startX, viewportTop, width, std::max(0.0f, viewportBottom - viewportTop)};
+
     // Layout unit rows
     for (auto& row : m_unitRows) {
         if (row) {
             row->setBounds(NUIRect(startX, yPos, width, rowHeight));
+            row->setViewport(m_listViewportRect);
             yPos += rowHeight + spacing;
         }
     }
-    
+
 }
 
 void ArsenalPanel::onResize(int width, int height) {
@@ -637,6 +714,8 @@ void ArsenalPanel::onUpdate(double dt) {
         m_scrollY = m_targetScrollY;
         layoutUnits();
     }
+
+    followGridPlayhead();
 }
 
 void ArsenalPanel::registerDropTargets(bool reorder) {
@@ -756,10 +835,11 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     // Calculate current step from clock
     m_currentPlayStep = calculateCurrentStep();
     
-    // Step layout (matches UnitRow grid layout)
+    // Step layout (matches UnitRow grid layout: control block + 8px context
+    // inset + 6px lane padding, so header pads line up with row pads exactly)
     const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     const float gridStartX = bounds.x + controlWidth + 14.0f;
-    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 20.0f);
+    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 26.0f);
 
     double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
     UnitType selectedType = UnitType::Sampler;
@@ -829,28 +909,38 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
     renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
 
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
+    // Same step width formula as the rows (min 20px pads) + the shared scroll
+    // offset, so the header ruler and every row grid stay in lockstep.
+    float stepWidth = std::max(availWidth / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+    const float totalWidth = stepWidth * static_cast<float>(m_stepCount);
+    const float maxScrollX = std::max(0.0f, totalWidth - availWidth);
+    m_gridScrollX = std::clamp(m_gridScrollX, 0.0f, maxScrollX);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
     float indicatorY = bounds.y + 5.0f;
     const float indicatorRadius = themeProps.radiusXS;
 
-    // Scanlines/Clipping: Clip to header bounds to prevent overflow
-    renderer.setClipRect(bounds);
+    // Clip to the grid card so scrolled steps never paint over the bars pills.
+    renderer.setClipRect(gridCard);
 
     // Draw step indicators
     for (int i = 0; i < m_stepCount; ++i) {
-        float stepX = gridStartX + (i * stepWidth) + 2.0f;
+        float stepX = gridStartX + (i * stepWidth) - m_gridScrollX + 2.0f;
         float indicatorWidth = stepWidth - 4.0f;
+        if (stepX > gridCard.right()) break;
+        if (stepX + stepWidth < gridCard.x) continue;
 
         NUIRect indicatorRect(stepX, indicatorY, indicatorWidth, indicatorHeight);
 
         // Base color: more visible background
         NUIColor bgColor = theme.getColor("surfaceTertiary").withAlpha(0.5f);
 
-        // Bar/beat markers
-        bool isBarStart = (i % 4 == 0);
+        // Bar/beat markers (16 steps = 1 bar at 1/16 resolution)
+        const bool isBeatStart = (i % 4 == 0);
+        const bool isBarStart = (i % 16 == 0);
         if (isBarStart) {
-            bgColor = bgColor.lightened(0.1f);
+            bgColor = bgColor.lightened(0.16f);
+        } else if (isBeatStart) {
+            bgColor = bgColor.lightened(0.08f);
         }
 
         renderer.fillRoundedRect(indicatorRect, indicatorRadius, bgColor);
@@ -876,10 +966,24 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
 
         if (isBarStart) {
-            renderer.drawTextCentered(std::to_string((i / 4) + 1), indicatorRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
+            const NUIRect labelRect(stepX, indicatorY, stepWidth * 16.0f, indicatorHeight);
+            renderer.drawTextCentered(std::to_string((i / 16) + 1), labelRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
         }
     }
-    
+
+    // Scroll indicator: show which slice of the loop the grids are viewing.
+    if (maxScrollX > 0.0f) {
+        const float trackX = gridCard.x + 3.0f;
+        const float trackWidth = std::max(0.0f, gridCard.width - 6.0f);
+        const float trackY = gridCard.bottom() - 4.0f;
+        renderer.fillRoundedRect({trackX, trackY, trackWidth, 2.5f}, 1.25f,
+                                 theme.getColor("borderSubtle").withAlpha(0.55f));
+        const float thumbWidth = std::max(16.0f, trackWidth * (availWidth / totalWidth));
+        const float thumbX = trackX + (trackWidth - thumbWidth) * (m_gridScrollX / maxScrollX);
+        renderer.fillRoundedRect({thumbX, trackY, thumbWidth, 2.5f}, 1.25f,
+                                 theme.getColor("accentPrimary").withAlpha(0.75f));
+    }
+
     renderer.clearClipRect();
 }
 
@@ -1214,8 +1318,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     
-    // Track which unit is selected (for copy/paste)
-    if (event.pressed && event.button == NUIMouseButton::Left) {
+    // Track which unit is selected (for copy/paste). Only rows inside the
+    // list viewport are clickable — scrolled-out rows are not rendered.
+    if (event.pressed && event.button == NUIMouseButton::Left &&
+        (m_listViewportRect.height <= 0.0f || m_listViewportRect.contains(event.position))) {
         for (size_t i = 0; i < m_unitRows.size(); ++i) {
             if (m_unitRows[i] && m_unitRows[i]->getBounds().contains(event.position)) {
                 m_selectedUnitId = m_unitRows[i]->getUnitId();

@@ -545,8 +545,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     
     // 1. GHOST NOTES (Read-only backgrounds)
     for (const auto& ghost : ghostPatterns_) {
-        NUIColor gCol = ghost.color.withAlpha(0.1f); 
-        NUIColor gBorder = ghost.color.withAlpha(0.2f);
+        NUIColor gCol = ghost.color.withAlpha(ghost.fillAlpha);
+        NUIColor gBorder = ghost.color.withAlpha(ghost.strokeAlpha);
         
         for (const auto& n : ghost.notes) {
             float x = snapRectX(beatToScreenX(n.startBeat, pixelsPerBeat_, scrollX_, b.x));

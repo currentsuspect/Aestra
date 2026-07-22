@@ -313,6 +313,10 @@ public:
         std::vector<MidiNote> notes;
         /** @brief Ghost overlay color. */
         AestraUI::NUIColor color;
+        /** @brief Fill alpha — same-pattern unit ghosts read stronger than cross-pattern ghosts. */
+        float fillAlpha{0.1f};
+        /** @brief Stroke alpha. */
+        float strokeAlpha{0.2f};
     };
 
     /** @brief Create the editable piano-roll note layer. */

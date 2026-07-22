@@ -1,6 +1,7 @@
 #include "Plugin/SamplerPlugin.h"
 
 #include "AestraJSON.h"
+#include "AestraLog.h"
 #include "Plugin/BuiltInPlugins.h"
 #include "GarbageCollector.h"
 #include "IO/MiniAudioDecoder.h"
@@ -621,7 +622,12 @@ std::vector<PluginParameter> SamplerPlugin::getParameters() const {
     params.push_back({kParamDecay, "Decay", "Dec", "s", 0.1f, 0.0f, 2.0f});
     params.push_back({kParamSustain, "Sustain", "Sus", "", 1.0f, 0.0f, 1.0f});
     params.push_back({kParamRelease, "Release", "Rel", "s", 0.5f, 0.0f, 5.0f});
-    params.push_back({kParamPitch, "Pitch", "Ptc", "st", 0.0f, -24.0f, 24.0f});
+    // Pitch is STORED normalized (0.5 = 0 st; see getCoarseSemitones). The
+    // declared default/range must match the stored encoding: plugin creation
+    // writes param.defaultValue straight back via setParameter (BuiltInPlugins
+    // applyInfo), and a semitone-encoded 0.0 default here transposed every
+    // fresh sampler down an octave.
+    params.push_back({kParamPitch, "Pitch", "Ptc", "", 0.5f, 0.0f, 1.0f});
     return params;
 }
 
@@ -643,6 +649,10 @@ void SamplerPlugin::setParameter(uint32_t id, float value) {
 std::string SamplerPlugin::getParameterDisplay(uint32_t id) const {
     if (id >= kParamCount)
         return "";
+    if (id == kParamPitch) {
+        // Stored normalized; display in musician units.
+        return std::to_string(getCoarseSemitones()) + " st";
+    }
     float val = m_params[id].load();
     return std::to_string(val);
 }

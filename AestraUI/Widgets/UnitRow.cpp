@@ -66,6 +66,7 @@ UnitRow::UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aest
 }
 
 void UnitRow::updateState() {
+    m_rootMidiNote = m_manager.getUnitRootMidiNote(m_unitId);
     auto* unit = m_manager.getUnit(m_unitId);
     if (unit) {
         m_name = unit->name;
@@ -145,15 +146,24 @@ void UnitRow::onRender(NUIRenderer& renderer) {
 
     auto bounds = getBounds();
 
+    // Stay inside the panel's list viewport: fully scrolled-out rows draw
+    // nothing, partially visible ones are clipped in drawContent.
+    const bool hasViewport = m_viewport.width > 0.0f && m_viewport.height > 0.0f;
+    if (hasViewport && !bounds.intersects(m_viewport)) {
+        return;
+    }
+
     // Render live for now. The widget cache path is currently producing
     // duplicate/local-space ghosts for Arsenal rows on Linux.
     drawContent(renderer);
-    
+
     // Render dynamic children (Input Widget, Context Menu) on top
     // Push UnitRow position so children (relative coords) draw correctly
+    if (hasViewport) renderer.setClipRect(m_viewport);
     renderer.pushTransform(bounds.x, bounds.y);
     renderChildren(renderer);
     renderer.popTransform();
+    if (hasViewport) renderer.clearClipRect();
 }
 
 void UnitRow::drawContent(NUIRenderer& renderer) {
@@ -162,6 +172,18 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     NUIRect cardBounds = bounds;
     cardBounds.height = 56.0f;
+
+    // Clip all painting to the card, further trimmed to the panel's list
+    // viewport so rows scrolled past the panel edge don't spill over it.
+    NUIRect paintClip = cardBounds;
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f) {
+        const float clipTop = std::max(paintClip.y, m_viewport.y);
+        const float clipBottom = std::min(paintClip.bottom(), m_viewport.bottom());
+        paintClip.y = clipTop;
+        paintClip.height = clipBottom - clipTop;
+        if (paintClip.height <= 0.0f) return;
+    }
+    renderer.setClipRect(paintClip);
 
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
@@ -200,7 +222,6 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
                       theme.getColor("borderSubtle").withAlpha(0.55f));
 
     NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 14.0f, cardBounds.height - 12.0f);
-    renderer.setClipRect(cardBounds);
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
 }
@@ -502,7 +523,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
             const NUIRect pitchRect(cellX, pitchY, cellWidth, pitchLaneHeight);
             if (stepPitch[step] >= 0) {
-                const int display = stepPitch[step] - 36;
+                const int display = stepPitch[step] - m_rootMidiNote; // semitones from root
                 renderer.drawTextCentered((display >= 0 ? "+" : "") + std::to_string(display), pitchRect, 8.0f, pitchText);
                 slidePoints.push_back(NUIPoint(pitchRect.x + pitchRect.width * 0.5f, pitchRect.y + pitchRect.height * 0.5f));
             } else {
@@ -643,6 +664,19 @@ bool UnitRow::shouldUseNoteRoll() const {
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
+    // Pointer events outside the panel's list viewport belong to whatever is
+    // rendered there (rows scrolled out of view are not clickable). Ongoing
+    // drags/step edits keep receiving events so gestures can finish.
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f &&
+        !m_isDragging && !m_isStepEditing && !m_viewport.contains(event.position)) {
+        if (m_isHovered || m_hoveredStep != -1) {
+            m_isHovered = false;
+            m_hoveredStep = -1;
+            invalidateVisuals();
+        }
+        return false;
+    }
+
     // Forward to UnitNameLabel first (same local-coordinate transform as old m_nameInput)
     if (m_nameLabel) {
         auto bounds = getBounds();
@@ -686,7 +720,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
                 [this, targetStart](const Aestra::Audio::MidiNote& n) {
                     return n.unitId == m_unitId &&
-                           n.pitch == 60 &&
+                           n.pitch == m_rootMidiNote &&
                            std::abs(n.startBeat - targetStart) < 0.01;
                 });
             if (it != midi.notes.end()) {
@@ -714,28 +748,20 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             if (delta > 10.0f) delta = 1.0f;
             if (delta < -10.0f) delta = -1.0f;
             
-            // If notes exist, scroll pitch viewport instead of horizontal
-            bool hasNotes = false;
-            if (m_patternId.isValid()) {
-                auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
-                if (pattern && pattern->isMidi()) {
-                    auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
-                    for (const auto& note : midi.notes) {
-                        if (note.unitId == m_unitId || note.unitId == 0) {
-                            hasNotes = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (hasNotes) {
+            // Step-grid units (Sampler / 808) scroll the grid horizontally so the
+            // whole loop is reachable when it's longer than the row is wide. Only
+            // the piano-roll / note-roll display scrolls the pitch viewport.
+            if (shouldUseNoteRoll()) {
                 // Pitch viewport scroll (up/down = see higher/lower pitches)
                 m_minimapPitchOffset -= delta * 4.0f; // 4 semitones per tick
                 m_minimapPitchOffset = std::clamp(m_minimapPitchOffset, -60.0f, 60.0f);
+            } else if (m_onGridScroll) {
+                // Panel owns the shared offset: it clamps against the loop
+                // width and pushes the result to every row + the header.
+                m_onGridScroll(-delta * 40.0f);
             } else {
-                // Horizontal scroll for step grid
-                m_scrollX -= delta * 40.0f;
+                // Horizontal scroll for step grid (clamped against content in draw)
+                m_scrollX = std::max(0.0f, m_scrollX - delta * 40.0f);
             }
             invalidateVisuals();
             return true;
@@ -919,7 +945,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
                 [this, targetBeat](const Aestra::Audio::MidiNote& n) {
                     const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
                     return n.unitId == m_unitId &&
-                           n.pitch == 60 &&
+                           n.pitch == m_rootMidiNote &&
                            targetBeat >= n.startBeat - 0.01 &&
                            targetBeat < endBeat - 0.01;
                 });
@@ -930,7 +956,9 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
                 return;
             }
 
-            const int defaultPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
+            // Place at the unit's root so untouched steps play the sample at
+            // its original pitch; transposition belongs to the Piano Roll.
+            const int defaultPitch = m_rootMidiNote;
             // NB: set fields explicitly — positional aggregate init would drop
             // m_unitId into MidiNote::pan (the field before unitId) and leave
             // unitId=0, which auditions/displays fine but is silently dropped by
@@ -957,7 +985,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             // value1 as the MIDI note and value2 as normalized velocity
             // (0..1, scaled by 127). Match the note we just wrote so the
             // click actually plays the sampler instead of note 0 at v1.
-            const int auditionPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
+            const int auditionPitch = m_rootMidiNote;
             Aestra::Audio::AudioQueueCommand audCmd;
             audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
             audCmd.trackIndex = m_unitId;
@@ -1091,7 +1119,16 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
 }
 
 NUIRect UnitRow::getDropBounds() const {
-    return getBounds();
+    // A row scrolled out of the list viewport is invisible — it must not
+    // catch drops either, so trim the drop area to what the user can see.
+    NUIRect bounds = getBounds();
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f) {
+        const float top = std::max(bounds.y, m_viewport.y);
+        const float bottom = std::min(bounds.bottom(), m_viewport.bottom());
+        bounds.y = top;
+        bounds.height = std::max(0.0f, bottom - top);
+    }
+    return bounds;
 }
 
 void UnitRow::onResize(int width, int height) {
