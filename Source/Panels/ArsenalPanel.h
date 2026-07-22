@@ -119,6 +119,7 @@ private:
     float m_targetScrollY = 0.0f;
     float m_gridScrollX = 0.0f; // Shared horizontal step-grid scroll (header + all rows)
     bool m_gridFollowSuspended = false; // User scrolled away while playing; stop chasing them
+    bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
     void scrollGridBy(float deltaPx); // Clamp + broadcast the shared grid scroll
@@ -178,6 +179,7 @@ private:
     bool m_dropTargetRegistered = false;
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
+    AestraUI::NUIRect m_fitToggleRect{};
     AestraUI::NUIRect m_commandHeaderRect{};
     AestraUI::NUIRect m_progressHeaderRect{};
     AestraUI::NUIRect m_listViewportRect{}; // Visible area for unit rows (scroll clip + hit-test)

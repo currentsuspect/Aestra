@@ -199,6 +199,7 @@ int ArsenalPanel::computeLoopStepCount() const {
 }
 
 float ArsenalPanel::computeGridMaxScrollX() const {
+    if (m_fitToWidth) return 0.0f; // Whole loop shown → nothing to scroll
     // Mirrors the UnitRow grid geometry (control block + context paddings +
     // min 20px pads) so the shared scroll clamps against the real content.
     const float width = m_progressHeaderRect.width;
@@ -276,6 +277,7 @@ void ArsenalPanel::refreshUnits() {
         
         // Set step count
         row->setStepCount(m_stepCount);
+        row->setFitToWidth(m_fitToWidth);
 
         // Shared horizontal grid scroll: the panel owns the offset so the
         // progress header and every row stay in lockstep.
@@ -655,6 +657,20 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
                           (unitCount == 1 ? " UNIT" : " UNITS"),
                       {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
                       theme.getColor("textSecondary").withAlpha(0.70f));
+
+    // View toggle: reflects current mode (accent = Fit, muted = Scroll).
+    if (m_fitToggleRect.width > 0.0f) {
+        const float radius = themeProps.radiusS;
+        const NUIColor fill = m_fitToWidth ? theme.getColor("accentPrimary").withAlpha(0.18f)
+                                           : theme.getColor("surfaceTertiary").withAlpha(0.85f);
+        const NUIColor stroke = m_fitToWidth ? theme.getColor("accentPrimary").withAlpha(0.70f)
+                                             : theme.getColor("borderSubtle").withAlpha(0.85f);
+        const NUIColor text = m_fitToWidth ? theme.getColor("accentPrimary")
+                                           : theme.getColor("textSecondary").withAlpha(0.9f);
+        renderer.fillRoundedRect(m_fitToggleRect, radius, fill);
+        renderer.strokeRoundedRect(m_fitToggleRect, radius, 1.0f, stroke);
+        renderer.drawTextCentered(m_fitToWidth ? "FIT" : "SCROLL", m_fitToggleRect, themeProps.fontSizeMicro, text);
+    }
 }
 
 void ArsenalPanel::layoutUnits() {
@@ -671,6 +687,10 @@ void ArsenalPanel::layoutUnits() {
     const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
     m_addUnitButtonRect = {m_commandHeaderRect.right() - 10.0f - addW, buttonY, addW, buttonH};
     if (m_addUnitBtn) m_addUnitBtn->setBounds(m_addUnitButtonRect);
+
+    // View toggle (Fit whole loop <-> readable + scroll) sits just left of Add.
+    constexpr float fitW = 84.0f;
+    m_fitToggleRect = {m_addUnitButtonRect.x - 8.0f - fitW, buttonY, fitW, buttonH};
 
     m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 8.0f, width, PROGRESS_HEADER_HEIGHT};
     float yPos = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
@@ -920,9 +940,11 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
     renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
 
-    // Same step width formula as the rows (min 20px pads) + the shared scroll
-    // offset, so the header ruler and every row grid stay in lockstep.
-    float stepWidth = std::max(availWidth / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+    // Same step width formula as the rows + the shared scroll offset, so the
+    // header ruler and every row grid stay in lockstep. Fit mode shrinks pads
+    // to show the whole loop; scroll mode keeps a readable 20px minimum.
+    const float fitStepWidth = availWidth / static_cast<float>(std::max(1, m_stepCount));
+    float stepWidth = m_fitToWidth ? std::max(fitStepWidth, 4.0f) : std::max(fitStepWidth, 20.0f);
     const float totalWidth = stepWidth * static_cast<float>(m_stepCount);
     const float maxScrollX = std::max(0.0f, totalWidth - availWidth);
     m_gridScrollX = std::clamp(m_gridScrollX, 0.0f, maxScrollX);
@@ -1259,6 +1281,17 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             repaint();
             return true;
         }
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left && m_fitToggleRect.contains(event.position)) {
+        m_fitToWidth = !m_fitToWidth;
+        m_gridScrollX = 0.0f;
+        for (auto& row : m_unitRows) {
+            if (row) row->setFitToWidth(m_fitToWidth);
+        }
+        scrollGridBy(0.0f); // Re-clamp shared scroll for the new mode
+        repaint();
+        return true;
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {

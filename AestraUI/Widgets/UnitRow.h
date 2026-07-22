@@ -91,6 +91,14 @@ public:
      * @param count Number of step pads to render.
      */
     void setStepCount(int count);
+
+    /**
+     * @brief Choose whether the grid fits the whole loop to width or keeps a
+     *        readable minimum pad size and scrolls. Owned by the panel so all
+     *        rows + the header agree.
+     * @param fit True to fit the entire loop (pads shrink, no scroll).
+     */
+    void setFitToWidth(bool fit);
     /**
      * @brief Get the visible step count for the sequencer section.
      * @return Number of rendered steps.
@@ -183,7 +191,15 @@ private:
     
     // Step sequencer
     int m_stepCount = 16;
+    bool m_fitToWidth = true; // Fit whole loop vs readable-min + scroll
     float m_scrollX = 0.0f;
+
+    // Pad width for the current fit mode: fit shrinks to show every step,
+    // scroll mode keeps a readable minimum and lets m_scrollX page the grid.
+    float gridStepWidth(float availWidth) const {
+        const float w = availWidth / static_cast<float>(std::max(1, m_stepCount));
+        return m_fitToWidth ? std::max(w, 4.0f) : std::max(w, PAD_MIN_SIZE);
+    }
     std::function<void(float)> m_onGridScroll; // Panel-owned shared scroll (see setOnGridScroll)
     NUIRect m_viewport{}; // Panel list viewport; empty = unrestricted
     int m_hoveredStep = -1;

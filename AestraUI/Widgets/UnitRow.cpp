@@ -138,6 +138,13 @@ void UnitRow::setStepCount(int count) {
     invalidateVisuals();
 }
 
+void UnitRow::setFitToWidth(bool fit) {
+    if (fit == m_fitToWidth) return;
+    m_fitToWidth = fit;
+    if (fit) m_scrollX = 0.0f; // Nothing to page when the whole loop is shown
+    invalidateVisuals();
+}
+
 void UnitRow::onRender(NUIRenderer& renderer) {
     if (m_nameLabel) {
         m_nameLabel->setUnitType(shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type);
@@ -403,7 +410,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     
     // === Step Grid Layout ===
     float availWidth = timelineStrip.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
+    float stepWidth = gridStepWidth(availWidth);
     float totalWidth = stepWidth * m_stepCount;
 
     
@@ -715,7 +722,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
         float relativeX = position.x - gridBounds.x;
         float availWidth = gridBounds.width;
-        float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
+        float stepWidth = gridStepWidth(availWidth);
         float contentX = relativeX + m_scrollX;
         return static_cast<int>(contentX / stepWidth);
     };
@@ -771,7 +778,15 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                 // Pitch viewport scroll (up/down = see higher/lower pitches)
                 m_minimapPitchOffset -= delta * 4.0f; // 4 semitones per tick
                 m_minimapPitchOffset = std::clamp(m_minimapPitchOffset, -60.0f, 60.0f);
-            } else if (m_onGridScroll) {
+                invalidateVisuals();
+                return true;
+            }
+            if (m_fitToWidth) {
+                // Whole loop is on screen — nothing to scroll horizontally, so
+                // let the wheel bubble up to the panel's vertical list scroll.
+                return false;
+            }
+            if (m_onGridScroll) {
                 // Panel owns the shared offset: it clamps against the loop
                 // width and pushes the result to every row + the header.
                 m_onGridScroll(-delta * 40.0f);
@@ -978,8 +993,8 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     // === Single click: Grid Interaction - Toggle Steps ===
     float relativeX = localPoint.x;
     float availWidth = bounds.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
-    
+    float stepWidth = gridStepWidth(availWidth);
+
     float contentX = relativeX + m_scrollX;
     int stepIndex = static_cast<int>(contentX / stepWidth);
     
