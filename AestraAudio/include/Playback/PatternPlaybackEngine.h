@@ -176,11 +176,18 @@ public:
     /**
      * Refill lookahead window with events (non-RT thread)
      * Called periodically by scheduler
-     * @param currentFrame Current transport frame.
+     * @param currentFrame Current transport frame. In looped pattern mode this
+     *        is MONOTONIC (iteration * loopLengthSamples + wrapped position) so
+     *        the window can pre-schedule the next iteration's events before the
+     *        wrap — flushing at the wrap and rescheduling on the next UI tick
+     *        made every loop's downbeat land late by the maintenance latency.
      * @param sampleRate Active sample rate.
      * @param lookaheadSamples Number of frames to schedule ahead.
+     * @param loopLengthSamples Loop length in samples for looped pattern mode
+     *        (loop start == 0); 0 = no loop (timeline / offline bounce).
      */
-    void refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples = 4096);
+    void refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples = 4096,
+                      uint64_t loopLengthSamples = 0);
 
     /**
      * Process audio callback (RT-safe, audio thread only)

@@ -476,6 +476,25 @@ void AestraContent::setupTransportBar() {
             clearPendingCountIn();
         }
     });
+    m_transportBar->setOnTimeSignatureChange([this](int beatsPerBar) {
+        // Propagate the time signature to every bar-math consumer. The clock
+        // is the source of truth; the rest cache or re-derive from it.
+        if (m_trackManager) {
+            m_trackManager->getTimelineClock().setBeatsPerBar(beatsPerBar);
+        }
+        if (m_audioEngine) {
+            m_audioEngine->setMetronomeBeatsPerBar(beatsPerBar);
+        }
+        if (m_pianoRollPanel) {
+            m_pianoRollPanel->setBeatsPerBar(beatsPerBar);
+        }
+        if (m_trackManagerUI) {
+            m_trackManagerUI->setBeatsPerBar(beatsPerBar);
+        }
+        if (m_sequencerPanel) {
+            m_sequencerPanel->refreshUnits(); // Re-derive bar grouping + loop length
+        }
+    });
 
     // Helper: Stop preview when Audition Queue changes (drop)
     if (m_auditionEngine) {
@@ -2795,7 +2814,13 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
     if (!pattern) {
         return;
     }
-    double lengthBeats = std::max(16.0, pattern->lengthBeats);
+    // Respect the pattern's real length, floored at one bar of the current
+    // time signature. The old 16-beat floor fought the Piano Roll's save path
+    // (which sets the true length): the loop length ping-ponged on every edit,
+    // playing phantom empty bars and desyncing the pattern scheduler's frame
+    // domain from the audio thread (= silence after the next wrap).
+    const double barBeats = static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar());
+    double lengthBeats = std::max(barBeats, pattern->lengthBeats);
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
 }
 

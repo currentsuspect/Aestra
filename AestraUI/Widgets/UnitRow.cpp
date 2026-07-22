@@ -133,6 +133,11 @@ void UnitRow::updateState() {
     invalidateVisuals();
 }
 
+void UnitRow::setStepCount(int count) {
+    m_stepCount = count;
+    invalidateVisuals();
+}
+
 void UnitRow::onRender(NUIRenderer& renderer) {
     if (m_nameLabel) {
         m_nameLabel->setUnitType(shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type);
@@ -400,6 +405,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     float availWidth = timelineStrip.width;
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
     float totalWidth = stepWidth * m_stepCount;
+
     
     // Clamp scroll
     float maxScroll = std::max(0.0f, totalWidth - availWidth);
@@ -551,7 +557,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                               theme.getColor("border").withAlpha(0.07f));
         }
 
-        for (double beat = 4.0; beat < visibleLengthBeats; beat += 4.0) {
+        const double barLineBeats =
+            m_trackManager ? static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar()) : 4.0;
+        for (double beat = barLineBeats; beat < visibleLengthBeats; beat += barLineBeats) {
             const float x = timelineStrip.x +
                             static_cast<float>(beat / visibleLengthBeats) * totalWidth - m_scrollX;
             renderer.drawLine(NUIPoint(x, timelineStrip.y), NUIPoint(x, timelineStrip.bottom()), 1.0f,
@@ -694,6 +702,14 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
     const float separatorX = m_controlWidth;
     const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
+    // Step math must use the same geometry the pads are DRAWN with:
+    // drawContextBlock insets the context rect by 6px lane padding before
+    // laying out steps. Resolving against the un-inset rect skewed the step
+    // width and offset, so clicks landed on neighboring pads (worse toward
+    // the right edge of long loops).
+    const NUIRect localGridRect(localContextRect.x + 6.0f, localContextRect.y + 6.0f,
+                                std::max(0.0f, localContextRect.width - 12.0f),
+                                std::max(0.0f, localContextRect.height - 12.0f));
     const NUIPoint localPoint(event.position.x - bounds.x, event.position.y - bounds.y);
 
     auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
@@ -777,7 +793,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     m_hoveredStep = -1;
     
     if (m_isHovered && localContextRect.contains(localPoint)) {
-        const int stepIndex = resolveGridStep(localPoint, localContextRect);
+        const int stepIndex = resolveGridStep(localPoint, localGridRect);
         if (stepIndex >= 0 && stepIndex < m_stepCount) {
             m_hoveredStep = stepIndex;
         }
@@ -800,7 +816,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
              event.button == NUIMouseButton::None);
 
         if (isPointerMoveWhileEditing) {
-            int stepIndex = resolveGridStep(localPoint, localContextRect);
+            int stepIndex = resolveGridStep(localPoint, localGridRect);
             stepIndex = std::max(m_stepEditStart, std::min(m_stepCount - 1, stepIndex));
             const int endExclusive = stepIndex + 1;
             if (endExclusive != m_stepEditEndExclusive) {
@@ -835,7 +851,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     return true;
                 }
                 else if (localContextRect.contains(localPoint)) {
-                    handleContextClick(event, localContextRect);
+                    handleContextClick(event, localGridRect);
                     return true;
                 }
             }
@@ -844,6 +860,38 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
+                // On a step pad with a note: right-click deletes it (FL-style).
+                // Anywhere else on the row keeps the context menu.
+                if (localContextRect.contains(localPoint) && !shouldUseNoteRoll() &&
+                    m_patternId.isValid() && m_trackManager) {
+                    const int stepIndex = resolveGridStep(localPoint, localGridRect);
+                    if (stepIndex >= 0 && stepIndex < m_stepCount) {
+                        bool removed = false;
+                        m_trackManager->getPatternManager().applyPatch(
+                            m_patternId, [this, stepIndex, &removed](Aestra::Audio::PatternSource& p) {
+                                if (!p.isMidi()) return;
+                                auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+                                const double targetBeat = stepIndex * 0.25;
+                                auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
+                                    [this, targetBeat](const Aestra::Audio::MidiNote& n) {
+                                        const double endBeat =
+                                            std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                                        return n.unitId == m_unitId &&
+                                               targetBeat >= n.startBeat - 0.01 &&
+                                               targetBeat < endBeat - 0.01;
+                                    });
+                                if (it != midi.notes.end()) {
+                                    midi.notes.erase(it);
+                                    removed = true;
+                                }
+                            });
+                        if (removed) {
+                            if (m_onPatternEdited) m_onPatternEdited(m_patternId);
+                            invalidateVisuals();
+                            return true;
+                        }
+                    }
+                }
                 showRowContextMenu(event.position);
                 return true;
             }
@@ -912,18 +960,21 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
         return;
     }
 
-    // === Double-click to load sample ===
+    // === Double-click to load sample (EMPTY units only) ===
+    // With a sample loaded, rapid taps are step programming — treating any two
+    // grid clicks within 400ms as "open the file picker" made fast FL-style
+    // tap-tap placement randomly hijack the second click.
     auto now = std::chrono::steady_clock::now();
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
     m_lastClipClickTimeMs = nowMs;
-    
-    if (isDoubleClick) {
-        // Trigger sample file picker
+
+    if (isDoubleClick && m_audioClip.empty() && m_pluginId.empty()) {
+        // Empty unit: double-click is a shortcut to give it a sample.
         if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
         return;
     }
-    
+
     // === Single click: Grid Interaction - Toggle Steps ===
     float relativeX = localPoint.x;
     float availWidth = bounds.width;
@@ -972,30 +1023,13 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             midi.notes.push_back(note);
         });
 
-        if (removedExisting) {
-            if (m_onPatternEdited) {
-                m_onPatternEdited(m_patternId);
-            }
-        } else {
-            m_isStepEditing = true;
-            m_stepEditStart = stepIndex;
-            m_stepEditEndExclusive = stepIndex + 1;
-
-            // Audible feedback for the step just placed. The engine reads
-            // value1 as the MIDI note and value2 as normalized velocity
-            // (0..1, scaled by 127). Match the note we just wrote so the
-            // click actually plays the sampler instead of note 0 at v1.
-            const int auditionPitch = m_rootMidiNote;
-            Aestra::Audio::AudioQueueCommand audCmd;
-            audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
-            audCmd.trackIndex = m_unitId;
-            audCmd.value1 = static_cast<float>(auditionPitch);
-            audCmd.value2 = 100.0f / 127.0f;
-            if (m_trackManager) {
-                m_trackManager->pushAudioCommand(audCmd);
-            }
+        // No drag-to-extend and no audition preview: a click is exactly one
+        // step toggled, silently — the running loop picks the note up itself
+        // (hot swap), which is the feedback the workflow wants.
+        if (m_onPatternEdited) {
+            m_onPatternEdited(m_patternId);
         }
-        
+
         invalidateVisuals();
     }
 }

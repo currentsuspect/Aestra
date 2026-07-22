@@ -132,7 +132,8 @@ private:
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
-    int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (16/bar)
+    int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
+    int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
     void createUnitOfType(UnitType type);
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);

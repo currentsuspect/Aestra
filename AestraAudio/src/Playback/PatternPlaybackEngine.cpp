@@ -138,7 +138,8 @@ uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
     return static_cast<uint16_t>(std::max(0, std::min(unit->targetMixerRoute, 15)));
 }
 
-void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples) {
+void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples,
+                                         uint64_t loopLengthSamples) {
     // RT safety: this method must NOT be called from the audio callback.
     // It acquires a mutex, allocates from scratch buffer, and calls pattern lookup.
     // See performNonRealtimeMaintenance() for the correct call site.
@@ -190,6 +191,18 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             continue;
         }
 
+        // Looped pattern mode works in a monotonic frame domain: iterate every
+        // loop pass that intersects the window so the next iteration's events
+        // (downbeat included) are queued BEFORE the wrap, sample-accurately.
+        uint64_t iterBegin = 0;
+        uint64_t iterEnd = 0;
+        if (loopLengthSamples > 0) {
+            iterBegin = scheduleFromFrame / loopLengthSamples;
+            iterEnd = (windowEnd - 1) / loopLengthSamples;
+        }
+
+        for (uint64_t loopIter = iterBegin; loopIter <= iterEnd; ++loopIter) {
+        const uint64_t loopBase = loopIter * loopLengthSamples;
         for (const auto& note : midi.notes) {
             const double noteStartInSource = note.startBeat;
             const double noteEndInSource = note.startBeat + note.durationBeats;
@@ -203,7 +216,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                                              ? resolvePitchedSamplerMidiNote(note, resolveSamplerRootMidiNote(unit))
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
-            uint64_t noteFrame = m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
+            uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
             bool suppressNoteOff = false;
 
@@ -221,7 +234,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 }
             }
 
-            uint64_t offFrame = m_clock->sampleFrameAtBeat(offBeat, sampleRate);
+            uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
 
             uint16_t channelIdx = getChannelForUnit(note.unitId);
 
@@ -298,6 +311,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 m_scratchEvents.push_back(offEvent);
             }
         }
+        } // loopIter
 
         inst.scheduledThroughFrame = windowEnd;
     }

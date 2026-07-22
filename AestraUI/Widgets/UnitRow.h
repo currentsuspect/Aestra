@@ -90,7 +90,7 @@ public:
      * @brief Set the visible step count for the sequencer section.
      * @param count Number of step pads to render.
      */
-    void setStepCount(int count) { m_stepCount = count; invalidateVisuals(); }
+    void setStepCount(int count);
     /**
      * @brief Get the visible step count for the sequencer section.
      * @return Number of rendered steps.

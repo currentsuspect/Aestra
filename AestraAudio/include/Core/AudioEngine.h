@@ -317,6 +317,8 @@ public:
     bool isMetronomeEnabled() const { return m_metronomeEngine.isEnabled(); }
     /** @brief Set metronome output volume. */
     void setMetronomeVolume(float vol) { m_metronomeEngine.setVolume(vol); }
+    /** @brief Set metronome beats-per-bar (time-signature numerator). */
+    void setMetronomeBeatsPerBar(int beats) { m_metronomeEngine.setBeatsPerBar(beats); }
     /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
     /** @brief Set transport tempo in beats per minute. */
@@ -377,10 +379,7 @@ public:
     }
 
     /** @brief Enable or disable Arsenal pattern playback mode. */
-    void setPatternPlaybackMode(bool enabled, double lengthBeats) {
-        m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
-        m_patternLengthBeats.store(lengthBeats, std::memory_order_relaxed);
-    }
+    void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
 
@@ -1031,6 +1030,11 @@ private:
     // Pattern Playback Mode State
     std::atomic<bool> m_patternPlaybackMode{false};
     std::atomic<double> m_patternLengthBeats{4.0};
+    // Completed pattern-loop passes (audio thread writes at each wrap, reset
+    // while stopped). Gives pattern scheduling a MONOTONIC frame domain
+    // (iteration * loopLen + wrapped pos) so the next iteration's events are
+    // queued before the wrap instead of after a UI maintenance tick.
+    std::atomic<uint64_t> m_patternLoopIteration{0};
 
     // Test Tone State
     std::atomic<bool> m_testToneEnabled{false};

@@ -13,7 +13,7 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
-constexpr int kArsenalMinPatternBars = 2;
+constexpr int kArsenalMinPatternBars = 1;
 constexpr int kArsenalMaxPatternBars = 16;
 
 const char* unitTypeDisplayName(UnitType type) {
@@ -179,17 +179,23 @@ void ArsenalPanel::createLayout() {
     // The content of this method has been moved to the constructor or is handled by the base class.
 }
 
+int ArsenalPanel::beatsPerBar() const {
+    return m_trackManager ? m_trackManager->getTimelineClock().getBeatsPerBar() : 4;
+}
+
 int ArsenalPanel::computeLoopStepCount() const {
     // One step per 1/16 note (0.25 beat), spanning the whole loop so the grid
-    // shows every bar of the pattern instead of a fixed single bar.
-    double lengthBeats = 4.0;
+    // shows every bar of the pattern instead of a fixed single bar. Minimum is
+    // one bar of the current time signature.
+    const double barBeats = static_cast<double>(beatsPerBar());
+    double lengthBeats = barBeats;
     if (m_trackManager && m_activePatternID.isValid()) {
         if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
-            lengthBeats = std::max(4.0, pattern->lengthBeats);
+            lengthBeats = std::max(barBeats, pattern->lengthBeats);
         }
     }
     const int steps = static_cast<int>(std::lround(lengthBeats / 0.25));
-    return std::clamp(steps, 16, 256);
+    return std::clamp(steps, beatsPerBar() * 4, 256);
 }
 
 float ArsenalPanel::computeGridMaxScrollX() const {
@@ -235,7 +241,8 @@ void ArsenalPanel::followGridPlayhead() {
     }
     if (m_gridFollowSuspended) return; // Don't fight a deliberate manual scroll
     // Page to the playing bar's start so a full musical bar reads at once.
-    const float barLeft = static_cast<float>((playStep / 16) * 16) * stepWidth;
+    const int stepsPerBar = beatsPerBar() * 4;
+    const float barLeft = static_cast<float>((playStep / stepsPerBar) * stepsPerBar) * stepWidth;
     scrollGridBy(std::clamp(barLeft, 0.0f, maxScroll) - m_gridScrollX);
 }
 
@@ -780,10 +787,11 @@ int ArsenalPanel::calculateCurrentStep() {
     double currentBeat = positionSeconds * beatsPerSecond;
     
     // Use the actual pattern length instead of a hard-coded 1-bar step grid.
-    double patternLengthBeats = 8.0;
+    const double barBeats = static_cast<double>(beatsPerBar());
+    double patternLengthBeats = barBeats;
     if (m_activePatternID.isValid()) {
         if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
-            patternLengthBeats = std::max(8.0, pattern->lengthBeats);
+            patternLengthBeats = std::max(barBeats, pattern->lengthBeats);
         }
     }
     const double beatsPerVisualStep = patternLengthBeats / std::max(1, m_stepCount);
@@ -808,12 +816,13 @@ void ArsenalPanel::adjustPatternBars(int deltaBars) {
         return;
     }
 
+    const double barBeats = static_cast<double>(beatsPerBar());
     const int currentBars = std::clamp(
-        static_cast<int>(std::round(std::max(8.0, pattern->lengthBeats) / 4.0)),
+        static_cast<int>(std::round(std::max(barBeats, pattern->lengthBeats) / barBeats)),
         kArsenalMinPatternBars,
         kArsenalMaxPatternBars);
     const int nextBars = std::clamp(currentBars + deltaBars, kArsenalMinPatternBars, kArsenalMaxPatternBars);
-    const double nextLengthBeats = static_cast<double>(nextBars) * 4.0;
+    const double nextLengthBeats = static_cast<double>(nextBars) * barBeats;
     if (std::abs(nextLengthBeats - pattern->lengthBeats) < 0.001) {
         return;
     }
@@ -863,7 +872,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         }
     }
 
-    const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / 4.0)), kArsenalMinPatternBars, kArsenalMaxPatternBars);
+    const int stepsPerBar = beatsPerBar() * 4;
+    const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / static_cast<double>(beatsPerBar()))),
+                                kArsenalMinPatternBars, kArsenalMaxPatternBars);
     const bool decEnabled = bars > kArsenalMinPatternBars;
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
@@ -934,9 +945,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         // Base color: more visible background
         NUIColor bgColor = theme.getColor("surfaceTertiary").withAlpha(0.5f);
 
-        // Bar/beat markers (16 steps = 1 bar at 1/16 resolution)
+        // Bar/beat markers (4 steps = 1 beat at 1/16 resolution)
         const bool isBeatStart = (i % 4 == 0);
-        const bool isBarStart = (i % 16 == 0);
+        const bool isBarStart = (i % stepsPerBar == 0);
         if (isBarStart) {
             bgColor = bgColor.lightened(0.16f);
         } else if (isBeatStart) {
@@ -966,8 +977,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
 
         if (isBarStart) {
-            const NUIRect labelRect(stepX, indicatorY, stepWidth * 16.0f, indicatorHeight);
-            renderer.drawTextCentered(std::to_string((i / 16) + 1), labelRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
+            const NUIRect labelRect(stepX, indicatorY, stepWidth * static_cast<float>(stepsPerBar), indicatorHeight);
+            renderer.drawTextCentered(std::to_string((i / stepsPerBar) + 1), labelRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
         }
     }
 
@@ -1254,7 +1265,8 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         int bars = 4;
         if (m_trackManager && m_activePatternID.isValid()) {
             if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
-                bars = std::clamp(static_cast<int>(std::round(std::max(8.0, pattern->lengthBeats) / 4.0)),
+                const double barBeats = static_cast<double>(beatsPerBar());
+                bars = std::clamp(static_cast<int>(std::round(std::max(barBeats, pattern->lengthBeats) / barBeats)),
                                   kArsenalMinPatternBars,
                                   kArsenalMaxPatternBars);
             }

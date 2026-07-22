@@ -66,7 +66,17 @@ TransportBar::TransportBar()
             }
         });
     }
-    
+
+    // Forward time-signature clicks to the app (this link was missing: the
+    // display cycled 2/4..7/8 but nothing outside the transport ever heard).
+    if (m_infoContainer && m_infoContainer->getTimeSignatureDisplay()) {
+        m_infoContainer->getTimeSignatureDisplay()->setOnTimeSignatureChange([this](int beatsPerBar) {
+            if (m_onTimeSignatureChange) {
+                m_onTimeSignatureChange(beatsPerBar);
+            }
+        });
+    }
+
     updateButtonStates();
 }
 

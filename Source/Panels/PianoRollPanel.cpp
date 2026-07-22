@@ -22,14 +22,14 @@
 using namespace Aestra::Audio;
 
 namespace {
-double quantizePatternLengthBeats(double contentEndBeat) {
-    constexpr double kBeatsPerBar = 4.0;
-    constexpr double kBarsPerPatternBlock = 2.0;
-    constexpr double kPatternBlockBeats = kBeatsPerBar * kBarsPerPatternBlock; // 8 beats = 2 bars
-
+// Round pattern length up to whole bars of the CURRENT time signature,
+// minimum one bar. (Was hardcoded 2 bars of 4/4 = 8 beats, which both locked
+// non-4/4 signatures out and forced a 2-bar minimum.)
+double quantizePatternLengthBeats(double contentEndBeat, int beatsPerBar) {
+    const double barBeats = static_cast<double>(std::max(1, beatsPerBar));
     const double safeContentEnd = std::max(0.0, contentEndBeat);
-    const double blocksNeeded = std::max(1.0, std::ceil(safeContentEnd / kPatternBlockBeats));
-    return blocksNeeded * kPatternBlockBeats;
+    const double barsNeeded = std::max(1.0, std::ceil(safeContentEnd / barBeats));
+    return barsNeeded * barBeats;
 }
 } // namespace
 
@@ -176,6 +176,10 @@ void PianoRollPanel::setPixelsPerBeat(float ppb) {
     }
 }
 
+int PianoRollPanel::beatsPerBar() const {
+    return m_trackManager ? m_trackManager->getTimelineClock().getBeatsPerBar() : 4;
+}
+
 void PianoRollPanel::setBeatsPerBar(int bpb) {
     if (m_pianoRoll) {
         m_pianoRoll->setBeatsPerBar(bpb);
@@ -246,8 +250,9 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
-        const double quantizedLengthBeats = quantizePatternLengthBeats(longestBeat);
-        const double resolvedLengthBeats = std::max(8.0, std::max(pattern->lengthBeats, quantizedLengthBeats));
+        const double barBeats = static_cast<double>(beatsPerBar());
+        const double quantizedLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+        const double resolvedLengthBeats = std::max(barBeats, std::max(pattern->lengthBeats, quantizedLengthBeats));
         if (std::abs(resolvedLengthBeats - pattern->lengthBeats) > 0.001) {
             pm.applyPatch(patternId, [resolvedLengthBeats](PatternSource& p) {
                 p.lengthBeats = resolvedLengthBeats;
@@ -372,9 +377,9 @@ void PianoRollPanel::savePattern() {
     for (const auto& note : currentNotes) {
         longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
     }
-    // Keep patterns musical in 4-bar blocks and let note content drive the
+    // Keep patterns musical in whole bars and let note content drive the
     // default loop size on add/delete.
-    const double newLengthBeats = quantizePatternLengthBeats(longestBeat);
+    const double newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
     m_patternDurationBeats = newLengthBeats;
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
@@ -404,9 +409,10 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
         contentEndBeat = std::max(contentEndBeat, note.startBeat + note.durationBeats);
     }
 
-    const double minLengthBeats = quantizePatternLengthBeats(contentEndBeat);
-    const double requestedLengthBeats = m_patternDurationBeats + (static_cast<double>(barsDelta) * 4.0);
-    const double newLengthBeats = std::max(8.0, std::max(minLengthBeats, requestedLengthBeats));
+    const double barBeats = static_cast<double>(beatsPerBar());
+    const double minLengthBeats = quantizePatternLengthBeats(contentEndBeat, beatsPerBar());
+    const double requestedLengthBeats = m_patternDurationBeats + (static_cast<double>(barsDelta) * barBeats);
+    const double newLengthBeats = std::max(barBeats, std::max(minLengthBeats, requestedLengthBeats));
 
     if (std::abs(newLengthBeats - m_patternDurationBeats) <= 0.001) {
         m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);

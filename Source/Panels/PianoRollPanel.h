@@ -107,6 +107,7 @@ private:
     AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
     PatternID m_currentPatternId;
     UnitID m_editingUnitId{0};
+    int beatsPerBar() const; // Time-signature numerator from the timeline clock
     std::function<void(PatternID)> m_onPatternEdited;
     std::function<void(UnitID)> m_onEditingUnitChanged;
     double m_patternDurationBeats{8.0};

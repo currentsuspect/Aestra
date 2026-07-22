@@ -551,6 +551,20 @@ void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSn
     }
 }
 
+void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
+    const double oldLength = m_patternLengthBeats.exchange(lengthBeats, std::memory_order_relaxed);
+    const bool wasEnabled = m_patternPlaybackMode.exchange(enabled, std::memory_order_relaxed);
+    // A loop-length change while playing shifts the monotonic scheduling
+    // domain (iteration * loopLen + pos) on both threads at once; already
+    // queued events were stamped in the OLD domain and would never come due.
+    // Flush so the scheduler re-queues everything in the new domain.
+    if (enabled && (!wasEnabled || std::abs(oldLength - lengthBeats) > 1e-9)) {
+        if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
+            patEng->flush();
+        }
+    }
+}
+
 void AudioEngine::performNonRealtimeMaintenance() {
     if (reportRealtimeMisuse("AudioEngine::performNonRealtimeMaintenance")) {
         return;
@@ -577,7 +591,28 @@ void AudioEngine::performNonRealtimeMaintenance() {
         uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
         if (sr > 0) {
-            patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES);
+            uint64_t loopLenSamples = 0;
+            if (m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+                // Same formula as the audio callback so both agree on the
+                // monotonic domain (iteration * loopLen + wrapped position).
+                const double bpm = std::max(1.0, static_cast<double>(m_metronomeEngine.getBPM()));
+                const double samplesPerBeat = static_cast<double>(sr) * 60.0 / bpm;
+                loopLenSamples =
+                    static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
+                if (loopLenSamples > 0) {
+                    // Consistent (iteration, position) pair: re-read once if a
+                    // loop wrap raced us between the two loads.
+                    uint64_t iter = m_patternLoopIteration.load(std::memory_order_acquire);
+                    uint64_t pos = m_globalSamplePos.load(std::memory_order_relaxed);
+                    const uint64_t iterCheck = m_patternLoopIteration.load(std::memory_order_acquire);
+                    if (iterCheck != iter) {
+                        iter = iterCheck;
+                        pos = m_globalSamplePos.load(std::memory_order_relaxed);
+                    }
+                    currentFrame = iter * loopLenSamples + pos;
+                }
+            }
+            patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
         }
     }
 
@@ -868,6 +903,15 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     uint64_t nextGlobalPos = currentGlobalPos;
     uint32_t loopSplitFrame = numFrames; // Default: no split
     uint64_t loopStartSample = 0;
+    uint64_t patternLoopLenSamples = 0; // Pattern-mode loop length (loop start == 0)
+
+    if (!playing && m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingOut) {
+        // Stopped: pattern playback restarts from the loop top, so the
+        // monotonic iteration counter restarts with it.
+        if (m_patternLoopIteration.load(std::memory_order_relaxed) != 0) {
+            m_patternLoopIteration.store(0, std::memory_order_relaxed);
+        }
+    }
 
     if (playing || m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         nextGlobalPos += numFrames;
@@ -879,6 +923,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 (static_cast<double>(currentSampleRate) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
             uint64_t loopEndSample = static_cast<uint64_t>(loopEndBeat * samplesPerBeat);
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
+            if (patternMode && loopEndSample > loopStartSample) {
+                patternLoopLenSamples = loopEndSample - loopStartSample;
+            }
 
             // Check for loop crossing
             // Enhanced Logic: In Pattern Mode, we might start WAY past loop end (Timeline position).
@@ -953,23 +1000,32 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
 
     // === Arsenal Unit Processing (Pattern Playback) ===
-    // Process pattern MIDI events and mix sampler output into master buffer
-    // Must respect loop splitting similar to renderGraph
+    // Process pattern MIDI events and mix sampler output into master buffer.
+    // Positions handed to the pattern engine are MONOTONIC in pattern mode
+    // (iteration * loopLen + wrapped pos): refillWindow pre-schedules the next
+    // iteration's events in that domain, so the wrap needs no flush and the
+    // loop's downbeat lands sample-accurately instead of waiting for the next
+    // UI maintenance tick (which made every bar end audibly "off").
+    const auto patternMonotonic = [&](uint64_t wrappedPos) {
+        return m_patternLoopIteration.load(std::memory_order_relaxed) * patternLoopLenSamples + wrappedPos;
+    };
     if (loopSplitFrame < numFrames) {
         // Split Render
         if (loopSplitFrame > 0) {
-            processArsenalUnits(loopSplitFrame, 0, currentGlobalPos);
+            processArsenalUnits(loopSplitFrame, 0, patternMonotonic(currentGlobalPos));
         }
-        // Flush pattern events on loop wrap so we don't accumulate duplicates.
-        if (isPlaying) {
+        if (patternMode) {
+            m_patternLoopIteration.fetch_add(1, std::memory_order_release);
+        } else if (isPlaying) {
+            // Timeline loops keep the flush-on-wrap behavior.
             auto* pe = m_patternEngine.load(std::memory_order_relaxed);
             if (pe)
                 pe->flush();
         }
-        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, loopStartSample);
+        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, patternMonotonic(loopStartSample));
     } else {
         // Normal
-        processArsenalUnits(numFrames, 0, currentGlobalPos);
+        processArsenalUnits(numFrames, 0, patternMonotonic(currentGlobalPos));
     }
 
     mixTestTone(numFrames, currentSampleRate);
