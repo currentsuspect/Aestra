@@ -110,11 +110,9 @@ bool UnitNameLabel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    if (event.pressed && event.button == NUIMouseButton::Right) {
-        showNameContextMenu(event.position);
-        return true;
-    }
-
+    // Right-click falls through to UnitRow, whose row context menu already
+    // offers Rename (a label-local menu shown here was positioned in
+    // row-local coordinates and never appeared on screen).
     return false;
 }
 
@@ -122,12 +120,6 @@ bool UnitNameLabel::onKeyEvent(const NUIKeyEvent& event) {
     if (m_isRenaming && m_textInput)
         return m_textInput->onKeyEvent(event);
     return false;
-}
-
-void UnitNameLabel::showNameContextMenu(const NUIPoint& pos) {
-    auto menu = std::make_shared<NUIContextMenu>();
-    menu->addItem("Rename", [this]() { beginRename(); });
-    menu->showAt(pos);
 }
 
 void UnitNameLabel::beginRename() {

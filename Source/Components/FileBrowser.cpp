@@ -96,6 +96,29 @@ void attachAndShowPopupMenu(AestraUI::NUIComponent* owner,
     root->repaint();
 }
 
+// Centered, word-wrapped hint text for empty/scanning states. The hint copy is
+// longer than the list strip at narrow browser widths; wrapping keeps it
+// readable instead of letting a single centered line clip mid-letter.
+static void drawWrappedCenteredHint(NUIRenderer& renderer, const std::string& hint, const NUIRect& listClip,
+                                    float startY, float fontSize, const NUIColor& color) {
+    const float maxWidth = std::max(40.0f, listClip.width - 16.0f);
+    float y = startY;
+    std::string remaining = hint;
+    while (!remaining.empty()) {
+        std::string line = remaining;
+        std::string rest;
+        while (renderer.measureText(line, fontSize).width > maxWidth) {
+            const size_t space = line.find_last_of(' ');
+            if (space == std::string::npos) break; // single unbreakable word
+            rest = line.substr(space + 1) + (rest.empty() ? "" : " " + rest);
+            line = line.substr(0, space);
+        }
+        renderer.drawTextCentered(line, NUIRect(listClip.x, y, listClip.width, 18.0f), fontSize, color);
+        y += 16.0f;
+        remaining = rest;
+    }
+}
+
 std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     constexpr const char* kEllipsis = "...";
 
@@ -2788,6 +2811,12 @@ void FileBrowser::toggleFolder(const FileItem* item) {
     } else {
         if (!nonConstItem->hasLoadedChildren) {
             loadFolderContents(nonConstItem);
+        } else if (!nonConstItem->isLoadingChildren) {
+            // Folder contents can change while the app runs (users drop new
+            // samples into their library), so re-scan on every expand. The
+            // stale children stay visible until the fresh listing lands.
+            nonConstItem->isLoadingChildren = true;
+            enqueueScan(ScanKind::Folder, nonConstItem->path, nonConstItem->depth + 1);
         }
         nonConstItem->isExpanded = true;
     }
@@ -2903,12 +2932,11 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     if (scanningRoot_ && view.empty()) {
         renderer.setClipRect(listClip);
         NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.43f - 12.0f, listClip.width, 20.0f);
-        NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
         renderer.drawTextCentered("Scanning library", titleRect, themeManager.getFontSize("l"),
                                   themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered("Large folders stay responsive while results load", hintRect,
-                                  themeManager.getFontSize("s"),
-                                  themeManager.getColor("textSecondary").withAlpha(0.56f));
+        drawWrappedCenteredHint(renderer, "Large folders stay responsive while results load", listClip,
+                                titleRect.bottom() + 4.0f, themeManager.getFontSize("s"),
+                                themeManager.getColor("textSecondary").withAlpha(0.56f));
         renderer.clearClipRect();
         return;
     }
@@ -2928,9 +2956,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             hint = "Audio, MIDI, and Aestra projects appear in the browser";
         }
         NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.42f - 12.0f, listClip.width, 20.0f);
-        NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
         renderer.drawTextCentered(title, titleRect, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered(hint, hintRect, themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.58f));
+        drawWrappedCenteredHint(renderer, hint, listClip, titleRect.bottom() + 4.0f,
+                                themeManager.getFontSize("s"),
+                                themeManager.getColor("textSecondary").withAlpha(0.58f));
         renderer.clearClipRect();
         return;
     }

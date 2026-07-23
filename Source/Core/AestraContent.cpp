@@ -1056,6 +1056,18 @@ void AestraContent::setupArsenalPanels() {
 
         // Set one-shot selection callback
         m_fileBrowser->setOnFileSelected([this, id](const AestraUI::FileItem& file) {
+            // Folder clicks fire onFileSelected too — ignore them so the pick
+            // stays armed while the user navigates to their sample.
+            if (file.isDirectory)
+                return;
+
+            // Copy out of the closure BEFORE the setOnFileSelected below —
+            // replacing the callback destroys this lambda and its captures;
+            // reading `id`/`file` afterwards was a use-after-free that made
+            // "Load Sample" silently load into a garbage unit id.
+            const UnitID targetUnit = id;
+            const std::string samplePath = file.path;
+
             // 1. Restore default behavior (Preview)
             m_fileBrowser->setOnFileSelected([this](const AestraUI::FileItem& f) {
                 stopSoundPreview();
@@ -1070,8 +1082,7 @@ void AestraContent::setupArsenalPanels() {
             // 2. Perform Load — do NOT auto-open the sample editor; loading a
             // sample should just arm the unit. The editor is opened explicitly
             // via the gear / double-click "edit" action.
-            AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            loadSampleIntoUnitAsync(id, file.path, false);
+            loadSampleIntoUnitAsync(targetUnit, samplePath, false);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -1610,6 +1621,11 @@ void AestraContent::onResize(int width, int height) {
             totalWidth += waveformWidth + gap;
 
         float xStart = width - totalWidth - layout.panelMargin;
+        if (m_transportBar) {
+            // The visualizers overlay the transport row; tell the bar so its
+            // KEYS status pill hides instead of rendering underneath them.
+            m_transportBar->setRightReservedWidth(totalWidth + layout.panelMargin + gap);
+        }
         if (m_waveformVisualizer) {
             m_waveformVisualizer->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));

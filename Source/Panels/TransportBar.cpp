@@ -609,6 +609,14 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 
 // ... (Previous code)
 
+void TransportBar::setRightReservedWidth(float width) {
+    if (m_rightReservedWidth == width) {
+        return;
+    }
+    m_rightReservedWidth = width;
+    layoutComponents();
+}
+
 void TransportBar::layoutComponents() {
     AestraUI::NUIRect bounds = getBounds();
 
@@ -726,7 +734,7 @@ void TransportBar::layoutComponents() {
         constexpr float statusWidth = 82.0f;
         constexpr float statusHeight = 24.0f;
         const float statusX = islandX + islandWidth + 10.0f;
-        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f;
+        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f - m_rightReservedWidth;
         m_musicalTypingLabel->setVisible(hasRoom);
         if (hasRoom) {
             m_musicalTypingLabel->setBounds(NUIAbsolute(

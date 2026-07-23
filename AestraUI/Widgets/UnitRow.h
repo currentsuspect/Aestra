@@ -213,9 +213,17 @@ private:
     bool m_isSelected = false;
     bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
-    bool m_isStepEditing = false;
-    int m_stepEditStart = -1;
-    int m_stepEditEndExclusive = -1;
+
+    // Velocity-drag session (Sampler step grid). A press arms a step; a
+    // vertical drag sets its velocity, a click without vertical movement
+    // toggles the step (place empty / remove active) on release.
+    static constexpr float kDefaultStepVelocity = 100.0f / 127.0f;
+    static constexpr float kMinStepVelocity = 0.05f;
+    int m_velEditStep = -1;         // -1 = no session
+    float m_velEditStartY = 0.0f;   // pointer Y at press
+    float m_velEditBaseVelocity = kDefaultStepVelocity;
+    bool m_velEditMoved = false;    // crossed the drag threshold → velocity edit
+    bool m_velEditWasActive = false; // step already had a note at press
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
 
@@ -233,6 +241,13 @@ private:
 
     void handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds);
     void handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds);
+
+    // Sampler step-grid note helpers (root pitch, single step). Each returns
+    // true if the pattern changed.
+    bool stepHasNote(int step, float& velocityOut) const; // true if a note exists at step
+    bool placeStepNote(int step);                          // place at root + default velocity
+    bool removeStepNote(int step);                         // remove note at step
+    void setStepNoteVelocity(int step, float velocity);    // set velocity of note at step
 
     // Icon drawing helpers
     void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
