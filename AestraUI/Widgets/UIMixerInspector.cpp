@@ -241,7 +241,10 @@ void UIMixerInspector::layoutHitRects()
     }
 
     if (m_ioInputDropdown) {
-        const float dropdownY = contentY + 68.0f;
+        // Sits between the "Verify level…" caption (ends ~+53) and the
+        // Source/Mode meta row (render pass places it at +88). The old +68 sat
+        // on top of the meta row; +52 clipped the caption above — +58 clears both.
+        const float dropdownY = contentY + 58.0f;
         m_ioInputDropdown->setBounds(x + 12.0f, dropdownY, w - 24.0f, IO_DROPDOWN_H);
     }
     if (m_mainOutputDropdown) {
@@ -750,7 +753,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         if (isMaster) {
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
-             const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 102.0f};
+             const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 110.0f};
              renderer.fillRoundedRect(sourceCard, 12.0f, m_tabBg.withAlpha(0.46f));
              renderer.strokeRoundedRect(sourceCard, 12.0f, 1.0f, accent.withAlpha(0.20f));
 
@@ -762,7 +765,10 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                {sourceCard.x + 12.0f, sourceCard.y + 42.0f}, 9.0f,
                                m_textSecondary.withAlpha(0.76f));
 
-             const float metaY = sourceCard.y + 77.0f;
+             // Meta row sits BELOW the input dropdown (layoutHitRects places it at
+             // contentY + 58, height 22 → bottom ~80). Anchoring the labels here
+             // keeps them clear of the dropdown instead of under it.
+             const float metaY = sourceCard.y + 88.0f;
              renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, 8.5f,
                                m_textSecondary.withAlpha(0.70f));
              renderer.drawText(fitText(renderer, channel->inputSourceName, 9.5f, 72.0f),
@@ -775,7 +781,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                {sourceCard.x + 158.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
 
              const float signalTop = sourceCard.bottom() + 10.0f;
-             const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 74.0f};
+             const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 94.0f};
              renderer.fillRoundedRect(signalCard, 12.0f, m_tabBg.withAlpha(0.38f));
              renderer.strokeRoundedRect(signalCard, 12.0f, 1.0f, m_border.withAlpha(0.34f));
 
@@ -806,9 +812,26 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                  renderer.fillRoundedRect({meterRect.x, meterRect.y, fillWidth, meterRect.height}, 6.0f, meterColor.withAlpha(0.95f));
              }
 
-             renderer.drawText("Flat or clipped input usually means the selected source needs attention.",
-                               {signalCard.x + 12.0f, signalCard.y + 55.0f},
-                               8.5f, m_textSecondary.withAlpha(0.72f));
+             // Short hint, word-wrapped as a safety net. (The old long copy
+             // overflowed the card into the master strip — measured width also
+             // under-reads actual render at this size, so keep it concise.)
+             {
+                 const std::string hint = "Flat or clipped? Recheck the source.";
+                 const float hintMaxW = signalCard.width - 24.0f;
+                 std::string line1 = hint, line2;
+                 while (renderer.measureText(line1, 8.5f).width > hintMaxW) {
+                     const size_t sp = line1.find_last_of(' ');
+                     if (sp == std::string::npos) break;
+                     line2 = line1.substr(sp + 1) + (line2.empty() ? "" : " " + line2);
+                     line1 = line1.substr(0, sp);
+                 }
+                 const NUIColor hintColor = m_textSecondary.withAlpha(0.72f);
+                 renderer.drawText(line1, {signalCard.x + 12.0f, signalCard.y + 54.0f}, 8.5f, hintColor);
+                 if (!line2.empty()) {
+                     renderer.drawText(fitText(renderer, line2, 8.5f, hintMaxW),
+                                       {signalCard.x + 12.0f, signalCard.y + 68.0f}, 8.5f, hintColor);
+                 }
+             }
         }
     }
 
