@@ -201,6 +201,15 @@ void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, bool 
 
     m_sampleRate.store(sampleRate, std::memory_order_relaxed);
 
+    // A loop wrap (skipCurrentBeat) keeps the ringing click: the ~100 ms tail
+    // is position-independent and cutting it audibly truncates the last click
+    // of every loop. Any other reset is a start/locate — a stale tail from the
+    // previous run must not resume there.
+    if (!skipCurrentBeat) {
+        m_clickPlaying = false;
+        m_clickPlayhead = 0;
+    }
+
     float bpm = m_bpm.load(std::memory_order_relaxed);
     int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
 
@@ -219,10 +228,6 @@ void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, bool 
         }
         m_nextBeatSample = beatSample;
         m_currentBeat = static_cast<int>(beatIndex % beatsPerBar);
-        // Deliberately keep any ringing click playing: reset() also fires when
-        // the transport wraps at a pattern-loop boundary, and killing the tail
-        // there audibly truncates the last click of every loop. The tail is
-        // ~100ms and position-independent, so letting it finish is always safe.
     }
 }
 

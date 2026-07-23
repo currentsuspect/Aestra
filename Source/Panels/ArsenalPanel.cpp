@@ -95,7 +95,7 @@ bool isAudioFileDrag(const AestraUI::DragData& data) {
     return ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff";
 }
 
-bool patternUsesNoteRoll(const PatternSource* pattern, UnitID unitId, UnitType type) {
+bool patternUsesNoteRoll(const PatternSource* pattern, UnitID unitId, UnitType type, int rootPitch) {
     if (type == UnitType::Instrument) {
         return true;
     }
@@ -103,11 +103,13 @@ bool patternUsesNoteRoll(const PatternSource* pattern, UnitID unitId, UnitType t
         return false;
     }
 
+    // rootPitch: the unit's sampler root note — grid steps are placed at the
+    // root, so only off-root/off-grid notes indicate real note-roll content.
     const auto& midi = std::get<MidiPayload>(pattern->payload);
-    return std::any_of(midi.notes.begin(), midi.notes.end(), [unitId](const MidiNote& note) {
+    return std::any_of(midi.notes.begin(), midi.notes.end(), [unitId, rootPitch](const MidiNote& note) {
         const bool belongsToUnit = note.unitId == unitId || note.unitId == 0;
         return belongsToUnit &&
-               (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+               (note.pitch != rootPitch || std::abs(note.durationBeats - 0.25) > 0.01);
     });
 }
 
@@ -642,7 +644,8 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
                 selectedType = unitTypeDisplayName(unit->type);
                 if (m_activePatternID.isValid()) {
                     const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
-                    if (patternUsesNoteRoll(pattern, m_selectedUnitId, unit->type)) {
+                    if (patternUsesNoteRoll(pattern, m_selectedUnitId, unit->type,
+                                            m_trackManager->getUnitManager().getUnitRootMidiNote(m_selectedUnitId))) {
                         selectedType = "MIDI";
                     }
                 }
@@ -887,7 +890,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     std::string contentLabel = unitTypeContentLabel(selectedType, m_stepCount, selectedDurationSeconds);
     if (m_trackManager && m_activePatternID.isValid()) {
         const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
-        if (patternUsesNoteRoll(pattern, m_selectedUnitId, selectedType)) {
+        if (patternUsesNoteRoll(pattern, m_selectedUnitId, selectedType,
+                                m_trackManager->getUnitManager().getUnitRootMidiNote(m_selectedUnitId))) {
             contentLabel = "Note Roll";
         }
     }

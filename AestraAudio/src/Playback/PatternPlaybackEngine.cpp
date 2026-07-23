@@ -163,6 +163,12 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = 0;
         }
+        // The frame domain jumped backwards (bounce restart, stop→locate):
+        // events already queued for the old, higher frames — including the
+        // next loop iteration pre-scheduled before a wrap — would sit at the
+        // queue head and block everything queued below them. Drain; the
+        // window below re-queues whatever is actually due.
+        m_rtQueue.forceDrain();
     }
     m_lastRefillFrame = currentFrame;
 

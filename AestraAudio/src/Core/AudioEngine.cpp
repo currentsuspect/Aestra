@@ -600,16 +600,22 @@ void AudioEngine::performNonRealtimeMaintenance() {
                 loopLenSamples =
                     static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
                 if (loopLenSamples > 0) {
-                    // Consistent (iteration, position) pair: re-read once if a
-                    // loop wrap raced us between the two loads.
-                    uint64_t iter = m_patternLoopIteration.load(std::memory_order_acquire);
-                    uint64_t pos = m_globalSamplePos.load(std::memory_order_relaxed);
-                    const uint64_t iterCheck = m_patternLoopIteration.load(std::memory_order_acquire);
-                    if (iterCheck != iter) {
-                        iter = iterCheck;
-                        pos = m_globalSamplePos.load(std::memory_order_relaxed);
+                    // BPM or sample-rate changes re-scale the sample domain:
+                    // queued event timestamps and scheduledThroughFrame were
+                    // computed against the old loopLenSamples — flush so they
+                    // re-queue in the new domain (length-in-beats changes are
+                    // already flushed by setPatternPlaybackMode).
+                    if (m_lastRefillLoopLenSamples != 0 && m_lastRefillLoopLenSamples != loopLenSamples) {
+                        patEng->flush();
                     }
-                    currentFrame = iter * loopLenSamples + pos;
+                    m_lastRefillLoopLenSamples = loopLenSamples;
+
+                    // One coherent snapshot published by the audio callback.
+                    // Loading iteration and position as separate atomics could
+                    // pair a new iteration with a stale position (the callback
+                    // writes them at different points) and schedule an epoch
+                    // ahead, starving legitimate events.
+                    currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
                 }
             }
             patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
@@ -910,6 +916,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         // monotonic iteration counter restarts with it.
         if (m_patternLoopIteration.load(std::memory_order_relaxed) != 0) {
             m_patternLoopIteration.store(0, std::memory_order_relaxed);
+        }
+        if (m_patternMonotonicFrame.load(std::memory_order_relaxed) != 0) {
+            m_patternMonotonicFrame.store(0, std::memory_order_relaxed);
         }
     }
 
@@ -1313,6 +1322,15 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     if (m_transportPlaying.load(std::memory_order_relaxed) ||
         m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
+        if (patternMode && patternLoopLenSamples > 0) {
+            // Single-store coherent snapshot: iteration was bumped earlier in
+            // THIS callback if this block wrapped, so the pair is consistent
+            // here — maintenance reads one atomic instead of two.
+            m_patternMonotonicFrame.store(m_patternLoopIteration.load(std::memory_order_relaxed) *
+                                                  patternLoopLenSamples +
+                                              nextGlobalPos,
+                                          std::memory_order_release);
+        }
 
         // Handle Loop Metronome Reset. skipCurrentBeat: the boundary beat
         // already clicked in the pre-wrap part of this block.
