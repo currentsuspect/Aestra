@@ -3999,6 +3999,26 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
 
+    // Global view-toggle shortcuts (the transport view buttons advertise these
+    // in their tooltips). F-keys never reach text inputs or musical typing, so
+    // handle them here as unconditional global shortcuts.
+    switch (event.keyCode) {
+    case AestraUI::NUIKeyCode::F3:
+        toggleView(Audio::ViewType::Mixer);
+        return true;
+    case AestraUI::NUIKeyCode::F5:
+        toggleView(Audio::ViewType::Playlist);
+        return true;
+    case AestraUI::NUIKeyCode::F6:
+        toggleView(Audio::ViewType::Sequencer); // Channel Rack (Arsenal)
+        return true;
+    case AestraUI::NUIKeyCode::F7:
+        toggleView(Audio::ViewType::PianoRoll);
+        return true;
+    default:
+        break;
+    }
+
     // Forward to piano roll when visible — its local undo/redo
     // and note shortcuts must take priority over global handlers
     if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
