@@ -502,14 +502,13 @@ void UIMixerStrip::layoutChildren()
         m_footer->setBounds(contentX, footerY, contentW, FOOTER_H);
     }
 
-    const float contentY = y;
-    const float contentH = std::max(1.0f, footerY - y);
-
     const float meterW = (m_channelId == 0) ? MASTER_METER_W : METER_W;
 
-    const float availableH = std::max(1.0f, contentH - PAD);
-    const float meterH = availableH * 0.62f;
-    const float meterY = footerY - GAP - meterH;
+    // Meter + fader fill the strip between the channel controls and the footer.
+    // (Previously sized to 62% of the free height and bottom-anchored, which
+    // left a large dead gap above the fader — the tallest, most-used control.)
+    const float meterY = y;
+    const float meterH = std::max(16.0f, (footerY - GAP) - y);
     const float meterX = contentX + 2.0f;
 
     if (m_meter) {
