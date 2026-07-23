@@ -661,6 +661,15 @@ std::string UnitManager::getUnitPluginId(UnitID id) const {
     return u ? u->pluginId : std::string{};
 }
 
+int UnitManager::getUnitRootMidiNote(UnitID id) const {
+    // Notes placed at this pitch play the unit's sample untransposed; 60 is
+    // both the SamplerPlugin default root and the sensible non-sampler answer.
+    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(getUnitPlugin(id))) {
+        return sampler->getRootMidiNote();
+    }
+    return 60;
+}
+
 JSON UnitManager::saveToJSON() const {
     JSON root = JSON::object();
     root.set("nextId", JSON(static_cast<double>(nextId)));

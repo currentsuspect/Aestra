@@ -551,6 +551,20 @@ void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSn
     }
 }
 
+void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
+    const double oldLength = m_patternLengthBeats.exchange(lengthBeats, std::memory_order_relaxed);
+    const bool wasEnabled = m_patternPlaybackMode.exchange(enabled, std::memory_order_relaxed);
+    // A loop-length change while playing shifts the monotonic scheduling
+    // domain (iteration * loopLen + pos) on both threads at once; already
+    // queued events were stamped in the OLD domain and would never come due.
+    // Flush so the scheduler re-queues everything in the new domain.
+    if (enabled && (!wasEnabled || std::abs(oldLength - lengthBeats) > 1e-9)) {
+        if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
+            patEng->flush();
+        }
+    }
+}
+
 void AudioEngine::performNonRealtimeMaintenance() {
     if (reportRealtimeMisuse("AudioEngine::performNonRealtimeMaintenance")) {
         return;
@@ -577,7 +591,46 @@ void AudioEngine::performNonRealtimeMaintenance() {
         uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
         if (sr > 0) {
-            patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES);
+            uint64_t loopLenSamples = 0;
+            bool deferRefill = false;
+            if (m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+                // Same formula as the audio callback so both agree on the
+                // monotonic domain (iteration * loopLen + wrapped position).
+                const double bpm = std::max(1.0, static_cast<double>(m_metronomeEngine.getBPM()));
+                const double samplesPerBeat = static_cast<double>(sr) * 60.0 / bpm;
+                loopLenSamples =
+                    static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
+                if (loopLenSamples > 0) {
+                    // BPM or sample-rate changes re-scale the sample domain:
+                    // queued event timestamps and scheduledThroughFrame were
+                    // computed against the old loopLenSamples — flush so they
+                    // re-queue in the new domain (length-in-beats changes are
+                    // already flushed by setPatternPlaybackMode).
+                    if (m_lastRefillLoopLenSamples != 0 && m_lastRefillLoopLenSamples != loopLenSamples) {
+                        // m_patternMonotonicFrame is still encoded in the OLD
+                        // loop-length domain until the audio callback republishes
+                        // it (which it does every block, from the same BPM /
+                        // length source). Refilling now with the new loopLen but
+                        // the stale frame would schedule an epoch ahead, so flush
+                        // and DEFER this refill one maintenance tick — the next
+                        // tick reads a coherent new-domain frame. The lookahead
+                        // (~85ms) dwarfs one tick (~16ms), so no underrun.
+                        patEng->flush();
+                        m_lastRefillLoopLenSamples = loopLenSamples;
+                        deferRefill = true; // skip the refill below this tick
+                    } else {
+                        m_lastRefillLoopLenSamples = loopLenSamples;
+                        // One coherent snapshot published by the audio callback.
+                        // Loading iteration and position as separate atomics could
+                        // pair a new iteration with a stale position (the callback
+                        // writes them at different points) and schedule an epoch
+                        // ahead, starving legitimate events.
+                        currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
+                    }
+                }
+            }
+            if (!deferRefill)
+                patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
         }
     }
 
@@ -868,6 +921,18 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     uint64_t nextGlobalPos = currentGlobalPos;
     uint32_t loopSplitFrame = numFrames; // Default: no split
     uint64_t loopStartSample = 0;
+    uint64_t patternLoopLenSamples = 0; // Pattern-mode loop length (loop start == 0)
+
+    if (!playing && m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingOut) {
+        // Stopped: pattern playback restarts from the loop top, so the
+        // monotonic iteration counter restarts with it.
+        if (m_patternLoopIteration.load(std::memory_order_relaxed) != 0) {
+            m_patternLoopIteration.store(0, std::memory_order_relaxed);
+        }
+        if (m_patternMonotonicFrame.load(std::memory_order_relaxed) != 0) {
+            m_patternMonotonicFrame.store(0, std::memory_order_relaxed);
+        }
+    }
 
     if (playing || m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         nextGlobalPos += numFrames;
@@ -879,6 +944,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 (static_cast<double>(currentSampleRate) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
             uint64_t loopEndSample = static_cast<uint64_t>(loopEndBeat * samplesPerBeat);
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
+            if (patternMode && loopEndSample > loopStartSample) {
+                patternLoopLenSamples = loopEndSample - loopStartSample;
+            }
 
             // Check for loop crossing
             // Enhanced Logic: In Pattern Mode, we might start WAY past loop end (Timeline position).
@@ -953,23 +1021,32 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
 
     // === Arsenal Unit Processing (Pattern Playback) ===
-    // Process pattern MIDI events and mix sampler output into master buffer
-    // Must respect loop splitting similar to renderGraph
+    // Process pattern MIDI events and mix sampler output into master buffer.
+    // Positions handed to the pattern engine are MONOTONIC in pattern mode
+    // (iteration * loopLen + wrapped pos): refillWindow pre-schedules the next
+    // iteration's events in that domain, so the wrap needs no flush and the
+    // loop's downbeat lands sample-accurately instead of waiting for the next
+    // UI maintenance tick (which made every bar end audibly "off").
+    const auto patternMonotonic = [&](uint64_t wrappedPos) {
+        return m_patternLoopIteration.load(std::memory_order_relaxed) * patternLoopLenSamples + wrappedPos;
+    };
     if (loopSplitFrame < numFrames) {
         // Split Render
         if (loopSplitFrame > 0) {
-            processArsenalUnits(loopSplitFrame, 0, currentGlobalPos);
+            processArsenalUnits(loopSplitFrame, 0, patternMonotonic(currentGlobalPos));
         }
-        // Flush pattern events on loop wrap so we don't accumulate duplicates.
-        if (isPlaying) {
+        if (patternMode) {
+            m_patternLoopIteration.fetch_add(1, std::memory_order_release);
+        } else if (isPlaying) {
+            // Timeline loops keep the flush-on-wrap behavior.
             auto* pe = m_patternEngine.load(std::memory_order_relaxed);
             if (pe)
                 pe->flush();
         }
-        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, loopStartSample);
+        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, patternMonotonic(loopStartSample));
     } else {
         // Normal
-        processArsenalUnits(numFrames, 0, currentGlobalPos);
+        processArsenalUnits(numFrames, 0, patternMonotonic(currentGlobalPos));
     }
 
     mixTestTone(numFrames, currentSampleRate);
@@ -1257,10 +1334,21 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     if (m_transportPlaying.load(std::memory_order_relaxed) ||
         m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
+        if (patternMode && patternLoopLenSamples > 0) {
+            // Single-store coherent snapshot: iteration was bumped earlier in
+            // THIS callback if this block wrapped, so the pair is consistent
+            // here — maintenance reads one atomic instead of two.
+            m_patternMonotonicFrame.store(m_patternLoopIteration.load(std::memory_order_relaxed) *
+                                                  patternLoopLenSamples +
+                                              nextGlobalPos,
+                                          std::memory_order_release);
+        }
 
-        // Handle Loop Metronome Reset
+        // Handle Loop Metronome Reset. skipCurrentBeat: the boundary beat
+        // already clicked in the pre-wrap part of this block.
         if (loopSplitFrame < numFrames) {
-            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)));
+            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
+                                    true);
         }
     }
 
@@ -3410,6 +3498,16 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     uint64_t endSample = static_cast<uint64_t>(endBeat * samplesPerBeat);
     uint64_t totalFrames = endSample - startSample;
 
+    // Keep pattern scheduling in the same monotonic loop domain live playback
+    // uses, so an isolated bounce of a looped pattern re-triggers events every
+    // loop instead of only rendering the first pass. The bounce frame advances
+    // linearly and never wraps, so `currentFrame` below is already the
+    // monotonic frame — only loopLenSamples needs threading through.
+    const uint64_t bounceLoopLenSamples =
+        m_patternPlaybackMode.load(std::memory_order_relaxed)
+            ? static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat)
+            : 0;
+
     if (totalFrames == 0)
         return false;
 
@@ -3499,7 +3597,8 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Refill pattern engine lookahead (normally done by performNonRealtimeMaintenance)
         auto* patEng = m_patternEngine.load(std::memory_order_acquire);
         if (patEng) {
-            patEng->refillWindow(currentFrame, static_cast<int>(sampleRate), static_cast<int>(blockSize));
+            patEng->refillWindow(currentFrame, static_cast<int>(sampleRate), static_cast<int>(blockSize),
+                                 bounceLoopLenSamples);
         }
 
         // Render

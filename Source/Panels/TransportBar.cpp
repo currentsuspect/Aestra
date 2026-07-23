@@ -66,7 +66,17 @@ TransportBar::TransportBar()
             }
         });
     }
-    
+
+    // Forward time-signature clicks to the app (this link was missing: the
+    // display cycled 2/4..7/8 but nothing outside the transport ever heard).
+    if (m_infoContainer && m_infoContainer->getTimeSignatureDisplay()) {
+        m_infoContainer->getTimeSignatureDisplay()->setOnTimeSignatureChange([this](int beatsPerBar) {
+            if (m_onTimeSignatureChange) {
+                m_onTimeSignatureChange(beatsPerBar);
+            }
+        });
+    }
+
     updateButtonStates();
 }
 
@@ -599,6 +609,14 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 
 // ... (Previous code)
 
+void TransportBar::setRightReservedWidth(float width) {
+    if (m_rightReservedWidth == width) {
+        return;
+    }
+    m_rightReservedWidth = width;
+    layoutComponents();
+}
+
 void TransportBar::layoutComponents() {
     AestraUI::NUIRect bounds = getBounds();
 
@@ -716,7 +734,7 @@ void TransportBar::layoutComponents() {
         constexpr float statusWidth = 82.0f;
         constexpr float statusHeight = 24.0f;
         const float statusX = islandX + islandWidth + 10.0f;
-        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f;
+        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f - m_rightReservedWidth;
         m_musicalTypingLabel->setVisible(hasRoom);
         if (hasRoom) {
             m_musicalTypingLabel->setBounds(NUIAbsolute(

@@ -99,6 +99,11 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
+    /** Width at the bar's right edge occupied by overlay siblings (the
+        master meter / waveform visualizers laid out by AestraContent).
+        The KEYS status pill hides instead of rendering underneath them. */
+    void setRightReservedWidth(float width);
+
 private:
     // UI Components
     std::shared_ptr<AestraUI::NUIButton> m_playButton;
@@ -166,6 +171,7 @@ private:
     TransportState m_state;
     float m_tempo;
     double m_position;
+    float m_rightReservedWidth = 0.0f;
 
     // View Toggles state
     bool m_mixerActive{false};

@@ -320,6 +320,11 @@ public:
 		    void renderToolbar(NUIRenderer& renderer);
             void renderNavigationPane(NUIRenderer& renderer, const BrowserLayout& layout);
             void renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout);
+            /// Centered empty/scanning/error block: optional glyph, title,
+            /// balanced word-wrapped hint. Shared by all list placeholder states.
+            void drawListEmptyState(NUIRenderer& renderer, const NUIRect& listClip,
+                                    const std::shared_ptr<NUIIcon>& icon, const std::string& title,
+                                    const std::string& hint);
 	    void renderScrollbar(NUIRenderer& renderer);
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();

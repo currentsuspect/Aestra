@@ -101,6 +101,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/NUIVisualWidgets.cpp
     Widgets/NUIUtilityWidgets.h
     Widgets/NUIUtilityWidgets.cpp
+    Widgets/NotificationToast.h
+    Widgets/NotificationToast.cpp
     Widgets/NUIThematicWidgets.h
     Widgets/NUIThematicWidgets.cpp
     Widgets/NUIStepSequencer.h

@@ -96,6 +96,40 @@ void attachAndShowPopupMenu(AestraUI::NUIComponent* owner,
     root->repaint();
 }
 
+// Greedy word wrap for placeholder hint copy, which is longer than the list
+// strip at narrow browser widths.
+static std::vector<std::string> wrapHintLines(NUIRenderer& renderer, const std::string& hint, float fontSize,
+                                              float maxWidth) {
+    std::vector<std::string> lines;
+    std::string remaining = hint;
+    while (!remaining.empty()) {
+        std::string line = remaining;
+        std::string rest;
+        while (renderer.measureText(line, fontSize).width > maxWidth) {
+            const size_t space = line.find_last_of(' ');
+            if (space == std::string::npos) break; // single unbreakable word
+            rest = line.substr(space + 1) + (rest.empty() ? "" : " " + rest);
+            line = line.substr(0, space);
+        }
+        lines.push_back(line);
+        remaining = rest;
+    }
+    return lines;
+}
+
+// Greedy wrap leaves a short orphan last line ("...appear in / the browser").
+// Once the line count is known, re-wrap near the average width so the lines
+// come out visually balanced; keep the greedy result if that would add a line.
+static std::vector<std::string> wrapHintBalanced(NUIRenderer& renderer, const std::string& hint, float fontSize,
+                                                 float maxWidth) {
+    auto lines = wrapHintLines(renderer, hint, fontSize, maxWidth);
+    if (lines.size() < 2) return lines;
+    const float total = renderer.measureText(hint, fontSize).width;
+    const float target = (total / static_cast<float>(lines.size())) * 1.2f;
+    auto balanced = wrapHintLines(renderer, hint, fontSize, std::clamp(target, maxWidth * 0.5f, maxWidth));
+    return balanced.size() == lines.size() ? balanced : lines;
+}
+
 std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     constexpr const char* kEllipsis = "...";
 
@@ -778,6 +812,47 @@ void FileBrowser::processScanResults() {
 // =============================================================================
 // SECTION: Rendering with FBO Caching
 // =============================================================================
+
+void FileBrowser::drawListEmptyState(NUIRenderer& renderer, const NUIRect& listClip,
+                                     const std::shared_ptr<NUIIcon>& icon, const std::string& title,
+                                     const std::string& hint) {
+    auto& themeManager = NUIThemeManager::getInstance();
+    const float titleFont = themeManager.getFontSize("l");
+    const float hintFont = themeManager.getFontSize("s");
+    constexpr float kIconSize = 28.0f;
+    constexpr float kIconGap = 12.0f;
+    constexpr float kTitleH = 20.0f;
+    constexpr float kTitleGap = 6.0f;
+    constexpr float kHintLineH = 16.0f;
+
+    // Cap the hint measure so it reads as a compact centered paragraph with
+    // real side margins instead of running edge to edge.
+    const float hintMaxWidth = std::max(60.0f, std::min(listClip.width - 48.0f, 240.0f));
+    const auto hintLines = wrapHintBalanced(renderer, hint, hintFont, hintMaxWidth);
+
+    float blockH = kTitleH + kTitleGap + static_cast<float>(hintLines.size()) * kHintLineH;
+    if (icon) blockH += kIconSize + kIconGap;
+    float y = listClip.y + std::max(12.0f, listClip.height * 0.42f - blockH * 0.5f);
+
+    renderer.setClipRect(listClip);
+    if (icon) {
+        const NUIRect iconRect(std::round(listClip.x + (listClip.width - kIconSize) * 0.5f), std::round(y),
+                               kIconSize, kIconSize);
+        icon->setBounds(iconRect);
+        icon->setColor(themeManager.getColor("textSecondary").withAlpha(0.30f));
+        icon->onRender(renderer);
+        y += kIconSize + kIconGap;
+    }
+    renderer.drawTextCentered(title, NUIRect(listClip.x, y, listClip.width, kTitleH), titleFont,
+                              themeManager.getColor("textPrimary").withAlpha(0.66f));
+    y += kTitleH + kTitleGap;
+    const NUIColor hintColor = themeManager.getColor("textSecondary").withAlpha(0.5f);
+    for (const auto& line : hintLines) {
+        renderer.drawTextCentered(line, NUIRect(listClip.x, y, listClip.width, kHintLineH), hintFont, hintColor);
+        y += kHintLineH;
+    }
+    renderer.clearClipRect();
+}
 
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
@@ -2788,6 +2863,12 @@ void FileBrowser::toggleFolder(const FileItem* item) {
     } else {
         if (!nonConstItem->hasLoadedChildren) {
             loadFolderContents(nonConstItem);
+        } else if (!nonConstItem->isLoadingChildren) {
+            // Folder contents can change while the app runs (users drop new
+            // samples into their library), so re-scan on every expand. The
+            // stale children stay visible until the fresh listing lands.
+            nonConstItem->isLoadingChildren = true;
+            enqueueScan(ScanKind::Folder, nonConstItem->path, nonConstItem->depth + 1);
         }
         nonConstItem->isExpanded = true;
     }
@@ -2901,37 +2982,22 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     renderer.fillRect(browserLayout.list, themeManager.getColor("backgroundPrimary"));
 
     if (scanningRoot_ && view.empty()) {
-        renderer.setClipRect(listClip);
-        NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.43f - 12.0f, listClip.width, 20.0f);
-        NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
-        renderer.drawTextCentered("Scanning library", titleRect, themeManager.getFontSize("l"),
-                                  themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered("Large folders stay responsive while results load", hintRect,
-                                  themeManager.getFontSize("s"),
-                                  themeManager.getColor("textSecondary").withAlpha(0.56f));
-        renderer.clearClipRect();
+        drawListEmptyState(renderer, listClip, folderIcon_, "Scanning library",
+                           "Results appear as they load");
         return;
     }
 
     if (view.empty()) {
-        renderer.setClipRect(listClip);
-        std::string title;
-        std::string hint;
         if (!scanError_.empty()) {
-            title = "Folder unavailable";
-            hint = "Press F5 to retry or choose another location";
+            drawListEmptyState(renderer, listClip, folderIcon_, "Folder unavailable",
+                               "Press F5 to retry, or choose another location");
         } else if (isFilterActive()) {
-            title = "No matches";
-            hint = "Press Esc to clear search and filters";
+            drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
+                               "Press Esc to clear the search and filters");
         } else {
-            title = "No supported files here";
-            hint = "Audio, MIDI, and Aestra projects appear in the browser";
+            drawListEmptyState(renderer, listClip, folderIcon_, "Nothing here yet",
+                               "Audio, MIDI, and Aestra projects show up here");
         }
-        NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.42f - 12.0f, listClip.width, 20.0f);
-        NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
-        renderer.drawTextCentered(title, titleRect, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered(hint, hintRect, themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.58f));
-        renderer.clearClipRect();
         return;
     }
 

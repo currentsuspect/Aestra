@@ -48,6 +48,7 @@ namespace AestraUI {
     class FileItem;
     class AudioVisualizer;
     class PluginUIController;
+    class NotificationToast;
 }
 
 // Forward declarations - Aestra::Audio (includes panel classes)
@@ -313,6 +314,9 @@ public:
     /** @brief Update the preview playhead visible in the UI. */
     void updatePreviewPlayhead();
 
+    /** @brief Show a transient status pill (bottom-center overlay). */
+    void showToast(const std::string& message, double seconds = 2.6);
+
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
     /** @brief Load an instrument plugin into Arsenal. */
@@ -362,6 +366,8 @@ private:
     
 
     
+    std::shared_ptr<AestraUI::NotificationToast> m_notificationToast;
+
     // Browser section
     std::shared_ptr<AestraUI::NUISegmentedControl> m_browserToggle;
     std::shared_ptr<AestraUI::FileBrowser> m_fileBrowser;
