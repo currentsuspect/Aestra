@@ -33,6 +33,7 @@
 #include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Widgets/NotificationToast.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
 
 // Component includes
@@ -303,6 +304,12 @@ AestraContent::AestraContent()
     m_overlayLayer->addChild(m_takesPanel);
     m_overlayLayer->addChild(m_historyPanel);
 
+    // Status toast: topmost but mouse-transparent (no handlers), so it never
+    // steals clicks from the panels beneath it.
+    m_notificationToast = std::make_shared<AestraUI::NotificationToast>();
+    m_notificationToast->setVisible(false);
+    m_overlayLayer->addChild(m_notificationToast);
+
     // Initialize preview engine
     m_previewEngine = std::make_unique<PreviewEngine>();
     if (m_audioEngine) {
@@ -474,6 +481,25 @@ void AestraContent::setupTransportBar() {
         m_countInEnabled = enabled;
         if (!enabled) {
             clearPendingCountIn();
+        }
+    });
+    m_transportBar->setOnTimeSignatureChange([this](int beatsPerBar) {
+        // Propagate the time signature to every bar-math consumer. The clock
+        // is the source of truth; the rest cache or re-derive from it.
+        if (m_trackManager) {
+            m_trackManager->getTimelineClock().setBeatsPerBar(beatsPerBar);
+        }
+        if (m_audioEngine) {
+            m_audioEngine->setMetronomeBeatsPerBar(beatsPerBar);
+        }
+        if (m_pianoRollPanel) {
+            m_pianoRollPanel->setBeatsPerBar(beatsPerBar);
+        }
+        if (m_trackManagerUI) {
+            m_trackManagerUI->setBeatsPerBar(beatsPerBar);
+        }
+        if (m_sequencerPanel) {
+            m_sequencerPanel->refreshUnits(); // Re-derive bar grouping + loop length
         }
     });
 
@@ -848,6 +874,14 @@ void AestraContent::setupPianoRollPanel() {
         }
         updatePatternLoopLength(patternId);
     });
+    m_pianoRollPanel->setOnEditingUnitChanged([this](UnitID unitId) {
+        // The Piano Roll's own unit switcher changed the editing unit — route it
+        // through the Arsenal's selection choke point so hardware MIDI, musical
+        // typing, and the Arsenal highlight all follow the same unit.
+        if (m_sequencerPanel) {
+            m_sequencerPanel->setSelectedUnit(unitId);
+        }
+    });
     m_pianoRollPanel->setOnClose([this]() {
         m_pianoRollPanel->savePattern();
         toggleView(Audio::ViewType::PianoRoll);
@@ -1027,8 +1061,32 @@ void AestraContent::setupArsenalPanels() {
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
         }
 
+        // Arming is otherwise invisible (the browser doesn't navigate or
+        // prompt), so tell the user what the next browser click will do.
+        std::string unitName;
+        if (m_trackManager) {
+            if (const auto* unit = m_trackManager->getUnitManager().getUnit(id)) {
+                unitName = unit->name;
+            }
+        }
+        showToast(unitName.empty() ? "Click a sample in the browser to load it"
+                                   : "Click a sample in the browser to load it into " + unitName,
+                  4.0);
+
         // Set one-shot selection callback
         m_fileBrowser->setOnFileSelected([this, id](const AestraUI::FileItem& file) {
+            // Folder clicks fire onFileSelected too — ignore them so the pick
+            // stays armed while the user navigates to their sample.
+            if (file.isDirectory)
+                return;
+
+            // Copy out of the closure BEFORE the setOnFileSelected below —
+            // replacing the callback destroys this lambda and its captures;
+            // reading `id`/`file` afterwards was a use-after-free that made
+            // "Load Sample" silently load into a garbage unit id.
+            const UnitID targetUnit = id;
+            const std::string samplePath = file.path;
+
             // 1. Restore default behavior (Preview)
             m_fileBrowser->setOnFileSelected([this](const AestraUI::FileItem& f) {
                 stopSoundPreview();
@@ -1040,9 +1098,10 @@ void AestraContent::setupArsenalPanels() {
                 onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
             });
 
-            // 2. Perform Load
-            AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            loadSampleIntoUnitAsync(id, file.path, true);
+            // 2. Perform Load — do NOT auto-open the sample editor; loading a
+            // sample should just arm the unit. The editor is opened explicitly
+            // via the gear / double-click "edit" action.
+            loadSampleIntoUnitAsync(targetUnit, samplePath, false);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -1055,7 +1114,7 @@ void AestraContent::setupArsenalPanels() {
     m_sequencerPanel->setOnPluginDroppedToUnit(
         [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, true); });
+        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
@@ -1080,6 +1139,13 @@ void AestraContent::setupArsenalPanels() {
         if (m_trackManagerUI) {
             m_trackManagerUI->refreshTracks();
             m_trackManagerUI->invalidateCache();
+        }
+        // Re-prepare the pattern so the playback engine re-schedules the notes
+        // just edited in the Arsenal grid. Without this, newly placed steps stay
+        // silent during pattern playback until some other path flushes (e.g.
+        // editing the same pattern in the Piano Roll). Mirrors setActivePattern.
+        if (m_trackManager) {
+            m_trackManager->preparePatternForArsenal(patternId);
         }
         // Update audio engine loop length to match actual pattern length
         updatePatternLoopLength(patternId);
@@ -1574,6 +1640,11 @@ void AestraContent::onResize(int width, int height) {
             totalWidth += waveformWidth + gap;
 
         float xStart = width - totalWidth - layout.panelMargin;
+        if (m_transportBar) {
+            // The visualizers overlay the transport row; tell the bar so its
+            // KEYS status pill hides instead of rendering underneath them.
+            m_transportBar->setRightReservedWidth(totalWidth + layout.panelMargin + gap);
+        }
         if (m_waveformVisualizer) {
             m_waveformVisualizer->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
@@ -1583,6 +1654,11 @@ void AestraContent::onResize(int width, int height) {
             m_audioVisualizer->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
         }
+    }
+
+    if (m_notificationToast && m_notificationToast->isVisible()) {
+        m_notificationToast->setBounds(
+            AestraUI::NUIAbsolute(contentBounds, 0.0f, height - 72.0f, width, 40.0f));
     }
 
     if (m_trackManagerUI) {
@@ -2778,7 +2854,13 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
     if (!pattern) {
         return;
     }
-    double lengthBeats = std::max(16.0, pattern->lengthBeats);
+    // Respect the pattern's real length, floored at one bar of the current
+    // time signature. The old 16-beat floor fought the Piano Roll's save path
+    // (which sets the true length): the loop length ping-ponged on every edit,
+    // playing phantom empty bars and desyncing the pattern scheduler's frame
+    // domain from the audio thread (= silence after the next wrap).
+    const double barBeats = static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar());
+    double lengthBeats = std::max(barBeats, pattern->lengthBeats);
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
 }
 
@@ -3300,6 +3382,19 @@ void AestraContent::drainMainThreadTasks() {
     }
 }
 
+void AestraContent::showToast(const std::string& message, double seconds) {
+    if (!m_notificationToast) {
+        return;
+    }
+    m_notificationToast->setText(message);
+    m_notificationToast->setDuration(seconds);
+    const auto bounds = getBounds();
+    m_notificationToast->setBounds(
+        AestraUI::NUIAbsolute(bounds, 0.0f, bounds.height - 72.0f, bounds.width, 40.0f));
+    m_notificationToast->setVisible(true);
+    m_notificationToast->bringToFront();
+}
+
 void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& samplePath, bool openEditorWhenReady) {
     if (!m_trackManager || unitId == 0 || samplePath.empty()) {
         return;
@@ -3379,6 +3474,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
                 !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
                                                          numChannels, std::move(previewWaveform), durationSeconds)) {
                 AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
+                self->showToast("Couldn't load " + std::filesystem::path(samplePath).filename().string());
                 return;
             }
 

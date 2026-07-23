@@ -77,37 +77,6 @@ void Tooltip::setText(const std::string& text)
     repaint();
 }
 
-NotificationToast::NotificationToast()
-    : duration_(2.0), elapsed_(0.0)
-{
-}
-
-void NotificationToast::onRender(NUIRenderer& renderer)
-{
-    (void)renderer;
-}
-
-void NotificationToast::onUpdate(double deltaTime)
-{
-    elapsed_ += deltaTime;
-    if (elapsed_ >= duration_)
-    {
-        setVisible(false);
-    }
-}
-
-void NotificationToast::setText(const std::string& text)
-{
-    text_ = text;
-    repaint();
-}
-
-void NotificationToast::setDuration(double duration)
-{
-    duration_ = std::max(0.1, duration);
-    elapsed_ = 0.0;
-}
-
 ContextMenu::ContextMenu() = default;
 
 ModalOverlay::ModalOverlay()

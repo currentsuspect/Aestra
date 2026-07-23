@@ -316,6 +316,8 @@ public:
     std::shared_ptr<IPluginInstance> getUnitPlugin(UnitID id) const;
     /** @brief Get the plugin identifier attached to a unit. */
     std::string getUnitPluginId(UnitID id) const;
+    /** @brief Get the MIDI note that plays a unit's sample untransposed (60 fallback). */
+    int getUnitRootMidiNote(UnitID id) const;
 
     /** @brief Serialize the manager to JSON. */
     JSON saveToJSON() const;

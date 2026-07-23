@@ -38,7 +38,6 @@ public:
 private:
     void commitRename();
     void cancelRename();
-    void showNameContextMenu(const NUIPoint& pos);
 
     std::string m_unitName;
     Aestra::Audio::UnitType m_unitType;

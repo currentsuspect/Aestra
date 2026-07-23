@@ -60,10 +60,7 @@ void PianoRollToolbar::setupUI() {
         auto snaps = MusicTheory::getSnapOptions();
         for (auto snap : snaps) {
             snapMenu->addItem(MusicTheory::getSnapName(snap), [this, snap]() {
-                m_currentSnap = snap;
-                if (auto g = grid_.lock()) g->setSnap(snap);
-                if (auto n = notes_.lock()) n->setSnap(snap);
-                repaint();
+                applySnap(snap);
             });
         }
         menu->addSubmenu("Snap", snapMenu);
@@ -167,6 +164,30 @@ void PianoRollToolbar::setupUI() {
         }
     });
 
+    m_unitDropdown = std::make_shared<NUIDropdown>();
+    m_unitDropdown->setPlaceholderText("Unit");
+    m_unitDropdown->setMaxVisibleItems(8);
+    m_unitDropdown->setItemHeight(24.0f);
+    m_unitDropdown->setOnSelectionChanged([this](int, int value, const std::string&) {
+        if (!m_updatingUnitDropdown && onUnitChoiceSelected_) {
+            onUnitChoiceSelected_(value);
+        }
+    });
+
+    m_snapDropdown = std::make_shared<NUIDropdown>();
+    m_snapDropdown->setPlaceholderText("Snap");
+    m_snapDropdown->setMaxVisibleItems(8);
+    m_snapDropdown->setItemHeight(24.0f);
+    for (auto snap : MusicTheory::getSnapOptions()) {
+        m_snapDropdown->addItem(MusicTheory::getSnapName(snap), static_cast<int>(snap));
+    }
+    m_snapDropdown->setSelectedByValue(static_cast<int>(m_currentSnap));
+    m_snapDropdown->setOnSelectionChanged([this](int, int value, const std::string&) {
+        if (!m_updatingSnapDropdown) {
+            applySnap(static_cast<SnapGrid>(value));
+        }
+    });
+
     m_lengthDownBtn = std::make_shared<NUIButton>("");
     m_lengthDownBtn->setTooltip("Shorten Pattern By 2 Bars");
     m_lengthDownBtn->setOnClick([this]() {
@@ -199,8 +220,22 @@ void PianoRollToolbar::setupUI() {
     addChild(m_pencilBtn);
     addChild(m_eraserBtn);
     addChild(m_patternDropdown);
+    addChild(m_unitDropdown);
+    addChild(m_snapDropdown);
     addChild(m_lengthDownBtn);
     addChild(m_lengthUpBtn);
+}
+
+void PianoRollToolbar::applySnap(SnapGrid snap) {
+    m_currentSnap = snap;
+    if (auto g = grid_.lock()) g->setSnap(snap);
+    if (auto n = notes_.lock()) n->setSnap(snap);
+    if (m_snapDropdown) {
+        m_updatingSnapDropdown = true;
+        m_snapDropdown->setSelectedByValue(static_cast<int>(snap));
+        m_updatingSnapDropdown = false;
+    }
+    repaint();
 }
 
 void PianoRollToolbar::setPatternName(const std::string& name) {
@@ -225,6 +260,21 @@ void PianoRollToolbar::setPatternChoices(const std::vector<PatternChoice>& choic
     }
     m_patternDropdown->setSelectedByValue(selectedValue);
     m_updatingPatternDropdown = false;
+    repaint();
+}
+
+void PianoRollToolbar::setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue) {
+    if (!m_unitDropdown) {
+        return;
+    }
+
+    m_updatingUnitDropdown = true;
+    m_unitDropdown->clearItems();
+    for (const auto& choice : choices) {
+        m_unitDropdown->addItem(choice.label, choice.value);
+    }
+    m_unitDropdown->setSelectedByValue(selectedValue);
+    m_updatingUnitDropdown = false;
     repaint();
 }
 
@@ -320,6 +370,17 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         currentX += dropdownW + buttonSpacing;
     }
 
+    if (m_unitDropdown) {
+        currentX += 8.0f;
+
+        const float unitDropdownW = std::clamp(b.width * 0.18f, 140.0f, 200.0f);
+        drawGroup(currentX - 3.0f, unitDropdownW + 6.0f);
+        m_unitDropdown->setBounds(NUIRect(currentX, currentY, unitDropdownW, buttonSize));
+        m_unitDropdown->onRender(renderer);
+        patternDropdownRight = currentX + unitDropdownW;
+        currentX += unitDropdownW + buttonSpacing;
+    }
+
     currentX += 8.0f;
 
     const int patternBars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
@@ -347,50 +408,20 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
 
+    // Snap selector — a real dropdown (was a dead "SNAP Beat" text pill). The
+    // menu's Snap submenu and this dropdown stay in sync via applySnap().
     currentX += 8.0f;
-    const std::string snapLabel = "SNAP  " + MusicTheory::getSnapName(m_currentSnap);
-    const float snapFontSize = 9.0f;
-    const auto snapTextSize = renderer.measureText(snapLabel, snapFontSize);
-    const float snapWidth = std::max(78.0f, snapTextSize.width + 18.0f);
-    const NUIRect snapRect(currentX, currentY, snapWidth, buttonSize);
-    renderer.fillRoundedRect(snapRect, radius, groupBg);
-    renderer.strokeRoundedRect(snapRect, radius, 1.0f, groupBorder);
-    renderer.drawText(snapLabel,
-                      NUIPoint(snapRect.x + (snapRect.width - snapTextSize.width) * 0.5f,
-                               snapRect.y + (snapRect.height - snapTextSize.height) * 0.5f + 1.0f),
-                      snapFontSize,
-                      themeManager.getColor("textSecondary").withAlpha(0.76f));
-    currentX += snapWidth;
-
-    // Editing Pattern Label (Right Side)
-    if (!m_patternName.empty()) {
-        const float labelLeft = std::max(patternDropdownRight + 10.0f, currentX + 12.0f);
-        const float labelRight = b.right() - innerPad - 4.0f;
-        const float maxLabelWidth = labelRight - labelLeft;
-        if (maxLabelWidth < 24.0f) {
-            return;
-        }
-
-        std::string labelStr = m_patternName;
-        float fontSize = 10.0f;
-        auto measured = renderer.measureText(labelStr, fontSize);
-        while (measured.width > maxLabelWidth && labelStr.length() > 3) {
-            labelStr.pop_back();
-            measured = renderer.measureText(labelStr + "...", fontSize);
-        }
-        if (measured.width > maxLabelWidth) {
-            labelStr = "...";
-        } else if (labelStr.length() < m_patternName.length()) {
-            labelStr += "...";
-        }
-        auto size = renderer.measureText(labelStr, fontSize);
-        float lx = std::max(labelLeft, labelRight - size.width);
-        renderer.drawText(labelStr,
-                          NUIPoint(lx, currentY + (buttonSize - size.height) * 0.5f + 2.0f),
-                          fontSize,
-                          themeManager.getColor("textSecondary").withAlpha(0.68f));
+    if (m_snapDropdown) {
+        const float snapDropdownW = 104.0f;
+        drawGroup(currentX - 3.0f, snapDropdownW + 6.0f);
+        m_snapDropdown->setBounds(NUIRect(currentX, currentY, snapDropdownW, buttonSize));
+        m_snapDropdown->onRender(renderer);
+        currentX += snapDropdownW;
     }
 
+    // (The redundant right-side "Pattern · Unit" label was removed — the Pattern
+    // and Unit dropdowns already show that state.)
+    (void)patternDropdownRight;
 }
 
 void PianoRollToolbar::setGrid(std::shared_ptr<PianoRollGrid> grid) {
@@ -415,13 +446,21 @@ void PianoRollToolbar::setActiveTool(GlobalTool tool) {
 
 
 bool PianoRollToolbar::onMouseEvent(const NUIMouseEvent& event) {
+    // Dropdowns first — an open one's popup list extends below the toolbar strip,
+    // so it must get first crack at clicks (and this override otherwise never
+    // forwards events to the dropdown children at all, which is why the Pattern /
+    // Unit / Snap dropdowns did nothing).
+    if (m_patternDropdown && m_patternDropdown->onMouseEvent(event)) return true;
+    if (m_unitDropdown && m_unitDropdown->onMouseEvent(event)) return true;
+    if (m_snapDropdown && m_snapDropdown->onMouseEvent(event)) return true;
+
     if (m_menuBtn->onMouseEvent(event)) return true;
     if (m_ptrBtn->onMouseEvent(event)) return true;
     if (m_pencilBtn->onMouseEvent(event)) return true;
     if (m_eraserBtn->onMouseEvent(event)) return true;
     if (m_lengthDownBtn->onMouseEvent(event)) return true;
     if (m_lengthUpBtn->onMouseEvent(event)) return true;
-    
+
     return false;
 }
 

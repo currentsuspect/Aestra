@@ -66,6 +66,7 @@ UnitRow::UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aest
 }
 
 void UnitRow::updateState() {
+    m_rootMidiNote = m_manager.getUnitRootMidiNote(m_unitId);
     auto* unit = m_manager.getUnit(m_unitId);
     if (unit) {
         m_name = unit->name;
@@ -132,6 +133,18 @@ void UnitRow::updateState() {
     invalidateVisuals();
 }
 
+void UnitRow::setStepCount(int count) {
+    m_stepCount = count;
+    invalidateVisuals();
+}
+
+void UnitRow::setFitToWidth(bool fit) {
+    if (fit == m_fitToWidth) return;
+    m_fitToWidth = fit;
+    if (fit) m_scrollX = 0.0f; // Nothing to page when the whole loop is shown
+    invalidateVisuals();
+}
+
 void UnitRow::onRender(NUIRenderer& renderer) {
     if (m_nameLabel) {
         m_nameLabel->setUnitType(shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type);
@@ -145,15 +158,24 @@ void UnitRow::onRender(NUIRenderer& renderer) {
 
     auto bounds = getBounds();
 
+    // Stay inside the panel's list viewport: fully scrolled-out rows draw
+    // nothing, partially visible ones are clipped in drawContent.
+    const bool hasViewport = m_viewport.width > 0.0f && m_viewport.height > 0.0f;
+    if (hasViewport && !bounds.intersects(m_viewport)) {
+        return;
+    }
+
     // Render live for now. The widget cache path is currently producing
     // duplicate/local-space ghosts for Arsenal rows on Linux.
     drawContent(renderer);
-    
+
     // Render dynamic children (Input Widget, Context Menu) on top
     // Push UnitRow position so children (relative coords) draw correctly
+    if (hasViewport) renderer.setClipRect(m_viewport);
     renderer.pushTransform(bounds.x, bounds.y);
     renderChildren(renderer);
     renderer.popTransform();
+    if (hasViewport) renderer.clearClipRect();
 }
 
 void UnitRow::drawContent(NUIRenderer& renderer) {
@@ -162,6 +184,18 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     NUIRect cardBounds = bounds;
     cardBounds.height = 56.0f;
+
+    // Clip all painting to the card, further trimmed to the panel's list
+    // viewport so rows scrolled past the panel edge don't spill over it.
+    NUIRect paintClip = cardBounds;
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f) {
+        const float clipTop = std::max(paintClip.y, m_viewport.y);
+        const float clipBottom = std::min(paintClip.bottom(), m_viewport.bottom());
+        paintClip.y = clipTop;
+        paintClip.height = clipBottom - clipTop;
+        if (paintClip.height <= 0.0f) return;
+    }
+    renderer.setClipRect(paintClip);
 
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
@@ -200,7 +234,6 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
                       theme.getColor("borderSubtle").withAlpha(0.55f));
 
     NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 14.0f, cardBounds.height - 12.0f);
-    renderer.setClipRect(cardBounds);
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
 }
@@ -377,8 +410,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     
     // === Step Grid Layout ===
     float availWidth = timelineStrip.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
+    float stepWidth = gridStepWidth(availWidth);
     float totalWidth = stepWidth * m_stepCount;
+
     
     // Clamp scroll
     float maxScroll = std::max(0.0f, totalWidth - availWidth);
@@ -389,6 +423,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     std::vector<NoteSpan> noteSpans;
     std::vector<int> stepPitch(m_stepCount, -1);
     std::vector<float> stepLength(m_stepCount, 0.0f);
+    std::vector<float> stepVelocity(m_stepCount, kDefaultStepVelocity);
     bool unitHasContent = !m_pluginId.empty() || !m_audioClip.empty();
     bool noteRollMode = usesPianoRollForType(m_type);
     double visibleLengthBeats = static_cast<double>(m_stepCount) * 0.25;
@@ -401,7 +436,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
                 unitHasContent = true;
                 if (m_type == Aestra::Audio::UnitType::Sampler &&
-                    (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01)) {
+                    (note.pitch != m_rootMidiNote || std::abs(note.durationBeats - 0.25) > 0.01)) {
                     noteRollMode = true;
                 }
                 const int startStep = std::clamp(static_cast<int>(std::floor(note.startBeat / 0.25 + 0.0001)), 0, m_stepCount - 1);
@@ -416,11 +451,18 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                                              note.velocity});
                 stepPitch[startStep] = note.pitch;
                 stepLength[startStep] = static_cast<float>(note.durationBeats);
+                stepVelocity[startStep] = note.velocity;
             }
         }
     }
     std::sort(activeSteps.begin(), activeSteps.end());
     activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
+
+    // Live playhead within the pattern — used to light up the step / note the
+    // transport is currently over so the user can track it and time their edits.
+    const double playBeat = playheadBeatInPattern();
+    const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
+    const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
@@ -439,9 +481,29 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             }
 
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            const bool isPlayhead = (step == playStep);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
-            renderer.fillRoundedRect(cellRect, cellRadius, isActive ? activeFill : inactiveFill);
+            NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (isPlayhead && isActive) {
+                cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
+            }
+            if (isActive) {
+                // Velocity meter: dim base + a brighter bar rising from the
+                // bottom to the note's velocity, so accents read at a glance
+                // and vertical drag has an obvious target.
+                renderer.fillRoundedRect(cellRect, cellRadius, cellFill.withAlpha(0.26f));
+                const float v = std::clamp(stepVelocity[step], kMinStepVelocity, 1.0f);
+                const float fillH = std::max(2.0f, cellHeight * v);
+                const NUIRect velRect(cellX, cellY + cellHeight - fillH, cellWidth, fillH);
+                renderer.fillRoundedRect(velRect, cellRadius, cellFill);
+            } else {
+                renderer.fillRoundedRect(cellRect, cellRadius, cellFill);
+            }
             renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
+            if (isPlayhead) {
+                renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
+                                           playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+            }
 
             if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
                 const float markerX = cellRect.right() + (cellGap * 0.5f);
@@ -472,13 +534,22 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 continue;
             }
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            const bool isPlayhead = (step == playStep);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
-            renderer.fillRoundedRect(cellRect, 3.0f, isActive ? activeFill : inactiveFill);
+            NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (isPlayhead && isActive) {
+                cellFill = activeFill.lightened(0.35f);
+            }
+            renderer.fillRoundedRect(cellRect, 3.0f, cellFill);
             renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
+            if (isPlayhead) {
+                renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f,
+                                           playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+            }
 
             const NUIRect pitchRect(cellX, pitchY, cellWidth, pitchLaneHeight);
             if (stepPitch[step] >= 0) {
-                const int display = stepPitch[step] - 36;
+                const int display = stepPitch[step] - m_rootMidiNote; // semitones from root
                 renderer.drawTextCentered((display >= 0 ? "+" : "") + std::to_string(display), pitchRect, 8.0f, pitchText);
                 slidePoints.push_back(NUIPoint(pitchRect.x + pitchRect.width * 0.5f, pitchRect.y + pitchRect.height * 0.5f));
             } else {
@@ -506,7 +577,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                               theme.getColor("border").withAlpha(0.07f));
         }
 
-        for (double beat = 4.0; beat < visibleLengthBeats; beat += 4.0) {
+        const double barLineBeats =
+            m_trackManager ? static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar()) : 4.0;
+        for (double beat = barLineBeats; beat < visibleLengthBeats; beat += barLineBeats) {
             const float x = timelineStrip.x +
                             static_cast<float>(beat / visibleLengthBeats) * totalWidth - m_scrollX;
             renderer.drawLine(NUIPoint(x, timelineStrip.y), NUIPoint(x, timelineStrip.bottom()), 1.0f,
@@ -541,8 +614,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             float normalizedPitch = static_cast<float>(span.pitch - minPitch) / static_cast<float>(pitchRange);
             float noteY = timelineStrip.bottom() - 2.0f - (normalizedPitch * (timelineStrip.height - noteHeight - 4.0f)) - noteHeight;
             NUIRect noteRect(startX, noteY, width, noteHeight);
-            renderer.fillRoundedRect(noteRect, 2.0f, noteFill);
-            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, noteStroke);
+            const bool isPlaying = (playBeat >= 0.0 && playBeat >= span.startBeat && playBeat < span.endBeat);
+            renderer.fillRoundedRect(noteRect, 2.0f, isPlaying ? playheadAccent : noteFill);
+            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, isPlaying ? playheadAccent : noteStroke);
         }
     } else if (m_type == Aestra::Audio::UnitType::Audio) {
         if (!m_audioPreviewWaveform.empty()) {
@@ -576,6 +650,26 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     }
 }
 
+double UnitRow::playheadBeatInPattern() const {
+    if (!m_trackManager || !m_trackManager->isPatternMode()) {
+        return -1.0;
+    }
+    double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
+    if (m_patternId.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId)) {
+            lengthBeats = std::max(lengthBeats, pattern->lengthBeats);
+        }
+    }
+    if (lengthBeats <= 0.0) {
+        return -1.0;
+    }
+    const double bpm = m_trackManager->getTimelineClock().getCurrentTempo();
+    double beat = m_trackManager->getPosition() * (bpm / 60.0);
+    beat = std::fmod(beat, lengthBeats);
+    if (beat < 0.0) beat += lengthBeats;
+    return beat;
+}
+
 bool UnitRow::shouldUseNoteRoll() const {
     if (usesPianoRollForType(m_type)) {
         return true;
@@ -593,11 +687,24 @@ bool UnitRow::shouldUseNoteRoll() const {
     return std::any_of(midi.notes.begin(), midi.notes.end(), [this](const Aestra::Audio::MidiNote& note) {
         const bool belongsToUnit = note.unitId == m_unitId || note.unitId == 0;
         return belongsToUnit &&
-               (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+               (note.pitch != m_rootMidiNote || std::abs(note.durationBeats - 0.25) > 0.01);
     });
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
+    // Pointer events outside the panel's list viewport belong to whatever is
+    // rendered there (rows scrolled out of view are not clickable). Ongoing
+    // drags/step edits keep receiving events so gestures can finish.
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f &&
+        !m_isDragging && m_velEditStep < 0 && !m_viewport.contains(event.position)) {
+        if (m_isHovered || m_hoveredStep != -1) {
+            m_isHovered = false;
+            m_hoveredStep = -1;
+            invalidateVisuals();
+        }
+        return false;
+    }
+
     // Forward to UnitNameLabel first (same local-coordinate transform as old m_nameInput)
     if (m_nameLabel) {
         auto bounds = getBounds();
@@ -615,50 +722,22 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
     const float separatorX = m_controlWidth;
     const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
+    // Step math must use the same geometry the pads are DRAWN with:
+    // drawContextBlock insets the context rect by 6px lane padding before
+    // laying out steps. Resolving against the un-inset rect skewed the step
+    // width and offset, so clicks landed on neighboring pads (worse toward
+    // the right edge of long loops).
+    const NUIRect localGridRect(localContextRect.x + 6.0f, localContextRect.y + 6.0f,
+                                std::max(0.0f, localContextRect.width - 12.0f),
+                                std::max(0.0f, localContextRect.height - 12.0f));
     const NUIPoint localPoint(event.position.x - bounds.x, event.position.y - bounds.y);
 
     auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
         float relativeX = position.x - gridBounds.x;
         float availWidth = gridBounds.width;
-        float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
+        float stepWidth = gridStepWidth(availWidth);
         float contentX = relativeX + m_scrollX;
         return static_cast<int>(contentX / stepWidth);
-    };
-
-    auto updateStepEditSpan = [this](int endExclusive) {
-        if (!m_patternId.isValid() || m_stepEditStart < 0 || endExclusive <= m_stepEditStart) {
-            return;
-        }
-
-        m_stepEditEndExclusive = std::max(m_stepEditStart + 1, std::min(m_stepCount, endExclusive));
-        const double targetStart = static_cast<double>(m_stepEditStart) * 0.25;
-        const double targetDuration = static_cast<double>(m_stepEditEndExclusive - m_stepEditStart) * 0.25;
-
-        auto& pm = m_trackManager->getPatternManager();
-        pm.applyPatch(m_patternId, [this, targetStart, targetDuration](Aestra::Audio::PatternSource& p) {
-            if (!p.isMidi()) return;
-            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
-            auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
-                [this, targetStart](const Aestra::Audio::MidiNote& n) {
-                    return n.unitId == m_unitId &&
-                           n.pitch == 60 &&
-                           std::abs(n.startBeat - targetStart) < 0.01;
-                });
-            if (it != midi.notes.end()) {
-                it->durationBeats = targetDuration;
-            }
-        });
-    };
-
-    auto finishStepEdit = [this]() {
-        if (!m_isStepEditing) {
-            return;
-        }
-        m_isStepEditing = false;
-        if (m_onPatternEdited && m_patternId.isValid()) {
-            m_onPatternEdited(m_patternId);
-        }
-        invalidateVisuals();
     };
 
     // === Scroll Handling ===
@@ -669,28 +748,28 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             if (delta > 10.0f) delta = 1.0f;
             if (delta < -10.0f) delta = -1.0f;
             
-            // If notes exist, scroll pitch viewport instead of horizontal
-            bool hasNotes = false;
-            if (m_patternId.isValid()) {
-                auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
-                if (pattern && pattern->isMidi()) {
-                    auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
-                    for (const auto& note : midi.notes) {
-                        if (note.unitId == m_unitId || note.unitId == 0) {
-                            hasNotes = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (hasNotes) {
+            // Step-grid units (Sampler / 808) scroll the grid horizontally so the
+            // whole loop is reachable when it's longer than the row is wide. Only
+            // the piano-roll / note-roll display scrolls the pitch viewport.
+            if (shouldUseNoteRoll()) {
                 // Pitch viewport scroll (up/down = see higher/lower pitches)
                 m_minimapPitchOffset -= delta * 4.0f; // 4 semitones per tick
                 m_minimapPitchOffset = std::clamp(m_minimapPitchOffset, -60.0f, 60.0f);
+                invalidateVisuals();
+                return true;
+            }
+            if (m_fitToWidth) {
+                // Whole loop is on screen — nothing to scroll horizontally, so
+                // let the wheel bubble up to the panel's vertical list scroll.
+                return false;
+            }
+            if (m_onGridScroll) {
+                // Panel owns the shared offset: it clamps against the loop
+                // width and pushes the result to every row + the header.
+                m_onGridScroll(-delta * 40.0f);
             } else {
-                // Horizontal scroll for step grid
-                m_scrollX -= delta * 40.0f;
+                // Horizontal scroll for step grid (clamped against content in draw)
+                m_scrollX = std::max(0.0f, m_scrollX - delta * 40.0f);
             }
             invalidateVisuals();
             return true;
@@ -706,7 +785,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     m_hoveredStep = -1;
     
     if (m_isHovered && localContextRect.contains(localPoint)) {
-        const int stepIndex = resolveGridStep(localPoint, localContextRect);
+        const int stepIndex = resolveGridStep(localPoint, localGridRect);
         if (stepIndex >= 0 && stepIndex < m_stepCount) {
             m_hoveredStep = stepIndex;
         }
@@ -716,30 +795,45 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         invalidateVisuals();
     }
 
-    if (m_isStepEditing) {
+    // === Velocity-drag session (Sampler step grid) ===
+    if (m_velEditStep >= 0) {
         if (event.released || event.type == NUIMouseEventType::Up) {
-            finishStepEdit();
+            // Release: a click that never moved vertically toggles the step
+            // (place was already done on press; remove if it pre-existed).
+            if (!m_velEditMoved && m_velEditWasActive) {
+                removeStepNote(m_velEditStep);
+            }
+            if (m_onPatternEdited && m_patternId.isValid()) {
+                m_onPatternEdited(m_patternId); // reschedule audio once, on release
+            }
+            m_velEditStep = -1;
+            invalidateVisuals();
             return true;
         }
 
-        const bool isPointerMoveWhileEditing =
+        const bool isPointerMove =
             !event.pressed && !event.released &&
             (event.type == NUIMouseEventType::Drag ||
              event.type == NUIMouseEventType::Move ||
              event.button == NUIMouseButton::None);
-
-        if (isPointerMoveWhileEditing) {
-            int stepIndex = resolveGridStep(localPoint, localContextRect);
-            stepIndex = std::max(m_stepEditStart, std::min(m_stepCount - 1, stepIndex));
-            const int endExclusive = stepIndex + 1;
-            if (endExclusive != m_stepEditEndExclusive) {
-                updateStepEditSpan(endExclusive);
+        if (isPointerMove) {
+            const float dy = m_velEditStartY - event.position.y; // up = louder
+            if (!m_velEditMoved && std::abs(dy) > 3.0f) {
+                m_velEditMoved = true;
+                if (!m_velEditWasActive) {
+                    // We placed on press; a drag now edits that fresh note.
+                }
+            }
+            if (m_velEditMoved) {
+                // Full row height ≈ full velocity range.
+                const float vel = m_velEditBaseVelocity + dy / 90.0f;
+                setStepNoteVelocity(m_velEditStep, vel);
                 invalidateVisuals();
             }
             return true;
         }
     }
-    
+
     // === Click Handling ===
     if (event.pressed) {
         // Ensure focus
@@ -764,7 +858,31 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     return true;
                 }
                 else if (localContextRect.contains(localPoint)) {
-                    handleContextClick(event, localContextRect);
+                    // Loaded Sampler step grid: arm a velocity-drag session.
+                    // A vertical drag sets the step's velocity; a plain click
+                    // toggles it on release. Empty units / pitched / note-roll
+                    // fall through to the classic toggle.
+                    const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
+                    if (m_type == Aestra::Audio::UnitType::Sampler && !shouldUseNoteRoll() && hasContent &&
+                        m_patternId.isValid() && m_trackManager) {
+                        const int step = resolveGridStep(localPoint, localGridRect);
+                        if (step >= 0 && step < m_stepCount) {
+                            float vel = kDefaultStepVelocity;
+                            const bool active = stepHasNote(step, vel);
+                            m_velEditStep = step;
+                            m_velEditStartY = event.position.y;
+                            m_velEditMoved = false;
+                            m_velEditWasActive = active;
+                            if (!active) {
+                                placeStepNote(step); // show immediately; kept unless click-removed
+                                vel = kDefaultStepVelocity;
+                            }
+                            m_velEditBaseVelocity = vel;
+                            invalidateVisuals();
+                            return true;
+                        }
+                    }
+                    handleContextClick(event, localGridRect);
                     return true;
                 }
             }
@@ -773,6 +891,38 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
+                // On a step pad with a note: right-click deletes it (FL-style).
+                // Anywhere else on the row keeps the context menu.
+                if (localContextRect.contains(localPoint) && !shouldUseNoteRoll() &&
+                    m_patternId.isValid() && m_trackManager) {
+                    const int stepIndex = resolveGridStep(localPoint, localGridRect);
+                    if (stepIndex >= 0 && stepIndex < m_stepCount) {
+                        bool removed = false;
+                        m_trackManager->getPatternManager().applyPatch(
+                            m_patternId, [this, stepIndex, &removed](Aestra::Audio::PatternSource& p) {
+                                if (!p.isMidi()) return;
+                                auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+                                const double targetBeat = stepIndex * 0.25;
+                                auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
+                                    [this, targetBeat](const Aestra::Audio::MidiNote& n) {
+                                        const double endBeat =
+                                            std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                                        return n.unitId == m_unitId &&
+                                               targetBeat >= n.startBeat - 0.01 &&
+                                               targetBeat < endBeat - 0.01;
+                                    });
+                                if (it != midi.notes.end()) {
+                                    midi.notes.erase(it);
+                                    removed = true;
+                                }
+                            });
+                        if (removed) {
+                            if (m_onPatternEdited) m_onPatternEdited(m_patternId);
+                            invalidateVisuals();
+                            return true;
+                        }
+                    }
+                }
                 showRowContextMenu(event.position);
                 return true;
             }
@@ -841,74 +991,130 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
         return;
     }
 
-    // === Double-click to load sample ===
+    // === Double-click to load sample (EMPTY units only) ===
+    // With a sample loaded, rapid taps are step programming — treating any two
+    // grid clicks within 400ms as "open the file picker" made fast FL-style
+    // tap-tap placement randomly hijack the second click.
     auto now = std::chrono::steady_clock::now();
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
     m_lastClipClickTimeMs = nowMs;
-    
-    if (isDoubleClick) {
-        // Trigger sample file picker
+
+    if (isDoubleClick && m_audioClip.empty() && m_pluginId.empty()) {
+        // Empty unit: double-click is a shortcut to give it a sample.
         if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
         return;
     }
-    
+
     // === Single click: Grid Interaction - Toggle Steps ===
     float relativeX = localPoint.x;
     float availWidth = bounds.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
-    
+    float stepWidth = gridStepWidth(availWidth);
+
     float contentX = relativeX + m_scrollX;
     int stepIndex = static_cast<int>(contentX / stepWidth);
     
     if (stepIndex >= 0 && stepIndex < m_stepCount && m_patternId.isValid()) {
-        auto& pm = m_trackManager->getPatternManager();
+        // Plain toggle: place if empty, remove if present. Silent — the running
+        // loop hot-swaps the change on its next pass, which is the wanted
+        // feedback. (The Sampler grid arms a velocity-drag session instead and
+        // never reaches here; this path covers pitched samplers + fallbacks.)
+        float dummy = kDefaultStepVelocity;
+        if (stepHasNote(stepIndex, dummy)) {
+            removeStepNote(stepIndex);
+        } else {
+            placeStepNote(stepIndex);
+        }
+        if (m_onPatternEdited) {
+            m_onPatternEdited(m_patternId);
+        }
+        invalidateVisuals();
+    }
+}
 
-        bool removedExisting = false;
-        pm.applyPatch(m_patternId, [this, stepIndex, &removedExisting](Aestra::Audio::PatternSource& p) {
+bool UnitRow::stepHasNote(int step, float& velocityOut) const {
+    velocityOut = kDefaultStepVelocity;
+    if (!m_patternId.isValid() || !m_trackManager) return false;
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
+    if (!pattern || !pattern->isMidi()) return false;
+    const auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+    const double targetBeat = step * 0.25;
+    for (const auto& n : midi.notes) {
+        const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+        if (n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 && targetBeat < endBeat - 0.01) {
+            velocityOut = n.velocity;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool UnitRow::placeStepNote(int step) {
+    if (!m_patternId.isValid() || !m_trackManager) return false;
+    bool placed = false;
+    m_trackManager->getPatternManager().applyPatch(
+        m_patternId, [this, step, &placed](Aestra::Audio::PatternSource& p) {
             if (!p.isMidi()) return;
             auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            const double targetBeat = step * 0.25;
+            for (const auto& n : midi.notes) {
+                const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                if (n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 && targetBeat < endBeat - 0.01) {
+                    return; // already present
+                }
+            }
+            // NB: explicit-field init — positional init would drop m_unitId into
+            // MidiNote::pan and leave unitId=0 (dropped by playback). Cf. #447.
+            Aestra::Audio::MidiNote note;
+            note.pitch = m_rootMidiNote; // root → sample plays untransposed
+            note.startBeat = targetBeat;
+            note.durationBeats = 0.25;
+            note.velocity = kDefaultStepVelocity;
+            note.unitId = m_unitId;
+            midi.notes.push_back(note);
+            placed = true;
+        });
+    return placed;
+}
 
-            const double targetBeat = stepIndex * 0.25;
+bool UnitRow::removeStepNote(int step) {
+    if (!m_patternId.isValid() || !m_trackManager) return false;
+    bool removed = false;
+    m_trackManager->getPatternManager().applyPatch(
+        m_patternId, [this, step, &removed](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) return;
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            const double targetBeat = step * 0.25;
             auto it = std::find_if(midi.notes.begin(), midi.notes.end(),
                 [this, targetBeat](const Aestra::Audio::MidiNote& n) {
                     const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
-                    return n.unitId == m_unitId &&
-                           n.pitch == 60 &&
-                           targetBeat >= n.startBeat - 0.01 &&
+                    return n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 &&
                            targetBeat < endBeat - 0.01;
                 });
-
             if (it != midi.notes.end()) {
                 midi.notes.erase(it);
-                removedExisting = true;
-                return;
+                removed = true;
             }
-
-            const int defaultPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
-            midi.notes.push_back({defaultPitch, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
         });
+    return removed;
+}
 
-        if (removedExisting) {
-            if (m_onPatternEdited) {
-                m_onPatternEdited(m_patternId);
+void UnitRow::setStepNoteVelocity(int step, float velocity) {
+    if (!m_patternId.isValid() || !m_trackManager) return;
+    const float v = std::clamp(velocity, kMinStepVelocity, 1.0f);
+    m_trackManager->getPatternManager().applyPatch(
+        m_patternId, [this, step, v](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) return;
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            const double targetBeat = step * 0.25;
+            for (auto& n : midi.notes) {
+                const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                if (n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 && targetBeat < endBeat - 0.01) {
+                    n.velocity = v;
+                    return;
+                }
             }
-        } else {
-            m_isStepEditing = true;
-            m_stepEditStart = stepIndex;
-            m_stepEditEndExclusive = stepIndex + 1;
-
-            Aestra::Audio::AudioQueueCommand audCmd;
-            audCmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit;
-            audCmd.trackIndex = m_unitId;
-            audCmd.value1 = 0.8f;
-            if (m_trackManager) {
-                m_trackManager->pushAudioCommand(audCmd);
-            }
-        }
-        
-        invalidateVisuals();
-    }
+        });
 }
 
 
@@ -1030,7 +1236,16 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
 }
 
 NUIRect UnitRow::getDropBounds() const {
-    return getBounds();
+    // A row scrolled out of the list viewport is invisible — it must not
+    // catch drops either, so trim the drop area to what the user can see.
+    NUIRect bounds = getBounds();
+    if (m_viewport.width > 0.0f && m_viewport.height > 0.0f) {
+        const float top = std::max(bounds.y, m_viewport.y);
+        const float bottom = std::min(bounds.bottom(), m_viewport.bottom());
+        bounds.y = top;
+        bounds.height = std::max(0.0f, bottom - top);
+    }
+    return bounds;
 }
 
 void UnitRow::onResize(int width, int height) {
