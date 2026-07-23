@@ -2294,6 +2294,16 @@ charSet.push_back(0x23F9); // ⏹ Stop
             charData.bearingX = ftFace_->glyph->bitmap_left;
             charData.bearingY = ftFace_->glyph->bitmap_top;
             charData.advance = ftFace_->glyph->advance.x;
+            if (codepoint == ' ') {
+                // Geist/Manrope declare a 0.20 em space — well under the
+                // 0.25-0.33 em of typical UI fonts — so at UI sizes words
+                // visually run together ("Audio,MIDI,and"). Floor it at
+                // 0.26 em (26.6 fixed point). measureText shares this cache,
+                // so layout and rendering stay consistent.
+                const int minSpace =
+                    static_cast<int>(0.26f * ftFace_->size->metrics.x_ppem * 64.0f);
+                charData.advance = std::max(charData.advance, minSpace);
+            }
 
             float invW = 1.0f / fontAtlasWidth_;
             float invH = 1.0f / fontAtlasHeight_;
@@ -2481,6 +2491,11 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
     charData.bearingX = face->glyph->bitmap_left;
     charData.bearingY = face->glyph->bitmap_top;
     charData.advance = face->glyph->advance.x;
+    if (codepoint == ' ') {
+        // Same 0.26 em space floor as the preload path — see comment there.
+        const int minSpace = static_cast<int>(0.26f * face->size->metrics.x_ppem * 64.0f);
+        charData.advance = std::max(charData.advance, minSpace);
+    }
     float invW = 1.0f / fontAtlasWidth_;
     float invH = 1.0f / fontAtlasHeight_;
     charData.u0 = atlasX * invW;

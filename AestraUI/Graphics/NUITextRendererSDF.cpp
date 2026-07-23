@@ -283,17 +283,24 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
         // Get actual space advance from font metrics (this is the key fix!)
         int spaceAdvance, spaceLsb;
         stbtt_GetCodepointHMetrics(&font, ' ', &spaceAdvance, &spaceLsb);
-        
+
+        // Geist and Manrope declare a 0.20 em space — well below the 0.25–0.33 em
+        // of typical UI fonts — so at UI sizes words visually run together
+        // ("Audio,MIDI,and"). Floor the advance at 0.26 em. measureText shares
+        // glyphs_, so layout and rendering stay consistent.
+        const float unitsPerEm = 1.0f / stbtt_ScaleForMappingEmToPixels(&font, 1.0f);
+        const float minSpaceUnits = 0.26f * unitsPerEm;
+
         GlyphData spaceGlyph{};
         spaceGlyph.width = 0.0f;
         spaceGlyph.height = 0.0f;
         spaceGlyph.bearingX = 0.0f;
         spaceGlyph.bearingY = 0.0f;
-        spaceGlyph.advance = spaceAdvance * scale;  // Use ACTUAL font metrics
+        spaceGlyph.advance = std::max(static_cast<float>(spaceAdvance), minSpaceUnits) * scale;
         spaceGlyph.u0 = spaceGlyph.u1 = spaceGlyph.v0 = spaceGlyph.v1 = 0.0f;
         glyphs_[' '] = spaceGlyph;
-        
-        std::cout << "Space character created with advance: " << spaceGlyph.advance 
+
+        std::cout << "Space character created with advance: " << spaceGlyph.advance
                   << "px (font metrics)" << std::endl;
     }
 
