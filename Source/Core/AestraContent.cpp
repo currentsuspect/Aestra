@@ -33,6 +33,7 @@
 #include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Widgets/NotificationToast.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
 
 // Component includes
@@ -302,6 +303,12 @@ AestraContent::AestraContent()
     // Add Takes + History panels LAST to overlay so they're on top and receive mouse events first
     m_overlayLayer->addChild(m_takesPanel);
     m_overlayLayer->addChild(m_historyPanel);
+
+    // Status toast: topmost but mouse-transparent (no handlers), so it never
+    // steals clicks from the panels beneath it.
+    m_notificationToast = std::make_shared<AestraUI::NotificationToast>();
+    m_notificationToast->setVisible(false);
+    m_overlayLayer->addChild(m_notificationToast);
 
     // Initialize preview engine
     m_previewEngine = std::make_unique<PreviewEngine>();
@@ -1054,6 +1061,18 @@ void AestraContent::setupArsenalPanels() {
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
         }
 
+        // Arming is otherwise invisible (the browser doesn't navigate or
+        // prompt), so tell the user what the next browser click will do.
+        std::string unitName;
+        if (m_trackManager) {
+            if (const auto* unit = m_trackManager->getUnitManager().getUnit(id)) {
+                unitName = unit->name;
+            }
+        }
+        showToast(unitName.empty() ? "Click a sample in the browser to load it"
+                                   : "Click a sample in the browser to load it into " + unitName,
+                  4.0);
+
         // Set one-shot selection callback
         m_fileBrowser->setOnFileSelected([this, id](const AestraUI::FileItem& file) {
             // Folder clicks fire onFileSelected too — ignore them so the pick
@@ -1635,6 +1654,11 @@ void AestraContent::onResize(int width, int height) {
             m_audioVisualizer->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
         }
+    }
+
+    if (m_notificationToast && m_notificationToast->isVisible()) {
+        m_notificationToast->setBounds(
+            AestraUI::NUIAbsolute(contentBounds, 0.0f, height - 72.0f, width, 40.0f));
     }
 
     if (m_trackManagerUI) {
@@ -3358,6 +3382,19 @@ void AestraContent::drainMainThreadTasks() {
     }
 }
 
+void AestraContent::showToast(const std::string& message, double seconds) {
+    if (!m_notificationToast) {
+        return;
+    }
+    m_notificationToast->setText(message);
+    m_notificationToast->setDuration(seconds);
+    const auto bounds = getBounds();
+    m_notificationToast->setBounds(
+        AestraUI::NUIAbsolute(bounds, 0.0f, bounds.height - 72.0f, bounds.width, 40.0f));
+    m_notificationToast->setVisible(true);
+    m_notificationToast->bringToFront();
+}
+
 void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& samplePath, bool openEditorWhenReady) {
     if (!m_trackManager || unitId == 0 || samplePath.empty()) {
         return;
@@ -3437,6 +3474,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
                 !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
                                                          numChannels, std::move(previewWaveform), durationSeconds)) {
                 AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
+                self->showToast("Couldn't load " + std::filesystem::path(samplePath).filename().string());
                 return;
             }
 

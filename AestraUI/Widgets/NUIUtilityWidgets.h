@@ -77,23 +77,10 @@ private:
     std::string text_;
 };
 
-class NotificationToast : public NUIComponent {
-public:
-    NotificationToast();
-
-    void onRender(NUIRenderer& renderer) override;
-    void onUpdate(double deltaTime) override;
-
-    void setText(const std::string& text);
-    const std::string& getText() const { return text_; }
-
-    void setDuration(double duration);
-
-private:
-    std::string text_;
-    double duration_;
-    double elapsed_;
-};
+// NotificationToast lives in Widgets/NotificationToast.h — this header's
+// FileBrowser/PluginBrowser stubs clash with the real Source/Components
+// classes of the same names, so app code must be able to get the toast
+// without including them.
 
 class ContextMenu : public NUIPopupMenu {
 public:
