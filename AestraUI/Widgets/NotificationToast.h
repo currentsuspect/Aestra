@@ -18,6 +18,10 @@ public:
 
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
+    /** Always mouse-transparent: the toast is a passive overlay and must never
+        consume clicks from the panels beneath it, even while it owns the
+        top-most z-order. */
+    bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setText(const std::string& text);
     const std::string& getText() const { return text_; }

@@ -592,6 +592,7 @@ void AudioEngine::performNonRealtimeMaintenance() {
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
         if (sr > 0) {
             uint64_t loopLenSamples = 0;
+            bool deferRefill = false;
             if (m_patternPlaybackMode.load(std::memory_order_relaxed)) {
                 // Same formula as the audio callback so both agree on the
                 // monotonic domain (iteration * loopLen + wrapped position).
@@ -606,19 +607,30 @@ void AudioEngine::performNonRealtimeMaintenance() {
                     // re-queue in the new domain (length-in-beats changes are
                     // already flushed by setPatternPlaybackMode).
                     if (m_lastRefillLoopLenSamples != 0 && m_lastRefillLoopLenSamples != loopLenSamples) {
+                        // m_patternMonotonicFrame is still encoded in the OLD
+                        // loop-length domain until the audio callback republishes
+                        // it (which it does every block, from the same BPM /
+                        // length source). Refilling now with the new loopLen but
+                        // the stale frame would schedule an epoch ahead, so flush
+                        // and DEFER this refill one maintenance tick — the next
+                        // tick reads a coherent new-domain frame. The lookahead
+                        // (~85ms) dwarfs one tick (~16ms), so no underrun.
                         patEng->flush();
+                        m_lastRefillLoopLenSamples = loopLenSamples;
+                        deferRefill = true; // skip the refill below this tick
+                    } else {
+                        m_lastRefillLoopLenSamples = loopLenSamples;
+                        // One coherent snapshot published by the audio callback.
+                        // Loading iteration and position as separate atomics could
+                        // pair a new iteration with a stale position (the callback
+                        // writes them at different points) and schedule an epoch
+                        // ahead, starving legitimate events.
+                        currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
                     }
-                    m_lastRefillLoopLenSamples = loopLenSamples;
-
-                    // One coherent snapshot published by the audio callback.
-                    // Loading iteration and position as separate atomics could
-                    // pair a new iteration with a stale position (the callback
-                    // writes them at different points) and schedule an epoch
-                    // ahead, starving legitimate events.
-                    currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
                 }
             }
-            patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
+            if (!deferRefill)
+                patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
         }
     }
 
@@ -3486,6 +3498,16 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     uint64_t endSample = static_cast<uint64_t>(endBeat * samplesPerBeat);
     uint64_t totalFrames = endSample - startSample;
 
+    // Keep pattern scheduling in the same monotonic loop domain live playback
+    // uses, so an isolated bounce of a looped pattern re-triggers events every
+    // loop instead of only rendering the first pass. The bounce frame advances
+    // linearly and never wraps, so `currentFrame` below is already the
+    // monotonic frame — only loopLenSamples needs threading through.
+    const uint64_t bounceLoopLenSamples =
+        m_patternPlaybackMode.load(std::memory_order_relaxed)
+            ? static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat)
+            : 0;
+
     if (totalFrames == 0)
         return false;
 
@@ -3575,7 +3597,8 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Refill pattern engine lookahead (normally done by performNonRealtimeMaintenance)
         auto* patEng = m_patternEngine.load(std::memory_order_acquire);
         if (patEng) {
-            patEng->refillWindow(currentFrame, static_cast<int>(sampleRate), static_cast<int>(blockSize));
+            patEng->refillWindow(currentFrame, static_cast<int>(sampleRate), static_cast<int>(blockSize),
+                                 bounceLoopLenSamples);
         }
 
         // Render

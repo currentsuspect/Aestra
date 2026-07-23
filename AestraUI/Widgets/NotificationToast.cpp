@@ -47,6 +47,11 @@ void NotificationToast::onUpdate(double deltaTime)
     repaint(); // animate the fade while visible
 }
 
+bool NotificationToast::onMouseEvent(const NUIMouseEvent& /*event*/)
+{
+    return false; // passive overlay — never intercept
+}
+
 void NotificationToast::setText(const std::string& text)
 {
     text_ = text;
