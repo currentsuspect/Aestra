@@ -20,10 +20,68 @@ namespace {
 
 constexpr float TRANSPORT_BUTTON_SIZE = 32.0f;
 constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
-constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
 constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
 constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
+// With the group shells gone, spacing carries the grouping: a tight gap holds a
+// cluster together (transport buttons ↔ record-aid extras), a generous gap sets
+// the transport / musical-state / view clusters apart as distinct surfaces.
+constexpr float TRANSPORT_INTRA_GAP = 14.0f;
+constexpr float TRANSPORT_SURFACE_GAP = 46.0f;
 constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
+
+// Semantic labels. Universal transport actions (play/stop/record), the
+// metronome and the piano roll read as icons on their own; every DAW-specific
+// concept carries a word so nobody has to memorise a glyph. The vocabulary is
+// deliberately terse. "LOOP REC" is never shortened to "LOOP" — that would
+// collide with playback looping.
+constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT";
+constexpr const char* TRANSPORT_LABEL_WAIT = "WAIT";
+constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP REC";
+constexpr const char* TRANSPORT_LABEL_MIXER = "MIX";
+constexpr const char* TRANSPORT_LABEL_RACK = "RACK";
+
+// 11px matches the renderer's small-text floor, so the size layout assumes is
+// the size that actually renders.
+constexpr float TRANSPORT_LABEL_FONT_SIZE = 11.0f;
+constexpr float TRANSPORT_LABEL_ICON_SIZE = 14.0f;
+constexpr float TRANSPORT_LABEL_ICON_GAP = 6.0f;
+constexpr float TRANSPORT_LABEL_PAD_X = 9.0f;
+
+// layoutComponents runs without a renderer, so label widths are estimated
+// rather than measured. Estimate high: the label is left-aligned after the
+// icon, so overshooting only adds trailing padding, while undershooting would
+// clip the word — and a clipped label defeats the whole point.
+inline float transportLabelTextWidth(const char* text) {
+    float w = 0.0f;
+    for (const char* p = text; *p != '\0'; ++p) {
+        w += (*p == ' ') ? TRANSPORT_LABEL_FONT_SIZE * 0.34f : TRANSPORT_LABEL_FONT_SIZE * 0.66f;
+    }
+    return w;
+}
+
+// An icon+label control is as wide as its word needs; icon-only controls stay
+// square. This is why the toolbar can no longer assume a uniform button width.
+inline float transportLabeledWidth(const char* text) {
+    return TRANSPORT_LABEL_PAD_X * 2.0f + TRANSPORT_LABEL_ICON_SIZE + TRANSPORT_LABEL_ICON_GAP
+           + transportLabelTextWidth(text);
+}
+
+// Record-aid cluster: COUNT · WAIT · LOOP REC · metronome (icon only).
+inline float transportExtrasWidth() {
+    return transportLabeledWidth(TRANSPORT_LABEL_COUNT_IN) + TRANSPORT_BUTTON_SPACING
+         + transportLabeledWidth(TRANSPORT_LABEL_WAIT) + TRANSPORT_BUTTON_SPACING
+         + transportLabeledWidth(TRANSPORT_LABEL_LOOP_REC) + TRANSPORT_BUTTON_SPACING
+         + TRANSPORT_BUTTON_SIZE;
+}
+
+// View cluster: MIX · RACK · piano roll (icon only). No Timeline button — the
+// title-bar Timeline tab already owns that workspace, and duplicate navigation
+// is worse than an ambiguous icon.
+inline float transportViewsWidth() {
+    return transportLabeledWidth(TRANSPORT_LABEL_MIXER) + TRANSPORT_BUTTON_SPACING
+         + transportLabeledWidth(TRANSPORT_LABEL_RACK) + TRANSPORT_BUTTON_SPACING
+         + TRANSPORT_BUTTON_SIZE;
+}
 
 // Progressive collapse for narrow windows. The transport island packs four fixed
 // groups (transport / extras / info / views). When the window can't hold them all
@@ -32,23 +90,31 @@ constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
 // (count-in / wait / loop-record / metronome), then the view switches — keeping
 // the transport buttons and tempo/time readout always visible. The transport
 // buttons and info readout never hide.
+// Collapse must preserve MEANING, not merely save width: a control either
+// appears with its label intact or it does not appear at all. Degrading
+// "LOOP REC" to a bare glyph to squeeze it in would undo the whole point of
+// labelling it.
 struct TransportLayoutTier {
     bool showExtras = true;   // count-in / wait / loop-record / metronome
-    bool showViews = true;    // mixer / sequencer / piano-roll / playlist
+    bool showViews = true;    // mixer / sequencer / piano-roll
 };
 
 inline TransportLayoutTier transportTierFor(float availWidth) {
     const float bs = TRANSPORT_BUTTON_SIZE;
     const float sp = TRANSPORT_BUTTON_SPACING;
-    const float gs = TRANSPORT_GROUP_SPACING;
+    const float intra = TRANSPORT_INTRA_GAP;
+    const float surf = TRANSPORT_SURFACE_GAP;
     const float pad = TRANSPORT_ISLAND_PADDING;
-    const float g1 = bs * 3.0f + sp * 2.0f;         // transport (3 buttons)
-    const float g = bs * 4.0f + sp * 3.0f;          // extras / views (4 buttons each)
+    const float g1 = bs * 3.0f + sp * 2.0f;         // transport (3 icon-only buttons)
+    const float extras = transportExtrasWidth();
+    const float views = transportViewsWidth();
     const float info = TRANSPORT_INFO_WIDTH;
     const float margin = 20.0f;                     // mirrors the island width clamp
-    const float full    = (g1 + gs + g + gs + info + gs + g) + pad * 2.0f;
-    const float noExtras = (g1 + gs + info + gs + g) + pad * 2.0f;
-    if (availWidth >= full + margin)    return {true, true};
+    // Mirrors layoutComponents' gap rhythm: extras tuck tight to transport (intra),
+    // clusters set apart by the surface gap.
+    const float full     = (g1 + intra + extras + surf + info + surf + views) + pad * 2.0f;
+    const float noExtras = (g1 + surf + info + surf + views) + pad * 2.0f;
+    if (availWidth >= full + margin)     return {true, true};
     if (availWidth >= noExtras + margin) return {false, true};
     return {false, false};
 }
@@ -173,37 +239,31 @@ void TransportBar::createIcons() {
     m_sequencerIcon->setColorFromTheme("textSecondary");
 
     // Piano Roll icon (MIDI Grid + Vertical Keys)
+    // A literal piano keyboard. This control carries no label, so the glyph has
+    // to be self-evident — the old version was an abstract pane with note
+    // blocks, which at 16px read as a generic panel. Kept to three white keys
+    // and two chunky black keys: a full octave turns into a barcode at this
+    // size, and the black keys need to out-weigh the key dividers to register
+    // as black keys rather than more lines.
     const char* pianoRollSvg = R"(
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-            <line x1="7" y1="4" x2="7" y2="20" stroke="currentColor" stroke-width="1"/>
-            <line x1="2" y1="8" x2="7" y2="8" stroke="currentColor" stroke-width="1"/>
-            <line x1="2" y1="12" x2="7" y2="12" stroke="currentColor" stroke-width="1"/>
-            <line x1="2" y1="16" x2="7" y2="16" stroke="currentColor" stroke-width="1"/>
-            <rect x="10" y="6" width="6" height="3" rx="1" fill="currentColor"/>
-            <rect x="15" y="10" width="4" height="3" rx="1" fill="currentColor"/>
-            <rect x="9" y="14" width="8" height="3" rx="1" fill="currentColor"/>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" fill-rule="evenodd" d="M3 6 H21 V18 H3 Z M7.7 6 H10.3 V13 H7.7 Z M13.7 6 H16.3 V13 H13.7 Z M8.55 13 H9.45 V18 H8.55 Z M14.55 13 H15.45 V18 H14.55 Z"/>
         </svg>
     )";
     m_pianoRollIcon = std::make_shared<AestraUI::NUIIcon>(pianoRollSvg);
     m_pianoRollIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_pianoRollIcon->setColorFromTheme("textSecondary");
 
-    // Playlist icon (tracks)
-    const char* playlistSvg = R"(
-        <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 13h8v-2H3v2zm0 4h8v-2H3v2zm0-8h8V7H3v2zm10-6v18h8V3h-8zm6 16h-4V5h4v14z"/>
-        </svg>
-    )";
-    m_playlistIcon = std::make_shared<AestraUI::NUIIcon>(playlistSvg);
-    m_playlistIcon->setIconSize(AestraUI::NUIIconSize::Medium);
-    m_playlistIcon->setColorFromTheme("textSecondary");
-
-    // Metronome icon (classic metronome shape)
+    // Metronome — solid trapezoid body with the pendulum arm and its weight
+    // rising clear of it. The previous outline version stacked a full-height
+    // trapezoid, a crossbar and a rod all in 1.8px strokes, which collapsed
+    // into a smudge at 16px. Keeping the arm entirely outside the body means
+    // it still reads when the whole glyph is one flat colour.
     const char* metronomeSvg = R"(
-        <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1.5L6 22h12L12 1.5zM11 8l1-3 1 3v6h-2V8z"/>
-            <circle cx="12" cy="18" r="2"/>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M9.6 12.2 H14.4 L19.8 20.6 H4.2 Z"/>
+            <path d="M12.6 12.4 L17 3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="14.8" cy="7.9" r="1.7" fill="currentColor"/>
         </svg>
     )";
     m_metronomeIcon = std::make_shared<AestraUI::NUIIcon>(metronomeSvg);
@@ -211,12 +271,14 @@ void TransportBar::createIcons() {
     m_metronomeIcon->setColorFromTheme("textSecondary");
 
     // Count-In icon (3-2-1 dots style)
+    // Three swelling beats — a count-in building to the downbeat. Shapes only:
+    // the SVG renderer ignores <text>, so the previous version's "3" never drew
+    // and all that survived was a row of dots stuck at the top of the viewBox.
     const char* countInSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <text x="12" y="17" font-family="Arial" font-size="14" font-weight="900" text-anchor="middle">3</text>
-            <circle cx="12" cy="5" r="1.5"/>
-            <circle cx="7" cy="5" r="1.5"/>
-            <circle cx="17" cy="5" r="1.5"/>
+            <circle cx="5" cy="12" r="1.3"/>
+            <circle cx="12" cy="12" r="1.9"/>
+            <circle cx="19" cy="12" r="2.6"/>
         </svg>
     )";
     m_countInIcon = std::make_shared<AestraUI::NUIIcon>(countInSvg);
@@ -341,9 +403,11 @@ void TransportBar::createButtons() {
     createViewButton(m_pianoRollButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::PianoRoll); });
     if(m_pianoRollButton) m_pianoRollButton->setTooltip("Piano Roll (F7)");
 
-    createViewButton(m_playlistButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Playlist); });
-    if(m_playlistButton) m_playlistButton->setTooltip("Playlist (F5)");
-    
+    // No Playlist button: it only toggled the same Timeline workspace the
+    // title-bar Timeline tab already owns. Duplicate navigation is worse than
+    // an ambiguous icon, so the control is gone rather than renamed. The
+    // ViewType::Playlist route itself (F5, menus) is untouched.
+
     // Add Dropdowns LAST to ensure Z-ordering
 
 }
@@ -442,7 +506,8 @@ void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
         case Audio::ViewType::Mixer: m_mixerActive = active; break;
         case Audio::ViewType::Sequencer: m_sequencerActive = active; break;
         case Audio::ViewType::PianoRoll: m_pianoRollActive = active; break;
-        case Audio::ViewType::Playlist: m_playlistActive = active; break;
+        // Timeline has no toolbar control to light up — the title-bar tab owns it.
+        case Audio::ViewType::Playlist: break;
     }
     setDirty(true);
 }
@@ -530,12 +595,15 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     
     const float iconSize = 18.0f; // Reduced from 24 to 18 for better padding in 28px button
 
-    // Helper to render universal Glass Box button
+    // Helper to render universal Glass Box button. Passing a label switches it
+    // to the inline "tiny icon + micro-label" form used by DAW-specific
+    // concepts; icon-only controls pass nullptr.
     auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn,
                                  std::shared_ptr<AestraUI::NUIIcon>& icon,
                                  bool isActive,
                                  bool isRecording = false,
-                                 bool isPrimaryTransport = false) {
+                                 bool isPrimaryTransport = false,
+                                 const char* label = nullptr) {
         if (!btn || !icon || !btn->isVisible()) return; // collapsed groups draw nothing
 
         AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
@@ -590,6 +658,27 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
             iconColor = iconColor.withAlpha(0.3f);
         }
 
+        if (label && label[0] != '\0') {
+            // Inline form: tiny icon, then the word. The word carries the
+            // meaning and the icon reinforces it, so the icon sits a step
+            // dimmer than the label rather than competing with it.
+            const AestraUI::NUIColor labelColor = iconColor;
+            const AestraUI::NUIColor dimIconColor = iconColor.withAlpha(iconColor.a * 0.70f);
+
+            const float iconY = buttonRect.y + (buttonRect.height - TRANSPORT_LABEL_ICON_SIZE) * 0.5f;
+            AestraUI::NUIRect labelIconRect(buttonRect.x + TRANSPORT_LABEL_PAD_X, iconY,
+                                            TRANSPORT_LABEL_ICON_SIZE, TRANSPORT_LABEL_ICON_SIZE);
+            icon->setBounds(labelIconRect);
+            icon->setColor(dimIconColor);
+            icon->onRender(renderer);
+
+            const float textX = labelIconRect.x + TRANSPORT_LABEL_ICON_SIZE + TRANSPORT_LABEL_ICON_GAP;
+            renderer.drawText(label,
+                              {textX, renderer.calculateTextY(buttonRect, TRANSPORT_LABEL_FONT_SIZE)},
+                              TRANSPORT_LABEL_FONT_SIZE, labelColor);
+            return;
+        }
+
         // Render Icon
         const float localIconSize = isPrimaryTransport ? 18.0f : 16.0f;
         float localPadding = (buttonRect.width - localIconSize) * 0.5f;
@@ -620,18 +709,20 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     renderGlassButton(m_recordButton, m_recordIcon, m_recordButton->isToggled(), m_recordButton->isToggled(), true);
 
     // --- Transport Extras (Left of Metronome) ---
-    renderGlassButton(m_countInButton, m_countInIcon, m_countInActive);
-    renderGlassButton(m_waitButton, m_waitIcon, m_waitActive);
-    renderGlassButton(m_loopRecordButton, m_loopRecordIcon, m_loopRecordActive);
-    
+    // Record aids are Aestra-specific concepts, so each carries its word.
+    renderGlassButton(m_countInButton, m_countInIcon, m_countInActive, false, false, TRANSPORT_LABEL_COUNT_IN);
+    renderGlassButton(m_waitButton, m_waitIcon, m_waitActive, false, false, TRANSPORT_LABEL_WAIT);
+    renderGlassButton(m_loopRecordButton, m_loopRecordIcon, m_loopRecordActive, false, false, TRANSPORT_LABEL_LOOP_REC);
+
     // --- Metronome (Left of Center) ---
+    // Icon only: a metronome is universally legible.
     renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);
 
     // --- View Toggles (Right) ---
-    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);
-    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
+    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive, false, false, TRANSPORT_LABEL_MIXER);
+    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive, false, false, TRANSPORT_LABEL_RACK);
+    // Icon only: a keyboard reads as a piano roll without help.
     renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
-    renderGlassButton(m_playlistButton, m_playlistIcon, m_playlistActive);
 }
 
 // =============================================================================
@@ -660,7 +751,6 @@ void TransportBar::layoutComponents() {
     const float primaryButtonScale = 1.0f;
     const float primaryButtonSize = buttonSize * primaryButtonScale;
     float spacing = TRANSPORT_BUTTON_SPACING;
-    float groupSpacing = TRANSPORT_GROUP_SPACING;
 
     // --- Layout Logic: Center-Out Calculation ---
     // We calculate the required width first to center the island perfectly
@@ -668,9 +758,10 @@ void TransportBar::layoutComponents() {
     // Group 1: Transport (Play, Stop, Rec)
     float group1Width = (buttonSize * 3) + (spacing * 2);
     
-    // Group 2: Extras (Count, Wait, Loop, Metronome)
-    float group2Width = (buttonSize * 4) + (spacing * 3);
-    
+    // Group 2: Extras (COUNT, WAIT, LOOP REC, metronome) — labelled controls
+    // size to their word, so this is no longer 4 uniform squares.
+    float group2Width = transportExtrasWidth();
+
     // Group 3: Info Display (Center)
     // Compact Info: 180px instead of 220px -> reduce to 160px for tighter packing?
     // Let's check TransportInfoContainer first, but for now allow 170.
@@ -678,17 +769,22 @@ void TransportBar::layoutComponents() {
     // Expanded Info: 220px to accommodate children
     float infoWidth = 260.0f;
     
-    // Group 4: Views (Mixer, Seq, Piano, Playlist) - 4 buttons
-    float group4Width = (buttonSize * 4) + (spacing * 3);
+    // Group 4: Views (MIX, RACK, piano roll) - 3 controls
+    float group4Width = transportViewsWidth();
 
     // Which secondary groups fit? (hide extras first, then views — see helper)
-    const TransportLayoutTier tier = transportTierFor(bounds.width);
+    // The visualizers overlay the right of this row, so the island only owns the
+    // width left of them.
+    const float availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);
+    const TransportLayoutTier tier = transportTierFor(availWidth);
 
-    // Total Content Width — only count the groups we'll actually place. Order is
-    // transport, (extras), info, (views), with one gap between adjacent groups.
-    float totalContentWidth = group1Width + groupSpacing + infoWidth
-        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
-        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
+    // Total Content Width — clusters set apart by a surface gap, extras tucked
+    // tight to the transport buttons (one cluster). Order: transport, (extras),
+    // info, (views).
+    float totalContentWidth = group1Width
+        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
+        + TRANSPORT_SURFACE_GAP + infoWidth
+        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -701,7 +797,17 @@ void TransportBar::layoutComponents() {
     const float visualCenterBiasY = 0.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
-    
+
+    // Stay centred on the window while there's room, but never slide under the
+    // visualizers — with labelled controls the island is wide enough that a
+    // plain centre would put the rightmost view button beneath the scope.
+    if (m_rightReservedWidth > 0.0f) {
+        const float rightLimit = bounds.width - m_rightReservedWidth;
+        if (islandX + islandWidth > rightLimit) {
+            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));
+        }
+    }
+
     // Check min width/fallback
     if (bounds.width < islandWidth) {
         islandX = 0;
@@ -727,24 +833,32 @@ void TransportBar::layoutComponents() {
     xCursor += buttonSize + spacing;
     
     placePrimaryButton(m_recordButton, xCursor);
-    xCursor += buttonSize + groupSpacing; // GAP
+    // Tight gap to the extras (same Transport cluster); if extras are collapsed,
+    // it's a full surface gap onward to the musical-state cluster.
+    xCursor += buttonSize + (tier.showExtras ? TRANSPORT_INTRA_GAP : TRANSPORT_SURFACE_GAP);
 
     // Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so
     // the buttons neither render nor take clicks when collapsed.
-    const auto placeExtra = [&](const std::shared_ptr<AestraUI::NUIButton>& button) {
+    // A null label means icon-only, so the control stays square; otherwise it is
+    // as wide as its word. The hitbox is the full labelled width, so the word is
+    // clickable, not just the glyph.
+    const auto placeExtra = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* label) {
         if (!button) return;
         button->setVisible(tier.showExtras);
         if (tier.showExtras) {
-            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-            xCursor += buttonSize + spacing;
+            const float w = label ? transportLabeledWidth(label) : buttonSize;
+            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));
+            xCursor += w + spacing;
         }
     };
-    placeExtra(m_countInButton);
-    placeExtra(m_waitButton);
-    placeExtra(m_loopRecordButton);
-    placeExtra(m_metronomeButton);
+    placeExtra(m_countInButton, TRANSPORT_LABEL_COUNT_IN);
+    placeExtra(m_waitButton, TRANSPORT_LABEL_WAIT);
+    placeExtra(m_loopRecordButton, TRANSPORT_LABEL_LOOP_REC);
+    placeExtra(m_metronomeButton, nullptr);
     if (tier.showExtras) {
-        xCursor += -spacing + groupSpacing; // last extra added a trailing spacing; swap it for a GAP
+        // Last extra added a trailing button spacing; swap it for the surface gap
+        // that sets the Transport cluster apart from the musical-state cluster.
+        xCursor += -spacing + TRANSPORT_SURFACE_GAP;
     }
 
     // Group 3: Info Container (always shown)
@@ -754,19 +868,19 @@ void TransportBar::layoutComponents() {
     xCursor += infoWidth;
 
     // Group 4: Views — hidden first on the narrowest windows.
-    const auto placeView = [&](const std::shared_ptr<AestraUI::NUIButton>& button, bool advance) {
+    const auto placeView = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* label, bool advance) {
         if (!button) return;
         button->setVisible(tier.showViews);
         if (tier.showViews) {
-            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-            if (advance) xCursor += buttonSize + spacing;
+            const float w = label ? transportLabeledWidth(label) : buttonSize;
+            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));
+            if (advance) xCursor += w + spacing;
         }
     };
-    if (tier.showViews) xCursor += groupSpacing; // GAP before views
-    placeView(m_mixerButton, true);
-    placeView(m_sequencerButton, true);
-    placeView(m_pianoRollButton, true);
-    placeView(m_playlistButton, false);
+    if (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; // surface gap before the view cluster
+    placeView(m_mixerButton, TRANSPORT_LABEL_MIXER, true);
+    placeView(m_sequencerButton, TRANSPORT_LABEL_RACK, true);
+    placeView(m_pianoRollButton, nullptr, false);
 
     if (m_musicalTypingLabel) {
         constexpr float statusWidth = 82.0f;
@@ -798,18 +912,19 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // Compact Values (Relaxed per user request: "space would have done the trick")
     float buttonSize = TRANSPORT_BUTTON_SIZE;
     float spacing = TRANSPORT_BUTTON_SPACING;
-    float groupSpacing = TRANSPORT_GROUP_SPACING;
     float group1Width = (buttonSize * 3) + (spacing * 2);
-    float group2Width = (buttonSize * 4) + (spacing * 3);
+    float group2Width = transportExtrasWidth();
     float infoWidth = TRANSPORT_INFO_WIDTH;
-    float group4Width = (buttonSize * 4) + (spacing * 3);
+    float group4Width = transportViewsWidth();
 
-    // Must mirror layoutComponents: same collapse tier drives which groups exist.
-    const TransportLayoutTier tier = transportTierFor(bounds.width);
+    // Must mirror layoutComponents: same available width, same collapse tier.
+    const float availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);
+    const TransportLayoutTier tier = transportTierFor(availWidth);
 
-    float totalContentWidth = group1Width + groupSpacing + infoWidth
-        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
-        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
+    float totalContentWidth = group1Width
+        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
+        + TRANSPORT_SURFACE_GAP + infoWidth
+        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -819,7 +934,15 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float visualCenterBiasY = -1.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
-    
+
+    // Mirrors layoutComponents: keep the island clear of the visualizers.
+    if (m_rightReservedWidth > 0.0f) {
+        const float rightLimit = bounds.width - m_rightReservedWidth;
+        if (islandX + islandWidth > rightLimit) {
+            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));
+        }
+    }
+
     if (bounds.width < islandWidth) {
         islandX = 0;
         islandWidth = bounds.width;
@@ -833,53 +956,10 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
                       1.0f,
                       themeManager.getColor("border").withAlpha(0.52f));
     
-    const float leftEdge = islandRect.x + islandPadding;
-    const float topInset = 6.0f;
-    const float bottomInset = 6.0f;
-    const float available = islandRect.height - topInset - bottomInset;
-    const float groupH = std::max(0.0f, std::min(36.0f, available));
-    const float groupY = islandRect.y + topInset;
-    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
-    const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
-    const float groupRadius = themeManager.getRadius("m"); // group shell corner
-    const auto drawGroup = [&](float x, float w) {
-        if (w <= 0.0f) {
-            return;
-        }
-        AestraUI::NUIRect groupRect(std::round(x), std::round(groupY), std::round(w), groupH);
-        renderer.fillRoundedRect(groupRect, groupRadius, groupBg);
-        renderer.strokeRoundedRect(groupRect, groupRadius, 1.0f, groupBorder);
-    };
-
-    // Build the present groups in order (transport, [extras], info, [views]) so the
-    // shells + separators match whatever layoutComponents placed for this tier.
-    std::vector<std::pair<float, float>> groupContent; // (x, contentWidth)
-    float cx = leftEdge;
-    groupContent.emplace_back(cx, group1Width);
-    cx += group1Width + groupSpacing;
-    if (tier.showExtras) {
-        groupContent.emplace_back(cx, group2Width);
-        cx += group2Width + groupSpacing;
-    }
-    groupContent.emplace_back(cx, infoWidth);
-    cx += infoWidth + groupSpacing;
-    if (tier.showViews) {
-        groupContent.emplace_back(cx, group4Width);
-        cx += group4Width + groupSpacing;
-    }
-
-    for (const auto& g : groupContent) {
-        drawGroup(g.first - 6.0f, g.second + 12.0f);
-    }
-
-    const float sepTop = islandRect.y + 8.0f;
-    const float sepBottom = islandRect.bottom() - 8.0f;
-    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.58f);
-    for (size_t i = 1; i < groupContent.size(); ++i) {
-        const float prevRight = groupContent[i - 1].first + groupContent[i - 1].second;
-        const float sepX = (prevRight + groupContent[i].first) * 0.5f;
-        renderer.drawLine({sepX, sepTop}, {sepX, sepBottom}, 1.0f, sepColor);
-    }
+    // No per-group shells or separators: the toolbar reads as one purpose-built
+    // instrument, with the transport / musical-state / workspace surfaces set
+    // apart by spacing (in layoutComponents) rather than boxes and borders.
+    (void)islandRect;
 
     renderChildren(renderer);
     renderButtonIcons(renderer);
@@ -912,13 +992,14 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         {m_stopButton, "Stop"},
         {m_recordButton, "Record"},
         {m_metronomeButton, "Metronome"},
+        // Labelled controls: the word on the button already says what it is, so
+        // the tooltip confirms and adds the shortcut instead of translating.
         {m_countInButton, "Count-In"},
         {m_waitButton, "Wait for Input"},
         {m_loopRecordButton, "Loop Record"},
-        {m_mixerButton, "Mixer"},
-        {m_sequencerButton, "Arsenal"},
-        {m_pianoRollButton, "Piano Roll"},
-        {m_playlistButton, "Timeline"}
+        {m_mixerButton, "Mixer (F3)"},
+        {m_sequencerButton, "Arsenal — Channel Rack (F6)"},
+        {m_pianoRollButton, "Piano Roll (F7)"}
     };
 
     for (const auto& [button, text] : tooltipButtons) {
