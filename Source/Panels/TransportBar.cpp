@@ -38,7 +38,10 @@ constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT";
 constexpr const char* TRANSPORT_LABEL_WAIT = "WAIT";
 constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP REC";
 constexpr const char* TRANSPORT_LABEL_MIXER = "MIX";
-constexpr const char* TRANSPORT_LABEL_RACK = "RACK";
+// The view is called Arsenal everywhere else in the product. Labelling it
+// "RACK" invented a second name for one thing, which is exactly the kind of
+// translation a label is supposed to remove.
+constexpr const char* TRANSPORT_LABEL_ARSENAL = "ARSENAL";
 
 // 11px matches the renderer's small-text floor, so the size layout assumes is
 // the size that actually renders.
@@ -74,12 +77,12 @@ inline float transportExtrasWidth() {
          + TRANSPORT_BUTTON_SIZE;
 }
 
-// View cluster: MIX · RACK · piano roll (icon only). No Timeline button — the
+// View cluster: MIX · ARSENAL · piano roll (icon only). No Timeline button — the
 // title-bar Timeline tab already owns that workspace, and duplicate navigation
 // is worse than an ambiguous icon.
 inline float transportViewsWidth() {
     return transportLabeledWidth(TRANSPORT_LABEL_MIXER) + TRANSPORT_BUTTON_SPACING
-         + transportLabeledWidth(TRANSPORT_LABEL_RACK) + TRANSPORT_BUTTON_SPACING
+         + transportLabeledWidth(TRANSPORT_LABEL_ARSENAL) + TRANSPORT_BUTTON_SPACING
          + TRANSPORT_BUTTON_SIZE;
 }
 
@@ -229,9 +232,18 @@ void TransportBar::createIcons() {
     m_mixerIcon->setColorFromTheme("textSecondary");
 
     // Sequencer icon (Grid)
+    // Arsenal — three channel strips, each a pad plus its lane. The old glyph
+    // was a plain 3x3 grid, which is the universal "apps" icon and said nothing
+    // about channels. Horizontal lanes also read differently from the mixer's
+    // vertical faders, so the two view buttons don't blur together.
     const char* sequencerSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
+            <rect x="3" y="5.2" width="4" height="3.8" rx="1.1"/>
+            <rect x="8.8" y="5.2" width="12.2" height="3.8" rx="1.1"/>
+            <rect x="3" y="10.6" width="4" height="3.8" rx="1.1"/>
+            <rect x="8.8" y="10.6" width="9" height="3.8" rx="1.1"/>
+            <rect x="3" y="16" width="4" height="3.8" rx="1.1"/>
+            <rect x="8.8" y="16" width="10.8" height="3.8" rx="1.1"/>
         </svg>
     )";
     m_sequencerIcon = std::make_shared<AestraUI::NUIIcon>(sequencerSvg);
@@ -720,7 +732,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 
     // --- View Toggles (Right) ---
     renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive, false, false, TRANSPORT_LABEL_MIXER);
-    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive, false, false, TRANSPORT_LABEL_RACK);
+    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive, false, false, TRANSPORT_LABEL_ARSENAL);
     // Icon only: a keyboard reads as a piano roll without help.
     renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
 }
@@ -879,7 +891,7 @@ void TransportBar::layoutComponents() {
     };
     if (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; // surface gap before the view cluster
     placeView(m_mixerButton, TRANSPORT_LABEL_MIXER, true);
-    placeView(m_sequencerButton, TRANSPORT_LABEL_RACK, true);
+    placeView(m_sequencerButton, TRANSPORT_LABEL_ARSENAL, true);
     placeView(m_pianoRollButton, nullptr, false);
 
     if (m_musicalTypingLabel) {
@@ -998,7 +1010,7 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         {m_waitButton, "Wait for Input"},
         {m_loopRecordButton, "Loop Record"},
         {m_mixerButton, "Mixer (F3)"},
-        {m_sequencerButton, "Arsenal — Channel Rack (F6)"},
+        {m_sequencerButton, "Arsenal (F6)"},
         {m_pianoRollButton, "Piano Roll (F7)"}
     };
 
