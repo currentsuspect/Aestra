@@ -37,11 +37,12 @@ constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
 constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT";
 constexpr const char* TRANSPORT_LABEL_WAIT = "WAIT";
 constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP REC";
-constexpr const char* TRANSPORT_LABEL_MIXER = "MIX";
-// The view is called Arsenal everywhere else in the product. Labelling it
-// "RACK" invented a second name for one thing, which is exactly the kind of
-// translation a label is supposed to remove.
-constexpr const char* TRANSPORT_LABEL_ARSENAL = "ARSENAL";
+// The view switches carry no labels. Faders and a rack of channel strips are
+// vocabulary any producer already owns, so the glyphs stand on their own and
+// the workspace cluster stays visually light next to the labelled record aids.
+// Their tooltips name them ("Mixer (F3)", "Arsenal (F6)", "Piano Roll (F7)");
+// the view is called Arsenal everywhere else in the product, so nothing here
+// invents a second name for it.
 
 // 11px matches the renderer's small-text floor, so the size layout assumes is
 // the size that actually renders.
@@ -77,13 +78,11 @@ inline float transportExtrasWidth() {
          + TRANSPORT_BUTTON_SIZE;
 }
 
-// View cluster: MIX · ARSENAL · piano roll (icon only). No Timeline button — the
-// title-bar Timeline tab already owns that workspace, and duplicate navigation
-// is worse than an ambiguous icon.
+// View cluster: mixer · arsenal · piano roll, all icon-only. No Timeline button
+// — the title-bar Timeline tab already owns that workspace, and duplicate
+// navigation is worse than an ambiguous icon.
 inline float transportViewsWidth() {
-    return transportLabeledWidth(TRANSPORT_LABEL_MIXER) + TRANSPORT_BUTTON_SPACING
-         + transportLabeledWidth(TRANSPORT_LABEL_ARSENAL) + TRANSPORT_BUTTON_SPACING
-         + TRANSPORT_BUTTON_SIZE;
+    return TRANSPORT_BUTTON_SIZE * 3.0f + TRANSPORT_BUTTON_SPACING * 2.0f;
 }
 
 // Progressive collapse for narrow windows. The transport island packs four fixed
@@ -731,9 +730,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);
 
     // --- View Toggles (Right) ---
-    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive, false, false, TRANSPORT_LABEL_MIXER);
-    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive, false, false, TRANSPORT_LABEL_ARSENAL);
-    // Icon only: a keyboard reads as a piano roll without help.
+    // All icon-only: faders, a channel rack and a keyboard are vocabulary a
+    // producer already has. Tooltips confirm rather than translate.
+    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);
+    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
     renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
 }
 
@@ -890,8 +890,8 @@ void TransportBar::layoutComponents() {
         }
     };
     if (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; // surface gap before the view cluster
-    placeView(m_mixerButton, TRANSPORT_LABEL_MIXER, true);
-    placeView(m_sequencerButton, TRANSPORT_LABEL_ARSENAL, true);
+    placeView(m_mixerButton, nullptr, true);
+    placeView(m_sequencerButton, nullptr, true);
     placeView(m_pianoRollButton, nullptr, false);
 
     if (m_musicalTypingLabel) {
