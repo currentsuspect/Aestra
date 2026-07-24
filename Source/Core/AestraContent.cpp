@@ -27,6 +27,7 @@
 #include "Plugin/AestraLFO.h"
 #include "PluginManager.h"
 #include "SampleEditorPanel.h"
+#include "AudioClipEditorPanel.h"
 
 // AestraUI includes
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -334,6 +335,7 @@ void AestraContent::setupTrackManagerUI() {
     m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
     m_trackManagerUI->setOnOpenPatternInPianoRoll([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
+    m_trackManagerUI->setOnOpenAudioClipEditor([this](ClipInstanceID clipId) { openAudioClipEditor(clipId); });
     m_trackManagerUI->setOnPreviewPatternClip([this](PatternID patternId) { startPatternClipPreview(patternId); });
     m_trackManagerUI->setOnStopPatternClipPreview([this]() { stopPatternClipPreview(true); });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
@@ -1026,6 +1028,44 @@ void AestraContent::setupArsenalPanels() {
         m_trackManager->markModified();
     };
     m_overlayLayer->addChild(m_sampleEditorPanel);
+
+    m_audioClipEditorPanel = std::make_shared<AudioClipEditorPanel>(m_trackManager);
+    m_audioClipEditorPanel->setVisible(false);
+    m_audioClipEditorPanel->setOnClose([this]() {
+        if (m_audioClipEditorPanel) {
+            m_audioClipEditorPanel->setVisible(false);
+        }
+    });
+    m_audioClipEditorPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
+    m_audioClipEditorPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) {
+        if (!m_overlayLayer)
+            return;
+        m_sampleEditorDragging = true;
+        m_sampleEditorDragStartMouseOverlay = m_overlayLayer->globalToLocal(pos);
+        m_sampleEditorDragStartRect = m_sampleEditorRect;
+    });
+    m_audioClipEditorPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) {
+        if (!m_overlayLayer || !m_sampleEditorDragging || !m_audioClipEditorPanel)
+            return;
+        const AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(pos);
+        const AestraUI::NUIPoint delta = currentMouseOverlay - m_sampleEditorDragStartMouseOverlay;
+        AestraUI::NUIRect proposed = m_sampleEditorDragStartRect;
+        proposed.x += delta.x;
+        proposed.y += delta.y;
+        m_sampleEditorRect = clampRectToAllowed(proposed, computeAllowedRectForPanels());
+        m_audioClipEditorPanel->setBounds(m_sampleEditorRect);
+        setDirty(true);
+    });
+    m_audioClipEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
+    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 430.0f);
+    m_audioClipEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        m_sampleEditorRect = clampRectToAllowed(proposed, computeAllowedRectForPanels());
+        if (m_audioClipEditorPanel)
+            m_audioClipEditorPanel->setBounds(m_sampleEditorRect);
+        setDirty(true);
+    });
+    m_overlayLayer->addChild(m_audioClipEditorPanel);
 
     // Antigravity Bindings (v3.1)
     m_sequencerPanel->setOnRequestEditor([this](UnitID id) {
@@ -1762,15 +1802,21 @@ void AestraContent::onResize(int width, int height) {
         }
     }
 
-    if (m_sampleEditorPanel && m_sampleEditorPanel->isVisible()) {
+    if ((m_sampleEditorPanel && m_sampleEditorPanel->isVisible()) ||
+        (m_audioClipEditorPanel && m_audioClipEditorPanel->isVisible())) {
         if (m_sampleEditorRect.x == 0.0f && m_sampleEditorRect.y == 0.0f) {
-            m_sampleEditorRect.width = std::min(640.0f, allowed.width);
+            m_sampleEditorRect.width = std::min(700.0f, allowed.width);
             m_sampleEditorRect.height = std::min(430.0f, allowed.height);
             m_sampleEditorRect.x = allowed.x + (allowed.width - m_sampleEditorRect.width) * 0.5f;
             m_sampleEditorRect.y = allowed.y + (allowed.height - m_sampleEditorRect.height) * 0.5f;
         }
         m_sampleEditorRect = clampRectToAllowed(m_sampleEditorRect, allowed);
-        m_sampleEditorPanel->setBounds(m_sampleEditorRect);
+        if (m_sampleEditorPanel && m_sampleEditorPanel->isVisible()) {
+            m_sampleEditorPanel->setBounds(m_sampleEditorRect);
+        }
+        if (m_audioClipEditorPanel && m_audioClipEditorPanel->isVisible()) {
+            m_audioClipEditorPanel->setBounds(m_sampleEditorRect);
+        }
     }
 
     if (m_workspaceLayer) {
@@ -2558,6 +2604,10 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     if (sampleStyle != AestraUI::NUICursorStyle::Arrow)
         return sampleStyle;
 
+    const auto audioClipStyle = resolveStyle(m_audioClipEditorPanel);
+    if (audioClipStyle != AestraUI::NUICursorStyle::Arrow)
+        return audioClipStyle;
+
     const auto pianoStyle = resolveStyle(m_pianoRollPanel);
     if (pianoStyle != AestraUI::NUICursorStyle::Arrow)
         return pianoStyle;
@@ -3224,9 +3274,9 @@ void AestraContent::addDemoTracks() {
     const int DEFAULT_TRACK_COUNT = 50;
 
     for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
-        std::string name = "Track " + std::to_string(i);
-        PlaylistLaneID laneId = playlist.createLane(name);
-        m_trackManager->addChannel(name);
+        const std::string laneName = "Track " + std::to_string(i);
+        PlaylistLaneID laneId = playlist.createLane(laneName);
+        m_trackManager->addChannel("Insert " + std::to_string(i));
 
         if (auto* lane = playlist.getLane(laneId)) {
             // Cycle the shared track palette so the lane strip matches the
@@ -3235,6 +3285,9 @@ void AestraContent::addDemoTracks() {
 
             if (i == 1) {
                 AutomationCurve vol("Volume", AutomationTarget::Volume);
+                if (const auto* channel = m_trackManager->getChannel(static_cast<size_t>(i - 1))) {
+                    vol.mixerChannelId = channel->getChannelId();
+                }
                 vol.setDefaultValue(0.8);
                 double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Demo values
                 vol.addPoint(0.0, 0.5, samplesPerBeat, 0.5f);
@@ -3664,12 +3717,32 @@ void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& sa
         return;
     }
     m_sampleEditorUnitId = unitId;
+    if (m_audioClipEditorPanel) {
+        m_audioClipEditorPanel->setVisible(false);
+    }
     syncSampleEditorToUnit(unitId);
     m_sampleEditorPanel->loadSample(samplePath);
     m_sampleEditorPanel->setVisible(true);
     m_sampleEditorPanel->bringToFront();
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     m_sampleEditorPanel->setDirty(true);
+}
+
+void AestraContent::openAudioClipEditor(ClipInstanceID clipId) {
+    if (!m_audioClipEditorPanel || !clipId.isValid()) {
+        return;
+    }
+    if (!m_audioClipEditorPanel->openClip(clipId)) {
+        return;
+    }
+    if (m_sampleEditorPanel) {
+        m_sampleEditorPanel->setVisible(false);
+    }
+    m_sampleEditorUnitId = 0;
+    m_audioClipEditorPanel->setVisible(true);
+    m_audioClipEditorPanel->bringToFront();
+    onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    m_audioClipEditorPanel->setDirty(true);
 }
 
 void AestraContent::updateSoundPreview() {
@@ -3743,21 +3816,9 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (!m_trackManager)
         return;
 
-    // 2. Resolve the target channel: the selected track's mixer channel when a
-    //    track is selected (mirrors the sample-drop selection path), otherwise
-    //    fall back to the first channel. The shared_ptr keeps the selected
-    //    channel alive for the duration of this call.
-    MixerChannel* channel = nullptr;
-    std::shared_ptr<MixerChannel> selectedChannel;
-    if (m_trackManagerUI) {
-        if (auto* selectedTrack = m_trackManagerUI->getSelectedTrackUI()) {
-            selectedChannel = selectedTrack->getMixerChannel();
-            channel = selectedChannel.get();
-        }
-    }
-    if (!channel) {
-        channel = m_trackManager->getChannel(0);
-    }
+    // 2. Playlist selection does not imply a mixer destination. Until the
+    // mixer exposes its own selected-insert state, use the first insert.
+    MixerChannel* channel = m_trackManager->getChannel(0);
     if (!channel) {
         AESTRA_LOG_ERROR("Cannot load effect: no mixer channel available");
         return;
