@@ -145,11 +145,6 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     , m_trackManager(trackManager)
 {
     // Log::info("TrackUIComponent ctor: " + m_laneId.toString());
-    if (!m_channel) {
-        Log::error("TrackUIComponent created with null channel");
-        return;
-    }
-
     // Create track name label
     m_nameLabel = std::make_shared<AestraUI::NUILabel>();
     
@@ -159,7 +154,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
             name = lane->name;
         }
     }
-    m_nameLabel->setText(name.empty() ? m_channel->getName() : name);
+    m_nameLabel->setText(name.empty() ? "Lane" : name);
 
     {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -203,13 +198,16 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_soloButton->setTooltip("Solo Track (S)");
     addChild(m_soloButton);
 
-    // Create record button
-    m_recordButton = std::make_shared<AestraUI::NUIButton>();
-    m_recordButton->setText("");
-    configureFlatTrackButton(m_recordButton);
-    m_recordButton->setToggleable(true);
-    m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
-    addChild(m_recordButton);
+    // Recording is armed from mixer inserts. A Playlist lane only receives a
+    // record control when an explicit mixer association is supplied.
+    if (m_channel) {
+        m_recordButton = std::make_shared<AestraUI::NUIButton>();
+        m_recordButton->setText("");
+        configureFlatTrackButton(m_recordButton);
+        m_recordButton->setToggleable(true);
+        m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
+        addChild(m_recordButton);
+    }
 
     updateUI();
 }
@@ -222,7 +220,52 @@ TrackUIComponent::~TrackUIComponent() {
         m_platformBridge->cancelCursorCapture();
     }
     detachContextMenu(m_recordModeMenu);
+    detachContextMenu(m_clipRoutingMenu);
     Log::debug("TrackUIComponent destroyed for lane: " + m_laneId.toString());
+}
+
+void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const AestraUI::NUIPoint& position) {
+    detachContextMenu(m_clipRoutingMenu);
+    if (!m_trackManager) {
+        return;
+    }
+
+    const auto* clip = m_trackManager->getPlaylistModel().getClip(clipId);
+    auto* pattern = clip ? m_trackManager->getPatternManager().getPattern(clip->patternId) : nullptr;
+    m_clipRoutingMenu = std::make_shared<AestraUI::NUIContextMenu>();
+    m_clipRoutingMenu->setOnHide([this]() { detachContextMenu(m_clipRoutingMenu); });
+
+    if (pattern && pattern->isAudio()) {
+        const uint32_t selectedId = pattern->getMixerChannelId();
+        const auto addDestination = [this, patternId = pattern->id, selectedId](uint32_t channelId,
+                                                                                const std::string& label) {
+            m_clipRoutingMenu->addItem((selectedId == channelId ? "✓ " : "  ") + label, [this, patternId, channelId]() {
+                if (m_trackManager->setAudioPatternMixerChannel(patternId, channelId)) {
+                    repaint();
+                    if (m_onCacheInvalidationCallback) {
+                        m_onCacheInvalidationCallback();
+                    }
+                }
+            });
+        };
+
+        m_clipRoutingMenu->addItem("Source routing (all linked clips)", []() {});
+        m_clipRoutingMenu->addSeparator();
+        addDestination(0, "Master");
+        for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+            if (const auto* channel = m_trackManager->getChannel(i)) {
+                addDestination(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
+            }
+        }
+        m_clipRoutingMenu->addSeparator();
+    }
+
+    m_clipRoutingMenu->addItem("Delete clip", [this, clipId, position]() {
+        if (m_onClipDeletedCallback) {
+            m_onClipDeletedCallback(this, clipId, position);
+        }
+    });
+    attachAndShowContextMenu(this, m_clipRoutingMenu, position);
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -258,17 +301,16 @@ void TrackUIComponent::onPanChanged(float pan) {
 
 
 void TrackUIComponent::onMuteToggled() {
-    if (m_channel && m_trackManager) {
+    if (m_trackManager) {
         bool isMuted = m_muteButton->isToggled();
-        m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetMuteCommand>(*m_channel, isMuted));
-
-        // Mutual Exclusivity: If Muting, turn off Solo
-        if (isMuted && m_channel->isSoloed()) {
-             Log::info("Mutual Exclusivity: Turning OFF Solo because Mute activated.");
-             m_trackManager->getCommandHistory().pushAndExecute(
-                 std::make_shared<SetSoloCommand>(*m_channel, false));
-             if (m_soloButton) m_soloButton->setToggled(false);
+        if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+            lane->muted = isMuted;
+            if (isMuted) {
+                lane->solo = false;
+                if (m_soloButton) m_soloButton->setToggled(false);
+            }
+            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            m_trackManager->markModified();
         }
 
         Log::info("Lane " + m_laneId.toString() + " muted: " + (isMuted ? "ON" : "OFF"));
@@ -280,17 +322,16 @@ void TrackUIComponent::onMuteToggled() {
 
 
 void TrackUIComponent::onSoloToggled() {
-    if (m_channel && m_trackManager) {
+    if (m_trackManager) {
         bool newSolo = m_soloButton->isToggled(); // Use button state
-        m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetSoloCommand>(*m_channel, newSolo));
-
-        // Mutual Exclusivity: If Soloing, turn off Mute
-        if (newSolo && m_channel->isMuted()) {
-            Log::info("Mutual Exclusivity: Turning OFF Mute because Solo activated.");
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetMuteCommand>(*m_channel, false));
-            if (m_muteButton) m_muteButton->setToggled(false);
+        if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+            lane->solo = newSolo;
+            if (newSolo) {
+                lane->muted = false;
+                if (m_muteButton) m_muteButton->setToggled(false);
+            }
+            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            m_trackManager->markModified();
         }
 
         if (newSolo && m_onSoloToggledCallback) {
@@ -359,8 +400,6 @@ void TrackUIComponent::updateRecordTooltip() {
 
 
 void TrackUIComponent::updateUI() {
-    if (!m_channel) return;
-
     // Invalidate parent cache since button colors are changing
     if (m_onCacheInvalidationCallback) {
         m_onCacheInvalidationCallback();
@@ -387,9 +426,10 @@ void TrackUIComponent::updateUI() {
         if (active) button->setBorderColor(statusColor.withAlpha(0.48f));
     };
 
-    configureStatusButton(m_muteButton, m_channel->isMuted(), themeManager.getColor("muted"));
-    configureStatusButton(m_soloButton, m_channel->isSoloed(), themeManager.getColor("soloed"));
-    configureStatusButton(m_recordButton, m_channel->isArmed(), themeManager.getColor("armed"));
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+    configureStatusButton(m_muteButton, lane && lane->muted, themeManager.getColor("muted"));
+    configureStatusButton(m_soloButton, lane && lane->solo, themeManager.getColor("soloed"));
+    configureStatusButton(m_recordButton, m_channel && m_channel->isArmed(), themeManager.getColor("armed"));
 
     if (m_recordButton) {
         updateRecordTooltip();
@@ -404,22 +444,16 @@ void TrackUIComponent::updateUI() {
         m_volumeFader->setFillColor(themeManager.getColor("accentPrimary").withAlpha(0.72f));
         m_volumeFader->setThumbColor(themeManager.getColor("textPrimary").withAlpha(0.92f));
         m_volumeFader->setThumbHoverColor(themeManager.getColor("textPrimary"));
-        m_volumeFader->setValue(m_channel->getVolume());
+        m_volumeFader->setValue(m_channel ? m_channel->getVolume() : 1.0f);
     }
 }
 
 
 void TrackUIComponent::updateTrackNameColors() {
-    if (!m_nameLabel || !m_channel) return;
-
-    int colorIndex = m_channel->getTrackColorIndex();
-    if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-        // trackId is unsigned; guard id 0 or the subtraction wraps to UINT32_MAX.
-        uint32_t trackId = m_channel->getChannelId();
-        colorIndex = static_cast<int>((trackId > 0 ? trackId - 1 : 0) % AestraUI::PALETTE_SIZE);
+    if (!m_nameLabel || !m_trackManager) return;
+    if (const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+        m_nameLabel->setTextColor(AestraUI::NUIColor::fromARGB(lane->colorRGBA).withAlpha(0.82f));
     }
-    m_nameLabel->setTextColor(
-        AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex)).withAlpha(0.82f));
 }
 
 void TrackUIComponent::generateWaveformCache(int, int) {
@@ -766,12 +800,13 @@ AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance&
     auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
     if (!pattern) return clipColor;
 
-    // Same TRACK_PALETTE lookup as updateTrackNameColors, so clips, track
-    // names, and mixer strips all share one curated color per track
-    if (m_channel) {
-        int colorIndex = m_channel->getTrackColorIndex();
+    // Audio-source color follows its mixer destination without coupling the
+    // Playlist lane itself to that insert.
+    auto routeChannel = pattern->isAudio() ? m_trackManager->getChannelById(pattern->getMixerChannelId()) : nullptr;
+    if (routeChannel) {
+        int colorIndex = routeChannel->getTrackColorIndex();
         if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-            uint32_t trackId = m_channel->getChannelId();
+            uint32_t trackId = routeChannel->getChannelId();
             colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
         }
         clipColor = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex));
@@ -1201,13 +1236,13 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         // direction — surfaceTertiary read bluish-grey), clean surface on light.
         AestraUI::NUIColor baseControlColor = themeManager.getColor("trackChrome");
 
-        // Static Control Area State
-        if (m_channel) {
+        // Static Playlist-lane state is independent from mixer insert state.
+        if (lane) {
             if (m_selected) {
                  baseControlColor = themeManager.getColor("primary").withAlpha(0.022f);
-             } else if (m_channel->isSoloed()) {
+            } else if (lane->solo) {
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
-             } else if (m_channel->isMuted()) {
+            } else if (lane->muted) {
                  baseControlColor = themeManager.getColor("backgroundSecondary");
              } else if (isHovered()) {
                  baseControlColor = themeManager.getColor("surfaceRaised").withAlpha(0.70f);
@@ -1243,7 +1278,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
             
             const float stripWidth = 3.0f;
-            const float stripAlpha = (m_selected || (m_channel && (m_channel->isArmed() || m_channel->isSoloed()))) ? 0.86f : 0.52f;
+            const float stripAlpha = (m_selected || lane->solo) ? 0.86f : 0.52f;
             const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
@@ -1284,17 +1319,18 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
     if (m_isPrimaryForLane) {
         bool anySoloed = false;
         if (m_trackManager) {
-            // Optimization: TrackManager should pass this state down? 
-            // For now, iterating 50 tracks is cheap.
-            for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
-                if (m_trackManager->getChannel(i)->isSoloed()) {
+            auto& playlist = m_trackManager->getPlaylistModel();
+            for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
+                const auto* candidate = playlist.getLane(playlist.getLaneId(i));
+                if (candidate && candidate->solo && !candidate->muted) {
                     anySoloed = true;
                     break;
                 }
             }
         }
 
-        const bool soloSuppressed = anySoloed && m_channel && !m_channel->isSoloed();
+        const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+        const bool soloSuppressed = anySoloed && lane && !lane->solo;
 
         AestraUI::NUIRect gridArea(
             bounds.x + controlAreaWidth,
@@ -1303,13 +1339,13 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
             bounds.height
         );
         
-        if (m_channel && m_channel->isSoloed()) {
+        if (lane && lane->solo) {
             renderer.fillRect(gridArea, themeManager.getColor("accentCyan").withAlpha(0.06f));
         }
 
         float dimAlpha = 0.0f;
         if (soloSuppressed) dimAlpha = std::max(dimAlpha, 0.28f);
-        if (m_channel && m_channel->isMuted()) dimAlpha = std::max(dimAlpha, 0.40f);
+        if (lane && lane->muted) dimAlpha = std::max(dimAlpha, 0.40f);
 
         if (dimAlpha > 0.0f) {
             renderer.fillRect(gridArea, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, dimAlpha));
@@ -1414,26 +1450,27 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                          fontSize, cyan.withAlpha(0.8f));
     }
 
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+
     // Apply highlight overlay (Selection / Solo / Mute)
-    if (m_channel) {
+    if (lane) {
         bool anySoloed = false;
         if (m_trackManager) {
-            const size_t channelCount = m_trackManager->getChannelCount();
-            for (size_t i = 0; i < channelCount; ++i) {
-                if (auto ch = m_trackManager->getChannel(i)) {
-                    if (ch->isSoloed()) {
-                        anySoloed = true;
-                        break;
-                    }
+            auto& playlist = m_trackManager->getPlaylistModel();
+            for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
+                const auto* candidate = playlist.getLane(playlist.getLaneId(i));
+                if (candidate && candidate->solo && !candidate->muted) {
+                    anySoloed = true;
+                    break;
                 }
             }
         }
 
-        const bool soloSuppressed = anySoloed && !m_channel->isSoloed();
+        const bool soloSuppressed = anySoloed && !lane->solo;
 
-        if (m_channel->isSoloed()) {
+        if (lane->solo) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
-        } else if (m_channel->isMuted()) {
+        } else if (lane->muted) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.62f));
         } else if (soloSuppressed) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.44f));
@@ -1448,7 +1485,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     // Track color strip (identity)
-    if (m_channel) {
+    if (lane) {
         AestraUI::NUIColor stripColor;
         
         if (m_isLoading) {
@@ -1457,12 +1494,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             float pulse = (std::sin(static_cast<float>(Aestra::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f);
             stripColor = stripColor.withAlpha(0.6f + pulse * 0.4f);
         } else {
-            int colorIndex = m_channel->getTrackColorIndex();
-            if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-                uint32_t trackId = m_channel->getChannelId();
-                colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
-            }
-            uint32_t argb = AestraUI::paletteIndexToARGB(colorIndex);
+            uint32_t argb = lane->colorRGBA;
             float a = ((argb >> 24) & 0xFF) / 255.0f;
             float r = ((argb >> 16) & 0xFF) / 255.0f;
             float g = ((argb >> 8) & 0xFF) / 255.0f;
@@ -1471,7 +1503,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
         
         const float stripWidth = 3.0f;
-        const float stripAlpha = (m_selected || m_channel->isArmed() || m_channel->isSoloed()) ? 0.90f : 0.64f;
+        const float stripAlpha = (m_selected || lane->solo) ? 0.90f : 0.64f;
         stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
         
         // Draw strip
@@ -1524,7 +1556,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         m_nameLabel->onRender(renderer);
     }
 
-    if (m_channel) {
+    if (lane) {
         const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 0.74f : 0.60f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
@@ -1573,8 +1605,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect, color);
         };
 
-        // Draw volume knob (replaces route button)
-        {
+        // A Playlist lane has no gain stage of its own. Only draw the knob
+        // when an explicit mixer association was supplied by another view.
+        if (m_channel) {
             const auto& knobBounds = m_volumeKnobBounds;
             if (!knobBounds.isEmpty()) {
                 const float cx = knobBounds.x + knobBounds.width * 0.5f;
@@ -1620,20 +1653,20 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
         }
 
-        drawControlIcon(m_muteButton, kMuteIconSvg, m_channel->isMuted() ? muteActive : textIdle,
-                        m_channel->isMuted(), muteActive);
-        drawControlIcon(m_soloButton, kSoloIconSvg, m_channel->isSoloed() ? soloActive : textIdle,
-                        m_channel->isSoloed(), soloActive);
-        drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
-                        m_channel->isArmed() ? recordActive : textIdle,
-                        m_channel->isArmed(), recordActive);
+        drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
+        drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
+        if (m_channel) {
+            drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
+                            m_channel->isArmed() ? recordActive : textIdle,
+                            m_channel->isArmed(), recordActive);
+        }
     }
 
     // Track number marker (left of name): fixed white — no dynamic dimming
     // (professional, defined feel per owner direction).
-    if (m_nameLabel && m_channel) {
+    if (m_nameLabel && lane) {
         constexpr float stripWidth = 3.0f;
-        uint32_t trackNumber = m_channel->getChannelId();
+        uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
         const auto laneName = m_nameLabel->getText();
         uint32_t parsedNumber = 0;
         if (parseTrailingTrackNumber(laneName, parsedNumber)) {
@@ -1689,9 +1722,9 @@ void TrackUIComponent::onUpdate(double deltaTime) {
     // This prevents overriding hover colors unnecessarily
 
     // Update children state
-    if (m_channel) {
-        bool currentMuted = m_channel->isMuted();
-        bool currentSoloed = m_channel->isSoloed();
+    if (const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr) {
+        bool currentMuted = lane->muted;
+        bool currentSoloed = lane->solo;
 
         // Check if buttons match channel state
         if (m_muteButton && m_muteButton->isToggled() != currentMuted) {
@@ -1718,7 +1751,7 @@ void TrackUIComponent::onResize(int width, int height) {
     const float buttonW = 16.0f;
     const float buttonH = 18.0f;
     const float spacing = 6.0f;
-    const int numButtons = 4; // M, S, R, Volume knob
+    const int numButtons = m_channel ? 4 : 2; // Playlist lanes only own M/S.
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     const float leftPad = 14.0f;
@@ -1759,8 +1792,10 @@ void TrackUIComponent::onResize(int width, int height) {
         m_recordButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
         xCursor += buttonW + spacing;
     }
-    // Volume knob in the slot where route button was
-    m_volumeKnobBounds = AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW + 2.0f, buttonH);
+    // Volume belongs to the mixer, never to a normal Playlist lane.
+    m_volumeKnobBounds = m_channel
+                             ? AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW + 2.0f, buttonH)
+                             : AestraUI::NUIRect();
 
     AestraUI::NUIComponent::onResize(width, height);
 }
@@ -2339,6 +2374,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                     m_onPatternClipOpenRequested(clip.patternId);
                                     return true;
                                 }
+                                if (pattern && pattern->isAudio() && m_onAudioClipOpenRequested) {
+                                    m_onAudioClipOpenRequested(clip.id);
+                                    return true;
+                                }
                                 break;
                             }
                         }
@@ -2485,10 +2524,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
 
-            if (m_onClipDeletedCallback) {
-                m_onClipDeletedCallback(this, clickedClipId, event.position);
-            }
-
+            showClipRoutingMenu(clickedClipId, event.position);
             return true;
         }
     }

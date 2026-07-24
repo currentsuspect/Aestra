@@ -587,22 +587,10 @@ void CommandRegistry::initialize() {
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
         if (!pattern || !pattern->isMidi())
             return CommandRegistry::fail("no such MIDI pattern: " + std::string(*patternRaw));
-        // Tracks are mixer channels; the command creates matching playlist
-        // lanes, but the channel itself must already exist.
-        if (static_cast<size_t>(*trackOpt) >= tm->getChannelCount())
-            return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
-
-        // A unit has a single timeline route: arranging it onto a different
-        // track would silently reroute every earlier clip that uses it.
-        // Reject the conflict instead of corrupting existing arrangements.
-        for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
-            if (note.unitId == 0) continue;
-            const int route = tm->getUnitManager().getUnitTimelineLane(note.unitId);
-            if (route >= 0 && route != *trackOpt)
-                return CommandRegistry::fail(
-                    "unit " + std::to_string(note.unitId) + " is already routed to track " +
-                    std::to_string(route) + "; arrange on that track or undo the earlier arrange");
-        }
+        // The target is a Playlist lane. Permit exactly one append position;
+        // mixer insert count is intentionally unrelated.
+        if (static_cast<size_t>(*trackOpt) > tm->getPlaylistModel().getLaneCount())
+            return CommandRegistry::fail("no such playlist lane: " + std::string(*trackRaw));
 
         return std::make_unique<ArrangePatternCommand>(*tm, patternId,
                                                        static_cast<size_t>(*trackOpt),

@@ -38,6 +38,10 @@ public:
     ArsenalRouteMode resolveRouteMode(const UnitInfo& unit) const noexcept;
     ArsenalRouteMode resolveRouteMode(const UnitState& unit) const noexcept;
 
+    bool shouldRenderToMixerChannel(const UnitState& unit, uint32_t mixerChannelId) const noexcept;
+    bool shouldRenderToMaster(const UnitState& unit) const noexcept;
+
+    // Compatibility helpers for legacy Timeline ownership metadata.
     bool shouldRenderToTimelineTrack(const UnitState& unit, uint32_t trackIndex) const noexcept;
     bool shouldRenderToMasterPreview(const UnitState& unit) const noexcept;
     bool isFutureDraftMode(const UnitState& unit) const noexcept;

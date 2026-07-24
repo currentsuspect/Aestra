@@ -210,3 +210,8 @@ autosave.*
 # Audit cache files (regenerated on each run)
 .aestra/audit/*.json
 !.aestra/audit/snapshots/
+
+# Reverb lab scratch: local listening/AB/prototype artefacts, not source
+labs/reverb/listening/
+labs/reverb/tremolo/ab/
+labs/reverb/tremolo/proto/

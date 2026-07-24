@@ -5,6 +5,7 @@
 #include "Models/TrackManager.h"
 
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -67,6 +68,9 @@ private:
     int m_trackIndex;
     std::string m_deletedName;
     uint32_t m_deletedId = 0;
+    std::vector<UnitID> m_routedUnits;
+    std::vector<PatternID> m_routedAudioPatterns;
+    bool m_routesCaptured = false;
     bool m_executed = false;
     /**
      * The removed channel itself, held alive while the delete stands.

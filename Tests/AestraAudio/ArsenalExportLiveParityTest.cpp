@@ -96,7 +96,7 @@ struct ScenarioResult {
 ScenarioResult runScenario(const std::filesystem::path& tempRoot,
                            const char* name,
                            bool routeToTrack,
-                           float trackVolume) {
+                           float trackVolume, float unitGain = 1.0f, bool unitMuted = false) {
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(kSampleRate));
     tm->getPlaylistModel().setBPM(kBpm);
@@ -104,7 +104,7 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     auto& playlist = tm->getPlaylistModel();
     const PlaylistLaneID laneId = playlist.createLane("Track 1");
     require(laneId.isValid(), "Failed to create lane for parity scenario");
-    auto* channel = tm->addChannel("Track 1");
+    auto* channel = tm->addChannelWithId("Track 1", 42);
     require(channel != nullptr, "Failed to create channel for parity scenario");
     if (auto* lane = playlist.getLane(laneId)) {
         lane->volume = trackVolume;
@@ -120,9 +120,13 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     const UnitID unitId = unitManager.createUnit(std::string("Arsenal ") + name, UnitType::Sampler);
     unitManager.setUnitAudioClip(unitId, samplePath.string());
     unitManager.setUnitEnabled(unitId, true);
+    unitManager.setUnitGain(unitId, unitGain);
+    unitManager.setUnitMute(unitId, unitMuted);
     if (routeToTrack) {
+        unitManager.setUnitMixerChannel(unitId, static_cast<int>(channel->getChannelId()));
         unitManager.assignUnitToTimelineLane(unitId, 0);
     } else {
+        unitManager.setUnitMixerChannel(unitId, 0);
         unitManager.clearUnitTimelineLane(unitId);
     }
 
@@ -218,7 +222,7 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     auto& playlist = tm->getPlaylistModel();
     const PlaylistLaneID laneId = playlist.createLane("Mixed Track");
     require(laneId.isValid(), "Failed to create lane for mixed scenario");
-    auto* channel = tm->addChannel("Mixed Track");
+    auto* channel = tm->addChannelWithId("Mixed Track", 42);
     require(channel != nullptr, "Failed to create channel for mixed scenario");
     if (auto* lane = playlist.getLane(laneId)) {
         lane->volume = trackVolume;
@@ -237,6 +241,8 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     unitManager.setUnitAudioClip(trackUnitId, samplePath.string());
     unitManager.setUnitEnabled(previewUnitId, true);
     unitManager.setUnitEnabled(trackUnitId, true);
+    unitManager.setUnitMixerChannel(previewUnitId, 0);
+    unitManager.setUnitMixerChannel(trackUnitId, static_cast<int>(channel->getChannelId()));
     unitManager.clearUnitTimelineLane(previewUnitId);
     unitManager.assignUnitToTimelineLane(trackUnitId, 0);
 
@@ -353,7 +359,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
         lane->volume = 1.0f;
         lane->pan = 0.0f;
     }
-    auto* channel0 = tm->addChannel("Bounce Track 0");
+    auto* channel0 = tm->addChannelWithId("Bounce Track 0", 42);
     require(channel0 != nullptr, "Failed to create channel 0 for bounce");
     channel0->setVolume(1.0f);
     channel0->setPan(0.0f);
@@ -364,7 +370,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
         lane->volume = 1.0f;
         lane->pan = 0.0f;
     }
-    auto* channel1 = tm->addChannel("Bounce Track 1");
+    auto* channel1 = tm->addChannelWithId("Bounce Track 1", 77);
     require(channel1 != nullptr, "Failed to create channel 1 for bounce");
     channel1->setVolume(1.0f);
     channel1->setPan(0.0f);
@@ -376,6 +382,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     const UnitID track0Unit = unitManager.createUnit("Bounce Track 0 Unit", UnitType::Sampler);
     unitManager.setUnitAudioClip(track0Unit, samplePath.string());
     unitManager.setUnitEnabled(track0Unit, true);
+    unitManager.setUnitMixerChannel(track0Unit, static_cast<int>(channel0->getChannelId()));
     unitManager.assignUnitToTimelineLane(track0Unit, 0);
 
     auto& patternManager = tm->getPatternManager();
@@ -507,31 +514,37 @@ int main() {
     require(previewMutedTrack.livePeak > 1.0e-4f, "PreviewToMaster should be audible in live output");
     require(previewMutedTrack.exportPeak > 1.0e-4f, "PreviewToMaster should currently participate in export");
 
-    // Case 2: Current live/export authority path still renders track-routed Arsenal
-    // in processBlock even when track volume is muted. This guards current behavior
-    // until routing policy is intentionally changed.
+    // Case 2: A track-routed unit follows the mixer fader in live and export.
     const ScenarioResult routedMutedTrack = runScenario(tempRoot, "routed_muted_track", true, 0.0f);
-    require(routedMutedTrack.livePeak > 1.0e-4f,
-            "Current policy regression: track-routed Arsenal became silent in muted-track live path");
-    require(routedMutedTrack.exportPeak > 1.0e-4f,
-            "Current policy regression: track-routed Arsenal became silent in muted-track export path");
+    require(routedMutedTrack.livePeak < 1.0e-5f, "Track-routed unit bypassed the muted mixer path in live playback");
+    require(routedMutedTrack.exportPeak < 1.0e-5f, "Track-routed unit bypassed the muted mixer path in export");
 
     // Case 3: Track-routed path is audible when track path is open.
     const ScenarioResult routedOpenTrack = runScenario(tempRoot, "routed_open_track", true, 1.0f);
     require(routedOpenTrack.livePeak > 1.0e-4f, "Track-routed Arsenal should be audible in live output when track is open");
     require(routedOpenTrack.exportPeak > 1.0e-4f, "Track-routed Arsenal should be audible in export when track is open");
 
-    // Case 4: Mixed route permutations — two units (preview + track-routed)
+    // Case 4: Unit gain and mute controls affect the shared live/export path.
+    const ScenarioResult reducedUnit = runScenario(tempRoot, "reduced_unit", false, 1.0f, 0.25f);
+    require(reducedUnit.livePeak > 1.0e-5f && reducedUnit.livePeak < previewMutedTrack.livePeak * 0.5f,
+            "Unit gain was not applied in live playback");
+    require(reducedUnit.exportPeak > 1.0e-5f && reducedUnit.exportPeak < previewMutedTrack.exportPeak * 0.5f,
+            "Unit gain was not applied in export");
+    const ScenarioResult mutedUnit = runScenario(tempRoot, "muted_unit", false, 1.0f, 1.0f, true);
+    require(mutedUnit.livePeak < 1.0e-5f, "Muted unit remained audible in live playback");
+    require(mutedUnit.exportPeak < 1.0e-5f, "Muted unit remained audible in export");
+
+    // Case 5: Mixed route permutations — two units (preview + track-routed)
     // running simultaneously must both be audible without cross-contamination.
-    std::cout << "[INFO] Case 4: Mixed route with two units simultaneously\n";
+    std::cout << "[INFO] Case 5: Mixed route with two units simultaneously\n";
     runMixedScenario(tempRoot, 1.0f);
 
-    // Case 5: Isolated-track bounce — verify bounceRangeToWav produces
+    // Case 6: Isolated-track bounce — verify bounceRangeToWav produces
     // correct output for the selected track and excludes non-selected paths.
-    std::cout << "[INFO] Case 5: Isolated-track bounce (full vs isolated)\n";
+    std::cout << "[INFO] Case 6: Isolated-track bounce (full vs isolated)\n";
     runIsolatedBounceScenario(tempRoot);
 
-    std::cout << "[INFO] Case 6: Write-failure cleanup (false return + partial file cleanup)\n";
+    std::cout << "[INFO] Case 7: Write-failure cleanup (false return + partial file cleanup)\n";
     runBounceWriteFailureCleanupScenario(tempRoot);
 
     std::cout << "[PASS] ArsenalExportLiveParityTest\n";
