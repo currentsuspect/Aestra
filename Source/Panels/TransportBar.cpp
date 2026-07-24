@@ -206,11 +206,13 @@ void TransportBar::createIcons() {
     m_playlistIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_playlistIcon->setColorFromTheme("textSecondary");
 
-    // Metronome icon (classic metronome shape)
+    // Metronome icon — trapezoid body + swinging pendulum rod, so it reads as a
+    // metronome rather than a bare triangle (which looked like a warning glyph).
     const char* metronomeSvg = R"(
-        <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1.5L6 22h12L12 1.5zM11 8l1-3 1 3v6h-2V8z"/>
-            <circle cx="12" cy="18" r="2"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.2 3.2h7.6l3.2 17.6H5L8.2 3.2z"/>
+            <path d="M6.2 15.2h11.6"/>
+            <path d="M12 20.8l4.2-10.4"/>
         </svg>
     )";
     m_metronomeIcon = std::make_shared<AestraUI::NUIIcon>(metronomeSvg);
