@@ -9,9 +9,7 @@
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioFileValidator.h"
 #include "ClipSource.h"
-#include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
-#include "Commands/CommandTransaction.h"
 #include "Commands/CreateLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -133,26 +131,16 @@ void TrackManagerUI::addTrack(const std::string& name) {
     if (!m_trackManager)
         return;
 
-    // Use CommandTransaction so add track is a single undoable step
-    auto transaction = std::make_shared<CommandTransaction>("Add Track");
-
-    // Add lane creation command
+    // Playlist lanes are created independently from mixer inserts.
     auto laneCmd = std::make_shared<CreateLaneCommand>(m_trackManager->getPlaylistModel(), name);
-    transaction->add(laneCmd);
-
-    // Add mixer channel creation command
-    auto channelCmd = std::make_shared<AddChannelCommand>(*m_trackManager, name);
-    transaction->add(channelCmd);
-
-    // Execute the transaction (creates lane + channel atomically)
-    m_trackManager->getCommandHistory().pushAndExecute(transaction);
+    m_trackManager->getCommandHistory().pushAndExecute(laneCmd);
 
     // Rebuild UI from model state
     refreshTracks();
     layoutTracks();
     scheduleTimelineMinimapRebuild();
     invalidateCache();
-    Log::info("Added track via command: " + name);
+    Log::info("Added Playlist lane via command: " + name);
 }
 
 void TrackManagerUI::refreshTracks() {
@@ -184,16 +172,9 @@ void TrackManagerUI::refreshTracks() {
             continue;
         }
 
-        // Find associated MixerChannel (we maintain a 1:1 mapping between lane index and channel index for now)
-        auto channel = m_trackManager->getTrack(i);
-        if (!channel) {
-            Log::warning("refreshTracks: channel " + std::to_string(i) + " is null!");
-            continue;
-        }
-
-        // Create UI component with LaneID and MixerChannel
-        auto trackUI = std::make_shared<TrackUIComponent>(
-            laneId, std::shared_ptr<MixerChannel>(channel, [](MixerChannel*) {}), m_trackManager.get());
+        // Playlist lanes are arrangement-only; mixer inserts are managed in
+        // the mixer and sources keep their own stable destinations.
+        auto trackUI = std::make_shared<TrackUIComponent>(laneId, nullptr, m_trackManager.get());
 
         // Register callbacks
         trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) { this->onTrackSoloToggled(soloedTrack); });
@@ -220,6 +201,11 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
             if (m_onOpenPatternInPianoRoll) {
                 m_onOpenPatternInPianoRoll(patternId);
+            }
+        });
+        trackUI->setOnAudioClipOpenRequested([this](ClipInstanceID clipId) {
+            if (m_onOpenAudioClipEditor) {
+                m_onOpenAudioClipEditor(clipId);
             }
         });
         trackUI->setOnPatternClipDragStarted([this](PatternID patternId) {
@@ -274,11 +260,9 @@ void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
         if (trackUI.get() == soloedTrack)
             continue;
 
-        // Check if other track is soloed
-        auto channel = trackUI->getChannel();
-        if (channel && channel->isSoloed()) {
-            channel->setSolo(false); // Unsolo model
-            trackUI->updateUI();     // Update UI
+        if (auto* lane = m_trackManager->getPlaylistModel().getLane(trackUI->getLaneId()); lane && lane->solo) {
+            lane->solo = false;
+            trackUI->updateUI(); // Update UI
             trackUI->repaint();
         }
     }

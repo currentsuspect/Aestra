@@ -15,6 +15,8 @@ namespace Aestra {
  *
  * Version History:
  * - v1: Initial schema (Feb 2026)
+ * - v2: Stable identity baseline
+ * - v3: Playlist lanes and mixer channels persist independently
  *
  * When adding breaking changes:
  * 1. Increment PROJECT_VERSION_CURRENT in ProjectSerializer.cpp
@@ -38,11 +40,8 @@ public:
      */
     static const std::vector<Migration>& getMigrations() {
         static std::vector<Migration> migrations = {
-            {
-                1, 2,
-                migrateV1ToV2,
-                "No-op migration marker for v2 schema baseline"
-            },
+            {1, 2, migrateV1ToV2, "No-op migration marker for v2 schema baseline"},
+            {2, 3, migrateV2ToV3, "Separate Playlist placement from source-level mixer routing"},
         };
         return migrations;
     }
@@ -86,6 +85,9 @@ private:
         return true;
     }
 
+    // The v3 loader understands v2 lane-local mixer state and performs the
+    // source-route migration after stable channel identities are restored.
+    static bool migrateV2ToV3(JSON&) { return true; }
 };
 
 } // namespace Aestra

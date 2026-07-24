@@ -1250,6 +1250,17 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
+    // Assign the selected unit to the first unused mixer destination.
+    if (isCtrl && event.keyCode == NUIKeyCode::L) {
+        const auto row = std::find_if(m_unitRows.begin(), m_unitRows.end(), [this](const auto& candidate) {
+            return candidate && candidate->getUnitId() == m_selectedUnitId;
+        });
+        if (row != m_unitRows.end()) {
+            (*row)->routeToFirstFreeMixerChannel();
+            return true;
+        }
+    }
+
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
         return removeSelectedUnit();
     }

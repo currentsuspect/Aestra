@@ -89,8 +89,10 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
         // 1. Render Clips (Generates Audio) -> track.selfBuffer
         renderClipAudio(track.selfBuffer, trackState, track.trackIndex, ctx, engineRef);
 
-        // [NEW] 1.5 Render Arsenal Units assigned to this track
-        renderArsenalUnitsForTrack(track.trackIndex, track.selfBuffer, ctx, engineRef);
+        // 1.5 Render units assigned to this track's stable mixer identity.
+        if (track.trackIndex < ctx.graph->tracks.size()) {
+            renderArsenalUnitsForTrack(ctx.graph->tracks[track.trackIndex].trackId, track.selfBuffer, ctx, engineRef);
+        }
 
         // 2. Process Effects (In-Place) -> track.selfBuffer
         processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph);
@@ -371,18 +373,22 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
     }
 }
 
-void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,
+void AudioRenderer::renderArsenalUnitsForTrack(uint32_t mixerChannelId, double* trackBuffer, const Context& ctx,
                                                AudioEngine& engineRef) {
     // Arsenal currently participates inside the main engine render path.
     ArsenalProcessingContext arsenal(engineRef.m_unitManager.load(std::memory_order_acquire));
     auto snap = arsenal.getSnapshot();
     if (!snap || snap->units.empty())
         return;
+    const bool anyUnitSolo = std::any_of(snap->units.begin(), snap->units.end(), [](const UnitState& unit) {
+        return unit.enabled && unit.isSolo && !unit.isMuted;
+    });
 
     const float* ins[2] = {engineRef.m_silentBufferF.data(), engineRef.m_silentBufferF.data()};
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
-        if (u.enabled && u.plugin && arsenal.shouldRenderToTimelineTrack(u, trackIndex)) {
+        if (u.enabled && u.plugin && !u.isMuted && (!anyUnitSolo || u.isSolo) &&
+            arsenal.shouldRenderToMixerChannel(u, mixerChannelId)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =
@@ -397,9 +403,10 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trac
             }
 
             double* dst = trackBuffer + (size_t)ctx.bufferOffset * 2;
+            const double unitGain = static_cast<double>(u.gain);
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
-                dst[i * 2] += (double)outs[0][i];
-                dst[i * 2 + 1] += (double)outs[1][i];
+                dst[i * 2] += static_cast<double>(outs[0][i]) * unitGain;
+                dst[i * 2 + 1] += static_cast<double>(outs[1][i]) * unitGain;
             }
         }
         bIdx++;
@@ -415,12 +422,14 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
     auto snap = arsenal.getSnapshot();
     if (!snap || snap->units.empty())
         return;
+    const bool anyUnitSolo = std::any_of(snap->units.begin(), snap->units.end(), [](const UnitState& unit) {
+        return unit.enabled && unit.isSolo && !unit.isMuted;
+    });
 
     const float* ins[2] = {engineRef.m_silentBufferF.data(), engineRef.m_silentBufferF.data()};
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
-        // Only handle units not routed to a Timeline track.
-        if (u.enabled && u.plugin && arsenal.shouldRenderToMasterPreview(u)) {
+        if (u.enabled && u.plugin && !u.isMuted && (!anyUnitSolo || u.isSolo) && arsenal.shouldRenderToMaster(u)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =
@@ -435,9 +444,10 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
             }
 
             double* dst = ctx.masterBuffer + (size_t)ctx.bufferOffset * 2;
+            const double unitGain = static_cast<double>(u.gain);
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
-                dst[i * 2] += (double)outs[0][i];
-                dst[i * 2 + 1] += (double)outs[1][i];
+                dst[i * 2] += static_cast<double>(outs[0][i]) * unitGain;
+                dst[i * 2 + 1] += static_cast<double>(outs[1][i]) * unitGain;
             }
         }
         bIdx++;

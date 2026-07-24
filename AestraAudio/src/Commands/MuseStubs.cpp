@@ -111,6 +111,20 @@ void DeleteTrackCommand::execute() {
     m_deletedName = ch->getName();
     m_deletedId = ch->getChannelId();
 
+    if (!m_routesCaptured) {
+        for (UnitID unitId : m_manager.getUnitManager().getAllUnitIDs()) {
+            if (m_manager.getUnitManager().getUnitMixerChannel(unitId) == m_deletedId) {
+                m_routedUnits.push_back(unitId);
+            }
+        }
+        for (const auto& pattern : m_manager.getPatternManager().getAllPatterns()) {
+            if (pattern && pattern->isAudio() && pattern->getMixerChannelId() == m_deletedId) {
+                m_routedAudioPatterns.push_back(pattern->id);
+            }
+        }
+        m_routesCaptured = true;
+    }
+
     if (m_manager.removeChannelById(m_deletedId))
         m_executed = true;
 }
@@ -119,9 +133,15 @@ void DeleteTrackCommand::undo() {
     if (!m_executed)
         return;
 
-    MixerChannel* ch = m_manager.addChannel(m_deletedName);
+    MixerChannel* ch = m_manager.addChannelWithId(m_deletedName, m_deletedId);
     if (ch) {
-        m_deletedId = ch->getChannelId();
+        for (UnitID unitId : m_routedUnits) {
+            m_manager.getUnitManager().setUnitMixerChannel(unitId, m_deletedId);
+        }
+        for (PatternID patternId : m_routedAudioPatterns) {
+            m_manager.getPatternManager().setPatternMixerChannel(patternId, m_deletedId);
+        }
+        m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = false;
     }
 }

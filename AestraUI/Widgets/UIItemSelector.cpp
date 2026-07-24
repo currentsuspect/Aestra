@@ -101,18 +101,19 @@ void UIItemSelector::commitEditing() {
         }
     }
     
-    // 2. "Track X" number parsing
+    // 2. Mixer insert number parsing
     if (matchIndex == -1) {
         try {
             // Check if user just typed a number "7"
             int trackNum = std::stoi(text);
             
-            // Try to find "Track NUM" or "Track NUM *"
-            std::string prefix = "track " + std::to_string(trackNum);
-             for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
+            // Prefer current "Insert NUM" labels while accepting saved legacy names.
+            const std::string insertPrefix = "insert " + std::to_string(trackNum);
+            const std::string legacyTrackPrefix = "track " + std::to_string(trackNum);
+            for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
                 std::string item = m_items[i];
                 std::transform(item.begin(), item.end(), item.begin(), ::tolower);
-                if (item.find(prefix) == 0) { // Starts with "track N"
+                if (item.find(insertPrefix) == 0 || item.find(legacyTrackPrefix) == 0) {
                     matchIndex = i;
                     break;
                 }

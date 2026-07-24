@@ -680,6 +680,7 @@ private:
         uint64_t blockEnd;
         bool isPlaying;
         bool anySolo;
+        bool anyUnitSolo;
         uint32_t cachedSampleRate;
         const ChannelSlotMap* cachedSlotMap;
         ContinuousParamBuffer* cachedParams;
@@ -696,9 +697,9 @@ private:
     // renderGraph() per-track loop body; srcActiveThisBlock is the loop-carried
     // "any resampling happened" telemetry flag.
     // renderTrack phase helpers (verbatim extractions; RT path — no allocation).
-    void renderTrackClips(const TrackRenderState& track, std::vector<double>& buffer, const RenderContext& ctx,
-                          bool& srcActiveThisBlock);
-    void renderTrackUnits(uint32_t trackIdx, std::vector<double>& buffer, const RenderContext& ctx);
+    void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
+                     bool& srcActiveThisBlock);
+    void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
     float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
                               uint32_t numFrames);
     void mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
@@ -711,7 +712,7 @@ private:
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                             double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+                             double* targetBuffer = nullptr, int64_t isolatedMixerChannelId = -1);
     // processBlock leaf phases (audio thread only). Each is a verbatim
     // extraction of a self-contained section of processBlock; state lives in
     // the members they always used.

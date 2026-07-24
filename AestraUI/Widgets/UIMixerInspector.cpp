@@ -331,8 +331,8 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
 
     m_cachedTrackNumber = findTrackNumber(channel->id);
     const std::string trackLabel = (m_cachedTrackNumber > 0)
-        ? ("Track " + std::to_string(m_cachedTrackNumber))
-        : "Channel";
+        ? ("Insert " + std::to_string(m_cachedTrackNumber))
+        : "Insert";
 
     m_cachedHeaderTitle = channel->name.empty()
         ? trackLabel
@@ -535,9 +535,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.fillRoundedRect(stateChip, 9.0f, m_bg.withAlpha(0.34f));
         renderer.strokeRoundedRect(stateChip, 9.0f, 1.0f, accent.withAlpha(0.20f));
         renderer.drawTextCentered("INSPECTOR", stateChip, 9.0f, m_textSecondary.withAlpha(0.90f));
-        renderer.drawTextCentered("Select a Track", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
+        renderer.drawTextCentered("Select an Insert", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
                                   13.0f, m_text.withAlpha(0.95f));
-        renderer.drawTextCentered("Choose a mixer channel to inspect",
+        renderer.drawTextCentered("Choose a mixer insert to inspect",
                                   {emptyCard.x + 24.0f, stateChip.bottom() + 38.0f, emptyCard.width - 48.0f, 14.0f},
                                   10.0f, m_textSecondary.withAlpha(0.86f));
         renderer.drawTextCentered("Inserts, Sends, and I/O.",
@@ -563,7 +563,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         titleAccent = NUIColor(r, g, b, a);
     }
     // Channel identity: a colour swatch beside the name. The old TRACK/BUS word
-    // pill was redundant with the "Track 1" title right below it — you're already
+    // pill was redundant with the numbered insert title right below it — you're already
     // in the mixer inspector, and the master reads as MASTER and is visually
     // distinct. The swatch gives this spot a real job: it ties the inspector to
     // the selected strip's colour.

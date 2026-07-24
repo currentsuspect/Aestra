@@ -419,7 +419,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 u.set("soloed", JSON(unit->isSolo));
                 u.set("defaultPatternId",
                       JSON(static_cast<double>(unit->defaultPatternId.value)));
-                // -1 = preview-to-master; >= 0 routes into that timeline track.
+                u.set("mixerChannelId", JSON(static_cast<double>(unitManager.getUnitMixerChannel(unitId))));
+                // Compatibility metadata retained for older clients. It no longer controls audio routing.
                 u.set("timelineLane",
                       JSON(static_cast<double>(unitManager.getUnitTimelineLane(unitId))));
                 u.set("samplePath", JSON(unit->audioClipPath));
@@ -699,7 +700,11 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 entry.set("name", JSON(pattern->name));
                 entry.set("lengthBeats", JSON(pattern->lengthBeats));
                 const bool isMidi = pattern->isMidi();
-                entry.set("type", JSON(isMidi ? "midi" : "other"));
+                const bool isAudio = pattern->isAudio();
+                entry.set("type", JSON(isMidi ? "midi" : (isAudio ? "audio" : "other")));
+                if (isAudio) {
+                    entry.set("mixerChannelId", JSON(static_cast<double>(pattern->getMixerChannelId())));
+                }
                 entry.set("noteCount",
                           JSON(isMidi ? static_cast<double>(
                                             std::get<MidiPayload>(pattern->payload).notes.size())
@@ -1099,6 +1104,19 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                                  verb)
                     .toString();
             }
+
+            // Pattern playback now shares the mixer graph with Timeline playback.
+            // Headless callers do not have the app loop to publish recent unit or
+            // channel changes, so prepare the current graph before pumping audio.
+            m_trackManager->buildAndShareSlotMap();
+            if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
+                m_engine->setChannelSlotMap(slotMap);
+            }
+            PlaybackGraphController graphController;
+            graphController.setTrackManager(m_trackManager);
+            graphController.setAudioEngine(m_engine);
+            graphController.requestRebuild(GraphDirtyReason::TimelineChanged);
+            graphController.drainIfDirty(static_cast<double>(sampleRate));
 
             std::vector<float> rendered;
             rendered.reserve(static_cast<size_t>(totalFrames) * 2u);

@@ -48,6 +48,8 @@ struct AutomationPoint {
 
 struct AutomationCurve {
     uint32_t laneId{0};
+    /** Stable mixer insert destination. Zero means unassigned, not lane index zero. */
+    uint32_t mixerChannelId{0};
     std::vector<AutomationPoint> points;
 
     // Extended fields for full AutomationCurve API

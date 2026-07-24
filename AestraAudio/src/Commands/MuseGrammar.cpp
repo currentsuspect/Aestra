@@ -141,7 +141,7 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, 0.0},
         {"start", FlagType::Float, true, 0.0}
     },
-     "Place a pattern on the timeline as a clip, routing its units to that track. A unit routes to at most one track; conflicts are rejected."},
+     "Place a pattern on the timeline as a clip. Arrangement does not change the pattern units' mixer destinations."},
     // steps: one char per step — 'x' hit, 'X' accented hit, '-' or '.' rest.
     // The string defines the ENTIRE row for that (unit, pitch): re-issuing
     // the verb rewrites the groove, an all-rest string clears it.
@@ -275,10 +275,10 @@ std::string schemaToJsonString() {
     // sync with its isQueryVerb()/isActionVerb().
     out << R"("queries": [
   {"verb": "get_transport", "args": "none", "description": "bpm, playing, positionSeconds."},
-  {"verb": "list_tracks", "args": "none", "description": "index, stable id, name, volume, pan, muted, soloed per track."},
-  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, timelineLane (-1 = preview), samplePath per unit."},
+  {"verb": "list_tracks", "args": "none", "description": "mixer inserts: index, stable id, name, volume, pan, muted, soloed. These are independent from Playlist lanes."},
+  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, mixerChannelId (0 = Master), legacy timelineLane, samplePath per unit."},
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
-  {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount, type per pattern."},
+  {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
   {"verb": "get_effects", "args": "{\"track\": <index>}", "description": "a track's effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
   {"verb": "get_meters", "args": "none", "description": "master + per-track meters from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
@@ -296,7 +296,7 @@ std::string schemaToJsonString() {
   "samplerPitch": "The sampler root is MIDI pitch 60: notes at 60 play the loaded sample unshifted, other pitches resample relative to 60. Put drum hits at pitch 60; write melodies around 60.",
   "unitTypes": "sampler = polyphonic sampler; 808 = mono pitched sampler with glide.",
   "patterns": "Every non-audio unit gets a default MIDI pattern at creation (list_units.defaultPatternId). A pattern is just a container: notes carry their unit, so one pattern can hold a whole multi-unit groove.",
-  "routing": "A unit routes to at most one timeline track. arrange_pattern routes the pattern's units to its track and rejects conflicting arrangements.",
+  "routing": "Each unit has one stable mixer destination (mixerChannelId; 0 = Master). Timeline arrangement is independent, so the same pattern may be placed on multiple lanes without changing its audio destination.",
   "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",

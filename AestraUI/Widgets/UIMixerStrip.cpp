@@ -50,9 +50,13 @@ namespace {
         if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
             return "M";
         }
-        const std::string trackPrefix = "Track ";
-        if (targetName.rfind(trackPrefix, 0) == 0) {
-            return "T" + targetName.substr(trackPrefix.size());
+        const std::string insertPrefix = "Insert ";
+        if (targetName.rfind(insertPrefix, 0) == 0) {
+            return "I" + targetName.substr(insertPrefix.size());
+        }
+        const std::string legacyTrackPrefix = "Track ";
+        if (targetName.rfind(legacyTrackPrefix, 0) == 0) {
+            return "I" + targetName.substr(legacyTrackPrefix.size());
         }
         const std::string lanePrefix = "Lane ";
         if (targetName.rfind(lanePrefix, 0) == 0) {

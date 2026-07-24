@@ -918,58 +918,30 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
 
     if (!m_masterBufferD.empty()) {
-        if (!patternMode) {
-            // === Timeline Mode: Render Graph ===
-            if (loopSplitFrame < numFrames) {
-                // Split Render
-                if (loopSplitFrame > 0) {
-                    renderGraph(graph, loopSplitFrame, 0);
-                }
-
-                // Part B: Jump to loop start
-                // Flush pattern events on loop wrap so we don't double-trigger across the wrap.
-                if (isPlaying) {
-                    auto* pe = m_patternEngine.load(std::memory_order_relaxed);
-                    if (pe)
-                        pe->flush();
-                }
-                m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
-                renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame);
-                m_globalSamplePos.store(currentGlobalPos, std::memory_order_relaxed);
-
-            } else {
-                // Normal Render
-                renderGraph(graph, numFrames, 0);
+        // Timeline and pattern playback share the mixer graph. renderTrackClips
+        // suppresses Timeline clips in pattern mode while units continue through
+        // their assigned mixer channels, inserts, faders, sends, and Master.
+        if (loopSplitFrame < numFrames) {
+            if (loopSplitFrame > 0) {
+                renderGraph(graph, loopSplitFrame, 0);
             }
+
+            // Flush pattern events on loop wrap so we don't double-trigger across the wrap.
+            if (isPlaying) {
+                auto* pe = m_patternEngine.load(std::memory_order_relaxed);
+                if (pe)
+                    pe->flush();
+            }
+            m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
+            renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame);
+            m_globalSamplePos.store(currentGlobalPos, std::memory_order_relaxed);
         } else {
-            // === Pattern Mode: Clear Buffer ===
-            std::fill(m_masterBufferD.begin(),
-                      m_masterBufferD.begin() + static_cast<size_t>(numFrames) * kInternalRenderChannels, 0.0);
+            renderGraph(graph, numFrames, 0);
         }
     } else {
         // Zero the double buffer
         std::fill(m_masterBufferD.begin(),
                   m_masterBufferD.begin() + static_cast<size_t>(numFrames) * kInternalRenderChannels, 0.0);
-    }
-
-    // === Arsenal Unit Processing (Pattern Playback) ===
-    // Process pattern MIDI events and mix sampler output into master buffer
-    // Must respect loop splitting similar to renderGraph
-    if (loopSplitFrame < numFrames) {
-        // Split Render
-        if (loopSplitFrame > 0) {
-            processArsenalUnits(loopSplitFrame, 0, currentGlobalPos);
-        }
-        // Flush pattern events on loop wrap so we don't accumulate duplicates.
-        if (isPlaying) {
-            auto* pe = m_patternEngine.load(std::memory_order_relaxed);
-            if (pe)
-                pe->flush();
-        }
-        processArsenalUnits(numFrames - loopSplitFrame, loopSplitFrame, loopStartSample);
-    } else {
-        // Normal
-        processArsenalUnits(numFrames, 0, currentGlobalPos);
     }
 
     mixTestTone(numFrames, currentSampleRate);
@@ -1906,11 +1878,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     double* masterBuf = m_masterBufferD.data() + bufferOffset * numChannels;
 
     const size_t availableTracks = m_trackBuffersD.size();
-    if (availableTracks == 0) {
-        std::memset(masterBuf, 0, static_cast<size_t>(numFrames) * numChannels * sizeof(double));
-        m_telemetry.incrementUnderruns();
-        return;
-    }
 
     // Clear master
     std::memset(masterBuf, 0, static_cast<size_t>(numFrames) * numChannels * sizeof(double));
@@ -1997,10 +1964,14 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     std::shared_ptr<const AudioArsenalSnapshot> unitSnapshot;
     std::array<PatternPlaybackEngine::UnitMidiRoute, 256> unitMidiRoutes{};
     size_t unitMidiRouteCount = 0;
+    bool anyUnitSolo = false;
 
     if (unitMgr) {
         unitSnapshot = unitMgr->getAudioSnapshot();
         if (unitSnapshot && !unitSnapshot->units.empty()) {
+            anyUnitSolo =
+                std::any_of(unitSnapshot->units.begin(), unitSnapshot->units.end(),
+                            [](const UnitState& unit) { return unit.enabled && unit.isSolo && !unit.isMuted; });
             // Map valid units to preallocated MIDI buffers (allocation-free)
             size_t bufIdx = 0;
             for (const auto& unit : unitSnapshot->units) {
@@ -2034,18 +2005,14 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
             injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
 
-            // Live note input in Timeline mode. Gated on !patternPlaybackMode so
-            // exactly one path drains the queue per block — Arsenal mode drains
-            // inside processArsenalUnits (which self-gates on the same flag).
-            if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
-                drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
-            }
-        } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
-            // No routable units in Timeline mode: drain-and-drop so stale live
-            // events cannot pile up and land as a burst when units appear.
+            // The shared graph path owns live note input in both Timeline and pattern modes.
+            drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+        } else {
+            // No routable units: drain-and-drop so stale live events cannot pile
+            // up and land as a burst when units appear.
             drainLiveMidi(nullptr, 0);
         }
-    } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+    } else {
         drainLiveMidi(nullptr, 0);
     }
 
@@ -2097,6 +2064,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                             blockEnd,
                             isPlaying,
                             anySolo,
+                            anyUnitSolo,
                             cachedSampleRate,
                             cachedSlotMap,
                             cachedParams,
@@ -2110,9 +2078,14 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         renderTrack(graph, orderedIndex, ctx, srcActiveThisBlock);
     }
 
+    // Sources routed to Master bypass mixer inserts but still share the same
+    // transport, clip-edit, resampling, and safety path as insert-routed clips.
+    renderClips(graph.masterClips, masterBuf, ctx, srcActiveThisBlock);
+
     if (unitSnapshot) {
         for (const auto& unit : unitSnapshot->units) {
-            if (unit.routeId >= 0 || !unit.enabled || !unit.plugin) {
+            if (unit.mixerChannelId != MASTER_MIXER_CHANNEL_ID || !unit.enabled || !unit.plugin || unit.isMuted ||
+                (anyUnitSolo && !unit.isSolo)) {
                 continue;
             }
 
@@ -2131,9 +2104,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             float* outputs[2] = {m_scratchL.data(), m_scratchR.data()};
             unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
 
+            const double unitGain = static_cast<double>(unit.gain);
             for (uint32_t i = 0; i < numFrames; ++i) {
-                masterBuf[i * 2] += sanitizeMix(static_cast<double>(outputs[0][i]));
-                masterBuf[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i]));
+                masterBuf[i * 2] += sanitizeMix(static_cast<double>(outputs[0][i])) * unitGain;
+                masterBuf[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i])) * unitGain;
             }
         }
     }
@@ -2143,8 +2117,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     }
 }
 
-void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<double>& buffer, const RenderContext& ctx,
-                                   bool& srcActiveThisBlock) {
+void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
+                              bool& srcActiveThisBlock) {
     // Verbatim clip-rendering phase moved out of renderTrack(); same ctx
     // unpack names the body has always used.
     const uint64_t blockStart = ctx.blockStart;
@@ -2159,7 +2133,7 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
     bool patternMode = cachedPatternMode;
 
     if (!patternMode) {
-        for (const auto& clip : track.clips) {
+        for (const auto& clip : clips) {
             if (!isPlaying)
                 continue;
             if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
@@ -2197,31 +2171,43 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
             const uint32_t channels = clip.channels;
             const uint32_t stride = channels;
 
-            double* dstBase = buffer.data();
+            double* dstBase = destination;
             const float* data = clip.audioData;
             double* dst = dstBase + static_cast<size_t>(localOffset) * 2;
 
-            const uint64_t fadeLen = CLIP_EDGE_FADE_SAMPLES;
+            const uint64_t clipLength = clip.endSample - clip.startSample;
+            const uint64_t fadeInLen =
+                std::min(clipLength, std::max<uint64_t>(CLIP_EDGE_FADE_SAMPLES, clip.fadeInSamples));
+            const uint64_t fadeOutLen =
+                std::min(clipLength, std::max<uint64_t>(CLIP_EDGE_FADE_SAMPLES, clip.fadeOutSamples));
+            const auto clipFadeAt = [&clip, fadeInLen, fadeOutLen](uint64_t projectSample) {
+                double fade = 1.0;
+                if (fadeInLen > 0 && projectSample < clip.startSample + fadeInLen) {
+                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                              static_cast<double>(fadeInLen));
+                }
+                if (fadeOutLen > 0 && projectSample + fadeOutLen > clip.endSample) {
+                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                              static_cast<double>(fadeOutLen));
+                }
+                return fade;
+            };
+            // Clip pan is an instance-level stereo balance before the insert.
+            // Centre must remain unity so opening the editor cannot change old
+            // projects or stack a second -3 dB centre law with the insert pan.
+            const double clipPan = clampD(static_cast<double>(clip.pan), -1.0, 1.0);
+            const double clipGain = static_cast<double>(clip.gain);
+            const double clipGainL = clipGain * (clipPan > 0.0 ? 1.0 - clipPan : 1.0);
+            const double clipGainR = clipGain * (clipPan < 0.0 ? 1.0 + clipPan : 1.0);
 
             // Fast path: matching sample rates - direct copy to double
             if (std::abs(ratio - 1.0) < 1e-9) {
                 const uint64_t srcStart = static_cast<uint64_t>(phase);
                 const float* src = data + srcStart * stride;
-                const double clipGain = static_cast<double>(clip.gain);
                 for (uint32_t i = 0; i < framesToRender; ++i) {
                     // Micro-fade at clip edges to avoid clicks/crackles.
-                    double fade = 1.0;
                     const uint64_t projectSample = start + i;
-                    if (fadeLen > 0) {
-                        if (projectSample < clip.startSample + fadeLen) {
-                            fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                   static_cast<double>(fadeLen)));
-                        }
-                        if (projectSample + fadeLen > clip.endSample) {
-                            fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                   static_cast<double>(fadeLen)));
-                        }
-                    }
+                    const double fade = clipFadeAt(projectSample);
 
                     // Sanitize clip source reads: a corrupted audio file can
                     // contain NaN/Inf that would otherwise poison the mix.
@@ -2234,8 +2220,8 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                         sR = sanitizeMix(static_cast<double>(src[i * 2 + 1]));
                     }
 
-                    dst[i * 2] += sL * clipGain * fade;
-                    dst[i * 2 + 1] += sR * clipGain * fade;
+                    dst[i * 2] += sL * clipGainL * fade;
+                    dst[i * 2 + 1] += sR * clipGainR * fade;
                 }
             } else {
                 srcActiveThisBlock = true;
@@ -2248,17 +2234,8 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     switch (cachedInterpQuality) {
                     case Interpolators::InterpolationQuality::Cubic:
                         for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            double fade = 1.0;
                             const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen)
-                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                              static_cast<double>(fadeLen));
-                                if (projectSample + fadeLen > clip.endSample)
-                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                              static_cast<double>(fadeLen));
-                            }
-                            double clipGain = static_cast<double>(clip.gain);
+                            const double fade = clipFadeAt(projectSample);
                             float sample = 0.0f;
                             uint64_t idx = static_cast<uint64_t>(phase);
                             double frac = phase - static_cast<double>(idx);
@@ -2271,8 +2248,8 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                             sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
                                                                (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
                                                                (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
-                            dst[i * 2] += sample * clipGain * fade;
-                            dst[i * 2 + 1] += sample * clipGain * fade;
+                            dst[i * 2] += sample * clipGainL * fade;
+                            dst[i * 2 + 1] += sample * clipGainR * fade;
                             phase += ratio;
                         }
                         continue;
@@ -2282,45 +2259,27 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     case Interpolators::InterpolationQuality::Sinc64:
                         // Sinc on mono: compute weighted sum, duplicate to L/R
                         for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            double fade = 1.0;
                             const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen)
-                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                              static_cast<double>(fadeLen));
-                                if (projectSample + fadeLen > clip.endSample)
-                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                              static_cast<double>(fadeLen));
-                            }
-                            double clipGain = static_cast<double>(clip.gain);
+                            const double fade = clipFadeAt(projectSample);
                             double val =
                                 Interpolators::sincInterpolateMono(data, totalFrames, phase, cachedInterpQuality);
-                            dst[i * 2] += val * clipGain * fade;
-                            dst[i * 2 + 1] += val * clipGain * fade;
+                            dst[i * 2] += val * clipGainL * fade;
+                            dst[i * 2 + 1] += val * clipGainR * fade;
                             phase += ratio;
                         }
                         continue;
                     default:
                         // Linear fallback
                         for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                            double fade = 1.0;
                             const uint64_t projectSample = start + i;
-                            if (fadeLen > 0) {
-                                if (projectSample < clip.startSample + fadeLen)
-                                    fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                                              static_cast<double>(fadeLen));
-                                if (projectSample + fadeLen > clip.endSample)
-                                    fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                                              static_cast<double>(fadeLen));
-                            }
-                            double clipGain = static_cast<double>(clip.gain);
+                            const double fade = clipFadeAt(projectSample);
                             uint64_t idx = static_cast<uint64_t>(phase);
                             double frac = phase - static_cast<double>(idx);
                             float s0 = data[idx];
                             float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
                             double val = s0 + frac * (s1 - s0);
-                            dst[i * 2] += val * clipGain * fade;
-                            dst[i * 2 + 1] += val * clipGain * fade;
+                            dst[i * 2] += val * clipGainL * fade;
+                            dst[i * 2 + 1] += val * clipGainR * fade;
                             phase += ratio;
                         }
                         continue;
@@ -2333,21 +2292,10 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                         float outL, outR;
                         Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
-                        double fade = 1.0;
                         const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-                        const double clipGain = static_cast<double>(clip.gain);
-                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        const double fade = clipFadeAt(projectSample);
+                        dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
                         phase += ratio;
                     }
                     break;
@@ -2355,21 +2303,10 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                         float outL, outR;
                         Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                        double fade = 1.0;
                         const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-                        const double clipGain = static_cast<double>(clip.gain);
-                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        const double fade = clipFadeAt(projectSample);
+                        dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
                         phase += ratio;
                     }
                     break;
@@ -2377,21 +2314,10 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                         float outL, outR;
                         Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                        double fade = 1.0;
                         const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-                        const double clipGain = static_cast<double>(clip.gain);
-                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        const double fade = clipFadeAt(projectSample);
+                        dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
                         phase += ratio;
                     }
                     break;
@@ -2399,21 +2325,10 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                         float outL, outR;
                         Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                        double fade = 1.0;
                         const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-                        const double clipGain = static_cast<double>(clip.gain);
-                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        const double fade = clipFadeAt(projectSample);
+                        dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
                         phase += ratio;
                     }
                     break;
@@ -2421,21 +2336,10 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                     for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                         float outL, outR;
                         Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                        double fade = 1.0;
                         const uint64_t projectSample = start + i;
-                        if (fadeLen > 0) {
-                            if (projectSample < clip.startSample + fadeLen) {
-                                fade = std::min(fade, (static_cast<double>(projectSample - clip.startSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                            if (projectSample + fadeLen > clip.endSample) {
-                                fade = std::min(fade, (static_cast<double>(clip.endSample - projectSample) /
-                                                       static_cast<double>(fadeLen)));
-                            }
-                        }
-                        const double clipGain = static_cast<double>(clip.gain);
-                        dst[i * 2] += static_cast<double>(outL) * clipGain * fade;
-                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGain * fade;
+                        const double fade = clipFadeAt(projectSample);
+                        dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
+                        dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
                         phase += ratio;
                     }
                     break;
@@ -2445,18 +2349,18 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
     }
 }
 
-void AudioEngine::renderTrackUnits(uint32_t trackIdx, std::vector<double>& buffer, const RenderContext& ctx) {
-    // Verbatim Arsenal-unit phase moved out of renderTrack().
+void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx) {
     const uint32_t numFrames = ctx.numFrames;
     const AudioArsenalSnapshot* const unitSnapshot = ctx.unitSnapshot;
     const PatternPlaybackEngine::UnitMidiRoute* const unitMidiRoutes = ctx.unitMidiRoutes;
     const size_t unitMidiRouteCount = ctx.unitMidiRouteCount;
 
     // === ANTIGRAVITY UNIT RENDER (v3.1) ===
-    // Render any units routed to this track
+    // Render every unit whose stable mixer destination matches this track.
     if (unitSnapshot) {
         for (const auto& unit : unitSnapshot->units) {
-            if (static_cast<uint32_t>(unit.routeId) == trackIdx && unit.enabled && unit.plugin) {
+            if (unit.mixerChannelId == mixerChannelId && unit.enabled && unit.plugin && !unit.isMuted &&
+                (!ctx.anyUnitSolo || unit.isSolo)) {
                 // Found unit for this track
                 MidiBuffer* midiBuf = nullptr;
                 for (size_t r = 0; r < unitMidiRouteCount; ++r) {
@@ -2953,9 +2857,9 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     // Clip rendering, Arsenal units, and the effect chain are verbatim phase
     // extractions — see the helpers directly above renderTrack().
-    renderTrackClips(track, buffer, ctx, srcActiveThisBlock);
+    renderClips(track.clips, buffer.data(), ctx, srcActiveThisBlock);
 
-    renderTrackUnits(trackIdx, buffer, ctx);
+    renderTrackUnits(track.trackId, buffer, ctx);
 
     float trackSidechainPeak = processTrackEffects(track, trackIdx, buffer, numFrames);
 
@@ -3222,7 +3126,7 @@ void AudioEngine::requestVoiceResetOnPatternChange() {
 //==============================================================================
 
 void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                                      double* targetBuffer, int32_t isolatedTrackIndex) {
+                                      double* targetBuffer, int64_t isolatedMixerChannelId) {
     // [FIX] Only process Arsenal units in pattern/Arsenal mode
     // In Timeline mode, skip entirely to prevent audio bleed with wrong sample rate
     if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
@@ -3266,6 +3170,9 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
             drainLiveMidi(nullptr, 0);
         return;
     }
+    const bool anyUnitSolo = std::any_of(snapshot->units.begin(), snapshot->units.end(), [](const UnitState& unit) {
+        return unit.enabled && unit.isSolo && !unit.isMuted;
+    });
 
     syncCachedSamplerSampleRatesRt(sampleRate);
 
@@ -3320,7 +3227,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     const float* inputs[2] = {m_silentBufferF.data(), m_silentBufferF.data()};
 
     for (const auto& unit : snapshot->units) {
-        if (!unit.enabled || !unit.plugin) {
+        if (!unit.enabled || !unit.plugin || unit.isMuted || (anyUnitSolo && !unit.isSolo)) {
             bufIdx++;
             continue;
         }
@@ -3328,14 +3235,13 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         // During bounce (targetBuffer set), skip PreviewToMaster units.
         // renderBlock handles PreviewToMaster via AudioRenderer::processArsenalUnits.
         // During live processBlock, all units process through m_masterBufferD.
-        if (targetBuffer != nullptr && unit.getRouteMode() == ArsenalRouteMode::PreviewToMaster) {
+        if (targetBuffer != nullptr && unit.mixerChannelId == MASTER_MIXER_CHANNEL_ID) {
             bufIdx++;
             continue;
         }
 
-        // During isolated-track bounce, skip track-routed units not assigned
-        // to the isolated track.
-        if (isolatedTrackIndex >= 0 && unit.routeId >= 0 && unit.routeId != isolatedTrackIndex) {
+        // During isolated-track bounce, include only the stable destination selected by the caller.
+        if (isolatedMixerChannelId >= 0 && unit.mixerChannelId != static_cast<uint32_t>(isolatedMixerChannelId)) {
             bufIdx++;
             continue;
         }
@@ -3413,6 +3319,16 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     if (totalFrames == 0)
         return false;
 
+    int64_t isolatedMixerChannelId = -1;
+    if (trackId >= 0) {
+        auto trackManager = m_trackManager.lock();
+        const auto* channel = trackManager ? trackManager->getChannel(static_cast<size_t>(trackId)) : nullptr;
+        if (!channel) {
+            return false;
+        }
+        isolatedMixerChannelId = static_cast<int64_t>(channel->getChannelId());
+    }
+
     // 2. Prepare Encoder (MiniAudio)
     // First, stop playback to ensure safe rendering
     bool wasPlaying = m_transportPlaying.exchange(false, std::memory_order_relaxed);
@@ -3470,11 +3386,6 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // However, for simplicity and since we are stopped, we use the active graph.
     // Ideally we clone it.
 
-    // trackId parameter is the persistent track lane index.
-    // isolatedTrackIndex is used to compare against unit.routeId (which is also the lane index).
-    // Use trackId directly when >= 0 for the comparison.
-    int32_t isolatedTrackIndex = trackId;
-
     Aestra::Log::info("[AudioEngine] Starting isolated track bounce: " + std::to_string(totalFrames) + " frames.");
 
     while (framesRemaining > 0) {
@@ -3494,7 +3405,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         auto graphRead = m_state.activeGraphRead();
         ctx.graph = &graphRead.get();
         ctx.isOffline = true;
-        ctx.isolatedTrackIndex = isolatedTrackIndex;
+        ctx.isolatedTrackIndex = trackId;
 
         // Refill pattern engine lookahead (normally done by performNonRealtimeMaintenance)
         auto* patEng = m_patternEngine.load(std::memory_order_acquire);
@@ -3514,7 +3425,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Process Arsenal pattern playback (MIDI buffer pop + unit render).
         // renderBlock handles PreviewToMaster; this call processes track-routed
         // Arsenal units that need MIDI buffer population for pattern playback.
-        processArsenalUnits(framesThisBlock, 0, currentFrame, blockBuffer.data(), isolatedTrackIndex);
+        processArsenalUnits(framesThisBlock, 0, currentFrame, blockBuffer.data(), isolatedMixerChannelId);
 
         // Buffer Conversion (Double -> Float)
         for (size_t i = 0; i < framesThisBlock * 2; ++i) {

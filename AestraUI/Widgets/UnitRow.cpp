@@ -11,6 +11,7 @@
 #include "AudioEngine.h"
 #include "../../AestraCore/include/AestraLog.h"
 
+#include <unordered_set>
 namespace AestraUI {
 
 namespace {
@@ -79,7 +80,22 @@ void UnitRow::updateState() {
         m_audioClip = unit->audioClipPath.empty() ? "" : 
                       unit->audioClipPath.substr(unit->audioClipPath.find_last_of("/\\") + 1);
         m_pluginId = unit->pluginId;
-        m_mixerChannel = unit->targetMixerRoute;
+        m_mixerChannelId = unit->targetMixerChannelId;
+        m_mixerRouteShortLabel = "M";
+        if (m_mixerChannelId != Aestra::Audio::MASTER_MIXER_CHANNEL_ID && m_trackManager) {
+            bool resolved = false;
+            for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+                const auto* channel = m_trackManager->getChannel(i);
+                if (channel && channel->getChannelId() == m_mixerChannelId) {
+                    m_mixerRouteShortLabel = std::to_string(i + 1);
+                    resolved = true;
+                    break;
+                }
+            }
+            if (!resolved) {
+                m_mixerRouteShortLabel = "!";
+            }
+        }
         m_audioDurationSeconds = unit->audioDurationSeconds;
         m_audioPreviewWaveform = unit->audioPreviewWaveform;
 
@@ -338,8 +354,17 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // Name + type label are rendered by the UnitNameLabel child component.
 
     const float pillY = centerY - 10.0f;
+    const NUIRect routeRect(bounds.x + bounds.width - 142.0f, pillY, 42.0f, 20.0f);
     const NUIRect muteRect(bounds.x + bounds.width - 92.0f, pillY, 24.0f, 20.0f);
     const NUIRect soloRect(bounds.x + bounds.width - 62.0f, pillY, 24.0f, 20.0f);
+    const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
+                                   ? theme.getColor("surfaceTertiary")
+                                   : unitAccent.withAlpha(0.16f);
+    const NUIColor routeStroke =
+        m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : unitAccent.withAlpha(0.42f);
+    renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
+    renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
+    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 9.0f, theme.getColor("textPrimary").withAlpha(0.9f));
     drawMuteIcon(renderer, muteRect, m_isMuted);
     drawSoloIcon(renderer, soloRect, m_isSolo);
 
@@ -807,7 +832,12 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
 
     const NUIRect muteRect(bounds.width - 92.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
     const NUIRect soloRect(bounds.width - 62.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
+    const NUIRect routeRect(bounds.width - 142.0f, bounds.height * 0.5f - 10.0f, 42.0f, 20.0f);
     const NUIPoint localPoint(localX, localY);
+    if (routeRect.contains(localPoint)) {
+        showMixerRoutingMenu(event.position);
+        return;
+    }
     if (muteRect.contains(localPoint)) {
         m_manager.setUnitMute(m_unitId, !m_isMuted);
         updateState();
@@ -886,7 +916,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
             }
 
             const int defaultPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
-            midi.notes.push_back({defaultPitch, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
+            midi.notes.push_back({defaultPitch, targetBeat, 0.25, 100.0f / 127.0f, 0.0f, m_unitId});
         });
 
         if (removedExisting) {
@@ -927,6 +957,7 @@ bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
 
 UnitRow::~UnitRow() {
     detachContextMenu(m_rowContextMenu);
+    detachContextMenu(m_mixerRoutingMenu);
     NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
@@ -1044,8 +1075,91 @@ void UnitRow::layoutNameLabel() {
     auto bounds = getBounds();
     float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
-    float labelWidth = std::max(56.0f, controlWidth - 158.0f);
+    float labelWidth = std::max(56.0f, controlWidth - 206.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+}
+
+void UnitRow::routeToMixerChannel(uint32_t channelId) {
+    if (!m_trackManager || !m_manager.getUnit(m_unitId)) {
+        return;
+    }
+    m_manager.setUnitMixerChannel(m_unitId, static_cast<int64_t>(channelId));
+    m_trackManager->markModified();
+    updateState();
+}
+
+void UnitRow::routeToFirstFreeMixerChannel() {
+    if (!m_trackManager || !m_manager.getUnit(m_unitId)) {
+        return;
+    }
+
+    std::unordered_set<uint32_t> usedChannelIds;
+    for (const auto unitId : m_manager.getAllUnitIDs()) {
+        if (unitId == m_unitId)
+            continue;
+        const uint32_t channelId = m_manager.getUnitMixerChannel(unitId);
+        if (channelId != Aestra::Audio::MASTER_MIXER_CHANNEL_ID) {
+            usedChannelIds.insert(channelId);
+        }
+    }
+
+    for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+        const auto* channel = m_trackManager->getChannel(i);
+        if (channel && usedChannelIds.find(channel->getChannelId()) == usedChannelIds.end()) {
+            routeToMixerChannel(channel->getChannelId());
+            return;
+        }
+    }
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    const std::string destinationName = m_name.empty() ? "Mixer Insert" : m_name;
+    const auto laneId = playlist.createLane(destinationName);
+    if (!laneId.isValid()) {
+        return;
+    }
+
+    auto* channel = m_trackManager->addChannel(destinationName);
+    if (!channel) {
+        playlist.removeLane(laneId);
+        return;
+    }
+
+    channel->setColor(m_color);
+    if (auto* lane = playlist.getLane(laneId)) {
+        lane->colorRGBA = m_color;
+    }
+    routeToMixerChannel(channel->getChannelId());
+}
+
+void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
+    detachContextMenu(m_mixerRoutingMenu);
+    if (!m_trackManager) {
+        return;
+    }
+
+    m_mixerRoutingMenu = std::make_shared<NUIContextMenu>();
+    m_mixerRoutingMenu->setOnHide([this]() { detachContextMenu(m_mixerRoutingMenu); });
+
+    const auto addRouteItem = [this](uint32_t channelId, const std::string& label) {
+        const bool selected = channelId == m_mixerChannelId;
+        m_mixerRoutingMenu->addItem((selected ? "✓ " : "  ") + label,
+                                    [this, channelId]() { routeToMixerChannel(channelId); });
+    };
+
+    addRouteItem(Aestra::Audio::MASTER_MIXER_CHANNEL_ID, "Master");
+    if (m_trackManager->getChannelCount() > 0) {
+        m_mixerRoutingMenu->addSeparator();
+    }
+    for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+        const auto* channel = m_trackManager->getChannel(i);
+        if (!channel)
+            continue;
+        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
+    }
+
+    m_mixerRoutingMenu->addSeparator();
+    m_mixerRoutingMenu->addItem("Assign to first free insert", [this]() { routeToFirstFreeMixerChannel(); });
+    attachAndShowContextMenu(this, m_mixerRoutingMenu, pos);
 }
 
 void UnitRow::showRowContextMenu(const NUIPoint& pos) {

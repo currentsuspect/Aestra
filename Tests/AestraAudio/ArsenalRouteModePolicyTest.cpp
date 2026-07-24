@@ -146,7 +146,7 @@ int main() {
     unit.set("id", Aestra::JSON(1.0));
     unit.set("name", Aestra::JSON("Policy"));
     unit.set("enabled", Aestra::JSON(true));
-    unit.set("targetMixerRoute", Aestra::JSON(4.0)); // timeline route authority
+    unit.set("targetMixerRoute", Aestra::JSON(4.0)); // legacy timeline ownership metadata
     Aestra::JSON routeMode = Aestra::JSON::object();
     routeMode.set("id", Aestra::JSON(static_cast<double>(static_cast<uint8_t>(ArsenalRouteMode::PreviewToMaster))));
     routeMode.set("name", Aestra::JSON("PreviewToMaster"));
