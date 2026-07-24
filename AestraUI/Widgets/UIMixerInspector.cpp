@@ -768,17 +768,22 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
              // Meta row sits BELOW the input dropdown (layoutHitRects places it at
              // contentY + 58, height 22 → bottom ~80). Anchoring the labels here
              // keeps them clear of the dropdown instead of under it.
+             // Label and value share one size and baseline so they align. The
+             // value's prominence comes from a brighter colour, not a larger
+             // size — previously it was 9.5px vs the label's 8.5px (which the
+             // renderer floored differently by alpha), so they mismatched.
              const float metaY = sourceCard.y + 88.0f;
-             renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, 8.5f,
+             constexpr float kMetaSize = 10.0f;
+             renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, kMetaSize,
                                m_textSecondary.withAlpha(0.70f));
-             renderer.drawText(fitText(renderer, channel->inputSourceName, 9.5f, 72.0f),
-                               {sourceCard.x + 58.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
+             renderer.drawText(fitText(renderer, channel->inputSourceName, kMetaSize, 60.0f),
+                               {sourceCard.x + 58.0f, metaY}, kMetaSize, m_text.withAlpha(0.92f));
 
              const std::string monitorMode = channel->monitored ? "Arm + Monitor" : "Arm Only";
-             renderer.drawText("Mode", {sourceCard.x + 122.0f, metaY}, 8.5f,
+             renderer.drawText("Mode", {sourceCard.x + 122.0f, metaY}, kMetaSize,
                                m_textSecondary.withAlpha(0.70f));
-             renderer.drawText(fitText(renderer, monitorMode, 9.5f, sourceCard.right() - sourceCard.x - 166.0f),
-                               {sourceCard.x + 158.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
+             renderer.drawText(fitText(renderer, monitorMode, kMetaSize, sourceCard.right() - sourceCard.x - 160.0f),
+                               {sourceCard.x + 158.0f, metaY}, kMetaSize, m_text.withAlpha(0.92f));
 
              const float signalTop = sourceCard.bottom() + 10.0f;
              const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 94.0f};
