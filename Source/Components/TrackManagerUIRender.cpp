@@ -372,14 +372,13 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // Light separator strip filling the lane gap across the grid area
         // (owner direction: the black gaps read as holes — lift them to a
         // shade of white so rows stay legible). This is the only row
-        // separator; TrackUIComponent draws none. Kept subtle: at 0.30 the
-        // strip read as a harsh bright rule (~RGB 149) against the near-black
-        // grid; 0.11 still lifts the gap out of "hole" territory without the
-        // high-contrast banding.
+        // separator; TrackUIComponent draws none. Kept very faint so track rows
+        // read as quietly separated lanes, not a hard spreadsheet grid — the
+        // musical content (clips) carries the visual weight, not the chrome.
         const AestraUI::NUIRect gapRect(bounds.x + gridStartX, trackBounds.bottom(),
                                         std::max(0.0f, trackWidth - gridStartX),
                                         static_cast<float>(m_trackSpacing));
-        renderer.fillRect(gapRect, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.11f));
+        renderer.fillRect(gapRect, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.06f));
     }
 
     // Clear clip rect before drawing header/ruler (they should draw fully)
