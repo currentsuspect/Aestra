@@ -155,31 +155,48 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                         badgeW,
                         badgeH);
     const float statusX = badge.x - statusSize.width - 14.0f;
-    const float sharedBaselineY = std::round(renderer.calculateTextY({statusX, badgeY, statusSize.width, badgeH}, userFont));
-    renderer.drawText(status,
-                      {statusX, sharedBaselineY},
-                      userFont, muted);
 
-    const float badgeRadius = props.radiusM; // 8.0
-    const NUIColor badgeFill = membershipVerified_
-        ? accent.withAlpha(0.10f)
-        : accent.withAlpha(0.04f);
-    const NUIColor badgeStroke = membershipVerified_
-        ? accent.withAlpha(0.50f)
-        : accent.withAlpha(0.24f);
-    renderer.fillRoundedRect(badge, badgeRadius, badgeFill);
-    renderer.strokeRoundedRect(badge, badgeRadius, 1.0f, badgeStroke);
+    // Progressive collapse for narrow windows. The view toggle is centred on the
+    // whole title bar (AestraContent positions it), so on a small window it would
+    // collide with this right-hand status/badge cluster. Rather than let them
+    // overlap the tabs, hide the least-critical chrome first — the "Signed out"
+    // status text, then the Core badge — keeping the view tabs uncrowded. Primary
+    // controls never hide. Compare against the toggle's centred right edge.
+    const float toggleRightEdge = bounds.x + bounds.width * 0.5f
+                                  + props.layout.viewToggleWidth * 0.5f;
+    constexpr float kClusterGuard = 16.0f;
+    const bool showBadge = badge.x > toggleRightEdge + kClusterGuard;
+    const bool showStatus = showBadge && statusX > toggleRightEdge + kClusterGuard;
 
-    if (membershipVerified_) {
-        // Subtle status dot on the leading edge of the badge to reinforce verified state.
-        const float dotRadius = 3.0f;
-        const NUIPoint dotCenter(badge.x + 10.0f, badge.y + badge.height * 0.5f);
-        renderer.fillCircle(dotCenter, dotRadius, verifiedAccent.withAlpha(0.92f));
-        renderer.fillCircle(dotCenter, dotRadius * 0.45f, NUIColor::white().withAlpha(0.55f));
+    if (showStatus) {
+        const float sharedBaselineY = std::round(renderer.calculateTextY({statusX, badgeY, statusSize.width, badgeH}, userFont));
+        renderer.drawText(status,
+                          {statusX, sharedBaselineY},
+                          userFont, muted);
     }
 
-    renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f, text.withAlpha(membershipVerified_ ? 0.92f : 0.78f));
-    
+    if (showBadge) {
+        const float badgeRadius = props.radiusM; // 8.0
+        const NUIColor badgeFill = membershipVerified_
+            ? accent.withAlpha(0.10f)
+            : accent.withAlpha(0.04f);
+        const NUIColor badgeStroke = membershipVerified_
+            ? accent.withAlpha(0.50f)
+            : accent.withAlpha(0.24f);
+        renderer.fillRoundedRect(badge, badgeRadius, badgeFill);
+        renderer.strokeRoundedRect(badge, badgeRadius, 1.0f, badgeStroke);
+
+        if (membershipVerified_) {
+            // Subtle status dot on the leading edge of the badge to reinforce verified state.
+            const float dotRadius = 3.0f;
+            const NUIPoint dotCenter(badge.x + 10.0f, badge.y + badge.height * 0.5f);
+            renderer.fillCircle(dotCenter, dotRadius, verifiedAccent.withAlpha(0.92f));
+            renderer.fillCircle(dotCenter, dotRadius * 0.45f, NUIColor::white().withAlpha(0.55f));
+        }
+
+        renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f, text.withAlpha(membershipVerified_ ? 0.92f : 0.78f));
+    }
+
     // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);
 }
