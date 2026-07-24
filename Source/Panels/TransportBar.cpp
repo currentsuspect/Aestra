@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <cmath>
 #include <chrono>
+#include <vector>
+#include <utility>
 
 namespace Aestra {
 
@@ -21,6 +23,35 @@ constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
 constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
 constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
 constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
+constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
+
+// Progressive collapse for narrow windows. The transport island packs four fixed
+// groups (transport / extras / info / views). When the window can't hold them all
+// it used to place them at full width anyway and clip the rightmost group off the
+// edge. Instead, hide the secondary groups — the record-aid extras first
+// (count-in / wait / loop-record / metronome), then the view switches — keeping
+// the transport buttons and tempo/time readout always visible. The transport
+// buttons and info readout never hide.
+struct TransportLayoutTier {
+    bool showExtras = true;   // count-in / wait / loop-record / metronome
+    bool showViews = true;    // mixer / sequencer / piano-roll / playlist
+};
+
+inline TransportLayoutTier transportTierFor(float availWidth) {
+    const float bs = TRANSPORT_BUTTON_SIZE;
+    const float sp = TRANSPORT_BUTTON_SPACING;
+    const float gs = TRANSPORT_GROUP_SPACING;
+    const float pad = TRANSPORT_ISLAND_PADDING;
+    const float g1 = bs * 3.0f + sp * 2.0f;         // transport (3 buttons)
+    const float g = bs * 4.0f + sp * 3.0f;          // extras / views (4 buttons each)
+    const float info = TRANSPORT_INFO_WIDTH;
+    const float margin = 20.0f;                     // mirrors the island width clamp
+    const float full    = (g1 + gs + g + gs + info + gs + g) + pad * 2.0f;
+    const float noExtras = (g1 + gs + info + gs + g) + pad * 2.0f;
+    if (availWidth >= full + margin)    return {true, true};
+    if (availWidth >= noExtras + margin) return {false, true};
+    return {false, false};
+}
 
 } // namespace
 
@@ -505,7 +536,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
                                  bool isActive,
                                  bool isRecording = false,
                                  bool isPrimaryTransport = false) {
-        if (!btn || !icon) return;
+        if (!btn || !icon || !btn->isVisible()) return; // collapsed groups draw nothing
 
         AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
         bool isHovered = btn->isHovered() && btn->isEnabled();
@@ -650,9 +681,14 @@ void TransportBar::layoutComponents() {
     // Group 4: Views (Mixer, Seq, Piano, Playlist) - 4 buttons
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
-    // Total Content Width
-    float totalContentWidth =
-        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    // Which secondary groups fit? (hide extras first, then views — see helper)
+    const TransportLayoutTier tier = transportTierFor(bounds.width);
+
+    // Total Content Width — only count the groups we'll actually place. Order is
+    // transport, (extras), info, (views), with one gap between adjacent groups.
+    float totalContentWidth = group1Width + groupSpacing + infoWidth
+        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
+        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -693,42 +729,44 @@ void TransportBar::layoutComponents() {
     placePrimaryButton(m_recordButton, xCursor);
     xCursor += buttonSize + groupSpacing; // GAP
 
-    // Group 2: Extras
-    m_countInButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-    xCursor += buttonSize + spacing;
-    
-    m_waitButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-    xCursor += buttonSize + spacing;
-    
-    m_loopRecordButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-    xCursor += buttonSize + spacing;
-    
-    m_metronomeButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-    xCursor += buttonSize + groupSpacing; // GAP to Info
+    // Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so
+    // the buttons neither render nor take clicks when collapsed.
+    const auto placeExtra = [&](const std::shared_ptr<AestraUI::NUIButton>& button) {
+        if (!button) return;
+        button->setVisible(tier.showExtras);
+        if (tier.showExtras) {
+            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+            xCursor += buttonSize + spacing;
+        }
+    };
+    placeExtra(m_countInButton);
+    placeExtra(m_waitButton);
+    placeExtra(m_loopRecordButton);
+    placeExtra(m_metronomeButton);
+    if (tier.showExtras) {
+        xCursor += -spacing + groupSpacing; // last extra added a trailing spacing; swap it for a GAP
+    }
 
-    // Group 3: Info Container
+    // Group 3: Info Container (always shown)
     if (m_infoContainer) {
         m_infoContainer->setBounds(NUIAbsolute(bounds, xCursor, islandY, infoWidth, islandHeight));
     }
-    xCursor += infoWidth + groupSpacing; // GAP
+    xCursor += infoWidth;
 
-    // Group 4: Views
-    if (m_mixerButton) {
-        m_mixerButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-        xCursor += buttonSize + spacing;
-    }
-    if (m_sequencerButton) {
-        m_sequencerButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-        xCursor += buttonSize + spacing;
-    }
-    if (m_pianoRollButton) {
-        m_pianoRollButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-        xCursor += buttonSize + spacing;
-    }
-    if (m_playlistButton) {
-        m_playlistButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
-        // xCursor += buttonSize + spacing;
-    }
+    // Group 4: Views — hidden first on the narrowest windows.
+    const auto placeView = [&](const std::shared_ptr<AestraUI::NUIButton>& button, bool advance) {
+        if (!button) return;
+        button->setVisible(tier.showViews);
+        if (tier.showViews) {
+            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+            if (advance) xCursor += buttonSize + spacing;
+        }
+    };
+    if (tier.showViews) xCursor += groupSpacing; // GAP before views
+    placeView(m_mixerButton, true);
+    placeView(m_sequencerButton, true);
+    placeView(m_pianoRollButton, true);
+    placeView(m_playlistButton, false);
 
     if (m_musicalTypingLabel) {
         constexpr float statusWidth = 82.0f;
@@ -763,11 +801,15 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     float groupSpacing = TRANSPORT_GROUP_SPACING;
     float group1Width = (buttonSize * 3) + (spacing * 2);
     float group2Width = (buttonSize * 4) + (spacing * 3);
-    float infoWidth = 260.0f;
+    float infoWidth = TRANSPORT_INFO_WIDTH;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
-    float totalContentWidth =
-        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    // Must mirror layoutComponents: same collapse tier drives which groups exist.
+    const TransportLayoutTier tier = transportTierFor(bounds.width);
+
+    float totalContentWidth = group1Width + groupSpacing + infoWidth
+        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
+        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -809,25 +851,36 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
         renderer.strokeRoundedRect(groupRect, groupRadius, 1.0f, groupBorder);
     };
 
-    const float g1X = leftEdge - 6.0f;
-    const float g2X = leftEdge + group1Width + groupSpacing - 6.0f;
-    const float infoX = leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f;
-    const float g4X = leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f;
-    drawGroup(g1X, group1Width + 12.0f);
-    drawGroup(g2X, group2Width + 12.0f);
-    drawGroup(infoX, infoWidth + 12.0f);
-    drawGroup(g4X, group4Width + 12.0f);
+    // Build the present groups in order (transport, [extras], info, [views]) so the
+    // shells + separators match whatever layoutComponents placed for this tier.
+    std::vector<std::pair<float, float>> groupContent; // (x, contentWidth)
+    float cx = leftEdge;
+    groupContent.emplace_back(cx, group1Width);
+    cx += group1Width + groupSpacing;
+    if (tier.showExtras) {
+        groupContent.emplace_back(cx, group2Width);
+        cx += group2Width + groupSpacing;
+    }
+    groupContent.emplace_back(cx, infoWidth);
+    cx += infoWidth + groupSpacing;
+    if (tier.showViews) {
+        groupContent.emplace_back(cx, group4Width);
+        cx += group4Width + groupSpacing;
+    }
 
-    const float sep1X = leftEdge + group1Width + (groupSpacing * 0.5f);
-    const float sep2X = sep1X + groupSpacing * 0.5f + group2Width + (groupSpacing * 0.5f);
-    const float sep3X = sep2X + groupSpacing * 0.5f + infoWidth + (groupSpacing * 0.5f);
+    for (const auto& g : groupContent) {
+        drawGroup(g.first - 6.0f, g.second + 12.0f);
+    }
+
     const float sepTop = islandRect.y + 8.0f;
     const float sepBottom = islandRect.bottom() - 8.0f;
     const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.58f);
-    renderer.drawLine({sep1X, sepTop}, {sep1X, sepBottom}, 1.0f, sepColor);
-    renderer.drawLine({sep2X, sepTop}, {sep2X, sepBottom}, 1.0f, sepColor);
-    renderer.drawLine({sep3X, sepTop}, {sep3X, sepBottom}, 1.0f, sepColor);
-    
+    for (size_t i = 1; i < groupContent.size(); ++i) {
+        const float prevRight = groupContent[i - 1].first + groupContent[i - 1].second;
+        const float sepX = (prevRight + groupContent[i].first) * 0.5f;
+        renderer.drawLine({sepX, sepTop}, {sepX, sepBottom}, 1.0f, sepColor);
+    }
+
     renderChildren(renderer);
     renderButtonIcons(renderer);
 }

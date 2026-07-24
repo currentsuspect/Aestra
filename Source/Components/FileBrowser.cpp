@@ -963,7 +963,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIRect navHeader(layout.navPane.x, layout.navPane.y, layout.navPane.width, navHeaderH);
     renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
-                      1.0f, themeManager.getColor("border").withAlpha(0.40f));
+                      1.0f, themeManager.getColor("border")); // matches list header bottom rule → continuous line
 
     // Folder name at top (like breadcrumb on the right)
     const auto& themeProps = themeManager.getCurrentTheme();
@@ -990,14 +990,17 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                           9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
     }
 
-    // Inner divider (like right header)
-    renderer.drawLine({navHeader.x, navHeader.y + 27.0f},
-                      {navHeader.right(), navHeader.y + 27.0f},
+    // Inner divider — aligned with the list header's inner rule (listHeader.y + 29)
+    // so the two form one continuous line across the browser.
+    renderer.drawLine({navHeader.x, navHeader.y + 29.0f},
+                      {navHeader.right(), navHeader.y + 29.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
     // Scrollable content region below the fixed folder-name header. Short
-    // windows keep the tail rows reachable without moving the header.
-    const float navContentTop = layout.navPane.y + 28.0f;
+    // windows keep the tail rows reachable without moving the header. Start at the
+    // full header height so the first nav row lines up with the first file row (the
+    // list header is BROWSER_LIST_HEADER_H tall).
+    const float navContentTop = layout.navPane.y + BROWSER_LIST_HEADER_H;
     navViewportHeight_ = std::max(0.0f, layout.navPane.bottom() - navContentTop);
     const float navMaxScroll = std::max(0.0f, navContentHeight_ - navViewportHeight_);
     navScrollOffset_ = std::clamp(navScrollOffset_, 0.0f, navMaxScroll);
@@ -1019,10 +1022,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawSection = [&](const std::string& label) {
         if (compact) {
-            y += 5.0f;
-            renderer.drawLine({layout.navPane.x + 15.0f, y}, {layout.navPane.right() - 15.0f, y}, 1.0f,
-                              divider.withAlpha(0.38f));
-            y += 6.0f;
+            // No rule for label-less compact sections. The explicit drawDivider()
+            // between groups already separates them; a section rule here doubled the
+            // divider at group boundaries and drew a lone line that isolated the
+            // first icon (the star) from the header.
             return;
         }
         std::string upper = label;
@@ -1061,7 +1064,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
         switch (action) {
             case BrowserNavAction::Favorites:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8l2.25 4.55 5.03.73-3.64 3.55.86 5.01L12 15.28l-4.5 2.36.86-5.01L4.72 9.08l5.03-.73L12 3.8z"/></svg>)");
+                // Filled star: a thin stroked outline aliased badly at 16px (sharp
+                // points), looking rough next to the crisp filled colour dots.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.7 5.47 6.05.88-4.38 4.27 1.03 6.02L12 17.28l-5.4 2.84 1.03-6.02L3.25 9.85l6.05-.88L12 3.5z"/></svg>)");
                 break;
             case BrowserNavAction::Purple:
                 renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
@@ -1153,8 +1158,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawDivider = [&]() {
         y += compact ? 3.0f : 5.0f;
-        renderer.drawLine({layout.navPane.x + 14.0f, y},
-                          {layout.navPane.right() - 14.0f, y},
+        // Narrow rail: smaller inset so the rule reads as a divider, not a stub.
+        const float divInset = compact ? 8.0f : 14.0f;
+        renderer.drawLine({layout.navPane.x + divInset, y},
+                          {layout.navPane.right() - divInset, y},
                           1.0f, divider.withAlpha(0.45f));
         y += compact ? 4.0f : 8.0f;
     };
@@ -3761,8 +3768,9 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     if (event.cursorCaptured) return false;
 
     // Ignore the fixed folder-name header band: rows scrolled up under it are
-    // visually clipped, so they must not be clickable there either.
-    const float navContentTop = layout.navPane.y + 28.0f;
+    // visually clipped, so they must not be clickable there either. Must match the
+    // render-side navContentTop (full header height).
+    const float navContentTop = layout.navPane.y + BROWSER_LIST_HEADER_H;
     const bool insideNav = layout.navPane.contains(event.position) && event.position.y >= navContentTop;
     int newHovered = -1;
     if (insideNav) {

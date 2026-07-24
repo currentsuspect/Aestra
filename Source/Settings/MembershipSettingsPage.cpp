@@ -112,6 +112,21 @@ inline void drawMembershipIcon(AestraUI::NUIRenderer& renderer, const char* name
     icon->onRender(renderer);
 }
 
+// Draw a leading icon + label as one row, both vertically centred on centreY.
+// calculateTextY() centres the full line box against a zero-height rect at
+// centreY, exactly how the SYNC-card rows position their icon (at the row centre)
+// and label — those sit level to sub-pixel. Prefer this over hand-tuned Y offsets
+// like `cy + 2`, which measured ~5px low against the geometrically centred icon.
+inline void drawIconLabel(AestraUI::NUIRenderer& renderer, const char* iconName,
+                          const std::string& label, float iconCx, float textX,
+                          float centreY, float iconSize, float fontSize,
+                          const AestraUI::NUIColor& iconColor,
+                          const AestraUI::NUIColor& textColor) {
+    drawMembershipIcon(renderer, iconName, iconCx, centreY, iconSize, iconColor);
+    const AestraUI::NUIRect rowRect(textX, centreY, 0.0f, 0.0f);
+    renderer.drawText(label, {textX, renderer.calculateTextY(rowRect, fontSize)}, fontSize, textColor);
+}
+
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
 std::string serviceStatusMessage(Aestra::License::AccountServiceStatus status) {
     switch (status) {
@@ -550,23 +565,24 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
                                      statusColor.withAlpha(m_signedIn ? 0.14f : 0.08f));
             renderer.strokeRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f, 0.5f,
                                        statusColor.withAlpha(m_signedIn ? 0.35f : 0.22f));
-            drawMembershipIcon(renderer, statusIcon, px + 14.0f, py + pillH * 0.5f, 14.0f, statusColor);
-            renderer.drawText(statusText, {px + 24.0f, py + 5.0f}, props.fontSizeS, statusColor);
+            drawIconLabel(renderer, statusIcon, statusText, px + 14.0f, px + 24.0f,
+                          py + pillH * 0.5f, 14.0f, props.fontSizeS, statusColor, statusColor);
         }
 
-        // Account meta rows
-        drawMembershipIcon(renderer, "mail", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText(m_accountLabel->getText().empty() ? "currentsuspect@gmail.com"
-                                                            : m_accountLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        // Account meta rows. Icon + label share one centre line via drawIconLabel
+        // so they sit level; the old {cx+20, cy+2} text offset rendered ~5px low.
+        const AestraUI::NUIColor metaIcon = textSecondary.withAlpha(0.6f);
+        drawIconLabel(renderer, "mail",
+                      m_accountLabel->getText().empty() ? "Account unavailable" : m_accountLabel->getText(),
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
         cy += 22.0f;
-        drawMembershipIcon(renderer, "file-badge", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText(m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
-                                                               : m_verificationLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        drawIconLabel(renderer, "file-badge",
+                      m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
+                                                             : m_verificationLabel->getText(),
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
         cy += 22.0f;
-        drawMembershipIcon(renderer, "clock", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText("Last refresh: this session", {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        drawIconLabel(renderer, "clock", "Last refresh: this session",
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
     }
 
     // --- 2. FEATURES CARD ---
@@ -628,13 +644,14 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
 
         // Footer note
         float footY = fy + 4.0f * (chipH + chipGap) + 10.0f;
-        drawMembershipIcon(renderer, "info", fx + 7.0f, footY + 7.0f, 14.0f, textTertiary);
-        renderer.drawText("Locked features require verified membership", {fx + 22.0f, footY + 3.0f},
-                          props.fontSizeS, textTertiary);
+        drawIconLabel(renderer, "info", "Locked features require verified membership",
+                      fx + 7.0f, fx + 22.0f, footY + 7.0f, 14.0f, props.fontSizeS, textTertiary, textTertiary);
     }
 
     // --- 3. SYNC & SESSION CARD ---
-    {
+    // Hidden on narrow dialogs (layoutComponents collapses it to a zero rect so
+    // Features can take the full width).
+    if (m_syncCardBounds.width > 0.0f) {
         const auto& cb = m_syncCardBounds;
         const float r = 12.0f;
         renderer.fillRoundedRect(cb, r, bgPrimary);
@@ -872,17 +889,29 @@ void MembershipSettingsPage::layoutComponents() {
     m_founderCardBounds = AestraUI::NUIRect(x, y, contentW, founderH);
     y += founderH + cardGap;
 
-    // Features + Sync cards (side by side)
-    const float cardW = (contentW - cardGap) * 0.5f;
+    // Features + Sync cards. Side by side when there's room; on a narrow dialog the
+    // two-column feature chips clip badly, so give Features the full width and hide
+    // the secondary Sync & Session card instead of squeezing both. (Height is
+    // unchanged either way — the dialog can't scroll and has no vertical slack.)
+    const float sideCardW = (contentW - cardGap) * 0.5f;
     const float chipH = 30.0f;
     const float chipGap = 8.0f;
     const float chipRows = 4.0f;
     const float featuresCardH = 16.0f + 24.0f + (chipRows * chipH + (chipRows - 1.0f) * chipGap) + 10.0f + 14.0f + 16.0f;
     const float syncCardH = 16.0f + 28.0f + 4.0f * 36.0f + 16.0f;
-    const float cardH = std::max(featuresCardH, syncCardH);
-    m_featuresCardBounds = AestraUI::NUIRect(x, y, cardW, cardH);
-    m_syncCardBounds = AestraUI::NUIRect(x + cardW + cardGap, y, cardW, cardH);
-    y += cardH + cardGap;
+    const bool narrowCards = sideCardW < 300.0f;
+    float cardsBlockH;
+    if (narrowCards) {
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, contentW, featuresCardH);
+        m_syncCardBounds = AestraUI::NUIRect(0.0f, 0.0f, 0.0f, 0.0f); // hidden — see onRender guard
+        cardsBlockH = featuresCardH;
+    } else {
+        const float cardH = std::max(featuresCardH, syncCardH);
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, sideCardW, cardH);
+        m_syncCardBounds = AestraUI::NUIRect(x + sideCardW + cardGap, y, sideCardW, cardH);
+        cardsBlockH = cardH;
+    }
+    y += cardsBlockH + cardGap;
 
     // Actions row
     const float actionH = 36.0f;
@@ -908,7 +937,7 @@ void MembershipSettingsPage::layoutComponents() {
         // the form takes the Actions row's slot instead of sitting a whole row
         // below the now-empty space — which left it hanging too low. The small
         // lift seats the "Sign in" heading just under the cards.
-        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap - 10.0f;
+        float signY = b.y + vPad + founderH + cardGap + cardsBlockH + cardGap - 10.0f;
         const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
         m_signInTitleLabel->setVisible(true);
