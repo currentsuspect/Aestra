@@ -297,6 +297,9 @@ private:
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
     void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
                                 const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+    // Header scrim + label, drawn AFTER the waveform so it stays readable over it.
+    void drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                              const ClipInstance& clip);
 
     // Pattern clip rendering
     void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
