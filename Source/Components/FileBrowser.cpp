@@ -421,7 +421,9 @@ FileBrowser::FileBrowser()
     // Use inline SVG content for reliable icon loading
     // Folder icon (Mac-style smooth)
     folderIcon_ = std::make_shared<NUIIcon>();
-    const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L15 10l.94-2H21v9h-3.06z" opacity="0.8"/><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
+    // Single solid folder. The old version drew a second, opacity-0.8 path that
+    // the solid one covered completely — invisible work on every rasterization.
+    const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
     folderIcon_->loadSVG(folderSvg);
     folderIcon_->setIconSize(20, 20);
     folderIcon_->setColor(themeManager.getColor("textSecondary"));
@@ -443,28 +445,48 @@ FileBrowser::FileBrowser()
 
     // WAV Icon (Waveform visual)
     wavFileIcon_ = std::make_shared<NUIIcon>();
-    const char* wavSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 9.25a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Zm3-3a.75.75 0 0 1 .75.75v10a.75.75 0 0 1-1.5 0v-10A.75.75 0 0 1 9 6.25Zm3 2.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Zm3-1.5a.75.75 0 0 1 .75.75v9.5a.75.75 0 0 1-1.5 0v-9.5A.75.75 0 0 1 15 7.25Zm3 3.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3a.75.75 0 0 1 .75-.75Z"/></svg>)";
+    // WAV — a sample's peak envelope, mirrored about the centre line. The old
+    // bars all grew from a shared baseline, which reads as a bar chart or a
+    // level meter rather than audio.
+    const char* wavSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.1" y="9.4" width="1.9" height="5.2" rx="0.95"/><rect x="5.2" y="6.6" width="1.9" height="10.8" rx="0.95"/><rect x="8.3" y="8.6" width="1.9" height="6.8" rx="0.95"/><rect x="11.4" y="4.4" width="1.9" height="15.2" rx="0.95"/><rect x="14.5" y="7.4" width="1.9" height="9.2" rx="0.95"/><rect x="17.6" y="5.8" width="1.9" height="12.4" rx="0.95"/><rect x="20.7" y="9.8" width="1.9" height="4.4" rx="0.95"/></svg>)";
     wavFileIcon_->loadSVG(wavSvg);
     wavFileIcon_->setIconSize(20, 20);
     wavFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // MP3 Icon (Music Note Circle)
     mp3FileIcon_ = std::make_shared<NUIIcon>();
-    const char* mp3Svg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>)";
+    // MP3 — a record: outer disc, groove gap, centre label. A finished track
+    // rather than raw material, which is what an mp3 in a browser usually is.
+    const char* mp3Svg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3.2a6.8 6.8 0 1 1 0 13.6 6.8 6.8 0 0 1 0-13.6z"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>)";
     mp3FileIcon_->loadSVG(mp3Svg);
     mp3FileIcon_->setIconSize(20, 20);
     mp3FileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // FLAC Icon (HQ High fidelity box)
     flacFileIcon_ = std::make_shared<NUIIcon>();
-    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>)";
+    // FLAC — a continuous waveform, distinct from WAV's discrete peak bars so
+    // the two are told apart at a glance while both still read as audio. The
+    // old glyph was a rounded box with bars in it and said nothing at all.
+    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 12 C3.4 4.8 5.4 4.8 7 12 S10.6 19.2 12.2 12 S15.8 4.8 17.4 12 S21 17 22.2 12"/></svg>)";
     flacFileIcon_->loadSVG(flacSvg);
     flacFileIcon_->setIconSize(20, 20);
     flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // Project Icon (Aestra Diamond)
+    // MIDI Icon — piano-roll note blocks. MIDI files previously fell through to
+    // the generic document glyph because getIconForFileType had no MidiFile
+    // case, so a first-class producer file type looked like a text file.
+    // Deliberately not a waveform: MIDI carries no audio.
+    midiFileIcon_ = std::make_shared<NUIIcon>();
+    const char* midiSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.8" y="5.2" width="8.2" height="3" rx="1.5"/><rect x="12.2" y="9.4" width="9" height="3" rx="1.5"/><rect x="5.4" y="13.6" width="7.4" height="3" rx="1.5"/><rect x="13.6" y="17.8" width="7.6" height="3" rx="1.5"/></svg>)";
+    midiFileIcon_->loadSVG(midiSvg);
+    midiFileIcon_->setIconSize(20, 20);
+    midiFileIcon_->setColor(themeManager.getColor("textSecondary"));
+
+    // Project Icon
     projectFileIcon_ = std::make_shared<NUIIcon>();
-    const char* projectSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 12l8 10 8-10-8-10zm0 3.75l5 6.25-5 6.25-5-6.25 5-6.25z"/></svg>)";
+    // Project — an arrangement: a card with track lanes cut out of it. The old
+    // glyph was an abstract diamond that could have meant anything.
+    const char* projectSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.7 4H19.3A2.2 2.2 0 0 1 21.5 6.2V17.8A2.2 2.2 0 0 1 19.3 20H4.7A2.2 2.2 0 0 1 2.5 17.8V6.2A2.2 2.2 0 0 1 4.7 4ZM5.6 7.4H18.4V9.6H5.6ZM5.6 10.9H15.1V13.1H5.6ZM5.6 14.4H17.1V16.6H5.6Z"/></svg>)";
     projectFileIcon_->loadSVG(projectSvg);
     projectFileIcon_->setIconSize(20, 20);
     projectFileIcon_->setColor(themeManager.getColor("accentPrimary"));
@@ -2973,6 +2995,8 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
             return mp3FileIcon_;
         case FileType::FlacFile:
             return flacFileIcon_;
+        case FileType::MidiFile:
+            return midiFileIcon_;
         default:
             return unknownFileIcon_;
     }
