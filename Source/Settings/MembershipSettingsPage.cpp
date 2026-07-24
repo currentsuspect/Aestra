@@ -649,7 +649,9 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     }
 
     // --- 3. SYNC & SESSION CARD ---
-    {
+    // Hidden on narrow dialogs (layoutComponents collapses it to a zero rect so
+    // Features can take the full width).
+    if (m_syncCardBounds.width > 0.0f) {
         const auto& cb = m_syncCardBounds;
         const float r = 12.0f;
         renderer.fillRoundedRect(cb, r, bgPrimary);
@@ -887,17 +889,29 @@ void MembershipSettingsPage::layoutComponents() {
     m_founderCardBounds = AestraUI::NUIRect(x, y, contentW, founderH);
     y += founderH + cardGap;
 
-    // Features + Sync cards (side by side)
-    const float cardW = (contentW - cardGap) * 0.5f;
+    // Features + Sync cards. Side by side when there's room; on a narrow dialog the
+    // two-column feature chips clip badly, so give Features the full width and hide
+    // the secondary Sync & Session card instead of squeezing both. (Height is
+    // unchanged either way — the dialog can't scroll and has no vertical slack.)
+    const float sideCardW = (contentW - cardGap) * 0.5f;
     const float chipH = 30.0f;
     const float chipGap = 8.0f;
     const float chipRows = 4.0f;
     const float featuresCardH = 16.0f + 24.0f + (chipRows * chipH + (chipRows - 1.0f) * chipGap) + 10.0f + 14.0f + 16.0f;
     const float syncCardH = 16.0f + 28.0f + 4.0f * 36.0f + 16.0f;
-    const float cardH = std::max(featuresCardH, syncCardH);
-    m_featuresCardBounds = AestraUI::NUIRect(x, y, cardW, cardH);
-    m_syncCardBounds = AestraUI::NUIRect(x + cardW + cardGap, y, cardW, cardH);
-    y += cardH + cardGap;
+    const bool narrowCards = sideCardW < 300.0f;
+    float cardsBlockH;
+    if (narrowCards) {
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, contentW, featuresCardH);
+        m_syncCardBounds = AestraUI::NUIRect(0.0f, 0.0f, 0.0f, 0.0f); // hidden — see onRender guard
+        cardsBlockH = featuresCardH;
+    } else {
+        const float cardH = std::max(featuresCardH, syncCardH);
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, sideCardW, cardH);
+        m_syncCardBounds = AestraUI::NUIRect(x + sideCardW + cardGap, y, sideCardW, cardH);
+        cardsBlockH = cardH;
+    }
+    y += cardsBlockH + cardGap;
 
     // Actions row
     const float actionH = 36.0f;
@@ -923,7 +937,7 @@ void MembershipSettingsPage::layoutComponents() {
         // the form takes the Actions row's slot instead of sitting a whole row
         // below the now-empty space — which left it hanging too low. The small
         // lift seats the "Sign in" heading just under the cards.
-        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap - 10.0f;
+        float signY = b.y + vPad + founderH + cardGap + cardsBlockH + cardGap - 10.0f;
         const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
         m_signInTitleLabel->setVisible(true);
