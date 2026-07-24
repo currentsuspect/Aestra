@@ -20,9 +20,13 @@ namespace {
 
 constexpr float TRANSPORT_BUTTON_SIZE = 32.0f;
 constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
-constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
 constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
 constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
+// With the group shells gone, spacing carries the grouping: a tight gap holds a
+// cluster together (transport buttons ↔ record-aid extras), a generous gap sets
+// the transport / musical-state / view clusters apart as distinct surfaces.
+constexpr float TRANSPORT_INTRA_GAP = 14.0f;
+constexpr float TRANSPORT_SURFACE_GAP = 46.0f;
 constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
 
 // Progressive collapse for narrow windows. The transport island packs four fixed
@@ -40,14 +44,17 @@ struct TransportLayoutTier {
 inline TransportLayoutTier transportTierFor(float availWidth) {
     const float bs = TRANSPORT_BUTTON_SIZE;
     const float sp = TRANSPORT_BUTTON_SPACING;
-    const float gs = TRANSPORT_GROUP_SPACING;
+    const float intra = TRANSPORT_INTRA_GAP;
+    const float surf = TRANSPORT_SURFACE_GAP;
     const float pad = TRANSPORT_ISLAND_PADDING;
     const float g1 = bs * 3.0f + sp * 2.0f;         // transport (3 buttons)
     const float g = bs * 4.0f + sp * 3.0f;          // extras / views (4 buttons each)
     const float info = TRANSPORT_INFO_WIDTH;
     const float margin = 20.0f;                     // mirrors the island width clamp
-    const float full    = (g1 + gs + g + gs + info + gs + g) + pad * 2.0f;
-    const float noExtras = (g1 + gs + info + gs + g) + pad * 2.0f;
+    // Mirrors layoutComponents' gap rhythm: extras tuck tight to transport (intra),
+    // clusters set apart by the surface gap.
+    const float full    = (g1 + intra + g + surf + info + surf + g) + pad * 2.0f;
+    const float noExtras = (g1 + surf + info + surf + g) + pad * 2.0f;
     if (availWidth >= full + margin)    return {true, true};
     if (availWidth >= noExtras + margin) return {false, true};
     return {false, false};
@@ -660,7 +667,6 @@ void TransportBar::layoutComponents() {
     const float primaryButtonScale = 1.0f;
     const float primaryButtonSize = buttonSize * primaryButtonScale;
     float spacing = TRANSPORT_BUTTON_SPACING;
-    float groupSpacing = TRANSPORT_GROUP_SPACING;
 
     // --- Layout Logic: Center-Out Calculation ---
     // We calculate the required width first to center the island perfectly
@@ -684,11 +690,13 @@ void TransportBar::layoutComponents() {
     // Which secondary groups fit? (hide extras first, then views — see helper)
     const TransportLayoutTier tier = transportTierFor(bounds.width);
 
-    // Total Content Width — only count the groups we'll actually place. Order is
-    // transport, (extras), info, (views), with one gap between adjacent groups.
-    float totalContentWidth = group1Width + groupSpacing + infoWidth
-        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
-        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
+    // Total Content Width — clusters set apart by a surface gap, extras tucked
+    // tight to the transport buttons (one cluster). Order: transport, (extras),
+    // info, (views).
+    float totalContentWidth = group1Width
+        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
+        + TRANSPORT_SURFACE_GAP + infoWidth
+        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -727,7 +735,9 @@ void TransportBar::layoutComponents() {
     xCursor += buttonSize + spacing;
     
     placePrimaryButton(m_recordButton, xCursor);
-    xCursor += buttonSize + groupSpacing; // GAP
+    // Tight gap to the extras (same Transport cluster); if extras are collapsed,
+    // it's a full surface gap onward to the musical-state cluster.
+    xCursor += buttonSize + (tier.showExtras ? TRANSPORT_INTRA_GAP : TRANSPORT_SURFACE_GAP);
 
     // Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so
     // the buttons neither render nor take clicks when collapsed.
@@ -744,7 +754,9 @@ void TransportBar::layoutComponents() {
     placeExtra(m_loopRecordButton);
     placeExtra(m_metronomeButton);
     if (tier.showExtras) {
-        xCursor += -spacing + groupSpacing; // last extra added a trailing spacing; swap it for a GAP
+        // Last extra added a trailing button spacing; swap it for the surface gap
+        // that sets the Transport cluster apart from the musical-state cluster.
+        xCursor += -spacing + TRANSPORT_SURFACE_GAP;
     }
 
     // Group 3: Info Container (always shown)
@@ -762,7 +774,7 @@ void TransportBar::layoutComponents() {
             if (advance) xCursor += buttonSize + spacing;
         }
     };
-    if (tier.showViews) xCursor += groupSpacing; // GAP before views
+    if (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; // surface gap before the view cluster
     placeView(m_mixerButton, true);
     placeView(m_sequencerButton, true);
     placeView(m_pianoRollButton, true);
@@ -798,7 +810,6 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // Compact Values (Relaxed per user request: "space would have done the trick")
     float buttonSize = TRANSPORT_BUTTON_SIZE;
     float spacing = TRANSPORT_BUTTON_SPACING;
-    float groupSpacing = TRANSPORT_GROUP_SPACING;
     float group1Width = (buttonSize * 3) + (spacing * 2);
     float group2Width = (buttonSize * 4) + (spacing * 3);
     float infoWidth = TRANSPORT_INFO_WIDTH;
@@ -807,9 +818,10 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // Must mirror layoutComponents: same collapse tier drives which groups exist.
     const TransportLayoutTier tier = transportTierFor(bounds.width);
 
-    float totalContentWidth = group1Width + groupSpacing + infoWidth
-        + (tier.showExtras ? group2Width + groupSpacing : 0.0f)
-        + (tier.showViews ? groupSpacing + group4Width : 0.0f);
+    float totalContentWidth = group1Width
+        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
+        + TRANSPORT_SURFACE_GAP + infoWidth
+        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -833,53 +845,10 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
                       1.0f,
                       themeManager.getColor("border").withAlpha(0.52f));
     
-    const float leftEdge = islandRect.x + islandPadding;
-    const float topInset = 6.0f;
-    const float bottomInset = 6.0f;
-    const float available = islandRect.height - topInset - bottomInset;
-    const float groupH = std::max(0.0f, std::min(36.0f, available));
-    const float groupY = islandRect.y + topInset;
-    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
-    const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
-    const float groupRadius = themeManager.getRadius("m"); // group shell corner
-    const auto drawGroup = [&](float x, float w) {
-        if (w <= 0.0f) {
-            return;
-        }
-        AestraUI::NUIRect groupRect(std::round(x), std::round(groupY), std::round(w), groupH);
-        renderer.fillRoundedRect(groupRect, groupRadius, groupBg);
-        renderer.strokeRoundedRect(groupRect, groupRadius, 1.0f, groupBorder);
-    };
-
-    // Build the present groups in order (transport, [extras], info, [views]) so the
-    // shells + separators match whatever layoutComponents placed for this tier.
-    std::vector<std::pair<float, float>> groupContent; // (x, contentWidth)
-    float cx = leftEdge;
-    groupContent.emplace_back(cx, group1Width);
-    cx += group1Width + groupSpacing;
-    if (tier.showExtras) {
-        groupContent.emplace_back(cx, group2Width);
-        cx += group2Width + groupSpacing;
-    }
-    groupContent.emplace_back(cx, infoWidth);
-    cx += infoWidth + groupSpacing;
-    if (tier.showViews) {
-        groupContent.emplace_back(cx, group4Width);
-        cx += group4Width + groupSpacing;
-    }
-
-    for (const auto& g : groupContent) {
-        drawGroup(g.first - 6.0f, g.second + 12.0f);
-    }
-
-    const float sepTop = islandRect.y + 8.0f;
-    const float sepBottom = islandRect.bottom() - 8.0f;
-    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.58f);
-    for (size_t i = 1; i < groupContent.size(); ++i) {
-        const float prevRight = groupContent[i - 1].first + groupContent[i - 1].second;
-        const float sepX = (prevRight + groupContent[i].first) * 0.5f;
-        renderer.drawLine({sepX, sepTop}, {sepX, sepBottom}, 1.0f, sepColor);
-    }
+    // No per-group shells or separators: the toolbar reads as one purpose-built
+    // instrument, with the transport / musical-state / workspace surfaces set
+    // apart by spacing (in layoutComponents) rather than boxes and borders.
+    (void)islandRect;
 
     renderChildren(renderer);
     renderButtonIcons(renderer);
