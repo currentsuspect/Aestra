@@ -548,19 +548,10 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     }
 
     // Always one combined waveform. Split L/R lanes read as a thin "doubled"
-    // texture at clip heights; a single filled waveform is clearer.
-    bool useStereoSplit = false;
-
-    if (useStereoSplit) {
-        float halfH = height * 0.5f;
-        // Left channel in top half
-        drawChannelWaveform(renderer, bounds.x, bounds.y, width, halfH, m_waveformPeaksL, clipTint);
-        // Right channel in bottom half
-        drawChannelWaveform(renderer, bounds.x, bounds.y + halfH, width, halfH, m_waveformPeaksR, clipTint);
-    } else {
-        // Combined: aggregate channels per bar
-        drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
-    }
+    // texture at clip heights; a single filled waveform is clearer. The
+    // deep-zoom path above combines too, so layout never jumps across the LOD
+    // threshold.
+    drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
 }
 
 void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
@@ -765,14 +756,9 @@ void TrackUIComponent::drawSampleWaveform(AestraUI::NUIRenderer& renderer, const
                           1.0f, centerLineColor);
     };
 
-    constexpr float kMinSplitHeight = 32.0f;
-    if (numChannels >= 2 && bounds.height >= kMinSplitHeight) {
-        const float halfH = bounds.height * 0.5f;
-        drawLane(bounds.y, halfH, 0);
-        drawLane(bounds.y + halfH, halfH, 1);
-    } else {
-        drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
-    }
+    // One combined lane, matching the peak-envelope path. Splitting L/R here
+    // would make the waveform layout jump as zoom crosses the LOD threshold.
+    drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
 }
 
 AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance& clip) const {
