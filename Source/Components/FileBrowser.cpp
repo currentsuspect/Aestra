@@ -1020,7 +1020,8 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     auto drawSection = [&](const std::string& label) {
         if (compact) {
             y += 5.0f;
-            renderer.drawLine({layout.navPane.x + 15.0f, y}, {layout.navPane.right() - 15.0f, y}, 1.0f,
+            // Small inset so the rule spans the narrow rail instead of a centre stub.
+            renderer.drawLine({layout.navPane.x + 8.0f, y}, {layout.navPane.right() - 8.0f, y}, 1.0f,
                               divider.withAlpha(0.38f));
             y += 6.0f;
             return;
@@ -1061,7 +1062,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
         switch (action) {
             case BrowserNavAction::Favorites:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8l2.25 4.55 5.03.73-3.64 3.55.86 5.01L12 15.28l-4.5 2.36.86-5.01L4.72 9.08l5.03-.73L12 3.8z"/></svg>)");
+                // Filled star: a thin stroked outline aliased badly at 16px (sharp
+                // points), looking rough next to the crisp filled colour dots.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.7 5.47 6.05.88-4.38 4.27 1.03 6.02L12 17.28l-5.4 2.84 1.03-6.02L3.25 9.85l6.05-.88L12 3.5z"/></svg>)");
                 break;
             case BrowserNavAction::Purple:
                 renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
@@ -1153,8 +1156,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawDivider = [&]() {
         y += compact ? 3.0f : 5.0f;
-        renderer.drawLine({layout.navPane.x + 14.0f, y},
-                          {layout.navPane.right() - 14.0f, y},
+        // Narrow rail: smaller inset so the rule reads as a divider, not a stub.
+        const float divInset = compact ? 8.0f : 14.0f;
+        renderer.drawLine({layout.navPane.x + divInset, y},
+                          {layout.navPane.right() - divInset, y},
                           1.0f, divider.withAlpha(0.45f));
         y += compact ? 4.0f : 8.0f;
     };
