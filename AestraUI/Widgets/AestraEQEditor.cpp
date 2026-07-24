@@ -190,12 +190,15 @@ std::shared_ptr<NUIIcon> polarityIcon() {
 }
 
 std::shared_ptr<NUIIcon> compareSlotIcon() {
+    // This one draws at 11px — the smallest icon in the editor. A 2px-stroked
+    // outline with two more strokes inside it resolves to a featureless blob at
+    // that size, so the slot is a solid card with its two lines cut out of it
+    // instead. Everything else here draws at 13-16px, where strokes still hold.
     static auto icon = makeSvgIcon(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="5" width="14" height="14" rx="4"/>
-            <path d="M8 13h8"/>
-            <path d="M9 9h6"/>
+        <svg viewBox="0 0 24 24">
+            <path fill="currentColor" fill-rule="evenodd"
+                  d="M7 4H17A3 3 0 0 1 20 7V17A3 3 0 0 1 17 20H7A3 3 0 0 1 4 17V7A3 3 0 0 1 7 4Z
+                     M7.6 8.4H16.4V10.6H7.6Z M7.6 13.4H16.4V15.6H7.6Z"/>
         </svg>
     )svg");
     return icon;
