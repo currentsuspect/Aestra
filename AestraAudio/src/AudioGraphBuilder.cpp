@@ -168,16 +168,9 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
         uint64_t maxEndSample = 0;
         double projectSampleRate = playlist.getProjectSampleRate();
 
-        // Map snapshot lanes to mixer tracks.
-        // In the current implementation, lane index usually corresponds to mixer channel index.
+        // Playlist lanes are arrangement-only. Audio patterns carry their own
+        // stable mixer destination, so moving a clip between lanes cannot reroute it.
         for (size_t laneIdx = 0; laneIdx < snapshot->lanes.size(); ++laneIdx) {
-            if (laneIdx >= graph.tracks.size()) {
-                AESTRA_DEBUG_ONLY(std::cerr << "[AudioGraphBuilder] Warning: snapshot has more lanes (" << snapshot->lanes.size()
-                          << ") than mixer tracks (" << graph.tracks.size() << "). Extra lanes dropped.\n");
-                break;
-            }
-
-            auto& trackState = graph.tracks[laneIdx];
             // Non-const: automationCurves below is genuinely moved out of the
             // snapshot (std::move through a const ref silently copies).
             auto& laneInfo = snapshot->lanes[laneIdx];
@@ -213,14 +206,42 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
 
                 clip.gain = clipInfo.gainLinear;
                 clip.pan = clipInfo.pan;
+                clip.fadeInSamples = clipInfo.fadeInSamples;
+                clip.fadeOutSamples = clipInfo.fadeOutSamples;
 
                 if (clip.endSample > maxEndSample) {
                     maxEndSample = clip.endSample;
                 }
 
-                trackState.clips.push_back(std::move(clip));
+                if (clipInfo.mixerChannelId == 0) {
+                    graph.masterClips.push_back(std::move(clip));
+                } else {
+                    const auto destination = std::find_if(graph.tracks.begin(), graph.tracks.end(),
+                                                          [&clipInfo](const TrackRenderState& track) {
+                                                              return track.trackId == clipInfo.mixerChannelId;
+                                                          });
+                    if (destination != graph.tracks.end()) {
+                        destination->clips.push_back(std::move(clip));
+                    } else {
+                        // Missing/corrupt destinations fail safe to Master rather
+                        // than dropping an audible source from the project.
+                        graph.masterClips.push_back(std::move(clip));
+                    }
+                }
             }
-            trackState.automationCurves = std::move(laneInfo.automationCurves);
+
+            // Automation is displayed on Playlist lanes but targets an
+            // explicit stable mixer insert. A lane may host curves for
+            // multiple inserts without owning any of them.
+            for (auto& curve : laneInfo.automationCurves) {
+                const auto destination =
+                    std::find_if(graph.tracks.begin(), graph.tracks.end(), [&curve](const TrackRenderState& track) {
+                        return curve.mixerChannelId != 0 && track.trackId == curve.mixerChannelId;
+                    });
+                if (destination != graph.tracks.end()) {
+                    destination->automationCurves.push_back(std::move(curve));
+                }
+            }
         }
 
         graph.timelineEndSample = maxEndSample;

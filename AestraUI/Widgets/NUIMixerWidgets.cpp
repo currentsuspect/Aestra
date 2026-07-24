@@ -23,7 +23,7 @@ PanKnob::PanKnob()
 }
 
 TrackLabel::TrackLabel()
-    : text_("Track"), color_(NUIColor::fromHex(0xff6633ff))
+    : text_("Insert"), color_(NUIColor::fromHex(0xff6633ff))
 {
 }
 

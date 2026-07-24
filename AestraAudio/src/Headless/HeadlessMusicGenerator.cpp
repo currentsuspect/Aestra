@@ -600,8 +600,7 @@ uint64_t HeadlessMusicGenerator::ensureLaneInstrument(uint32_t laneIndex) {
     const std::string label = "Lane " + std::to_string(laneIndex + 1);
 
     // Mixer channel that carries this lane's instrument to the master bus.
-    const size_t channelIndex = m_trackManager.getChannelCount();
-    m_trackManager.addChannel(label);
+    auto* mixerChannel = m_trackManager.addChannel(label);
 
     // Playlist lane the clips are placed on.
     PlaylistLaneID laneId = m_trackManager.getPlaylistModel().createLane(label);
@@ -624,7 +623,7 @@ uint64_t HeadlessMusicGenerator::ensureLaneInstrument(uint32_t laneIndex) {
     if (!m_toneSamplePath.empty()) {
         um.setUnitAudioClip(unit, m_toneSamplePath); // loads the tone into the sampler
     }
-    um.setUnitMixerChannel(unit, static_cast<int>(channelIndex));
+    um.setUnitMixerChannel(unit, mixerChannel ? static_cast<int>(mixerChannel->getChannelId()) : 0);
     um.assignUnitToTimelineLane(unit, static_cast<int>(laneIndex));
 
     m_laneUnits[laneIndex] = unit;
@@ -636,7 +635,7 @@ void HeadlessMusicGenerator::commitPatternsToManager() {
     // units and clips to the TrackManager on a second exportTo() call. State is
     // reset by createProject(). The MIDI PatternSources themselves are created
     // in commitPlaylistToModel(): each note routes to the sampler unit backing
-    // the lane its clip is placed on, so the routed pattern can only be built
+    // the lane its clip is placed on, so the pattern can only be built
     // once the placement (and thus the lane instrument) is known. Here we just
     // prepare the shared sampler source.
     if (m_committed) {

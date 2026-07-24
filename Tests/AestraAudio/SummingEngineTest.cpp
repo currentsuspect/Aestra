@@ -65,6 +65,9 @@ int main() {
         PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane(stem);
         PatternID patternId = trackManager->getPatternManager().createAudioPattern(
             stem, kDurationSeconds * 2.0, payload);
+        if (auto* channel = trackManager->getChannel(t)) {
+            trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+        }
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationSeconds * 2.0);
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "PatternSource.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <unordered_map>
@@ -132,6 +133,48 @@ public:
         pattern->id = id;
         m_patterns[id.value] = std::move(pattern);
         return id;
+    }
+
+    /** Route an audio pattern to a stable mixer channel ID (0 means Master). */
+    bool setPatternMixerChannel(PatternID id, uint32_t channelId) {
+        auto* pattern = getPattern(id);
+        if (!pattern || !pattern->isAudio()) {
+            return false;
+        }
+        pattern->setMixerChannelId(channelId);
+        pattern->legacyMixerRoutePending = false;
+        return true;
+    }
+
+    /** Reset audio patterns that target a mixer channel being removed. */
+    bool resetMixerChannel(uint32_t channelId) {
+        bool changed = false;
+        for (auto& [id, pattern] : m_patterns) {
+            (void)id;
+            if (pattern && pattern->isAudio() && pattern->getMixerChannelId() == channelId) {
+                pattern->setMixerChannelId(0);
+                pattern->legacyMixerRoutePending = false;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /** Resolve missing/invalid audio-pattern destinations after project channels load. */
+    void validateMixerChannels(const std::vector<uint32_t>& mixerChannelIds) {
+        for (auto& [id, pattern] : m_patterns) {
+            (void)id;
+            if (!pattern || !pattern->isAudio()) {
+                continue;
+            }
+            const uint32_t channelId = pattern->getMixerChannelId();
+            if (pattern->legacyMixerRoutePending ||
+                (channelId != 0 &&
+                 std::find(mixerChannelIds.begin(), mixerChannelIds.end(), channelId) == mixerChannelIds.end())) {
+                pattern->setMixerChannelId(0);
+            }
+            pattern->legacyMixerRoutePending = false;
+        }
     }
 
     /**

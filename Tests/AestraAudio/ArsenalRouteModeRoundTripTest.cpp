@@ -55,12 +55,23 @@ void verifyCurrentProjectRoundTrip(const std::filesystem::path& path) {
     using namespace Aestra::Audio;
     auto tm1 = std::make_shared<TrackManager>();
     tm1->getPlaylistModel().setPatternManager(&tm1->getPatternManager());
-    tm1->addChannel("Track 1");
+    tm1->getPlaylistModel().createLane("Track 1");
+    tm1->getPlaylistModel().createLane("Arrangement only 2");
+    tm1->getPlaylistModel().createLane("Arrangement only 3");
+    auto* mixerChannel = tm1->addChannelWithId("Track 1", 42);
+    require(mixerChannel && mixerChannel->getChannelId() == 42, "Failed to create stable mixer channel");
+
+    AudioSlicePayload audioPayload;
+    audioPayload.audioSourceId = tm1->getSourceManager().getOrCreateSource("missing-routing-test.wav");
+    const PatternID audioPattern = tm1->getPatternManager().createAudioPattern("Routed audio", 4.0, audioPayload);
+    require(tm1->getPatternManager().setPatternMixerChannel(audioPattern, 42),
+            "Failed to route audio pattern before save");
 
     UnitManager& um1 = tm1->getUnitManager();
     const UnitID timelineUnit = um1.createUnit("Timeline", UnitType::Sampler);
     const UnitID previewUnit = um1.createUnit("Preview", UnitType::Sampler);
     um1.assignUnitToTimelineLane(timelineUnit, 0);
+    um1.setUnitMixerChannel(timelineUnit, 42);
     um1.clearUnitTimelineLane(previewUnit);
 
     require(ProjectSerializer::save(path.string(), tm1, 120.0, 0.0), "Failed to save project");
@@ -68,6 +79,10 @@ void verifyCurrentProjectRoundTrip(const std::filesystem::path& path) {
     const std::string saved = readFile(path);
     require(!saved.empty(), "Saved project is empty");
     require(saved.find("\"routeMode\"") != std::string::npos, "routeMode field should be serialized for arsenal units");
+    require(saved.find("\"targetMixerChannelId\"") != std::string::npos,
+            "Stable unit mixer destination should be serialized");
+    require(saved.find("\"mixerChannelId\"") != std::string::npos,
+            "Stable mixer channel identity should be serialized");
 
     auto tm2 = std::make_shared<TrackManager>();
     tm2->getPlaylistModel().setPatternManager(&tm2->getPatternManager());
@@ -79,6 +94,15 @@ void verifyCurrentProjectRoundTrip(const std::filesystem::path& path) {
     const UnitInfo* loadedPreview = um2.getUnit(previewUnit);
     require(loadedTimeline != nullptr, "Timeline unit missing after load");
     require(loadedPreview != nullptr, "Preview unit missing after load");
+    require(tm2->getChannelCount() == 1 && tm2->getChannel(0)->getChannelId() == 42,
+            "Mixer channel identity mismatch after load");
+    require(tm2->getPlaylistModel().getLaneCount() == 3, "Independent Playlist lane count mismatch after load");
+    const auto* loadedAudioPattern = tm2->getPatternManager().getPattern(audioPattern);
+    require(loadedAudioPattern && loadedAudioPattern->getMixerChannelId() == 42,
+            "Audio-pattern mixer destination mismatch after load");
+    require(loadedTimeline->targetMixerChannelId == 42, "Unit mixer destination mismatch after load");
+    require(loadedPreview->targetMixerChannelId == MASTER_MIXER_CHANNEL_ID,
+            "Preview unit should remain routed to Master");
     require(loadedTimeline->targetMixerRoute == 0, "Timeline routeId mismatch after load");
     require(loadedPreview->targetMixerRoute < 0, "Preview routeId mismatch after load");
     require(loadedTimeline->routeMode == ArsenalRouteMode::RoutedToTimelineTrack,
@@ -136,6 +160,45 @@ void verifyLegacyRouteIdOnlyProjectLoad(const std::filesystem::path& path) {
             "Legacy preview unit routeMode should resolve from routeId");
     require(track->routeMode == ArsenalRouteMode::RoutedToTimelineTrack,
             "Legacy track unit routeMode should resolve from routeId");
+}
+
+void verifyLegacySharedAudioPatternMigration(const std::filesystem::path& path) {
+    using namespace Aestra::Audio;
+    const std::string legacy = R"JSON({
+  "version": 2,
+  "tempo": 120,
+  "playhead": 0,
+  "sources": [{"id": 1, "path": "missing-legacy.wav", "name": "Legacy source"}],
+  "patterns": [{
+    "id": 7, "name": "Shared audio", "length": 4, "type": "audio",
+    "sourceId": 1, "durationSeconds": 2, "slices": [{"start": 0, "length": 88200}]
+  }],
+  "lanes": [
+    {"name": "Lane A", "mixerChannelId": 11, "clips": [{"patternId": 7, "start": 0, "duration": 4}]},
+    {"name": "Lane B", "mixerChannelId": 42, "clips": [{"patternId": 7, "start": 8, "duration": 4}]}
+  ]
+})JSON";
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out << legacy;
+    }
+
+    auto tm = std::make_shared<TrackManager>();
+    const auto loadResult = ProjectSerializer::load(path.string(), tm);
+    require(loadResult.ok, "Legacy shared-audio project failed to load");
+    require(tm->getChannelCount() == 2, "Legacy lane inserts were not restored");
+    require(tm->getPlaylistModel().getLaneCount() == 2, "Legacy lanes were not restored");
+
+    const auto* laneA = tm->getPlaylistModel().getLane(tm->getPlaylistModel().getLaneId(0));
+    const auto* laneB = tm->getPlaylistModel().getLane(tm->getPlaylistModel().getLaneId(1));
+    require(laneA && laneB && laneA->clips.size() == 1 && laneB->clips.size() == 1,
+            "Legacy shared clips were not restored");
+    require(laneA->clips[0].patternId != laneB->clips[0].patternId,
+            "Legacy source was not cloned to preserve different lane destinations");
+    const auto* sourceA = tm->getPatternManager().getPattern(laneA->clips[0].patternId);
+    const auto* sourceB = tm->getPatternManager().getPattern(laneB->clips[0].patternId);
+    require(sourceA && sourceB && sourceA->getMixerChannelId() == 11 && sourceB->getMixerChannelId() == 42,
+            "Legacy lane routes were not preserved as source destinations");
 }
 
 void verifyEQCurrentProjectRoundTrip(const std::filesystem::path& path) {
@@ -243,6 +306,7 @@ int main() {
     const TempDir tempDir{makeTempDir()};
     verifyCurrentProjectRoundTrip(tempDir.path / "current_roundtrip.aes");
     verifyLegacyRouteIdOnlyProjectLoad(tempDir.path / "legacy_routeid_only.aes");
+    verifyLegacySharedAudioPatternMigration(tempDir.path / "legacy_shared_audio.aes");
     verifyEQCurrentProjectRoundTrip(tempDir.path / "eq_current_roundtrip.aes");
 
     std::cout << "[PASS] ArsenalRouteModeRoundTripTest\n";

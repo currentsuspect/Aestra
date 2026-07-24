@@ -90,11 +90,20 @@ public:
     double lengthBeats{4.0};
     Type type{Type::Empty};
     std::variant<std::monostate, MidiPayload, AudioSlicePayload> payload;
-    int m_mixerChannel{-1};
+    /** Stable mixer destination for audio patterns (0 routes directly to Master). */
+    uint32_t m_mixerChannelId{0};
+    /** True while a pre-source-routing project awaits lane-based migration. */
+    bool legacyMixerRoutePending{false};
     std::optional<ScaleContext> scaleOverride;
 
-    int getMixerChannel() const { return m_mixerChannel; }
-    void setMixerChannel(int ch) { m_mixerChannel = ch; }
+    uint32_t getMixerChannelId() const { return m_mixerChannelId; }
+    void setMixerChannelId(uint32_t channelId) { m_mixerChannelId = channelId; }
+
+    // Compatibility accessors for older UI callers. Values are stable IDs, not indexes.
+    int getMixerChannel() const {
+        return m_mixerChannelId <= static_cast<uint32_t>(INT32_MAX) ? static_cast<int>(m_mixerChannelId) : 0;
+    }
+    void setMixerChannel(int channelId) { m_mixerChannelId = channelId > 0 ? static_cast<uint32_t>(channelId) : 0; }
 
     bool isMidi() const { return type == Type::Midi && std::holds_alternative<MidiPayload>(payload); }
 

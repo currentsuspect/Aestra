@@ -137,7 +137,7 @@ void UIRoutingMap::rebuildGraph() {
         Node node;
         node.id = ch->id;
         node.type = Node::Track;
-        node.label = ch->name.empty() ? ("Track " + std::to_string(i + 1)) : ch->name;
+        node.label = ch->name.empty() ? ("Insert " + std::to_string(i + 1)) : ch->name;
         node.color = paletteIndexToARGB(ch->trackColorIndex);
         node.insertCount = ch->fxCount;
         node.muted = ch->muted;
@@ -220,7 +220,7 @@ void UIRoutingMap::rebuildFocusedGraph(const Aestra::ChannelViewModel* selected)
     Node node;
     node.id = selected->id;
     node.type = Node::Track;
-    node.label = selected->name.empty() ? "Track" : selected->name;
+    node.label = selected->name.empty() ? "Insert" : selected->name;
     node.color = paletteIndexToARGB(selected->trackColorIndex);
     node.insertCount = selected->fxCount;
     node.muted = selected->muted;

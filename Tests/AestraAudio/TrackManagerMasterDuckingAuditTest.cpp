@@ -107,6 +107,7 @@ std::shared_ptr<TrackManager> createOneTrackManager() {
     const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("Track 1");
     const PatternID patternId =
         trackManager->getPatternManager().createAudioPattern("duck_audit_pattern", durationSeconds * 2.0, payload);
+    trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
     trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationSeconds * 2.0);
 
     trackManager->buildAndShareSlotMap();

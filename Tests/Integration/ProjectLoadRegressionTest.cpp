@@ -583,7 +583,7 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
-    assert(saved.find("\"version\": 2") != std::string::npos || saved.find("\"version\":2") != std::string::npos);
+    assert(saved.find("\"version\": 3") != std::string::npos || saved.find("\"version\":3") != std::string::npos);
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
