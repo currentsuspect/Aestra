@@ -95,15 +95,25 @@ static uint32_t decodeUTF8(const std::string& text, size_t& index) {
     return 0; // Invalid UTF-8
 }
 
-static float normalizeSmallTextSize(float requestedSize, float alpha) {
-    // Policy: tiny secondary labels should not dip below a practical readable floor.
-    if (alpha < 0.80f && requestedSize < 12.0f) {
-        return 12.0f;
-    }
-    if (alpha < 0.92f && requestedSize < 11.0f) {
-        return 11.0f;
-    }
-    return requestedSize;
+static float normalizeSmallTextSize(float requestedSize) {
+    // Readability floor for small text, applied to SIZE ONLY.
+    //
+    // This used to also key off the colour's alpha (dim text floored to 12px,
+    // bright text left at its requested size). That coupled rendered size to
+    // colour, with two consequences:
+    //   1. Two labels written at the "same" size rendered at different sizes if
+    //      one was dimmer — so adjacent label/value pairs no longer aligned and
+    //      the smaller one looked jagged (e.g. the I/O tab's Source/Auto row).
+    //   2. measureText() has no alpha and never applied the floor, so dim small
+    //      text measured narrow but rendered wide — layout (wrap/centre/fit)
+    //      disagreed with what hit the screen.
+    // A single size-based floor keeps small text legible while measure and
+    // render always agree. 11px sits between the old two-tier floor (11/12):
+    // it lifts the previously-unfloored bright small text (which looked jagged)
+    // up to a readable, crisp size, while barely nudging the dim labels that
+    // already floored to 12 — so compact one-line rows still fit.
+    constexpr float kMinReadableSize = 11.0f;
+    return std::max(requestedSize, kMinReadableSize);
 }
 
 float NUIRendererGL::getKerningUnits(FT_Face face, uint32_t previousGlyph, uint32_t currentGlyph) const {
@@ -1204,7 +1214,7 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 // ============================================================================
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
-    const float effectiveFontSize = normalizeSmallTextSize(fontSize, color.a);
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize);
     // Use FreeType atlas for ALL text - consistent rendering
     
     if (fontInitialized_) {
@@ -1219,9 +1229,11 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
         return;
     }
 
-    // Fallback only if FreeType not initialized - simple rectangles
-    float charWidth = fontSize * 0.5f;
-    float charHeight = fontSize * 0.8f;
+    // Fallback only if FreeType not initialized - simple rectangles.
+    // Size from effectiveFontSize (not raw fontSize) so this matches the floor
+    // measureText() applies, keeping fallback measure and render consistent.
+    float charWidth = effectiveFontSize * 0.5f;
+    float charHeight = effectiveFontSize * 0.8f;
     
     for (size_t i = 0; i < text.length(); ++i) {
         char c = text[i];
@@ -1948,7 +1960,7 @@ void NUIRendererGL::drawCharacter(char c, float x, float y, float width, float h
 }
 
 void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) {
-    const float effectiveFontSize = normalizeSmallTextSize(fontSize, color.a);
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize);
     // Measure actual text dimensions
     NUISize textSize = measureText(text, effectiveFontSize);
 
@@ -1985,7 +1997,11 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
 NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
     // IMPORTANT: drawText() renders via the FreeType atlas path; prefer matching metrics here
     // so layout (centering/truncation) matches what actually hits the screen.
-    
+    // Apply the SAME readability floor drawText() uses, or a small string would
+    // measure narrower than it renders and wrap/centre/fit calculations would be
+    // wrong (the size is colour-independent, so measureText can apply it too).
+    fontSize = normalizeSmallTextSize(fontSize);
+
     // Handle empty text quickly
     if (text.empty()) {
         if (fontInitialized_) {

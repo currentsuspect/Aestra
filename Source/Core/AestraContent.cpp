@@ -1639,20 +1639,34 @@ void AestraContent::onResize(int width, int height) {
         if (m_waveformVisualizer)
             totalWidth += waveformWidth + gap;
 
-        float xStart = width - totalWidth - layout.panelMargin;
-        if (m_transportBar) {
-            // The visualizers overlay the transport row; tell the bar so its
-            // KEYS status pill hides instead of rendering underneath them.
-            m_transportBar->setRightReservedWidth(totalWidth + layout.panelMargin + gap);
-        }
-        if (m_waveformVisualizer) {
-            m_waveformVisualizer->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
-            xStart += waveformWidth + gap;
-        }
-        if (m_audioVisualizer) {
-            m_audioVisualizer->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
+        // The scope + meter overlay the right of the transport row. They only clear
+        // the centre-anchored transport island near full width; on a narrow window
+        // they'd sit on top of the view buttons. Treat them as secondary chrome:
+        // hide them below that width and drop the reserve so the transport island
+        // reclaims the whole row. (The threshold leaves room for the full island.)
+        constexpr float kVisualizerMinWidth = 1230.0f;
+        const bool showVisualizers = width >= kVisualizerMinWidth;
+        if (m_waveformVisualizer) m_waveformVisualizer->setVisible(showVisualizers);
+        if (m_audioVisualizer) m_audioVisualizer->setVisible(showVisualizers);
+
+        if (!showVisualizers) {
+            if (m_transportBar) m_transportBar->setRightReservedWidth(0.0f);
+        } else {
+            float xStart = width - totalWidth - layout.panelMargin;
+            if (m_transportBar) {
+                // Visualizers overlay the transport row; reserve their width so the
+                // bar's KEYS status pill hides instead of rendering underneath them.
+                m_transportBar->setRightReservedWidth(totalWidth + layout.panelMargin + gap);
+            }
+            if (m_waveformVisualizer) {
+                m_waveformVisualizer->setBounds(
+                    AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
+                xStart += waveformWidth + gap;
+            }
+            if (m_audioVisualizer) {
+                m_audioVisualizer->setBounds(
+                    AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
+            }
         }
     }
 
@@ -3998,6 +4012,26 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     // over global shortcuts so Ctrl+Z etc. don't fire mid-edit.
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
+
+    // Global view-toggle shortcuts (the transport view buttons advertise these
+    // in their tooltips). F-keys never reach text inputs or musical typing, so
+    // handle them here as unconditional global shortcuts.
+    switch (event.keyCode) {
+    case AestraUI::NUIKeyCode::F3:
+        toggleView(Audio::ViewType::Mixer);
+        return true;
+    case AestraUI::NUIKeyCode::F5:
+        toggleView(Audio::ViewType::Playlist);
+        return true;
+    case AestraUI::NUIKeyCode::F6:
+        toggleView(Audio::ViewType::Sequencer); // Channel Rack (Arsenal)
+        return true;
+    case AestraUI::NUIKeyCode::F7:
+        toggleView(Audio::ViewType::PianoRoll);
+        return true;
+    default:
+        break;
+    }
 
     // Forward to piano roll when visible — its local undo/redo
     // and note shortcuts must take priority over global handlers
