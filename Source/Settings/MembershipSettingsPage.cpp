@@ -573,7 +573,7 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         // so they sit level; the old {cx+20, cy+2} text offset rendered ~5px low.
         const AestraUI::NUIColor metaIcon = textSecondary.withAlpha(0.6f);
         drawIconLabel(renderer, "mail",
-                      m_accountLabel->getText().empty() ? "currentsuspect@gmail.com" : m_accountLabel->getText(),
+                      m_accountLabel->getText().empty() ? "Account unavailable" : m_accountLabel->getText(),
                       cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
         cy += 22.0f;
         drawIconLabel(renderer, "file-badge",

@@ -1229,9 +1229,11 @@ void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, 
         return;
     }
 
-    // Fallback only if FreeType not initialized - simple rectangles
-    float charWidth = fontSize * 0.5f;
-    float charHeight = fontSize * 0.8f;
+    // Fallback only if FreeType not initialized - simple rectangles.
+    // Size from effectiveFontSize (not raw fontSize) so this matches the floor
+    // measureText() applies, keeping fallback measure and render consistent.
+    float charWidth = effectiveFontSize * 0.5f;
+    float charHeight = effectiveFontSize * 0.8f;
     
     for (size_t i = 0; i < text.length(); ++i) {
         char c = text[i];
