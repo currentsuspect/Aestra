@@ -46,16 +46,21 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
     }
 
     constexpr float kLevelFullPx = 28.0f;
-    const auto lineAlpha = [&](float spacingPx) {
-        const float strength =
-            0.028f + (0.105f - 0.028f) *
-                         std::clamp((spacingPx - kLevelFullPx) / (kLevelFullPx * 3.0f), 0.0f, 1.0f);
-        return strength * timelineGridLevelFade(spacingPx);
+    // Musical hierarchy with FIXED per-type ceilings, so bar > beat > subdivision
+    // holds at every zoom (a purely spacing-based alpha made beats as strong as
+    // bars when zoomed in — the "spreadsheet" look). The fade only culls a tier
+    // once its lines get too dense to read.
+    constexpr float kBarLineAlpha = 0.15f;      // bars: clearly visible
+    constexpr float kBeatLineAlpha = 0.05f;     // beats: subtle
+    constexpr float kSubBeatLineAlpha = 0.026f; // subdivisions: near-invisible until zoomed in
+    const auto barAlpha = [&](float levelSpacing) {
+        return kBarLineAlpha * timelineGridLevelFade(levelSpacing);
     };
 
     const int barStride = timelineGridBarStride(pixelsPerBeat, beatsPerBar);
 
-    constexpr float kZebraAlpha = 0.030f;
+    // Very quiet zebra — a hint of bar-group alternation, not a checkerboard.
+    constexpr float kZebraAlpha = 0.016f;
     const auto drawZebraLevel = [&](int strideBars, float alpha) {
         if (alpha <= 0.001f) return;
         const float blockWidth = pixelsPerBar * static_cast<float>(strideBars);
@@ -94,8 +99,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                           1.0f,
                           ink.withAlpha(alpha));
     };
-    const float beatLineAlpha = lineAlpha(pixelsPerBeat);
-    const float halfBeatLineAlpha = lineAlpha(pixelsPerBeat * 0.5f);
+    const float beatLineAlpha = kBeatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
+    const float halfBeatLineAlpha = kSubBeatLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - scrollX;
@@ -110,7 +115,7 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                 }
             }
             const float levelSpacing = pixelsPerBar * static_cast<float>(1u << level);
-            const float alpha = lineAlpha(levelSpacing);
+            const float alpha = barAlpha(levelSpacing);
             if (alpha > 0.001f) drawGridLine(barX, alpha);
         }
 
