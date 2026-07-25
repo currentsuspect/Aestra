@@ -12,6 +12,7 @@ set(Aestra_SOURCES
 	App/Main.cpp
 	App/AestraApp.h
 	App/AestraApp.cpp
+    App/MuseHostVerbs.cpp
 	
 	# Core
 	Core/AestraAudioController.h

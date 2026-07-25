@@ -1870,6 +1870,18 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 // SECTION: View Management
 // =============================================================================
 
+bool AestraContent::isViewOpen(Audio::ViewType view) const {
+    switch (view) {
+    case Audio::ViewType::Mixer:     return m_viewState.mixerOpen;
+    case Audio::ViewType::PianoRoll: return m_viewState.pianoRollOpen;
+    case Audio::ViewType::Sequencer: return m_viewState.sequencerOpen;
+    case Audio::ViewType::Playlist:  return m_viewState.playlistActive;
+    case Audio::ViewType::History:   return m_historyPanel && m_historyPanel->isVisible();
+    case Audio::ViewType::Takes:     return m_takesPanel && m_takesPanel->isVisible();
+    }
+    return false;
+}
+
 void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
     bool changed = false;
     switch (view) {
