@@ -221,16 +221,6 @@ const char* unitTypeName(UnitType type) {
     return "unknown";
 }
 
-const char* hostArgTypeName(FlagType type) {
-    switch (type) {
-    case FlagType::String: return "string";
-    case FlagType::Int:    return "int";
-    case FlagType::Float:  return "float";
-    case FlagType::Bool:   return "bool";
-    }
-    return "string";
-}
-
 bool isKnownVerb(const std::string& verb) {
     if (isQueryVerb(verb) || isActionVerb(verb)) return true;
     for (const auto& cmd : MuseGrammar::allCommands()) {
@@ -499,7 +489,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 for (const auto& arg : spec.args) {
                     JSON a = JSON::object();
                     a.set("name", JSON(arg.name));
-                    a.set("type", JSON(std::string(hostArgTypeName(arg.type))));
+                    a.set("type", JSON(std::string(HostVerbRegistry::argTypeName(arg.type))));
                     a.set("required", JSON(arg.required));
                     if (!arg.description.empty()) a.set("description", JSON(arg.description));
                     if (!std::isnan(arg.minValue)) a.set("min", JSON(arg.minValue));

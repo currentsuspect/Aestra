@@ -6,6 +6,7 @@
 #include "AestraJSON.h"
 
 #include <functional>
+#include <limits> // HostVerbArg's NaN bounds — not left to reach us transitively
 #include <map>
 #include <string>
 #include <vector>
@@ -169,6 +170,9 @@ public:
     /** @brief The domain prefix for a name, or empty when it has none. */
     static std::string domainPrefixOf(const std::string& name);
     static const char* domainName(HostVerbDomain domain);
+    /** @brief Wire name for an argument type. One table, so a new FlagType cannot
+     *         be added to half the places that render it. */
+    static const char* argTypeName(FlagType type);
 
 private:
     struct Entry {

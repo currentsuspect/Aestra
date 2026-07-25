@@ -25,16 +25,6 @@ bool isLowerCamelIdentifier(const std::string& text) {
     });
 }
 
-const char* flagTypeName(FlagType type) {
-    switch (type) {
-    case FlagType::String: return "string";
-    case FlagType::Int:    return "int";
-    case FlagType::Float:  return "float";
-    case FlagType::Bool:   return "bool";
-    }
-    return "string";
-}
-
 // Validate a JSON value against one typed argument. JSON carries real types,
 // so unlike the text-flag path there is nothing to parse — only to check.
 bool valueMatches(const HostVerbArg& arg, const JSON& value, std::string& outError) {
@@ -85,6 +75,16 @@ bool valueMatches(const HostVerbArg& arg, const JSON& value, std::string& outErr
 
 } // namespace
 
+const char* HostVerbRegistry::argTypeName(FlagType type) {
+    switch (type) {
+    case FlagType::String: return "string";
+    case FlagType::Int:    return "int";
+    case FlagType::Float:  return "float";
+    case FlagType::Bool:   return "bool";
+    }
+    return "string";
+}
+
 const char* HostVerbRegistry::domainName(HostVerbDomain domain) {
     switch (domain) {
     case HostVerbDomain::Project:  return "project";
@@ -114,14 +114,13 @@ HostVerbRegistry::RegisterStatus HostVerbRegistry::registerVerb(HostVerbSpec spe
         return RegisterStatus::ReservedDomain;
     }
 
-    const size_t dot = spec.name.find('.');
-    if (dot == std::string::npos) {
+    const std::string prefix = domainPrefixOf(spec.name);
+    if (prefix.empty()) {
         outError = "host verb '" + spec.name +
                    "' must be named <domain>.<capability>, e.g. settings.setAudioDevice";
         return RegisterStatus::NameMalformed;
     }
-    const std::string prefix = spec.name.substr(0, dot);
-    const std::string capability = spec.name.substr(dot + 1);
+    const std::string capability = spec.name.substr(prefix.size() + 1);
     if (!isLowerCamelIdentifier(capability) || capability.find('.') != std::string::npos) {
         outError = "'" + capability + "' is not a lowerCamelCase capability name";
         return RegisterStatus::NameMalformed;
@@ -183,6 +182,11 @@ HostVerbResult HostVerbRegistry::invoke(const std::string& name, const JSON& arg
     // Checked BEFORE required args on purpose. Typing "framez" for "frames"
     // otherwise reports the required arg as missing, which sends the caller
     // looking for an argument they did in fact pass, spelled wrong.
+    // The non-const copy is load-bearing: JSON's const asObject() returns an
+    // EMPTY static, while the non-const overload returns the real map by value.
+    // Inlining provided.asObject() here would make this loop iterate nothing and
+    // silently stop rejecting misspelled args. Same footgun as jsonArgsToFlags
+    // in MuseService.cpp.
     JSON mutableArgs = provided;
     for (const auto& entry : mutableArgs.asObject()) {
         const bool declared =
@@ -200,7 +204,7 @@ HostVerbResult HostVerbRegistry::invoke(const std::string& name, const JSON& arg
             if (arg.required) {
                 return HostVerbResult::failure("missing_arg",
                                                "'" + name + "' requires arg '" + arg.name + "' (" +
-                                                   flagTypeName(arg.type) + ")");
+                                                   argTypeName(arg.type) + ")");
             }
             continue;
         }
