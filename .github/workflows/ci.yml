@@ -24,26 +24,66 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-linux
@@ -51,7 +91,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -84,15 +124,53 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
 
       - name: Configure (UI enabled)
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
 
       - name: Build app target
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
 
   build-windows:
@@ -103,7 +181,43 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cache vcpkg artifacts
+        if: steps.scope.outputs.run_cxx == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -117,6 +231,7 @@ jobs:
             windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
 
       - name: Setup vcpkg and libsodium
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -151,6 +266,7 @@ jobs:
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -162,19 +278,22 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         shell: bash
         run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: bash
         run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-windows
@@ -182,7 +301,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         shell: bash
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -210,26 +329,66 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           brew update
           brew install cmake pkg-config libsodium googletest
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-macos
@@ -237,7 +396,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
