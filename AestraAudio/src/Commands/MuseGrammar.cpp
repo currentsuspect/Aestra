@@ -290,7 +290,9 @@ std::string schemaToJsonString() {
 "actions": [
   {"verb": "render_pattern", "args": "{\"pattern\": <id>, \"file\": <path>, \"tail\": <seconds 0..30>}", "description": "Bounce one pattern (Arsenal preview routing) to a float32 WAV. Result carries durationSeconds, frames, sampleRate, peakDb."},
   {"verb": "render_song", "args": "{\"file\": <path>, \"tail\": <seconds 0..30>}", "description": "Bounce the arranged timeline to a float32 WAV. Errors on an empty timeline. Result carries durationSeconds, frames, sampleRate, peakDb."},
-  {"verb": "batch", "args": "{\"commands\": [{\"verb\": ..., \"args\": ...}, ...]}", "description": "Run 1..64 mutation verbs all-or-nothing as a single undo step. Members execute against the state their predecessors produced."}
+  {"verb": "batch", "args": "{\"commands\": [{\"verb\": ..., \"args\": ...}, ...]}", "description": "Run 1..64 mutation verbs all-or-nothing as a single undo step. Members execute against the state their predecessors produced. A member takes only \"verb\" and \"args\"; any other key is refused."},
+  {"verb": "undo", "args": "none", "description": "Step back one entry in the shared undo history (a batch is one entry). Refuses with 'nothing to undo' at the end of the stack rather than reporting a no-op as success. Result carries canUndo, canRedo."},
+  {"verb": "redo", "args": "none", "description": "Step forward one entry. Refuses with 'nothing to redo' at the end of the stack. Result carries canUndo, canRedo."}
 ],
 "notes": {
   "samplerPitch": "The sampler root is MIDI pitch 60: notes at 60 play the loaded sample unshifted, other pitches resample relative to 60. Put drum hits at pitch 60; write melodies around 60.",
