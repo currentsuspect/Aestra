@@ -227,9 +227,17 @@ public:
      * added while this one was away — better than refusing and stranding the
      * channel inside a command nobody can undo.
      *
-     * @return false only when the channel is null.
+     * @param channel taken by REFERENCE, and moved from only on success. A
+     *        by-value parameter would destroy the channel on every failure
+     *        path: the caller's unique_ptr is already moved-from at the call
+     *        site, so a refusal inside this function would lose the object for
+     *        good — the same "the channel is gone" defect this pair of
+     *        functions exists to prevent, merely relocated. On failure the
+     *        caller still holds it and can retry.
+     * @return false when the channel is null, or when called from the audio
+     *         thread, where mutating the channel list is not allowed.
      */
-    bool reinsertChannel(std::unique_ptr<MixerChannel> channel, size_t index) {
+    bool reinsertChannel(std::unique_ptr<MixerChannel>& channel, size_t index) {
         if (!channel || reportRealtimeMisuse("TrackManager::reinsertChannel")) {
             return false;
         }

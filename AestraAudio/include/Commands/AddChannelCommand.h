@@ -59,9 +59,11 @@ public:
     void redo() override {
         if (m_executed) return;
         if (m_detached) {
-            if (m_manager.reinsertChannel(std::move(m_detached), m_detachedIndex)) {
+            if (m_manager.reinsertChannel(m_detached, m_detachedIndex)) {
                 m_executed = true;
             }
+            // A failed reinsert leaves m_detached intact, so a later redo can
+            // retry with the same object rather than minting a new id.
             return;
         }
         // No detached channel means undo never ran (or failed); fall back to

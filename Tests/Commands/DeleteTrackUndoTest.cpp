@@ -22,6 +22,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetVolumeCommand.h"
 #include "Models/TrackManager.h"
+#include "RealtimeThreadGuard.h"
 
 #include <cmath>
 #include <iostream>
@@ -167,6 +168,43 @@ int main() {
         check(addHistory.redo(), "redo of the volume change");
         check(back != nullptr && almostEqual(back->getVolume(), 0.4f),
               "volume re-applied through a reference that survived the undo");
+    }
+
+    // --- a refused reinsert must not eat the channel ------------------------
+    // reinsertChannel takes the unique_ptr by reference and moves from it only
+    // on success. By value, the caller's pointer would already be moved-from at
+    // the call site, so any refusal inside the function would destroy the
+    // channel with the caller holding nothing — the same "the channel is gone"
+    // defect this whole change exists to prevent, merely relocated.
+    {
+        TrackManager guarded;
+        guarded.addChannel("Keep");
+        size_t index = 0;
+        const uint32_t keptId = guarded.getChannel(0)->getChannelId();
+        std::unique_ptr<MixerChannel> detached = guarded.detachChannelById(keptId, index);
+        check(detached != nullptr, "detached the channel for the refusal case");
+        check(guarded.getChannelCount() == 0, "and it left the track list");
+
+        {
+            // Pretend to be the audio thread, with a no-op handler so the debug
+            // assert inside reportRealtimeMisuse does not fire.
+            auto previous = Aestra::Audio::setRealtimeMisuseHandler(+[](const char*) noexcept {});
+            Aestra::Audio::ScopedRealtimeAudioThread pretendAudioThread;
+            const bool inserted = guarded.reinsertChannel(detached, index);
+            check(!inserted, "reinsert is refused on the audio thread");
+            Aestra::Audio::setRealtimeMisuseHandler(previous);
+        }
+
+        check(detached != nullptr, "the caller STILL owns the channel after a refusal");
+        check(guarded.getChannelCount() == 0, "and nothing was inserted");
+
+        // Off the audio thread it goes back, same object, same id.
+        MixerChannel* raw = detached.get();
+        check(guarded.reinsertChannel(detached, index), "the retry succeeds");
+        check(detached == nullptr, "ownership transferred only on success");
+        check(guarded.getChannelCount() == 1 && guarded.getChannel(0) == raw &&
+                  guarded.getChannel(0)->getChannelId() == keptId,
+              "the retry restored the same object with its id");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))

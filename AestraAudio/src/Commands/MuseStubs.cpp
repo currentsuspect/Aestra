@@ -124,7 +124,7 @@ void DeleteTrackCommand::undo() {
     if (!m_executed || !m_detached)
         return;
 
-    if (m_manager.reinsertChannel(std::move(m_detached), m_detachedIndex)) {
+    if (m_manager.reinsertChannel(m_detached, m_detachedIndex)) {
         m_executed = false;
     }
 }
