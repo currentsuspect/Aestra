@@ -92,6 +92,10 @@ else()
 endif()
 add_test(NAME SecProjectLoadHardening COMMAND SecProjectLoadHardening)
 set_tests_properties(SecPluginScanIsolation PROPERTIES SKIP_RETURN_CODE 77)
+# Both of these spawn AestraPluginHost out of process; if that binary is absent
+# the run says nothing about the code under test, so they exit 77 and ctest
+# reports SKIP instead of a failure.
+set_tests_properties(SecOutOfProcessPluginHost PROPERTIES SKIP_RETURN_CODE 77)
 
 if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)

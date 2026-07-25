@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -180,6 +181,16 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "usage: SecOutOfProcessPluginHost <AestraPluginHost path> [real CLAP path]\n";
         return 2;
+    }
+
+    // Self-skip rather than fail when the helper binary isn't there. This test
+    // spawns AestraPluginHost out of process; if that target wasn't built the
+    // failure says nothing about the code under test. ctest maps 77 to SKIP
+    // (see SKIP_RETURN_CODE in tests/security/CMakeLists.txt), matching what
+    // plugin_scan_isolation.cpp already does for its own prerequisites.
+    if (!std::filesystem::exists(argv[1])) {
+        std::cout << "AestraPluginHost not found at " << argv[1] << "; skipping.\n";
+        return 77;
     }
 
     OutOfProcessPluginFactory factory(argv[1]);
