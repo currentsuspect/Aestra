@@ -56,15 +56,27 @@ jobs:
           # the latter goes through GraphQL and can return a short list without
           # saying so. A silently truncated list is SHORT, so it sails under the
           # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
           # The PR's own changedFiles total, passed to the classifier so it can
           # refuse to answer when the list it was handed is not the whole change.
           expected=$(gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json changedFiles \
             --jq '.changedFiles' 2>/dev/null || echo "")
-          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
           verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
@@ -173,15 +185,27 @@ jobs:
           # the latter goes through GraphQL and can return a short list without
           # saying so. A silently truncated list is SHORT, so it sails under the
           # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
           # The PR's own changedFiles total, passed to the classifier so it can
           # refuse to answer when the list it was handed is not the whole change.
           expected=$(gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json changedFiles \
             --jq '.changedFiles' 2>/dev/null || echo "")
-          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
           verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
@@ -247,15 +271,27 @@ jobs:
           # the latter goes through GraphQL and can return a short list without
           # saying so. A silently truncated list is SHORT, so it sails under the
           # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
           # The PR's own changedFiles total, passed to the classifier so it can
           # refuse to answer when the list it was handed is not the whole change.
           expected=$(gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json changedFiles \
             --jq '.changedFiles' 2>/dev/null || echo "")
-          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
           verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
@@ -412,15 +448,27 @@ jobs:
           # the latter goes through GraphQL and can return a short list without
           # saying so. A silently truncated list is SHORT, so it sails under the
           # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
           # The PR's own changedFiles total, passed to the classifier so it can
           # refuse to answer when the list it was handed is not the whole change.
           expected=$(gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json changedFiles \
             --jq '.changedFiles' 2>/dev/null || echo "")
-          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
           verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
