@@ -83,11 +83,6 @@ bool pumpUntilGain(const PluginInstancePtr& instance, const float* in, float gai
 }
 
 // --- #244 CLAP note-dialect e2e helpers -----------------------------------
-// The in-host fake CLAP plugin these drive, and the TESTNOTES command they read it
-// back with, are compiled into AestraPluginHost only on non-Windows (see
-// AestraPluginHostMain.cpp). Mirror the host's guard so the Windows lane still runs
-// everything else in this file instead of failing on hooks its child does not have.
-#ifndef _WIN32
 PluginInfo makeClapInfo(const std::string& id) {
     PluginInfo info;
     info.id = id;
@@ -179,7 +174,6 @@ std::vector<DeliveredEvent> deliverNotesToFakeClap(OutOfProcessPluginFactory& fa
     ok = true;
     return events;
 }
-#endif // !_WIN32
 
 } // namespace
 
@@ -198,6 +192,18 @@ int main(int argc, char** argv) {
         std::cout << "AestraPluginHost not found at " << argv[1] << "; skipping.\n";
         return 77;
     }
+
+#ifdef _WIN32
+    // Out-of-process hosting is a POSIX-only feature today: PluginHostProcess's
+    // start/sendLine/readLine/isRunning are all `#ifdef _WIN32 -> return false`
+    // (AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp), so no child is ever
+    // spawned and there is nothing to contain. Skip loudly rather than assert
+    // against a feature this platform does not have — and rather than hide it in
+    // a ctest -E regex, where the gap stops being visible in the run output.
+    std::cout << "Out-of-process plugin hosting is not implemented on Windows "
+                 "(PluginHostProcess::start always fails); skipping.\n";
+    return 77;
+#else
 
     OutOfProcessPluginFactory factory(argv[1]);
 
@@ -309,7 +315,6 @@ int main(int argc, char** argv) {
     // Drives real MIDI through OutOfProcessPluginInstance -> forked child ->
     // ClapModule::process, and reads back exactly what the fake CLAP plugin
     // received via process.in_events for each advertised dialect.
-#ifndef _WIN32
     {
         bool ran = false;
 
@@ -367,7 +372,6 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-#endif // !_WIN32
 
     auto missingVst3 = create(factory, makeInfo("com.aestra.missing-vst3"));
     if (missingVst3) {
@@ -422,4 +426,5 @@ int main(int argc, char** argv) {
 
     std::cout << "[PASS] Out-of-process plugin host contains helper crashes and keeps parent alive.\n";
     return 0;
+#endif // _WIN32
 }
