@@ -24,26 +24,95 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-linux
@@ -51,7 +120,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -84,15 +153,82 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
 
       - name: Configure (UI enabled)
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
 
       - name: Build app target
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
 
   build-windows:
@@ -103,7 +239,72 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cache vcpkg artifacts
+        if: steps.scope.outputs.run_cxx == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -117,6 +318,7 @@ jobs:
             windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
 
       - name: Setup vcpkg and libsodium
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -151,6 +353,7 @@ jobs:
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -162,19 +365,22 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         shell: bash
         run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         shell: bash
         run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-windows
@@ -182,7 +388,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         shell: bash
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -210,26 +416,95 @@ jobs:
         with:
           submodules: false
 
+      # --- Phase 1 lane selection (#620) -------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh.
+      - name: Classify change scope
+        id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running everything"; exit 0
+          fi
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+            echo "targets main: running everything"; exit 0
+          fi
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          # NOTE the field is `filename`. The REST files endpoint returns filename;
+          # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+          # file, exit status 0, and no error — an empty list that looks like a
+          # successful fetch, which then falls back to broad forever and makes this
+          # whole step inert while every check stays green.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+          echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+          # A mismatch is safe — the classifier falls back to broad — but it must not
+          # be silent, or a broken fetch degrades into "always broad" with every check
+          # green and nobody any the wiser.
+          if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+            echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+          fi
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
+          echo "classifier verdict: ${verdict}"
+          if [ "${verdict}" = "skip-cxx" ]; then
+            echo "run_cxx=false" >> "$GITHUB_OUTPUT"
+            echo "nothing here can affect a C++ build; skipping compile and tests"
+          else
+            echo "run_cxx=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run_cxx == 'true'
         run: |
           brew update
           brew install cmake pkg-config libsodium googletest
 
       - name: Configure
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
 
       - name: Build
+        if: steps.scope.outputs.run_cxx == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run_cxx == 'true'
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
 
       - name: License verification tests
+        if: steps.scope.outputs.run_cxx == 'true'
         run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run_cxx == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-macos
@@ -237,7 +512,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run_cxx == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -255,6 +530,93 @@ jobs:
           }
           EOF
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
+
+  classifier-selftest:
+    name: CI classifier self-test
+    runs-on: ubuntu-latest
+    # Least privilege, declared rather than inherited. This job shells out and
+    # queries two historical pull requests, so it reads repo contents and PR
+    # metadata and needs nothing else — least of all a token that could push.
+    permissions:
+      contents: read
+      pull-requests: read
+    # Two separate guarantees, and the second is the one that was missing.
+    #
+    #   SAFETY   uncertainty falls back to broad
+    #   LIVENESS a change that IS narrow actually produces a narrow verdict
+    #
+    # Safety alone is satisfiable by a classifier that has silently died: answer
+    # "broad" to everything and every correctness assertion still passes while the
+    # feature does nothing. That is exactly what shipped in this PR's first draft —
+    # the fetch asked for a GraphQL field name against a REST endpoint, returned
+    # blank lines with exit 0, and degraded into always-broad behind a fully green
+    # matrix. Nothing failed, because nothing could fail.
+    #
+    # So this job asserts both directions, at both levels: the script in isolation,
+    # and the real fetch pipeline end to end against two MERGED pull requests whose
+    # file lists can never change again.
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          # Nothing here pushes, so do not leave a credential in .git/config
+          # for the scripts this job runs to find.
+          persist-credentials: false
+
+      # Level 1: the classifier itself. 42 cases, both directions, including the
+      # look-alike paths and the degenerate input that produced a fail-open.
+      - name: Classifier unit tests
+        run: bash scripts/ci/classify-changes.test.sh
+
+      # Level 2: the wiring. The unit tests all passed while the pipeline was dead,
+      # because the bug was in how the file list was fetched, not in how it was
+      # judged. This runs the real command against known history.
+      - name: Fetch pipeline liveness and safety
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fail=0
+
+          # verdict_for <pr-number>  — the exact pipeline the scope steps run.
+          verdict_for() {
+            local pr="$1"
+            gh api --paginate "repos/${{ github.repository }}/pulls/${pr}/files" \
+              --jq '.[].filename' > "/tmp/files-${pr}.txt"
+            local expected
+            expected=$(gh pr view "${pr}" --repo "${{ github.repository }}" \
+              --json changedFiles --jq '.changedFiles')
+            local got
+            got=$(grep -c . "/tmp/files-${pr}.txt") || got=0
+            echo "  PR #${pr}: fetched ${got}, reports ${expected}" >&2
+            if [ "${got}" -eq 0 ] && [ "${expected}" -gt 0 ]; then
+              echo "::error::changed-file fetch returned nothing for #${pr} — the pipeline is dead" >&2
+              return 1
+            fi
+            bash scripts/ci/classify-changes.sh "/tmp/files-${pr}.txt" "${expected}"
+          }
+
+          # LIVENESS: #619 was documentation only. If this stops saying skip-cxx,
+          # the classifier has degraded to running everything and the feature is
+          # dead — the failure this job exists to make visible.
+          v=$(verdict_for 619) || fail=1
+          if [ "${v:-}" != "skip-cxx" ]; then
+            echo "::error::LIVENESS: docs-only #619 classified '${v:-<none>}', expected skip-cxx"
+            fail=1
+          else
+            echo "liveness ok: docs-only #619 -> skip-cxx"
+          fi
+
+          # SAFETY: #618 changed a workflow. It must never be skippable.
+          v=$(verdict_for 618) || fail=1
+          if [ "${v:-}" != "broad" ]; then
+            echo "::error::SAFETY: workflow change #618 classified '${v:-<none>}', expected broad"
+            fail=1
+          else
+            echo "safety ok: workflow-only #618 -> broad"
+          fi
+
+          exit "${fail}"
 
   format-check:
     name: Formatting (advisory)
