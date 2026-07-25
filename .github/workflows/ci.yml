@@ -36,6 +36,11 @@ jobs:
       # See scripts/ci/classify-changes.sh.
       - name: Classify change scope
         id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -50,7 +55,9 @@ jobs:
           gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json files \
             --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
-          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -136,6 +143,11 @@ jobs:
       # See scripts/ci/classify-changes.sh.
       - name: Classify change scope
         id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -150,7 +162,9 @@ jobs:
           gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json files \
             --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
-          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -193,6 +207,11 @@ jobs:
       # See scripts/ci/classify-changes.sh.
       - name: Classify change scope
         id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -207,7 +226,9 @@ jobs:
           gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json files \
             --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
-          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -341,6 +362,11 @@ jobs:
       # See scripts/ci/classify-changes.sh.
       - name: Classify change scope
         id: scope
+        # Windows runners default `run:` to PowerShell, which parses this bash as
+        # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+        # runner, so pinning the shell keeps one implementation across all three
+        # platforms rather than maintaining a pwsh twin of the same logic.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -355,7 +381,9 @@ jobs:
           gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" --json files \
             --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
-          verdict=$(scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          # Invoked through bash explicitly rather than relying on the exec bit
+          # surviving a Windows checkout and on shebang resolution under Git Bash.
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
