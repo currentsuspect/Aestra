@@ -660,6 +660,9 @@ void OutOfProcessPluginInstance::workerLoop() {
             std::copy_n(m_workerOutput.data(), outputSamples, m_readyOutput.data());
             m_readyFrames.store(frames, std::memory_order_release);
             m_readyState.store(2, std::memory_order_release);
+            // Published last, so an observer that sees this advance is guaranteed
+            // to find the result readable rather than half-written.
+            m_processedBlocks.fetch_add(1, std::memory_order_acq_rel);
         }
     }
 }

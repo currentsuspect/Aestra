@@ -72,6 +72,25 @@ public:
         sendCommand(command, &response, std::chrono::seconds(2));
         return response;
     }
+
+    /**
+     * @brief Blocks the worker has finished, monotonically increasing.
+     *
+     * The audio path here is a SINGLE-SLOT double buffer, not a queue: every
+     * process() overwrites the pending slot, so a block that has not been picked
+     * up yet is simply lost. That makes "has the worker caught up?" unobservable
+     * from outside, and tests were left sleeping a fixed 20ms and hoping — a race
+     * that failed on a loaded macOS runner (#622) and could not be fixed by
+     * polling, because polling means calling process(), which destroys the very
+     * block being waited for.
+     *
+     * This counter makes the completion an event a test can wait on. It is
+     * incremented after the worker publishes a result, so observing it advance
+     * means that result is readable on the next process() call.
+     */
+    uint64_t processedBlockCountForTest() const {
+        return m_processedBlocks.load(std::memory_order_acquire);
+    }
 #endif
 
 private:
@@ -104,6 +123,10 @@ private:
 
     std::thread m_workerThread;
     std::atomic<bool> m_workerStop{false};
+    // Counts blocks the worker has published. Always maintained, not just under
+    // test hooks: a counter that only exists in test builds would be measuring a
+    // different binary from the one that ships.
+    std::atomic<uint64_t> m_processedBlocks{0};
     std::atomic<bool> m_workerRunning{false};
 
     std::vector<float> m_pendingInput;
