@@ -52,7 +52,7 @@ rather than an aspiration.
 - 🆓 Aestra Core is **free forever** under ASSAL
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
-- 🤖 Premium features (Muse AI, plugins) will require paid licenses
+- 🤖 Further premium modules (additional instruments and effects, Muse's model-backed features) are **planned**, not yet gated, and subject to future licensing
 - 📜 Full license text: [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) (plain-language guide: [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md))
 
 ## Hybrid Licensing Model
@@ -298,7 +298,6 @@ While you grant full rights, we value contributions:
 
 - [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) - the ASSAL agreement itself
 - [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - plain-language guide to it
-- [Licensing Details](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - Original licensing document
 - [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) - How to contribute
 - [FAQ](../technical/faq.md) - General questions
 

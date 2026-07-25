@@ -38,11 +38,28 @@ The short version, which is orientation and not terms: **you may read, study, le
 
 ---
 
+## Your music is yours
+
+Selling, licensing, publishing or distributing music, audio, recordings or artistic content
+made with Aestra is **explicitly excluded** from "Commercial Use" — see the definition in
+[LICENSE §1](LICENSE). You own 100% of what you make with it, whether that is a personal
+demo, a commercial release, or client work.
+
+The licence restricts what you may do with Aestra's *source code*. It has never restricted
+what you do with your masters.
+
+---
+
 ## If you are here to contribute
 
-Contributing assigns ownership of your contribution to Aestra Studios. That is a real
-consequence and worth understanding before you open a pull request — the terms are in
-[LICENSE §5](LICENSE), and they are four short subsections.
+You keep the copyright in what you contribute. What you grant is a **perpetual,
+worldwide, non-exclusive, royalty-free, irrevocable licence** for Aestra Studios to use,
+modify, distribute and sublicense it — including under proprietary terms. You also waive
+moral rights so far as the law allows, and Aestra Studios is under no obligation to accept
+or keep any contribution.
+
+That is a real consequence and worth understanding before you open a pull request. The
+terms are [LICENSE §5](LICENSE), four short subsections.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the practical workflow.
 
@@ -59,7 +76,7 @@ code into your own projects, or redistributing it to a class — the boundary is
 
 ## SPDX identifier
 
-```
+```text
 SPDX-License-Identifier: ASSAL
 ```
 
