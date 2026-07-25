@@ -2168,6 +2168,15 @@ target_include_directories(DeleteTrackUndoTest PRIVATE
 add_test(NAME DeleteTrackUndoTest COMMAND DeleteTrackUndoTest)
 set_tests_properties(DeleteTrackUndoTest PROPERTIES LABELS "commands;regression")
 
+add_executable(HostVerbRegistryTest Commands/HostVerbRegistryTest.cpp)
+target_link_libraries(HostVerbRegistryTest PRIVATE AestraAudioCore)
+target_include_directories(HostVerbRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME HostVerbRegistryTest COMMAND HostVerbRegistryTest)
+set_tests_properties(HostVerbRegistryTest PROPERTIES LABELS "commands;muse")
+
 add_executable(MuseSocketServerTest Commands/MuseSocketServerTest.cpp)
 target_link_libraries(MuseSocketServerTest PRIVATE AestraAudioCore)
 target_include_directories(MuseSocketServerTest PRIVATE
