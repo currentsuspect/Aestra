@@ -534,6 +534,12 @@ jobs:
   classifier-selftest:
     name: CI classifier self-test
     runs-on: ubuntu-latest
+    # Least privilege, declared rather than inherited. This job shells out and
+    # queries two historical pull requests, so it reads repo contents and PR
+    # metadata and needs nothing else — least of all a token that could push.
+    permissions:
+      contents: read
+      pull-requests: read
     # Two separate guarantees, and the second is the one that was missing.
     #
     #   SAFETY   uncertainty falls back to broad
@@ -553,6 +559,9 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
+          # Nothing here pushes, so do not leave a credential in .git/config
+          # for the scripts this job runs to find.
+          persist-credentials: false
 
       # Level 1: the classifier itself. 42 cases, both directions, including the
       # look-alike paths and the degenerate input that produced a fail-open.
