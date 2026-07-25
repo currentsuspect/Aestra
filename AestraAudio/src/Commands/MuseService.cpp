@@ -139,7 +139,8 @@ bool queryTakesArgs(const std::string& verb) {
 // through CommandHistory — a bounce is not an undoable project edit; batch
 // pushes one CommandTransaction so the whole group is a single undo step.
 bool isActionVerb(const std::string& verb) {
-    return verb == "render_pattern" || verb == "render_song" || verb == "batch";
+    return verb == "render_pattern" || verb == "render_song" || verb == "batch" ||
+           verb == "undo" || verb == "redo";
 }
 
 // JSON args -> flag map for the schema/registry path. Returns false with
@@ -774,6 +775,50 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             return finish(response);
         }
 
+        // ------------------------------------------------------------------
+        // undo / redo — drive the same history the UI's Ctrl+Z drives.
+        //
+        // Every mutation verb and every batch already lands there as one step;
+        // without these the surface could build that history but never walk it,
+        // so the only way back from a mistake was to hand-write the inverse
+        // edit. Against the live app these move the user's undo stack, which is
+        // the point: agent edits and hand edits are the same edits.
+        // ------------------------------------------------------------------
+        if (verb == "undo" || verb == "redo") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            if (request.has("args") && request["args"].isObject() &&
+                !request["args"].asObject().empty()) {
+                return makeError(id, "validation_error", verb + " takes no args", verb).toString();
+            }
+
+            CommandHistory& history = m_trackManager->getCommandHistory();
+            const bool undoing = (verb == "undo");
+
+            // An empty history is a refusal, not a silent success: a caller that
+            // gets ok back would reasonably believe an edit was reverted.
+            if (undoing ? !history.canUndo() : !history.canRedo()) {
+                return makeError(id, "execution_error",
+                                 undoing ? "nothing to undo" : "nothing to redo", verb)
+                    .toString();
+            }
+            if (!(undoing ? history.undo() : history.redo())) {
+                return makeError(id, "execution_error",
+                                 std::string(undoing ? "undo" : "redo") + " failed", verb)
+                    .toString();
+            }
+
+            // Report the new ends of the stack so a caller can walk it without
+            // guessing when to stop.
+            JSON result = JSON::object();
+            result.set("canUndo", JSON(history.canUndo()));
+            result.set("canRedo", JSON(history.canRedo()));
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
         if (verb == "batch") {
             if (!m_trackManager) {
                 return makeError(id, "execution_error", "no track manager", verb).toString();
@@ -855,6 +900,18 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 if (!item.isObject() || !item.has("verb") || !item["verb"].isString()) {
                     return failBatch("validation_error",
                                      prefix + "must be an object with a string verb");
+                }
+                // Refuse unknown member keys by name, the way every other args
+                // object here does. Accepting them silently is how a member
+                // written with "flags" instead of "args" runs with NO args and
+                // still reports ok — an add_track that quietly takes its default
+                // name rather than the one asked for.
+                for (auto& memberEntry : item.asObject()) {
+                    if (memberEntry.first != "verb" && memberEntry.first != "args") {
+                        return failBatch("validation_error",
+                                         prefix + "unknown key: " + memberEntry.first +
+                                             " (a member is {\"verb\": ..., \"args\": ...})");
+                    }
                 }
                 const std::string subVerb = item["verb"].asString();
                 if (isQueryVerb(subVerb) || isActionVerb(subVerb)) {

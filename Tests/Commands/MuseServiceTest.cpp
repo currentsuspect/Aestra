@@ -1146,6 +1146,104 @@ int main() {
         std::filesystem::remove(outPath);
     }
 
+    // --- undo / redo: the surface can walk the history it writes ------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        JSON r = call(service, "{\"id\": 240, \"verb\": \"add_track\", \"args\": {\"name\": \"Undoable\"}}");
+        check(status(r) == "ok", "add_track for the undo case");
+        check(trackManager->getChannelCount() == before + 1, "track was added");
+
+        r = call(service, "{\"id\": 241, \"verb\": \"undo\"}");
+        check(status(r) == "ok", "undo ok");
+        check(trackManager->getChannelCount() == before, "undo removed the track");
+        check(r["result"]["canRedo"].isBool() && r["result"]["canRedo"].asBool(),
+              "undo reports that a redo is now available");
+
+        r = call(service, "{\"id\": 242, \"verb\": \"redo\"}");
+        check(status(r) == "ok", "redo ok");
+        check(trackManager->getChannelCount() == before + 1, "redo restored the track");
+        check(r["result"]["canRedo"].isBool() && !r["result"]["canRedo"].asBool(),
+              "redo reports the stack is now at its top");
+
+        // Exhaustion is checked on a FRESH session, not by unwinding the long
+        // history this file has built up. That history contains a delete_track,
+        // and unwinding past one is currently unsafe for reasons that have
+        // nothing to do with undo/redo: DeleteTrackCommand::undo() calls
+        // addChannel(), which mints a NEW MixerChannel with a NEW id at the END
+        // of the vector, so every older command still holding `MixerChannel&`
+        // (SetVolume/SetPan/SetMute/SetSolo and the effect commands all do)
+        // is left dangling. ASan catches it as a heap-use-after-free the moment
+        // one of those older commands is undone.
+        //
+        // That bug predates this change and is reachable from the UI's Ctrl+Z;
+        // it is filed separately rather than smuggled in here. Scoping this
+        // assertion to a clean history tests what this change actually adds
+        // without also driving a broken path it does not own.
+        {
+            auto freshManager = std::make_shared<TrackManager>();
+            freshManager->getUnitManager().setPatternManager(&freshManager->getPatternManager());
+            MuseService fresh(freshManager.get(), &engine);
+
+            JSON f = call(fresh, "{\"id\": 243, \"verb\": \"undo\"}");
+            check(status(f) == "execution_error" && f["message"].asString() == "nothing to undo",
+                  "undo on an untouched session refuses by name");
+            f = call(fresh, "{\"id\": 244, \"verb\": \"redo\"}");
+            check(status(f) == "execution_error" && f["message"].asString() == "nothing to redo",
+                  "redo on an untouched session refuses by name");
+
+            f = call(fresh, "{\"id\": 245, \"verb\": \"add_track\", \"args\": {\"name\": \"Only\"}}");
+            check(status(f) == "ok", "fresh session takes one edit");
+            f = call(fresh, "{\"id\": 246, \"verb\": \"undo\"}");
+            check(status(f) == "ok" && f["result"]["canUndo"].isBool() &&
+                      !f["result"]["canUndo"].asBool(),
+                  "undoing the only edit empties the undo stack");
+            f = call(fresh, "{\"id\": 247, \"verb\": \"undo\"}");
+            check(status(f) == "execution_error",
+                  "a second undo at the end of the stack refuses rather than reporting a no-op");
+        }
+
+        r = call(service, "{\"id\": 248, \"verb\": \"undo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "undo takes no args");
+        r = call(service, "{\"id\": 249, \"verb\": \"redo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "redo takes no args");
+
+        // undo/redo act on history, so they are not batch members.
+        r = call(service,
+                 "{\"id\": 247, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": \"undo\"}]}}");
+        check(status(r) == "validation_error", "undo is rejected inside a batch");
+    }
+
+    // --- a batch member takes only verb and args ----------------------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        // The real mistake this catches: "flags" instead of "args". It used to
+        // run with NO args and report ok, silently creating a default-named
+        // track instead of the one asked for.
+        JSON r = call(service,
+                      "{\"id\": 250, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                      "\"add_track\", \"flags\": {\"name\": \"Typo\"}}]}}");
+        check(status(r) == "validation_error", "batch member with 'flags' is refused");
+        check(r["message"].asString().find("unknown key: flags") != std::string::npos,
+              "the refusal names the offending key");
+        check(r["message"].asString().find("commands[0]") != std::string::npos,
+              "the refusal names the offending member");
+        check(trackManager->getChannelCount() == before,
+              "a refused batch member adds nothing");
+
+        // The correct spelling still works, and lands as one undo step.
+        r = call(service,
+                 "{\"id\": 251, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                 "\"add_track\", \"args\": {\"name\": \"Correct\"}}]}}");
+        check(status(r) == "ok", "batch member with 'args' is accepted");
+        check(trackManager->getChannelCount() == before + 1, "the batch added its track");
+
+        r = call(service, "{\"id\": 252, \"verb\": \"undo\"}");
+        check(status(r) == "ok" && trackManager->getChannelCount() == before,
+              "the whole batch undoes as a single step");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
               << std::endl;
     return g_failures == 0 ? 0 : 1;
