@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
+#include "MuseHostVerbs.h"
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
@@ -1059,6 +1060,14 @@ void AestraApp::startMuseSocketIfConfigured() {
 
     m_museService = std::make_unique<Aestra::Audio::MuseService>(
         m_content->getTrackManager().get(), m_audioController->getEngine());
+
+    // Requests are executed from the frame pump (see processPending in UI_Update),
+    // so UI-affine host verbs can be honoured here. Headless processes leave this
+    // false and refuse them with a reason rather than running host code on a
+    // thread that does not own the state it touches.
+    m_museService->setHostUiThreadAvailable(true);
+    registerMuseHostVerbs(*m_museService, *m_content);
+
     m_museSocketServer = std::make_unique<Aestra::Audio::MuseSocketServer>();
     std::string error;
     if (!m_museSocketServer->start(static_cast<uint16_t>(port), error)) {
