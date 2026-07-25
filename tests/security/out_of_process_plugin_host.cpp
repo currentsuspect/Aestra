@@ -56,6 +56,32 @@ PluginInstancePtr create(OutOfProcessPluginFactory& factory, const PluginInfo& i
     return created;
 }
 
+// Wait for the worker to publish one more finished block than it had before.
+//
+// The transport is a SINGLE-SLOT double buffer, not a queue: every process()
+// overwrites the pending slot, so a block the worker has not picked up yet is
+// simply dropped. That is why this cannot be done by polling with process() —
+// polling would destroy the very block being waited for — and why the original
+// fixed 20ms sleeps raced on a loaded macOS runner (#622).
+//
+// processedBlockCountForTest() makes completion observable. Sample it BEFORE the
+// process() that submits, then wait for it to move.
+bool waitForWorkerBlock(const PluginInstancePtr& instance, uint64_t countBefore,
+                        std::chrono::milliseconds budget = std::chrono::seconds(5)) {
+    auto* oop = static_cast<OutOfProcessPluginInstance*>(instance.get());
+    const auto deadline = std::chrono::steady_clock::now() + budget;
+    while (std::chrono::steady_clock::now() < deadline) {
+        if (oop->processedBlockCountForTest() > countBefore) {
+            return true;
+        }
+        if (instance->isCrashed()) {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return false;
+}
+
 // Pump process() until the echo output steady-states at input*gain, tolerating
 // the async worker/double-buffer latency (#238 param delivery is not synchronous).
 // Returns true once every frame matches; false if it never converges.
@@ -223,12 +249,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    auto* oopInstance = static_cast<OutOfProcessPluginInstance*>(instance.get());
+
     float inL[4] = {0.1f, 0.2f, 0.3f, 0.4f};
     float inR[4] = {-0.1f, -0.2f, -0.3f, -0.4f};
     const float* inputs[2] = {inL, inR};
     float outL[4] = {};
     float outR[4] = {};
     float* outputs[2] = {outL, outR};
+
+    // Each stage: sample the completed-block count, submit, then wait for the
+    // worker to publish. The block submitted here is read back on the NEXT call.
+    uint64_t blocksBefore = oopInstance->processedBlockCountForTest();
     instance->process(inputs, outputs, 2, 2, 4);
 
     if (std::memcmp(inL, outL, sizeof(inL)) != 0 || std::memcmp(inR, outR, sizeof(inR)) != 0) {
@@ -236,13 +268,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    if (!waitForWorkerBlock(instance, blocksBefore)) {
+        std::cerr << "helper did not finish the first audio block\n";
+        return 1;
+    }
 
     float nextInL[4] = {0.9f, 0.8f, 0.7f, 0.6f};
     float nextInR[4] = {-0.9f, -0.8f, -0.7f, -0.6f};
     const float* nextInputs[2] = {nextInL, nextInR};
     std::memset(outL, 0, sizeof(outL));
     std::memset(outR, 0, sizeof(outR));
+    blocksBefore = oopInstance->processedBlockCountForTest();
     instance->process(nextInputs, outputs, 2, 2, 4);
 
     if (std::memcmp(inL, outL, sizeof(inL)) != 0 || std::memcmp(inR, outR, sizeof(inR)) != 0) {
@@ -250,7 +286,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    if (!waitForWorkerBlock(instance, blocksBefore)) {
+        std::cerr << "helper did not finish the second audio block\n";
+        return 1;
+    }
 
     MidiBuffer midi;
     midi.addNoteOn(1, 60, 100, 1);
@@ -259,13 +298,17 @@ int main(int argc, char** argv) {
     const float* midiInputs[2] = {midiInL, midiInR};
     std::memset(outL, 0, sizeof(outL));
     std::memset(outR, 0, sizeof(outR));
+    blocksBefore = oopInstance->processedBlockCountForTest();
     instance->process(midiInputs, outputs, 2, 2, 4, &midi, nullptr);
     if (std::memcmp(nextInL, outL, sizeof(nextInL)) != 0 || std::memcmp(nextInR, outR, sizeof(nextInR)) != 0) {
         std::cerr << "isolated plugin proxy did not survive MIDI-bearing process command\n";
         return 1;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    if (!waitForWorkerBlock(instance, blocksBefore)) {
+        std::cerr << "helper did not finish the MIDI-bearing block\n";
+        return 1;
+    }
     std::memset(outL, 0, sizeof(outL));
     std::memset(outR, 0, sizeof(outR));
     instance->process(nextInputs, outputs, 2, 2, 4);
