@@ -2159,6 +2159,15 @@ target_include_directories(MuseCliRequestTest PRIVATE
 add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
 set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse")
 
+add_executable(DeleteTrackUndoTest Commands/DeleteTrackUndoTest.cpp)
+target_link_libraries(DeleteTrackUndoTest PRIVATE AestraAudioCore)
+target_include_directories(DeleteTrackUndoTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DeleteTrackUndoTest COMMAND DeleteTrackUndoTest)
+set_tests_properties(DeleteTrackUndoTest PROPERTIES LABELS "commands;regression")
+
 add_executable(MuseSocketServerTest Commands/MuseSocketServerTest.cpp)
 target_link_libraries(MuseSocketServerTest PRIVATE AestraAudioCore)
 target_include_directories(MuseSocketServerTest PRIVATE

@@ -111,17 +111,20 @@ void DeleteTrackCommand::execute() {
     m_deletedName = ch->getName();
     m_deletedId = ch->getChannelId();
 
-    if (m_manager.removeChannelById(m_deletedId))
+    // Detach rather than destroy: this command owns the channel for as long as
+    // the delete stands, so undo can put back the same object at the same id
+    // and index. See the m_detached comment in the header for why an equivalent
+    // channel is not good enough.
+    m_detached = m_manager.detachChannelById(m_deletedId, m_detachedIndex);
+    if (m_detached)
         m_executed = true;
 }
 
 void DeleteTrackCommand::undo() {
-    if (!m_executed)
+    if (!m_executed || !m_detached)
         return;
 
-    MixerChannel* ch = m_manager.addChannel(m_deletedName);
-    if (ch) {
-        m_deletedId = ch->getChannelId();
+    if (m_manager.reinsertChannel(std::move(m_detached), m_detachedIndex)) {
         m_executed = false;
     }
 }
@@ -130,7 +133,8 @@ void DeleteTrackCommand::redo() {
     if (m_executed)
         return;
 
-    if (m_manager.removeChannelById(m_deletedId))
+    m_detached = m_manager.detachChannelById(m_deletedId, m_detachedIndex);
+    if (m_detached)
         m_executed = true;
 }
 
