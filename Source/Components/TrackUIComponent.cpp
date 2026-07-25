@@ -18,6 +18,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Graphics/NUISVGParser.h"
+#include "../AestraUI/Widgets/TrackControlIcons.h"
 #include "../AestraUI/Helpers/TimelineGridRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
@@ -70,14 +71,10 @@ const AestraUI::NUISVGDocument* trackControlIcon(const char* svg) {
     return doc.get();
 }
 
-constexpr const char* kMuteIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 4.5v-15L8 9H4z" fill="#fff"/><path d="M16 9.5 21 14.5 M21 9.5 16 14.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/></svg>)";
-constexpr const char* kSoloIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 0 0-7.5 7.5v5.2a1.8 1.8 0 0 0 1.8 1.8h1.2a1 1 0 0 0 1-1v-4.2a1 1 0 0 0-1-1H6.5V12a5.5 5.5 0 0 1 11 0v.8h-1a1 1 0 0 0-1 1V18a1 1 0 0 0 1 1h1.2a1.8 1.8 0 0 0 1.8-1.8V12A7.5 7.5 0 0 0 12 4.5z" fill="#fff"/></svg>)";
-constexpr const char* kRecordIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg>)";
-constexpr const char* kMonitorIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3.2l2.2-5.5 3.4 11 2.2-5.5H21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
+using AestraUI::kMonitorIconSvg;
+using AestraUI::kMuteIconSvg;
+using AestraUI::kRecordIconSvg;
+using AestraUI::kSoloIconSvg;
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");

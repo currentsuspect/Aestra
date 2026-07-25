@@ -507,6 +507,7 @@ public:
     std::shared_ptr<NUIIcon> wavFileIcon_;
     std::shared_ptr<NUIIcon> mp3FileIcon_;
     std::shared_ptr<NUIIcon> flacFileIcon_;
+    std::shared_ptr<NUIIcon> midiFileIcon_;
     std::shared_ptr<NUIIcon> unknownFileIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;
     
