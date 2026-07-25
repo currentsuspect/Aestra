@@ -1,7 +1,8 @@
 # Aestra
 
 ![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
-![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey)
+![App](https://img.shields.io/badge/App-Windows%20%7C%20Linux-lightgrey)
+![Engine CI](https://img.shields.io/badge/Engine%20CI-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
 
 > A digital audio workstation under active development, built in modern C++ with a custom UI stack and a native audio engine.
