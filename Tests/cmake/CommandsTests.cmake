@@ -189,7 +189,13 @@ endif()
 # Guarded on AestraPremiumPlugins; absent from public builds.
 # Append new targets for this group at the END of this sub-section.
 
-if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
+# TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
+# branch below links AestraRumble by name, and AestraPlugins only defines that
+# target when its AestraRumble subdirectory is present. Without this, a premium
+# build with Rumble absent emits -lAestraRumble and fails to link. AestraPlugins
+# guards its own use the same way (if(TARGET AestraRumble)).
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumble
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
     if(UNIX AND NOT APPLE)
         target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
@@ -204,7 +210,13 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
 endif()
 
-if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")
+# TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
+# branch below links AestraRumble by name, and AestraPlugins only defines that
+# target when its AestraRumble subdirectory is present. Without this, a premium
+# build with Rumble absent emits -lAestraRumble and fails to link. AestraPlugins
+# guards its own use the same way (if(TARGET AestraRumble)).
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumble
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")
     add_executable(RumbleUnauthorizedOutputSafetyTest Commands/RumbleUnauthorizedOutputSafetyTest.cpp)
     if(UNIX AND NOT APPLE)
         target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
