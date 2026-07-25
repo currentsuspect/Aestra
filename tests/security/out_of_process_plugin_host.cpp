@@ -193,6 +193,18 @@ int main(int argc, char** argv) {
         return 77;
     }
 
+#ifdef _WIN32
+    // Out-of-process hosting is a POSIX-only feature today: PluginHostProcess's
+    // start/sendLine/readLine/isRunning are all `#ifdef _WIN32 -> return false`
+    // (AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp), so no child is ever
+    // spawned and there is nothing to contain. Skip loudly rather than assert
+    // against a feature this platform does not have — and rather than hide it in
+    // a ctest -E regex, where the gap stops being visible in the run output.
+    std::cout << "Out-of-process plugin hosting is not implemented on Windows "
+                 "(PluginHostProcess::start always fails); skipping.\n";
+    return 77;
+#else
+
     OutOfProcessPluginFactory factory(argv[1]);
 
     auto instance = create(factory, makeInfo("__aestra_test_echo__"));
@@ -414,4 +426,5 @@ int main(int argc, char** argv) {
 
     std::cout << "[PASS] Out-of-process plugin host contains helper crashes and keeps parent alive.\n";
     return 0;
+#endif // _WIN32
 }

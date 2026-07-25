@@ -1302,6 +1302,31 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-load-request");
                 continue;
             }
+
+            // A real plugin is only "loaded" if a real backend loaded it. When this
+            // build has no backend for the requested format the guarded blocks below
+            // are compiled out entirely, so without this refusal control would fall
+            // straight through to `loaded = true` and hand back a usable proxy for a
+            // plugin nobody ever opened -- including one whose file does not exist.
+            // SCAN already refuses this way ("ERR unsupported-platform"); LOAD did not.
+            bool exemptFake = false;
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+            exemptFake = (id == "__aestra_test_echo__"); // in-host fake, no module to load
+#endif
+            if (!exemptFake) {
+#ifndef AESTRA_HAS_VST3
+                if (format == "vst3") {
+                    reply("ERR vst3-unsupported-in-this-build");
+                    continue;
+                }
+#endif
+#ifdef _WIN32
+                if (format == "clap") {
+                    reply("ERR clap-unsupported-on-this-platform");
+                    continue;
+                }
+#endif
+            }
 #ifndef _WIN32
             if (format == "clap" && id != "__aestra_test_echo__") {
 #ifdef AESTRA_HAS_VST3

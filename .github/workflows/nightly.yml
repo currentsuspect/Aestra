@@ -56,7 +56,7 @@ jobs:
         run: cmake --build build-nightly --parallel
 
       - name: Test
-        run: ctest --test-dir build-nightly --output-on-failure -E "SecOutOfProcessPluginHost"
+        run: ctest --test-dir build-nightly --output-on-failure
 
       - name: Upload build artifacts
         if: always()
