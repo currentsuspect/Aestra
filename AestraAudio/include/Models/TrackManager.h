@@ -176,6 +176,84 @@ public:
         return true;
     }
 
+    /**
+     * @brief Remove a channel without destroying it, handing back ownership.
+     *
+     * Undoing a track delete must restore the SAME object, not an equivalent
+     * one. Three things live in the object rather than in anything that could
+     * be reconstructed from a name:
+     *   - its channel id, which routing is keyed on (a unit or audio pattern
+     *     points at an id, never a lane index), so a re-created channel
+     *     silently orphans everything routed to the old one;
+     *   - its volume, pan, mute, solo and whole effect chain;
+     *   - its address — SetVolumeCommand, SetPanCommand, SetMuteCommand,
+     *     SetSoloCommand and the effect/plugin commands all store a
+     *     `MixerChannel&`, so destroying it leaves every one of them in the
+     *     undo history holding a dangling reference.
+     *
+     * Keeping the object alive in the command that removed it is what makes
+     * undo safe: the references stay valid for as long as anything can undo
+     * through them.
+     *
+     * @param outIndex receives the position it occupied, so it can go back there.
+     * @return the channel, or nullptr when no channel has that id.
+     */
+    std::unique_ptr<MixerChannel> detachChannelById(uint32_t channelId, size_t& outIndex) {
+        if (reportRealtimeMisuse("TrackManager::detachChannelById")) {
+            return nullptr;
+        }
+        auto it = std::find_if(m_channels.begin(), m_channels.end(), [channelId](const auto& channel) {
+            return channel && channel->getChannelId() == channelId;
+        });
+        if (it == m_channels.end()) {
+            return nullptr;
+        }
+        outIndex = static_cast<size_t>(std::distance(m_channels.begin(), it));
+        std::unique_ptr<MixerChannel> detached = std::move(*it);
+        m_channels.erase(it);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->rebuild(m_channels);
+        }
+        publishInputMonitoringSnapshot();
+        return detached;
+    }
+
+    /**
+     * @brief Put a detached channel back where it came from.
+     *
+     * An index past the end appends, so a restore still succeeds if tracks were
+     * added while this one was away — better than refusing and stranding the
+     * channel inside a command nobody can undo.
+     *
+     * @param channel taken by REFERENCE, and moved from only on success. A
+     *        by-value parameter would destroy the channel on every failure
+     *        path: the caller's unique_ptr is already moved-from at the call
+     *        site, so a refusal inside this function would lose the object for
+     *        good — the same "the channel is gone" defect this pair of
+     *        functions exists to prevent, merely relocated. On failure the
+     *        caller still holds it and can retry.
+     * @return false when the channel is null, or when called from the audio
+     *         thread, where mutating the channel list is not allowed.
+     */
+    bool reinsertChannel(std::unique_ptr<MixerChannel>& channel, size_t index) {
+        if (!channel || reportRealtimeMisuse("TrackManager::reinsertChannel")) {
+            return false;
+        }
+        const size_t clamped = std::min(index, m_channels.size());
+        m_channels.insert(m_channels.begin() + static_cast<std::ptrdiff_t>(clamped),
+                          std::move(channel));
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(m_channels);
+        publishInputMonitoringSnapshot();
+        return true;
+    }
+
     size_t getTrackCount() const { return getChannelCount(); }
     /**
      * @brief Get a track by zero-based index.
