@@ -48,7 +48,9 @@ void check(bool condition, const std::string& label) {
     }
 }
 
-bool near(float a, float b) { return std::fabs(a - b) < 1e-5f; }
+// Not `near`: that is a legacy Windows macro (minwindef.h), so MSVC rejects a
+// function of that name outright.
+bool almostEqual(float a, float b) { return std::fabs(a - b) < 1e-5f; }
 
 } // namespace
 
@@ -71,8 +73,8 @@ int main() {
     // re-created replacement would be detectably different.
     history.pushAndExecute(std::make_shared<SetVolumeCommand>(*victim, 0.25f));
     history.pushAndExecute(std::make_shared<SetPanCommand>(*victim, -0.5f));
-    check(near(victim->getVolume(), 0.25f), "fixture: volume applied");
-    check(near(victim->getPan(), -0.5f), "fixture: pan applied");
+    check(almostEqual(victim->getVolume(), 0.25f), "fixture: volume applied");
+    check(almostEqual(victim->getPan(), -0.5f), "fixture: pan applied");
 
     // Delete the middle track.
     history.pushAndExecute(std::make_shared<DeleteTrackCommand>(manager, 1));
@@ -90,8 +92,8 @@ int main() {
         check(restored->getChannelId() == victimId,
               "restored with its ORIGINAL channel id (routing points at ids, not indexes)");
         check(restored->getName() == "Victim", "restored with its name");
-        check(near(restored->getVolume(), 0.25f), "restored with its volume, not a default");
-        check(near(restored->getPan(), -0.5f), "restored with its pan, not a default");
+        check(almostEqual(restored->getVolume(), 0.25f), "restored with its volume, not a default");
+        check(almostEqual(restored->getPan(), -0.5f), "restored with its pan, not a default");
         check(restored == victim,
               "restored the SAME object, so references held by older commands stay valid");
     }
@@ -102,15 +104,15 @@ int main() {
     // Older commands hold `MixerChannel&` to the channel the delete removed.
     // With a re-created channel those references dangled; ASan caught the write.
     check(history.undo(), "undo of the pan change reported success");
-    check(restored != nullptr && near(restored->getPan(), 0.0f),
+    check(restored != nullptr && almostEqual(restored->getPan(), 0.0f),
           "pan undone through a reference that survived the delete");
     check(history.undo(), "undo of the volume change reported success");
-    check(restored != nullptr && near(restored->getVolume(), 1.0f),
+    check(restored != nullptr && almostEqual(restored->getVolume(), 1.0f),
           "volume undone through a reference that survived the delete");
 
     // --- redo forward again -------------------------------------------------
-    check(history.redo() && near(restored->getVolume(), 0.25f), "redo re-applies the volume");
-    check(history.redo() && near(restored->getPan(), -0.5f), "redo re-applies the pan");
+    check(history.redo() && almostEqual(restored->getVolume(), 0.25f), "redo re-applies the volume");
+    check(history.redo() && almostEqual(restored->getPan(), -0.5f), "redo re-applies the pan");
     check(history.redo(), "redo re-applies the delete");
     check(manager.getChannelCount() == 2, "the track is deleted again");
 
@@ -149,7 +151,7 @@ int main() {
         const uint32_t addedId = channel->getChannelId();
 
         addHistory.pushAndExecute(std::make_shared<SetVolumeCommand>(*channel, 0.4f));
-        check(near(channel->getVolume(), 0.4f), "volume applied to the added channel");
+        check(almostEqual(channel->getVolume(), 0.4f), "volume applied to the added channel");
 
         check(addHistory.undo(), "undo of the volume change");
         check(addHistory.undo(), "undo of the add");
@@ -163,7 +165,7 @@ int main() {
 
         // The step that used to write through freed memory.
         check(addHistory.redo(), "redo of the volume change");
-        check(back != nullptr && near(back->getVolume(), 0.4f),
+        check(back != nullptr && almostEqual(back->getVolume(), 0.4f),
               "volume re-applied through a reference that survived the undo");
     }
 
