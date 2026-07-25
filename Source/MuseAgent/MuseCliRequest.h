@@ -24,6 +24,9 @@ struct CliInvocation {
     bool compact = false;
     bool resultOnly = false;
     bool helpRequested = false;
+    // A hang guard, not a latency budget: render_song bounces a whole timeline
+    // and is legitimately slow. 0 waits forever.
+    int timeoutSeconds = 120;
 };
 
 // A bare token is a value; `--name` starts the next flag. This is what lets
@@ -71,7 +74,8 @@ inline bool parseMuseCli(const std::vector<std::string>& tokens, CliInvocation& 
         }
 
         if (out.verb.empty() && museCliIsFlag(arg)) {
-            const bool wantsValue = (arg == "--port" || arg == "--host" || arg == "--args-json");
+            const bool wantsValue =
+                (arg == "--port" || arg == "--host" || arg == "--args-json" || arg == "--timeout");
             std::string value;
             if (wantsValue) {
                 if (i + 1 >= tokens.size()) {
@@ -96,6 +100,16 @@ inline bool parseMuseCli(const std::vector<std::string>& tokens, CliInvocation& 
                 out.args = parsed;
                 out.haveArgs = true;
                 out.argsFromJson = true;
+                continue;
+            }
+            if (arg == "--timeout") {
+                char* end = nullptr;
+                const long seconds = std::strtol(value.c_str(), &end, 10);
+                if (end == nullptr || *end != '\0' || seconds < 0 || seconds > 86400) {
+                    outError = "--timeout must be whole seconds in 0..86400 (0 waits forever)";
+                    return false;
+                }
+                out.timeoutSeconds = static_cast<int>(seconds);
                 continue;
             }
             if (arg == "--raw") { out.raw = true; continue; }

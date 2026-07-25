@@ -37,9 +37,9 @@ namespace {
 
 using Aestra::JSON;
 
-constexpr int kExitOk = 0;
-constexpr int kExitRequestFailed = 1; // the service answered, and said no
-constexpr int kExitUsage = 2;         // never reached the service
+constexpr int EXIT_OK = 0;
+constexpr int EXIT_REQUEST_FAILED = 1; // the service answered, and said no
+constexpr int EXIT_USAGE = 2;         // never reached the service
 
 void printUsage() {
     std::cout <<
@@ -56,6 +56,9 @@ void printUsage() {
         "  --result             print only the result field, not the envelope\n"
         "  --raw                print the response line exactly as received\n"
         "  --compact            single-line JSON (default is indented)\n"
+        "  --timeout <seconds>  give up waiting for a response (default 120,\n"
+        "                       0 waits forever). A bounce of a long timeline\n"
+        "                       is slow but finite; a stalled peer is not.\n"
         "  -h, --help\n"
         "\n"
         "Flag values are typed by shape: true/false become booleans, numbers\n"
@@ -93,11 +96,11 @@ int main(int argc, char** argv) {
     if (!Aestra::MuseAgent::parseMuseCli(tokens, invocation, error)) {
         std::cerr << error << "\n\n";
         printUsage();
-        return kExitUsage;
+        return EXIT_USAGE;
     }
     if (invocation.helpRequested) {
         printUsage();
-        return kExitOk;
+        return EXIT_OK;
     }
 
     if (invocation.portText.empty()) {
@@ -109,13 +112,13 @@ int main(int argc, char** argv) {
         std::cerr << "no port: pass --port, or set AESTRA_MUSE_PORT.\n"
                      "Start the app with AESTRA_MUSE_PORT=<port> to drive the live\n"
                      "session, or run MuseRepl --port <port> for a headless one.\n";
-        return kExitUsage;
+        return EXIT_USAGE;
     }
 
     uint16_t port = 0;
     if (!parsePort(invocation.portText, port)) {
         std::cerr << "invalid port: " << invocation.portText << "\n";
-        return kExitUsage;
+        return EXIT_USAGE;
     }
 
     Aestra::MuseAgent::MuseSocketClient client;
@@ -123,29 +126,40 @@ int main(int argc, char** argv) {
         std::cerr << "cannot reach a Muse socket at " << invocation.host << ":" << port
                   << " — " << error << "\n"
                   << "Is the app running with AESTRA_MUSE_PORT set, or MuseRepl --port?\n";
-        return kExitUsage;
+        return EXIT_USAGE;
     }
 
+    client.setReadTimeoutMs(invocation.timeoutSeconds * 1000);
+
+    Aestra::MuseAgent::MuseSocketClient::Outcome outcome{};
     const std::string line =
-        client.request(Aestra::MuseAgent::buildMuseRequest(invocation).toString());
-    if (line.empty()) {
+        client.request(Aestra::MuseAgent::buildMuseRequest(invocation).toString(), &outcome);
+
+    if (outcome == Aestra::MuseAgent::MuseSocketClient::Outcome::TimedOut) {
+        std::cerr << "timed out after " << invocation.timeoutSeconds << "s waiting for "
+                  << invocation.verb << " — raise --timeout, or 0 to wait indefinitely\n";
+        return EXIT_USAGE;
+    }
+    if (outcome == Aestra::MuseAgent::MuseSocketClient::Outcome::Disconnected || line.empty()) {
         std::cerr << "no response from " << invocation.host << ":" << port
                   << " (the session may have exited mid-request)\n";
-        return kExitUsage;
+        return EXIT_USAGE;
     }
 
-    JSON response = JSON::parse(line);
-    const bool ok = response.isObject() && response.has("status") &&
-                    response["status"].asString() == "ok";
+    // Validate before printing, and identically in both modes. --raw controls
+    // the *formatting* of a well-formed envelope; it is not a licence to pass
+    // protocol garbage through with a status derived from a lenient parse.
+    bool consumedAll = false;
+    JSON response = JSON::parseStrict(line, consumedAll);
+    if (!consumedAll || !response.isObject() || !response.has("status")) {
+        std::cerr << "malformed response (not a single JSON envelope): " << line << "\n";
+        return EXIT_USAGE;
+    }
+    const bool ok = response["status"].asString() == "ok";
 
     if (invocation.raw) {
         std::cout << line << std::endl;
-        return ok ? kExitOk : kExitRequestFailed;
-    }
-
-    if (!response.isObject()) {
-        std::cerr << "malformed response: " << line << "\n";
-        return kExitUsage;
+        return ok ? EXIT_OK : EXIT_REQUEST_FAILED;
     }
 
     const int indent = invocation.compact ? 0 : 2;
@@ -155,5 +169,5 @@ int main(int argc, char** argv) {
         std::cout << response.toString(indent) << std::endl;
     }
 
-    return ok ? kExitOk : kExitRequestFailed;
+    return ok ? EXIT_OK : EXIT_REQUEST_FAILED;
 }

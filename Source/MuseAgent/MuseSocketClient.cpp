@@ -16,6 +16,7 @@ using SocketHandle = int;
 static constexpr SocketHandle kInvalidSocket = -1;
 #endif
 
+#include <cerrno>
 #include <cstring>
 #include <mutex>
 
@@ -89,8 +90,46 @@ bool MuseSocketClient::connect(const std::string& host, uint16_t port, std::stri
     return true;
 }
 
-std::string MuseSocketClient::request(const std::string& line) {
+void MuseSocketClient::setReadTimeoutMs(int milliseconds) {
+    if (m_impl->socket == kInvalidSocket || milliseconds < 0) {
+        return;
+    }
+#ifdef _WIN32
+    const DWORD value = static_cast<DWORD>(milliseconds);
+    ::setsockopt(m_impl->socket, SOL_SOCKET, SO_RCVTIMEO,
+                 reinterpret_cast<const char*>(&value), sizeof(value));
+#else
+    timeval value{};
+    value.tv_sec = milliseconds / 1000;
+    value.tv_usec = (milliseconds % 1000) * 1000;
+    ::setsockopt(m_impl->socket, SOL_SOCKET, SO_RCVTIMEO, &value, sizeof(value));
+#endif
+}
+
+namespace {
+
+// SO_RCVTIMEO expiry looks like any other recv failure, so ask the platform
+// which one it was — a timeout is recoverable information for the caller,
+// a dead peer is not.
+bool lastRecvWasTimeout() {
+#ifdef _WIN32
+    const int code = ::WSAGetLastError();
+    return code == WSAETIMEDOUT;
+#else
+    return errno == EAGAIN || errno == EWOULDBLOCK;
+#endif
+}
+
+} // namespace
+
+std::string MuseSocketClient::request(const std::string& line, Outcome* outOutcome) {
+    const auto report = [&](Outcome outcome) {
+        if (outOutcome != nullptr) *outOutcome = outcome;
+    };
+    report(Outcome::Ok);
+
     if (m_impl->socket == kInvalidSocket) {
+        report(Outcome::Disconnected);
         return "{\"status\": \"execution_error\", \"message\": \"not connected\"}";
     }
 
@@ -108,6 +147,7 @@ std::string MuseSocketClient::request(const std::string& line) {
         if (n <= 0) {
             closeSocket(m_impl->socket);
             m_impl->socket = kInvalidSocket;
+            report(Outcome::Disconnected);
             return "{\"status\": \"execution_error\", \"message\": \"connection lost on send\"}";
         }
         sent += static_cast<size_t>(n);
@@ -118,9 +158,16 @@ std::string MuseSocketClient::request(const std::string& line) {
         char chunk[4096];
         const auto received = ::recv(m_impl->socket, chunk, sizeof(chunk), 0);
         if (received <= 0) {
+            // A timeout leaves the connection usable in principle, but this
+            // request is unanswerable — close either way so a later request
+            // cannot read this one's late response as its own.
+            const bool timedOut = (received < 0) && lastRecvWasTimeout();
             closeSocket(m_impl->socket);
             m_impl->socket = kInvalidSocket;
-            return "{\"status\": \"execution_error\", \"message\": \"connection lost on recv\"}";
+            report(timedOut ? Outcome::TimedOut : Outcome::Disconnected);
+            return timedOut
+                       ? "{\"status\": \"execution_error\", \"message\": \"timed out waiting for a response\"}"
+                       : "{\"status\": \"execution_error\", \"message\": \"connection lost on recv\"}";
         }
         m_impl->readBuffer.append(chunk, static_cast<size_t>(received));
     }

@@ -146,6 +146,26 @@ int main() {
               "--port after the verb is a verb arg");
     }
 
+    // --- the read deadline -------------------------------------------------
+    {
+        const CliInvocation defaults = parseOrDie({"list_units"});
+        check(defaults.timeoutSeconds > 0, "there is a finite default deadline");
+
+        const CliInvocation explicitValue = parseOrDie({"--timeout", "5", "render_song"});
+        check(explicitValue.timeoutSeconds == 5, "--timeout is captured");
+
+        const CliInvocation forever = parseOrDie({"--timeout", "0", "render_song"});
+        check(forever.timeoutSeconds == 0, "--timeout 0 means wait indefinitely");
+
+        std::string error;
+        check(parseFails({"--timeout", "-5", "list_units"}, error),
+              "a negative deadline is refused");
+        check(parseFails({"--timeout", "abc", "list_units"}, error),
+              "a non-numeric deadline is refused");
+        check(parseFails({"--timeout", "2.5", "list_units"}, error),
+              "a fractional deadline is refused rather than truncated");
+    }
+
     // --- --args-json for shapes flat flags cannot express ------------------
     {
         const CliInvocation inv = parseOrDie(
