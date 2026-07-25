@@ -1,0 +1,105 @@
+name: Worker CI (license-signing)
+
+# The license-signing worker had no CI at all: nothing under .github/workflows
+# referenced workers/**, so its 57 tests had never run on any commit. They passed
+# only when somebody ran them locally, which is how a broken dependency graph got
+# merged green (see #617).
+#
+# This lane asserts TWO different invariants, deliberately kept apart:
+#
+#   npm ci          reproducibility  — the frozen graph installs and works
+#   resolver check  consistency      — the graph can be RE-resolved
+#
+# The second is the one that was missing. #615 bumped wrangler to a version whose
+# peerOptional @cloudflare/workers-types is ^5 while the manifest stayed on ^4.
+# npm ci tolerated that (lockfile already resolved, peer optional) so every signal
+# stayed green — but any command that recomputed the tree died with ERESOLVE, and
+# ordinary dependency maintenance was broken until #616.
+
+on:
+  pull_request:
+    paths:
+      - 'workers/**'
+      - '.github/workflows/worker-ci.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/worker-ci.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: workers/license-signing
+
+jobs:
+  worker:
+    name: license-signing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      # wrangler and miniflare both declare engines.node >=22.0.0.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: workers/license-signing/package-lock.json
+
+      # --- Reproducibility: the frozen graph, installed strictly ---------------
+      - name: Install (npm ci)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Builds the worker and resolves its bindings without touching the account,
+      # so a toolchain bump that breaks deployment fails here rather than at deploy.
+      - name: Build (wrangler dry-run)
+        run: npx wrangler deploy --dry-run --outdir "${RUNNER_TEMP}/worker-dryrun"
+        env:
+          # wrangler phones home for anonymous usage stats; CI should not.
+          WRANGLER_SEND_METRICS: 'false'
+
+      # --- Consistency: can npm still RESOLVE this graph from scratch? ---------
+      # Deliberately not npm ci. This exercises the resolver instead of replaying
+      # an already-frozen answer, which is the only way an ERESOLVE or a drifted
+      # manifest shows up before it blocks the next person to touch the package.
+      #
+      # --ignore-scripts because workerd and esbuild have postinstall steps that
+      # download platform binaries; resolving the graph does not need them.
+      - name: Dependency graph is still resolvable
+        run: npm install --package-lock-only --ignore-scripts
+
+      # The committed manifests should already BE that resolution. A diff here
+      # means the lockfile was hand-edited, partially updated, or left behind by a
+      # bump — all of which install fine today and break the next change.
+      - name: Committed lockfile matches the resolved graph
+        run: |
+          if ! git diff --exit-code -- package.json package-lock.json; then
+            echo "::error::package.json / package-lock.json are not what npm resolves."
+            echo "Run 'npm install --package-lock-only' in workers/license-signing and commit the result."
+            exit 1
+          fi
+
+      # Workers deploy bundled source, so a runtime dependency ships while a dev
+      # one never does. That distinction is what makes most advisories here
+      # non-urgent — worth asserting rather than remembering.
+      - name: Runtime dependencies are still only what we expect
+        run: |
+          expected='["tweetnacl"]'
+          actual=$(node -p "JSON.stringify(Object.keys(require('./package.json').dependencies || {}).sort())")
+          echo "runtime dependencies: $actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Runtime dependencies changed: expected $expected, got $actual."
+            echo "A new runtime dependency ships in the deployed worker. If that is intended, update this check."
+            exit 1
+          fi
