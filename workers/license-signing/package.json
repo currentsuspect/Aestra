@@ -17,7 +17,7 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260428.0",
+    "@cloudflare/workers-types": "^5.20260722.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2",
     "wrangler": "^4.114.0"
