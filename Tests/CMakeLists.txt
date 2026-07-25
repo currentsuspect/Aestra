@@ -2151,6 +2151,14 @@ target_include_directories(MuseServiceTest PRIVATE
 add_test(NAME MuseServiceTest COMMAND MuseServiceTest)
 set_tests_properties(MuseServiceTest PROPERTIES LABELS "commands;muse")
 
+add_executable(MuseCliRequestTest Commands/MuseCliRequestTest.cpp)
+target_include_directories(MuseCliRequestTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
+set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse")
+
 add_executable(MuseSocketServerTest Commands/MuseSocketServerTest.cpp)
 target_link_libraries(MuseSocketServerTest PRIVATE AestraAudioCore)
 target_include_directories(MuseSocketServerTest PRIVATE
