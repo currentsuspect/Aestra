@@ -126,7 +126,8 @@ bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
-           verb == "list_samples" || verb == "get_meters" || verb == "get_schema";
+           verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
+           verb == "get_capabilities";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -220,6 +221,16 @@ const char* unitTypeName(UnitType type) {
     return "unknown";
 }
 
+const char* hostArgTypeName(FlagType type) {
+    switch (type) {
+    case FlagType::String: return "string";
+    case FlagType::Int:    return "int";
+    case FlagType::Float:  return "float";
+    case FlagType::Bool:   return "bool";
+    }
+    return "string";
+}
+
 bool isKnownVerb(const std::string& verb) {
     if (isQueryVerb(verb) || isActionVerb(verb)) return true;
     for (const auto& cmd : MuseGrammar::allCommands()) {
@@ -263,15 +274,21 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         }
         verb = request["verb"].asString();
 
+        // Host verbs are namespaced (settings.setAudioDevice) and validated by
+        // the registry, which owns their argument schemas. Built-ins are
+        // checked here. A host verb can never shadow a built-in: the registry
+        // refuses the reserved audio. prefix and every built-in is unprefixed.
+        const bool isHostVerb = m_hostVerbs.has(verb);
+
         // Classify the verb before any dependency checks so protocol status
         // never depends on how the service happens to be wired.
-        if (!isKnownVerb(verb)) {
+        if (!isHostVerb && !isKnownVerb(verb)) {
             return makeError(id, "parse_error", "unknown command: " + verb).toString();
         }
 
         // Most queries take no arguments; accepting any would silently drop
         // caller intent.
-        if (isQueryVerb(verb) && !queryTakesArgs(verb) && request.has("args") &&
+        if (!isHostVerb && isQueryVerb(verb) && !queryTakesArgs(verb) && request.has("args") &&
             request["args"].size() > 0) {
             return makeError(id, "validation_error", verb + " takes no arguments", verb).toString();
         }
@@ -429,6 +446,72 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        // ------------------------------------------------------------------
+        // Host verbs: capabilities the application registered into the seam.
+        // MuseService does not know what any of them do — it validates against
+        // the declared schema, checks that this process can honour the verb's
+        // thread affinity, and calls the handler.
+        // ------------------------------------------------------------------
+        if (isHostVerb) {
+            JSON noArgs = JSON::object();
+            const JSON& hostArgs = request.has("args") ? request["args"] : noArgs;
+            const HostVerbResult hostResult =
+                m_hostVerbs.invoke(verb, hostArgs, m_hostUiThreadAvailable);
+
+            if (!hostResult.ok) {
+                // The registry's own refusals are argument/affinity problems;
+                // anything else is the host declining to do the thing. Keep the
+                // machine-readable code in the response so callers never have to
+                // pattern-match prose to tell them apart.
+                const bool validation = hostResult.errorCode == "invalid_args" ||
+                                        hostResult.errorCode == "missing_arg" ||
+                                        hostResult.errorCode == "unknown_verb";
+                JSON response = makeError(id, validation ? "validation_error" : "execution_error",
+                                          hostResult.message, verb);
+                response.set("errorCode", JSON(hostResult.errorCode));
+                return finish(response);
+            }
+
+            JSON response = makeOk();
+            response.set("result", hostResult.result);
+            return finish(response);
+        }
+
+        if (verb == "get_capabilities") {
+            // "What can this host do?" — so an agent discovers the surface
+            // instead of hardcoding assumptions about which build it is talking
+            // to. A headless session legitimately answers with an empty list.
+            JSON verbs = JSON::array();
+            for (const auto& spec : m_hostVerbs.capabilities()) {
+                JSON entry = JSON::object();
+                entry.set("verb", JSON(spec.name));
+                entry.set("domain", JSON(std::string(HostVerbRegistry::domainName(spec.domain))));
+                entry.set("description", JSON(spec.description));
+                entry.set("mutates", JSON(spec.mutates));
+                entry.set("requiresHostUi",
+                          JSON(spec.affinity == HostThreadAffinity::HostUiThread));
+                JSON args = JSON::array();
+                for (const auto& arg : spec.args) {
+                    JSON a = JSON::object();
+                    a.set("name", JSON(arg.name));
+                    a.set("type", JSON(std::string(hostArgTypeName(arg.type))));
+                    a.set("required", JSON(arg.required));
+                    if (!arg.description.empty()) a.set("description", JSON(arg.description));
+                    if (!std::isnan(arg.minValue)) a.set("min", JSON(arg.minValue));
+                    if (!std::isnan(arg.maxValue)) a.set("max", JSON(arg.maxValue));
+                    args.push(a);
+                }
+                entry.set("args", args);
+                verbs.push(entry);
+            }
+            JSON result = JSON::object();
+            result.set("hostVerbs", verbs);
+            result.set("hostUiAvailable", JSON(m_hostUiThreadAvailable));
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
