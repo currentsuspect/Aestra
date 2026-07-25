@@ -401,7 +401,7 @@ void TransportBar::createButtons() {
     if(m_mixerButton) m_mixerButton->setTooltip("Mixer (F3)");
 
     createViewButton(m_sequencerButton, [this]() { if (m_onToggleView) m_onToggleView(Audio::ViewType::Sequencer); });
-    if(m_sequencerButton) m_sequencerButton->setTooltip("Channel Rack (F6)");
+    if(m_sequencerButton) m_sequencerButton->setTooltip("Arsenal (F6)");
     
     // Wire Record button
     if (m_recordButton) {
