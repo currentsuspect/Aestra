@@ -3192,6 +3192,17 @@ void AestraContent::resetToDefaultProject() {
     // Suppress UI refresh during clear to avoid flicker
     playlist.clear();
     sourceManager.clear();
+
+    // Drop the undo history BEFORE destroying what it refers to (#611).
+    // clearAllChannels() destroys every MixerChannel outright, and commands in
+    // the history hold `MixerChannel&` to them — SetVolume, SetPan, SetMute,
+    // SetSolo and the effect/plugin commands all do. Without this, File > New
+    // Project followed by Ctrl+Z undoes an edit through freed memory.
+    //
+    // Project *load* already clears the history (AestraApp::loadProjectFromPath);
+    // the reset path did not, and every caller of this function is replacing the
+    // project wholesale, so the old history is meaningless here as well as unsafe.
+    m_trackManager->getCommandHistory().clear();
     m_trackManager->clearAllChannels();
 
     // Recreate default tracks
