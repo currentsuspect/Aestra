@@ -1146,6 +1146,81 @@ int main() {
         std::filesystem::remove(outPath);
     }
 
+    // --- undo / redo: the surface can walk the history it writes ------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        JSON r = call(service, "{\"id\": 240, \"verb\": \"add_track\", \"args\": {\"name\": \"Undoable\"}}");
+        check(status(r) == "ok", "add_track for the undo case");
+        check(trackManager->getChannelCount() == before + 1, "track was added");
+
+        r = call(service, "{\"id\": 241, \"verb\": \"undo\"}");
+        check(status(r) == "ok", "undo ok");
+        check(trackManager->getChannelCount() == before, "undo removed the track");
+        check(r["result"]["canRedo"].isBool() && r["result"]["canRedo"].asBool(),
+              "undo reports that a redo is now available");
+
+        r = call(service, "{\"id\": 242, \"verb\": \"redo\"}");
+        check(status(r) == "ok", "redo ok");
+        check(trackManager->getChannelCount() == before + 1, "redo restored the track");
+        check(r["result"]["canRedo"].isBool() && !r["result"]["canRedo"].asBool(),
+              "redo reports the stack is now at its top");
+
+        // Walk back to the end of the stack, then confirm the refusal. Reporting
+        // a no-op as ok would tell a caller an edit was reverted when none was.
+        int guard = 0;
+        for (; guard < 5000; ++guard) {
+            JSON step = call(service, "{\"id\": 243, \"verb\": \"undo\"}");
+            if (status(step) != "ok") {
+                break;
+            }
+        }
+        check(guard < 5000, "undo terminates rather than succeeding forever");
+        r = call(service, "{\"id\": 244, \"verb\": \"undo\"}");
+        check(status(r) == "execution_error" && r["message"].asString() == "nothing to undo",
+              "undo at the end of the stack refuses by name");
+
+        r = call(service, "{\"id\": 245, \"verb\": \"undo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "undo takes no args");
+        r = call(service, "{\"id\": 246, \"verb\": \"redo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "redo takes no args");
+
+        // undo/redo act on history, so they are not batch members.
+        r = call(service,
+                 "{\"id\": 247, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": \"undo\"}]}}");
+        check(status(r) == "validation_error", "undo is rejected inside a batch");
+    }
+
+    // --- a batch member takes only verb and args ----------------------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        // The real mistake this catches: "flags" instead of "args". It used to
+        // run with NO args and report ok, silently creating a default-named
+        // track instead of the one asked for.
+        JSON r = call(service,
+                      "{\"id\": 250, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                      "\"add_track\", \"flags\": {\"name\": \"Typo\"}}]}}");
+        check(status(r) == "validation_error", "batch member with 'flags' is refused");
+        check(r["message"].asString().find("unknown key: flags") != std::string::npos,
+              "the refusal names the offending key");
+        check(r["message"].asString().find("commands[0]") != std::string::npos,
+              "the refusal names the offending member");
+        check(trackManager->getChannelCount() == before,
+              "a refused batch member adds nothing");
+
+        // The correct spelling still works, and lands as one undo step.
+        r = call(service,
+                 "{\"id\": 251, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                 "\"add_track\", \"args\": {\"name\": \"Correct\"}}]}}");
+        check(status(r) == "ok", "batch member with 'args' is accepted");
+        check(trackManager->getChannelCount() == before + 1, "the batch added its track");
+
+        r = call(service, "{\"id\": 252, \"verb\": \"undo\"}");
+        check(status(r) == "ok" && trackManager->getChannelCount() == before,
+              "the whole batch undoes as a single step");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
               << std::endl;
     return g_failures == 0 ? 0 : 1;
