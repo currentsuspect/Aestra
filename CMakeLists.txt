@@ -252,6 +252,37 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/MuseReplMain.cpp")
 endif()
 
 # =============================================================================
+# muse — one-shot CLI for the Muse socket. Built unconditionally: unlike
+# muse-agent it needs no libcurl and no provider adapters, only the socket
+# client and JSON, so a terminal session is always available.
+# =============================================================================
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/MuseAgent/MuseCliMain.cpp")
+  add_executable(muse
+    Source/MuseAgent/MuseCliMain.cpp
+    Source/MuseAgent/MuseSocketClient.cpp
+  )
+  if(MSVC)
+    target_compile_options(muse PRIVATE /utf-8)
+    target_compile_definitions(muse PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+  endif()
+  set_target_properties(muse PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+  target_include_directories(muse PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+  )
+  target_link_libraries(muse PRIVATE AestraCore)
+  if(WIN32)
+    target_link_libraries(muse PRIVATE ws2_32)
+  endif()
+  message(STATUS "muse CLI configured")
+endif()
+
+# =============================================================================
 # muse-agent — the standalone Muse driver (interchangeable intelligence).
 # Deliberately OUTSIDE the Aestra binary: HTTP, TLS, and provider adapters
 # never enter the DAW. Only built where libcurl is available.
