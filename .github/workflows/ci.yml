@@ -52,12 +52,22 @@ jobs:
             echo "run_cxx=true" >> "$GITHUB_OUTPUT"
             echo "targets main: running everything"; exit 0
           fi
-          gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json files \
-            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
-          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -159,12 +169,22 @@ jobs:
             echo "run_cxx=true" >> "$GITHUB_OUTPUT"
             echo "targets main: running everything"; exit 0
           fi
-          gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json files \
-            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
-          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -223,12 +243,22 @@ jobs:
             echo "run_cxx=true" >> "$GITHUB_OUTPUT"
             echo "targets main: running everything"; exit 0
           fi
-          gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json files \
-            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
-          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"
@@ -378,12 +408,22 @@ jobs:
             echo "run_cxx=true" >> "$GITHUB_OUTPUT"
             echo "targets main: running everything"; exit 0
           fi
-          gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json files \
-            --jq '.files[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The REST files endpoint with --paginate, not `gh pr view --json files`:
+          # the latter goes through GraphQL and can return a short list without
+          # saying so. A silently truncated list is SHORT, so it sails under the
+          # size guard and would classify narrow on a change it never saw.
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].path' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+          # The PR's own changedFiles total, passed to the classifier so it can
+          # refuse to answer when the list it was handed is not the whole change.
+          expected=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --json changedFiles \
+            --jq '.changedFiles' 2>/dev/null || echo "")
+          echo "changed files: fetched $(grep -c . /tmp/changed-files.txt || echo 0), PR reports ${expected:-unknown}"
           # Invoked through bash explicitly rather than relying on the exec bit
           # surviving a Windows checkout and on shebang resolution under Git Bash.
-          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt)
+          verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
           echo "classifier verdict: ${verdict}"
           if [ "${verdict}" = "skip-cxx" ]; then
             echo "run_cxx=false" >> "$GITHUB_OUTPUT"

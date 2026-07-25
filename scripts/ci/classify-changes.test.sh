@@ -132,6 +132,31 @@ else
     printf 'FAIL  %-58s\n' "150 docs files (under the threshold)"; failures=$((failures + 1))
 fi
 
+# --- the truncation cross-check --------------------------------------------
+# The size guard alone cannot catch truncation: a truncated list is SHORT, so it
+# sails under the threshold and classifies narrow on a change it never saw. The
+# expected-count argument is what closes that.
+tc() {  # tc <expected-out> <label> <expected-count> <path>...
+    local want="$1"; shift; local label="$1"; shift; local n="$1"; shift
+    local list="${TMP}/tc"; : > "${list}"
+    local p; for p in "$@"; do printf '%s\n' "${p}" >> "${list}"; done
+    checks=$((checks + 1))
+    local got; got="$("${CLASSIFY}" "${list}" "${n}")"
+    if [[ "${got}" == "${want}" ]]; then
+        printf 'PASS  %-58s -> %s\n' "${label}" "${got}"
+    else
+        printf 'FAIL  %-58s -> %s (expected %s)\n' "${label}" "${got}" "${want}"
+        failures=$((failures + 1))
+    fi
+}
+
+tc skip-cxx "count matches, all safe"            2 "docs/a.md" "README.md"
+tc broad    "list truncated (2 of 40 returned)"  40 "docs/a.md" "README.md"
+tc broad    "list longer than reported"          1 "docs/a.md" "README.md"
+tc broad    "expected count not a number"        "abc" "docs/a.md"
+tc broad    "expected count empty-ish garbage"   "-1" "docs/a.md"
+tc broad    "truncated AND source present"       40 "docs/a.md" "AestraAudio/src/x.cpp"
+
 echo
 if [[ "${failures}" -eq 0 ]]; then
     echo "ALL PASSED (${checks} checks)"

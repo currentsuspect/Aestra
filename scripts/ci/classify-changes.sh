@@ -19,7 +19,14 @@
 # safe unit today is therefore the whole lane. Subsystem and test-level selection are
 # phases 2 and 3 of #620, and phase 3 is blocked on 45 unlabelled tests.
 #
-# Usage:  classify-changes.sh <file-with-one-changed-path-per-line>
+# Usage:  classify-changes.sh <file-with-one-changed-path-per-line> [expected-count]
+#
+# expected-count is the PR's authoritative changedFiles total. When supplied, the
+# list must contain exactly that many entries or the answer is broad. Without it,
+# a SILENTLY TRUNCATED list is indistinguishable from a genuinely small change:
+# the size guard below only fires when the returned list is large, and a truncated
+# list is by definition short. The cross-check is what closes that hole.
+#
 # Output: "broad" or "skip-cxx" on stdout.
 #
 # Exit status is 0 for a successful classification; a non-zero exit means the caller
@@ -28,6 +35,7 @@
 set -uo pipefail
 
 FILE_LIST="${1:-}"
+EXPECTED_COUNT="${2:-}"
 
 # Above this many changed files, do not trust the list. GitHub's changed-files API
 # truncates at 300 entries, and a truncated list looks exactly like a smaller change
@@ -77,6 +85,20 @@ main() {
     if [[ "${count}" -ge "${MAX_TRUSTED_FILES}" ]]; then
         echo "broad"
         return 0
+    fi
+
+    # Cross-check against the PR's own changedFiles total. Any disagreement means
+    # the list we classified is not the change that is being merged — truncation,
+    # pagination stopping early, or a partial fetch — so we do not trust it.
+    if [[ -n "${EXPECTED_COUNT}" ]]; then
+        if ! [[ "${EXPECTED_COUNT}" =~ ^[0-9]+$ ]]; then
+            echo "broad"
+            return 0
+        fi
+        if [[ "${count}" -ne "${EXPECTED_COUNT}" ]]; then
+            echo "broad"
+            return 0
+        fi
     fi
 
     # A single unrecognised path is enough to force the full matrix.
