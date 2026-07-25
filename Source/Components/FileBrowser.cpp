@@ -421,7 +421,9 @@ FileBrowser::FileBrowser()
     // Use inline SVG content for reliable icon loading
     // Folder icon (Mac-style smooth)
     folderIcon_ = std::make_shared<NUIIcon>();
-    const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L15 10l.94-2H21v9h-3.06z" opacity="0.8"/><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
+    // Single solid folder. The old version drew a second, opacity-0.8 path that
+    // the solid one covered completely — invisible work on every rasterization.
+    const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
     folderIcon_->loadSVG(folderSvg);
     folderIcon_->setIconSize(20, 20);
     folderIcon_->setColor(themeManager.getColor("textSecondary"));
@@ -443,28 +445,48 @@ FileBrowser::FileBrowser()
 
     // WAV Icon (Waveform visual)
     wavFileIcon_ = std::make_shared<NUIIcon>();
-    const char* wavSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 9.25a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Zm3-3a.75.75 0 0 1 .75.75v10a.75.75 0 0 1-1.5 0v-10A.75.75 0 0 1 9 6.25Zm3 2.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Zm3-1.5a.75.75 0 0 1 .75.75v9.5a.75.75 0 0 1-1.5 0v-9.5A.75.75 0 0 1 15 7.25Zm3 3.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3a.75.75 0 0 1 .75-.75Z"/></svg>)";
+    // WAV — a sample's peak envelope, mirrored about the centre line. The old
+    // bars all grew from a shared baseline, which reads as a bar chart or a
+    // level meter rather than audio.
+    const char* wavSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.1" y="9.4" width="1.9" height="5.2" rx="0.95"/><rect x="5.2" y="6.6" width="1.9" height="10.8" rx="0.95"/><rect x="8.3" y="8.6" width="1.9" height="6.8" rx="0.95"/><rect x="11.4" y="4.4" width="1.9" height="15.2" rx="0.95"/><rect x="14.5" y="7.4" width="1.9" height="9.2" rx="0.95"/><rect x="17.6" y="5.8" width="1.9" height="12.4" rx="0.95"/><rect x="20.7" y="9.8" width="1.9" height="4.4" rx="0.95"/></svg>)";
     wavFileIcon_->loadSVG(wavSvg);
     wavFileIcon_->setIconSize(20, 20);
     wavFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // MP3 Icon (Music Note Circle)
     mp3FileIcon_ = std::make_shared<NUIIcon>();
-    const char* mp3Svg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>)";
+    // MP3 — a record: outer disc, groove gap, centre label. A finished track
+    // rather than raw material, which is what an mp3 in a browser usually is.
+    const char* mp3Svg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3.2a6.8 6.8 0 1 1 0 13.6 6.8 6.8 0 0 1 0-13.6z"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>)";
     mp3FileIcon_->loadSVG(mp3Svg);
     mp3FileIcon_->setIconSize(20, 20);
     mp3FileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // FLAC Icon (HQ High fidelity box)
     flacFileIcon_ = std::make_shared<NUIIcon>();
-    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>)";
+    // FLAC — a continuous waveform, distinct from WAV's discrete peak bars so
+    // the two are told apart at a glance while both still read as audio. The
+    // old glyph was a rounded box with bars in it and said nothing at all.
+    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 12 C3.4 4.8 5.4 4.8 7 12 S10.6 19.2 12.2 12 S15.8 4.8 17.4 12 S21 17 22.2 12"/></svg>)";
     flacFileIcon_->loadSVG(flacSvg);
     flacFileIcon_->setIconSize(20, 20);
     flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // Project Icon (Aestra Diamond)
+    // MIDI Icon — piano-roll note blocks. MIDI files previously fell through to
+    // the generic document glyph because getIconForFileType had no MidiFile
+    // case, so a first-class producer file type looked like a text file.
+    // Deliberately not a waveform: MIDI carries no audio.
+    midiFileIcon_ = std::make_shared<NUIIcon>();
+    const char* midiSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.8" y="5.2" width="8.2" height="3" rx="1.5"/><rect x="12.2" y="9.4" width="9" height="3" rx="1.5"/><rect x="5.4" y="13.6" width="7.4" height="3" rx="1.5"/><rect x="13.6" y="17.8" width="7.6" height="3" rx="1.5"/></svg>)";
+    midiFileIcon_->loadSVG(midiSvg);
+    midiFileIcon_->setIconSize(20, 20);
+    midiFileIcon_->setColor(themeManager.getColor("textSecondary"));
+
+    // Project Icon
     projectFileIcon_ = std::make_shared<NUIIcon>();
-    const char* projectSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 12l8 10 8-10-8-10zm0 3.75l5 6.25-5 6.25-5-6.25 5-6.25z"/></svg>)";
+    // Project — an arrangement: a card with track lanes cut out of it. The old
+    // glyph was an abstract diamond that could have meant anything.
+    const char* projectSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.7 4H19.3A2.2 2.2 0 0 1 21.5 6.2V17.8A2.2 2.2 0 0 1 19.3 20H4.7A2.2 2.2 0 0 1 2.5 17.8V6.2A2.2 2.2 0 0 1 4.7 4ZM5.6 7.4H18.4V9.6H5.6ZM5.6 10.9H15.1V13.1H5.6ZM5.6 14.4H17.1V16.6H5.6Z"/></svg>)";
     projectFileIcon_->loadSVG(projectSvg);
     projectFileIcon_->setIconSize(20, 20);
     projectFileIcon_->setColor(themeManager.getColor("accentPrimary"));
@@ -1084,45 +1106,76 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                 renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
                                          NUIColor::fromHex(0x3b82f6, selected ? 0.98f : 0.82f));
                 break;
+            // The rail rasterizes every glyph at exactly 16x16 (see setBounds
+            // above). These were all 1.8px stroked outlines, several of them
+            // stacking six to twelve subpaths, which is the size at which thin
+            // strokes stop resolving and a glyph turns into a smudge. They are
+            // solid silhouettes now, with internal contrast cut out via
+            // fill-rule="evenodd" so the background shows through instead of
+            // being drawn as more competing lines.
             case BrowserNavAction::Sounds:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5v10.2"/><path d="M14 5l5-1.3v10.2"/><circle cx="10" cy="17" r="3.1"/><circle cx="17" cy="15.7" r="2.4"/></svg>)");
+                // Solid eighth note.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.4" cy="16.8" r="3.9"/><path d="M10.4 3.2h2.1v13.6h-2.1z"/><path d="M12.5 3.2c3.5 1.2 5.5 3.1 5.7 6.1-1.2-2.3-3.1-3.4-5.7-3.7z"/></svg>)");
                 break;
             case BrowserNavAction::Drums:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="6" height="6" rx="1.6"/><rect x="14" y="5" width="6" height="6" rx="1.6"/><rect x="4" y="15" width="6" height="4" rx="1.4"/><rect x="14" y="15" width="6" height="4" rx="1.4"/></svg>)");
+                // Four solid pads — a pad grid rather than four outlined boxes.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3.4" y="3.8" width="7.6" height="7.6" rx="1.8"/><rect x="13" y="3.8" width="7.6" height="7.6" rx="1.8"/><rect x="3.4" y="13" width="7.6" height="7.6" rx="1.8"/><rect x="13" y="13" width="7.6" height="7.6" rx="1.8"/></svg>)");
                 break;
             case BrowserNavAction::Instruments:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M3.5 11h17"/><path d="M8 6v12"/><path d="M12 11v7"/><path d="M16 6v12"/></svg>)");
+                // Same keyboard treatment as the piano-roll glyph: black keys as
+                // negative space, because in one flat colour a bright "black key"
+                // is indistinguishable from a bright key divider.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M3 6H21V18H3Z M7.7 6H10.3V13H7.7Z M13.7 6H16.3V13H13.7Z M8.55 13H9.45V18H8.55Z M14.55 13H15.45V18H14.55Z"/></svg>)");
                 break;
             case BrowserNavAction::AudioEffects:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16"/><path d="M12 4v16"/><path d="M18 4v16"/><circle cx="6" cy="9" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="18" cy="8" r="2"/></svg>)");
+                // Processor sliders: solid tracks with chunky handles.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4.6" y="3.2" width="1.8" height="17.6" rx="0.9"/><rect x="11.1" y="3.2" width="1.8" height="17.6" rx="0.9"/><rect x="17.6" y="3.2" width="1.8" height="17.6" rx="0.9"/><rect x="2.4" y="6.4" width="6.2" height="3.6" rx="1.6"/><rect x="8.9" y="13" width="6.2" height="3.6" rx="1.6"/><rect x="15.4" y="8.6" width="6.2" height="3.6" rx="1.6"/></svg>)");
                 break;
             case BrowserNavAction::Plugins:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M9 2.8V6"/><path d="M15 2.8V6"/><path d="M9 18v3.2"/><path d="M15 18v3.2"/><path d="M2.8 9H6"/><path d="M2.8 15H6"/><path d="M18 9h3.2"/><path d="M18 15h3.2"/></svg>)");
+                // A jack plug with its cable — you plug a plugin in. The old
+                // glyph stacked eight pins and two nested outlines, twelve
+                // subpaths fighting inside a 16px box.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><rect x="9.6" y="2.4" width="4.8" height="6.2" rx="1.4" fill="currentColor"/><rect x="6.8" y="8" width="10.4" height="7" rx="2.2" fill="currentColor"/><path d="M12 15.4v2.1a3.3 3.3 0 0 0 3.3 3.3h4.5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>)");
                 break;
             case BrowserNavAction::Patterns:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8"/><path d="M8 13h5"/><circle cx="16" cy="13" r="1.5"/></svg>)");
+                // A step grid with an actual pattern in it, not a uniform block.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4 5H20A2 2 0 0 1 22 7V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17V7A2 2 0 0 1 4 5Z M5 8.2H8.2V11H5Z M10.4 8.2H13.6V11H10.4Z M15.8 8.2H19V11H15.8Z M5 13H8.2V15.8H5Z M15.8 13H19V15.8H15.8Z"/></svg>)");
                 break;
             case BrowserNavAction::Clips:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/></svg>)");
+                // A clip block with the play triangle cut out of it.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5.6 5H18.4A2 2 0 0 1 20.4 7V17A2 2 0 0 1 18.4 19H5.6A2 2 0 0 1 3.6 17V7A2 2 0 0 1 5.6 5Z M10.2 8.7L16 12L10.2 15.3Z"/></svg>)");
                 break;
             case BrowserNavAction::Samples:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M7 12h1.4l1.2-3 2.2 6 1.8-5 1.4 2h2"/></svg>)");
+                // Same mirrored peak envelope as the .wav file glyph, so a
+                // sample reads the same wherever it appears.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="9" width="2.2" height="6" rx="1.1"/><rect x="6.8" y="5.4" width="2.2" height="13.2" rx="1.1"/><rect x="11.2" y="7.8" width="2.2" height="8.4" rx="1.1"/><rect x="15.6" y="4" width="2.2" height="16" rx="1.1"/><rect x="20" y="8.6" width="2.2" height="6.8" rx="1.1"/></svg>)");
                 break;
             case BrowserNavAction::Packs:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7.5l5-2.8 5 2.8v9l-5 2.8-5-2.8v-9z"/><path d="M7.3 7.8L12 10.5l4.7-2.7"/><path d="M12 10.5v8.6"/></svg>)");
+                // A wrapped box — ribbon both ways. The old isometric cube
+                // needed three strokes to imply a top face and read as a
+                // scribble at this size. The ribbon is one cross-shaped subpath
+                // rather than two crossing bars: under evenodd, overlapping
+                // holes cancel and would leave the crossing filled in.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><circle cx="10.1" cy="3.9" r="1.9" fill="currentColor"/><circle cx="13.9" cy="3.9" r="1.9" fill="currentColor"/><path fill="currentColor" fill-rule="evenodd" d="M4 5.4H20A1.9 1.9 0 0 1 21.9 7.3V17.9A1.9 1.9 0 0 1 20 19.8H4A1.9 1.9 0 0 1 2.1 17.9V7.3A1.9 1.9 0 0 1 4 5.4Z M10.9 5.4H13.1V11.5H21.9V13.7H13.1V19.8H10.9V13.7H2.1V11.5H10.9Z"/></svg>)");
                 break;
             case BrowserNavAction::UserLibrary:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19c1.2-3.4 3.4-5.1 6.5-5.1s5.3 1.7 6.5 5.1"/></svg>)");
+                // Solid figure.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="7.6" r="4"/><path d="M12 13c-4 0-6.9 2.4-8 6.4a1 1 0 0 0 1 1.3h14a1 1 0 0 0 1-1.3c-1.1-4-4-6.4-8-6.4z"/></svg>)");
                 break;
             case BrowserNavAction::CurrentProject:
             case BrowserNavAction::CustomPlace:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2h6l1.6 2H20v7.3a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.5V8.2z"/><path d="M4 8.2V6.7A1.8 1.8 0 0 1 5.8 5h4.4l1.4 1.8H18"/></svg>)");
+                // Same solid folder the file list uses.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)");
                 break;
             case BrowserNavAction::AddFolder:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.2h6l1.6 2H18v7.1a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7V8.2z"/><path d="M16.5 5.5v6"/><path d="M13.5 8.5h6"/></svg>)");
+                // Folder with the plus cut out. The plus is one cross-shaped
+                // subpath, not two overlapping bars — under evenodd, overlapping
+                // holes cancel and would leave a filled square at the crossing.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z M11.15 9.6H12.85V12.15H15.4V13.85H12.85V16.4H11.15V13.85H8.6V12.15H11.15Z"/></svg>)");
                 break;
             default:
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M8.5 10h7"/><path d="M8.5 14h7"/></svg>)");
+                // Generic list card.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5 5H19A2 2 0 0 1 21 7V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17V7A2 2 0 0 1 5 5Z M7.5 9H16.5V10.6H7.5Z M7.5 13.4H16.5V15H7.5Z"/></svg>)");
                 break;
         }
     };
@@ -2973,6 +3026,8 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
             return mp3FileIcon_;
         case FileType::FlacFile:
             return flacFileIcon_;
+        case FileType::MidiFile:
+            return midiFileIcon_;
         default:
             return unknownFileIcon_;
     }

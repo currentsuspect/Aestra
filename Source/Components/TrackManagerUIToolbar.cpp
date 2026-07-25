@@ -38,25 +38,37 @@ namespace Audio {
 // SECTION: Toolbar & Tools
 // =============================================================================
 
+// These icons are all tinted via NUIIcon::setColor at render time, and the tint
+// is a flat RGB overwrite of every opaque pixel — so any colour baked into the
+// SVG is discarded. The old hard-coded palette here (#AAAAAA / #FF6B6B /
+// #4FC3F7 / #BB86FC) was never visible; it only made the source misleading.
+// Everything is currentColor now, and shapes carry the meaning instead.
 void TrackManagerUI::createToolIcons() {
-    // === POINTER/SELECT TOOL ICON (Simple arrow) ===
+    // === POINTER/SELECT TOOL ICON ===
+    // Solid arrow. The old one filled grey and outlined it in a 0.5px darker
+    // grey that could never resolve at toolbar size.
     const char* selectSvg =
-        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 3 L5 17 L9 13 L12 19 L14 18 L11 12 L16 12 Z" fill="#AAAAAA" stroke="#666666" stroke-width="0.5"/></svg>)";
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2.8 L6 19.4 L10.3 15.2 L13.2 21.5 L16 20.2 L13.1 14 L18.9 14 Z"/></svg>)";
     m_selectToolIcon = std::make_shared<AestraUI::NUIIcon>(selectSvg);
 
-    // === SPLIT TOOL ICON (Scissors) ===
+    // === SPLIT TOOL ICON ===
+    // A clip parted by the cut, with the blade line through the gap. The old
+    // glyph was two rings and a grey X that read as scissors at best and as
+    // nothing at 16px.
     const char* splitSvg =
-        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3" fill="none" stroke="#FF6B6B" stroke-width="1.5"/><circle cx="6" cy="18" r="3" fill="none" stroke="#FF6B6B" stroke-width="1.5"/><line x1="8" y1="8" x2="18" y2="16" stroke="#AAAAAA" stroke-width="2"/><line x1="8" y1="16" x2="18" y2="8" stroke="#AAAAAA" stroke-width="2"/></svg>)";
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="5.6" width="8" height="12.8" rx="1.6"/><rect x="13.6" y="5.6" width="8" height="12.8" rx="1.6"/><rect x="11.3" y="2.6" width="1.4" height="18.8" rx="0.7"/></svg>)";
     m_splitToolIcon = std::make_shared<AestraUI::NUIIcon>(splitSvg);
 
-    // === MULTI-SELECT TOOL ICON (Dashed box) ===
+    // === MULTI-SELECT TOOL ICON ===
+    // Corner brackets rather than a dashed outline: a 3,2 dash pattern turns to
+    // mush once the icon is scaled down to toolbar size.
     const char* multiSelectSvg =
-        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="6" width="16" height="12" fill="none" stroke="#4FC3F7" stroke-width="2" stroke-dasharray="3,2"/></svg>)";
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v2.1H5.1V10H3V3zm11 0h7v7h-2.1V5.1H14V3zM3 14h2.1v4.9H10V21H3v-7zm15.9 0H21v7h-7v-2.1h4.9V14z"/></svg>)";
     m_multiSelectToolIcon = std::make_shared<AestraUI::NUIIcon>(multiSelectSvg);
 
     // === PAINT/STAMP TOOL ICON (Brush/stamp) ===
     const char* paintSvg =
-        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z" fill="#BB86FC"/></svg>)";
+        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z" fill="currentColor"/></svg>)";
     m_paintToolIcon = std::make_shared<AestraUI::NUIIcon>(paintSvg);
 
     // === MENU ICON (Hamburger) ===
@@ -65,8 +77,12 @@ void TrackManagerUI::createToolIcons() {
     m_menuIcon = std::make_shared<AestraUI::NUIIcon>(menuSvg);
 
     // === VISUAL MOVE CURSOR (4-way arrow) ===
+    // Solid arrowheads on a slim cross. The old version drew four chevrons plus
+    // a full-width crosshair in 2px strokes — six subpaths competing in a 16px
+    // box. It also carried a path-level stroke="#FFFFFF" that silently beat the
+    // svg-level currentColor, so it never followed the theme.
     const char* moveSvg =
-        R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M9 19l3 3 3-3M2 12h20M12 2v20" stroke="#FFFFFF" stroke-opacity="0.9"/></svg>)";
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.05 2.2h1.9v19.6h-1.9z"/><path d="M2.2 11.05h19.6v1.9H2.2z"/><path d="M12 1 15.1 5.2H8.9L12 1zm0 22-3.1-4.2h6.2L12 23zM1 12l4.2-3.1v6.2L1 12zm22 0-4.2 3.1V8.9L23 12z"/></svg>)";
     m_moveCursorIcon = std::make_shared<AestraUI::NUIIcon>(moveSvg);
 
     Log::info("Tool icons created");
