@@ -77,18 +77,48 @@ jobs:
       # --ignore-scripts because workerd and esbuild have postinstall steps that
       # download platform binaries; resolving the graph does not need them.
       - name: Dependency graph is still resolvable
-        run: npm install --package-lock-only --ignore-scripts
+        run: |
+          cp package-lock.json "${RUNNER_TEMP}/lock-committed.json"
+          npm install --package-lock-only --ignore-scripts
 
-      # The committed manifests should already BE that resolution. A diff here
-      # means the lockfile was hand-edited, partially updated, or left behind by a
-      # bump — all of which install fine today and break the next change.
+      # The committed manifests should already BE that resolution. Drift here means
+      # the lockfile was hand-edited, partially updated, or left behind by a bump —
+      # all of which install fine today and break the next change.
+      #
+      # Compared SEMANTICALLY (package -> resolved version), not as text. npm
+      # versions serialise lockfiles differently — npm 11 writes a `libc` field on
+      # optional platform packages that npm 10 omits — so a textual `git diff`
+      # fails whenever CI's npm differs from whoever last ran the install, which is
+      # serialisation drift rather than dependency drift. Comparing resolved
+      # versions tests the invariant we actually care about and does not couple
+      # this gate to npm's output format.
       - name: Committed lockfile matches the resolved graph
         run: |
-          if ! git diff --exit-code -- package.json package-lock.json; then
-            echo "::error::package.json / package-lock.json are not what npm resolves."
-            echo "Run 'npm install --package-lock-only' in workers/license-signing and commit the result."
-            exit 1
-          fi
+          node -e '
+            const fs = require("fs");
+            const versions = (file) => {
+              const pkgs = JSON.parse(fs.readFileSync(file, "utf8")).packages || {};
+              return Object.fromEntries(
+                Object.entries(pkgs).map(([name, entry]) => [name, entry.version ?? ""]));
+            };
+            const committed = versions(process.env.RUNNER_TEMP + "/lock-committed.json");
+            const resolved  = versions("package-lock.json");
+            const names = [...new Set([...Object.keys(committed), ...Object.keys(resolved)])].sort();
+            const drift = names.filter((n) => committed[n] !== resolved[n]);
+            if (drift.length > 0) {
+              console.error("Resolved graph differs from the committed lockfile:");
+              for (const n of drift) {
+                console.error(`  ${n || "(root)"}: committed=${committed[n] ?? "(absent)"} resolved=${resolved[n] ?? "(absent)"}`);
+              }
+              process.exit(1);
+            }
+            console.log(`Resolved graph matches the committed lockfile (${names.length} entries).`);
+          '
+
+      # package.json is hand-written, so it must not move at all — no serialisation
+      # ambiguity to forgive here.
+      - name: Manifest is unchanged by resolution
+        run: git diff --exit-code -- package.json
 
       # Workers deploy bundled source, so a runtime dependency ships while a dev
       # one never does. That distinction is what makes most advisories here
