@@ -1,290 +1,127 @@
-# 🧾 Aestra — Licensing Information
+# Aestra — Licensing Guide
 
-**Aestra** is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
+Aestra is licensed under the **Aestra Studios Source-Available License (ASSAL) v1.1**.
 
-This document provides an overview of the licensing terms and rights. For the complete legal text, see [LICENSE](LICENSE).
-
----
-
-## 📋 Overview
-
-Aestra uses a **source-available license**, which means:
-- ✅ The source code is **publicly visible** for transparency and education
-- ❌ The code is **NOT open-source** — you cannot use it freely
-
-This model allows developers and musicians to see exactly how Aestra works while protecting the intellectual property of Aestra Studios.
+> **[LICENSE](LICENSE) is the agreement. This page is not.**
+>
+> This guide exists to make the license easier to understand. It is a plain-language
+> orientation, not a restatement of terms, and it has no legal effect. Where anything
+> here differs from [LICENSE](LICENSE) — in wording, emphasis, or omission — the text
+> of [LICENSE](LICENSE) governs.
 
 ---
 
-## ✅ What You CAN Do (Permitted Actions)
+## What the license is
 
-### 1. View and Study the Code
-You are free to:
-- Read and study the source code
-- Learn from the architecture and implementation
-- Use Aestra as an educational resource
-- Analyze algorithms and design patterns
+Source-available, not open source:
 
-**Use Case:** Students, researchers, and developers can study professional DAW architecture.
+- The source is **publicly readable**, for transparency and for learning from.
+- The source is **not freely usable**. Reading it grants you no right to ship it, fork it into your own product, or build on it.
 
-### 2. Report Bugs and Security Issues
-You are encouraged to:
-- Report bugs via GitHub Issues
-- Disclose security vulnerabilities responsibly
-- Suggest improvements and optimizations
-- Participate in technical discussions
-
-**Use Case:** Help improve Aestra's quality and security.
-
-### 3. Suggest Features and Improvements
-You can:
-- Open feature requests on GitHub
-- Participate in GitHub Discussions
-- Provide feedback on design decisions
-- Vote on community feature polls
-
-**Use Case:** Shape the future direction of Aestra.
-
-### 4. Submit Pull Requests
-You may contribute code by:
-- Fixing bugs in the codebase
-- Implementing approved features
-- Improving documentation
-- Optimizing performance
-
-**Important:** By submitting a pull request, you grant all rights to Aestra Studios. See [Contributor License Agreement](#-contributor-license-agreement) below.
+Those two facts are the whole model. The rest is detail.
 
 ---
 
-## ❌ What You CANNOT Do (Restrictions)
+## What you can and cannot do
 
-### 1. Use the Software Without Permission
-You may **NOT**:
-- Build and use Aestra for personal or commercial projects without written consent
-- Deploy Aestra in production environments
-- Distribute compiled binaries to others
+Rather than paraphrase the terms — which is how a summary and a license drift apart — read them directly. They are short:
 
-**Exception:** Aestra Studios may grant usage rights in the future through a commercial license.
+| Question | Where it is answered |
+| --- | --- |
+| What am I permitted to do? | [LICENSE §2.1 — Permitted Actions](LICENSE) |
+| What am I forbidden from doing? | [LICENSE §2.2 — Restrictions](LICENSE) |
+| Who owns what? | [LICENSE §3 — Ownership and Intellectual Property](LICENSE) |
+| What happens to code I contribute? | [LICENSE §5 — Contributor License Agreement](LICENSE) |
+| Can I use this commercially? | [LICENSE §7 — Commercial Licensing](LICENSE) |
 
-### 2. Create Derivative Works
-You may **NOT**:
-- Fork the repository to create your own DAW
-- Modify the code to create competing products
-- Extract components for use in other projects
-- Create plugins or extensions without permission
-
-**Why?** This protects Aestra's competitive advantage and intellectual property.
-
-### 3. Redistribute or Sublicense
-You may **NOT**:
-- Share the source code with others (it's already public, but you can't redistribute it)
-- Grant licenses to third parties
-- Sell or monetize any part of the codebase
-- Package Aestra for distribution platforms
-
-### 4. Remove or Alter Proprietary Notices
-You may **NOT**:
-- Remove copyright headers from source files
-- Alter the license text
-- Remove or modify the ASSAL identifier
-- Change author attribution
-
-**All source files must retain:**
-```cpp
-// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
-```
+The short version, which is orientation and not terms: **you may read, study, learn from, report bugs against, and propose changes to Aestra. You may not use it in your own software, redistribute it, or build a derivative product from it, without written permission.**
 
 ---
 
-## 🏷️ SPDX License Identifier
+## If you are here to contribute
 
-Aestra uses the following SPDX identifier:
+Contributing assigns ownership of your contribution to Aestra Studios. That is a real
+consequence and worth understanding before you open a pull request — the terms are in
+[LICENSE §5](LICENSE), and they are four short subsections.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the practical workflow.
+
+---
+
+## If you are a student or educator
+
+Reading, studying, analysing and writing about Aestra's architecture are all permitted,
+and encouraged. Teaching from the codebase is fine. What is not permitted is taking the
+code into your own projects, or redistributing it to a class — the boundary is
+[LICENSE §2.2](LICENSE), and it is the same boundary that applies to everyone.
+
+---
+
+## SPDX identifier
 
 ```
 SPDX-License-Identifier: ASSAL
 ```
 
-This identifier should be included in:
-- All source code files (`.cpp`, `.h`, `.c`)
-- Build configuration files (`CMakeLists.txt`)
-- Documentation that references the license
+Source files carry a one-line header:
 
-**Example Usage:**
 ```cpp
-// © 2026 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
-// SPDX-License-Identifier: ASSAL
-
-#pragma once
-#include "AestraCore.h"
-// ... rest of file
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 ```
 
 ---
 
-## 🤝 Contributor License Agreement
+## Why source-available rather than open source
 
-By contributing to Aestra (via pull requests, issues, or other means), you agree to the following terms:
+This is the part of this page that is genuinely additional rather than a pointer, so it
+is the part worth reading here.
 
-### 1. Grant of Rights
-You grant **Dylan Makori / Aestra Studios**:
-- Full ownership of your contributed code
-- Perpetual, worldwide, exclusive license to use your contributions
-- The right to modify, distribute, and sublicense your contributions
-- The right to relicense your contributions under different terms
+Aestra is a solo-built DAW competing with products backed by companies. An open-source
+license would allow a larger company to take the work, ship it, and outspend it on
+distribution — while the original project keeps the maintenance burden and none of the
+return. Source-available keeps the code readable, which is most of what open source is
+actually valued for by the people reading it, without giving away the one asset a small
+project has.
 
-### 2. Waiver of Ownership
-You agree that:
-- All contributed code becomes the property of Aestra Studios
-- You waive all ownership claims to your contributions
-- You will not challenge Aestra Studios' ownership in the future
-- Your contributions will be licensed under ASSAL v1.1
-
-### 3. Representation and Warranty
-You represent that:
-- You have the legal right to grant these rights
-- Your contributions are original work or properly licensed
-- Your contributions do not infringe on third-party rights
-- You are not submitting code under conflicting licenses
-
-### 4. No Compensation
-You understand that:
-- Contributions are voluntary and unpaid
-- You will not receive royalties or compensation
-- Aestra Studios has no obligation to use your contributions
-- Recognition may be given via Git commit history and acknowledgments
+It is a deliberate trade: transparency without the right to take. If that makes Aestra
+unsuitable for your purposes, that is a fair conclusion to reach, and the license is
+stated plainly so you can reach it early rather than late.
 
 ---
 
-## 📖 License Philosophy
+## Commercial licensing
 
-### Why Source-Available Instead of Open-Source?
+The Aestra application itself is free for personal use, and intended to stay that way
+([LICENSE §7.1](LICENSE)).
 
-We chose a source-available model for several reasons:
+Separately from the repository license, the product has paid tiers — currently
+**Core**, **Supporter** and **Founder** — which unlock premium modules. Those tiers
+govern the *application*, not this source repository, and are documented in
+[docs/about/license-reference.md](docs/about/license-reference.md).
 
-**1. Sustainability**
-- Allows Aestra Studios to build a sustainable business model
-- Enables funding for long-term development and support
-- Protects against commercial exploitation by larger companies
-
-**2. Quality Control**
-- Maintains a cohesive vision and design philosophy
-- Ensures professional-grade quality standards
-- Prevents fragmentation into incompatible forks
-
-**3. Transparency**
-- Source code visibility builds trust with users
-- Educational value for students and developers
-- Community can verify security and correctness
-
-**4. Protection**
-- Safeguards innovative features and technology
-- Prevents competitors from copying unique implementations
-- Preserves intellectual property value
-
-**Source-available ≠ Open-source**, but we believe this model offers the best balance of transparency and sustainability.
+For any use beyond personal — embedding Aestra in a product, offering it as a paid
+service, or using it commercially — see [LICENSE §7.2](LICENSE) and get in touch.
 
 ---
 
-## 💼 Future Commercial Licensing
+## Contact
 
-**Aestra is currently in development.** Upon official release, we plan to offer:
-
-### Planned License Tiers
-- **Personal License** — For individual producers and hobbyists
-- **Professional License** — For professional studios and producers
-- **Enterprise License** — For large organizations and institutions
-- **Educational License** — For students and educational institutions (discounted)
-
-**Pricing and availability will be announced upon official release.**
-
-To express interest in early access or commercial licensing, contact: [licensing@aestra.studio](mailto:licensing@aestra.studio)
+| Purpose | Where |
+| --- | --- |
+| Licensing, commercial and partnership inquiries | [makoridylan@gmail.com](mailto:makoridylan@gmail.com) |
+| Bugs and technical questions | [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) |
+| Everything else | [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions) |
 
 ---
 
-## 🎓 Educational Use
+## Related
 
-We are committed to supporting education and learning:
-
-### For Students
-- ✅ Study the source code freely for educational purposes
-- ✅ Write papers and research based on Aestra's architecture
-- ✅ Use Aestra as a reference for academic projects
-- ❌ Cannot use Aestra code in your own projects without permission
-
-### For Educators
-- ✅ Teach using Aestra's codebase as an example
-- ✅ Assign students to analyze Aestra's architecture
-- ✅ Compare Aestra to other DAW designs
-- ❌ Cannot distribute Aestra or derivative works to students
-
-**Educational licensing** may be available in the future for verified students and institutions.
+- **[LICENSE](LICENSE)** — the agreement itself, and the only authoritative text
+- **[NOTICE](NOTICE)** — attribution and third-party notices
+- **[docs/about/license-reference.md](docs/about/license-reference.md)** — the product's paid tiers and what they unlock
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to contribute
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — community guidelines
 
 ---
 
-## 📚 Full License Reference
-
-For a comprehensive breakdown of the license terms, including:
-- Detailed permissions and restrictions
-- Commercial licensing information
-- Contributor guidelines
-- Frequently asked questions
-
-See **[docs/about/license-reference.md](docs/about/license-reference.md)** for the complete license reference guide.
-
----
-
-## ⚖️ Legal Information
-
-### Copyright
-**Copyright © 2026 Dylan Makori / Aestra Studios. All rights reserved.**
-
-### Trademarks
-- **Aestra** and the **Aestra** logo are trademarks of Dylan Makori / Aestra Studios
-- Unauthorized use of trademarks is prohibited
-
-### Jurisdiction
-This license is governed by the laws of the **Republic of Kenya**, without regard to its conflict of law provisions.
-
-### Termination
-Any unauthorized use of this software will result in:
-- Immediate termination of all implied permissions
-- Potential legal action for intellectual property infringement
-- Liability for damages
-
----
-
-## 📧 Contact & Inquiries
-
-### For Licensing Questions
-- **Email:** [licensing@aestra.studio](mailto:licensing@aestra.studio)
-- **Subject Line:** "Aestra Licensing Inquiry"
-
-### For Technical Questions
-- **GitHub Issues:** [Report bugs](https://github.com/currentsuspect/Aestra/issues)
-- **GitHub Discussions:** [Community forum](https://github.com/currentsuspect/Aestra/discussions)
-
-### For Partnership Opportunities
-- **Email:** [licensing@aestra.studio](mailto:licensing@aestra.studio)
-- **Subject Line:** "Aestra Partnership Inquiry"
-
----
-
-## 🔗 Additional Resources
-
-- **[Full LICENSE Text](LICENSE)** — Complete legal license document
-- **[License Reference Guide](docs/about/license-reference.md)** — Detailed FAQ and examples
-- **[Contributing Guide](docs/developer/contributing.md)** — How to contribute to Aestra
-- **[Code of Conduct](CODE_OF_CONDUCT.md)** — Community guidelines
-
----
-
-<div align="center">
-
-**Thank you for respecting Aestra's license.** 🙏
-
-We believe in building sustainable, transparent software that serves musicians worldwide.
-
-*Copyright © 2026 Dylan Makori / Aestra Studios*  
-*Licensed under ASSAL v1.1*
-
-</div>
+*Copyright © 2026 Dylan Makori / Aestra Studios. Licensed under ASSAL v1.1.*

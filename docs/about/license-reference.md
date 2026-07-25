@@ -4,7 +4,15 @@
 ![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
 ![Premium](https://img.shields.io/badge/Premium-Paid-orange)
 
-Comprehensive reference for Aestra licensing, including the source-available license terms and contributor agreements.
+Reference for how Aestra is licensed as a **product** — the free core, the paid tiers, and
+what each unlocks.
+
+!!! warning "This page is not the license"
+    The agreement covering this source repository is
+    [`LICENSE`](https://github.com/currentsuspect/Aestra/blob/main/LICENSE), and it is the
+    only authoritative text. This page describes the commercial model of the application,
+    which is a separate matter from the repository's license. Where the two appear to
+    differ on repository terms, `LICENSE` governs.
 
 ## Table of Contents
 
@@ -25,17 +33,27 @@ Comprehensive reference for Aestra licensing, including the source-available lic
 - 👁️ **Source-available** - Code is publicly visible for transparency and education
 - 🎵 **Full DAW functionality** - Complete digital audio workstation without restrictions
 
-### Premium Add-ons (Paid)
-- **Muse AI** - AI-powered music generation and production assistance (future)
-- **Premium Plugins** - Advanced effects and instruments (future)
-- 💰 **Paid licenses** - Available separately when released
+### Paid tiers
+
+The application recognises three tiers, defined in `AestraLicense/include/LicenseTier.h`:
+
+| Tier | Unlocks |
+| --- | --- |
+| **Core** | the full DAW — free, no licence required |
+| **Supporter** | premium modules on top of Core |
+| **Founder** | premium modules on top of Core |
+
+Today the only gated feature is **Aestra Rumble** (`Feature::RUMBLE`). Further premium
+modules — additional instruments and effects, and Muse's model-backed features — are
+planned but not yet gated, and this table is the list that matches the shipping code
+rather than an aspiration.
 
 **Key Points:**
 - 🆓 Aestra Core is **free forever** under ASSAL
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md)
+- 📜 Full license text: [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) (plain-language guide: [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md))
 
 ## Hybrid Licensing Model
 
@@ -111,7 +129,7 @@ Unauthorized use, copying, or distribution of Aestra will be prosecuted to the f
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
-**For the complete legal text, see:** [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md)
+**For the complete legal text, see:** [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE)
 
 ### Third-Party Dependencies
 
@@ -125,28 +143,14 @@ All third-party licenses are compatible with Aestra's proprietary model.
 
 ## Contributor License Agreement
 
-### By Contributing to Aestra
+Contributing assigns ownership of your contribution to Aestra Studios, and the terms are
+in [`LICENSE` §5](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) — four short
+subsections covering the grant of rights, your warranties, moral rights, and the absence
+of any obligation to use a contribution.
 
-By submitting a pull request, issue, or any contribution to Aestra, you agree to the following:
-
-**Grant of Rights:**
-1. You grant Dylan Makori / Aestra a **perpetual, worldwide, exclusive license** to your contributions
-2. All contributed code becomes **property of Dylan Makori / Aestra**
-3. Dylan Makori has **full rights** to use, modify, distribute, and sublicense your contributions
-4. You **waive all ownership claims** to your contributions
-5. You **cannot revoke** this license
-
-**Your Warranties:**
-- You have the right to make the contribution
-- Your contribution does not violate any third-party rights
-- Your contribution is your original work
-- You have not previously assigned rights to the contribution
-
-**Why This Matters:**
-- Aestra is commercial software and needs clear ownership
-- We must be able to license and sell the product
-- Contributors are credited but don't retain ownership
-- This allows us to build a sustainable business
+They are not restated here. A summary of a legal term that drifts from the term itself is
+worse than no summary, and this page has no way to stay in step with `LICENSE` except by
+pointing at it.
 
 ### Recognition
 
@@ -292,7 +296,8 @@ While you grant full rights, we value contributions:
 
 ## Additional Resources
 
-- [Full License Text](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - Complete ASSAL license terms
+- [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) - the ASSAL agreement itself
+- [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - plain-language guide to it
 - [Licensing Details](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - Original licensing document
 - [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) - How to contribute
 - [FAQ](../technical/faq.md) - General questions

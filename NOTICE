@@ -1,7 +1,9 @@
 Aestra - Digital Audio Workstation
-Copyright © 2024-2025 Dylan Makori (Aestra Studios). All rights reserved.
+Copyright © 2024-2026 Dylan Makori (Aestra Studios). All rights reserved.
 
-This project is licensed under the Aestra Studios Source-Available License (ASSAL) Version 1.1 — see the LICENSE file for details.
+This project is licensed under the Aestra Studios Source-Available License (ASSAL)
+Version 1.1. The LICENSE file is the agreement; this NOTICE is attribution and
+third-party acknowledgement. Where the two differ, LICENSE governs.
 
 This is NOT an Open Source License as defined by the Open Source Initiative (OSI). 
 While the source code is publicly visible ("source-available"), it does not grant 
@@ -26,18 +28,9 @@ Portions of this software may utilize the following third-party components:
 Aestra and the Aestra logo are trademarks of Dylan Makori / Aestra Studios.
 
 Usage Rights:
-✅ **You MAY use Aestra DAW for:**
-- Personal music production and learning
-- Commercial music production, beats, and freelance work
-- Educational purposes and studying the code
-- Reporting bugs and suggesting improvements
-- Submitting contributions under the Contributor License Agreement
-
-❌ **You MAY NOT use the software to:**
-- Create competing DAWs or music production software
-- Commercialize or redistribute the software itself
-- Build derivative products that compete with Aestra
-- Remove or modify copyright notices and attributions
+The terms are in LICENSE — §2.1 for what is permitted and §2.2 for what is not.
+They are not restated here, so that there is only one place they can be read and
+only one place they can go out of date.
 
 **Your Music, Your Business:**
 Whether you create music for personal enjoyment, commercial release, client work, or 
