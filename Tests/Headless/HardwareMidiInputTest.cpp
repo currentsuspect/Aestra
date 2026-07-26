@@ -118,7 +118,7 @@ int main() {
     UnitID unitId = unitManager.createUnit("HW Sampler", UnitGroup::Synth);
     unitManager.attachPlugin(unitId, "com.Aestrastudios.sampler", sampler);
     unitManager.setUnitEnabled(unitId, true);
-    unitManager.setUnitMixerChannel(unitId, -1);
+    unitManager.setUnitMixerChannel(unitId, MASTER_MIXER_CHANNEL_ID);
     unitManager.captureUnitPluginState(unitId);
 
     AudioEngine engine;

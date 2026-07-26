@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
+
+#include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "NUIButton.h"
@@ -1407,13 +1409,14 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
 
     // Assign the selected unit to the first unused mixer destination.
     if (isCtrl && event.keyCode == NUIKeyCode::L) {
-        const auto row = std::find_if(m_unitRows.begin(), m_unitRows.end(), [this](const auto& candidate) {
-            return candidate && candidate->getUnitId() == m_selectedUnitId;
-        });
-        if (row != m_unitRows.end()) {
-            (*row)->routeToFirstFreeMixerChannel();
-            return true;
-        }
+        if (!m_trackManager || m_selectedUnitId == 0)
+            return false;
+        const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId);
+        if (!unit)
+            return false;
+        const std::string destinationName = unit->name.empty() ? "Mixer Insert" : unit->name;
+        assignUnitToFirstFreeInsert(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+        return true;
     }
 
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {

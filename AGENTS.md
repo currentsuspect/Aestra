@@ -556,7 +556,7 @@ Write one sentence a producer would understand, or `None`.
   code removal and internal renames. Most PRs are `None`.
 * Rough wording is fine. It gets edited at release time.
 
-```
+```text
 "Hitting pause no longer rewinds you."        <- ships
 "RMS detection with parameter smoothing"      <- fails the test, use None
 ```

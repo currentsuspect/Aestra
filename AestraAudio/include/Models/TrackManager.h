@@ -137,7 +137,7 @@ public:
             m_nextChannelId = std::max(m_nextChannelId, channelId + 1);
         }
         auto channel = std::make_unique<MixerChannel>(
-            name.empty() ? "Insert " + std::to_string(m_channels.size() + 1) : name, channelId);
+            name.empty() ? "Insert " + std::to_string(channelId) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {

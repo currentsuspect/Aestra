@@ -98,6 +98,8 @@ public:
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
     bool isSelected() const { return m_selected; }
+    /** @brief Supply the parent-computed Playlist solo aggregate for this render pass. */
+    void setAnyPlaylistLaneSoloed(bool anySoloed) { m_anyPlaylistLaneSoloed = anySoloed; }
     
     // View mode support (v3.1)
     void setPlaylistMode(PlaylistMode mode) {
@@ -160,6 +162,7 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
+    bool m_anyPlaylistLaneSoloed = false;
     bool m_isLoading = false;
     float m_loadProgress = 0.0f;
 

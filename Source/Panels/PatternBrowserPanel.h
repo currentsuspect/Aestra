@@ -86,7 +86,6 @@ private:
         std::string name;
         bool isMidi;
         double lengthBeats;
-        int mixerChannel = -1;
         bool isPlacedOnTimeline = false;
     };
     std::vector<PatternEntry> m_patterns;

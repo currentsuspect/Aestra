@@ -48,7 +48,7 @@ public:
      */
     void updateState();
     /** @brief Route this unit to the first unused mixer insert, creating one when needed. */
-    void routeToFirstFreeMixerChannel();
+    bool routeToFirstFreeMixerChannel();
 
     /** @brief Callback fired when row dragging begins. */
     std::function<void(Aestra::Audio::UnitID)> m_onDragStart;

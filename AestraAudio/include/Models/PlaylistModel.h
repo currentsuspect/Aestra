@@ -131,6 +131,13 @@ public:
         return m_lanes.size();
     }
 
+    /** @brief Return whether any unmuted Playlist lane is currently soloed. */
+    bool hasAudibleSoloLane() const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return std::any_of(m_lanes.begin(), m_lanes.end(),
+                           [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
+    }
+
     // === Clip Management ===
 
     /**
@@ -471,12 +478,18 @@ public:
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
                 clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
                 clipInfo.sourceStart = static_cast<uint64_t>(clip.sourceOffset * samplesPerBeat);
-                clipInfo.gainLinear = clip.edits.gainLinear;
-                clipInfo.pan = std::clamp(clip.edits.pan, -1.0f, 1.0f);
-                clipInfo.fadeInSamples =
-                    static_cast<uint64_t>(std::max(0.0, static_cast<double>(clip.edits.fadeInBeats)) * samplesPerBeat);
-                clipInfo.fadeOutSamples =
-                    static_cast<uint64_t>(std::max(0.0, static_cast<double>(clip.edits.fadeOutBeats)) * samplesPerBeat);
+                clipInfo.gainLinear = std::isfinite(clip.edits.gainLinear) ? clip.edits.gainLinear : 1.0f;
+                clipInfo.pan =
+                    std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;
+                const double fadeInBeats =
+                    std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
+                                                         : 0.0;
+                const double fadeOutBeats =
+                    std::isfinite(clip.edits.fadeOutBeats)
+                        ? std::max(0.0, static_cast<double>(clip.edits.fadeOutBeats))
+                        : 0.0;
+                clipInfo.fadeInSamples = static_cast<uint64_t>(fadeInBeats * samplesPerBeat);
+                clipInfo.fadeOutSamples = static_cast<uint64_t>(fadeOutBeats * samplesPerBeat);
                 clipInfo.isAudioClip = true;
 
                 if (!laneAudible || clip.edits.muted) {

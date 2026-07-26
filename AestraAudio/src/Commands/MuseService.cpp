@@ -833,7 +833,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             result.set("name", JSON(pattern->name));
             result.set("lengthBeats", JSON(pattern->lengthBeats));
             const bool isMidi = pattern->isMidi();
-            result.set("type", JSON(isMidi ? "midi" : "other"));
+            result.set("type", JSON(isMidi ? "midi" : (pattern->isAudio() ? "audio" : "other")));
             if (isMidi) {
                 JSON notes = JSON::array();
                 for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
@@ -847,6 +847,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     notes.push(n);
                 }
                 result.set("notes", notes);
+            } else if (pattern->isAudio()) {
+                result.set("mixerChannelId", JSON(static_cast<double>(pattern->getMixerChannelId())));
             }
             JSON response = makeOk();
             response.set("result", result);
