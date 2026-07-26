@@ -21,6 +21,7 @@ enum class DragDataType {
     MidiClip,       // MIDI clip being moved
     Pattern,        // Pattern from browser (to timeline)
     Plugin,         // Plugin from browser
+    AudioSourceRoute, // Audio-pattern source being routed to a mixer insert
     Custom          // User-defined data
 };
 

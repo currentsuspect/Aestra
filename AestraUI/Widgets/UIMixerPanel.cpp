@@ -14,6 +14,7 @@
 #include "TrackManager.h"
 #include "PluginManager.h"
 #include "Commands/PluginCommands.h"
+#include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/AestraDelay.h"
 #include <algorithm>
@@ -149,10 +150,9 @@ void UIMixerPanel::refreshChannels()
 
         // Wire fader to CommandHistory for undo/redo
         uint32_t chId = channel->id;
-        int slotIdx = channel->slotIndex;
-        strip->onFaderChanged = [this, chId, slotIdx](float newDb) {
+        strip->onFaderChanged = [this, chId](float newDb) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             // Convert dB to linear gain
@@ -167,9 +167,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire mute to CommandHistory for undo/redo
-        strip->onMuteChanged = [this, slotIdx](bool muted) {
+        strip->onMuteChanged = [this, chId](bool muted) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -177,9 +177,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire solo to CommandHistory for undo/redo
-        strip->onSoloChanged = [this, slotIdx](bool soloed) {
+        strip->onSoloChanged = [this, chId](bool soloed) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -187,9 +187,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire pan to CommandHistory for undo/redo
-        strip->onPanChanged = [this, slotIdx](float pan) {
+        strip->onPanChanged = [this, chId](float pan) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -733,7 +733,7 @@ DropFeedback UIMixerPanel::onDragEnter(const DragData& data, const NUIPoint& pos
 
 DropFeedback UIMixerPanel::onDragOver(const DragData& data, const NUIPoint& position) {
     m_dropHoverChannelId = -1;
-    if (data.type != DragDataType::Plugin) {
+    if (data.type != DragDataType::Plugin && data.type != DragDataType::AudioSourceRoute) {
         return DropFeedback::Invalid;
     }
     auto* strip = stripAt(position);
@@ -741,7 +741,7 @@ DropFeedback UIMixerPanel::onDragOver(const DragData& data, const NUIPoint& posi
         return DropFeedback::Invalid;
     }
     m_dropHoverChannelId = static_cast<int64_t>(strip->getChannelId());
-    return DropFeedback::Copy;
+    return data.type == DragDataType::AudioSourceRoute ? DropFeedback::Move : DropFeedback::Copy;
 }
 
 void UIMixerPanel::onDragLeave() {
@@ -755,9 +755,9 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
     // The mixer claims every drop over its bounds, including ones it rejects:
     // letting a rejected drop fall through to the timeline behind the mixer is
     // exactly the misrouting this target exists to prevent (#395).
-    if (data.type != DragDataType::Plugin) {
+    if (data.type != DragDataType::Plugin && data.type != DragDataType::AudioSourceRoute) {
         result.accepted = false;
-        result.message = "Only plugins can be dropped on the mixer";
+        result.message = "Only plugins and audio-source routes can be dropped on the mixer";
         return result;
     }
 
@@ -766,6 +766,41 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
     if (!strip || !vmChannel) {
         result.accepted = false;
         result.message = "No mixer strip under drop";
+        return result;
+    }
+
+    if (data.type == DragDataType::AudioSourceRoute) {
+        const auto* patternValue = std::any_cast<uint64_t>(&data.customData);
+        if (!patternValue || *patternValue == 0 || !m_trackManager) {
+            result.accepted = false;
+            result.message = "Drag data missing audio source";
+            return result;
+        }
+
+        const Aestra::Audio::PatternID patternId(*patternValue);
+        const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isAudio()) {
+            result.accepted = false;
+            result.message = "Audio source is no longer available";
+            return result;
+        }
+
+        const uint32_t destinationId =
+            vmChannel->id == 0 ? Aestra::Audio::MASTER_MIXER_CHANNEL_ID : vmChannel->id;
+        if (pattern->getMixerChannelId() != destinationId) {
+            auto command = std::make_shared<Aestra::Audio::SetAudioPatternMixerChannelCommand>(
+                *m_trackManager, patternId, destinationId);
+            m_trackManager->getCommandHistory().pushAndExecute(command);
+        }
+        if (m_viewModel) {
+            m_viewModel->setSelectedChannelId(static_cast<int32_t>(vmChannel->id));
+        }
+
+        result.accepted = true;
+        result.targetTrackIndex = static_cast<int>(vmChannel->id);
+        result.message = "Routed " + (data.displayName.empty() ? pattern->name : data.displayName) + " to " +
+                         (vmChannel->id == 0 ? "Master" : vmChannel->name);
+        Aestra::Log::info("[UIMixerPanel] Audio source drop: " + result.message);
         return result;
     }
 

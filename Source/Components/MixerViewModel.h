@@ -284,6 +284,7 @@ public:
 
     // Send Management
     void addSend(uint32_t channelId);
+    void addSidechain(uint32_t channelId);
     void addSend(uint32_t channelId, uint32_t targetId);
     void removeSend(uint32_t channelId, int sendIndex);
     void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);

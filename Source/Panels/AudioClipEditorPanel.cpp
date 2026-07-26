@@ -26,8 +26,10 @@ namespace Audio {
 
 namespace {
 constexpr float kMinPanelWidth = 660.0f;
-constexpr float kMinPanelHeight = 430.0f;
+constexpr float kMinPanelHeight = 500.0f;
 constexpr size_t kWaveformBuckets = 768;
+constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
+constexpr float kControlsCardHeight = 194.0f;
 
 class AudioClipEditorSurface final : public NUIComponent {
 public:
@@ -41,7 +43,8 @@ public:
         const auto card = theme.getColor("surfaceTertiary").withAlpha(0.46f);
         const auto stroke = theme.getColor("borderSubtle").withAlpha(0.68f);
         const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, 78.0f};
-        const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - 152.0f, bounds.width - 16.0f, 144.0f};
+        const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - kControlsCardHeight - 8.0f, bounds.width - 16.0f,
+                                   kControlsCardHeight};
         renderer.fillRoundedRect(sourceCard, 7.0f, card);
         renderer.strokeRoundedRect(sourceCard, 7.0f, 1.0f, stroke);
         renderer.fillRoundedRect(controlsCard, 7.0f, card.withAlpha(0.38f));
@@ -55,6 +58,13 @@ std::string formatFixed(double value, int precision) {
     std::ostringstream stream;
     stream << std::fixed << std::setprecision(precision) << value;
     return stream.str();
+}
+
+std::string formatGainDb(float linear) {
+    if (!std::isfinite(linear) || linear <= 0.000001f)
+        return "-inf dB";
+    const double db = 20.0 * std::log10(static_cast<double>(linear));
+    return formatFixed(db, 1) + " dB";
 }
 
 bool editsEqual(const ClipEdits& a, const ClipEdits& b) {
@@ -111,7 +121,7 @@ void AudioClipEditorPanel::buildUI() {
     m_sourceNameLabel->setTextColor(theme.getColor("textPrimary"));
     m_sourceMetaLabel = makeLabel("");
     m_routeLabel = makeLabel("OUTPUT INSERT", 10.0f);
-    m_routeHintLabel = makeLabel("Source route • linked clips follow this destination", 10.0f);
+    m_routeHintLabel = makeLabel("Source route • Alt-drag this clip onto an Insert", 10.0f);
     m_routeHintLabel->setAlignment(NUILabel::Alignment::Right);
     m_routePicker = std::make_shared<UIInsertRoutePicker>();
     m_routePicker->setOnRouteSelected([this](uint32_t routeId) { selectRoute(routeId); });
@@ -122,23 +132,34 @@ void AudioClipEditorPanel::buildUI() {
     m_panLabel = makeLabel("Pan");
     m_fadeInLabel = makeLabel("Fade in");
     m_fadeOutLabel = makeLabel("Fade out");
-    m_gainValueLabel = makeLabel("100%", 10.0f);
+    m_speedLabel = makeLabel("Speed");
+    m_sourceStartLabel = makeLabel("Start");
+    m_gainValueLabel = makeLabel("-5.0 dB", 10.0f);
     m_panValueLabel = makeLabel("Center", 10.0f);
     m_fadeInValueLabel = makeLabel("0.00 beats", 10.0f);
     m_fadeOutValueLabel = makeLabel("0.00 beats", 10.0f);
-    for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel}) {
+    m_speedValueLabel = makeLabel("1.00x", 10.0f);
+    m_sourceStartValueLabel = makeLabel("0.000 s", 10.0f);
+    m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 10.0f);
+    m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
+    for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
+                              m_speedValueLabel, m_sourceStartValueLabel}) {
         value->setAlignment(NUILabel::Alignment::Right);
     }
 
-    m_gainSlider = makeSlider("Clip gain", 0.0, 2.0, 1.0);
+    m_gainSlider = makeSlider("Clip gain", 0.0, 2.0, DEFAULT_AUDIO_CLIP_GAIN_LINEAR);
     m_panSlider = makeSlider("Clip pan", -1.0, 1.0, 0.0);
     m_fadeInSlider = makeSlider("Fade in", 0.0, 4.0, 0.0);
     m_fadeOutSlider = makeSlider("Fade out", 0.0, 4.0, 0.0);
+    m_speedSlider = makeSlider("Playback speed", 0.25, 4.0, 1.0);
+    m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
+    m_normalizeButton = std::make_shared<NUIButton>("Normalize");
     m_resetButton = std::make_shared<NUIButton>("Reset instance");
     m_makeUniqueButton = std::make_shared<NUIButton>("Make unique");
     styleButton(m_muteButton);
+    styleButton(m_normalizeButton);
     styleButton(m_resetButton);
     styleButton(m_makeUniqueButton);
 
@@ -165,6 +186,12 @@ void AudioClipEditorPanel::buildUI() {
     wireSlider(m_panSlider, [](ClipEdits& edits, double value) { edits.pan = static_cast<float>(value); });
     wireSlider(m_fadeInSlider, [](ClipEdits& edits, double value) { edits.fadeInBeats = static_cast<float>(value); });
     wireSlider(m_fadeOutSlider, [](ClipEdits& edits, double value) { edits.fadeOutBeats = static_cast<float>(value); });
+    wireSlider(m_speedSlider, [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); });
+    wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
+        const double projectRate =
+            m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
+        edits.sourceStart = value * projectRate;
+    });
 
     m_muteButton->setOnToggle([this](bool muted) {
         if (m_suppressCallbacks)
@@ -173,9 +200,15 @@ void AudioClipEditorPanel::buildUI() {
         edits.muted = muted;
         applyDiscreteEdit(edits);
     });
-    m_resetButton->setOnClick([this]() {
-        ClipEdits reset;
-        applyDiscreteEdit(reset);
+    m_resetButton->setOnClick([this]() { applyDiscreteEdit(ClipEdits::forNewAudioClip()); });
+    m_normalizeButton->setOnClick([this]() {
+        if (!std::isfinite(m_sourcePeak) || m_sourcePeak <= 0.000001f)
+            return;
+        auto edits = m_workingEdits;
+        const float normalizedGain = std::clamp(kNormalizeTargetLinear / m_sourcePeak, 0.0f, 2.0f);
+        edits.gain = normalizedGain;
+        edits.gainLinear = normalizedGain;
+        applyDiscreteEdit(edits);
     });
     m_makeUniqueButton->setOnClick([this]() {
         if (!m_trackManager || !m_clipId.isValid())
@@ -186,10 +219,12 @@ void AudioClipEditorPanel::buildUI() {
     });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
-        m_sourceNameLabel, m_sourceMetaLabel,  m_routeLabel,        m_routeHintLabel,  m_routePicker,  m_waveform,
-        m_instanceLabel,   m_gainLabel,        m_panLabel,          m_fadeInLabel,     m_fadeOutLabel, m_gainValueLabel,
-        m_panValueLabel,   m_fadeInValueLabel, m_fadeOutValueLabel, m_gainSlider,      m_panSlider,    m_fadeInSlider,
-        m_fadeOutSlider,   m_muteButton,       m_resetButton,       m_makeUniqueButton};
+        m_sourceNameLabel,   m_sourceMetaLabel,   m_routeLabel,        m_routeHintLabel,   m_routePicker,
+        m_waveform,          m_waveformHintLabel, m_instanceLabel,     m_gainLabel,        m_panLabel,
+        m_fadeInLabel,       m_fadeOutLabel,      m_speedLabel,        m_sourceStartLabel, m_gainValueLabel,
+        m_panValueLabel,     m_fadeInValueLabel,  m_fadeOutValueLabel, m_speedValueLabel,  m_sourceStartValueLabel,
+        m_gainSlider,        m_panSlider,         m_fadeInSlider,      m_fadeOutSlider,    m_speedSlider,
+        m_sourceStartSlider, m_muteButton,        m_normalizeButton,   m_resetButton,      m_makeUniqueButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
@@ -237,6 +272,8 @@ void AudioClipEditorPanel::rebuildWaveform() {
     const auto* source = m_trackManager->getSourceManager().getSource(payload->audioSourceId);
     const auto* buffer = source ? source->getRawBuffer() : nullptr;
     if (!source || !buffer || !buffer->isValid()) {
+        m_sourceDurationSeconds = 0.0;
+        m_sourcePeak = 0.0f;
         m_sourceNameLabel->setText(clip->name.empty() ? "Audio clip" : clip->name);
         m_sourceMetaLabel->setText("Source unavailable");
         m_waveformData.assign(kWaveformBuckets * 2, 0.0f);
@@ -255,14 +292,26 @@ void AudioClipEditorPanel::rebuildWaveform() {
                           [pattern](const ClipInstance& candidate) { return candidate.patternId == pattern->id; }));
     }
 
+    m_sourceDurationSeconds = buffer->durationSeconds();
+    m_sourcePeak = 0.0f;
+    for (const float sample : buffer->interleavedData) {
+        if (std::isfinite(sample))
+            m_sourcePeak = std::max(m_sourcePeak, std::abs(sample));
+    }
+
     m_sourceNameLabel->setText(source->getName().empty() ? clip->name : source->getName());
     const char* channelText =
         buffer->numChannels == 1 ? "Mono" : (buffer->numChannels == 2 ? "Stereo" : "Multichannel");
     m_sourceMetaLabel->setText(formatFixed(buffer->durationSeconds(), 2) + " s  •  " +
                                std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
-                               std::to_string(linkedInstances) +
-                               (linkedInstances == 1 ? " linked clip" : " linked clips"));
+                               (linkedInstances > 1
+                                    ? "Shared source • " + std::to_string(linkedInstances) + " instances"
+                                    : "Unique source • 1 instance"));
     m_makeUniqueButton->setVisible(linkedInstances > 1);
+    m_makeUniqueButton->setText(linkedInstances > 1 ? "Make unique" : "Unique");
+    m_routeHintLabel->setText(linkedInstances > 1 ? "Shared source route • changes " + std::to_string(linkedInstances) +
+                                                        " clips • Alt-drag to an Insert"
+                                                  : "Unique source route • Alt-drag this clip onto an Insert");
 
     const size_t frameCount = static_cast<size_t>(buffer->numFrames);
     const size_t channels = static_cast<size_t>(buffer->numChannels);
@@ -351,6 +400,12 @@ void AudioClipEditorPanel::syncControlsFromModel() {
     m_fadeOutSlider->setRange(0.0, fadeMaximum);
     m_fadeInSlider->setValue(std::min<double>(m_workingEdits.fadeInBeats, fadeMaximum));
     m_fadeOutSlider->setValue(std::min<double>(m_workingEdits.fadeOutBeats, fadeMaximum));
+    m_speedSlider->setValue(std::clamp<double>(m_workingEdits.playbackRate, 0.25, 4.0));
+    const double projectRate = std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate());
+    const double sourceStartSeconds = std::max(0.0, m_workingEdits.sourceStart) / projectRate;
+    const double sourceStartMaximum = std::max(0.001, m_sourceDurationSeconds);
+    m_sourceStartSlider->setRange(0.0, sourceStartMaximum);
+    m_sourceStartSlider->setValue(std::min(sourceStartSeconds, sourceStartMaximum));
     m_muteButton->setToggled(m_workingEdits.muted);
     m_muteButton->setText(m_workingEdits.muted ? "Unmute clip" : "Mute clip");
     m_suppressCallbacks = false;
@@ -358,7 +413,7 @@ void AudioClipEditorPanel::syncControlsFromModel() {
 }
 
 void AudioClipEditorPanel::updateValueLabels() {
-    m_gainValueLabel->setText(std::to_string(static_cast<int>(std::round(m_workingEdits.gainLinear * 100.0f))) + "%");
+    m_gainValueLabel->setText(formatGainDb(m_workingEdits.gainLinear));
     if (std::abs(m_workingEdits.pan) < 0.005f) {
         m_panValueLabel->setText("Center");
     } else {
@@ -368,6 +423,10 @@ void AudioClipEditorPanel::updateValueLabels() {
     }
     m_fadeInValueLabel->setText(formatFixed(m_workingEdits.fadeInBeats, 2) + " beats");
     m_fadeOutValueLabel->setText(formatFixed(m_workingEdits.fadeOutBeats, 2) + " beats");
+    m_speedValueLabel->setText(formatFixed(m_workingEdits.playbackRate, 2) + "x");
+    const double projectRate =
+        m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
+    m_sourceStartValueLabel->setText(formatFixed(std::max(0.0, m_workingEdits.sourceStart) / projectRate, 3) + " s");
 }
 
 void AudioClipEditorPanel::beginEditGesture() {
@@ -434,14 +493,17 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 34.0f, routeWidth, 30.0f});
     m_routeHintLabel->setBounds({bounds.x + pad, bounds.y + 61.0f, contentWidth, 14.0f});
 
-    const float controlsTop = bounds.bottom() - 152.0f;
+    const float controlsTop = bounds.bottom() - kControlsCardHeight - 8.0f;
     const float waveformTop = bounds.y + 96.0f;
     m_waveform->setBounds(
         {bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, std::max(100.0f, controlsTop - waveformTop - 8.0f)});
+    m_waveformHintLabel->setBounds({bounds.x + pad, controlsTop - 23.0f, contentWidth - 4.0f, 14.0f});
 
     m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, contentWidth, 14.0f});
     const float buttonWidth = 104.0f;
     m_makeUniqueButton->setBounds(
+        {bounds.right() - pad - buttonWidth * 4.0f - 18.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
+    m_normalizeButton->setBounds(
         {bounds.right() - pad - buttonWidth * 3.0f - 12.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
     m_muteButton->setBounds({bounds.right() - pad - buttonWidth * 2.0f - 6.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
     m_resetButton->setBounds({bounds.right() - pad - buttonWidth, controlsTop + 8.0f, buttonWidth, 24.0f});
@@ -462,6 +524,8 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     layoutControl(right, controlsTop + 42.0f, m_panLabel, m_panSlider, m_panValueLabel);
     layoutControl(left, controlsTop + 88.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
     layoutControl(right, controlsTop + 88.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
+    layoutControl(left, controlsTop + 134.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
+    layoutControl(right, controlsTop + 134.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
 }
 
 void AudioClipEditorPanel::onUpdate(double deltaTime) {
@@ -479,6 +543,8 @@ void AudioClipEditorPanel::onUpdate(double deltaTime) {
         rebuildWaveform();
         syncControlsFromModel();
         rebuildRoutes(true);
+    } else if (!editsEqual(clip->edits, m_workingEdits) && !m_editGestureActive) {
+        syncControlsFromModel();
     }
     rebuildRoutes(false);
 }

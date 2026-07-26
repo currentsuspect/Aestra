@@ -186,7 +186,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     configureFlatTrackButton(m_muteButton);
     m_muteButton->setToggleable(true);
     m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
-    m_muteButton->setTooltip("Mute Track (M)");
+    m_muteButton->setTooltip("Mute Playlist lane (M)");
     addChild(m_muteButton);
 
     // Create solo button
@@ -195,7 +195,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     configureFlatTrackButton(m_soloButton);
     m_soloButton->setToggleable(true);
     m_soloButton->setOnToggle([this](bool) { onSoloToggled(); });
-    m_soloButton->setTooltip("Solo Track (S)");
+    m_soloButton->setTooltip("Solo Playlist lane (S)");
     addChild(m_soloButton);
 
     // Recording is armed from mixer inserts. A Playlist lane only receives a
@@ -305,10 +305,6 @@ void TrackUIComponent::onMuteToggled() {
         bool isMuted = m_muteButton->isToggled();
         if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             lane->muted = isMuted;
-            if (isMuted) {
-                lane->solo = false;
-                if (m_soloButton) m_soloButton->setToggled(false);
-            }
             m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
             m_trackManager->markModified();
         }
@@ -326,15 +322,11 @@ void TrackUIComponent::onSoloToggled() {
         bool newSolo = m_soloButton->isToggled(); // Use button state
         if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             lane->solo = newSolo;
-            if (newSolo) {
-                lane->muted = false;
-                if (m_muteButton) m_muteButton->setToggled(false);
-            }
             m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
             m_trackManager->markModified();
         }
 
-        if (newSolo && m_onSoloToggledCallback) {
+        if (m_onSoloToggledCallback) {
             m_onSoloToggledCallback(this);
         }
 
@@ -1955,11 +1947,17 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         if (!event.cursorCaptured && isInsideBounds) {
             if (m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
+                AestraUI::NUIComponent::showRemoteTooltip("Playlist lane volume", event.position, this);
             } else if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Mute Track (M)", event.position, this);
+                const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+                const std::string tooltip =
+                    lane && lane->muted && lane->solo ? "Muted • solo is held (M)" : "Mute Playlist lane (M)";
+                AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_soloButton && m_soloButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Solo Track (S)", event.position, this);
+                const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+                const std::string tooltip =
+                    lane && lane->muted && lane->solo ? "Solo held • lane is muted (S)" : "Solo Playlist lane (S)";
+                AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
                 AestraUI::NUIComponent::showRemoteTooltip("Arm for Recording (O)", event.position, this);
             } else if (m_volumeKnobHovered) {
@@ -2249,10 +2247,31 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         
         const float DRAG_THRESHOLD = 5.0f;
         if (distance >= DRAG_THRESHOLD && m_activeClipId.isValid()) {
-            m_isDraggingClip = true;
             m_clipDragPotential = false;
-            
-            // Replaced DragManager with Instant Drag
+
+            // Alt-drag routes the referenced audio source. Normal drag remains
+            // arrangement-only, so moving a clip can never change its signal path.
+            if ((event.modifiers & AestraUI::NUIModifiers::Alt) && m_trackManager) {
+                const auto* clip = m_trackManager->getPlaylistModel().getClip(m_activeClipId);
+                const auto* pattern = clip ? m_trackManager->getPatternManager().getPattern(clip->patternId) : nullptr;
+                if (clip && pattern && pattern->isAudio()) {
+                    AestraUI::DragData routeDrag;
+                    routeDrag.type = AestraUI::DragDataType::AudioSourceRoute;
+                    routeDrag.displayName = clip->name.empty() ? pattern->name : clip->name;
+                    routeDrag.customData = pattern->id.value;
+                    const auto boundsIt = m_allClipBounds.find(m_activeClipId);
+                    if (boundsIt != m_allClipBounds.end()) {
+                        routeDrag.previewWidth = std::max(100.0f, boundsIt->second.width);
+                        routeDrag.previewHeight = std::max(24.0f, boundsIt->second.height);
+                    }
+                    dragManager.beginDrag(routeDrag, m_clipDragStartPos, this);
+                    return true;
+                }
+            }
+
+            m_isDraggingClip = true;
+
+            // Normal clip movement uses the low-latency arrangement drag path.
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (m_trackManager) {
                     auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
