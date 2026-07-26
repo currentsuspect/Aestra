@@ -86,6 +86,14 @@ private:
                 usedChannelIds.insert(channelId);
             }
         }
+        for (const auto& pattern : m_manager.getPatternManager().getAllPatterns()) {
+            if (!pattern || !pattern->isAudio())
+                continue;
+            const uint32_t channelId = pattern->getMixerChannelId();
+            if (channelId != MASTER_MIXER_CHANNEL_ID) {
+                usedChannelIds.insert(channelId);
+            }
+        }
 
         for (size_t i = 0; i < m_manager.getChannelCount(); ++i) {
             const auto* channel = m_manager.getChannel(i);
