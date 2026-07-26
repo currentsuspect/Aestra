@@ -174,6 +174,7 @@ public:
         m_unitManager.resetMixerChannel(removedChannelId);
         m_patternManager.resetMixerChannel(removedChannelId);
         m_channels.pop_back();
+        resetMixerRoutingDestination(removedChannelId);
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
@@ -194,6 +195,7 @@ public:
         m_unitManager.resetMixerChannel(channelId);
         m_patternManager.resetMixerChannel(channelId);
         m_channels.erase(it);
+        resetMixerRoutingDestination(channelId);
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
@@ -201,6 +203,28 @@ public:
         }
         publishInputMonitoringSnapshot();
         return true;
+    }
+
+    /**
+     * Fail safe after a mixer insert disappears. Main paths fall back to
+     * Master; auxiliary/control routes to the missing destination are removed.
+     * Undoable deletion commands snapshot and restore these routes separately.
+     */
+    void resetMixerRoutingDestination(uint32_t removedChannelId) {
+        for (auto& channel : m_channels) {
+            if (!channel)
+                continue;
+            if (channel->getMainOutputId() == removedChannelId) {
+                channel->setMainOutputId(0xFFFFFFFFu);
+            }
+            auto sends = channel->getSends();
+            sends.erase(std::remove_if(sends.begin(), sends.end(),
+                                       [removedChannelId](const AudioRoute& route) {
+                                           return route.targetChannelId == removedChannelId;
+                                       }),
+                        sends.end());
+            channel->replaceSends(sends);
+        }
     }
 
     /**

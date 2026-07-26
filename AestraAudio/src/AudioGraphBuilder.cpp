@@ -27,7 +27,7 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
     uint32_t maxTrackId = 0;
     for (const auto& track : graph.tracks) {
         maxTrackId = std::max(maxTrackId, track.trackId);
-        graph.anySolo = graph.anySolo || track.solo;
+        graph.anySolo = graph.anySolo || (track.solo && !track.mute);
     }
 
     graph.trackIndexById.assign(static_cast<size_t>(maxTrackId) + 1, AudioGraph::kInvalidTrackIndex);
@@ -145,7 +145,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
         trackState.pan = channel->getPan();
         trackState.mute = channel->isMuted();
         trackState.solo = channel->isSoloed();
-        if (trackState.solo)
+        if (trackState.solo && !trackState.mute)
             anySoloFound = true;
         trackState.isSoloSafe = channel->isSoloSafe();
 
@@ -206,6 +206,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
 
                 clip.gain = clipInfo.gainLinear;
                 clip.pan = clipInfo.pan;
+                clip.playbackRate = clipInfo.playbackRate;
                 clip.fadeInSamples = clipInfo.fadeInSamples;
                 clip.fadeOutSamples = clipInfo.fadeOutSamples;
 

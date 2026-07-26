@@ -231,6 +231,13 @@ int main() {
     const PatternID audioPattern = patternManager.createAudioPattern("Audio Source", 1.0, audioPayload);
     require(patternManager.setPatternMixerChannel(audioPattern, 77), "Audio source route was not stored");
 
+    const ClipInstanceID defaultAudioClip = playlist.addClipFromPattern(laneA, audioPattern, 4.0, 1.0);
+    const auto* defaultAudioClipState = playlist.getClip(defaultAudioClip);
+    require(defaultAudioClipState &&
+                std::abs(defaultAudioClipState->edits.gainLinear - DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f,
+            "New audio clip factory did not preserve default headroom");
+    playlist.removeClip(defaultAudioClip);
+
     ClipInstance audioClip;
     audioClip.id = ClipInstanceID::generate();
     audioClip.patternId = audioPattern;
@@ -245,6 +252,8 @@ int main() {
     edited.pan = -0.25f;
     edited.fadeInBeats = 0.25f;
     edited.fadeOutBeats = 0.5f;
+    edited.playbackRate = 1.5f;
+    edited.sourceStart = 12.0;
     tracks.getCommandHistory().pushAndExecute(std::make_shared<SetClipEditsCommand>(playlist, audioClip.id, edited));
 
     auto findTrack = [](AudioGraph& graph, uint32_t id) -> TrackRenderState* {
@@ -262,6 +271,8 @@ int main() {
             "Clip editor gain/pan did not reach the audio graph");
     require(renderedEdit.fadeInSamples > 0 && renderedEdit.fadeOutSamples > renderedEdit.fadeInSamples,
             "Clip editor fades did not reach the audio graph");
+    require(renderedEdit.playbackRate == 1.5f && renderedEdit.sampleOffset > 0.0,
+            "Clip editor speed/source-start did not reach the audio graph");
 
     require(tracks.getCommandHistory().undo(), "Clip edit undo was unavailable");
     graph = AudioGraphBuilder::buildFromTrackManager(tracks);
@@ -271,6 +282,20 @@ int main() {
 
     auto* alternateDestination = tracks.addChannelWithId("Alternate Insert", 88);
     require(alternateDestination != nullptr, "Alternate insert setup failed");
+    AudioQueueCommand capturedMixerCommand{};
+    alternateDestination->setCommandSink(
+        [&capturedMixerCommand](const AudioQueueCommand& command) { capturedMixerCommand = command; });
+    alternateDestination->setPan(0.25f);
+    require(capturedMixerCommand.type == AudioQueueCommandType::SetTrackPan && capturedMixerCommand.channelId == 88,
+            "Mixer control command used a derived dense index instead of its stable Insert ID");
+    alternateDestination->setCommandSink({});
+    alternateDestination->setSolo(true);
+    alternateDestination->setMute(true);
+    graph = AudioGraphBuilder::buildFromTrackManager(tracks);
+    require(alternateDestination->isSoloed() && alternateDestination->isMuted() && !graph.anySolo,
+            "Muted mixer solo did not preserve state or incorrectly suppressed other inserts");
+    alternateDestination->setMute(false);
+    alternateDestination->setSolo(false);
     tracks.getCommandHistory().pushAndExecute(
         std::make_shared<SetAudioPatternMixerChannelCommand>(tracks, audioPattern, 88));
     graph = AudioGraphBuilder::buildFromTrackManager(tracks);
@@ -285,6 +310,23 @@ int main() {
     linkedClip.id = ClipInstanceID::generate();
     linkedClip.startBeat = 2.0;
     playlist.addClip(laneB, linkedClip);
+
+    auto* laneAState = playlist.getLane(laneA);
+    auto* laneBState = playlist.getLane(laneB);
+    require(laneAState && laneBState, "Solo-domain test lanes disappeared");
+    laneAState->solo = true;
+    laneBState->solo = true;
+    graph = AudioGraphBuilder::buildFromTrackManager(tracks);
+    require(findTrack(graph, 77) && findTrack(graph, 77)->clips.size() == 2,
+            "Additive Playlist solos did not keep both lanes audible");
+    laneAState->muted = true;
+    graph = AudioGraphBuilder::buildFromTrackManager(tracks);
+    require(laneAState->solo && findTrack(graph, 77) && findTrack(graph, 77)->clips.size() == 1,
+            "Playlist mute erased solo state or failed to gate its own lane");
+    laneAState->muted = false;
+    laneAState->solo = false;
+    laneBState->solo = false;
+
     tracks.getCommandHistory().pushAndExecute(std::make_shared<MakeAudioClipUniqueCommand>(tracks, audioClip.id));
     const auto* uniqueClip = playlist.getClip(audioClip.id);
     const auto* stillLinkedClip = playlist.getClip(linkedClip.id);
