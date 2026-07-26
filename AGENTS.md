@@ -561,14 +561,6 @@ Write one sentence a producer would understand, or `None`.
 "RMS detection with parameter smoothing"      <- fails the test, use None
 ```
 
-**Why this exists:** the website changelog once fell 374 commits
-behind, because reconstructing user-facing impact after the fact from
-engineering commit titles is unreliable even when done carefully — a
-manual pass over that backlog still missed a step-sequencer overhaul
-and a deleted-track restore fix. The note is cheap to write while the
-change is fresh and expensive to recover later. Agents opening a PR
-must fill this in rather than leaving the template placeholder.
-
 ---
 
 ## 22. CodeRabbit and Review Tools

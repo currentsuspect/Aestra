@@ -5,13 +5,14 @@
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
 #include "NUIButton.h"
-#include "NUIDropdown.h"
 #include "NUILabel.h"
 #include "NUIRenderer.h"
 #include "NUISlider.h"
 #include "NUIThemeSystem.h"
 #include "SampleEditorPanel.h"
+#include "TrackColorPalette.h"
 #include "TrackManager.h"
+#include "UIInsertRoutePicker.h"
 
 #include <algorithm>
 #include <cmath>
@@ -112,10 +113,8 @@ void AudioClipEditorPanel::buildUI() {
     m_routeLabel = makeLabel("OUTPUT INSERT", 10.0f);
     m_routeHintLabel = makeLabel("Source route • linked clips follow this destination", 10.0f);
     m_routeHintLabel->setAlignment(NUILabel::Alignment::Right);
-    m_routeDropdown = std::make_shared<NUIDropdown>();
-    m_routeDropdown->setPlaceholderText("Choose an insert");
-    m_routeDropdown->setMaxVisibleItems(9);
-    m_routeDropdown->setOnSelectionChanged([this](int index) { selectRouteIndex(index); });
+    m_routePicker = std::make_shared<UIInsertRoutePicker>();
+    m_routePicker->setOnRouteSelected([this](uint32_t routeId) { selectRoute(routeId); });
 
     m_waveform = std::make_shared<WaveformDisplayComponent>();
     m_instanceLabel = makeLabel("THIS CLIP", 10.0f);
@@ -181,11 +180,10 @@ void AudioClipEditorPanel::buildUI() {
     });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
-        m_sourceNameLabel, m_sourceMetaLabel, m_routeLabel,    m_routeHintLabel,   m_routeDropdown,
-        m_waveform,        m_instanceLabel,   m_gainLabel,     m_panLabel,         m_fadeInLabel,
-        m_fadeOutLabel,    m_gainValueLabel,  m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
-        m_gainSlider,      m_panSlider,       m_fadeInSlider,  m_fadeOutSlider,    m_muteButton,
-        m_resetButton,     m_makeUniqueButton};
+        m_sourceNameLabel, m_sourceMetaLabel,  m_routeLabel,        m_routeHintLabel,  m_routePicker,  m_waveform,
+        m_instanceLabel,   m_gainLabel,        m_panLabel,          m_fadeInLabel,     m_fadeOutLabel, m_gainValueLabel,
+        m_panValueLabel,   m_fadeInValueLabel, m_fadeOutValueLabel, m_gainSlider,      m_panSlider,    m_fadeInSlider,
+        m_fadeOutSlider,   m_muteButton,       m_resetButton,       m_makeUniqueButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
@@ -312,26 +310,22 @@ void AudioClipEditorPanel::rebuildRoutes(bool force) {
         return;
     m_routeFingerprint = fingerprint;
     m_suppressCallbacks = true;
-    m_routeDropdown->clearItems();
-    m_routeIds.clear();
-    m_routeIds.push_back(MASTER_MIXER_CHANNEL_ID);
-    m_routeDropdown->addItem("Master", 0);
+    std::vector<UIInsertRoutePicker::Route> routes;
+    routes.push_back({MASTER_MIXER_CHANNEL_ID, 0, "Master", 0});
     for (size_t index = 0; index < m_trackManager->getChannelCount(); ++index) {
         const auto* channel = m_trackManager->getChannel(index);
         if (!channel)
             continue;
-        m_routeIds.push_back(channel->getChannelId());
         const std::string name =
             channel->getName().empty() ? "Insert " + std::to_string(index + 1) : channel->getName();
-        m_routeDropdown->addItem(std::to_string(index + 1) + "  •  " + name, static_cast<int>(index + 1));
+        routes.push_back({channel->getChannelId(), static_cast<int>(index + 1), name,
+                          paletteIndexToARGB(channel->getTrackColorIndex())});
     }
     uint32_t selectedRoute = MASTER_MIXER_CHANNEL_ID;
     if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId)) {
         selectedRoute = pattern->getMixerChannelId();
     }
-    const auto selected = std::find(m_routeIds.begin(), m_routeIds.end(), selectedRoute);
-    m_routeDropdown->setSelectedIndex(
-        selected == m_routeIds.end() ? 0 : static_cast<int>(std::distance(m_routeIds.begin(), selected)));
+    m_routePicker->setRoutes(std::move(routes), selectedRoute);
     m_suppressCallbacks = false;
 }
 
@@ -405,14 +399,13 @@ void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {
     syncControlsFromModel();
 }
 
-void AudioClipEditorPanel::selectRouteIndex(int index) {
-    if (m_suppressCallbacks || !m_trackManager || index < 0 || static_cast<size_t>(index) >= m_routeIds.size())
+void AudioClipEditorPanel::selectRoute(uint32_t routeId) {
+    if (m_suppressCallbacks || !m_trackManager)
         return;
     const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
-    if (!pattern || !pattern->isAudio() || pattern->getMixerChannelId() == m_routeIds[static_cast<size_t>(index)])
+    if (!pattern || !pattern->isAudio() || pattern->getMixerChannelId() == routeId)
         return;
-    auto command = std::make_shared<SetAudioPatternMixerChannelCommand>(*m_trackManager, m_patternId,
-                                                                        m_routeIds[static_cast<size_t>(index)]);
+    auto command = std::make_shared<SetAudioPatternMixerChannelCommand>(*m_trackManager, m_patternId, routeId);
     m_trackManager->getCommandHistory().pushAndExecute(command);
     m_routeFingerprint = 0;
     rebuildRoutes(true);
@@ -436,7 +429,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     m_sourceNameLabel->setBounds({bounds.x + pad, bounds.y + 14.0f, contentWidth - routeWidth - 18.0f, 20.0f});
     m_sourceMetaLabel->setBounds({bounds.x + pad, bounds.y + 39.0f, contentWidth - routeWidth - 18.0f, 16.0f});
     m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 14.0f, routeWidth, 14.0f});
-    m_routeDropdown->setBounds({bounds.right() - pad - routeWidth, bounds.y + 34.0f, routeWidth, 30.0f});
+    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 34.0f, routeWidth, 30.0f});
     m_routeHintLabel->setBounds({bounds.x + pad, bounds.y + 61.0f, contentWidth, 14.0f});
 
     const float controlsTop = bounds.bottom() - 152.0f;

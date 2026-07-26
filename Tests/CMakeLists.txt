@@ -2034,6 +2034,20 @@ else()
     message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+if(TARGET AestraUI_Core)
+    add_executable(UIInsertRoutePickerTest AestraUI/UIInsertRoutePickerTest.cpp)
+    target_link_libraries(UIInsertRoutePickerTest PRIVATE AestraUI_Core AestraPlat)
+    target_include_directories(UIInsertRoutePickerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME UIInsertRoutePickerTest COMMAND UIInsertRoutePickerTest)
+    set_tests_properties(UIInsertRoutePickerTest PROPERTIES LABELS "ui;routing;regression")
+else()
+    message(STATUS "UIInsertRoutePickerTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # NUITextInput Layout / Caret / Selection regression tests
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")
