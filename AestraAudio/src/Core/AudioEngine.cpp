@@ -211,6 +211,17 @@ void AudioEngine::applyPendingCommands() {
     bool sawRestartEdge = false;
     bool sawStopEdge = false;
     bool sawHardStopEdge = false;
+    const auto resolveTrackIndex = [this](const AudioQueueCommand& command) {
+        if (command.channelId == 0) {
+            return command.trackIndex;
+        }
+        if (auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire)) {
+            return slotMap->getSlotIndex(command.channelId);
+        }
+        // Compatibility for standalone engines without a slot map. Production
+        // paths always install one; contiguous IDs preserve the legacy result.
+        return command.channelId - 1;
+    };
 
     while (cmdCount < 16 && m_commandQueue.pop(cmd)) {
         ++cmdCount;
@@ -253,7 +264,10 @@ void AudioEngine::applyPendingCommands() {
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
             break;
         case AudioQueueCommandType::SetTrackVolume: {
-            auto& state = ensureTrackState(cmd.trackIndex);
+            const uint32_t trackIndex = resolveTrackIndex(cmd);
+            if (trackIndex == ChannelSlotMap::INVALID_SLOT)
+                break;
+            auto& state = ensureTrackState(trackIndex);
             state.currentVolume = cmd.value1;
 
             // Recalculate Targets using FastMath
@@ -266,7 +280,10 @@ void AudioEngine::applyPendingCommands() {
             break;
         }
         case AudioQueueCommandType::SetTrackPan: {
-            auto& state = ensureTrackState(cmd.trackIndex);
+            const uint32_t trackIndex = resolveTrackIndex(cmd);
+            if (trackIndex == ChannelSlotMap::INVALID_SLOT)
+                break;
+            auto& state = ensureTrackState(trackIndex);
             state.currentPan = cmd.value1;
 
             // Recalculate Targets using FastMath
@@ -279,12 +296,18 @@ void AudioEngine::applyPendingCommands() {
             break;
         }
         case AudioQueueCommandType::SetTrackMute: {
-            auto& state = ensureTrackState(cmd.trackIndex);
+            const uint32_t trackIndex = resolveTrackIndex(cmd);
+            if (trackIndex == ChannelSlotMap::INVALID_SLOT)
+                break;
+            auto& state = ensureTrackState(trackIndex);
             state.mute = (cmd.value1 != 0.0f);
             break;
         }
         case AudioQueueCommandType::SetTrackSolo: {
-            auto& state = ensureTrackState(cmd.trackIndex);
+            const uint32_t trackIndex = resolveTrackIndex(cmd);
+            if (trackIndex == ChannelSlotMap::INVALID_SLOT)
+                break;
+            auto& state = ensureTrackState(trackIndex);
             state.solo = (cmd.value1 != 0.0f);
             break;
         }
@@ -1973,7 +1996,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // Solo state can still change through RT track state, while routing topology
     // is compiled into AudioGraph before publication.
-    bool anySolo = graph.anySolo;
+    bool anySolo = false;
     const size_t numTracks = graph.tracks.size();
     std::fill(m_rtAudibleEligible.begin(), m_rtAudibleEligible.begin() + availableTracks, false);
     std::fill(m_rtProcessActive.begin(), m_rtProcessActive.begin() + availableTracks, false);
@@ -1981,7 +2004,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
         const auto& tr = graph.tracks[i];
         auto& state = ensureTrackState(tr.trackIndex);
-        if (tr.solo || state.solo) {
+        const bool muted = tr.mute || state.mute;
+        if ((tr.solo || state.solo) && !muted) {
             anySolo = true;
         }
     }
@@ -1996,7 +2020,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         for (size_t i = 0; i < graph.tracks.size(); ++i) {
             const auto& tr = graph.tracks[i];
             auto& state = ensureTrackState(tr.trackIndex);
-            const bool soloed = tr.solo || state.solo;
+            const bool muted = tr.mute || state.mute;
+            const bool soloed = (tr.solo || state.solo) && !muted;
             const bool soloSafe = tr.isSoloSafe || state.soloSafe;
             if (!soloed && !soloSafe) {
                 continue;
@@ -2233,7 +2258,9 @@ void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double*
             // Sample rate ratio
             const double outputRate = static_cast<double>(cachedSampleRate);
             const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
-            const double ratio = srcRate / outputRate;
+            const double playbackRate =
+                std::isfinite(clip.playbackRate) ? clampD(static_cast<double>(clip.playbackRate), 0.25, 4.0) : 1.0;
+            const double ratio = (srcRate / outputRate) * playbackRate;
 
             // Source position
             const double outputFrameOffset = static_cast<double>(start - clip.startSample);

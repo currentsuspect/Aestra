@@ -731,6 +731,7 @@ void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
     auto* midiPattern = tm->getPatternManager().getPattern(lane->clips[1].patternId);
     assert(audioPattern && audioPattern->isAudio());
     assert(midiPattern && midiPattern->isMidi());
+    assert(std::abs(lane->clips[0].edits.gainLinear - 1.0f) < 1.0e-7f);
     assert(std::abs(lane->clips[0].durationSeconds - 2.0) < 1.0e-9);
     assert(std::abs(lane->clips[0].durationBeats - 4.0) < 1.0e-9);
     assert(std::abs(lane->clips[1].durationBeats - 4.0) < 1.0e-9);
@@ -778,6 +779,7 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
 
     const auto* clip = playlist.getClip(clipId);
     assert(clip);
+    assert(std::abs(clip->edits.gainLinear - Aestra::Audio::DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f);
     assert(std::abs(clip->durationSeconds - 1.0) < 1.0e-9);
 
     std::string firstSave = serializeProject(*tm1, 120.0, 0.0);
@@ -795,6 +797,7 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     const auto* loadedLane = tm2->getPlaylistModel().getLane(loadedLaneId);
     assert(loadedLane);
     assert(loadedLane->clips.size() == 1);
+    assert(std::abs(loadedLane->clips[0].edits.gainLinear - Aestra::Audio::DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f);
     assert(std::abs(loadedLane->clips[0].durationSeconds - 1.0) < 1.0e-9);
     assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
 

@@ -70,6 +70,12 @@ private:
     uint32_t m_deletedId = 0;
     std::vector<UnitID> m_routedUnits;
     std::vector<PatternID> m_routedAudioPatterns;
+    struct MixerRouteSnapshot {
+        uint32_t sourceChannelId{0};
+        uint32_t mainOutputId{0xFFFFFFFFu};
+        std::vector<AudioRoute> sends;
+    };
+    std::vector<MixerRouteSnapshot> m_mixerRoutes;
     bool m_routesCaptured = false;
     bool m_executed = false;
     /**

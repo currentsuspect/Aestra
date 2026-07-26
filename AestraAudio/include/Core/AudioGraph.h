@@ -33,6 +33,7 @@ struct ClipRenderState {
     uint32_t channels{2};                      // Source channels (1=mono, 2=stereo)
     float gain{1.0f};
     float pan{0.0f};
+    float playbackRate{1.0f};
     uint64_t fadeInSamples{0};
     uint64_t fadeOutSamples{0};
 };

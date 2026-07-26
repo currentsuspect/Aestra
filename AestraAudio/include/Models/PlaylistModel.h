@@ -477,10 +477,17 @@ public:
                 ClipRuntimeInfo clipInfo;
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
                 clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
-                clipInfo.sourceStart = static_cast<uint64_t>(clip.sourceOffset * samplesPerBeat);
+                const double canonicalSourceStart = clip.durationSeconds > 0.0
+                                                        ? std::max(0.0, clip.sourceOffsetSeconds) * m_projectSampleRate
+                                                        : std::max(0.0, clip.sourceOffset) * samplesPerBeat;
+                const double instanceSourceStart =
+                    std::isfinite(clip.edits.sourceStart) ? std::max(0.0, clip.edits.sourceStart) : 0.0;
+                clipInfo.sourceStart = static_cast<uint64_t>(canonicalSourceStart + instanceSourceStart);
                 clipInfo.gainLinear = std::isfinite(clip.edits.gainLinear) ? clip.edits.gainLinear : 1.0f;
                 clipInfo.pan =
                     std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;
+                clipInfo.playbackRate =
+                    std::isfinite(clip.edits.playbackRate) ? std::clamp(clip.edits.playbackRate, 0.25f, 4.0f) : 1.0f;
                 const double fadeInBeats =
                     std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
                                                          : 0.0;
@@ -655,6 +662,7 @@ public:
         if (m_patternManager) {
             const auto* pattern = m_patternManager->getPattern(patternId);
             if (pattern && pattern->isAudio()) {
+                clip.edits = ClipEdits::forNewAudioClip();
                 const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
                 if (payload.durationSeconds > 0.0) {
                     clip.durationSeconds = payload.durationSeconds;
