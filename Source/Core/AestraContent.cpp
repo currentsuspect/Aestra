@@ -3666,6 +3666,7 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     clip.durationBeats = durationBeats;
     clip.durationSeconds = durationSeconds;
     clip.name = patternName;
+    clip.edits = Aestra::Audio::ClipEdits::forNewAudioClip();
     const auto clipId = playlist.addClip(targetLaneId, clip);
     if (!clipId.isValid()) {
         patternManager.removePattern(patternId);

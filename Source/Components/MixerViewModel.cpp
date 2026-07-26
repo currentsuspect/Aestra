@@ -595,21 +595,19 @@ void MixerViewModel::addSend(uint32_t channelId) {
     std::string defaultName = "Master";
     
     auto available = getAvailableDestinations(channelId);
-    bool foundBetter = false;
     for (const auto& dest : available) {
         // Pick the first available Send that isn't Master (0).
         // e.g., a Reverb Bus or Group Channel
         if (dest.id != 0) {
             defaultTarget = dest.id;
             defaultName = dest.name;
-            foundBetter = true;
             break;
         }
     }
 
     send.targetId = defaultTarget; 
     send.targetName = defaultName;
-    send.gain = 1.0f; // 0dB
+    send.gain = 0.25f; // -12 dB leaves headroom when adding a parallel path
     send.sidechainOnly = false;
     ch->sends.push_back(send);
 
@@ -618,10 +616,27 @@ void MixerViewModel::addSend(uint32_t channelId) {
         Audio::AudioRoute route{};
         // Map 0 -> 0xFFFFFFFF for engine
         route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
-        route.gain = 1.0f;
+        route.gain = 0.25f;
         route.sidechainOnly = false;
         mc->addSend(route);
         
+        graphDirty.emit();
+        projectModified.emit();
+    }
+}
+
+void MixerViewModel::addSidechain(uint32_t channelId) {
+    addSend(channelId);
+    auto* ch = getChannelById(channelId);
+    if (!ch || ch->sends.empty())
+        return;
+
+    const int sendIndex = static_cast<int>(ch->sends.size() - 1);
+    ch->sends.back().gain = 1.0f;
+    ch->sends.back().sidechainOnly = true;
+    if (auto* mc = ch->channel) {
+        mc->setSendLevel(sendIndex, 1.0f);
+        mc->setSendSidechainOnly(sendIndex, true);
         graphDirty.emit();
         projectModified.emit();
     }
@@ -666,11 +681,6 @@ void MixerViewModel::toggleMute(uint32_t channelId) {
     bool newMute = !ch->channel->isMuted();
     ch->channel->setMute(newMute);
     ch->muted = newMute;
-    // Mutual exclusivity: muting turns off solo
-    if (newMute && ch->channel->isSoloed()) {
-        ch->channel->setSolo(false);
-        ch->soloed = false;
-    }
     graphDirty.emit();
     projectModified.emit();
 }
@@ -681,11 +691,6 @@ void MixerViewModel::toggleSolo(uint32_t channelId) {
     bool newSolo = !ch->channel->isSoloed();
     ch->channel->setSolo(newSolo);
     ch->soloed = newSolo;
-    // Mutual exclusivity: soloing turns off mute
-    if (newSolo && ch->channel->isMuted()) {
-        ch->channel->setMute(false);
-        ch->muted = false;
-    }
     graphDirty.emit();
     projectModified.emit();
 }
@@ -710,11 +715,14 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
 
+    linearGain = std::isfinite(linearGain) ? std::clamp(linearGain, 0.0f, 4.0f) : 0.0f;
     ch->sends[sendIndex].gain = linearGain;
 
     // Update Engine
     if (auto mc = ch->channel) {
         mc->setSendLevel(sendIndex, linearGain);
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 

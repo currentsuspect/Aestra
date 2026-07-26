@@ -275,13 +275,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->muted = muted;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel) {
-            if (muted && mc->isSoloed()) {
-                mc->setSolo(false);
-                channel->soloed = false;
-            }
-        }
-
         // Fire undo/redo callback
         if (onMuteChanged) onMuteChanged(muted);
     };
@@ -293,51 +286,17 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         // Solo Safe Logic (Ctrl + Click)
         const bool isCtrl = (modifiers & NUIModifiers::Ctrl);
         if (isCtrl) {
-            // Revert the local toggle because pure solo state shouldn't change
-            // But wait, the button row just toggled its internal visual state.
-            // For Solo Safe, we actually want to toggle a *different* visual state 
-            // (maybe different color or icon?), but for now let's just update the logic.
-            // NOTE: UIMixerButtonRow tracks 'soloed' boolean. If we are setting 'solo safe',
-            // we should probably revert the 'soloed' state on the button if it wasn't already soloed.
-            // Or, ideally, Solo Safe is an independent state.
-            // Given the button row is simple, let's treat it as:
-            // Ctrl+Click -> Toggle Safe. Restore Solo button state to what it was.
-            
-            // Revert button state visually (hacky but works for stateless widget)
-            m_buttons->setSoloed(!soloed); 
-            
-            // Toggle proper safe state
+            // Solo-safe is independent from solo. Restore the button's prior
+            // state, then toggle only the processing-safe flag.
+            m_buttons->setSoloed(!soloed);
             if (auto mc = channel->channel) {
-               bool newSafe = !mc->isSoloSafe();
-               mc->setSoloSafe(newSafe);
-               // Visual feedback? UIMixerStrip doesn't have a distinct 'Safe' icon yet.
-               // We might rely on the user knowing they did it, or add a small indicator later.
+                mc->setSoloSafe(!mc->isSoloSafe());
             }
             return;
         }
 
-        // Exclusive solo: clear other solos first (matches playlist behavior).
-        if (soloed) {
-            const size_t count = m_viewModel->getChannelCount();
-            for (size_t i = 0; i < count; ++i) {
-                auto* other = m_viewModel->getChannelByIndex(i);
-                if (!other || other->id == channel->id) continue;
-                if (auto otherMC = other->channel) {
-                    otherMC->setSolo(false);
-                }
-                other->soloed = false;
-            }
-        }
-
         channel->soloed = soloed;
         invalidateStaticCache();
-
-        if (auto mc = channel->channel) {
-            if (soloed && mc->isMuted()) {
-                mc->setMute(false);
-                channel->muted = false;
-            }
-        }
 
         // Fire undo/redo callback
         if (onSoloChanged) onSoloChanged(soloed);

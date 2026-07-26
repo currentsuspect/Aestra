@@ -67,10 +67,13 @@ private:
     // Hit rectangles
     NUIRect m_tabRects[3]{};
     NUIRect m_addFxRect{};
+    NUIRect m_addSidechainRect{};
 
     int m_hoveredTab{-1};
     bool m_addHovered{false};
     bool m_addPressed{false};
+    bool m_addSidechainHovered{false};
+    bool m_addSidechainPressed{false};
 
     // Inserts
     std::shared_ptr<EffectChainRack> m_effectRack;

@@ -254,21 +254,15 @@ void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
     if (!m_trackManager || !soloedTrack)
         return;
 
-    // Exclusive Solo: Unsolo everyone ELSE
+    // Playlist solos are additive. Refresh every lane because the aggregate
+    // solo gate changes the dimmed/audible state of non-soloed lanes.
     for (auto& trackUI : m_trackUIComponents) {
-        // Skip the track that was just soloed
-        if (trackUI.get() == soloedTrack)
-            continue;
-
-        if (auto* lane = m_trackManager->getPlaylistModel().getLane(trackUI->getLaneId()); lane && lane->solo) {
-            lane->solo = false;
-            trackUI->updateUI(); // Update UI
-            trackUI->repaint();
-        }
+        trackUI->updateUI();
+        trackUI->repaint();
     }
 
     invalidateCache();
-    Log::info("Solo coordination: Cleared other solos (Exclusive Mode)");
+    Log::info("Playlist solo set changed (additive mode)");
 }
 
 void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId,
