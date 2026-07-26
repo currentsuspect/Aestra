@@ -327,6 +327,17 @@ int main() {
                   r["result"]["notes"][1]["velocity"].asNumber() < 0.61,
               "note expression round-trips");
 
+        Aestra::Audio::AudioSlicePayload audioPayload;
+        const auto audioPattern =
+            trackManager->getPatternManager().createAudioPattern("Audio query", 4.0, audioPayload);
+        trackManager->getPatternManager().setPatternMixerChannel(audioPattern, 73);
+        r = call(service, "{\"id\": 630, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " +
+                              std::to_string(audioPattern.value) + "}}");
+        check(status(r) == "ok" && r["result"]["type"].asString() == "audio",
+              "get_pattern identifies audio patterns");
+        check(r["result"]["mixerChannelId"].asNumber() == 73.0,
+              "get_pattern reports an audio pattern's mixer destination");
+
         // Revision loop: move the second hit, then soften it, then delete it.
         r = call(service, "{\"id\": 64, \"verb\": \"move_note\", \"args\": {\"pattern\": " + p +
                               ", \"unit\": " + u +

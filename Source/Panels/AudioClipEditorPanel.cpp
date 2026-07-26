@@ -144,11 +144,17 @@ void AudioClipEditorPanel::buildUI() {
 
     const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update) {
         slider->setOnDragStart([this]() { beginEditGesture(); });
-        slider->setOnValueChange([this, update](double value) {
+        slider->setOnValueChange([this, slider, update](double value) {
             if (m_suppressCallbacks)
                 return;
+            if (!m_editGestureActive)
+                beginEditGesture();
             update(m_workingEdits, value);
             applyWorkingEdits();
+            // Double-click resets and other non-drag changes do not receive a
+            // drag-end callback, so commit them immediately.
+            if (!slider->isDragging())
+                commitEditGesture();
         });
         slider->setOnDragEnd([this]() { commitEditGesture(); });
     };
@@ -225,8 +231,10 @@ void AudioClipEditorPanel::rebuildWaveform() {
     PatternSource* pattern = nullptr;
     if (!resolveClip(clip, pattern))
         return;
-    const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
-    const auto* source = m_trackManager->getSourceManager().getSource(payload.audioSourceId);
+    const auto* payload = std::get_if<AudioSlicePayload>(&pattern->payload);
+    if (!payload)
+        return;
+    const auto* source = m_trackManager->getSourceManager().getSource(payload->audioSourceId);
     const auto* buffer = source ? source->getRawBuffer() : nullptr;
     if (!source || !buffer || !buffer->isValid()) {
         m_sourceNameLabel->setText(clip->name.empty() ? "Audio clip" : clip->name);
@@ -412,12 +420,6 @@ void AudioClipEditorPanel::selectRoute(uint32_t routeId) {
 }
 
 void AudioClipEditorPanel::onResize(int width, int height) {
-    const auto panelBounds = getBounds();
-    if (panelBounds.width < kMinPanelWidth || panelBounds.height < kMinPanelHeight) {
-        setBounds({panelBounds.x, panelBounds.y, std::max(panelBounds.width, kMinPanelWidth),
-                   std::max(panelBounds.height, kMinPanelHeight)});
-        return;
-    }
     WindowPanel::onResize(width, height);
     if (!m_surface)
         return;

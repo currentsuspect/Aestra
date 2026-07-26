@@ -3,6 +3,8 @@
 
 #include "../../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
+#include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/SetUnitMixerChannelCommand.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PluginBrowserPanel.h"
@@ -11,7 +13,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <unordered_set>
 namespace AestraUI {
 
 namespace {
@@ -1303,52 +1304,20 @@ void UnitRow::routeToMixerChannel(uint32_t channelId) {
     if (!m_trackManager || !m_manager.getUnit(m_unitId)) {
         return;
     }
-    m_manager.setUnitMixerChannel(m_unitId, static_cast<int64_t>(channelId));
-    m_trackManager->markModified();
+    m_trackManager->getCommandHistory().pushAndExecute(
+        std::make_shared<Aestra::Audio::SetUnitMixerChannelCommand>(*m_trackManager, m_unitId, channelId));
     updateState();
 }
 
-void UnitRow::routeToFirstFreeMixerChannel() {
+bool UnitRow::routeToFirstFreeMixerChannel() {
     if (!m_trackManager || !m_manager.getUnit(m_unitId)) {
-        return;
+        return false;
     }
 
-    std::unordered_set<uint32_t> usedChannelIds;
-    for (const auto unitId : m_manager.getAllUnitIDs()) {
-        if (unitId == m_unitId)
-            continue;
-        const uint32_t channelId = m_manager.getUnitMixerChannel(unitId);
-        if (channelId != Aestra::Audio::MASTER_MIXER_CHANNEL_ID) {
-            usedChannelIds.insert(channelId);
-        }
-    }
-
-    for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
-        const auto* channel = m_trackManager->getChannel(i);
-        if (channel && usedChannelIds.find(channel->getChannelId()) == usedChannelIds.end()) {
-            routeToMixerChannel(channel->getChannelId());
-            return;
-        }
-    }
-
-    auto& playlist = m_trackManager->getPlaylistModel();
     const std::string destinationName = m_name.empty() ? "Mixer Insert" : m_name;
-    const auto laneId = playlist.createLane(destinationName);
-    if (!laneId.isValid()) {
-        return;
-    }
-
-    auto* channel = m_trackManager->addChannel(destinationName);
-    if (!channel) {
-        playlist.removeLane(laneId);
-        return;
-    }
-
-    channel->setColor(m_color);
-    if (auto* lane = playlist.getLane(laneId)) {
-        lane->colorRGBA = m_color;
-    }
-    routeToMixerChannel(channel->getChannelId());
+    const bool routed = Aestra::Audio::assignUnitToFirstFreeInsert(*m_trackManager, m_unitId, destinationName, m_color);
+    updateState();
+    return routed;
 }
 
 void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {

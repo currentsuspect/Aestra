@@ -274,8 +274,8 @@ public:
     void setUnitArmed(UnitID id, bool armed);
     /** @brief Set enabled state for a unit. */
     void setUnitEnabled(UnitID id, bool enabled);
-    /** @brief Route a unit to a stable mixer channel ID (0 or negative means Master). */
-    void setUnitMixerChannel(UnitID id, int64_t channelId);
+    /** @brief Route a unit to a stable mixer channel ID (0 means Master). */
+    void setUnitMixerChannel(UnitID id, uint32_t channelId);
     /** @brief Return the unit's stable mixer destination ID (0 means Master). */
     uint32_t getUnitMixerChannel(UnitID id) const;
     /** @brief Resolve lane-index routes from projects saved before stable mixer IDs existed. */

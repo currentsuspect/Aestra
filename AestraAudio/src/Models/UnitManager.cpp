@@ -268,7 +268,7 @@ void UnitManager::publishSnapshot() {
         state.routeId = unit->targetMixerRoute;
         state.mixerChannelId = unit->targetMixerChannelId;
         state.routeMode = arsenalRouteModeFromRouteId(state.routeId);
-        state.gain = unit->gain;
+        state.gain = std::isfinite(unit->gain) ? unit->gain : 1.0f;
         state.isMuted = unit->isMuted;
         state.isSolo = unit->isSolo;
         snapshot->units.push_back(state);
@@ -451,11 +451,10 @@ void UnitManager::setUnitEnabled(UnitID id, bool enabled) {
         publishSnapshot();
     }
 }
-void UnitManager::setUnitMixerChannel(UnitID id, int64_t channelId) {
+void UnitManager::setUnitMixerChannel(UnitID id, uint32_t channelId) {
     if (auto* u = getUnit(id)) {
-        u->targetMixerChannelId = channelId > 0 && channelId < static_cast<int64_t>(UINT32_MAX)
-                                      ? static_cast<uint32_t>(channelId)
-                                      : MASTER_MIXER_CHANNEL_ID;
+        u->targetMixerChannelId =
+            channelId < std::numeric_limits<uint32_t>::max() ? channelId : MASTER_MIXER_CHANNEL_ID;
         u->legacyMixerRoutePending = false;
         publishSnapshot();
     }
@@ -538,7 +537,7 @@ int UnitManager::getUnitTimelineLane(UnitID id) const {
 }
 void UnitManager::setUnitGain(UnitID id, float gain) {
     if (auto* u = getUnit(id)) {
-        u->gain = gain;
+        u->gain = std::isfinite(gain) ? gain : 1.0f;
         publishSnapshot();
     }
 }
@@ -826,14 +825,23 @@ void UnitManager::loadFromJSON(const JSON& json) {
         } else {
             unit.targetMixerRoute = ju.has("targetMixerRoute") ? ju["targetMixerRoute"].asInt() : -1;
         }
-        if (ju.has("targetMixerChannelId") && ju["targetMixerChannelId"].isNumber()) {
+        const bool hasStableMixerChannelId = ju.has("targetMixerChannelId");
+        bool validStableMixerChannelId = false;
+        if (hasStableMixerChannelId && ju["targetMixerChannelId"].isNumber()) {
             const double rawMixerChannelId = ju["targetMixerChannelId"].asNumber();
             if (std::isfinite(rawMixerChannelId) && rawMixerChannelId >= 0.0 &&
-                rawMixerChannelId < static_cast<double>(UINT32_MAX)) {
+                rawMixerChannelId < static_cast<double>(UINT32_MAX) &&
+                std::floor(rawMixerChannelId) == rawMixerChannelId) {
                 unit.targetMixerChannelId = static_cast<uint32_t>(rawMixerChannelId);
+                validStableMixerChannelId = true;
             }
-        } else {
+        }
+        if (!validStableMixerChannelId) {
             unit.legacyMixerRoutePending = unit.targetMixerRoute >= 0;
+            if (hasStableMixerChannelId) {
+                Log::warning("[UnitManager] Invalid targetMixerChannelId for unit " + std::to_string(unit.id) +
+                             "; falling back to legacy route metadata.");
+            }
         }
         const ArsenalRouteMode legacyResolvedRouteMode = arsenalRouteModeFromRouteId(unit.targetMixerRoute);
         unit.routeMode = legacyResolvedRouteMode;
@@ -877,7 +885,13 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;
         unit.isArmed = ju.has("armed") ? ju["armed"].asBool() : false;
         unit.audioClipPath = ju.has("audioClipPath") ? ju["audioClipPath"].asString() : std::string{};
-        unit.gain = ju.has("gain") ? static_cast<float>(ju["gain"].asNumber()) : 1.0f;
+        unit.gain = 1.0f;
+        if (ju.has("gain") && ju["gain"].isNumber()) {
+            const float loadedGain = static_cast<float>(ju["gain"].asNumber());
+            if (std::isfinite(loadedGain)) {
+                unit.gain = loadedGain;
+            }
+        }
         unit.audioDurationSeconds = ju.has("audioDurationSeconds") ? ju["audioDurationSeconds"].asNumber() : 0.0;
         if (ju.has("defaultPatternId")) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));

@@ -186,6 +186,36 @@ public:
     }
 
     /**
+     * @brief Detach a pattern while preserving its identity and state for undo.
+     * @param id Pattern identifier to detach.
+     * @return Ownership of the pattern, or nullptr when it was not found.
+     */
+    std::unique_ptr<PatternSource> detachPattern(PatternID id) {
+        const auto it = m_patterns.find(id.value);
+        if (it == m_patterns.end()) {
+            return nullptr;
+        }
+        auto pattern = std::move(it->second);
+        m_patterns.erase(it);
+        return pattern;
+    }
+
+    /**
+     * @brief Reinsert a detached pattern with the same stable identity.
+     * @param pattern Detached pattern ownership; retained by the caller on failure.
+     * @return True when the pattern was restored.
+     */
+    bool reinsertPattern(std::unique_ptr<PatternSource>& pattern) {
+        if (!pattern || !pattern->id.isValid() || getPattern(pattern->id)) {
+            return false;
+        }
+        const uint64_t id = pattern->id.value;
+        m_patterns[id] = std::move(pattern);
+        nextId = std::max(nextId, id + 1);
+        return true;
+    }
+
+    /**
      * @brief Get or create a pattern
      * @param id Pattern identifier to look up or create.
      * @return Pointer to the requested pattern.

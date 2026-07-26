@@ -403,7 +403,7 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t mixerChannelId, double* 
             }
 
             double* dst = trackBuffer + (size_t)ctx.bufferOffset * 2;
-            const double unitGain = static_cast<double>(u.gain);
+            const double unitGain = std::isfinite(u.gain) ? static_cast<double>(u.gain) : 1.0;
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
                 dst[i * 2] += static_cast<double>(outs[0][i]) * unitGain;
                 dst[i * 2 + 1] += static_cast<double>(outs[1][i]) * unitGain;
@@ -444,7 +444,7 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
             }
 
             double* dst = ctx.masterBuffer + (size_t)ctx.bufferOffset * 2;
-            const double unitGain = static_cast<double>(u.gain);
+            const double unitGain = std::isfinite(u.gain) ? static_cast<double>(u.gain) : 1.0;
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
                 dst[i * 2] += static_cast<double>(outs[0][i]) * unitGain;
                 dst[i * 2 + 1] += static_cast<double>(outs[1][i]) * unitGain;

@@ -81,7 +81,7 @@ int main() {
     UnitID unitId = unitManager.createUnit("Live Sampler", UnitGroup::Synth);
     unitManager.attachPlugin(unitId, "com.Aestrastudios.sampler", sampler);
     unitManager.setUnitEnabled(unitId, true);
-    unitManager.setUnitMixerChannel(unitId, -1); // route directly to master in Arsenal mode
+    unitManager.setUnitMixerChannel(unitId, MASTER_MIXER_CHANNEL_ID); // route directly to master in Arsenal mode
     unitManager.captureUnitPluginState(unitId);
 
     AudioEngine engine;

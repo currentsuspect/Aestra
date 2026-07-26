@@ -2189,7 +2189,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             float* outputs[2] = {m_scratchL.data(), m_scratchR.data()};
             unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
 
-            const double unitGain = static_cast<double>(unit.gain);
+            const double unitGain = std::isfinite(unit.gain) ? static_cast<double>(unit.gain) : 1.0;
             for (uint32_t i = 0; i < numFrames; ++i) {
                 masterBuf[i * 2] += sanitizeMix(static_cast<double>(outputs[0][i])) * unitGain;
                 masterBuf[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i])) * unitGain;
@@ -2468,7 +2468,7 @@ void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>&
                 unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
 
                 // Mix to Track Buffer (Double Precision)
-                const double unitGain = static_cast<double>(unit.gain);
+                const double unitGain = std::isfinite(unit.gain) ? static_cast<double>(unit.gain) : 1.0;
                 double* dDst = buffer.data();
                 for (uint32_t k = 0; k < numFrames; ++k) {
                     dDst[k * 2] += sanitizeMix(static_cast<double>(outputs[0][k])) * unitGain;
@@ -3350,7 +3350,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         // Mix plugin output into master buffer (mixing floats into double master)
         double* masterD =
             (targetBuffer ? targetBuffer : m_masterBufferD.data()) + static_cast<size_t>(bufferOffset) * 2;
-        const double unitGain = static_cast<double>(unit.gain);
+        const double unitGain = std::isfinite(unit.gain) ? static_cast<double>(unit.gain) : 1.0;
         for (uint32_t i = 0; i < numFrames; ++i) {
             masterD[i * 2 + 0] += sanitizeMix(static_cast<double>(outputs[0][i])) * unitGain; // Left
             masterD[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i])) * unitGain; // Right

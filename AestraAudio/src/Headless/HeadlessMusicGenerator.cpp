@@ -623,7 +623,7 @@ uint64_t HeadlessMusicGenerator::ensureLaneInstrument(uint32_t laneIndex) {
     if (!m_toneSamplePath.empty()) {
         um.setUnitAudioClip(unit, m_toneSamplePath); // loads the tone into the sampler
     }
-    um.setUnitMixerChannel(unit, mixerChannel ? static_cast<int>(mixerChannel->getChannelId()) : 0);
+    um.setUnitMixerChannel(unit, mixerChannel ? mixerChannel->getChannelId() : MASTER_MIXER_CHANNEL_ID);
     um.assignUnitToTimelineLane(unit, static_cast<int>(laneIndex));
 
     m_laneUnits[laneIndex] = unit;

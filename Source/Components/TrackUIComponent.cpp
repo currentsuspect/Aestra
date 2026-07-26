@@ -1317,20 +1317,8 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
 
     // Apply overlay for muted/solo state (Grid Area Only)
     if (m_isPrimaryForLane) {
-        bool anySoloed = false;
-        if (m_trackManager) {
-            auto& playlist = m_trackManager->getPlaylistModel();
-            for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
-                const auto* candidate = playlist.getLane(playlist.getLaneId(i));
-                if (candidate && candidate->solo && !candidate->muted) {
-                    anySoloed = true;
-                    break;
-                }
-            }
-        }
-
         const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
-        const bool soloSuppressed = anySoloed && lane && !lane->solo;
+        const bool soloSuppressed = m_anyPlaylistLaneSoloed && lane && !lane->solo;
 
         AestraUI::NUIRect gridArea(
             bounds.x + controlAreaWidth,
@@ -1454,19 +1442,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
     // Apply highlight overlay (Selection / Solo / Mute)
     if (lane) {
-        bool anySoloed = false;
-        if (m_trackManager) {
-            auto& playlist = m_trackManager->getPlaylistModel();
-            for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
-                const auto* candidate = playlist.getLane(playlist.getLaneId(i));
-                if (candidate && candidate->solo && !candidate->muted) {
-                    anySoloed = true;
-                    break;
-                }
-            }
-        }
-
-        const bool soloSuppressed = anySoloed && !lane->solo;
+        const bool soloSuppressed = m_anyPlaylistLaneSoloed && !lane->solo;
 
         if (lane->solo) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
@@ -2641,6 +2617,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
 
 
 void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth) {
+    if (!m_trackManager || !m_channel) return;
     if (!m_trackManager->isRecording()) return;
     if (!m_channel->isArmed()) return;
 

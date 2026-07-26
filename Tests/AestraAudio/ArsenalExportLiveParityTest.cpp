@@ -123,7 +123,7 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     unitManager.setUnitGain(unitId, unitGain);
     unitManager.setUnitMute(unitId, unitMuted);
     if (routeToTrack) {
-        unitManager.setUnitMixerChannel(unitId, static_cast<int>(channel->getChannelId()));
+        unitManager.setUnitMixerChannel(unitId, channel->getChannelId());
         unitManager.assignUnitToTimelineLane(unitId, 0);
     } else {
         unitManager.setUnitMixerChannel(unitId, 0);
@@ -242,7 +242,7 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     unitManager.setUnitEnabled(previewUnitId, true);
     unitManager.setUnitEnabled(trackUnitId, true);
     unitManager.setUnitMixerChannel(previewUnitId, 0);
-    unitManager.setUnitMixerChannel(trackUnitId, static_cast<int>(channel->getChannelId()));
+    unitManager.setUnitMixerChannel(trackUnitId, channel->getChannelId());
     unitManager.clearUnitTimelineLane(previewUnitId);
     unitManager.assignUnitToTimelineLane(trackUnitId, 0);
 
@@ -382,7 +382,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     const UnitID track0Unit = unitManager.createUnit("Bounce Track 0 Unit", UnitType::Sampler);
     unitManager.setUnitAudioClip(track0Unit, samplePath.string());
     unitManager.setUnitEnabled(track0Unit, true);
-    unitManager.setUnitMixerChannel(track0Unit, static_cast<int>(channel0->getChannelId()));
+    unitManager.setUnitMixerChannel(track0Unit, channel0->getChannelId());
     unitManager.assignUnitToTimelineLane(track0Unit, 0);
 
     auto& patternManager = tm->getPatternManager();

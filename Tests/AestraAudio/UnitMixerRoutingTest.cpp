@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Commands/ArrangePatternCommand.h"
+#include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/MakeAudioClipUniqueCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
@@ -9,8 +10,10 @@
 #include "Models/UnitManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -43,7 +46,14 @@ int main() {
     units.setUnitMixerChannel(unitId, static_cast<int64_t>(UINT32_MAX));
     require(units.getUnitMixerChannel(unitId) == MASTER_MIXER_CHANNEL_ID,
             "Reserved mixer destination must fall back to Master");
+    units.setUnitMixerChannel(unitId, UINT32_MAX - 1);
+    require(units.getUnitMixerChannel(unitId) == UINT32_MAX - 1,
+            "High unsigned mixer destination was truncated or redirected");
     units.setUnitMixerChannel(unitId, 42);
+    units.setUnitGain(unitId, std::numeric_limits<float>::quiet_NaN());
+    snapshot = units.getAudioSnapshot();
+    require(snapshot && std::isfinite(snapshot->units.front().gain) && snapshot->units.front().gain == 1.0f,
+            "Non-finite unit gain reached the audio snapshot");
 
     const auto saved = units.saveToJSON();
     UnitManager restored;
@@ -66,6 +76,16 @@ int main() {
     require(migrated.getUnitMixerChannel(1) == 42,
             "Legacy lane-index destination did not migrate to the matching stable ID");
 
+    legacyUnit.set("targetMixerChannelId", Aestra::JSON("malformed"));
+    legacyUnits = Aestra::JSON::array();
+    legacyUnits.push(legacyUnit);
+    legacyRoot.set("units", legacyUnits);
+    UnitManager malformedStableRoute;
+    malformedStableRoute.loadFromJSON(legacyRoot);
+    malformedStableRoute.migrateLegacyMixerRoutes({11, 42});
+    require(malformedStableRoute.getUnitMixerChannel(1) == 42,
+            "Malformed stable destination blocked valid legacy route migration");
+
     TrackManager tracks;
     auto* restoredChannel = tracks.addChannelWithId("Restored", 42);
     require(restoredChannel && restoredChannel->getChannelId() == 42, "Persisted channel ID was not restored");
@@ -75,6 +95,49 @@ int main() {
     const auto* defaultInsert = defaultNames.addChannel();
     require(defaultInsert && defaultInsert->getName() == "Insert 1",
             "New mixer destinations must use Insert terminology");
+    require(defaultNames.removeChannelById(defaultInsert->getChannelId()), "Default insert deletion failed");
+    const auto* postDeleteInsert = defaultNames.addChannel();
+    require(postDeleteInsert && postDeleteInsert->getName() == "Insert 2",
+            "Default insert name reused a deleted channel number");
+
+    TrackManager firstFreeTracks;
+    const UnitID firstFreeUnit = firstFreeTracks.getUnitManager().createUnit("Bass", UnitType::Instrument);
+    firstFreeTracks.getCommandHistory().pushAndExecute(
+        std::make_shared<AssignUnitToFirstFreeInsertCommand>(firstFreeTracks, firstFreeUnit, "Bass", 0xFF336699));
+    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 1,
+            "First-free route did not atomically create its insert and lane");
+    const uint32_t createdDestinationId = firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit);
+    const auto createdLaneId = firstFreeTracks.getPlaylistModel().getLaneId(0);
+    require(createdDestinationId != MASTER_MIXER_CHANNEL_ID &&
+                firstFreeTracks.getChannel(0)->getColor() == 0xFF336699 &&
+                firstFreeTracks.getPlaylistModel().getLane(createdLaneId)->colorRGBA == 0xFF336699,
+            "First-free route did not apply destination identity and color");
+    require(firstFreeTracks.getCommandHistory().undo(), "First-free route undo was unavailable");
+    require(firstFreeTracks.getChannelCount() == 0 && firstFreeTracks.getPlaylistModel().getLaneCount() == 0 &&
+                firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == MASTER_MIXER_CHANNEL_ID,
+            "First-free route undo left created project state behind");
+    require(firstFreeTracks.getCommandHistory().redo(), "First-free route redo was unavailable");
+    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 1 &&
+                firstFreeTracks.getChannel(0)->getChannelId() == createdDestinationId &&
+                firstFreeTracks.getPlaylistModel().getLaneId(0) == createdLaneId &&
+                firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == createdDestinationId,
+            "First-free route redo did not restore stable identities atomically");
+
+    TrackManager shortcutTracks;
+    const UnitID shortcutUnit = shortcutTracks.getUnitManager().createUnit("Shortcut", UnitType::Instrument);
+    require(assignUnitToFirstFreeInsert(shortcutTracks, shortcutUnit, "Shortcut", 0xFF224466),
+            "Ctrl+L routing helper did not handle a selected unit");
+    require(shortcutTracks.getUnitManager().getUnitMixerChannel(shortcutUnit) != MASTER_MIXER_CHANNEL_ID,
+            "Ctrl+L routing helper did not route the selected unit");
+    const size_t shortcutChannelCount = shortcutTracks.getChannelCount();
+    const size_t shortcutLaneCount = shortcutTracks.getPlaylistModel().getLaneCount();
+    require(!assignUnitToFirstFreeInsert(shortcutTracks, 0, "Missing", 0xFFFFFFFF),
+            "Ctrl+L routing helper handled a missing selection");
+    require(!assignUnitToFirstFreeInsert(shortcutTracks, shortcutUnit + 999, "Missing", 0xFFFFFFFF),
+            "Ctrl+L routing helper handled a failed unit destination");
+    require(shortcutTracks.getChannelCount() == shortcutChannelCount &&
+                shortcutTracks.getPlaylistModel().getLaneCount() == shortcutLaneCount,
+            "Failed Ctrl+L routing changed project structure");
 
     auto& patternManager = tracks.getPatternManager();
     auto& trackUnits = tracks.getUnitManager();
@@ -194,7 +257,29 @@ int main() {
     stillLinkedClip = playlist.getClip(linkedClip.id);
     require(uniqueClip && stillLinkedClip && uniqueClip->patternId == stillLinkedClip->patternId,
             "Make unique undo did not restore the shared source identity");
+    require(tracks.getCommandHistory().redo(), "Make unique redo was unavailable");
+    uniqueClip = playlist.getClip(audioClip.id);
+    require(uniqueClip && uniqueClip->patternId == uniquePatternId,
+            "Make unique redo did not restore the original unique source identity");
+    require(patternManager.getPattern(uniquePatternId) &&
+                patternManager.getPattern(uniquePatternId)->getMixerChannelId() == 77,
+            "Make unique redo did not restore the unique source route");
+    require(tracks.getCommandHistory().undo(), "Second make unique undo was unavailable");
     playlist.removeClip(linkedClip.id);
+
+    ClipEdits poisonedEdits = audioClip.edits;
+    poisonedEdits.gainLinear = std::numeric_limits<float>::quiet_NaN();
+    poisonedEdits.pan = std::numeric_limits<float>::infinity();
+    poisonedEdits.fadeInBeats = std::numeric_limits<float>::quiet_NaN();
+    poisonedEdits.fadeOutBeats = std::numeric_limits<float>::infinity();
+    require(playlist.setClipEdits(audioClip.id, poisonedEdits), "Failed to install non-finite clip edits");
+    graph = AudioGraphBuilder::buildFromTrackManager(tracks);
+    require(findTrack(graph, 77) && !findTrack(graph, 77)->clips.empty(), "Poisoned clip vanished from graph");
+    const auto& sanitizedClip = findTrack(graph, 77)->clips.front();
+    require(std::isfinite(sanitizedClip.gain) && sanitizedClip.gain == 1.0f && std::isfinite(sanitizedClip.pan) &&
+                sanitizedClip.pan == 0.0f && sanitizedClip.fadeInSamples == 0 && sanitizedClip.fadeOutSamples == 0,
+            "Non-finite clip edits reached the render graph");
+    require(playlist.setClipEdits(audioClip.id, audioClip.edits), "Failed to restore finite clip edits");
 
     playlist.moveClip(audioClip.id, 8.0, laneB);
     graph = AudioGraphBuilder::buildFromTrackManager(tracks);

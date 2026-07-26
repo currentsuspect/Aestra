@@ -52,6 +52,14 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     if (!isVisible())
         return;
 
+    const bool anyPlaylistLaneSoloed =
+        m_trackManager && m_trackManager->getPlaylistModel().hasAudibleSoloLane();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setAnyPlaylistLaneSoloed(anyPlaylistLaneSoloed);
+        }
+    }
+
     AestraUI::NUIRect bounds = getBounds();
 
     // Normal rendering with FBO CACHING for massive FPS boost! 🚀

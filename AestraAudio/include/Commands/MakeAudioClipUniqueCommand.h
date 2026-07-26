@@ -24,13 +24,19 @@ public:
         const auto* sourcePattern = m_manager.getPatternManager().getPattern(clip->patternId);
         if (!sourcePattern || !sourcePattern->isAudio())
             return;
-        m_originalPatternId = clip->patternId;
-        m_uniquePatternId = m_manager.getPatternManager().clonePattern(m_originalPatternId);
-        if (!m_uniquePatternId.isValid())
-            return;
+        if (!m_originalPatternId.isValid()) {
+            m_originalPatternId = clip->patternId;
+        }
+        if (m_detachedPattern) {
+            if (!m_manager.getPatternManager().reinsertPattern(m_detachedPattern))
+                return;
+        } else {
+            m_uniquePatternId = m_manager.getPatternManager().clonePattern(m_originalPatternId);
+            if (!m_uniquePatternId.isValid())
+                return;
+        }
         if (!m_manager.getPlaylistModel().setClipPattern(m_clipId, m_uniquePatternId)) {
-            m_manager.getPatternManager().removePattern(m_uniquePatternId);
-            m_uniquePatternId = {};
+            m_detachedPattern = m_manager.getPatternManager().detachPattern(m_uniquePatternId);
             return;
         }
         m_manager.markModified();
@@ -41,8 +47,7 @@ public:
         if (!m_executed)
             return;
         if (m_manager.getPlaylistModel().setClipPattern(m_clipId, m_originalPatternId)) {
-            m_manager.getPatternManager().removePattern(m_uniquePatternId);
-            m_uniquePatternId = {};
+            m_detachedPattern = m_manager.getPatternManager().detachPattern(m_uniquePatternId);
             m_manager.markModified();
             m_executed = false;
         }
@@ -59,6 +64,7 @@ private:
     ClipInstanceID m_clipId;
     PatternID m_originalPatternId;
     PatternID m_uniquePatternId;
+    std::unique_ptr<PatternSource> m_detachedPattern;
     bool m_executed{false};
 };
 

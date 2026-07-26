@@ -277,7 +277,6 @@ void PatternBrowserPanel::refreshPatterns() {
         entry.name = p->name;
         entry.isMidi = p->isMidi();
         entry.lengthBeats = p->lengthBeats;
-        entry.mixerChannel = p->getMixerChannel();
         entry.isPlacedOnTimeline = playlistModel.isPatternUsed(entry.id);
         m_patterns.push_back(entry);
     }

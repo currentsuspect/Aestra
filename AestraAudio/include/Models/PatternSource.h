@@ -99,12 +99,6 @@ public:
     uint32_t getMixerChannelId() const { return m_mixerChannelId; }
     void setMixerChannelId(uint32_t channelId) { m_mixerChannelId = channelId; }
 
-    // Compatibility accessors for older UI callers. Values are stable IDs, not indexes.
-    int getMixerChannel() const {
-        return m_mixerChannelId <= static_cast<uint32_t>(INT32_MAX) ? static_cast<int>(m_mixerChannelId) : 0;
-    }
-    void setMixerChannel(int channelId) { m_mixerChannelId = channelId > 0 ? static_cast<uint32_t>(channelId) : 0; }
-
     bool isMidi() const { return type == Type::Midi && std::holds_alternative<MidiPayload>(payload); }
 
     bool isAudio() const { return type == Type::Audio && std::holds_alternative<AudioSlicePayload>(payload); }
