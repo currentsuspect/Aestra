@@ -11,7 +11,7 @@
 
 namespace AestraUI {
 class NUIButton;
-class NUIDropdown;
+class UIInsertRoutePicker;
 class NUILabel;
 class NUISlider;
 } // namespace AestraUI
@@ -47,7 +47,6 @@ private:
     bool m_editGestureActive{false};
     bool m_suppressCallbacks{false};
     uint64_t m_routeFingerprint{0};
-    std::vector<uint32_t> m_routeIds;
     std::vector<float> m_waveformData;
 
     std::shared_ptr<AestraUI::NUIComponent> m_surface;
@@ -56,7 +55,7 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_sourceMetaLabel;
     std::shared_ptr<AestraUI::NUILabel> m_routeLabel;
     std::shared_ptr<AestraUI::NUILabel> m_routeHintLabel;
-    std::shared_ptr<AestraUI::NUIDropdown> m_routeDropdown;
+    std::shared_ptr<AestraUI::UIInsertRoutePicker> m_routePicker;
     std::shared_ptr<AestraUI::NUILabel> m_instanceLabel;
     std::shared_ptr<AestraUI::NUILabel> m_gainLabel;
     std::shared_ptr<AestraUI::NUILabel> m_panLabel;
@@ -85,7 +84,7 @@ private:
     void applyWorkingEdits();
     void commitEditGesture();
     void applyDiscreteEdit(const ClipEdits& edits);
-    void selectRouteIndex(int index);
+    void selectRoute(uint32_t routeId);
 };
 
 } // namespace Audio
