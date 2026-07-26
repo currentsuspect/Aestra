@@ -272,7 +272,12 @@ RenderResult renderThroughAestraEngine(const std::vector<TrackFixture>& tracks, 
         if (channel) {
             trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
         }
-        trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+        const ClipInstanceID clipId =
+            trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+        if (!trackManager->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+            std::cerr << "Failed to configure unity-gain audio-purity fixture\n";
+            return {};
+        }
     }
 
     AudioEngine engine;

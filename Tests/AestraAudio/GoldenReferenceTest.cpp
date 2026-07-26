@@ -107,7 +107,11 @@ AnalysisResult runSignalTest(const std::string& label, const std::vector<float>&
     if (channel) {
         trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
     }
-    trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+    const ClipInstanceID clipId =
+        trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+    if (!trackManager->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        return {label, false, 0.0, 0.0, 0.0};
+    }
 
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);

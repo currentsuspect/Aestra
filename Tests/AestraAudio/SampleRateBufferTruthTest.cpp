@@ -131,7 +131,11 @@ void runCrossRateCase() {
         if (channel) {
             tm->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
         }
-        tm->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, 2.0);
+        const ClipInstanceID clipId = tm->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, 2.0);
+        if (!tm->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+            verdict(false, "Cross-rate fixture uses unity clip gain");
+            return;
+        }
     }
 
     AudioEngine engine;

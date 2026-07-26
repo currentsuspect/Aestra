@@ -84,7 +84,11 @@ static std::vector<float> renderSine(
     if (channel) {
         tm->getPatternManager().setPatternMixerChannel(patId, channel->getChannelId());
     }
-    tm->getPlaylistModel().addClipFromPattern(laneId, patId, 0.0, durationSec * 2.0);
+    const ClipInstanceID clipId = tm->getPlaylistModel().addClipFromPattern(laneId, patId, 0.0, durationSec * 2.0);
+    if (!tm->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        CHECK(false, "Quality fixture uses unity clip gain");
+        return {};
+    }
 
     AudioEngine eng;
     eng.setSampleRate(sampleRate);
