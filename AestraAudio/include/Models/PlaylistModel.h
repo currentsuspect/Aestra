@@ -466,13 +466,14 @@ public:
         const double samplesPerBeat = (m_projectSampleRate * 60.0) / snapshot->bpm;
         constexpr uint64_t kMaxSampleOffset = std::numeric_limits<uint64_t>::max();
         const auto toSampleOffset = [](double offset, double scale) -> uint64_t {
+            constexpr uint64_t kMaxOffset = std::numeric_limits<uint64_t>::max();
             if (!std::isfinite(offset) || offset <= 0.0 || !std::isfinite(scale) || scale <= 0.0) {
                 return 0;
             }
 
             const long double scaled = static_cast<long double>(offset) * static_cast<long double>(scale);
-            if (scaled >= static_cast<long double>(kMaxSampleOffset)) {
-                return kMaxSampleOffset;
+            if (scaled >= static_cast<long double>(kMaxOffset)) {
+                return kMaxOffset;
             }
             return static_cast<uint64_t>(scaled);
         };
