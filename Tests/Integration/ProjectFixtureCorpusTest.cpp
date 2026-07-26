@@ -226,8 +226,8 @@ int main() {
     // ---------------- Migration proof: a re-save must be stamped current (v2).
     auto resave = ProjectSerializer::serialize(tm1, load1.tempo, load1.playhead, 2);
     require(resave.ok, "re-serialize failed");
-    require(resave.contents.find("\"version\": 2") != std::string::npos ||
-                resave.contents.find("\"version\":2") != std::string::npos,
+    require(resave.contents.find("\"version\": 3") != std::string::npos ||
+                resave.contents.find("\"version\":3") != std::string::npos,
             "re-save not stamped with current version (migration did not run)");
 
     // ---------------- The re-save must load with every value intact.

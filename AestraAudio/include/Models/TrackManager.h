@@ -2,6 +2,8 @@
 #include "../Core/GraphDirtyReason.h"
 #include "../Commands/AddClipCommand.h"
 #include "../Commands/CommandHistory.h"
+#include "../Commands/CommandTransaction.h"
+#include "../Commands/CreateLaneCommand.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
@@ -108,14 +110,34 @@ public:
     /**
      * @brief Add a new channel
      */
-    MixerChannel* addChannel(const std::string& name = "") {
+    MixerChannel* addChannel(const std::string& name = "") { return addChannelWithId(name, 0); }
+
+    /**
+     * @brief Add a channel while restoring a persisted stable identity.
+     * @param name User-facing channel name.
+     * @param requestedId Persisted channel ID, or 0 to mint a new ID.
+     */
+    MixerChannel* addChannelWithId(const std::string& name, uint32_t requestedId) {
         if (reportRealtimeMisuse("TrackManager::addChannel")) {
             return nullptr;
         }
-        // IDs start at 1 to avoid collision with Master (ID 0).
-        const uint32_t channelId = m_nextChannelId++;
+        // IDs start at 1 to avoid collision with Master (ID 0). A duplicate or
+        // invalid persisted ID is replaced instead of aliasing two live routes.
+        constexpr uint32_t invalidChannelId = std::numeric_limits<uint32_t>::max();
+        uint32_t channelId = requestedId;
+        if (channelId == 0 || channelId == invalidChannelId || getChannelById(channelId) != nullptr) {
+            while (m_nextChannelId != invalidChannelId && getChannelById(m_nextChannelId) != nullptr) {
+                ++m_nextChannelId;
+            }
+            if (m_nextChannelId == invalidChannelId) {
+                return nullptr;
+            }
+            channelId = m_nextChannelId++;
+        } else {
+            m_nextChannelId = std::max(m_nextChannelId, channelId + 1);
+        }
         auto channel = std::make_unique<MixerChannel>(
-            name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name, channelId);
+            name.empty() ? "Insert " + std::to_string(channelId) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {
@@ -148,6 +170,9 @@ public:
     bool removeLastChannel() {
         if (m_channels.empty())
             return false;
+        const uint32_t removedChannelId = m_channels.back()->getChannelId();
+        m_unitManager.resetMixerChannel(removedChannelId);
+        m_patternManager.resetMixerChannel(removedChannelId);
         m_channels.pop_back();
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
@@ -166,6 +191,8 @@ public:
             return false;
         }
 
+        m_unitManager.resetMixerChannel(channelId);
+        m_patternManager.resetMixerChannel(channelId);
         m_channels.erase(it);
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
@@ -267,6 +294,35 @@ public:
      * @return Const track pointer or nullptr when out of range.
      */
     const MixerChannel* getTrack(size_t index) const { return getChannel(index); }
+
+    /** @brief Find a mixer channel by stable ID. */
+    MixerChannel* getChannelById(uint32_t channelId) {
+        const size_t index = findChannelIndexById(channelId);
+        return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /** @brief Find a mixer channel by stable ID. */
+    const MixerChannel* getChannelById(uint32_t channelId) const {
+        const size_t index = findChannelIndexById(channelId);
+        return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /** Route an audio source pattern independently from Playlist placement. */
+    bool setAudioPatternMixerChannel(PatternID patternId, int64_t channelId) {
+        uint32_t resolvedId = MASTER_MIXER_CHANNEL_ID;
+        if (channelId > 0 && channelId < static_cast<int64_t>(std::numeric_limits<uint32_t>::max())) {
+            const uint32_t candidate = static_cast<uint32_t>(channelId);
+            if (getChannelById(candidate)) {
+                resolvedId = candidate;
+            }
+        }
+        if (!m_patternManager.setPatternMixerChannel(patternId, resolvedId)) {
+            return false;
+        }
+        requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        return true;
+    }
 
     /**
      * @brief Get the playlist model
@@ -1176,16 +1232,14 @@ private:
                 const auto& midi = std::get<MidiPayload>(pattern->payload);
                 size_t noteCount = midi.notes.size();
                 UnitID firstUnitId = noteCount > 0 ? midi.notes.front().unitId : 0;
-                int firstRoute = -999;
+                uint32_t firstMixerChannelId = MASTER_MIXER_CHANNEL_ID;
                 if (firstUnitId != 0) {
                     if (auto* unit = m_unitManager.getUnit(firstUnitId)) {
-                        firstRoute = unit->targetMixerRoute;
-                    } else {
-                        firstRoute = -998;
+                        firstMixerChannelId = unit->targetMixerChannelId;
                     }
                 }
                 routeSummary = "notes=" + std::to_string(noteCount) + " firstUnit=" + std::to_string(firstUnitId) +
-                               " firstRoute=" + std::to_string(firstRoute);
+                               " firstMixerChannelId=" + std::to_string(firstMixerChannelId);
             }
 
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
@@ -1310,15 +1364,9 @@ private:
             return;
         }
 
-        const size_t channelIndex = findChannelIndexById(channelId);
-        if (channelIndex == static_cast<size_t>(-1)) {
-            Log::warning("[TrackManager] Could not resolve lane for recorded track " + std::to_string(channelId));
-            return;
-        }
-
-        PlaylistLaneID laneId = m_playlistModel.getLaneId(channelIndex);
-        if (!laneId.isValid()) {
-            Log::warning("[TrackManager] Invalid lane target for recorded track " + std::to_string(channelId));
+        if (!getChannelById(channelId)) {
+            Log::warning("[TrackManager] Could not resolve mixer insert for recorded take " +
+                         std::to_string(channelId));
             return;
         }
 
@@ -1379,6 +1427,7 @@ private:
             Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
             return;
         }
+        m_patternManager.setPatternMixerChannel(patternId, channelId);
 
         ClipInstance clip;
         clip.id = ClipInstanceID::generate();
@@ -1391,14 +1440,43 @@ private:
         clip.edits.gain = playbackGain;
         clip.edits.gainLinear = playbackGain;
 
-        auto cmd = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
-        m_commandHistory.pushAndExecute(cmd);
+        // Recording destination and Playlist placement are separate. Create a
+        // lane for the take while the PatternSource retains the armed insert.
+        auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
+        createLane->execute();
+        const PlaylistLaneID laneId = createLane->getLaneId();
+        if (!laneId.isValid()) {
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to create a Playlist lane for recorded take.");
+            return;
+        }
+
+        auto addClip = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
+        addClip->execute();
+        if (!m_playlistModel.getClip(clip.id)) {
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to place recorded take on its Playlist lane.");
+            return;
+        }
+
+        auto transaction = std::make_shared<CommandTransaction>("Record Take");
+        transaction->add(createLane);
+        transaction->add(addClip);
+        transaction->markExecuted();
+        if (!m_commandHistory.pushExecuted(transaction)) {
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to add recorded take to command history.");
+            return;
+        }
         requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
         m_modified.store(true, std::memory_order_relaxed);
 
-        Log::info("[TrackManager] Recorded take committed: " + takePath + " on track " + std::to_string(channelId) +
-                  " at beat " + std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) +
-                  ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
+        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " +
+                  std::to_string(channelId) + " at beat " + std::to_string(startBeat) + " with raw peak " +
+                  std::to_string(rawPeak) + ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
                   std::to_string(playbackGain));
     }
 

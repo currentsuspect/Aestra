@@ -114,25 +114,9 @@ void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
             baseColor = theme.getColor("primary"); // Purple
             isMaster = true;
         } else {
-            // Priority: Use Playlist Lane Color (Visual Source of Truth)
-            bool colorFound = false;
-            
-            // Try mapped lane
-            if (m_laneId.isValid() && m_trackManager) {
-                const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
-                // Ensure alpha is fully opaque for the base color extraction
-                if (lane && lane->colorRGBA != 0) {
-                    baseColor = AestraUI::NUIColor::fromHex(lane->colorRGBA).withAlpha(1.0f);
-                    colorFound = true;
-                }
-            }
-            
-            // Fallback to internal track color
-            if (!colorFound) {
-                uint32_t c = m_track->getColor();
-                if (c != 0) {
-                    baseColor = AestraUI::NUIColor::fromHex(c).withAlpha(1.0f);
-                } 
+            uint32_t c = m_track->getColor();
+            if (c != 0) {
+                baseColor = AestraUI::NUIColor::fromHex(c).withAlpha(1.0f);
             }
         }
     }
@@ -305,24 +289,10 @@ void MixerView::refreshChannels() {
     
     // THREAD-SAFE: Get a snapshot of channels to avoid race with Audio Thread
     auto channelsSnapshot = m_trackManager->getChannelsSnapshot();
-    auto& playlist = m_trackManager->getPlaylistModel();
-    
-    // Create channel strip for each track
-    // Assume 1:1 mapping between Playlist Lanes and non-skipped Mixer Channels for now
-    // (excluding Master which is special case ID 0)
-    size_t laneIndex = 0;
-    
+    // Mixer inserts are independent from Playlist lanes.
     for (const auto& track : channelsSnapshot) {
         if (track && track->getName() != "Preview") {  // Skip preview track
             auto channelStrip = std::make_shared<ChannelStrip>(std::shared_ptr<MixerChannel>(track, [](MixerChannel*){}), m_trackManager.get());
-
-            // Map to playlist lane if it's a regular track
-            if (track->getChannelId() != 0) {
-                if (laneIndex < playlist.getLaneCount()) {
-                     channelStrip->setPlaylistLaneID(playlist.getLaneId(laneIndex));
-                     laneIndex++;
-                }
-            }
 
             channelStrip->setPlatformBridge(m_platformBridge);
             m_channelStrips.push_back(channelStrip);

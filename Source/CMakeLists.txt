@@ -55,6 +55,8 @@ set(Aestra_SOURCES
 	Panels/TakesPanel.cpp
 	Panels/SampleEditorPanel.h
 	Panels/SampleEditorPanel.cpp
+	Panels/AudioClipEditorPanel.h
+	Panels/AudioClipEditorPanel.cpp
 	
 	# Settings
 	Settings/ConfirmationDialog.h

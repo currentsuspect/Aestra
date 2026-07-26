@@ -74,7 +74,7 @@ int main() {
     UnitID unitId = unitManager.createUnit("Aestra Rumble", UnitGroup::Synth);
     unitManager.attachPlugin(unitId, "com.Aestrastudios.rumble", rumble);
     unitManager.setUnitEnabled(unitId, true);
-    unitManager.setUnitMixerChannel(unitId, -1); // route directly to master in Arsenal mode
+    unitManager.setUnitMixerChannel(unitId, MASTER_MIXER_CHANNEL_ID); // route directly to master in Arsenal mode
     unitManager.captureUnitPluginState(unitId);
 
     PatternID patternId = patternManager.createPattern();

@@ -62,12 +62,14 @@ namespace Aestra::Audio {
     class PianoRollPanel;
     class ArsenalPanel;
     class SampleEditorPanel;
+    class AudioClipEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
     class AestraHistoryPanel;
     class TakesPanel;
     class AuditionEngine;  // For Audition Mode
     class PlaybackGraphController;
+    struct ClipInstanceID;
 }
 
 namespace Aestra {
@@ -442,6 +444,7 @@ private:
     double m_pendingCountInTargetSeconds{0.0};
 
     std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
+    std::shared_ptr<Aestra::Audio::AudioClipEditorPanel> m_audioClipEditorPanel;
     AestraUI::NUIRect m_sampleEditorRect{0.0f, 0.0f, 640.0f, 430.0f};
 
     // Playback graph controller - single authoritative drain for graph rebuilds
@@ -455,6 +458,7 @@ private:
     AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
+    void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void enqueueMainThreadTask(std::function<void()> task);
     void drainMainThreadTasks();

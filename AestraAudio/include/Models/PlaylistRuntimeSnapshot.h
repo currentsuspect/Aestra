@@ -34,6 +34,10 @@ struct ClipRuntimeInfo {
     // Parameters
     float gainLinear{1.0f};
     float pan{0.0f};
+    uint64_t fadeInSamples{0};
+    uint64_t fadeOutSamples{0};
+    /** Stable source-level mixer destination (0 routes directly to Master). */
+    uint32_t mixerChannelId{0};
 
     // Type
     bool isAudioClip{true};

@@ -131,6 +131,9 @@ public:
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
     void setOnOpenPatternInPianoRoll(std::function<void(PatternID)> cb) { m_onOpenPatternInPianoRoll = std::move(cb); }
+    void setOnOpenAudioClipEditor(std::function<void(ClipInstanceID)> cb) {
+        m_onOpenAudioClipEditor = std::move(cb);
+    }
     void setOnPreviewPatternClip(std::function<void(PatternID)> cb) { m_onPreviewPatternClip = std::move(cb); }
     void setOnStopPatternClipPreview(std::function<void()> cb) { m_onStopPatternClipPreview = std::move(cb); }
 
@@ -501,6 +504,7 @@ private:
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
+    std::function<void(ClipInstanceID)> m_onOpenAudioClipEditor;
     std::function<void(PatternID)> m_onPreviewPatternClip;
     std::function<void()> m_onStopPatternClipPreview;
     std::function<void(int)> m_onLoopPresetChanged;        // Called when loop preset dropdown changes

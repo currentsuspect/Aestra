@@ -289,7 +289,7 @@ private:
     // build (com.Aestrastudios.sampler is the only always-available instrument).
     bool prepareToneSample();
     // Get-or-create the mixer channel + playlist lane + sampler unit that plays
-    // MIDI placed on `laneIndex`, routed to that timeline lane and on to master.
+    // MIDI placed on `laneIndex`, routed to that lane's stable mixer channel.
     // Returns the unit id, or 0 on failure.
     uint64_t ensureLaneInstrument(uint32_t laneIndex);
 

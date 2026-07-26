@@ -47,6 +47,8 @@ public:
      * @brief Refresh cached unit state from the backing managers.
      */
     void updateState();
+    /** @brief Route this unit to the first unused mixer insert, creating one when needed. */
+    bool routeToFirstFreeMixerChannel();
 
     /** @brief Callback fired when row dragging begins. */
     std::function<void(Aestra::Audio::UnitID)> m_onDragStart;
@@ -170,11 +172,14 @@ private:
     std::string m_groupLabel;
     double m_audioDurationSeconds = 0.0;
     std::vector<float> m_audioPreviewWaveform;
-    int m_mixerChannel = -1;
+    uint32_t m_mixerChannelId = Aestra::Audio::MASTER_MIXER_CHANNEL_ID;
+    std::string m_mixerRouteShortLabel{"M"};
 
     // === Internal State ===
     void layoutNameLabel();
     void showRowContextMenu(const NUIPoint& pos);
+    void showMixerRoutingMenu(const NUIPoint& pos);
+    void routeToMixerChannel(uint32_t channelId);
     void showDeleteConfirmation(const NUIPoint& pos);
 
     // === Layout Constants (Premium v2) ===
@@ -259,6 +264,7 @@ private:
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;
     std::shared_ptr<NUIContextMenu> m_rowContextMenu;
+    std::shared_ptr<NUIContextMenu> m_mixerRoutingMenu;
 
     // Cache management
     bool m_needsCacheUpdate = true;

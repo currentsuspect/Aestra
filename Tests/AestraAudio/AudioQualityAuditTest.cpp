@@ -60,7 +60,7 @@ static std::vector<float> renderSine(
 
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(sampleRate));
-    tm->addChannel("QualityTest");
+    auto* channel = tm->addChannel("QualityTest");
 
     // Portable temp path with a per-run unique name (avoids collisions in
     // parallel test runs; the source is in-memory, path is metadata only)
@@ -81,6 +81,9 @@ static std::vector<float> renderSine(
     PlaylistLaneID laneId = tm->getPlaylistModel().createLane("quality");
     PatternID patId = tm->getPatternManager().createAudioPattern(
         "quality_pat", durationSec * 2.0, payload);
+    if (channel) {
+        tm->getPatternManager().setPatternMixerChannel(patId, channel->getChannelId());
+    }
     tm->getPlaylistModel().addClipFromPattern(laneId, patId, 0.0, durationSec * 2.0);
 
     AudioEngine eng;

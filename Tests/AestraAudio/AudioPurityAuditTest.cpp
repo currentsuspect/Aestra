@@ -269,6 +269,9 @@ RenderResult renderThroughAestraEngine(const std::vector<TrackFixture>& tracks, 
         }
         const PatternID patternId =
             trackManager->getPatternManager().createAudioPattern(stem, payload.durationSeconds * 2.0, payload);
+        if (channel) {
+            trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+        }
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
     }
 
