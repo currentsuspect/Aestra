@@ -87,12 +87,16 @@ int main() {
     require(malformedStableRoute.getUnitMixerChannel(1) == 42,
             "Malformed stable destination blocked valid legacy route migration");
 
-    TrackManager tracks;
+    // TrackManager embeds large fixed-capacity RT queues. Keep the independent
+    // fixtures off the smaller default Windows process stack.
+    auto tracksOwner = std::make_unique<TrackManager>();
+    auto& tracks = *tracksOwner;
     auto* restoredChannel = tracks.addChannelWithId("Restored", 42);
     require(restoredChannel && restoredChannel->getChannelId() == 42, "Persisted channel ID was not restored");
     auto* nextChannel = tracks.addChannel("Next");
     require(nextChannel && nextChannel->getChannelId() == 43, "Channel ID source did not advance past restored ID");
-    TrackManager defaultNames;
+    auto defaultNamesOwner = std::make_unique<TrackManager>();
+    auto& defaultNames = *defaultNamesOwner;
     const auto* defaultInsert = defaultNames.addChannel();
     require(defaultInsert && defaultInsert->getName() == "Insert 1",
             "New mixer destinations must use Insert terminology");
@@ -101,7 +105,8 @@ int main() {
     require(postDeleteInsert && postDeleteInsert->getName() == "Insert 2",
             "Default insert name reused a deleted channel number");
 
-    TrackManager firstFreeTracks;
+    auto firstFreeTracksOwner = std::make_unique<TrackManager>();
+    auto& firstFreeTracks = *firstFreeTracksOwner;
     const UnitID firstFreeUnit = firstFreeTracks.getUnitManager().createUnit("Bass", UnitType::Instrument);
     firstFreeTracks.getCommandHistory().pushAndExecute(
         std::make_shared<AssignUnitToFirstFreeInsertCommand>(firstFreeTracks, firstFreeUnit, "Bass", 0xFF336699));
@@ -124,7 +129,8 @@ int main() {
                 firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == createdDestinationId,
             "First-free route redo did not restore stable identities atomically");
 
-    TrackManager patternOccupiedTracks;
+    auto patternOccupiedTracksOwner = std::make_unique<TrackManager>();
+    auto& patternOccupiedTracks = *patternOccupiedTracksOwner;
     const auto* patternInsert = patternOccupiedTracks.addChannel("Audio Source");
     const auto* availableInsert = patternOccupiedTracks.addChannel("Available");
     require(patternInsert && availableInsert, "Pattern-occupied route setup could not create inserts");
@@ -145,7 +151,8 @@ int main() {
                 patternOccupiedTracks.getPlaylistModel().getLaneCount() == 0,
             "First-free routing created project structure despite an available insert");
 
-    TrackManager missingRedoTracks;
+    auto missingRedoTracksOwner = std::make_unique<TrackManager>();
+    auto& missingRedoTracks = *missingRedoTracksOwner;
     const auto* redoInsert = missingRedoTracks.addChannel("Redo");
     require(redoInsert, "Unit-route redo setup could not create an insert");
     const UnitID missingRedoUnit =
@@ -161,7 +168,8 @@ int main() {
     require(!missingRedoCommand->isUndoable() && !missingRedoTracks.isModified(),
             "Unit-route redo reported a project change after its unit was removed");
 
-    TrackManager shortcutTracks;
+    auto shortcutTracksOwner = std::make_unique<TrackManager>();
+    auto& shortcutTracks = *shortcutTracksOwner;
     const UnitID shortcutUnit = shortcutTracks.getUnitManager().createUnit("Shortcut", UnitType::Instrument);
     require(assignUnitToFirstFreeInsert(shortcutTracks, shortcutUnit, "Shortcut", 0xFF224466),
             "Ctrl+L routing helper did not handle a selected unit");
