@@ -781,6 +781,10 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     assert(clip);
     assert(std::abs(clip->edits.gainLinear - Aestra::Audio::DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f);
     assert(std::abs(clip->durationSeconds - 1.0) < 1.0e-9);
+    auto persistedEdits = clip->edits;
+    persistedEdits.playbackRate = 1.75f;
+    persistedEdits.sourceStart = 1234.5;
+    assert(playlist.setClipEdits(clipId, persistedEdits));
 
     std::string firstSave = serializeProject(*tm1, 120.0, 0.0);
     assert(firstSave.find("\"durationSeconds\"") != std::string::npos);
@@ -798,6 +802,8 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     assert(loadedLane);
     assert(loadedLane->clips.size() == 1);
     assert(std::abs(loadedLane->clips[0].edits.gainLinear - Aestra::Audio::DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f);
+    assert(std::abs(loadedLane->clips[0].edits.playbackRate - 1.75f) < 1.0e-7f);
+    assert(std::abs(loadedLane->clips[0].edits.sourceStart - 1234.5) < 1.0e-9);
     assert(std::abs(loadedLane->clips[0].durationSeconds - 1.0) < 1.0e-9);
     assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
 

@@ -102,7 +102,9 @@ int main() {
     require(std::abs(rightAt(42000)) < 1.0e-6f, "Clip pan changed during fade-out");
 
     // Playback speed and source-start are instance edits. They must reach the
-    // same graph used by live playback and offline export.
+    // same graph used by live playback and offline export, including when an
+    // imported source uses a different sample rate from the project.
+    sourceBuffer->sampleRate = kSampleRate / 2;
     for (uint32_t frame = 0; frame < kTotalFrames; ++frame) {
         sourceBuffer->interleavedData[frame] = static_cast<float>(frame) / static_cast<float>(kTotalFrames);
     }
@@ -119,12 +121,12 @@ int main() {
     const auto shiftedLeftAt = [&shiftedOutput](uint32_t frame) {
         return shiftedOutput[static_cast<size_t>(frame) * 2];
     };
-    require(shiftedLeftAt(6000) > 0.49f && shiftedLeftAt(6000) < 0.51f,
-            "Playback speed or source-start did not reach the renderer");
-    require(shiftedLeftAt(12000) > 0.74f && shiftedLeftAt(12000) < 0.76f,
-            "Playback rate did not advance through the source at the requested speed");
-    require(std::abs(shiftedLeftAt(18000)) < 1.0e-6f,
-            "Playback continued after the rate-adjusted source region was exhausted");
+    require(shiftedLeftAt(6000) > 0.24f && shiftedLeftAt(6000) < 0.26f,
+            "Source-rate conversion or source-start did not reach the renderer");
+    require(shiftedLeftAt(12000) > 0.36f && shiftedLeftAt(12000) < 0.39f,
+            "Source and playback rates did not combine at the requested speed");
+    require(std::abs(shiftedLeftAt(42000)) < 1.0e-6f,
+            "Playback continued after the mixed-rate source region was exhausted");
 
     std::cout << "[PASS] AudioClipInstanceRenderTest\n";
     return 0;
