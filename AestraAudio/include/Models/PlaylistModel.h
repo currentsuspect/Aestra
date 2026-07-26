@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
@@ -463,6 +464,18 @@ public:
         snapshot->projectSampleRate = m_projectSampleRate;
 
         const double samplesPerBeat = (m_projectSampleRate * 60.0) / snapshot->bpm;
+        constexpr uint64_t kMaxSampleOffset = std::numeric_limits<uint64_t>::max();
+        const auto toSampleOffset = [](double offset, double scale) -> uint64_t {
+            if (!std::isfinite(offset) || offset <= 0.0 || !std::isfinite(scale) || scale <= 0.0) {
+                return 0;
+            }
+
+            const long double scaled = static_cast<long double>(offset) * static_cast<long double>(scale);
+            if (scaled >= static_cast<long double>(kMaxSampleOffset)) {
+                return kMaxSampleOffset;
+            }
+            return static_cast<uint64_t>(scaled);
+        };
 
         const bool anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),
                                              [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
@@ -477,12 +490,13 @@ public:
                 ClipRuntimeInfo clipInfo;
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
                 clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
-                const double canonicalSourceStart = clip.durationSeconds > 0.0
-                                                        ? std::max(0.0, clip.sourceOffsetSeconds) * m_projectSampleRate
-                                                        : std::max(0.0, clip.sourceOffset) * samplesPerBeat;
-                const double instanceSourceStart =
-                    std::isfinite(clip.edits.sourceStart) ? std::max(0.0, clip.edits.sourceStart) : 0.0;
-                clipInfo.sourceStart = static_cast<uint64_t>(canonicalSourceStart + instanceSourceStart);
+                const uint64_t canonicalSourceStart =
+                    clip.durationSeconds > 0.0 ? toSampleOffset(clip.sourceOffsetSeconds, m_projectSampleRate)
+                                               : toSampleOffset(clip.sourceOffset, samplesPerBeat);
+                const uint64_t instanceSourceStart = toSampleOffset(clip.edits.sourceStart, 1.0);
+                clipInfo.sourceStart = instanceSourceStart > kMaxSampleOffset - canonicalSourceStart
+                                           ? kMaxSampleOffset
+                                           : canonicalSourceStart + instanceSourceStart;
                 clipInfo.gainLinear = std::isfinite(clip.edits.gainLinear) ? clip.edits.gainLinear : 1.0f;
                 clipInfo.pan =
                     std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;

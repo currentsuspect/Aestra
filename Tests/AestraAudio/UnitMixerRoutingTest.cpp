@@ -256,6 +256,22 @@ int main() {
     edited.sourceStart = 12.0;
     tracks.getCommandHistory().pushAndExecute(std::make_shared<SetClipEditsCommand>(playlist, audioClip.id, edited));
 
+    auto* malformedOffsetClip = playlist.getClip(audioClip.id);
+    require(malformedOffsetClip != nullptr, "Audio clip was unavailable for oversized offset coverage");
+    malformedOffsetClip->sourceOffsetSeconds = std::numeric_limits<double>::max();
+    ClipEdits oversizedOffsetEdits = edited;
+    oversizedOffsetEdits.sourceStart = std::numeric_limits<double>::max();
+    require(playlist.setClipEdits(audioClip.id, oversizedOffsetEdits), "Oversized finite clip offsets were rejected");
+    const auto oversizedOffsetSnapshot =
+        playlist.buildRuntimeSnapshot(tracks.getPatternManager(), tracks.getSourceManager());
+    require(oversizedOffsetSnapshot && !oversizedOffsetSnapshot->lanes.empty() &&
+                !oversizedOffsetSnapshot->lanes.front().clips.empty() &&
+                oversizedOffsetSnapshot->lanes.front().clips.front().sourceStart ==
+                    std::numeric_limits<uint64_t>::max(),
+            "Oversized finite clip offsets did not saturate safely");
+    malformedOffsetClip->sourceOffsetSeconds = 0.0;
+    require(playlist.setClipEdits(audioClip.id, edited), "Finite clip edits were not restored after offset coverage");
+
     auto findTrack = [](AudioGraph& graph, uint32_t id) -> TrackRenderState* {
         auto it = std::find_if(graph.tracks.begin(), graph.tracks.end(),
                                [id](const TrackRenderState& state) { return state.trackId == id; });

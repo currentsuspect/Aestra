@@ -1436,10 +1436,10 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     if (lane) {
         const bool soloSuppressed = m_anyPlaylistLaneSoloed && !lane->solo;
 
-        if (lane->solo) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
-        } else if (lane->muted) {
+        if (lane->muted) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.62f));
+        } else if (lane->solo) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
         } else if (soloSuppressed) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.44f));
         }
