@@ -131,6 +131,13 @@ public:
         return m_lanes.size();
     }
 
+    /** @brief Return whether any unmuted Playlist lane is currently soloed. */
+    bool hasAudibleSoloLane() const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return std::any_of(m_lanes.begin(), m_lanes.end(),
+                           [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
+    }
+
     // === Clip Management ===
 
     /**
@@ -203,6 +210,43 @@ public:
         }
 
         return nullptr;
+    }
+
+    /**
+     * @brief Replace the editable playback properties for one clip instance.
+     *
+     * The mutation stays behind PlaylistModel's lock and emits the normal clip
+     * change notification so the immutable audio graph is rebuilt off-thread.
+     */
+    bool setClipEdits(const ClipInstanceID& clipId, const ClipEdits& edits) {
+        {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            auto* clip = getClipInternal(clipId);
+            if (!clip) {
+                return false;
+            }
+            clip->edits = edits;
+        }
+        notifyClipChanged(clipId);
+        return true;
+    }
+
+    /** Replace the source pattern referenced by one clip instance. */
+    bool setClipPattern(const ClipInstanceID& clipId, PatternID patternId) {
+        if (!patternId.isValid()) {
+            return false;
+        }
+        {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            auto* clip = getClipInternal(clipId);
+            if (!clip) {
+                return false;
+            }
+            clip->patternId = patternId;
+            clip->sourceId = patternId.value;
+        }
+        notifyClipChanged(clipId);
+        return true;
     }
 
     /**
@@ -420,22 +464,43 @@ public:
 
         const double samplesPerBeat = (m_projectSampleRate * 60.0) / snapshot->bpm;
 
+        const bool anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),
+                                             [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
+
         for (const auto& lane : m_lanes) {
             LaneRuntimeInfo laneInfo;
             laneInfo.clips.reserve(lane.clips.size());
+
+            const bool laneAudible = !lane.muted && (!anyLaneSolo || lane.solo);
 
             for (const auto& clip : lane.clips) {
                 ClipRuntimeInfo clipInfo;
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
                 clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
                 clipInfo.sourceStart = static_cast<uint64_t>(clip.sourceOffset * samplesPerBeat);
-                clipInfo.gainLinear = clip.edits.gain;
+                clipInfo.gainLinear = std::isfinite(clip.edits.gainLinear) ? clip.edits.gainLinear : 1.0f;
+                clipInfo.pan =
+                    std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;
+                const double fadeInBeats =
+                    std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
+                                                         : 0.0;
+                const double fadeOutBeats =
+                    std::isfinite(clip.edits.fadeOutBeats)
+                        ? std::max(0.0, static_cast<double>(clip.edits.fadeOutBeats))
+                        : 0.0;
+                clipInfo.fadeInSamples = static_cast<uint64_t>(fadeInBeats * samplesPerBeat);
+                clipInfo.fadeOutSamples = static_cast<uint64_t>(fadeOutBeats * samplesPerBeat);
                 clipInfo.isAudioClip = true;
+
+                if (!laneAudible || clip.edits.muted) {
+                    continue;
+                }
 
                 // Resolve audio data through pattern → AudioSlicePayload → source
                 if (clip.patternId.isValid()) {
                     auto* pattern = patterns.getPattern(clip.patternId);
                     if (pattern && pattern->isAudio()) {
+                        clipInfo.mixerChannelId = pattern->getMixerChannelId();
                         auto& audioPayload = std::get<AudioSlicePayload>(pattern->payload);
                         if (auto* source = sources.getSource(audioPayload.audioSourceId)) {
                             // Phase 4 (F1): prefer the anti-aliased filtered copy when
@@ -622,8 +687,16 @@ public:
     std::vector<MidiClipPlaybackInstance> collectMidiClipInstances(const PatternManager& patterns) const {
         std::shared_lock<std::shared_mutex> lock(m_mutex);
         std::vector<MidiClipPlaybackInstance> instances;
+        const bool anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),
+                                             [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
         for (const auto& lane : m_lanes) {
+            if (lane.muted || (anyLaneSolo && !lane.solo)) {
+                continue;
+            }
             for (const auto& clip : lane.clips) {
+                if (clip.edits.muted) {
+                    continue;
+                }
                 if (!clip.patternId.isValid()) {
                     continue;
                 }

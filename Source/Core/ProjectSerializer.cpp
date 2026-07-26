@@ -37,7 +37,7 @@ namespace {
     // - Increment CURRENT when making breaking changes
     // - MIN_SUPPORTED is the oldest version we can still load
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
-    constexpr int PROJECT_VERSION_CURRENT = 2;
+    constexpr int PROJECT_VERSION_CURRENT = 3;
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
     constexpr size_t PROJECT_HISTORY_DEFAULT_MAX_ENTRIES = 50;
     // Total on-disk cap for a project's .history directory. A large project can
@@ -387,6 +387,7 @@ namespace {
         if (!validArraySection(root, "sources", PROJECT_MAX_SOURCES, error)) return false;
         if (!validArraySection(root, "patterns", PROJECT_MAX_PATTERNS, error)) return false;
         if (!validArraySection(root, "lanes", PROJECT_MAX_LANES, error, true)) return false;
+        if (!validArraySection(root, "mixerChannels", PROJECT_MAX_LANES, error)) return false;
 
         if (root.has("sources")) {
             const JSON& sources = root["sources"];
@@ -454,6 +455,36 @@ namespace {
                 }
             }
         }
+
+    if (root.has("mixerChannels")) {
+        const JSON& channels = root["mixerChannels"];
+        for (size_t i = 0; i < channels.size(); ++i) {
+            if (!channels[i].isObject()) {
+                error = "Invalid project file: mixer channel entry must be an object";
+                return false;
+            }
+            if (!validFiniteNumber(channels[i], "id", error, true))
+                return false;
+            if (!validStringField(channels[i], "name", PROJECT_MAX_STRING_BYTES, error))
+                return false;
+            if (!validColorField(channels[i], "color", error))
+                return false;
+            if (channels[i].has("effectChainStateHex") &&
+                (!channels[i]["effectChainStateHex"].isString() ||
+                 channels[i]["effectChainStateHex"].asString().size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES)) {
+                error = "Invalid project file: mixer effect chain state is too large";
+                return false;
+            }
+            if (channels[i].has("routing") && channels[i]["routing"].isObject() &&
+                channels[i]["routing"].has("sends")) {
+                const JSON& sends = channels[i]["routing"]["sends"];
+                if (!sends.isArray() || sends.size() > PROJECT_MAX_SENDS_PER_LANE) {
+                    error = "Invalid project file: mixer sends must be a bounded array";
+                    return false;
+                }
+            }
+        }
+    }
 
         const JSON& lanes = root["lanes"];
         for (size_t i = 0; i < lanes.size(); ++i) {
@@ -766,6 +797,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         pjs.set("id", JSON(static_cast<double>(p->id.value)));
         pjs.set("name", JSON(p->name));
         pjs.set("length", JSON(p->lengthBeats));
+        pjs.set("mixerChannelId", JSON(static_cast<double>(p->getMixerChannelId())));
         
         if (p->isAudio()) {
             pjs.set("type", JSON("audio"));
@@ -816,6 +848,56 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     }
     root.set("patterns", patternsJson);
 
+    // Mixer channels are persisted independently from Playlist lanes. The
+    // lane-local copies below remain temporarily for backward readers, but this
+    // top-level section is authoritative for current projects.
+    JSON mixerChannelsJson = JSON::array();
+    for (size_t channelIndex = 0; channelIndex < trackManager->getChannelCount(); ++channelIndex) {
+        const auto* channel = trackManager->getChannel(channelIndex);
+        if (!channel) {
+            continue;
+        }
+        JSON mjs = JSON::object();
+        mjs.set("id", JSON(static_cast<double>(channel->getChannelId())));
+        mjs.set("name", JSON(channel->getName()));
+        mjs.set("color", JSON(std::to_string(channel->getColor())));
+        mjs.set("volume", JSON(static_cast<double>(channel->getVolume())));
+        mjs.set("pan", JSON(static_cast<double>(channel->getPan())));
+        mjs.set("mute", JSON(channel->isMuted()));
+        mjs.set("solo", JSON(channel->isSoloed()));
+        mjs.set("soloSafe", JSON(channel->isSoloSafe()));
+        mjs.set("armed", JSON(channel->isArmed()));
+        mjs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
+        mjs.set("inputChannelIndex", JSON(static_cast<double>(channel->getInputChannelIndex())));
+        mjs.set("width", JSON(static_cast<double>(channel->getWidth())));
+        mjs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
+
+        JSON routingJson = JSON::object();
+        const uint32_t mainOutputId = channel->getMainOutputId();
+        routingJson.set("mainOutputId", JSON(static_cast<double>(mainOutputId == 0xFFFFFFFFu ? 0u : mainOutputId)));
+        JSON sendsJson = JSON::array();
+        for (const auto& send : channel->getSends()) {
+            JSON sjs = JSON::object();
+            sjs.set("targetId",
+                    JSON(static_cast<double>(send.targetChannelId == 0xFFFFFFFFu ? 0u : send.targetChannelId)));
+            sjs.set("gain", JSON(static_cast<double>(send.gain)));
+            sjs.set("pan", JSON(static_cast<double>(send.pan)));
+            sjs.set("postFader", JSON(send.postFader));
+            sjs.set("mute", JSON(send.mute));
+            sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+            sendsJson.push(sjs);
+        }
+        routingJson.set("sends", sendsJson);
+        mjs.set("routing", routingJson);
+
+        const auto effectChainState = channel->getEffectChain().saveState();
+        if (!effectChainState.empty()) {
+            mjs.set("effectChainStateHex", JSON(bytesToHex(effectChainState)));
+        }
+        mixerChannelsJson.push(mjs);
+    }
+    root.set("mixerChannels", mixerChannelsJson);
+
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
     size_t laneIndex = 0;
@@ -832,6 +914,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("solo", JSON(lane->solo));
             if (const auto* channel = trackManager->getChannel(laneIndex)) {
                 // MixerChannel state not covered by PlaylistLane
+                ljs.set("mixerChannelId", JSON(static_cast<double>(channel->getChannelId())));
                 ljs.set("soloSafe", JSON(channel->isSoloSafe()));
                 ljs.set("armed", JSON(channel->isArmed()));
                 ljs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
@@ -869,6 +952,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 JSON cj = JSON::object();
                 cj.set("param", JSON(curve.getTarget()));
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
+                cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                     // Plugin-parameter address (older builds ignore unknown keys;
@@ -1507,6 +1591,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
         // 3. Load Patterns
         std::unordered_map<uint64_t, PatternID> patternMap;
+        std::unordered_set<uint64_t> legacyAudioPatternIds;
+        std::unordered_map<uint64_t, std::unordered_map<uint32_t, PatternID>> legacyAudioRouteVariants;
         if (root.has("patterns")) {
             const JSON& pj = root["patterns"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1545,6 +1631,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         // Restore serialized pattern identity (#446); the map
                         // still covers collision/mint fallbacks.
                         PatternID newId = patternManager.createAudioPatternWithId(PatternID{oldId}, name, length, payload);
+                        if (auto* pattern = patternManager.getPattern(newId)) {
+                            if (pj[i].has("mixerChannelId") && pj[i]["mixerChannelId"].isNumber()) {
+                                const double rawMixerChannelId = pj[i]["mixerChannelId"].asNumber();
+                                if (std::isfinite(rawMixerChannelId) && rawMixerChannelId >= 0.0 &&
+                                    rawMixerChannelId < static_cast<double>(UINT32_MAX)) {
+                                    pattern->setMixerChannelId(static_cast<uint32_t>(rawMixerChannelId));
+                                }
+                            } else {
+                                pattern->legacyMixerRoutePending = true;
+                                legacyAudioPatternIds.insert(newId.value);
+                            }
+                        }
                         patternMap[oldId] = newId;
                     }
                 } else {
@@ -1636,7 +1734,93 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
-        // 4. Load Lanes and Clips
+        // 4. Load mixer channels independently from Playlist lanes (v3+).
+        const bool hasIndependentMixerChannels = root.has("mixerChannels") && root["mixerChannels"].isArray();
+        if (hasIndependentMixerChannels) {
+            const JSON& channels = root["mixerChannels"];
+            for (size_t i = 0; i < channels.size(); ++i) {
+                if (!channels[i].isObject()) {
+                    continue;
+                }
+                const std::string channelName =
+                    boundedStringOr(channels[i], "name", "Insert", PROJECT_MAX_STRING_BYTES);
+                const uint32_t storedId = static_cast<uint32_t>(
+                    finiteNumberOr(channels[i], "id", 0.0, 1.0, static_cast<double>(UINT32_MAX - 1)));
+                MixerChannel* channel = trackManager->addChannelWithId(channelName, storedId);
+                if (!channel) {
+                    warningLimiter.warning(ProjectLoadWarningCategory::LaneCreateChannel,
+                                           "[ProjectLoad] Failed to restore mixer channel '" + channelName + "'",
+                                           "[ProjectLoad] Additional mixer channel creation failures suppressed.");
+                    continue;
+                }
+
+                if (channels[i].has("color") && channels[i]["color"].isString()) {
+                    try {
+                        channel->setColor(
+                            static_cast<uint32_t>(std::stoull(channels[i]["color"].asString()) & 0xFFFFFFFFu));
+                    } catch (const std::exception&) {
+                        channel->setColor(0xFFFFFFFFu);
+                    }
+                }
+                channel->setVolume(static_cast<float>(finiteNumberOr(channels[i], "volume", 1.0, 0.0, 4.0)));
+                channel->setPan(static_cast<float>(finiteNumberOr(channels[i], "pan", 0.0, -1.0, 1.0)));
+                channel->setMute(channels[i].has("mute") && channels[i]["mute"].isBool() &&
+                                 channels[i]["mute"].asBool());
+                channel->setSolo(channels[i].has("solo") && channels[i]["solo"].isBool() &&
+                                 channels[i]["solo"].asBool());
+                if (channels[i].has("soloSafe") && channels[i]["soloSafe"].isBool())
+                    channel->setSoloSafe(channels[i]["soloSafe"].asBool());
+                if (channels[i].has("armed") && channels[i]["armed"].isBool())
+                    channel->setArmed(channels[i]["armed"].asBool());
+                if (channels[i].has("monitorInput") && channels[i]["monitorInput"].isBool())
+                    channel->setMonitoringEnabled(channels[i]["monitorInput"].asBool());
+                channel->setInputChannelIndex(
+                    static_cast<int>(finiteNumberOr(channels[i], "inputChannelIndex", -1.0, -2.0, 1024.0)));
+                channel->setWidth(static_cast<float>(finiteNumberOr(channels[i], "width", 1.0, 0.0, 4.0)));
+                channel->setTrackColorIndex(
+                    static_cast<int>(finiteNumberOr(channels[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
+
+                if (channels[i].has("routing") && channels[i]["routing"].isObject()) {
+                    const JSON& routing = channels[i]["routing"];
+                    const uint32_t mainOutputId = static_cast<uint32_t>(
+                        finiteNumberOr(routing, "mainOutputId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
+                    if (routing.has("sends") && routing["sends"].isArray()) {
+                        const JSON& sends = routing["sends"];
+                        for (size_t s = 0; s < sends.size(); ++s) {
+                            if (!sends[s].isObject())
+                                continue;
+                            AudioRoute route;
+                            const uint32_t targetId = static_cast<uint32_t>(
+                                finiteNumberOr(sends[s], "targetId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                            route.targetChannelId = targetId == 0 ? 0xFFFFFFFFu : targetId;
+                            route.gain = static_cast<float>(finiteNumberOr(sends[s], "gain", 1.0, 0.0, 16.0));
+                            route.pan = static_cast<float>(finiteNumberOr(sends[s], "pan", 0.0, -1.0, 1.0));
+                            route.postFader = !sends[s].has("postFader") || !sends[s]["postFader"].isBool() ||
+                                              sends[s]["postFader"].asBool();
+                            route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
+                            route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
+                                                  sends[s]["sidechainOnly"].asBool();
+                            channel->addSend(route);
+                        }
+                    }
+                }
+
+                auto& pluginManager = PluginManager::getInstance();
+                auto& chain = channel->getEffectChain();
+                chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+                if (channels[i].has("effectChainStateHex") && channels[i]["effectChainStateHex"].isString()) {
+                    const auto effectState = hexToBytes(channels[i]["effectChainStateHex"].asString());
+                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager)) {
+                        warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
+                                               "[ProjectLoad] Failed to restore mixer effect chain on: " + channelName,
+                                               "[ProjectLoad] Additional mixer effect-chain warnings suppressed.");
+                    }
+                }
+            }
+        }
+
+        // 5. Load Playlist lanes and clips.
         // Clip ids restored from the file must stay unique — a hand-edited or
         // corrupted file with duplicates would silently break id lookups.
         std::unordered_set<AestraUUID> seenClipIds;
@@ -1668,14 +1852,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         "[ProjectLoad] Additional lane creation failure warnings suppressed.");
                     continue;
                 }
-                MixerChannel* channel = trackManager->addChannel(laneName);
-                if (!channel) {
-                    warningLimiter.warning(
-                        ProjectLoadWarningCategory::LaneCreateChannel,
-                        "[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane",
-                        "[ProjectLoad] Additional lane channel creation failure warnings suppressed.");
-                    playlist.removeLane(laneId);
-                    continue;
+                MixerChannel* channel = nullptr;
+                if (!hasIndependentMixerChannels) {
+                    uint32_t storedMixerChannelId = 0;
+                    if (lj[i].has("mixerChannelId") && lj[i]["mixerChannelId"].isNumber()) {
+                        const double rawId = lj[i]["mixerChannelId"].asNumber();
+                        if (std::isfinite(rawId) && rawId > 0.0 && rawId < static_cast<double>(UINT32_MAX)) {
+                            storedMixerChannelId = static_cast<uint32_t>(rawId);
+                        }
+                    }
+                    channel = trackManager->addChannelWithId(laneName, storedMixerChannelId);
+                    if (!channel) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::LaneCreateChannel,
+                            "[ProjectLoad] Failed to create channel for legacy lane '" + laneName + "' — removing lane",
+                            "[ProjectLoad] Additional legacy lane channel creation failures suppressed.");
+                        playlist.removeLane(laneId);
+                        continue;
+                    }
                 }
                 if (auto* lane = playlist.getLane(laneId)) {
                     if (lj[i].has("color") && lj[i]["color"].isString()) {
@@ -1802,6 +1996,16 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             }
                             
                             AutomationCurve curve(param, target);
+                            if (aj[a].has("mixerChannelId") && aj[a]["mixerChannelId"].isNumber()) {
+                                const double rawMixerId = aj[a]["mixerChannelId"].asNumber();
+                                if (std::isfinite(rawMixerId) && rawMixerId > 0.0 &&
+                                    rawMixerId < static_cast<double>(UINT32_MAX)) {
+                                    curve.mixerChannelId = static_cast<uint32_t>(rawMixerId);
+                                }
+                            } else if (channel) {
+                                // Pre-v3 curves inherited their lane's paired insert.
+                                curve.mixerChannelId = channel->getChannelId();
+                            }
                             curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
                             // Plugin-parameter address (Custom target). Bounded:
                             // slot to the effect-chain size, paramId defensively.
@@ -1837,6 +2041,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     clip.id = ClipInstanceID(); // duplicate in file — mint below
                                 }
                                 clip.patternId = patternMap[oldPatId];
+                                if (channel && legacyAudioPatternIds.count(clip.patternId.value) != 0) {
+                                    const uint32_t legacyDestination = channel->getChannelId();
+                                    auto& variants = legacyAudioRouteVariants[clip.patternId.value];
+                                    auto variant = variants.find(legacyDestination);
+                                    if (variant == variants.end()) {
+                                        PatternID routedPattern = clip.patternId;
+                                        if (!variants.empty()) {
+                                            routedPattern = patternManager.clonePattern(clip.patternId);
+                                        }
+                                        if (routedPattern.isValid()) {
+                                            patternManager.setPatternMixerChannel(routedPattern, legacyDestination);
+                                            variants.emplace(legacyDestination, routedPattern);
+                                            clip.patternId = routedPattern;
+                                        }
+                                    } else {
+                                        clip.patternId = variant->second;
+                                    }
+                                }
                                 clip.sourceId = clip.patternId.value;
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
                                 const auto* loadedPattern = patternManager.getPattern(clip.patternId);
@@ -1901,6 +2123,19 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
+        // Resolve pre-stable-ID unit routes after all mixer channels exist.
+        {
+            std::vector<uint32_t> mixerChannelIds;
+            mixerChannelIds.reserve(trackManager->getChannelCount());
+            for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                if (const auto* channel = trackManager->getChannel(ci)) {
+                    mixerChannelIds.push_back(channel->getChannelId());
+                }
+            }
+            trackManager->getUnitManager().migrateLegacyMixerRoutes(mixerChannelIds);
+            trackManager->getPatternManager().validateMixerChannels(mixerChannelIds);
+        }
+
         // PHASE 7: Validate send routing targets.
         // Unresolved sends are non-fatal — the audio runtime silently ignores them
         // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.

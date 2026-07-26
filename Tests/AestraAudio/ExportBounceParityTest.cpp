@@ -135,6 +135,12 @@ int main() {
         PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane(stem);
         PatternID patternId = trackManager->getPatternManager().createAudioPattern(
             stem, kDurationBeats, payload);
+        const auto* destination = trackManager->getChannel(static_cast<size_t>(t));
+        if (!destination ||
+            !trackManager->getPatternManager().setPatternMixerChannel(patternId, destination->getChannelId())) {
+            std::cerr << "Could not assign explicit source destination for track " << t << "\n";
+            return 1;
+        }
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
     }
 

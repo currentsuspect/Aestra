@@ -129,6 +129,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UIMixerPluginDropdown.h
     Widgets/UIMixerPluginDropdown.cpp
+    Widgets/UIInsertRoutePicker.h
+    Widgets/UIInsertRoutePicker.cpp
     Widgets/UIRoutingMap.h
     Widgets/UIRoutingMap.cpp
     Widgets/UnitRow.h

@@ -69,12 +69,9 @@ static constexpr uint32_t CLIP_EDGE_FADE_SAMPLES = 128;
 
 private:
     /**
-     * @brief Helper to render Arsenal units assigned to a specific Timeline track.
-     *
-     * Current behavior is intentionally unchanged: routeId == trackIndex renders
-     * into that track path before Timeline track effects.
+     * @brief Render units assigned to a stable mixer channel before its effects.
      */
-    void renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,
+    void renderArsenalUnitsForTrack(uint32_t mixerChannelId, double* trackBuffer, const Context& ctx,
                                     AudioEngine& engineRef);
 
 private:

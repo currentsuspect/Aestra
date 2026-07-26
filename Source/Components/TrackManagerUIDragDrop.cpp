@@ -41,11 +41,12 @@ namespace Audio {
 AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
 
-    // Accept file drops, plugins, patterns, and MIDI clips. (Timeline clip
+    // Accept source content, patterns, and MIDI clips. Effects belong to the
+    // mixer and never imply a Playlist-lane/mixer-insert association. (Timeline clip
     // moves are an internal mouse drag, not a DragData transfer — see
     // m_draggedClipId.)
-    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::Plugin &&
-        data.type != AestraUI::DragDataType::MidiClip && data.type != AestraUI::DragDataType::Pattern) {
+    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::MidiClip &&
+        data.type != AestraUI::DragDataType::Pattern) {
         return AestraUI::DropFeedback::Invalid;
     }
 
@@ -175,22 +176,33 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     // Set target track index for logging
     result.targetTrackIndex = laneIndex;
 
+    // Reject unsupported payloads before appending a lane.
+    if (data.type == AestraUI::DragDataType::Plugin) {
+        result.accepted = false;
+        result.message = "Drop effects on a mixer insert";
+        clearDropPreview();
+        return result;
+    }
+    if (data.type == AestraUI::DragDataType::MidiClip) {
+        result.accepted = false;
+        result.message = "MIDI track creation not yet implemented";
+        clearDropPreview();
+        return result;
+    }
+    if (data.type == AestraUI::DragDataType::File && !AudioFileValidator::isValidAudioFile(data.filePath)) {
+        result.accepted = false;
+        result.message = "Unsupported file format";
+        clearDropPreview();
+        return result;
+    }
+
     // 2. Resolve target lane
     PlaylistLaneID targetLaneId;
     bool createdTargetLane = false;
-    uint32_t createdChannelId = 0;
     if (laneIndex == static_cast<int>(laneCount)) {
         // Create new lane if dropping at the end
         targetLaneId = playlist.createLane("Lane " + std::to_string(laneIndex + 1));
         createdTargetLane = targetLaneId.isValid();
-
-        // Ensure we also have a mixer channel (we maintain 1:1 mapping for now)
-        if (m_trackManager->getChannelCount() <= static_cast<size_t>(laneIndex)) {
-            if (auto* channel =
-                    m_trackManager->addChannel("Channel " + std::to_string(m_trackManager->getChannelCount() + 1))) {
-                createdChannelId = channel->getChannelId();
-            }
-        }
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {
@@ -214,31 +226,6 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             auto pattern = m_trackManager->getPatternManager().getPattern(pid);
             if (pattern) {
                 double duration = pattern->lengthBeats;
-                auto& unitManager = m_trackManager->getUnitManager();
-                if (pattern->isMidi()) {
-                    const auto& midi = std::get<MidiPayload>(pattern->payload);
-                    std::unordered_set<UnitID> routedUnits;
-                    for (const auto& note : midi.notes) {
-                        if (note.unitId == 0 || routedUnits.find(note.unitId) != routedUnits.end()) {
-                            continue;
-                        }
-                        if (auto* unit = unitManager.getUnit(note.unitId)) {
-                            unitManager.assignUnitToTimelineLane(note.unitId, laneIndex);
-                            Log::info("[TrackManagerUI] Routed note unit " + std::to_string(note.unitId) +
-                                      " to timeline lane " + std::to_string(laneIndex));
-                            routedUnits.insert(note.unitId);
-                        }
-                    }
-                } else {
-                    for (const auto unitId : unitManager.getAllUnitIDs()) {
-                        if (auto* unit = unitManager.getUnit(unitId); unit && unit->defaultPatternId == pid) {
-                            unitManager.assignUnitToTimelineLane(unitId, laneIndex);
-                            Log::info("[TrackManagerUI] Routed owner unit " + std::to_string(unitId) +
-                                      " to timeline lane " + std::to_string(laneIndex));
-                            break;
-                        }
-                    }
-                }
                 // Create clip instance manually and use command for undo support
                 ClipInstance clip;
                 clip.id = ClipInstanceID::generate();
@@ -250,6 +237,16 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
                 m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
+                if (!playlist.getClip(clip.id)) {
+                    if (createdTargetLane) {
+                        playlist.removeLane(targetLaneId);
+                    }
+                    result.accepted = false;
+                    result.message = "Could not place pattern";
+                    clearDropPreview();
+                    return result;
+                }
+
                 result.accepted = true;
                 result.message = "Pattern added: " + pattern->name;
                 Log::info("[TrackManagerUI] Pattern added to timeline: " + pattern->name);
@@ -258,10 +255,16 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 invalidateCache();
                 scheduleTimelineMinimapRebuild();
             } else {
+                if (createdTargetLane) {
+                    playlist.removeLane(targetLaneId);
+                }
                 result.accepted = false;
                 result.message = "Pattern not found";
             }
         } else {
+            if (createdTargetLane) {
+                playlist.removeLane(targetLaneId);
+            }
             result.accepted = false;
             result.message = "Invalid pattern ID";
         }
@@ -272,14 +275,6 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     // 4. Handle File Drop (New Audio Content)
     if (data.type == AestraUI::DragDataType::File) {
         Log::info("[TrackManagerUI] File drop received: " + data.filePath);
-
-        if (!AudioFileValidator::isValidAudioFile(data.filePath)) {
-            result.accepted = false;
-            result.message = "Unsupported file format";
-            Log::warning("[TrackManagerUI] File rejected (validator): " + data.filePath);
-            clearDropPreview();
-            return result;
-        }
 
         // Register file with SourceManager
         auto& sourceManager = m_trackManager->getSourceManager();
@@ -292,7 +287,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             // Helper to create clip once source is ready. Async decode and queued tasks capture only weakSelf so
             // they cannot call back into a destroyed TrackManagerUI.
             auto createClipFromSource = [weakSelf, sourceId, displayName = data.displayName, targetLaneId,
-                                         createdTargetLane, createdChannelId, timePositionBeats]() {
+                                         createdTargetLane, timePositionBeats]() {
                 auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                 if (!self || !self->m_trackManager)
                     return;
@@ -315,12 +310,9 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     self->m_onClipLibraryChanged();
                 }
 
-                auto rollbackCreatedTrack = [&]() {
+                auto rollbackCreatedLane = [&]() {
                     if (!createdTargetLane) {
                         return;
-                    }
-                    if (createdChannelId != 0) {
-                        self->m_trackManager->removeChannelById(createdChannelId);
                     }
                     self->m_trackManager->getPlaylistModel().removeLane(targetLaneId);
                     self->refreshTracks();
@@ -329,7 +321,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 };
 
                 if (!source || !source->isReady()) {
-                    rollbackCreatedTrack();
+                    rollbackCreatedLane();
                     return;
                 }
 
@@ -337,7 +329,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 double durationBeats = self->secondsToBeats(durationSeconds);
                 if (!std::isfinite(durationSeconds) || durationSeconds <= 0.0 ||
                     !std::isfinite(durationBeats) || durationBeats <= 0.0) {
-                    rollbackCreatedTrack();
+                    rollbackCreatedLane();
                     Log::error("[TrackManagerUI] Invalid decoded duration for imported source");
                     return;
                 }
@@ -375,7 +367,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
                     if (!playlist.getClip(clip.id)) {
                         patternManager.removePattern(patternId);
-                        rollbackCreatedTrack();
+                        rollbackCreatedLane();
                         Log::error("[TrackManagerUI] Failed to add imported clip to target lane; removed orphan audio pattern");
                         return;
                     }
@@ -385,7 +377,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     self->scheduleTimelineMinimapRebuild();
                     Log::info("[TrackManagerUI] Clip added successfully via command");
                 } else {
-                    rollbackCreatedTrack();
+                    rollbackCreatedLane();
                     Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
                 }
             };
@@ -532,106 +524,11 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 result.message = "Imported: " + data.displayName;
             }
         } else {
+            if (createdTargetLane) {
+                playlist.removeLane(targetLaneId);
+            }
             result.accepted = false;
             result.message = "Failed to create source";
-        }
-
-        clearDropPreview();
-        return result;
-    }
-
-    // 5b. Handle MIDI Clip Drop (stub — full MIDI track creation is a future spec)
-    if (data.type == AestraUI::DragDataType::MidiClip) {
-        Log::info("[TrackManagerUI] MIDI drag received: " + data.filePath + " — MIDI track creation not yet implemented");
-        result.accepted = false;
-        result.message = "MIDI track creation not yet implemented";
-        clearDropPreview();
-        return result;
-    }
-
-    // 5. Handle Plugin Drop
-    if (data.type == AestraUI::DragDataType::Plugin) {
-        Log::info("[TrackManagerUI] Plugin drop received: " + data.displayName);
-
-        std::string pluginId = data.sourceClipIdString;
-        if (!pluginId.empty()) {
-            auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
-
-            // Validate target channel exists
-            int channelIndex = laneIndex;
-            auto channel = m_trackManager->getTrack(channelIndex);
-
-            if (!channel) {
-                result.accepted = false;
-                result.message = "Target channel not found";
-                clearDropPreview();
-                return result;
-            }
-
-            // Check if chain has space (pre-check)
-            auto& chain = channel->getEffectChain();
-            if (chain.getFirstEmptySlot() >= Aestra::Audio::EffectChain::MAX_SLOTS) {
-                result.accepted = false;
-                result.message = "Effect chain full";
-                clearDropPreview();
-                return result;
-            }
-
-            // Request Plugin Creation (Async)
-            // Captured variables must be kept alive. m_trackManager is a shared_ptr.
-            // NOTE: The callback runs on a worker thread (PluginManager's factory thread),
-            // not the main/UI thread. We dispatch the actual plugin insertion to the main
-            // thread via m_pendingTasks to ensure proper sequencing with graph rebuild.
-            // This is documented in the plugin/effect-chain lifetime audit
-            // (labs/memory/plugin_effect_lifetime_audit.md).
-            std::string displayName = data.displayName;
-            auto trackManager = m_trackManager;
-
-            pluginManager.createInstanceByIdAsync(pluginId, [this, trackManager, channelIndex, displayName,
-                                                             pluginId](Aestra::Audio::PluginInstancePtr instance) {
-                if (!instance) {
-                    Log::error("[TrackManagerUI] Plugin creation failed for ID: " + pluginId);
-                    return;
-                }
-
-                std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                m_pendingTasks.push_back([trackManager, channelIndex, displayName, pluginId, instance]() {
-                    auto channel = trackManager->getTrack(channelIndex);
-                    if (!channel)
-                        return;
-
-                    auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
-                    if (instance->initialize(pluginManager.getDefaultSampleRate(),
-                                             pluginManager.getDefaultBlockSize())) {
-                        instance->activate();
-
-                        auto& chain = channel->getEffectChain();
-                        chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
-                        size_t slot = chain.getFirstEmptySlot();
-
-                        if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
-                            chain.insertPlugin(slot, instance);
-                            Log::info("[TrackManagerUI] Added plugin (Async): " + displayName);
-                        } else {
-                            Log::warning("[TrackManagerUI] Effect chain became full during async load");
-                        }
-                    } else {
-                        Log::error("[TrackManagerUI] Plugin initialization failed for ID: " + pluginId);
-                    }
-
-                    // Request the same non-RT graph rebuild path used by timeline edits.
-                    trackManager->requestAudioGraphRebuild(
-                        Aestra::Audio::TrackManager::GraphDirtyReason::EffectChainChanged);
-                });
-            });
-
-            // Return immediate acceptance
-            result.accepted = true;
-            result.message = "Loading " + data.displayName + "...";
-
-        } else {
-            result.accepted = false;
-            result.message = "Invalid plugin ID";
         }
 
         clearDropPreview();

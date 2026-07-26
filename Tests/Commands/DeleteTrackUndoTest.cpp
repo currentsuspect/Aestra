@@ -51,7 +51,9 @@ void check(bool condition, const std::string& label) {
 
 // Not `near`: that is a legacy Windows macro (minwindef.h), so MSVC rejects a
 // function of that name outright.
-bool almostEqual(float a, float b) { return std::fabs(a - b) < 1e-5f; }
+bool almostEqual(float a, float b) {
+    return std::fabs(a - b) < 1e-5f;
+}
 
 } // namespace
 
@@ -70,6 +72,16 @@ int main() {
     const uint32_t victimId = victim->getChannelId();
     const uint32_t lastId = last->getChannelId();
 
+    // Route both source domains to the doomed Insert. Deletion must fail safe
+    // to Master, while undo must restore the stable destination once the exact
+    // same channel object is back.
+    auto& unitManager = manager.getUnitManager();
+    const auto routedUnit = unitManager.createUnit("Routed Unit", Aestra::Audio::UnitType::Instrument);
+    unitManager.setUnitMixerChannel(routedUnit, victimId);
+    auto& patternManager = manager.getPatternManager();
+    const auto routedAudio = patternManager.createAudioPattern("Routed Audio", 1.0, Aestra::Audio::AudioSlicePayload{});
+    patternManager.setPatternMixerChannel(routedAudio, victimId);
+
     // Give the doomed track state that only lives in the object, so a
     // re-created replacement would be detectably different.
     history.pushAndExecute(std::make_shared<SetVolumeCommand>(*victim, 0.25f));
@@ -82,6 +94,10 @@ int main() {
     check(manager.getChannelCount() == 2, "delete removed the track");
     check(manager.getChannel(1) != nullptr && manager.getChannel(1)->getChannelId() == lastId,
           "the track after it shifted down");
+    check(unitManager.getUnitMixerChannel(routedUnit) == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
+          "delete resets the Unit route to Master");
+    check(patternManager.getPattern(routedAudio)->getMixerChannelId() == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
+          "delete resets the audio-source route to Master");
 
     // --- undo the delete: the SAME channel must come back -------------------
     check(history.undo(), "undo of delete reported success");
@@ -95,9 +111,11 @@ int main() {
         check(restored->getName() == "Victim", "restored with its name");
         check(almostEqual(restored->getVolume(), 0.25f), "restored with its volume, not a default");
         check(almostEqual(restored->getPan(), -0.5f), "restored with its pan, not a default");
-        check(restored == victim,
-              "restored the SAME object, so references held by older commands stay valid");
+        check(restored == victim, "restored the SAME object, so references held by older commands stay valid");
     }
+    check(unitManager.getUnitMixerChannel(routedUnit) == victimId, "undo restores the Unit's stable mixer destination");
+    check(patternManager.getPattern(routedAudio)->getMixerChannelId() == victimId,
+          "undo restores the audio source's stable mixer destination");
     check(manager.getChannel(2) != nullptr && manager.getChannel(2)->getChannelId() == lastId,
           "the track after it moved back down");
 
@@ -116,6 +134,10 @@ int main() {
     check(history.redo() && almostEqual(restored->getPan(), -0.5f), "redo re-applies the pan");
     check(history.redo(), "redo re-applies the delete");
     check(manager.getChannelCount() == 2, "the track is deleted again");
+    check(unitManager.getUnitMixerChannel(routedUnit) == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
+          "redo resets the Unit route to Master again");
+    check(patternManager.getPattern(routedAudio)->getMixerChannelId() == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
+          "redo resets the audio-source route to Master again");
 
     // And a second round trip still restores the same identity, so the fix is
     // not a one-shot that works only until the channel has been detached twice.
@@ -123,6 +145,9 @@ int main() {
     check(manager.getChannelCount() == 3 && manager.getChannel(1) != nullptr &&
               manager.getChannel(1)->getChannelId() == victimId,
           "a second delete/undo round trip preserves the id");
+    check(unitManager.getUnitMixerChannel(routedUnit) == victimId &&
+              patternManager.getPattern(routedAudio)->getMixerChannelId() == victimId,
+          "a second delete/undo round trip restores both source routes");
 
     // --- deleting the last track restores to the end ------------------------
     {
@@ -207,7 +232,6 @@ int main() {
               "the retry restored the same object with its id");
     }
 
-    std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
-              << std::endl;
+    std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures)) << std::endl;
     return g_failures == 0 ? 0 : 1;
 }

@@ -187,8 +187,8 @@ struct Rendered {
     bool hasInvalid = false;
 };
 
-// Builds a one-track project whose lane carries `curves`, sets the playlist
-// BPM to `renderBpm`, and renders `beats` beats of transport playback.
+// Builds a one-insert project whose Playlist-hosted `curves` explicitly target
+// that insert, sets the playlist BPM to `renderBpm`, and renders `beats` beats.
 // An optional extra effect is inserted at chain slot 1 (after the generator).
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
                               std::shared_ptr<IPluginInstance> slot1Fx = nullptr) {
@@ -209,6 +209,9 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     auto* lane = playlist.getLane(laneId);
     require(lane != nullptr, "getLane failed");
     lane->automationCurves = curves;
+    for (auto& curve : lane->automationCurves) {
+        curve.mixerChannelId = src->getChannelId();
+    }
 
     AudioEngine engine;
     engine.setTrackManager(trackManager);

@@ -100,7 +100,7 @@ constexpr uint32_t kWinSkip = 8192;
 /// at native rate; PlaylistModel:428 copies buffer->sampleRate into the snapshot).
 void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::Signal& clip,
                          const GA::SessionConfig& cfg) {
-    tm.addChannel(label);
+    auto* channel = tm.addChannel(label);
 
     auto buffer = std::make_shared<AudioBufferData>();
     buffer->sampleRate = clip.sampleRate;
@@ -119,6 +119,9 @@ void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::S
     PlaylistLaneID laneId = tm.getPlaylistModel().createLane(label);
     const double durationBeats = payload.durationSeconds * (static_cast<double>(cfg.bpm) / 60.0);
     PatternID patternId = tm.getPatternManager().createAudioPattern(label, durationBeats, payload);
+    if (channel) {
+        tm.getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    }
     tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
 }
 
@@ -620,7 +623,7 @@ void runIsolatedBounceCase(AR::CheckSession& t, const fs::path& tempRoot) {
     const fs::path outPath = tempRoot / "isolated_bounce.wav";
     std::error_code ec;
     fs::remove(outPath, ec);
-    if (!t.expect("isolated bounce: bounceRangeToWav(trackId=0) succeeds",
+    if (!t.expect("isolated bounce: bounceRangeToWav(track index 0) succeeds",
                   engine.bounceRangeToWav(0.0, durationBeats, outPath.string(), 0))) {
         return;
     }

@@ -14,13 +14,13 @@
 #include "EngineState.h"
 #include "GarbageCollector.h"
 #include "Interpolators.h"
-#include "Playback/LiveMidiQueue.h"
 #include "LatencyTopology.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
 #include "MetronomeEngine.h"     // [NEW]
 #include "Models/TrackManager.h" // [NEW] For headless rendering
-#include "PluginHost.h"          // For MidiBuffer [NEW]
+#include "Playback/LiveMidiQueue.h"
+#include "PluginHost.h" // For MidiBuffer [NEW]
 
 #include <array>
 #include <atomic>
@@ -667,7 +667,7 @@ private:
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);
-    void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
+    void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one
     // argument instead of re-loading atomics per track.
@@ -679,6 +679,7 @@ private:
         uint64_t blockEnd;
         bool isPlaying;
         bool anySolo;
+        bool anyUnitSolo;
         uint32_t cachedSampleRate;
         const ChannelSlotMap* cachedSlotMap;
         ContinuousParamBuffer* cachedParams;
@@ -695,22 +696,21 @@ private:
     // renderGraph() per-track loop body; srcActiveThisBlock is the loop-carried
     // "any resampling happened" telemetry flag.
     // renderTrack phase helpers (verbatim extractions; RT path — no allocation).
-    void renderTrackClips(const TrackRenderState& track, std::vector<double>& buffer, const RenderContext& ctx,
-                          bool& srcActiveThisBlock);
-    void renderTrackUnits(uint32_t trackIdx, std::vector<double>& buffer, const RenderContext& ctx);
+    void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
+                     bool& srcActiveThisBlock);
+    void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
     float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
                               uint32_t numFrames);
     void mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
                           std::vector<double>& buffer, const RenderContext& ctx, double volTarget, double panTarget,
                           float trackSidechainPeak, bool muted, bool audibleEligible);
-    void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
-                     bool& srcActiveThisBlock);
+    void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx, bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                             double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+                             double* targetBuffer = nullptr, int64_t isolatedMixerChannelId = -1);
     // processBlock leaf phases (audio thread only). Each is a verbatim
     // extraction of a self-contained section of processBlock; state lives in
     // the members they always used.

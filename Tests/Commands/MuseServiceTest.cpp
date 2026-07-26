@@ -327,6 +327,17 @@ int main() {
                   r["result"]["notes"][1]["velocity"].asNumber() < 0.61,
               "note expression round-trips");
 
+        Aestra::Audio::AudioSlicePayload audioPayload;
+        const auto audioPattern =
+            trackManager->getPatternManager().createAudioPattern("Audio query", 4.0, audioPayload);
+        trackManager->getPatternManager().setPatternMixerChannel(audioPattern, 73);
+        r = call(service, "{\"id\": 630, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " +
+                              std::to_string(audioPattern.value) + "}}");
+        check(status(r) == "ok" && r["result"]["type"].asString() == "audio",
+              "get_pattern identifies audio patterns");
+        check(r["result"]["mixerChannelId"].asNumber() == 73.0,
+              "get_pattern reports an audio pattern's mixer destination");
+
         // Revision loop: move the second hit, then soften it, then delete it.
         r = call(service, "{\"id\": 64, \"verb\": \"move_note\", \"args\": {\"pattern\": " + p +
                               ", \"unit\": " + u +
@@ -991,8 +1002,9 @@ int main() {
               "clip sized from pattern length");
 
         r = call(service, "{\"id\": 113, \"verb\": \"list_units\"}");
-        check(r["result"]["units"][0]["timelineLane"].asNumber() == 0.0,
-              "pattern's unit routed to timeline lane 0");
+        const double mixerChannelBefore = r["result"]["units"][0]["mixerChannelId"].asNumber();
+        check(r["result"]["units"][0]["timelineLane"].asNumber() == -1.0,
+              "arrangement leaves legacy timeline ownership unchanged");
 
         r = call(service, "{\"id\": 114, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 0, \"start\": 8}}");
@@ -1002,21 +1014,24 @@ int main() {
         check(r["result"]["lanes"][0]["clips"][1]["startBeat"].asNumber() == 8.0,
               "second clip starts at the requested beat");
 
-        // Conflict: the pattern's unit is routed to lane 0; arranging it on
-        // another track would silently reroute the clips already placed.
+        // The same pattern may appear on another lane without silently changing
+        // the unit's stable mixer destination.
         r = call(service, "{\"id\": 130, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 1, \"start\": 0}}");
-        check(status(r) == "execution_error",
-              "arrange onto a conflicting track -> execution_error");
+        check(status(r) == "ok", "arrange the same pattern on another lane");
+        r = call(service, "{\"id\": 131, \"verb\": \"list_units\"}");
+        check(r["result"]["units"][0]["mixerChannelId"].asNumber() == mixerChannelBefore,
+              "cross-lane arrangement preserves the mixer destination");
 
-        // Undo unwinds the whole gesture: clip, unit routing, created lane.
+        // Undo unwinds the three arrangement gestures and their created lanes.
+        trackManager->getCommandHistory().undo();
         trackManager->getCommandHistory().undo();
         trackManager->getCommandHistory().undo();
         r = call(service, "{\"id\": 116, \"verb\": \"list_clips\"}");
         check(r["result"]["lanes"].size() == lanesBefore, "undo removes the created lane");
         r = call(service, "{\"id\": 117, \"verb\": \"list_units\"}");
-        check(r["result"]["units"][0]["timelineLane"].asNumber() == -1.0,
-              "undo restores the unit's preview routing");
+        check(r["result"]["units"][0]["mixerChannelId"].asNumber() == mixerChannelBefore,
+              "undo preserves the unit's mixer destination");
 
         // Contract: bad targets never build.
         r = call(service,
@@ -1025,7 +1040,7 @@ int main() {
         check(status(r) == "execution_error", "arrange unknown pattern -> execution_error");
         r = call(service, "{\"id\": 119, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 99, \"start\": 0}}");
-        check(status(r) == "execution_error", "arrange onto missing channel -> execution_error");
+        check(status(r) == "execution_error", "arrange beyond the next Playlist lane -> execution_error");
     }
 
     // --- Render the arrangement: the song comes back as audio ---

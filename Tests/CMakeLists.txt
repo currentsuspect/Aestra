@@ -1142,7 +1142,13 @@ add_test(NAME AutomationStressTest COMMAND AutomationStressTest)
 # Arsenal Parameter Stress Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins)
     add_executable(ArsenalParameterStressTest AestraAudio/ArsenalParameterStressTest.cpp)
-    target_link_libraries(ArsenalParameterStressTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(ArsenalParameterStressTest PRIVATE
+            -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group
+        )
+    else()
+        target_link_libraries(ArsenalParameterStressTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
     target_compile_definitions(ArsenalParameterStressTest PRIVATE AESTRA_HEADLESS)
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME ArsenalParameterStressTest COMMAND ArsenalParameterStressTest)
@@ -1192,6 +1198,26 @@ target_include_directories(ArsenalProcessingContextRoutingTest PRIVATE
 )
 add_test(NAME ArsenalProcessingContextRoutingTest COMMAND ArsenalProcessingContextRoutingTest)
 set_tests_properties(ArsenalProcessingContextRoutingTest PROPERTIES LABELS "audio;arsenal")
+
+# Stable unit-to-mixer routing and arrangement independence regression test
+add_executable(UnitMixerRoutingTest AestraAudio/UnitMixerRoutingTest.cpp)
+target_link_libraries(UnitMixerRoutingTest PRIVATE AestraAudioCore)
+target_include_directories(UnitMixerRoutingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME UnitMixerRoutingTest COMMAND UnitMixerRoutingTest)
+set_tests_properties(UnitMixerRoutingTest PROPERTIES LABELS "audio;arsenal;routing")
+
+# Audio clip instance gain, pan, and fade rendering regression test
+add_executable(AudioClipInstanceRenderTest AestraAudio/AudioClipInstanceRenderTest.cpp)
+target_link_libraries(AudioClipInstanceRenderTest PRIVATE AestraAudioCore)
+target_include_directories(AudioClipInstanceRenderTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioClipInstanceRenderTest COMMAND AudioClipInstanceRenderTest)
+set_tests_properties(AudioClipInstanceRenderTest PROPERTIES LABELS "audio;routing")
 
 # Arsenal route-mode project round-trip compatibility test
 add_executable(ArsenalRouteModeRoundTripTest
@@ -1941,7 +1967,7 @@ endif()
 # (click-through + spurious dismiss).
 if(TARGET AestraUI_Core)
     add_executable(PanelWindowClickSwallowTest AestraUI/PanelWindowClickSwallowTest.cpp)
-    target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core)
+    target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PanelWindowClickSwallowTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
@@ -1996,7 +2022,7 @@ endif()
 # than silently selecting whichever row inherits the old numeric index.
 if(TARGET AestraUI_Core)
     add_executable(PluginBrowserSelectionTest AestraUI/PluginBrowserSelectionTest.cpp)
-    target_link_libraries(PluginBrowserSelectionTest PRIVATE AestraUI_Core)
+    target_link_libraries(PluginBrowserSelectionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PluginBrowserSelectionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
@@ -2006,6 +2032,20 @@ if(TARGET AestraUI_Core)
     set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression")
 else()
     message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+if(TARGET AestraUI_Core)
+    add_executable(UIInsertRoutePickerTest AestraUI/UIInsertRoutePickerTest.cpp)
+    target_link_libraries(UIInsertRoutePickerTest PRIVATE AestraUI_Core AestraPlat)
+    target_include_directories(UIInsertRoutePickerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME UIInsertRoutePickerTest COMMAND UIInsertRoutePickerTest)
+    set_tests_properties(UIInsertRoutePickerTest PROPERTIES LABELS "ui;routing;regression")
+else()
+    message(STATUS "UIInsertRoutePickerTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput Layout / Caret / Selection regression tests

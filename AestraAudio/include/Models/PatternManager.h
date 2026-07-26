@@ -1,6 +1,7 @@
 #pragma once
 #include "PatternSource.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <unordered_map>
@@ -134,12 +135,84 @@ public:
         return id;
     }
 
+    /** Route an audio pattern to a stable mixer channel ID (0 means Master). */
+    bool setPatternMixerChannel(PatternID id, uint32_t channelId) {
+        auto* pattern = getPattern(id);
+        if (!pattern || !pattern->isAudio()) {
+            return false;
+        }
+        pattern->setMixerChannelId(channelId);
+        pattern->legacyMixerRoutePending = false;
+        return true;
+    }
+
+    /** Reset audio patterns that target a mixer channel being removed. */
+    bool resetMixerChannel(uint32_t channelId) {
+        bool changed = false;
+        for (auto& [id, pattern] : m_patterns) {
+            (void)id;
+            if (pattern && pattern->isAudio() && pattern->getMixerChannelId() == channelId) {
+                pattern->setMixerChannelId(0);
+                pattern->legacyMixerRoutePending = false;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /** Resolve missing/invalid audio-pattern destinations after project channels load. */
+    void validateMixerChannels(const std::vector<uint32_t>& mixerChannelIds) {
+        for (auto& [id, pattern] : m_patterns) {
+            (void)id;
+            if (!pattern || !pattern->isAudio()) {
+                continue;
+            }
+            const uint32_t channelId = pattern->getMixerChannelId();
+            if (pattern->legacyMixerRoutePending ||
+                (channelId != 0 &&
+                 std::find(mixerChannelIds.begin(), mixerChannelIds.end(), channelId) == mixerChannelIds.end())) {
+                pattern->setMixerChannelId(0);
+            }
+            pattern->legacyMixerRoutePending = false;
+        }
+    }
+
     /**
      * @brief Remove a pattern by ID
      * @param id Pattern identifier to erase.
      */
     void removePattern(PatternID id) {
         m_patterns.erase(id.value);
+    }
+
+    /**
+     * @brief Detach a pattern while preserving its identity and state for undo.
+     * @param id Pattern identifier to detach.
+     * @return Ownership of the pattern, or nullptr when it was not found.
+     */
+    std::unique_ptr<PatternSource> detachPattern(PatternID id) {
+        const auto it = m_patterns.find(id.value);
+        if (it == m_patterns.end()) {
+            return nullptr;
+        }
+        auto pattern = std::move(it->second);
+        m_patterns.erase(it);
+        return pattern;
+    }
+
+    /**
+     * @brief Reinsert a detached pattern with the same stable identity.
+     * @param pattern Detached pattern ownership; retained by the caller on failure.
+     * @return True when the pattern was restored.
+     */
+    bool reinsertPattern(std::unique_ptr<PatternSource>& pattern) {
+        if (!pattern || !pattern->id.isValid() || getPattern(pattern->id)) {
+            return false;
+        }
+        const uint64_t id = pattern->id.value;
+        m_patterns[id] = std::move(pattern);
+        nextId = std::max(nextId, id + 1);
+        return true;
     }
 
     /**
