@@ -32,13 +32,7 @@ public:
         m_executed = false;
     }
 
-    void redo() override {
-        if (m_executed)
-            return;
-        m_manager.getUnitManager().setUnitMixerChannel(m_unitId, m_channelId);
-        m_manager.markModified();
-        m_executed = true;
-    }
+    void redo() override { execute(); }
 
     std::string getName() const override { return "Route Unit to Mixer Insert"; }
     size_t getSizeInBytes() const override { return sizeof(*this); }

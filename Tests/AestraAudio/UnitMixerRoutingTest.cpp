@@ -5,6 +5,7 @@
 #include "Commands/MakeAudioClipUniqueCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
+#include "Commands/SetUnitMixerChannelCommand.h"
 #include "Core/AudioGraphBuilder.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
@@ -122,6 +123,43 @@ int main() {
                 firstFreeTracks.getPlaylistModel().getLaneId(0) == createdLaneId &&
                 firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == createdDestinationId,
             "First-free route redo did not restore stable identities atomically");
+
+    TrackManager patternOccupiedTracks;
+    const auto* patternInsert = patternOccupiedTracks.addChannel("Audio Source");
+    const auto* availableInsert = patternOccupiedTracks.addChannel("Available");
+    require(patternInsert && availableInsert, "Pattern-occupied route setup could not create inserts");
+    const uint32_t patternInsertId = patternInsert->getChannelId();
+    const uint32_t availableInsertId = availableInsert->getChannelId();
+    AudioSlicePayload occupiedPayload;
+    const PatternID occupiedPattern =
+        patternOccupiedTracks.getPatternManager().createAudioPattern("Occupied", 4.0, occupiedPayload);
+    require(patternOccupiedTracks.setAudioPatternMixerChannel(occupiedPattern, patternInsertId),
+            "Pattern-occupied route setup could not route its audio source");
+    const UnitID patternAwareUnit =
+        patternOccupiedTracks.getUnitManager().createUnit("Pattern Aware", UnitType::Instrument);
+    require(assignUnitToFirstFreeInsert(patternOccupiedTracks, patternAwareUnit, "Pattern Aware", 0xFF446688),
+            "First-free routing failed with an existing pattern-owned insert");
+    require(patternOccupiedTracks.getUnitManager().getUnitMixerChannel(patternAwareUnit) == availableInsertId,
+            "First-free routing reused an insert owned by an audio pattern");
+    require(patternOccupiedTracks.getChannelCount() == 2 &&
+                patternOccupiedTracks.getPlaylistModel().getLaneCount() == 0,
+            "First-free routing created project structure despite an available insert");
+
+    TrackManager missingRedoTracks;
+    const auto* redoInsert = missingRedoTracks.addChannel("Redo");
+    require(redoInsert, "Unit-route redo setup could not create an insert");
+    const UnitID missingRedoUnit =
+        missingRedoTracks.getUnitManager().createUnit("Transient", UnitType::Instrument);
+    auto missingRedoCommand =
+        std::make_shared<SetUnitMixerChannelCommand>(missingRedoTracks, missingRedoUnit, redoInsert->getChannelId());
+    missingRedoCommand->execute();
+    missingRedoCommand->undo();
+    require(missingRedoTracks.getUnitManager().removeUnit(missingRedoUnit),
+            "Unit-route redo setup could not remove its unit");
+    missingRedoTracks.setModified(false);
+    missingRedoCommand->redo();
+    require(!missingRedoCommand->isUndoable() && !missingRedoTracks.isModified(),
+            "Unit-route redo reported a project change after its unit was removed");
 
     TrackManager shortcutTracks;
     const UnitID shortcutUnit = shortcutTracks.getUnitManager().createUnit("Shortcut", UnitType::Instrument);
