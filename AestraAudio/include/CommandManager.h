@@ -78,8 +78,8 @@ public:
     std::string getUndoName() const { return m_history.getUndoName(); }
     std::string getRedoName() const { return m_history.getRedoName(); }
 
-    void setOnStateChanged(CommandHistory::StateChangedCallback cb) {
-        m_history.setOnStateChanged(std::move(cb));
+    void addOnStateChanged(CommandHistory::StateChangedCallback cb) {
+        m_history.addOnStateChanged(std::move(cb));
     }
 
 private:

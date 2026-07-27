@@ -6,10 +6,12 @@
 
 #include "Commands/ICommand.h"
 
+#include <atomic>
 #include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 
 using namespace Aestra::Audio;
 
@@ -288,7 +290,7 @@ bool testCallback() {
     CommandHistory history;
     resetCallbackCount();
 
-    history.setOnStateChanged(incrementCallback);
+    history.addOnStateChanged(incrementCallback);
 
     int executeCount = 0;
     int undoCount = 0;
@@ -478,7 +480,7 @@ bool testCallbackCanQueryHistory() {
 
     // Register a callback that re-enters CommandHistory by querying state.
     // This would deadlock if callbacks were invoked while m_mutex is held.
-    history.setOnStateChanged([&]() {
+    history.addOnStateChanged([&]() {
         queryCount++;
         // These all acquire m_mutex internally — safe only if caller doesn't hold it
         [[maybe_unused]] bool cu = history.canUndo();
@@ -522,7 +524,7 @@ bool testCallbackReentryDuringUndoRedo() {
     CommandHistory history;
     int callbackQueries = 0;
 
-    history.setOnStateChanged([&]() {
+    history.addOnStateChanged([&]() {
         callbackQueries++;
         // Re-enter: query state from within the callback
         [[maybe_unused]] bool cu = history.canUndo();
@@ -590,6 +592,58 @@ bool testMultipleCallbacksReentry() {
     return true;
 }
 
+// Fixed iteration counts rather than a stop flag: the registrar finishes in
+// microseconds, so a flag-driven dispatcher can be told to stop before the thread
+// is ever scheduled, and the test then proves nothing while passing.
+//
+// Namespace scope, not function-local: MSVC refuses to let a lambda with an
+// explicit capture list reach a local constexpr without naming it in that list
+// (C3493), where GCC and Clang treat it as not odr-used.
+constexpr int kDispatches = 2000;
+constexpr int kRegistrations = 200;
+
+// Registration is no longer confined to startup: TrackManager subscribes to its
+// own history in its constructor, and panels subscribe as they are built. Adding
+// a listener while another thread is dispatching used to reallocate the vector
+// out from under the loop that was walking it. Run this under TSan.
+bool testConcurrentRegistrationAndDispatch() {
+    std::cout << "TEST: registration concurrent with dispatch... ";
+
+    CommandHistory history;
+    std::atomic<int> notifications{0};
+    history.addOnStateChanged([&notifications]() { notifications.fetch_add(1, std::memory_order_relaxed); });
+
+    std::thread dispatcher([&history]() {
+        int executeCount = 0;
+        int undoCount = 0;
+        for (int i = 0; i < kDispatches; ++i) {
+            history.pushAndExecute(std::make_shared<TestCommand>("Churn", &executeCount, &undoCount));
+            history.undo();
+        }
+    });
+
+    // Registrar: add listeners while that is happening.
+    for (int i = 0; i < kRegistrations; ++i) {
+        history.addOnStateChanged([&notifications]() { notifications.fetch_add(1, std::memory_order_relaxed); });
+    }
+
+    dispatcher.join();
+
+    // The exact count depends on interleaving and is deliberately not asserted.
+    // What matters is that dispatch really happened and nothing raced.
+    assert(notifications.load(std::memory_order_relaxed) > 0);
+
+    // Every listener must still be live afterwards.
+    const int before = notifications.load(std::memory_order_relaxed);
+    int executeCount = 0;
+    int undoCount = 0;
+    history.pushAndExecute(std::make_shared<TestCommand>("Final", &executeCount, &undoCount));
+    assert(notifications.load(std::memory_order_relaxed) == before + kRegistrations + 1);
+
+    std::cout << "✅ PASS\n";
+    return true;
+}
+
 int main() {
     std::cout << "=================================\n";
     std::cout << "  CommandHistory Unit Tests\n";
@@ -622,6 +676,7 @@ int main() {
         {"Callback Re-entry Safety", testCallbackCanQueryHistory},
         {"Callback Re-entry Undo/Redo", testCallbackReentryDuringUndoRedo},
         {"Multiple Callbacks Re-entry", testMultipleCallbacksReentry},
+        {"Concurrent Registration and Dispatch", testConcurrentRegistrationAndDispatch},
     };
 
     for (const auto& test : tests) {

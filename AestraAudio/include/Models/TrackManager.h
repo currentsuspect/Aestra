@@ -83,6 +83,13 @@ public:
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
+        // Dirty tracking is owned here, not by the application layer. This
+        // manager owns both the undo history and the modified flag, so anything
+        // that runs through the history is by definition a project change.
+        // Wiring it in the constructor means no edit path can forget to call
+        // markModified(), and dirty tracking cannot be lost when a subsystem
+        // that happens to own the wiring fails to initialise.
+        m_commandHistory.addOnStateChanged([this]() { markModified(); });
     }
 
     /**
