@@ -1525,6 +1525,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
+# safeClampFloat boundary semantics (#551). Header-only and widget-free by
+# design — TrackManagerUIMath.h exists precisely so this primitive is reachable
+# without linking AestraUI, which AESTRA_CI=ON disables.
+add_executable(SafeClampFloatTest AestraUI/SafeClampFloatTest.cpp)
+target_include_directories(SafeClampFloatTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
+set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression")
+
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
     add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
     target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
