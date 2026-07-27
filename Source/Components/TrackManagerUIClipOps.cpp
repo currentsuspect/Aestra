@@ -59,9 +59,9 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     // Calculate offset (Cursor Beat - Clip Start Beat)
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = getGlobalBounds().x + controlAreaWidth + 5.0f;
+    float gridStartX = getGlobalBounds().x + controlAreaWidth + kTimelineGridInsetX;
 
-    double cursorBeat = (clickPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    double cursorBeat = gridOffsetToBeat(clickPos.x - gridStartX);
     m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
 
     if (m_window) {
@@ -78,14 +78,14 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     const AestraUI::NUIRect bounds = getGlobalBounds();
-    const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+    const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
     AestraUI::NUIPoint latchedPos = currentPos;
     clampInstantClipDragPosition(latchedPos);
 
     // Track mouse position for edge-scrolling in onUpdate
     m_lastMousePos = latchedPos;
 
-    double cursorBeat = (latchedPos.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    double cursorBeat = gridOffsetToBeat(latchedPos.x - gridStartX);
 
     // Apply relative offset
     double newStartBeat = cursorBeat - m_clipDragOffsetBeats;
@@ -133,7 +133,7 @@ bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) 
     const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     const float rulerHeight = kTimelineRulerHeight;
     const float scrollbarWidth = kTimelineScrollbarWidth;
-    const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+    const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
     const float gridEndX = bounds.x + bounds.width - scrollbarWidth;
     const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     const float trackAreaBottom = bounds.y + bounds.height;
@@ -165,7 +165,7 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
     const auto bounds = getBounds();
     const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
     const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
-    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + 5.0f;
+    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + kTimelineGridInsetX;
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
     const float x =
@@ -198,7 +198,7 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
     const auto bounds = getBounds();
     const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
     const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
-    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + 5.0f;
+    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + kTimelineGridInsetX;
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
     const float x =
