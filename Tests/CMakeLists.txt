@@ -1219,6 +1219,16 @@ target_include_directories(DropTransactionTest PRIVATE
 add_test(NAME DropTransactionTest COMMAND DropTransactionTest)
 set_tests_properties(DropTransactionTest PROPERTIES LABELS "audio;commands;project")
 
+# Cancelled-drag history regression test (#551)
+add_executable(CancelledDragHistoryTest AestraAudio/CancelledDragHistoryTest.cpp)
+target_link_libraries(CancelledDragHistoryTest PRIVATE AestraAudioCore)
+target_include_directories(CancelledDragHistoryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CancelledDragHistoryTest COMMAND CancelledDragHistoryTest)
+set_tests_properties(CancelledDragHistoryTest PROPERTIES LABELS "audio;commands;project")
+
 # Audio clip instance gain, pan, and fade rendering regression test
 add_executable(AudioClipInstanceRenderTest AestraAudio/AudioClipInstanceRenderTest.cpp)
 target_link_libraries(AudioClipInstanceRenderTest PRIVATE AestraAudioCore)
