@@ -6,6 +6,7 @@
 // API — include only from TrackManagerUI*.cpp files, after TrackManagerUI.h.
 
 #include "../AestraUI/Base/NUIContextMenu.h"
+#include "TrackManagerUIMath.h" // kTimeline* constants + safeClampFloat (no widget deps)
 
 #include <algorithm>
 #include <cmath>
@@ -18,42 +19,6 @@
 
 namespace Aestra {
 namespace Audio {
-
-// Shared by layout, rendering, hit testing, and drag math so visible and
-// interactive geometry cannot drift independently.
-constexpr float kTimelineHeaderHeight = 38.0f;
-constexpr float kTimelineRulerHeight = 28.0f;
-constexpr float kTimelineHorizontalScrollbarHeight = 24.0f;
-constexpr float kTimelineScrollbarWidth = 15.0f;
-
-/**
- * @brief Gap between the track-controls column and the first grid pixel.
- *
- * Appeared as a bare `+ 5` in 30-odd `gridStartX` expressions across every
- * TrackManagerUI translation unit (#550). Rendering, hit testing and drag math
- * all have to agree on it, and a literal repeated that many times agrees only
- * by luck.
- */
-constexpr float kTimelineGridInsetX = 5.0f;
-
-/** @brief Clamp to [a, b] (order-agnostic); non-finite inputs collapse to a safe bound. */
-inline float safeClampFloat(float value, float a, float b) {
-    if (!std::isfinite(value))
-        return 0.0f;
-    if (!std::isfinite(a) && !std::isfinite(b))
-        return 0.0f;
-    if (!std::isfinite(a))
-        a = b;
-    if (!std::isfinite(b))
-        b = a;
-    const float lo = std::min(a, b);
-    const float hi = std::max(a, b);
-    if (value <= lo)
-        return lo;
-    if (value >= hi)
-        return hi;
-    return value;
-}
 
 /** @brief Walk up the parent chain to the root component. */
 inline AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
