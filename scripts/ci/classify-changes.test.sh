@@ -57,10 +57,40 @@ expect skip-cxx "#619 as merged"                 "AestraDocs/images/aestra_daw_i
 expect skip-cxx "#615 as merged"                 "workers/license-signing/package.json" \
                                                  "workers/license-signing/package-lock.json"
 
+# --- phase 2: changes only the UI/App compile lane can observe ---------------
+# AESTRA_CI=ON force-disables AESTRA_ENABLE_UI, and every lane but "Linux (UI/App
+# compile)" sets it — so nothing else compiles these files.
+expect ui-app-only "UI widget source"            "AestraUI/Widgets/UIMixerButtonRow.cpp"
+expect ui-app-only "app source"                  "Source/App/AestraApp.cpp"
+expect ui-app-only "component source"            "Source/Components/TrackManagerUIClipOps.cpp"
+expect ui-app-only "several UI sources"          "AestraUI/Widgets/UIMixerButtonRow.cpp" \
+                                                 "Source/Panels/MixerPanel.cpp"
+expect ui-app-only "UI source plus docs"         "docs/index.md" "Source/App/AestraApp.cpp"
+
+# Headers are never eligible: a header under these trees may be included by one of
+# the .cpp files that headless targets DO compile, and one-level grepping cannot
+# prove otherwise.
+expect broad "UI header"                         "AestraUI/Widgets/UIMixerButtonRow.h"
+expect broad "app header"                        "Source/App/AestraApp.h"
+expect broad "UI source plus its own header"     "Source/App/AestraApp.cpp" "Source/App/AestraApp.h"
+
+# .cpp files under the UI trees that headless targets compile by name. These are read
+# out of the CMake files at classification time; if that derivation breaks, these
+# cases start failing rather than silently widening the skip.
+expect broad "serializer (compiled by tests)"    "Source/Core/ProjectSerializer.cpp"
+expect broad "take manager (compiled by tests)"  "Source/Core/TakeManager.cpp"
+expect broad "headless main"                     "Source/App/HeadlessMain.cpp"
+expect broad "muse agent"                        "Source/MuseAgent/AgentLoop.cpp"
+expect broad "panel compiled by a test"          "Source/Panels/WindowPanel.cpp"
+expect broad "theme compiled by a test"          "AestraUI/Core/NUITheme.cpp"
+expect broad "cursor service compiled by a test" "AestraUI/Platform/NUICursorService.cpp"
+expect broad "one headless source among UI"      "Source/App/AestraApp.cpp" \
+                                                 "Source/Core/ProjectSerializer.cpp"
+
 # --- anything touching the build must be broad ------------------------------
 expect broad "C++ source"                        "AestraAudio/src/Core/AudioEngine.cpp"
-expect broad "UI source"                         "AestraUI/Widgets/UIMixerButtonRow.cpp"
-expect broad "app source"                        "Source/App/AestraApp.cpp"
+expect broad "audio source with UI source"       "AestraAudio/src/Core/AudioEngine.cpp" \
+                                                 "Source/App/AestraApp.cpp"
 expect broad "header"                            "AestraCore/include/AestraJSON.h"
 expect broad "root CMakeLists"                   "CMakeLists.txt"
 expect broad "cmake module"                      "cmake/LowMemory.cmake"
@@ -79,8 +109,11 @@ expect broad "mostly docs, one CMake"            "README.md" "docs/index.md" "CM
 # --- paths that merely LOOK like the safe ones ------------------------------
 # These are the ones an unanchored pattern gets wrong, and the reason every rule
 # in the classifier is anchored at the start of the path.
-expect broad "source file named after docs"      "Source/Panels/AestraDocsPanel.cpp"
-expect broad "source path containing 'workers'"  "Source/Core/WorkersPool.cpp"
+# These two are app sources whose paths contain a safe-list word. Phase 2 classifies
+# them as UI/app work, which is the point: what must never happen is their being read
+# as documentation or as the worker tree and skipping the C++ matrix entirely.
+expect ui-app-only "source file named after docs"    "Source/Panels/AestraDocsPanel.cpp"
+expect ui-app-only "source path containing 'workers'" "Source/Core/WorkersPool.cpp"
 expect broad "a README inside a source tree"     "AestraAudio/README.md"
 expect broad "top-level file not on the list"    "requirements.txt"
 expect broad "new unknown directory"             "AestraNewModule/src/Thing.cpp"
@@ -156,6 +189,41 @@ tc broad    "list longer than reported"          1 "docs/a.md" "README.md"
 tc broad    "expected count not a number"        "abc" "docs/a.md"
 tc broad    "expected count empty-ish garbage"   "-1" "docs/a.md"
 tc broad    "truncated AND source present"       40 "docs/a.md" "AestraAudio/src/x.cpp"
+
+# --- the derivation must fail safe, not fail open ---------------------------
+# The ui-app-only rule depends on reading the headless-compiled .cpp list out of the
+# CMake files. If that read returns nothing — moved file, renamed variable, a grep
+# that stopped matching — every UI path would look skippable and the classifier would
+# quietly start skipping the one lane that compiles them. Copy the script somewhere
+# with no repository around it and confirm it refuses to classify narrow.
+orphan="${TMP}/orphan/scripts/ci"
+mkdir -p "${orphan}"
+cp "${CLASSIFY}" "${orphan}/classify-changes.sh"
+printf 'Source/App/AestraApp.cpp\n' > "${TMP}/orphan-list"
+checks=$((checks + 1))
+orphan_verdict="$(bash "${orphan}/classify-changes.sh" "${TMP}/orphan-list")"
+if [[ "${orphan_verdict}" == "broad" ]]; then
+    printf 'PASS  %-58s -> broad\n' "no CMake files to derive from (fail safe)"
+else
+    printf 'FAIL  %-58s -> %s (expected broad)\n' \
+        "no CMake files to derive from (fail safe)" "${orphan_verdict}"
+    failures=$((failures + 1))
+fi
+
+# LIVENESS, stated directly rather than left implicit. Every ui-app-only expectation
+# above would also pass if the classifier had degraded into answering broad to
+# everything, because broad is the safe answer and safety is what most of this file
+# asserts. Name the case that can only pass when the feature is actually working.
+checks=$((checks + 1))
+printf 'AestraUI/Widgets/UIMixerButtonRow.cpp\n' > "${TMP}/live-list"
+live_verdict="$("${CLASSIFY}" "${TMP}/live-list")"
+if [[ "${live_verdict}" == "ui-app-only" ]]; then
+    printf 'PASS  %-58s -> ui-app-only\n' "liveness: the narrow verdict is reachable"
+else
+    printf 'FAIL  %-58s -> %s (expected ui-app-only)\n' \
+        "liveness: the narrow verdict is reachable" "${live_verdict}"
+    failures=$((failures + 1))
+fi
 
 echo
 if [[ "${failures}" -eq 0 ]]; then
