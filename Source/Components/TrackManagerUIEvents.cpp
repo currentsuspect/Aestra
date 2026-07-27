@@ -380,7 +380,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
 
             float gridTopLocal = globalBounds.y + headerHeight + rulerHeight + horizontalScrollbarHeight;
-            float gridLeftLocal = globalBounds.x + controlAreaWidth + 5.0f;
+            float gridLeftLocal = globalBounds.x + controlAreaWidth + kTimelineGridInsetX;
             float gridRightLocal = globalBounds.x + globalBounds.width - scrollbarWidth; // Corrected width calc
             float gridBottomLocal = globalBounds.y + globalBounds.height;                // Full height down
 
@@ -454,13 +454,13 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             // Calculate mouse position in "content space" BEFORE zoom
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-            float gridStartX = controlAreaWidth + 5.0f;
+            float gridStartX = controlAreaWidth + kTimelineGridInsetX;
             float gridWidthPx = getTimelineGridWidthPixels();
 
             float mouseRelX = localPos.x - gridStartX;
 
             // Current beat at mouse position
-            double mouseBeat = (mouseRelX + m_timelineScrollOffset) / m_pixelsPerBeat;
+            double mouseBeat = gridOffsetToBeat(mouseRelX);
 
             // Calculate min pixels/beat based on domain (can't zoom out beyond domain)
             const double domainWidth = std::max(1.0, m_minimapDomainEndBeat - m_minimapDomainStartBeat);
@@ -497,7 +497,7 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             // HORIZONTAL SCROLL: Shift/Caps+wheel (and synthetic Shift from laptop horizontal wheel).
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-            const float gridStartX = controlAreaWidth + 5.0f;
+            const float gridStartX = controlAreaWidth + kTimelineGridInsetX;
             const float gridWidthPx = getTimelineGridWidthPixels();
             const double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
             const float maxTimelineScroll = static_cast<float>(maxStartBeat * m_pixelsPerBeat);
@@ -541,7 +541,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // === LOOP MARKER INTERACTION (highest priority) ===
         if (m_hasRulerSelection) {
@@ -594,7 +594,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
             // Start ruler selection
             m_isDraggingRulerSelection = true;
 
-            float gridStartX = controlAreaWidth + 5;
+            float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
             // Convert mouse position to beat
             float mouseX = localPos.x - gridStartX + m_timelineScrollOffset;
@@ -621,7 +621,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
                 auto& themeManager = AestraUI::NUIThemeManager::getInstance();
                 const auto& layout = themeManager.getLayoutDimensions();
                 float controlAreaWidth = layout.trackControlsWidth;
-                float gridStartX = controlAreaWidth + 5;
+                float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
                 auto& playlist = m_trackManager->getPlaylistModel();
                 float mouseX = localPos.x - gridStartX + m_timelineScrollOffset;
@@ -645,7 +645,7 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // Update selection end position
         float mouseX = localPos.x - gridStartX + m_timelineScrollOffset;
@@ -717,7 +717,7 @@ bool TrackManagerUI::handleRulerSelectionMenu(const AestraUI::NUIMouseEvent& eve
         !m_hoveringLoopStart && !m_hoveringLoopEnd) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
-        float gridStartX = layout.trackControlsWidth + 5;
+        float gridStartX = layout.trackControlsWidth + kTimelineGridInsetX;
 
         float loopStartX =
             gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
@@ -751,7 +751,7 @@ bool TrackManagerUI::handleLoopMarkerDrag(const AestraUI::NUIMouseEvent& event, 
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // Stop dragging on mouse release
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
@@ -812,7 +812,7 @@ bool TrackManagerUI::handlePlayheadDrag(const AestraUI::NUIMouseEvent& event, co
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // Update playhead position while dragging
         auto& playlist = m_trackManager->getPlaylistModel();
@@ -843,7 +843,7 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         float headerHeight = kTimelineHeaderHeight;
         float rulerHeight = kTimelineRulerHeight;

@@ -106,7 +106,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
     // Explicit mapping: Workspace -> Grid -> Beat
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     float controlWidth = theme.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = getBounds().x + controlWidth + 5.0f;
+    float gridStartX = getBounds().x + controlWidth + kTimelineGridInsetX;
 
     // REJECTION: If dropping on the control area
     if (position.x < gridStartX) {
@@ -118,8 +118,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
         return AestraUI::DropFeedback::Invalid;
     }
 
-    double gridX = position.x - gridStartX;
-    double rawTimeBeats = (gridX + m_timelineScrollOffset) / m_pixelsPerBeat;
+    double rawTimeBeats = gridOffsetToBeat(position.x - gridStartX);
     double snappedBeats = snapBeatToGrid(rawTimeBeats);
     double newTime = m_trackManager->getPlaylistModel().beatToSeconds(snappedBeats);
 
@@ -686,19 +685,17 @@ double TrackManagerUI::getTimeAtPosition(float x) const {
 
     // Get control area width (where track buttons are)
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = controlAreaWidth + 5;
+    float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
-    // Relative X position in grid area
-    float relativeX = x - bounds.x - gridStartX + m_timelineScrollOffset;
+    // Same conversion the drag and zoom paths use; this one then clamps and
+    // converts to seconds, which is why it could not simply be called from them.
+    const double beats = gridOffsetToBeat(x - bounds.x - gridStartX);
 
-    if (relativeX < 0) {
+    if (beats < 0.0) {
         return 0.0; // Before grid start
     }
 
-    // Convert pixels to beats, then to seconds
-    // pixels / pixelsPerBeat = beats
     // beats / beatsPerMinute * 60 = seconds
-    double beats = relativeX / m_pixelsPerBeat;
     double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);
     double seconds = (beats / bpm) * 60.0;
 
@@ -721,7 +718,7 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
 
     // Calculate grid area
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
     // Calculate track Y position - MUST match layoutTracks() calculation exactly
     // layoutTracks uses: headerHeight(38) + horizontalScrollbarHeight(24) + rulerHeight(28)

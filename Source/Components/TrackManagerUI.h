@@ -547,6 +547,38 @@ private:
     void renderTrackManagerStatic(::AestraUI::NUIRenderer& renderer);  // Static content (cached)
     void renderTrackManagerDynamic(::AestraUI::NUIRenderer& renderer); // Dynamic content (real-time)
 
+    // --- Timeline geometry: one conversion, many coordinate bases (#550) -----
+    //
+    // These take a distance FROM the grid's left edge, not an absolute x. That is
+    // deliberate. The grid's origin is expressed in at least three different
+    // bases across this component — component-relative, window-absolute
+    // (getBounds()), and ruler-relative — and which one a call site means is
+    // knowledge that belongs at the call site. What was duplicated, and what is
+    // worth centralising, is the conversion itself: the same
+    // `(x + scroll) / pixelsPerBeat` was written out inline in four places
+    // alongside getTimeAtPosition, which does the same arithmetic and then
+    // converts to seconds and clamps.
+    //
+    // Beat domain, unclamped: the zoom handler needs to keep negative beats to
+    // compute an anchor, and clamping there would pin the zoom to bar 1.
+
+    /** @brief Convert a pixel distance from the grid's left edge into beats. */
+    double gridOffsetToBeat(float offsetFromGridStart) const {
+        // A zero or non-finite zoom would otherwise divide by zero. Callers get
+        // beat 0 rather than an infinity that propagates into clip positions.
+        const float pixelsPerBeat = m_pixelsPerBeat;
+        if (!(pixelsPerBeat > 0.0f)) {
+            return 0.0;
+        }
+        return (static_cast<double>(offsetFromGridStart) + static_cast<double>(m_timelineScrollOffset)) /
+               static_cast<double>(pixelsPerBeat);
+    }
+
+    /** @brief Convert beats into a pixel distance from the grid's left edge. */
+    float beatToGridOffset(double beat) const {
+        return static_cast<float>(beat * static_cast<double>(m_pixelsPerBeat)) - m_timelineScrollOffset;
+    }
+
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
     double getTimeAtPosition(float x) const;

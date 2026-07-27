@@ -137,7 +137,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
-        const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+        const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
         const float headerHeight = kTimelineHeaderHeight;
         const float rulerHeight = kTimelineRulerHeight;
         const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
@@ -621,7 +621,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
     float headerHeight = kTimelineHeaderHeight;
     float rulerHeight = kTimelineRulerHeight;
     float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
@@ -736,7 +736,7 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
-        const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+        const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
         const float headerHeight = kTimelineHeaderHeight;
         const float rulerHeight = kTimelineRulerHeight;
         const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
