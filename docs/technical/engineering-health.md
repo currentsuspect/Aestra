@@ -194,6 +194,15 @@ nothing more, and it can still be skipped, flaky or incomplete. "Regression-test
 means *this* behaviour is pinned — not that the feature is safe. Naming the
 covered scenario is part of the claim.
 
+**Rung and extent are separate axes.** The rung says what *kind* of evidence
+exists; the named scenario says how far it reaches. Two changes can both be
+"regression-tested" while one pins a single reproduction and the other pins an
+entire semantic input space — the same rung, wildly different extent. State both:
+`safeClampFloat` is regression-tested over finite/NaN/±inf against normal,
+inverted, degenerate and non-finite bounds (#640), which is a very different
+claim from a test that reproduces one reported bug, even though both sit on the
+top rung.
+
 **Why the second rung is not free.** A fix can compile, read correctly, and never
 run. #638 shipped a menu-toggle fix whose guard sat in a handler that a mouse
 click never reached with the state it tested for — an earlier handler had already
