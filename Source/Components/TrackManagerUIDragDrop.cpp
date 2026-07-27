@@ -79,6 +79,18 @@ AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& dat
 }
 
 AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    // Same payload allowlist as onDragEnter. Without it, dragging an effect across
+    // the timeline showed Copy feedback for the whole traverse — onDragEnter refused
+    // it and onDrop refuses it, but the cursor said it would land.
+    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::MidiClip &&
+        data.type != AestraUI::DragDataType::Pattern) {
+        if (m_showDropPreview) {
+            m_showDropPreview = false;
+            setDirty(true);
+        }
+        return AestraUI::DropFeedback::Invalid;
+    }
+
     // Keep feedback "Invalid" for unsupported formats while hovering.
     if (data.type == AestraUI::DragDataType::File && !AudioFileValidator::hasValidAudioExtension(data.filePath)) {
         if (m_showDropPreview) {
@@ -197,17 +209,53 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     }
 
     // 2. Resolve target lane
+    //
+    // A drop that has to append a lane must undo as ONE step: the lane is part of
+    // the edit, not scaffolding around it. Creating it through CreateLaneCommand
+    // rather than calling playlist.createLane() directly is what lets it join the
+    // clip in a single transaction — otherwise Ctrl+Z removes the clip and leaves
+    // an empty orphan lane the user never asked for and cannot undo away.
     PlaylistLaneID targetLaneId;
-    bool createdTargetLane = false;
+    std::shared_ptr<CreateLaneCommand> laneCommand;
     if (laneIndex == static_cast<int>(laneCount)) {
-        // Create new lane if dropping at the end
-        targetLaneId = playlist.createLane("Lane " + std::to_string(laneIndex + 1));
-        createdTargetLane = targetLaneId.isValid();
+        laneCommand = std::make_shared<CreateLaneCommand>(playlist, "Lane " + std::to_string(laneIndex + 1));
+        laneCommand->execute();
+        targetLaneId = laneCommand->getLaneId();
+        if (!targetLaneId.isValid()) {
+            laneCommand.reset();
+            result.accepted = false;
+            result.message = "Could not create lane";
+            clearDropPreview();
+            return result;
+        }
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {
         targetLaneId = playlist.getLaneId(laneIndex);
     }
+
+    // Undo the appended lane without recording anything: a drop that failed is not
+    // history. Reused lanes are left alone.
+    auto rollbackLane = [&laneCommand]() {
+        if (laneCommand) {
+            laneCommand->undo();
+        }
+    };
+
+    // Adopt an already-executed clip command, plus the lane it needed, as one undo
+    // step. The members were executed stepwise — each validated against the state
+    // its predecessor produced — so the transaction is adopted with
+    // markExecuted()/pushExecuted() rather than replayed by the history.
+    auto commitDrop = [this, &laneCommand](const std::string& name,
+                                           const std::shared_ptr<ICommand>& clipCommand) {
+        auto transaction = std::make_shared<CommandTransaction>(name);
+        if (laneCommand) {
+            transaction->add(laneCommand);
+        }
+        transaction->add(clipCommand);
+        transaction->markExecuted();
+        return m_trackManager->getCommandHistory().pushExecuted(transaction);
+    };
 
     // 3. Handle Pattern Drop
     if (data.type == AestraUI::DragDataType::Pattern) {
@@ -238,17 +286,17 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 }
 
                 auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
-                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                cmd->execute();
 
                 if (!playlist.getClip(clip.id)) {
-                    if (createdTargetLane) {
-                        playlist.removeLane(targetLaneId);
-                    }
+                    rollbackLane();
                     result.accepted = false;
                     result.message = "Could not place pattern";
                     clearDropPreview();
                     return result;
                 }
+
+                commitDrop("Add Pattern Clip", cmd);
 
                 result.accepted = true;
                 result.message = "Pattern added: " + pattern->name;
@@ -258,16 +306,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 invalidateCache();
                 scheduleTimelineMinimapRebuild();
             } else {
-                if (createdTargetLane) {
-                    playlist.removeLane(targetLaneId);
-                }
+                rollbackLane();
                 result.accepted = false;
                 result.message = "Pattern not found";
             }
         } else {
-            if (createdTargetLane) {
-                playlist.removeLane(targetLaneId);
-            }
+            rollbackLane();
             result.accepted = false;
             result.message = "Invalid pattern ID";
         }
@@ -289,11 +333,16 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
             // Helper to create clip once source is ready. Async decode and queued tasks capture only weakSelf so
             // they cannot call back into a destroyed TrackManagerUI.
+            //
+            // Returns whether a clip was actually placed. The already-decoded branch
+            // below calls this synchronously and used to report success no matter what
+            // happened inside — a file whose duration decoded as zero, or whose pattern
+            // could not be created, still told the user "Imported".
             auto createClipFromSource = [weakSelf, sourceId, displayName = data.displayName, targetLaneId,
-                                         createdTargetLane, timePositionBeats]() {
+                                         laneCommand, timePositionBeats]() -> bool {
                 auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                 if (!self || !self->m_trackManager)
-                    return;
+                    return false;
 
                 auto& sourceManager = self->m_trackManager->getSourceManager();
                 ClipSource* source = sourceManager.getSource(sourceId);
@@ -314,18 +363,31 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 }
 
                 auto rollbackCreatedLane = [&]() {
-                    if (!createdTargetLane) {
+                    if (!laneCommand) {
                         return;
                     }
-                    self->m_trackManager->getPlaylistModel().removeLane(targetLaneId);
+                    laneCommand->undo();
                     self->refreshTracks();
                     self->invalidateCache();
                     self->scheduleTimelineMinimapRebuild();
                 };
 
+                // Same one-undo-step contract as the synchronous paths: the lane the
+                // import had to append belongs to the import, so it is adopted into the
+                // transaction alongside the clip rather than left outside history.
+                auto commitImport = [&](const std::shared_ptr<ICommand>& clipCommand) {
+                    auto transaction = std::make_shared<CommandTransaction>("Import Audio Clip");
+                    if (laneCommand) {
+                        transaction->add(laneCommand);
+                    }
+                    transaction->add(clipCommand);
+                    transaction->markExecuted();
+                    self->m_trackManager->getCommandHistory().pushExecuted(transaction);
+                };
+
                 if (!source || !source->isReady()) {
                     rollbackCreatedLane();
-                    return;
+                    return false;
                 }
 
                 double durationSeconds = source->getDurationSeconds();
@@ -334,7 +396,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     !std::isfinite(durationBeats) || durationBeats <= 0.0) {
                     rollbackCreatedLane();
                     Log::error("[TrackManagerUI] Invalid decoded duration for imported source");
-                    return;
+                    return false;
                 }
                 Log::info("[TrackManagerUI] Duration: " + std::to_string(durationSeconds) +
                           "s, beats: " + std::to_string(durationBeats));
@@ -368,22 +430,26 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     clip.edits = ClipEdits::forNewAudioClip();
 
                     auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
-                    self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                    cmd->execute();
                     if (!playlist.getClip(clip.id)) {
                         patternManager.removePattern(patternId);
                         rollbackCreatedLane();
                         Log::error("[TrackManagerUI] Failed to add imported clip to target lane; removed orphan audio pattern");
-                        return;
+                        return false;
                     }
+
+                    commitImport(cmd);
 
                     self->refreshTracks();
                     self->invalidateCache();
                     self->scheduleTimelineMinimapRebuild();
                     Log::info("[TrackManagerUI] Clip added successfully via command");
-                } else {
-                    rollbackCreatedLane();
-                    Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
+                    return true;
                 }
+
+                rollbackCreatedLane();
+                Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
+                return false;
             };
 
             if (!source->isReady()) {
@@ -522,15 +588,19 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 result.accepted = true;
                 result.message = "Importing...";
             } else {
-                // Already loaded, proceed immediately
-                createClipFromSource();
-                result.accepted = true;
-                result.message = "Imported: " + data.displayName;
+                // Already loaded, proceed immediately — and report what actually
+                // happened. createClipFromSource rolls back the appended lane on every
+                // failure path, so a false here means nothing was left behind either.
+                if (createClipFromSource()) {
+                    result.accepted = true;
+                    result.message = "Imported: " + data.displayName;
+                } else {
+                    result.accepted = false;
+                    result.message = "Could not import " + data.displayName;
+                }
             }
         } else {
-            if (createdTargetLane) {
-                playlist.removeLane(targetLaneId);
-            }
+            rollbackLane();
             result.accepted = false;
             result.message = "Failed to create source";
         }

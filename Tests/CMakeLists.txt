@@ -1209,6 +1209,16 @@ target_include_directories(UnitMixerRoutingTest PRIVATE
 add_test(NAME UnitMixerRoutingTest COMMAND UnitMixerRoutingTest)
 set_tests_properties(UnitMixerRoutingTest PROPERTIES LABELS "audio;arsenal;routing")
 
+# Drop-as-one-undo-step regression test (#551)
+add_executable(DropTransactionTest AestraAudio/DropTransactionTest.cpp)
+target_link_libraries(DropTransactionTest PRIVATE AestraAudioCore)
+target_include_directories(DropTransactionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DropTransactionTest COMMAND DropTransactionTest)
+set_tests_properties(DropTransactionTest PROPERTIES LABELS "audio;commands;project")
+
 # Audio clip instance gain, pan, and fade rendering regression test
 add_executable(AudioClipInstanceRenderTest AestraAudio/AudioClipInstanceRenderTest.cpp)
 target_link_libraries(AudioClipInstanceRenderTest PRIVATE AestraAudioCore)
