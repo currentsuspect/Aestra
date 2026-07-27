@@ -11,6 +11,32 @@ CommandHistory::CommandHistory() {
     m_redoStack.reserve(100);
 }
 
+void CommandHistory::addOnStateChanged(StateChangedCallback cb) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_onStateChangedCallbacks.push_back(std::move(cb));
+}
+
+void CommandHistory::notifyStateChanged() {
+    // Snapshot under the lock, invoke with it released.
+    //
+    // Both halves are load-bearing. Callbacks re-enter this class — the history
+    // panel asks canUndo()/getUndoName() from inside its own notification — so
+    // invoking them under m_mutex deadlocks, which is why every call site already
+    // dispatched outside it. But iterating the live vector unlocked races with a
+    // registration that reallocates it, and registration is no longer confined to
+    // startup now that TrackManager subscribes to its own history.
+    std::vector<StateChangedCallback> listeners;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        listeners = m_onStateChangedCallbacks;
+    }
+    for (const auto& cb : listeners) {
+        if (cb) {
+            cb();
+        }
+    }
+}
+
 void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     if (!cmd)
         return;
@@ -55,7 +81,7 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     // Notify listeners AFTER releasing lock to prevent deadlock
     // if callback queries CommandHistory state
     if (stateChanged) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
 }
 
@@ -82,7 +108,7 @@ bool CommandHistory::pushExecuted(std::shared_ptr<ICommand> cmd) {
     }
 
     if (recorded) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
     return recorded;
 }
@@ -128,7 +154,9 @@ void CommandHistory::commitTransaction() {
             stateChanged = true;
         }
 
-        if (stateChanged) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
+        if (stateChanged) {
+            notifyStateChanged();
+        }
     }
 }
 
@@ -187,7 +215,7 @@ bool CommandHistory::undo() {
 
     // Phase 4: Notify listeners outside lock
     if (success) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
     return success;
 }
@@ -230,7 +258,7 @@ bool CommandHistory::redo() {
 
     // Phase 4: Notify listeners outside lock
     if (success) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
     return success;
 }
@@ -268,7 +296,9 @@ void CommandHistory::clear() {
         stateChanged = true;
     }
     // Notify AFTER releasing lock
-    if (stateChanged) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
+    if (stateChanged) {
+        notifyStateChanged();
+    }
 }
 
 void CommandHistory::setMaxHistorySize(size_t size) {
@@ -365,7 +395,7 @@ void CommandHistory::undoTo(int targetIndex) {
 
     // Phase 4: Notify listeners outside lock
     if (!successfulUndos.empty()) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
 }
 
@@ -410,7 +440,7 @@ void CommandHistory::redoTo(int targetIndex) {
 
     // Phase 4: Notify listeners outside lock
     if (!successfulRedos.empty()) {
-        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+        notifyStateChanged();
     }
 }
 

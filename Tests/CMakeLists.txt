@@ -1229,6 +1229,16 @@ target_include_directories(CancelledDragHistoryTest PRIVATE
 add_test(NAME CancelledDragHistoryTest COMMAND CancelledDragHistoryTest)
 set_tests_properties(CancelledDragHistoryTest PROPERTIES LABELS "audio;commands;project")
 
+# Project dirty-state integrity regression test (#551)
+add_executable(ProjectDirtyStateTest AestraAudio/ProjectDirtyStateTest.cpp)
+target_link_libraries(ProjectDirtyStateTest PRIVATE AestraAudioCore)
+target_include_directories(ProjectDirtyStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ProjectDirtyStateTest COMMAND ProjectDirtyStateTest)
+set_tests_properties(ProjectDirtyStateTest PROPERTIES LABELS "audio;commands;project")
+
 # Audio clip instance gain, pan, and fade rendering regression test
 add_executable(AudioClipInstanceRenderTest AestraAudio/AudioClipInstanceRenderTest.cpp)
 target_link_libraries(AudioClipInstanceRenderTest PRIVATE AestraAudioCore)
