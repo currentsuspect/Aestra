@@ -51,17 +51,15 @@
 // with [MEASURE] are the raw data quoted in AestraDocs/audio-research-bench.md.
 
 #include "AudioMeasure.h"
-#include "SignalLab.h"
-
-#include "GoldenAudio/GoldenAudioHarness.h"
-
 #include "DSP/ClipPrefilter.h"
 #include "DSP/Interpolators.h"
 #include "DSP/PanLaw.h"
+#include "GoldenAudio/GoldenAudioHarness.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h"
 #include "PluginHost.h"
+#include "SignalLab.h"
 
 #include <algorithm>
 #include <chrono>
@@ -71,6 +69,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -122,7 +121,10 @@ void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::S
     if (channel) {
         tm.getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
     }
-    tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    const ClipInstanceID clipId = tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    if (!tm.getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        throw std::runtime_error("Failed to configure unity-gain resampling fixture");
+    }
 }
 
 std::shared_ptr<TrackManager> buildSession(const std::string& label, const AR::Signal& clip,

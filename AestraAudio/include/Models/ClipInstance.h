@@ -11,6 +11,10 @@
 namespace Aestra {
 namespace Audio {
 
+/** New audio clips start below unity to preserve useful summing headroom. */
+constexpr float DEFAULT_AUDIO_CLIP_GAIN_DB = -5.0f;
+constexpr float DEFAULT_AUDIO_CLIP_GAIN_LINEAR = 0.56234133f;
+
 /**
  * @brief Unique identifier for a clip instance
  */
@@ -64,6 +68,18 @@ struct ClipEdits {
     bool muted = false;
     float playbackRate = 1.0f;
     double sourceStart = 0.0;
+
+    /**
+     * Defaults for a newly created audio clip. The value-initialized defaults
+     * above intentionally remain unity for legacy project fields and generic
+     * clip construction, so loading an older project cannot change its mix.
+     */
+    static ClipEdits forNewAudioClip() {
+        ClipEdits edits;
+        edits.gain = DEFAULT_AUDIO_CLIP_GAIN_LINEAR;
+        edits.gainLinear = DEFAULT_AUDIO_CLIP_GAIN_LINEAR;
+        return edits;
+    }
 };
 
 /**

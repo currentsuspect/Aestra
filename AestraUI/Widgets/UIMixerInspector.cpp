@@ -736,18 +736,27 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         m_maxScrollOffset = std::max(0.0f, addButtonY + ROW_H - contentRect.bottom());
         clampScrollOffsets();
 
-        // "Add Send" button
-        m_addFxRect = NUIRect{contentRect.x, addButtonY, contentRect.width, ROW_H};
+        // Parallel audio sends start conservatively, while sidechains are
+        // control-only and start at unity detector level.
+        const float actionGap = 6.0f;
+        const float actionWidth = (contentRect.width - actionGap) * 0.5f;
+        m_addFxRect = NUIRect{contentRect.x, addButtonY, actionWidth, ROW_H};
+        m_addSidechainRect = NUIRect{contentRect.x + actionWidth + actionGap, addButtonY, actionWidth, ROW_H};
         
         NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
         renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
         renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
         renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
+        NUIColor sidechainBg = m_addSidechainPressed ? m_addHover : (m_addSidechainHovered ? m_addHover : m_addBg);
+        renderer.fillRoundedRect(m_addSidechainRect, ROW_RADIUS, sidechainBg);
+        renderer.strokeRoundedRect(m_addSidechainRect, ROW_RADIUS, 1.0f, m_border);
+        renderer.drawTextCentered("Add Sidechain", m_addSidechainRect, 11.0f, m_addText);
 
     } else {
         // I/O Tab or Inserts
         // Clear the add rect so it doesn't capture clicks in other tabs
         m_addFxRect = NUIRect{0,0,0,0};
+        m_addSidechainRect = NUIRect{0,0,0,0};
         
         bool isMaster = (channel && channel->id == 0);
         if (isMaster) {
@@ -996,8 +1005,14 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.button == NUIMouseButton::None) {
         const bool addHover = (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position);
+        const bool sidechainHover =
+            (m_viewModel && m_viewModel->getSelectedChannel()) && m_addSidechainRect.contains(event.position);
         if (addHover != m_addHovered) {
             m_addHovered = addHover;
+            repaint();
+        }
+        if (sidechainHover != m_addSidechainHovered) {
+            m_addSidechainHovered = sidechainHover;
             repaint();
         }
         // Consume hover if inside bounds to prevent hover-through to components behind
@@ -1007,6 +1022,12 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position)) {
             m_addPressed = true;
+            repaint();
+            return true;
+        }
+        if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) &&
+            m_addSidechainRect.contains(event.position)) {
+            m_addSidechainPressed = true;
             repaint();
             return true;
         }
@@ -1026,6 +1047,16 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
                     rebuildSendWidgets(m_viewModel->getSelectedChannel());
                     repaint();
                 }
+            }
+            return true;
+        }
+        if (m_addSidechainPressed) {
+            m_addSidechainPressed = false;
+            repaint();
+            if (m_activeTab == Tab::Sends && m_viewModel && m_viewModel->getSelectedChannel()) {
+                m_viewModel->addSidechain(m_viewModel->getSelectedChannel()->id);
+                rebuildSendWidgets(m_viewModel->getSelectedChannel());
+                repaint();
             }
             return true;
         }

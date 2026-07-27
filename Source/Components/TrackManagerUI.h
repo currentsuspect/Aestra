@@ -82,7 +82,7 @@ public:
     void invalidateCache(); // Keep for compatibility
     void buildAllWaveformCaches();
 
-    // Solo coordination (exclusive solo behavior)
+    // Solo coordination (refreshes the additive Playlist solo set)
     void onTrackSoloToggled(TrackUIComponent* soloedTrack);
 
     void onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& rippleCenter);

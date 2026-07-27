@@ -71,6 +71,11 @@ int main() {
 
     const uint32_t victimId = victim->getChannelId();
     const uint32_t lastId = last->getChannelId();
+    first->setMainOutputId(victimId);
+    Aestra::Audio::AudioRoute sidechainToVictim{};
+    sidechainToVictim.targetChannelId = victimId;
+    sidechainToVictim.sidechainOnly = true;
+    last->addSend(sidechainToVictim);
 
     // Route both source domains to the doomed Insert. Deletion must fail safe
     // to Master, while undo must restore the stable destination once the exact
@@ -98,6 +103,9 @@ int main() {
           "delete resets the Unit route to Master");
     check(patternManager.getPattern(routedAudio)->getMixerChannelId() == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
           "delete resets the audio-source route to Master");
+    check(first->getMainOutputId() == 0xFFFFFFFFu,
+          "delete resets an insert main path targeting the removed Insert to Master");
+    check(last->getSends().empty(), "delete removes sends and sidechains targeting the removed Insert");
 
     // --- undo the delete: the SAME channel must come back -------------------
     check(history.undo(), "undo of delete reported success");
@@ -116,6 +124,10 @@ int main() {
     check(unitManager.getUnitMixerChannel(routedUnit) == victimId, "undo restores the Unit's stable mixer destination");
     check(patternManager.getPattern(routedAudio)->getMixerChannelId() == victimId,
           "undo restores the audio source's stable mixer destination");
+    check(first->getMainOutputId() == victimId, "undo restores the insert main path");
+    check(last->getSends().size() == 1 && last->getSends().front().targetChannelId == victimId &&
+              last->getSends().front().sidechainOnly,
+          "undo restores the sidechain route with its stable destination");
     check(manager.getChannel(2) != nullptr && manager.getChannel(2)->getChannelId() == lastId,
           "the track after it moved back down");
 
@@ -138,6 +150,8 @@ int main() {
           "redo resets the Unit route to Master again");
     check(patternManager.getPattern(routedAudio)->getMixerChannelId() == Aestra::Audio::MASTER_MIXER_CHANNEL_ID,
           "redo resets the audio-source route to Master again");
+    check(first->getMainOutputId() == 0xFFFFFFFFu && last->getSends().empty(),
+          "redo safely removes insert routes again");
 
     // And a second round trip still restores the same identity, so the fix is
     // not a one-shot that works only until the channel has been detached twice.
@@ -148,6 +162,9 @@ int main() {
     check(unitManager.getUnitMixerChannel(routedUnit) == victimId &&
               patternManager.getPattern(routedAudio)->getMixerChannelId() == victimId,
           "a second delete/undo round trip restores both source routes");
+    check(first->getMainOutputId() == victimId && last->getSends().size() == 1 &&
+              last->getSends().front().targetChannelId == victimId,
+          "a second delete/undo round trip restores mixer routes");
 
     // --- deleting the last track restores to the end ------------------------
     {

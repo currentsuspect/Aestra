@@ -18,10 +18,10 @@ namespace Audio {
 enum class AudioQueueCommandType : uint8_t {
     None = 0,
     SetTransportState, // value1: 1.0 = play, 0.0 = stop; samplePos used for seek
-    SetTrackVolume,    // trackIndex, value1
-    SetTrackPan,       // trackIndex, value1 (-1..1)
-    SetTrackMute,      // trackIndex, value1 (0/1)
-    SetTrackSolo,      // trackIndex, value1 (0/1)
+    SetTrackVolume,    // channelId (preferred) or trackIndex, value1
+    SetTrackPan,       // channelId (preferred) or trackIndex, value1 (-1..1)
+    SetTrackMute,      // channelId (preferred) or trackIndex, value1 (0/1)
+    SetTrackSolo,      // channelId (preferred) or trackIndex, value1 (0/1)
     LoadProjectState,
     UpdateClipState,
     StartPreview,
@@ -50,6 +50,7 @@ struct alignas(32) AudioQueueCommand {
     float value1{0.0f};       // Generic value (gain/pan/mute flag/etc.)
     float value2{0.0f};       // Optional secondary value
     uint64_t samplePos{0};    // For seeks / absolute positions
+    uint32_t channelId{0};    // Stable mixer channel ID; translated through ChannelSlotMap
     uint32_t payloadIndex{0}; // Optional external payload reference
 };
 
