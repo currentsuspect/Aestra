@@ -68,7 +68,12 @@ int main() {
         if (auto* channel = trackManager->getChannel(t)) {
             trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
         }
-        trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationSeconds * 2.0);
+        const ClipInstanceID clipId =
+            trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationSeconds * 2.0);
+        if (!trackManager->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+            std::cerr << "Failed to configure unity-gain summing fixture\n";
+            return 1;
+        }
     }
 
     // Initialize engine

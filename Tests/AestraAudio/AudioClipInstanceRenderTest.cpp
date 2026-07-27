@@ -79,6 +79,8 @@ int main() {
     const ClipInstanceID clipId = tracks->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, 2.0);
     auto* clip = tracks->getPlaylistModel().getClip(clipId);
     require(clip != nullptr, "Audio clip setup failed");
+    require(std::abs(clip->edits.gainLinear - DEFAULT_AUDIO_CLIP_GAIN_LINEAR) < 1.0e-7f,
+            "New audio clip did not start with the headroom-preserving gain");
 
     ClipEdits edits = clip->edits;
     edits.gain = 0.5f;
@@ -98,6 +100,33 @@ int main() {
     require(std::abs(rightAt(18000)) < 1.0e-6f, "Hard-left clip pan leaked into the right channel");
     require(leftAt(42000) > 0.20f && leftAt(42000) < 0.30f, "Fade-out did not shape the rendered clip");
     require(std::abs(rightAt(42000)) < 1.0e-6f, "Clip pan changed during fade-out");
+
+    // Playback speed and source-start are instance edits. They must reach the
+    // same graph used by live playback and offline export, including when an
+    // imported source uses a different sample rate from the project.
+    sourceBuffer->sampleRate = kSampleRate / 2;
+    for (uint32_t frame = 0; frame < kTotalFrames; ++frame) {
+        sourceBuffer->interleavedData[frame] = static_cast<float>(frame) / static_cast<float>(kTotalFrames);
+    }
+    edits.gain = 1.0f;
+    edits.gainLinear = 1.0f;
+    edits.pan = 0.0f;
+    edits.fadeInBeats = 0.0f;
+    edits.fadeOutBeats = 0.0f;
+    edits.playbackRate = 2.0f;
+    edits.sourceStart = kSampleRate / 4.0;
+    require(tracks->getPlaylistModel().setClipEdits(clipId, edits), "Playback edits were not accepted");
+
+    const auto shiftedOutput = render(tracks);
+    const auto shiftedLeftAt = [&shiftedOutput](uint32_t frame) {
+        return shiftedOutput[static_cast<size_t>(frame) * 2];
+    };
+    require(shiftedLeftAt(6000) > 0.24f && shiftedLeftAt(6000) < 0.26f,
+            "Source-rate conversion or source-start did not reach the renderer");
+    require(shiftedLeftAt(12000) > 0.36f && shiftedLeftAt(12000) < 0.39f,
+            "Source and playback rates did not combine at the requested speed");
+    require(std::abs(shiftedLeftAt(42000)) < 1.0e-6f,
+            "Playback continued after the mixed-rate source region was exhausted");
 
     std::cout << "[PASS] AudioClipInstanceRenderTest\n";
     return 0;

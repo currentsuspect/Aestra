@@ -47,6 +47,8 @@ private:
     bool m_editGestureActive{false};
     bool m_suppressCallbacks{false};
     uint64_t m_routeFingerprint{0};
+    double m_sourceDurationSeconds{0.0};
+    float m_sourcePeak{0.0f};
     std::vector<float> m_waveformData;
 
     std::shared_ptr<AestraUI::NUIComponent> m_surface;
@@ -61,15 +63,23 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_panLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeInLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeOutLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_speedLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_sourceStartLabel;
     std::shared_ptr<AestraUI::NUILabel> m_gainValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_panValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeInValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeOutValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_speedValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_sourceStartValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUISlider> m_gainSlider;
     std::shared_ptr<AestraUI::NUISlider> m_panSlider;
     std::shared_ptr<AestraUI::NUISlider> m_fadeInSlider;
     std::shared_ptr<AestraUI::NUISlider> m_fadeOutSlider;
+    std::shared_ptr<AestraUI::NUISlider> m_speedSlider;
+    std::shared_ptr<AestraUI::NUISlider> m_sourceStartSlider;
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
+    std::shared_ptr<AestraUI::NUIButton> m_normalizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_resetButton;
     std::shared_ptr<AestraUI::NUIButton> m_makeUniqueButton;
 

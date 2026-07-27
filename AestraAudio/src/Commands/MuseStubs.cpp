@@ -1,5 +1,6 @@
 #include "Commands/MuseStubs.h"
 
+#include <algorithm>
 #include <string>
 
 namespace Aestra {
@@ -119,6 +120,18 @@ void DeleteTrackCommand::execute() {
                 m_routedAudioPatterns.push_back(pattern->id);
             }
         }
+        for (const auto& channel : m_manager.getChannelsSnapshot()) {
+            if (!channel || channel->getChannelId() == m_deletedId)
+                continue;
+            const auto sends = channel->getSends();
+            const bool routesToDeleted = channel->getMainOutputId() == m_deletedId ||
+                                         std::any_of(sends.begin(), sends.end(), [this](const AudioRoute& route) {
+                                             return route.targetChannelId == m_deletedId;
+                                         });
+            if (routesToDeleted) {
+                m_mixerRoutes.push_back({channel->getChannelId(), channel->getMainOutputId(), sends});
+            }
+        }
         m_routesCaptured = true;
     }
 
@@ -130,6 +143,7 @@ void DeleteTrackCommand::execute() {
     if (m_detached) {
         m_manager.getUnitManager().resetMixerChannel(m_deletedId);
         m_manager.getPatternManager().resetMixerChannel(m_deletedId);
+        m_manager.resetMixerRoutingDestination(m_deletedId);
         m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = true;
     }
@@ -146,6 +160,12 @@ void DeleteTrackCommand::undo() {
         for (PatternID patternId : m_routedAudioPatterns) {
             m_manager.getPatternManager().setPatternMixerChannel(patternId, m_deletedId);
         }
+        for (const auto& routeSnapshot : m_mixerRoutes) {
+            if (auto* channel = m_manager.getChannelById(routeSnapshot.sourceChannelId)) {
+                channel->setMainOutputId(routeSnapshot.mainOutputId);
+                channel->replaceSends(routeSnapshot.sends);
+            }
+        }
         m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = false;
     }
@@ -159,6 +179,7 @@ void DeleteTrackCommand::redo() {
     if (m_detached) {
         m_manager.getUnitManager().resetMixerChannel(m_deletedId);
         m_manager.getPatternManager().resetMixerChannel(m_deletedId);
+        m_manager.resetMixerRoutingDestination(m_deletedId);
         m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = true;
     }

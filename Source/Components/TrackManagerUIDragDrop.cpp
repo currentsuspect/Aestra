@@ -233,6 +233,9 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 clip.durationBeats = duration;
                 clip.patternId = pid;
                 clip.sourceId = pid.value;
+                if (pattern->isAudio()) {
+                    clip.edits = ClipEdits::forNewAudioClip();
+                }
 
                 auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
                 m_trackManager->getCommandHistory().pushAndExecute(cmd);
@@ -362,6 +365,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     clip.durationSeconds = durationSeconds;
                     clip.patternId = patternId;
                     clip.sourceId = patternId.value;
+                    clip.edits = ClipEdits::forNewAudioClip();
 
                     auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
                     self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
