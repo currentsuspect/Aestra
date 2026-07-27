@@ -69,6 +69,18 @@ bool lookupView(const std::string& name, ViewType& out) {
     return false;
 }
 
+// The workspace modes, as protocol strings. Same contract as kViews: agents will
+// hardcode these, so renaming one is a breaking change.
+const char* focusName(::ViewFocus focus) {
+    switch (focus) {
+    case ::ViewFocus::Arsenal:    return "arsenal";
+    case ::ViewFocus::Timeline:   return "timeline";
+    case ::ViewFocus::Audition:   return "audition";
+    case ::ViewFocus::RoutingMap: return "routingMap";
+    }
+    return "unknown";
+}
+
 HostVerbArg viewArg() {
     HostVerbArg arg;
     arg.name = "view";
@@ -101,8 +113,13 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
             return HostVerbResult::failure(
                 "no_such_view", "no view named '" + requested + "'; known views: " + knownViewList());
         }
-        const bool already = c->isViewOpen(view);
+        // Compare against the STANDING INTENT, not against visibility. In a mode
+        // that hides panels (Audition), the mixer can be requestedOpen with
+        // visible=false; "open the mixer" there is not a no-op just because the
+        // panel is off screen, and it is not a change just because it is.
+        const bool already = c->getViewOpenState(view).requestedOpen;
         c->setViewOpen(view, open);
+        const auto after = c->getViewOpenState(view);
 
         JSON result = JSON::object();
         result.set("view", JSON(requested));
@@ -111,6 +128,12 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
         // successful outcome, and a caller that cannot tell it apart from a
         // change will re-issue commands trying to force one.
         result.set("changed", JSON(already != open));
+        // Both halves of the outcome, so a caller can see when a request was
+        // honoured as intent but is not on screen yet — rather than concluding
+        // the verb failed.
+        result.set("requestedOpen", JSON(after.requestedOpen));
+        result.set("visible", JSON(after.visible));
+        result.set("focus", JSON(std::string(focusName(c->getViewFocus()))));
         return HostVerbResult::success(result);
     };
 
@@ -145,18 +168,28 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
         spec.affinity = HostThreadAffinity::HostUiThread;
         spec.mutates = false;
         spec.description =
-            "Which workspaces are open right now. Returns every known view with its "
-            "open state, so an agent can see the workspace instead of assuming it.";
+            "Which workspaces are open right now. Each view reports 'visible' (on "
+            "screen) and 'requestedOpen' (standing intent, which survives modes that "
+            "hide panels), plus the workspace 'focus' that causes them to differ. "
+            "'open' is retained as an alias for 'visible'.";
         registerOrLog(service, std::move(spec), [c](const JSON&) {
             JSON views = JSON::array();
             for (const auto& v : kViews) {
+                const auto state = c->getViewOpenState(v.view);
                 JSON entry = JSON::object();
                 entry.set("view", JSON(std::string(v.name)));
-                entry.set("open", JSON(c->isViewOpen(v.view)));
+                // "open" is retained and means VISIBLE — the question an agent
+                // asking a single yes/no about a view actually means.
+                entry.set("open", JSON(state.visible));
+                entry.set("visible", JSON(state.visible));
+                entry.set("requestedOpen", JSON(state.requestedOpen));
                 views.push(entry);
             }
             JSON result = JSON::object();
             result.set("views", views);
+            // The mode that CAUSES intent and visibility to diverge. Without it an
+            // agent seeing requestedOpen=true, visible=false has no way to learn why.
+            result.set("focus", JSON(std::string(focusName(c->getViewFocus()))));
             return HostVerbResult::success(result);
         });
     }
