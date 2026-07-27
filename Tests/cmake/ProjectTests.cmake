@@ -54,5 +54,3 @@ target_include_directories(AudioClipInstanceRenderTest PRIVATE
 )
 add_test(NAME AudioClipInstanceRenderTest COMMAND AudioClipInstanceRenderTest)
 set_tests_properties(AudioClipInstanceRenderTest PROPERTIES LABELS "audio;routing")
-
-# Arsenal route-mode project round-trip compatibility test

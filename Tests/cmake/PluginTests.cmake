@@ -150,7 +150,9 @@ target_include_directories(AestraSatTest PRIVATE
 add_test(NAME AestraSatTest COMMAND AestraSatTest)
 set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation")
 
-# Aestra Filter plugin test (AestraFilterTest is the DSP::Filter lab above)
+# Aestra Filter plugin test. Not to be confused with AestraFilterTest, which is
+# the DSP::Filter lab (AestraAudio/FilterTest.cpp, registered in Tests/CMakeLists.txt
+# and gated on AESTRA_ENABLE_EXPERIMENTAL_TESTS).
 add_executable(AestraFilterPluginTest AestraAudio/AestraFilterPluginTest.cpp)
 target_link_libraries(AestraFilterPluginTest PRIVATE AestraAudio)
 target_include_directories(AestraFilterPluginTest PRIVATE

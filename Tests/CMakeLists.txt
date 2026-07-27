@@ -1028,6 +1028,7 @@ target_include_directories(UnitMixerRoutingTest PRIVATE
 add_test(NAME UnitMixerRoutingTest COMMAND UnitMixerRoutingTest)
 set_tests_properties(UnitMixerRoutingTest PROPERTIES LABELS "audio;arsenal;routing")
 
+# Arsenal route-mode project round-trip compatibility test
 add_executable(ArsenalRouteModeRoundTripTest
     AestraAudio/ArsenalRouteModeRoundTripTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
