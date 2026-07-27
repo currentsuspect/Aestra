@@ -138,7 +138,7 @@ public:
      * setOnStateChanged() silently destroyed every earlier registration, and
      * whichever subsystem happened to initialise last won.
      */
-    void addOnStateChanged(StateChangedCallback cb) { m_onStateChangedCallbacks.push_back(std::move(cb)); }
+    void addOnStateChanged(StateChangedCallback cb);
 
 private:
     std::vector<std::shared_ptr<ICommand>> m_undoStack;
@@ -157,6 +157,17 @@ private:
     void trimHistory();
     void trimHistoryByMemory();
     size_t calculateMemoryUsage() const;
+
+    /**
+     * @brief Invoke every state-changed listener, off the lock.
+     *
+     * Snapshots the listener list under m_mutex and invokes the copies with the
+     * lock released. Both halves matter: callbacks re-enter this class to ask
+     * canUndo()/getUndoName(), so calling them under the lock deadlocks, and
+     * iterating the live vector unlocked races with a registration that
+     * reallocates it.
+     */
+    void notifyStateChanged();
 };
 
 } // namespace Audio
