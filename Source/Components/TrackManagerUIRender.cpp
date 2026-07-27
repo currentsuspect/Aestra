@@ -70,37 +70,43 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
     auto* renderCache = renderer.getRenderCache();
     if (!renderCache) {
-        // Fallback: No cache available, render normally
+        // No FBO cache available (software renderer, cache creation failed). Draw the
+        // static content directly and FALL THROUGH — this used to `return`, which also
+        // skipped every dynamic pass below: overlays, meters, selection highlight, the
+        // playhead and the drop preview. The cache is a performance optimisation, so
+        // losing it must cost frame rate, never content.
         renderTrackManagerStatic(renderer);
-        return;
-    }
-
-    // === FBO CACHING ENABLED ===
-    // Get or create FBO cache (cache entire playlist view area)
-    AestraUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
-    m_cachedRender = renderCache->getOrCreateCache(m_cacheId, cacheSize);
-
-    // Check if we need to invalidate the cache
-    if (m_cacheInvalidated && m_cachedRender) {
-        renderCache->invalidate(m_cacheId);
-        m_cacheInvalidated = false;
-    }
-
-    // Render using cache (auto-rebuild if invalid)
-    if (m_cachedRender) {
-        renderCache->renderCachedOrUpdate(m_cachedRender, bounds, [&]() {
-            // Re-render playlist contents into the cache
-            m_isRenderingToCache = true;
-
-            renderer.clear(AestraUI::NUIColor(0, 0, 0, 0));
-            renderer.pushTransform(-bounds.x, -bounds.y);
-            renderTrackManagerStatic(renderer);
-            renderer.popTransform();
-
-            m_isRenderingToCache = false;
-        });
     } else {
-        renderTrackManagerStatic(renderer);
+        // === FBO CACHING ENABLED ===
+        // Get or create FBO cache (cache entire playlist view area)
+        AestraUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
+        m_cachedRender = renderCache->getOrCreateCache(m_cacheId, cacheSize);
+
+        // Check if we need to invalidate the cache
+        if (m_cacheInvalidated && m_cachedRender) {
+            renderCache->invalidate(m_cacheId);
+            m_cacheInvalidated = false;
+        }
+
+        // Render using cache (auto-rebuild if invalid)
+        if (m_cachedRender) {
+            renderCache->renderCachedOrUpdate(m_cachedRender, bounds, [&]() {
+                // Re-render playlist contents into the cache
+                m_isRenderingToCache = true;
+
+                renderer.clear(AestraUI::NUIColor(0, 0, 0, 0));
+                renderer.pushTransform(-bounds.x, -bounds.y);
+                renderTrackManagerStatic(renderer);
+                renderer.popTransform();
+
+                m_isRenderingToCache = false;
+            });
+        } else {
+            // Cache object unavailable but the cache system is present. This branch
+            // already fell through to the dynamic passes; the !renderCache one above
+            // now behaves the same way.
+            renderTrackManagerStatic(renderer);
+        }
     }
 
     // Render the left control strip OUTSIDE the cache to keep M/S/R hover/press responsive

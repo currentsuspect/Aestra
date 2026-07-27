@@ -390,22 +390,27 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         Log::info("TrackManagerUI: Menu Icon Clicked! Bounds: " + std::to_string(m_menuIconBounds.x) + "," +
                   std::to_string(m_menuIconBounds.y));
 
-        // Cleanup previous menu if exists
+        // Defensive only — NOT the toggle. handleContextMenuMouse runs before this
+        // handler (see onMouseEvent) and always clears m_activeContextMenu when a
+        // click lands outside the menu, so by the time a mouse click reaches here the
+        // pointer is already null. The toggle lives there, where the dismissal
+        // happens. This branch stays because "button clicked while its own menu is
+        // open" should close rather than rebuild for any caller that does reach it.
+        //
+        // What this block DID replace was a genuine artifact: an else-branch that
+        // constructed a menu, followed by an `if (!m_activeContextMenu)` that
+        // constructed another, under a comment reading "RE-ADDING MISSING LOGIC
+        // because I am replacing the block".
         if (m_activeContextMenu) {
             Log::info("TrackManagerUI: Closing existing menu");
             detachContextMenu(m_activeContextMenu);
             m_activeContextMenu = nullptr;
-        } else {
-            Log::info("TrackManagerUI: Creating new context menu");
-            // Create context menu
-            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-            // ... capture rest of logic ...
+            setDirty(true);
+            return true;
         }
 
-        // Create context menu (RE-ADDING MISSING LOGIC because I am replacing the block)
-        if (!m_activeContextMenu) {
-            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-        }
+        Log::info("TrackManagerUI: Creating new context menu");
+        m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
         auto menu = m_activeContextMenu;
 
         // === SNAP SUBMENU ===
@@ -423,7 +428,11 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         auto addLoopItem = [&](const std::string& name, int id) {
             bool isSelected = (m_loopPreset == id);
             loopMenu->addRadioItem(name, "LoopGroup", isSelected, [this, id, name]() {
-                m_loopPreset = id;
+                // m_loopPreset is assigned AFTER the branches below, not here. Two of
+                // them can decline to apply — "Selection" with no selection, "Project"
+                // with no resolvable extent — and assigning up front left the radio
+                // item checked for a preset that had not taken effect, so the menu
+                // showed "Selection" while looping was actually off.
                 bool loopEnabled = (id != 0);
                 double loopStartBeat = 0.0;
                 double loopEndBeat = 4.0;
@@ -466,6 +475,13 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                     }
                 }
 
+                // What is recorded is what actually happened. A preset that meant to
+                // enable looping but could not falls back to Off (0), because that is
+                // the state the project is now in.
+                const bool intendedToEnable = (id != 0);
+                const int appliedPreset = (intendedToEnable && !loopEnabled) ? 0 : id;
+                m_loopPreset = appliedPreset;
+
                 setLoopRegion(loopStartBeat, loopEndBeat, loopEnabled);
 
                 if (m_onLoopRegionUpdate) {
@@ -477,9 +493,13 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                 }
 
                 if (m_onLoopPresetChanged)
-                    m_onLoopPresetChanged(id);
+                    m_onLoopPresetChanged(appliedPreset);
                 invalidateCache();
-                Log::info("Loop preset changed to: " + name);
+                if (appliedPreset == id) {
+                    Log::info("Loop preset changed to: " + name);
+                } else {
+                    Log::info("Loop preset '" + name + "' could not be applied; loop is Off");
+                }
             });
         };
 

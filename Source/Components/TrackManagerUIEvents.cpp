@@ -242,6 +242,7 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         bool oldSelectHovered = m_selectToolHovered;
         bool oldSplitHovered = m_splitToolHovered;
         bool oldMultiSelectHovered = m_multiSelectToolHovered;
+        bool oldPaintHovered = m_paintToolHovered;
         bool oldFollowHovered = m_followPlayheadHovered;
 
         m_menuHovered = m_menuIconBounds.contains(event.position);
@@ -249,13 +250,14 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         m_selectToolHovered = m_selectToolBounds.contains(event.position);
         m_splitToolHovered = m_splitToolBounds.contains(event.position);
         m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
+        m_paintToolHovered = m_paintToolBounds.contains(event.position);
         m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
 
         // Toolbar Tooltips
         bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
-                                 m_multiSelectToolHovered || m_followPlayheadHovered;
+                                 m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered;
         bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
-                             oldMultiSelectHovered || oldFollowHovered;
+                             oldMultiSelectHovered || oldPaintHovered || oldFollowHovered;
 
         if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
             std::string tooltipText;
@@ -269,6 +271,8 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
                 tooltipText = "Split Tool";
             else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
                 tooltipText = "Multi-Select Tool";
+            else if (m_paintToolHovered && !oldPaintHovered)
+                tooltipText = "Paint Tool";
             else if (m_followPlayheadHovered && !oldFollowHovered)
                 tooltipText = "Follow Playhead";
             if (!tooltipText.empty()) {
@@ -281,7 +285,8 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
         if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
             m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
-            m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
+            m_multiSelectToolHovered != oldMultiSelectHovered || m_paintToolHovered != oldPaintHovered ||
+            m_followPlayheadHovered != oldFollowHovered) {
             setDirty(true);
         }
     }
@@ -327,6 +332,21 @@ bool TrackManagerUI::handleContextMenuMouse(const AestraUI::NUIMouseEvent& event
         if (!handled && event.pressed) {
             detachContextMenu(m_activeContextMenu);
             m_activeContextMenu = nullptr;
+
+            // Falling through lets the click also act on whatever is underneath
+            // (Stop button, track header, ...), which is what we want everywhere
+            // EXCEPT on the menu button itself: the control underneath there is the
+            // one that opens this menu, so handleToolbarClick would see the pointer
+            // we just cleared and immediately build a new menu. That is why the
+            // button could only ever open — the dismissal was real, it was just
+            // undone one handler later, in the same event.
+            //
+            // updateToolbarBounds() runs before this handler, so m_menuIconBounds is
+            // current.
+            if (m_menuIconBounds.contains(event.position)) {
+                setDirty(true);
+                return true;
+            }
             // Let execution continue so the click can interact with whatever is underneath
             // (e.g. Stop button, Track header, etc.)
         } else if (handled) {
