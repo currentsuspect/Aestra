@@ -173,6 +173,34 @@ fail. Where a fix cannot be tested at the layer it lives in — UI gestures have
 headless harness — say that plainly and pin the shape of the change one layer
 down, rather than implying coverage that does not exist.
 
+### The verification ladder
+
+These four are different claims, and they get blurred precisely when a change is
+hard to test:
+
+| rung | means | typical evidence |
+|---|---|---|
+| **compiled** | the code is legal and links | CI build lane |
+| **code path executed** | the branch actually ran | a log line, a counter, a coverage run |
+| **behaviour observed** | the change did the thing, once | screenshot, trace, driven gesture |
+| **behaviour regression-tested** | it cannot silently stop doing the thing | a test that fails when reverted |
+
+A change may legitimately ship at any rung. What is not legitimate is claiming a
+higher one than was reached, or leaving the rung unstated so a reader assumes the
+top. Say which rung each part of a change is on.
+
+**Why the second rung is not free.** A fix can compile, read correctly, and never
+run. #638 shipped a menu-toggle fix whose guard sat in a handler that a mouse
+click never reached with the state it tested for — an earlier handler had already
+cleared it. The code was locally correct and globally inert. One log line settled
+in a single run what re-reading the file could not.
+
+**Observe before constructing a causal story.** Not because reasoning is bad, but
+because a false premise about control flow yields an impeccable explanation and a
+useless fix. This matters most for composition bugs, where every function is
+individually correct and the defect exists only in their ordering — those hide
+from single-file reading by construction.
+
 ---
 
 ## 9. Behaviour-preserving refactors stop where equivalence cannot be demonstrated
@@ -193,6 +221,13 @@ silently resolves it.
 ---
 
 ## Working rules
+
+**Instrument before theorising about runtime behaviour.** For anything about
+what the running system does — input, ordering, timing, "it does X when I do Y" —
+add the trace and observe first. The existing logs are often enough. This is not
+a substitute for reading the code; it is what stops you reading the wrong file
+confidently. (Pure logic and compile errors are exempt: there the code *is* the
+evidence.)
 
 **A running build owns the working tree until it exits.** Do not switch branches,
 rebase, or check out files while a build is running against the tree — the build
