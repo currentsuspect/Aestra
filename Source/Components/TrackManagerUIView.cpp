@@ -330,7 +330,7 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
-        const float gridStartXAbs = getBounds().x + controlAreaWidth + 5.0f;
+        const float gridStartXAbs = getBounds().x + controlAreaWidth + kTimelineGridInsetX;
 
         const float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
         const float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);

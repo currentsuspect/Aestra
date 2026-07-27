@@ -26,6 +26,16 @@ constexpr float kTimelineRulerHeight = 28.0f;
 constexpr float kTimelineHorizontalScrollbarHeight = 24.0f;
 constexpr float kTimelineScrollbarWidth = 15.0f;
 
+/**
+ * @brief Gap between the track-controls column and the first grid pixel.
+ *
+ * Appeared as a bare `+ 5` in 30-odd `gridStartX` expressions across every
+ * TrackManagerUI translation unit (#550). Rendering, hit testing and drag math
+ * all have to agree on it, and a literal repeated that many times agrees only
+ * by luck.
+ */
+constexpr float kTimelineGridInsetX = 5.0f;
+
 /** @brief Clamp to [a, b] (order-agnostic); non-finite inputs collapse to a safe bound. */
 inline float safeClampFloat(float value, float a, float b) {
     if (!std::isfinite(value))
