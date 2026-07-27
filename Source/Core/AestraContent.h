@@ -161,6 +161,15 @@ public:
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
     /** @brief Toggle visibility for a specific workspace overlay. */
     void toggleView(Aestra::Audio::ViewType view);
+    /**
+     * @brief Whether a workspace overlay is currently open.
+     *
+     * The view state was previously write-only from outside this class: callers
+     * could open and close overlays but had no way to ask what was showing. The
+     * Muse host verbs need to answer "what is on screen right now" without
+     * guessing, so the state is now readable as well as writable.
+     */
+    bool isViewOpen(Aestra::Audio::ViewType view) const;
     /** @brief Toggle visibility of the left browser area. */
     void toggleFileBrowser();
     /** @brief Synchronize overlay state into owned child views. */
