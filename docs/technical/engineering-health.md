@@ -183,11 +183,16 @@ hard to test:
 | **compiled** | the code is legal and links | CI build lane |
 | **code path executed** | the branch actually ran | a log line, a counter, a coverage run |
 | **behaviour observed** | the change did the thing, once | screenshot, trace, driven gesture |
-| **behaviour regression-tested** | it cannot silently stop doing the thing | a test that fails when reverted |
+| **behaviour regression-tested** | the covered scenario is protected against silent regression | a test that fails when the change is reverted |
 
 A change may legitimately ship at any rung. What is not legitimate is claiming a
 higher one than was reached, or leaving the rung unstated so a reader assumes the
 top. Say which rung each part of a change is on.
+
+The top rung is not absolute either: a test protects the scenario it covers and
+nothing more, and it can still be skipped, flaky or incomplete. "Regression-tested"
+means *this* behaviour is pinned — not that the feature is safe. Naming the
+covered scenario is part of the claim.
 
 **Why the second rung is not free.** A fix can compile, read correctly, and never
 run. #638 shipped a menu-toggle fix whose guard sat in a handler that a mouse
