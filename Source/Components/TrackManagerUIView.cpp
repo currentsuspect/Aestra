@@ -216,9 +216,12 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     if (!(m_pixelsPerBeat > 0.0f) || gridWidthPx <= 0.0f)
         return;
 
-    const double viewStartBeat = static_cast<double>(m_timelineScrollOffset / m_pixelsPerBeat);
+    // Not const: a shrinking domain re-clamps the scroll offset further down, and the
+    // model published at the end of this function must describe the viewport we ended
+    // up with, not the one we started with.
+    double viewStartBeat = static_cast<double>(m_timelineScrollOffset / m_pixelsPerBeat);
     const double viewWidthBeats = static_cast<double>(gridWidthPx / m_pixelsPerBeat);
-    const double viewEndBeat = viewStartBeat + viewWidthBeats;
+    double viewEndBeat = viewStartBeat + viewWidthBeats;
 
     const double playheadBeat = secondsToBeats(m_trackManager->getUIPosition());
 
@@ -306,6 +309,13 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     // to call here: it only re-enters updateTimelineMinimap when isFinal is false.
     if (domainShrank) {
         setTimelineViewStartBeat(viewStartBeat, /*isFinal=*/true);
+
+        // Re-read what the clamp actually settled on. Zoom is untouched, so the width
+        // is unchanged and only the start moves. Without this the minimap model below
+        // would publish the pre-clamp viewport — the thumb would stay parked outside
+        // the domain for a frame, which is the exact symptom this block exists to fix.
+        viewStartBeat = static_cast<double>(m_timelineScrollOffset / m_pixelsPerBeat);
+        viewEndBeat = viewStartBeat + viewWidthBeats;
     }
 
     if (m_minimapNeedsRebuild) {
