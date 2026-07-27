@@ -263,14 +263,23 @@ void TrackManagerUI::cancelInstantClipDrag() {
 
     Log::info("Cancelled instant clip drag");
 
-    // Revert position using command so it's undoable
+    // Put the clip back where the drag started, WITHOUT recording history.
+    //
+    // User cancellation is not project history. This used to revert by pushing a
+    // MoveClipCommand, which was undoable in exactly the wrong direction: the
+    // command captures the clip's current — i.e. dragged — position as its
+    // "original", so the next Ctrl+Z re-applied the movement the user had just
+    // cancelled. It also cleared the redo stack, so cancelling a drag destroyed
+    // whatever the user still had to redo.
+    //
+    // The live drag itself never went through the history either
+    // (updateInstantClipDrag moves the model directly for smoothness), so there is
+    // nothing on the stack to undo here — only a position to restore.
     if (m_trackManager && m_draggedClipId.isValid()) {
         auto& playlist = m_trackManager->getPlaylistModel();
         auto laneId = playlist.findClipLane(m_draggedClipId);
         if (laneId.isValid() && m_clipOriginalLaneId.isValid()) {
-            auto cmd = std::make_shared<MoveClipCommand>(playlist, m_draggedClipId, m_clipOriginalStartTime,
-                                                         m_clipOriginalLaneId);
-            m_trackManager->getCommandHistory().pushAndExecute(cmd);
+            playlist.moveClip(m_draggedClipId, m_clipOriginalStartTime, m_clipOriginalLaneId);
         }
     }
 
