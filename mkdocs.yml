@@ -35,6 +35,7 @@ not_in_nav: |
   /technical/TODO-E003-MacroCommand.md
   /technical/ai-guide.md
   /technical/command_model.md
+  /technical/muse_state_ownership.md
   /technical/audio/IMPLEMENTATION_COMPLETE.md
   /technical/ui/ADAPTIVE_FPS_QUICKREF.md
   /technical/ui/BUTTON_CUSTOMIZATION_GUIDE.md
