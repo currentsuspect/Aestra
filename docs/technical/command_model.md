@@ -297,11 +297,21 @@ Commands holding audio data should:
 ### 7.3 State Callback
 
 ```cpp
-commandHistory.setOnStateChanged([this]() {
+commandHistory.addOnStateChanged([this]() {
     updateUndoRedoButtons();
     updateEditMenu();
 });
 ```
+
+Listeners accumulate; there is no replace-all entry point. Several unrelated
+subsystems observe the same history — project dirty tracking, the history
+panel, the mixer panel and the piano roll — and none of them can know about the
+others, so a registration must never be able to displace another one.
+
+Project dirty state is not one of these listeners' responsibilities to install:
+`TrackManager` subscribes to its own history in its constructor and calls
+`markModified()`. Anything that runs through the history is a project change by
+definition, so edit paths do not call `markModified()` themselves.
 
 ---
 

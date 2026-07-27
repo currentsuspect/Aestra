@@ -288,7 +288,7 @@ bool testCallback() {
     CommandHistory history;
     resetCallbackCount();
 
-    history.setOnStateChanged(incrementCallback);
+    history.addOnStateChanged(incrementCallback);
 
     int executeCount = 0;
     int undoCount = 0;
@@ -478,7 +478,7 @@ bool testCallbackCanQueryHistory() {
 
     // Register a callback that re-enters CommandHistory by querying state.
     // This would deadlock if callbacks were invoked while m_mutex is held.
-    history.setOnStateChanged([&]() {
+    history.addOnStateChanged([&]() {
         queryCount++;
         // These all acquire m_mutex internally — safe only if caller doesn't hold it
         [[maybe_unused]] bool cu = history.canUndo();
@@ -522,7 +522,7 @@ bool testCallbackReentryDuringUndoRedo() {
     CommandHistory history;
     int callbackQueries = 0;
 
-    history.setOnStateChanged([&]() {
+    history.addOnStateChanged([&]() {
         callbackQueries++;
         // Re-enter: query state from within the callback
         [[maybe_unused]] bool cu = history.canUndo();

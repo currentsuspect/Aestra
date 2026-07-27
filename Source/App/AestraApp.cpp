@@ -335,6 +335,14 @@ void AestraApp::initializeContent() {
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
 
+    // Forward project dirty state to autosave. TrackManager marks itself modified
+    // from its own command history (see its constructor); this is the only hop the
+    // application layer owns. It lives here, not in connectAudioToUI(), because a
+    // failed audio device must not cost the user their unsaved-changes tracking.
+    if (auto trackMgr = m_content->getTrackManager()) {
+        trackMgr->setOnModified([this]() { m_autoSaveManager.markDirty(); });
+    }
+
     wireTakesPanel();
 
     // Performance HUD is created eagerly: it must exist independently of the
@@ -788,13 +796,8 @@ void AestraApp::connectAudioToUI() {
             Aestra::ServiceLocator::provide<Aestra::Audio::TrackManager>(m_content->getTrackManager());
 
             auto trackMgr = m_content->getTrackManager();
-            trackMgr->getCommandHistory().setOnStateChanged([trackMgr]() {
-                if (trackMgr) trackMgr->markModified();
-            });
-            trackMgr->setOnModified([this]() {
-                m_autoSaveManager.markDirty();
-            });
-
+            // Dirty tracking (command history -> markModified -> autosave) is wired
+            // in initializeContent(); it must not depend on the audio device coming up.
             Aestra::PointerRegistry::expectNotNull("AudioEngine", m_audioController->getEngine());
             Aestra::PointerRegistry::expectNotNull("TrackManager", trackMgr.get());
             Aestra::PointerRegistry::validateAll();

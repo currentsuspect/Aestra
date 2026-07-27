@@ -128,9 +128,16 @@ public:
 
     // Callbacks for UI updates
     using StateChangedCallback = std::function<void()>;
-    /** @brief Replace all state-changed callbacks with a single one. */
-    void setOnStateChanged(StateChangedCallback cb) { m_onStateChangedCallbacks = {std::move(cb)}; }
-    /** @brief Add an additional state-changed callback without removing existing ones. */
+    /**
+     * @brief Register a state-changed listener.
+     *
+     * Listeners only ever accumulate: several unrelated subsystems observe this
+     * history (project dirty tracking, the history panel, the mixer panel, the
+     * piano roll) and none of them can know about the others. There is
+     * deliberately no "replace all listeners" entry point — the previous
+     * setOnStateChanged() silently destroyed every earlier registration, and
+     * whichever subsystem happened to initialise last won.
+     */
     void addOnStateChanged(StateChangedCallback cb) { m_onStateChangedCallbacks.push_back(std::move(cb)); }
 
 private:

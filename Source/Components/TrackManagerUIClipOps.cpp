@@ -404,7 +404,6 @@ void TrackManagerUI::pasteClipToRight() {
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
-    m_trackManager->markModified();
     Log::info("Paste-to-right at beat " + std::to_string(newClip.startBeat));
 }
 
@@ -437,7 +436,6 @@ void TrackManagerUI::duplicateSelectedClip() {
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
-    m_trackManager->markModified();
     Log::info("Duplicated selected clip");
 }
 
@@ -457,7 +455,6 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
-    m_trackManager->markModified();
     Log::info("Pasted clip via Paint/Paste");
 }
 // =============================================================================
@@ -496,7 +493,6 @@ void TrackManagerUI::splitSelectedClipAtPlayhead() {
     auto cmd = std::make_shared<SplitClipCommand>(playlist, m_selectedClipId, splitBeat);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
-    m_trackManager->markModified();
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
