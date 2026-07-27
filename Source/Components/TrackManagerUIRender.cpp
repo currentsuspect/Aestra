@@ -200,8 +200,8 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         float scrollbarWidth = kTimelineScrollbarWidth;
 
         float gridTop = getBounds().y + headerHeight + rulerHeight + horizontalScrollbarHeight;
-        float gridLeft = getBounds().x + controlAreaWidth + 5.0f; // +5 margin
-        float gridWidth = getBounds().width - (controlAreaWidth + 5.0f) - scrollbarWidth;
+        float gridLeft = getBounds().x + controlAreaWidth + kTimelineGridInsetX; // gap between the controls column and the first grid pixel
+        float gridWidth = getBounds().width - (controlAreaWidth + kTimelineGridInsetX) - scrollbarWidth;
         float gridHeight = getBounds().height - (headerHeight + rulerHeight + horizontalScrollbarHeight);
 
         AestraUI::NUIRect gridBounds(gridLeft, gridTop, gridWidth, gridHeight);
@@ -281,7 +281,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
     // Calculate where the grid/background should end
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = controlAreaWidth + 5;
+    float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
     // Draw background (control area + full grid area - no bounds restriction)
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
@@ -497,7 +497,7 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
         double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
 
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+        float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
         float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
         float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
@@ -690,7 +690,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float gridStartX = controlAreaWidth + 5;
+        float gridStartX = controlAreaWidth + kTimelineGridInsetX;
         float gridWidthPx = getTimelineGridWidthPixels();
 
         // Calculate world position under the zoom pivot point
@@ -813,7 +813,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         float scrollbarWidth = kTimelineScrollbarWidth;
 
         AestraUI::NUIRect bounds = getBounds();
-        float gridStartX = bounds.x + controlAreaWidth + 5.0f;
+        float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
         float gridEndX = bounds.x + bounds.width - scrollbarWidth;
         float gridWidth = gridEndX - gridStartX;
 
@@ -940,7 +940,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     // Calculate grid bounds FIRST (before drawing)
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
+    float gridStartX = rulerBounds.x + controlAreaWidth + kTimelineGridInsetX;
 
     float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = rulerBounds.width - scrollbarWidth;
@@ -1068,7 +1068,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
     //    Use backgroundPrimary to match minimap's left section exactly
     auto controlBg = themeManager.getColor("backgroundSecondary");
-    AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
+    AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + kTimelineGridInsetX, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
     renderer.drawLine(AestraUI::NUIPoint(controlRect.x, controlRect.bottom() - 1.0f),
                       AestraUI::NUIPoint(controlRect.right(), controlRect.bottom() - 1.0f), 1.0f,
@@ -1092,7 +1092,7 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
 
     // Calculate grid start (same as ruler)
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
+    float gridStartX = rulerBounds.x + controlAreaWidth + kTimelineGridInsetX;
     float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = rulerBounds.width - scrollbarWidth;
     float gridWidth = trackWidth - controlAreaWidth - 10.0f;
@@ -1195,13 +1195,13 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float controlAreaWidth = layout.trackControlsWidth;
 
     AestraUI::NUIRect bounds = getBounds();
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
     float playheadX = gridStartX + static_cast<float>(relPositionX);
 
     // Calculate bounds and triangle size for precise culling
     float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = bounds.width - scrollbarWidth;
-    float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
+    float gridWidth = trackWidth - (controlAreaWidth + kTimelineGridInsetX);
     float gridEndX = gridStartX + gridWidth;
     float triangleSize = 6.0f; // Marker extends this much left/right from playhead center
 
@@ -1296,7 +1296,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
 
     // Calculate layout dimensions
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = controlAreaWidth + 5;
+    float gridStartX = controlAreaWidth + kTimelineGridInsetX;
     float scrollbarWidth = kTimelineScrollbarWidth;
     float gridWidth = width - controlAreaWidth - scrollbarWidth - 5;
 
@@ -1460,7 +1460,7 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
     float rulerHeight = kTimelineRulerHeight;
     float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
+    float gridStartX = getBounds().x + controlAreaWidth + kTimelineGridInsetX;
     float trackAreaTop = getBounds().y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
     // Tech/Holo Colors

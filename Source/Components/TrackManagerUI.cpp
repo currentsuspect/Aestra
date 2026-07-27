@@ -385,7 +385,7 @@ void TrackManagerUI::layoutTracks() {
     }
 
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + 5.0f);
+    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + kTimelineGridInsetX);
     float trackAreaTop = bounds.y + std::max(0.0f, headerHeight + horizontalScrollbarHeight + rulerHeight);
 
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
