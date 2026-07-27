@@ -592,6 +592,16 @@ bool testMultipleCallbacksReentry() {
     return true;
 }
 
+// Fixed iteration counts rather than a stop flag: the registrar finishes in
+// microseconds, so a flag-driven dispatcher can be told to stop before the thread
+// is ever scheduled, and the test then proves nothing while passing.
+//
+// Namespace scope, not function-local: MSVC refuses to let a lambda with an
+// explicit capture list reach a local constexpr without naming it in that list
+// (C3493), where GCC and Clang treat it as not odr-used.
+constexpr int kDispatches = 2000;
+constexpr int kRegistrations = 200;
+
 // Registration is no longer confined to startup: TrackManager subscribes to its
 // own history in its constructor, and panels subscribe as they are built. Adding
 // a listener while another thread is dispatching used to reallocate the vector
@@ -602,12 +612,6 @@ bool testConcurrentRegistrationAndDispatch() {
     CommandHistory history;
     std::atomic<int> notifications{0};
     history.addOnStateChanged([&notifications]() { notifications.fetch_add(1, std::memory_order_relaxed); });
-
-    // A fixed iteration count rather than a stop flag: the registrar finishes in
-    // microseconds, so a flag-driven dispatcher can be told to stop before the
-    // thread is ever scheduled, and the test then proves nothing while passing.
-    constexpr int kDispatches = 2000;
-    constexpr int kRegistrations = 200;
 
     std::thread dispatcher([&history]() {
         int executeCount = 0;
