@@ -281,6 +281,7 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     }
 
     // Update domain instantly (no cooldown needed)
+    bool domainShrank = false;
     if (!(m_minimapDomainEndBeat > 0.0)) {
         // First init
         m_minimapDomainEndBeat = requiredEndBeat;
@@ -293,8 +294,19 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
         // Domain can shrink - also instant, no reason to delay
         m_minimapDomainEndBeat = requiredEndBeat;
         m_minimapNeedsRebuild = true;
+        domainShrank = true;
     }
     // else: domain unchanged, nothing to do
+
+    // A shrinking domain can leave the viewport scrolled past the new end — delete the
+    // last clip in a long arrangement and the view stays out where that clip used to
+    // be, showing empty grid with a minimap thumb pinned off its own track. Growing is
+    // safe (the old view is still inside the larger domain), so only the shrink needs
+    // this. setTimelineViewStartBeat applies exactly the clamp this needs and is safe
+    // to call here: it only re-enters updateTimelineMinimap when isFinal is false.
+    if (domainShrank) {
+        setTimelineViewStartBeat(viewStartBeat, /*isFinal=*/true);
+    }
 
     if (m_minimapNeedsRebuild) {
         std::vector<AestraUI::TimelineMinimapClipSpan> spans;
