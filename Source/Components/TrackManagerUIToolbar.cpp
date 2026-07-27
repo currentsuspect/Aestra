@@ -390,10 +390,17 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         Log::info("TrackManagerUI: Menu Icon Clicked! Bounds: " + std::to_string(m_menuIconBounds.x) + "," +
                   std::to_string(m_menuIconBounds.y));
 
-        // Clicking the button while its menu is open dismisses it. The early return
-        // is what makes this a toggle: without it, control fell through to the
-        // construction below and immediately reopened the menu that had just been
-        // closed, so the button could only ever open.
+        // Defensive only — NOT the toggle. handleContextMenuMouse runs before this
+        // handler (see onMouseEvent) and always clears m_activeContextMenu when a
+        // click lands outside the menu, so by the time a mouse click reaches here the
+        // pointer is already null. The toggle lives there, where the dismissal
+        // happens. This branch stays because "button clicked while its own menu is
+        // open" should close rather than rebuild for any caller that does reach it.
+        //
+        // What this block DID replace was a genuine artifact: an else-branch that
+        // constructed a menu, followed by an `if (!m_activeContextMenu)` that
+        // constructed another, under a comment reading "RE-ADDING MISSING LOGIC
+        // because I am replacing the block".
         if (m_activeContextMenu) {
             Log::info("TrackManagerUI: Closing existing menu");
             detachContextMenu(m_activeContextMenu);

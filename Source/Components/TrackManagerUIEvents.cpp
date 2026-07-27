@@ -332,6 +332,21 @@ bool TrackManagerUI::handleContextMenuMouse(const AestraUI::NUIMouseEvent& event
         if (!handled && event.pressed) {
             detachContextMenu(m_activeContextMenu);
             m_activeContextMenu = nullptr;
+
+            // Falling through lets the click also act on whatever is underneath
+            // (Stop button, track header, ...), which is what we want everywhere
+            // EXCEPT on the menu button itself: the control underneath there is the
+            // one that opens this menu, so handleToolbarClick would see the pointer
+            // we just cleared and immediately build a new menu. That is why the
+            // button could only ever open — the dismissal was real, it was just
+            // undone one handler later, in the same event.
+            //
+            // updateToolbarBounds() runs before this handler, so m_menuIconBounds is
+            // current.
+            if (m_menuIconBounds.contains(event.position)) {
+                setDirty(true);
+                return true;
+            }
             // Let execution continue so the click can interact with whatever is underneath
             // (e.g. Stop button, Track header, etc.)
         } else if (handled) {
