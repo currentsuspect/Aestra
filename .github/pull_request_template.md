@@ -10,6 +10,23 @@
 
 -
 
+## Authority / invariant
+
+<!-- Required for architectural or hardening changes; delete this section for
+     anything else (a typo fix owes nobody an invariant).
+
+     State the authority or invariant this change establishes, and what now
+     prevents it from drifting again. See docs/technical/engineering-health.md.
+
+     Two questions, two lines:
+       What became the single source of truth?
+       What now prevents that truth from drifting again?
+
+     "A named constant, so 37 copies can't disagree" is an answer.
+     "Cleaned up the geometry code" is not. -->
+
+-
+
 ## Producer note
 
 <!-- One sentence for the public changelog, in the voice of someone who

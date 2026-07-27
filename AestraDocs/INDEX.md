@@ -103,6 +103,7 @@ Behavioral/interaction specs for subsystems.
 - [Documentation Status](status/DOCUMENTATION_STATUS.md)
 - [Branching Strategy](status/BRANCHING_STRATEGY.md)
 - [Issue Governance Policy](status/issue-governance-policy.md)
+- [Weekly Health — 2026-W31](status/Weekly-Health-2026-W31.md) — expires end of week; durable contract is `docs/technical/engineering-health.md`
 - [Screenshot Limitation](status/SCREENSHOT_LIMITATION.md)
 
 ## Bug reports

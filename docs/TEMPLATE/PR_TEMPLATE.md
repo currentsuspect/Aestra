@@ -2,6 +2,12 @@
 
 **Use this template when submitting pull requests that update documentation.**
 
+> **Changing code, not docs?** Use the repository's default template
+> (`.github/pull_request_template.md`, applied automatically). For architectural
+> or hardening changes it asks you to state the authority or invariant being
+> established and what prevents it from drifting again — see
+> [Engineering Health](../technical/engineering-health.md).
+
 ---
 
 ## Description
