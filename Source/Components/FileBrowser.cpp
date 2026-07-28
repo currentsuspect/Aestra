@@ -3846,7 +3846,10 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         NUIPoint tooltipPosition = event.position;
         tooltipPosition.x = layout.navPane.right() + 8.0f;
         NUIComponent::showRemoteTooltip(navHits_[newHovered].label, tooltipPosition, this);
-    } else if (newHovered < 0 || !usesCompactNavigation()) {
+    } else if (layout.navPane.contains(event.position)) {
+        // Only dismiss the navigation tooltip while the pointer is still in
+        // this region. The file list shares this component as its tooltip
+        // owner and will manage its own tooltip outside the navigation pane.
         NUIComponent::hideRemoteTooltip(this);
     }
 

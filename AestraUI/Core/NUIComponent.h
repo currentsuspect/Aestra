@@ -36,6 +36,7 @@ struct TooltipState {
     bool immediate = false;
     float alpha = 0.0f;
     float delayTimer = 0.0f;
+    float dismissGraceTimer = 0.0f;
 };
 
 /**

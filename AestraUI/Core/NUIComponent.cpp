@@ -542,6 +542,20 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
     if (!force && s_cursorCaptureActive)
         return;
 
+    const bool canResumePendingDismiss = !s_tooltipState.active && s_tooltipState.dismissGraceTimer > 0.0f &&
+        owner != nullptr &&
+        s_tooltipState.owner == owner && s_tooltipState.text == text;
+    if (canResumePendingDismiss) {
+        s_tooltipState.active = true;
+        s_tooltipState.dismissGraceTimer = 0.0f;
+        if (force) {
+            s_tooltipState.position = position;
+            s_tooltipState.immediate = true;
+            s_tooltipState.delayTimer = kTooltipDelaySeconds;
+        }
+        return;
+    }
+
     const bool ownerChanged = !s_tooltipState.active || s_tooltipState.owner != owner;
     const bool contentChanged = s_tooltipState.text != text;
     const bool shouldRestart = ownerChanged || (contentChanged && !force);
@@ -554,6 +568,7 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
         s_tooltipState.immediate = force;
         s_tooltipState.delayTimer = 0.0f;
         s_tooltipState.alpha = 0.0f;
+        s_tooltipState.dismissGraceTimer = 0.0f;
     } else if (force) {
         s_tooltipState.text = text;
         s_tooltipState.position = position;
@@ -563,7 +578,17 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
 }
 
 void NUIComponent::hideRemoteTooltip(const void* owner) {
+    constexpr float kDismissGraceSeconds = 0.50f;
+
     if (owner != nullptr && s_tooltipState.owner != owner) {
+        return;
+    }
+    if (owner != nullptr) {
+        // Keep a short resume window. Complex components can route adjacent
+        // pointer events through multiple internal tooltip regions; the same
+        // owner may reassert the tooltip without restarting its delay or fade.
+        s_tooltipState.active = false;
+        s_tooltipState.dismissGraceTimer = kDismissGraceSeconds;
         return;
     }
     s_tooltipState.active = false;
@@ -571,6 +596,7 @@ void NUIComponent::hideRemoteTooltip(const void* owner) {
     s_tooltipState.immediate = false;
     s_tooltipState.alpha = 0.0f;
     s_tooltipState.delayTimer = 0.0f;
+    s_tooltipState.dismissGraceTimer = 0.0f;
 }
 
 void NUIComponent::updateGlobalTooltip(double deltaTime) {
@@ -578,13 +604,21 @@ void NUIComponent::updateGlobalTooltip(double deltaTime) {
     constexpr float kFadeSpeed = 8.0f;
 
     if (s_tooltipState.active) {
+        s_tooltipState.dismissGraceTimer = 0.0f;
         s_tooltipState.delayTimer += static_cast<float>(std::max(0.0, deltaTime));
         if (s_tooltipState.immediate || s_tooltipState.delayTimer >= kTooltipDelaySeconds) {
             s_tooltipState.alpha =
                 std::min(1.0f, s_tooltipState.alpha + static_cast<float>(std::max(0.0, deltaTime) * kFadeSpeed));
         }
     } else {
-        s_tooltipState.alpha = 0.0f;
+        s_tooltipState.dismissGraceTimer -= static_cast<float>(std::max(0.0, deltaTime));
+        if (s_tooltipState.dismissGraceTimer <= 0.0f) {
+            s_tooltipState.alpha = 0.0f;
+            s_tooltipState.owner = nullptr;
+            s_tooltipState.immediate = false;
+            s_tooltipState.delayTimer = 0.0f;
+            s_tooltipState.dismissGraceTimer = 0.0f;
+        }
     }
 }
 

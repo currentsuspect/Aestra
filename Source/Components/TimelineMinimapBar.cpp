@@ -377,7 +377,7 @@ void TimelineMinimapBar::onMouseLeave()
     hoverInMap_ = false;
     hoverToggleIndex_ = -1;
     hoverOnResizeEdge_ = false;
-    AestraUI::NUIComponent::hideRemoteTooltip();
+    AestraUI::NUIComponent::hideRemoteTooltip(this);
     if (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight) {
         cursorHint_ = TimelineMinimapCursorHint::ResizeHorizontal;
     } else {
@@ -401,7 +401,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
         hoverToggleIndex_ = -1;
         hoverOnResizeEdge_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
-        AestraUI::NUIComponent::hideRemoteTooltip();
+        AestraUI::NUIComponent::hideRemoteTooltip(this);
         repaint();
         return false;
     }
@@ -446,16 +446,16 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
             if (hoverToggleIndex_ == 0) text = "C: Clips (where audio/MIDI exists)";
             else if (hoverToggleIndex_ == 1) text = "E: Energy (approx. loudness per region)";
             else text = "A: Automation (where automation exists)";
-            AestraUI::NUIComponent::showRemoteTooltip(text, event.position);
+            AestraUI::NUIComponent::showRemoteTooltip(text, event.position, this);
         } else if (hoverInMap_) {
-            AestraUI::NUIComponent::showRemoteTooltip(formatHoverText_(hoverBeat_), event.position);
+            AestraUI::NUIComponent::showRemoteTooltip(formatHoverText_(hoverBeat_), event.position, this);
         } else {
-            AestraUI::NUIComponent::hideRemoteTooltip();
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
     } else {
         // Clear any stale minimap tooltip shown before capture started
         // (won't clear component-owned tooltips like volume knob's)
-        AestraUI::NUIComponent::hideRemoteTooltip();
+        AestraUI::NUIComponent::hideRemoteTooltip(this);
     }
 
     // Mode toggles.

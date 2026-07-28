@@ -80,6 +80,39 @@ void testOwnerlessHideIsAnUnconditionalGlobalDismiss() {
     check(!NUIComponent::getGlobalTooltipState().active, "ownerless hide dismisses an owner-scoped tooltip");
 }
 
+void testDifferentOwnerCannotDismissTooltip() {
+    resetTooltip();
+    int tooltipOwner = 0;
+    int unrelatedOwner = 0;
+    NUIComponent::showRemoteTooltip("Owned", {10.0f, 10.0f}, &tooltipOwner, true);
+    NUIComponent::hideRemoteTooltip(&unrelatedOwner);
+    check(NUIComponent::getGlobalTooltipState().active, "unrelated components cannot dismiss an owned tooltip");
+    check(NUIComponent::getGlobalTooltipState().owner == &tooltipOwner, "the original owner remains active");
+}
+
+void testSameOwnerCanReassertWithinResumeWindow() {
+    resetTooltip();
+    int owner = 0;
+    NUIComponent::showRemoteTooltip("Stable", {10.0f, 10.0f}, &owner);
+    NUIComponent::updateGlobalTooltip(0.60);
+    const float visibleAlpha = NUIComponent::getGlobalTooltipState().alpha;
+
+    NUIComponent::hideRemoteTooltip(&owner);
+    NUIComponent::updateGlobalTooltip(0.25);
+    NUIComponent::showRemoteTooltip("Stable", {30.0f, 30.0f}, &owner);
+    const auto& resumed = NUIComponent::getGlobalTooltipState();
+    check(resumed.active, "same owner can reassert a tooltip after a brief routing gap");
+    check(resumed.alpha == visibleAlpha, "brief same-owner reassertion preserves visible opacity");
+    check(resumed.position.x == 10.0f && resumed.position.y == 10.0f,
+          "brief same-owner reassertion preserves the stable anchor");
+
+    NUIComponent::hideRemoteTooltip(&owner);
+    NUIComponent::updateGlobalTooltip(0.51);
+    const auto& cleared = NUIComponent::getGlobalTooltipState();
+    check(!cleared.active && cleared.owner == nullptr && cleared.alpha == 0.0f,
+          "an owner-scoped hide clears after the resume window expires");
+}
+
 void testCaptureDismissesHoverTooltipButForcedReadoutCanShow() {
     resetTooltip();
     int owner = 0;
@@ -114,6 +147,8 @@ int main() {
     testTextChangeForSameHoverOwnerRestartsDelay();
     testForcedReadoutKeepsOpacityAcrossValueChanges();
     testOwnerlessHideIsAnUnconditionalGlobalDismiss();
+    testDifferentOwnerCannotDismissTooltip();
+    testSameOwnerCanReassertWithinResumeWindow();
     testCaptureDismissesHoverTooltipButForcedReadoutCanShow();
     testTooltipBoundsStayInsideViewportEdges();
 
