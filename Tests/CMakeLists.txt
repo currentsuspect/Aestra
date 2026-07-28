@@ -1535,6 +1535,16 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression")
 
+# Settings persistence policy (#648). Same shape as SafeClampFloatTest above:
+# header-only and widget-free so the decision that was destroying saved device
+# ids is reachable without linking AestraUI, which AESTRA_CI=ON disables.
+add_executable(SettingsPersistencePolicyTest AestraUI/SettingsPersistencePolicyTest.cpp)
+target_include_directories(SettingsPersistencePolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Settings
+)
+add_test(NAME SettingsPersistencePolicyTest COMMAND SettingsPersistencePolicyTest)
+set_tests_properties(SettingsPersistencePolicyTest PROPERTIES LABELS "ui;settings;regression")
+
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
     add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
     target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
