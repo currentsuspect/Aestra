@@ -93,7 +93,9 @@ private:
     void loadCurrentSettings();
     
     // Persistence
-    void saveSettings();
+    /// @return true only when the configuration was actually written. A failed
+    /// save must not clear the dirty flag (#648 review).
+    bool saveSettings();
     void loadSettings();
 
     // Apply the current control values to the engine WITHOUT persisting (#648).
