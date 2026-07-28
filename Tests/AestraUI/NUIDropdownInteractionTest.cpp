@@ -156,6 +156,38 @@ void testHidingSelectionDoesNotLeaveInvisibleValueDisplayed() {
     dropdown->setItemVisible(1, false);
 
     check(dropdown->getSelectedIndex() == -1, "hiding the selected item clears stale selection");
+
+    // Pin what the two value accessors report in the no-selection state, not
+    // just the index. This is the product policy, and a consumer has already
+    // depended on it: getSelectedValue() returns 0 here, which is
+    // indistinguishable from the item whose value IS 0, so it cannot be used to
+    // detect "nothing selected". getSelectedItem() is the accessor that can say
+    // nothing without inventing a legal-looking value. PR #657 persists audio
+    // device ids and would have written this 0 over a real device.
+    check(!dropdown->getSelectedItem().has_value(),
+          "no selection reports std::nullopt — the unambiguous accessor");
+    check(dropdown->getSelectedValue() == 0,
+          "getSelectedValue() reports 0 with nothing selected; it is NOT a selection signal");
+
+    // The other half of the discriminator: a genuine selection whose value is 0
+    // must be reportable, so consumers cannot special-case 0 as "absent".
+    auto zeroValued = makeDropdown();
+    zeroValued->addItem("Device zero", 0);
+    zeroValued->setSelectedIndex(0);
+    check(zeroValued->getSelectedItem().has_value(), "a real selection reports a value");
+    check(zeroValued->getSelectedValue() == 0, "a real selection of value 0 reports 0");
+
+    // Hiding must clear the selection rather than silently moving it to another
+    // visible row. Auto-advancing would change the user's choice without asking,
+    // which for a settings control is a silent intent change.
+    auto multi = makeDropdown();
+    multi->addItem("First", 1);
+    multi->addItem("Chosen", 2);
+    multi->addItem("Third", 3);
+    multi->setSelectedIndex(1);
+    multi->setItemVisible(1, false);
+    check(multi->getSelectedIndex() == -1, "hiding the selection does not auto-advance to a neighbour");
+    check(!multi->getSelectedItem().has_value(), "and leaves no phantom selection behind");
 }
 
 } // namespace

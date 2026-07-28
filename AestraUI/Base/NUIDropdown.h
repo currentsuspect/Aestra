@@ -41,6 +41,19 @@ public:
     void addItem(const std::string& text, int value, const std::function<void()>& callback);
     void addItem(const DropdownItem& item);
     
+    /**
+     * @brief Show or hide an item.
+     *
+     * Hiding the CURRENTLY SELECTED item clears the selection outright — it does
+     * not retain a hidden logical selection, and it does not advance to another
+     * visible row. Auto-advancing would change the user's choice without asking,
+     * which for a settings control is a silent intent change.
+     *
+     * Consumers must therefore treat "no selection" as a real state. Use
+     * getSelectedItem(), which returns std::nullopt; getSelectedValue() returns
+     * 0 in that state, and 0 is a legal item value, so it cannot distinguish
+     * "nothing selected" from "the item whose value is 0".
+     */
     void setItemVisible(int index, bool visible);
     void setItemEnabled(int index, bool enabled);
     void clearItems();
