@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 #include "NUIComponent.h"
+#include "NUISlidingIndicator.h"
 #include "NUIRenderer.h"
 #include "NUITypes.h"
 #include "NUIThemeSystem.h"
@@ -26,7 +27,6 @@ public:
     NUISegmentedControl(const std::vector<std::string>& segments)
         : segments_(segments)
         , selectedIndex_(0)
-        , indicatorPosition_(0.0f)
         , cornerRadius_(-1.0f)
         , accentColor_(NUIThemeManager::getInstance().getColor("accentPrimary"))
         , hoveredIndex_(-1)
@@ -39,14 +39,14 @@ public:
         if (index >= segments_.size()) return;
         if (index == selectedIndex_) {
             if (!animate) {
-                indicatorPosition_ = static_cast<float>(index);
+                indicator_.snapTo(static_cast<float>(index));
                 setDirty(true);
             }
             return;
         }
         selectedIndex_ = index;
         if (!animate) {
-            indicatorPosition_ = static_cast<float>(index);
+            indicator_.snapTo(static_cast<float>(index));
         }
         if (onSelectionChanged_) {
             onSelectionChanged_(selectedIndex_);
@@ -139,7 +139,7 @@ public:
         }
         
         // Sliding indicator
-        float indicatorX = bounds.x + padding + indicatorPosition_ * segmentWidth;
+        float indicatorX = bounds.x + padding + indicator_.position() * segmentWidth;
         NUIRect indicatorRect(indicatorX, bounds.y + padding, indicatorWidth, indicatorHeight);
         
         renderer.fillRoundedRect(indicatorRect, radius - padding,
@@ -166,18 +166,15 @@ public:
     }
     
     void onUpdate(double deltaTime) override {
-        // Animate indicator sliding
-        float targetPos = static_cast<float>(selectedIndex_);
-        float diff = targetPos - indicatorPosition_;
-        if (std::abs(diff) > 0.001f) {
-            float speed = 12.0f; // Animation speed
-            indicatorPosition_ += diff * speed * static_cast<float>(deltaTime);
-            if (std::abs(targetPos - indicatorPosition_) < 0.01f) {
-                indicatorPosition_ = targetPos;
-            }
+        // selectedIndex_ remains the single authority; the indicator chases it.
+        // The first sync snaps (nothing to animate from), later ones animate,
+        // and an unchanged target does nothing — so layout, resize or segment
+        // changes never replay a selection animation.
+        constexpr float kIndicatorSpeed = 12.0f;
+        if (indicator_.sync(static_cast<float>(selectedIndex_), deltaTime, kIndicatorSpeed)) {
             setDirty(true);
         }
-        
+
         NUIComponent::onUpdate(deltaTime);
     }
     
@@ -233,7 +230,11 @@ public:
 private:
     std::vector<std::string> segments_;
     size_t selectedIndex_;
-    float indicatorPosition_; // Animated position (0.0 to segments_.size()-1)
+    // Indicator position + whether it has ever been synchronised (#653 follow-up).
+    // Initialisation is explicit state, not inferred from the position value:
+    // 0.0f is a valid position, so it cannot distinguish "never initialised"
+    // from "correctly on segment zero".
+    NUISlidingIndicator indicator_;
     float cornerRadius_;
     NUIColor accentColor_;
     int hoveredIndex_;

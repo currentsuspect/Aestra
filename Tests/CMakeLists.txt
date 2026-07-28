@@ -1949,3 +1949,13 @@ target_include_directories(AudioSettingsStoreTest PRIVATE
 )
 add_test(NAME AudioSettingsStoreTest COMMAND AudioSettingsStoreTest)
 set_tests_properties(AudioSettingsStoreTest PROPERTIES LABELS "audio;settings;regression")
+
+# Sliding-indicator first-sync semantics (segmented control, #653 follow-up).
+# Header-only and widget-free by design so the animation contract is reachable
+# without linking AestraUI, which AESTRA_CI=ON disables.
+add_executable(SlidingIndicatorTest AestraUI/SlidingIndicatorTest.cpp)
+target_include_directories(SlidingIndicatorTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Base
+)
+add_test(NAME SlidingIndicatorTest COMMAND SlidingIndicatorTest)
+set_tests_properties(SlidingIndicatorTest PROPERTIES LABELS "ui;regression")
