@@ -179,6 +179,49 @@ int main() {
                 "Registering a panel listener must not displace project dirty tracking");
     }
 
+    // -------------------------------------------------------------------
+    // Building default content is not an edit (#653).
+    //
+    // AestraContent's constructor calls addDemoTracks(), which calls
+    // addChannel() fifty times. addChannel legitimately marks the project
+    // modified, so construction left every fresh launch dirty and closing
+    // without touching anything prompted "Unsaved Changes" — confirmed by
+    // instrumenting all eight dirty-write sites: exactly one transition,
+    // addChannel during ContentConstruction, never cleared.
+    //
+    // AestraContent cannot be constructed headlessly, so this pins the
+    // TrackManager half of the contract: the population-then-clear sequence
+    // the constructor now performs must leave the project clean, AND a real
+    // edit afterwards must still dirty it.
+    //
+    // The second half is the important one. It fails if anyone ever "fixes"
+    // this class of defect with a startup-wide suppression guard or by
+    // weakening addChannel — both of which would make the first assertion
+    // pass and this one fail.
+    {
+        auto tracksOwner = std::make_unique<TrackManager>();
+        auto& tracks = *tracksOwner;
+
+        require(!tracks.isModified(), "A newly constructed TrackManager is not modified");
+
+        // What addDemoTracks() does.
+        for (int i = 1; i <= 50; ++i) {
+            tracks.addChannel("Insert " + std::to_string(i));
+        }
+        require(tracks.isModified(),
+                "addChannel must still mark the project modified — the defect is not "
+                "that addChannel dirties, it is that construction never cleared");
+
+        // What the constructor now does after populating.
+        tracks.setModified(false);
+        require(!tracks.isModified(), "Default content, once built, leaves the project clean");
+
+        // A real user edit through the very same path must dirty it again.
+        tracks.addChannel("User added this one");
+        require(tracks.isModified(),
+                "A channel added after construction must mark the project modified");
+    }
+
     std::cout << "[PASS] ProjectDirtyStateTest\n";
     return 0;
 }
