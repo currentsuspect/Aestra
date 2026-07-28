@@ -87,6 +87,7 @@ private:
     void setupCallbacks();
     void connectAudioToUI();
     void finalizeAudioSetup(); // Deferred after window shown for instant startup
+    void applyPersistedEngineSettings(); // #649: startup owns DSP config, not the dialog
 
     // Project management
     void requestClose();

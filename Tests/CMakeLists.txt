@@ -1935,3 +1935,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/LatencyCompensationTest.cpp")
     add_test(NAME LatencyCompensationTest COMMAND LatencyCompensationTest)
     set_tests_properties(LatencyCompensationTest PROPERTIES LABELS "audio;latency;pdc")
 endif()
+
+# One parser for audio_settings.conf (#649). parse/serialize are stream-based
+# and platform-free by design, so the decision that was leaving the user's
+# buffer size unapplied is reachable without linking the app or a UI.
+add_executable(AudioSettingsStoreTest AestraUI/AudioSettingsStoreTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/AudioSettingsStore.cpp)
+target_link_libraries(AudioSettingsStoreTest PRIVATE AestraPlat AestraCore)
+target_include_directories(AudioSettingsStoreTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/AestraPlat/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioSettingsStoreTest COMMAND AudioSettingsStoreTest)
+set_tests_properties(AudioSettingsStoreTest PROPERTIES LABELS "audio;settings;regression")
