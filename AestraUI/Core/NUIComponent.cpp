@@ -29,6 +29,7 @@ NUIComponent::NUIComponent() {
 }
 
 NUIComponent::~NUIComponent() {
+    hideRemoteTooltip(this);
     if (g_focusedComponent == this) {
         g_focusedComponent = nullptr;
     }
@@ -111,16 +112,7 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
 
     // Update hover state if it changed
     if (wasHovered != shouldBeHovered && !event.cursorCaptured) {
-        // Store the mouse position when hover state changes for tooltip positioning
-        if (shouldBeHovered && !tooltipText_.empty()) {
-            s_tooltipState.hoverPos = event.position;
-        }
         setHovered(shouldBeHovered);
-    }
-    
-    // Update hover position continuously while hovering (for accurate tooltip placement)
-    if (hovered_ && !tooltipText_.empty() && s_tooltipState.text == tooltipText_) {
-        s_tooltipState.hoverPos = event.position;
     }
 
     return eventHandledByChild || eventHandledBySelf;
@@ -155,34 +147,19 @@ void NUIComponent::onFocusLost() {
 
 void NUIComponent::onMouseEnter() {
     hovered_ = true;
-    
-    // Trigger global tooltip if text is set
+
     if (!tooltipText_.empty()) {
-        s_tooltipState.text = tooltipText_;
-        
-        // Get global position for tooltip using localToGlobal for accurate transformation
-        // Calculate center-bottom of this component in local coords, then convert to global
         NUIPoint localCenter(bounds_.width * 0.5f, bounds_.height + 6.0f);
-        NUIPoint globalPos = localToGlobal(localCenter);
-        s_tooltipState.position = globalPos;
-        
-        s_tooltipState.active = true;
-        s_tooltipState.delayTimer = 0.0f; // Reset delay
-        s_tooltipState.alpha = 0.0f; // Start faded out
+        showRemoteTooltip(tooltipText_, localToGlobal(localCenter), this);
     }
-    
+
     setDirty();
 }
 
 void NUIComponent::onMouseLeave() {
     hovered_ = false;
-    
-    // Hide tooltip if this component was the source (simple check)
-    // In a complex system we might check if s_tooltipState.text == tooltipText_
-    if (!tooltipText_.empty() && s_tooltipState.text == tooltipText_) {
-        s_tooltipState.active = false;
-    }
-    
+    hideRemoteTooltip(this);
+
     setDirty();
 }
 
@@ -383,6 +360,10 @@ NUIPoint NUIComponent::globalToLocal(const NUIPoint& global) const {
 void NUIComponent::setVisible(bool visible) {
     if (visible_ != visible) {
         visible_ = visible;
+        if (!visible_) {
+            setHovered(false);
+            hideRemoteTooltip(this);
+        }
         setDirty();
     }
 }
@@ -432,7 +413,8 @@ void NUIComponent::clearFocusedComponent() {
 }
 
 void NUIComponent::setHovered(bool hovered) {
-    if (s_cursorCaptureActive) return;
+    if (s_cursorCaptureActive && hovered)
+        return;
     if (hovered_ != hovered) {
         hovered_ = hovered;
         if (hovered) {
@@ -534,29 +516,49 @@ std::shared_ptr<NUIComponent> NUIComponent::findChildAt(const NUIPoint& point) {
     return nullptr;
 }
 
-
-
 // ============================================================================
 // Tooltip Implementation
 // ============================================================================
 
 void NUIComponent::setTooltip(const std::string& text) {
+    if (tooltipText_ == text)
+        return;
+    hideRemoteTooltip(this);
     tooltipText_ = text;
+    if (hovered_ && !tooltipText_.empty()) {
+        const NUIPoint localCenter(bounds_.width * 0.5f, bounds_.height + 6.0f);
+        showRemoteTooltip(tooltipText_, localToGlobal(localCenter), this);
+    }
 }
 
 void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner, bool force) {
-    // Suppress all tooltips during hidden-cursor drag unless forced
-    if (!force && s_cursorCaptureActive) return;
+    constexpr float kTooltipDelaySeconds = 0.45f;
 
-    const bool wasActive = s_tooltipState.active;
-    s_tooltipState.text = text;
-    s_tooltipState.position = position;
-    s_tooltipState.hoverPos = position;  // Set both for manual tooltip calls
-    s_tooltipState.owner = owner;
-    s_tooltipState.active = true;
-    if (!wasActive) {
+    if (text.empty()) {
+        hideRemoteTooltip(owner);
+        return;
+    }
+
+    if (!force && s_cursorCaptureActive)
+        return;
+
+    const bool ownerChanged = !s_tooltipState.active || s_tooltipState.owner != owner;
+    const bool contentChanged = s_tooltipState.text != text;
+    const bool shouldRestart = ownerChanged || (contentChanged && !force);
+
+    if (shouldRestart) {
+        s_tooltipState.text = text;
+        s_tooltipState.position = position;
+        s_tooltipState.owner = owner;
+        s_tooltipState.active = true;
+        s_tooltipState.immediate = force;
         s_tooltipState.delayTimer = 0.0f;
         s_tooltipState.alpha = 0.0f;
+    } else if (force) {
+        s_tooltipState.text = text;
+        s_tooltipState.position = position;
+        s_tooltipState.immediate = true;
+        s_tooltipState.delayTimer = kTooltipDelaySeconds;
     }
 }
 
@@ -564,62 +566,89 @@ void NUIComponent::hideRemoteTooltip(const void* owner) {
     if (owner != nullptr && s_tooltipState.owner != owner) {
         return;
     }
-    if (owner == nullptr && s_tooltipState.owner != nullptr) {
-        return;
-    }
     s_tooltipState.active = false;
     s_tooltipState.owner = nullptr;
+    s_tooltipState.immediate = false;
+    s_tooltipState.alpha = 0.0f;
+    s_tooltipState.delayTimer = 0.0f;
 }
 
 void NUIComponent::updateGlobalTooltip(double deltaTime) {
+    constexpr float kTooltipDelaySeconds = 0.45f;
+    constexpr float kFadeSpeed = 8.0f;
+
     if (s_tooltipState.active) {
-        // Fade in
-        const float FADE_SPEED = 5.0f;
-        s_tooltipState.alpha = std::min(1.0f, s_tooltipState.alpha + static_cast<float>(deltaTime * FADE_SPEED));
+        s_tooltipState.delayTimer += static_cast<float>(std::max(0.0, deltaTime));
+        if (s_tooltipState.immediate || s_tooltipState.delayTimer >= kTooltipDelaySeconds) {
+            s_tooltipState.alpha =
+                std::min(1.0f, s_tooltipState.alpha + static_cast<float>(std::max(0.0, deltaTime) * kFadeSpeed));
+        }
     } else {
-         s_tooltipState.alpha = 0.0f; // Instant hide for responsiveness
+        s_tooltipState.alpha = 0.0f;
     }
 }
 
+NUIRect NUIComponent::calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
+                                             const NUIRect& viewport) {
+    constexpr float kMargin = 4.0f;
+    float x = anchor.x + 10.0f;
+    float y = anchor.y - tooltipSize.height - 6.0f;
 
+    const bool hasViewport = viewport.width > 0.0f && viewport.height > 0.0f;
+    const float top = hasViewport ? viewport.y + kMargin : kMargin;
+    if (y < top) {
+        y = anchor.y + 16.0f;
+    }
 
-void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
-    if (!s_tooltipState.active || s_tooltipState.alpha <= 0.01f) return;
+    if (hasViewport) {
+        const float left = viewport.x + kMargin;
+        const float right = viewport.right() - kMargin;
+        const float bottom = viewport.bottom() - kMargin;
+        x = std::clamp(x, left, std::max(left, right - tooltipSize.width));
+        y = std::clamp(y, top, std::max(top, bottom - tooltipSize.height));
+    } else {
+        x = std::max(kMargin, x);
+        y = std::max(kMargin, y);
+    }
+
+    return {x, y, tooltipSize.width, tooltipSize.height};
+}
+
+void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport) {
+    if (!s_tooltipState.active || s_tooltipState.alpha <= 0.01f)
+        return;
     auto& theme = NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
-    
-    // Reuse minimap tooltip pattern - position relative to hoverPos (actual mouse position)
+
+    // Reuse the compact minimap tooltip styling around the stable hover anchor.
     const float tooltipPadX = props.spacingS;
     const float tooltipPadY = props.spacingXS;
     const float tooltipRadius = props.radiusS;
     const float fontSize = props.fontSizeXS;
     const auto size = renderer.measureText(s_tooltipState.text, fontSize);
-    
+
     const float w = size.width + tooltipPadX * 2.0f;
     const float h = size.height + tooltipPadY * 2.0f;
-    
-    // Position: offset from mouse cursor (like minimap tooltip)
-    float x = s_tooltipState.hoverPos.x + 10.0f;
-    float y = s_tooltipState.hoverPos.y - h - 6.0f;
-    
-    // If tooltip would go above screen, show below cursor instead
-    if (y < 4.0f) {
-        y = s_tooltipState.hoverPos.y + 16.0f;
-    }
-    
-    // Clamp to reasonable screen bounds
-    if (x < 4.0f) x = 4.0f;
-    
-    const NUIRect tipRect(x, y, w, h);
-    
+
+    const NUIRect tipRect = calculateTooltipBounds(s_tooltipState.position, {w, h}, viewport);
+
     // Theme colors (matching minimap style)
     const NUIColor bg = theme.getColor("elevatedPanel").withAlpha(0.98f * s_tooltipState.alpha);
     const NUIColor border = theme.getColor("borderStrong").withAlpha(0.88f * s_tooltipState.alpha);
     const NUIColor text = theme.getColor("textPrimary").withAlpha(0.96f * s_tooltipState.alpha);
-    
+
     renderer.fillRoundedRect(tipRect, tooltipRadius, bg);
     renderer.strokeRoundedRect(tipRect, tooltipRadius, props.layout.dividerWidth, border);
     renderer.drawTextCentered(s_tooltipState.text, tipRect, fontSize, text);
+}
+
+void NUIComponent::setCursorCaptureActive(bool active) {
+    if (s_cursorCaptureActive == active)
+        return;
+    s_cursorCaptureActive = active;
+    if (active) {
+        hideRemoteTooltip();
+    }
 }
 
 } // namespace AestraUI

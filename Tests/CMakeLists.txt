@@ -1699,6 +1699,27 @@ else()
     message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+if(TARGET AestraUI_Core)
+    add_executable(NUIDropdownInteractionTest AestraUI/NUIDropdownInteractionTest.cpp)
+    target_link_libraries(NUIDropdownInteractionTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIDropdownInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME NUIDropdownInteractionTest COMMAND NUIDropdownInteractionTest)
+    set_tests_properties(NUIDropdownInteractionTest PROPERTIES LABELS "ui;dropdown;regression")
+
+    add_executable(NUIComponentTooltipTest AestraUI/NUIComponentTooltipTest.cpp)
+    target_link_libraries(NUIComponentTooltipTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIComponentTooltipTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME NUIComponentTooltipTest COMMAND NUIComponentTooltipTest)
+    set_tests_properties(NUIComponentTooltipTest PROPERTIES LABELS "ui;tooltip;regression")
+else()
+    message(STATUS "Dropdown/tooltip interaction tests skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # No EXISTS guard: a missing committed test source must fail configure, not
 # silently drop coverage (repo policy since #454/#463).
 add_executable(MusicalTypingControllerTest

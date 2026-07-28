@@ -31,9 +31,9 @@ enum class NUILayer {
 struct TooltipState {
     std::string text;
     NUIPoint position;
-    NUIPoint hoverPos;  // Actual mouse position when tooltip was triggered
     const void* owner = nullptr;
     bool active = false;
+    bool immediate = false;
     float alpha = 0.0f;
     float delayTimer = 0.0f;
 };
@@ -186,9 +186,12 @@ public:
     // Global Tooltip Management
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
-    static void renderGlobalTooltip(NUIRenderer& renderer);
+    static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
     static void updateGlobalTooltip(double deltaTime);
-    static void setCursorCaptureActive(bool active) { s_cursorCaptureActive = active; }
+    static NUIRect calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
+                                          const NUIRect& viewport);
+    static const TooltipState& getGlobalTooltipState() { return s_tooltipState; }
+    static void setCursorCaptureActive(bool active);
     static bool isCursorCaptureActive() { return s_cursorCaptureActive; }
 
 };

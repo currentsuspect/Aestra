@@ -9,7 +9,7 @@
 
 namespace AestraUI {
 
-// Track the currently open dropdown so other dropdowns ignore clicks while one is open
+// Keep one shared dropdown open at a time.
 static NUIDropdown* s_openDropdown = nullptr;
 constexpr float kDropdownGap = 6.0f;
 
@@ -104,7 +104,19 @@ void NUIDropdown::addItem(const DropdownItem& item) {
 
 void NUIDropdown::setItemVisible(int index, bool visible) {
     if (index >= 0 && index < static_cast<int>(items_.size())) {
+        if (items_[index].visible == visible)
+            return;
         items_[index].visible = visible;
+        if (!visible && selectedIndex_ == index) {
+            selectedIndex_ = -1;
+        }
+        if (!visible && hoveredIndex_ == index) {
+            hoveredIndex_ = -1;
+        }
+        clampScrollOffset();
+        if (isOpen_ && getVisibleItemCount() == 0) {
+            closeDropdown();
+        }
         setDirty(true);
         itemWidthCacheValid_ = false;
         cacheDirty_ = true;
@@ -113,16 +125,24 @@ void NUIDropdown::setItemVisible(int index, bool visible) {
 
 void NUIDropdown::setItemEnabled(int index, bool enabled) {
     if (index >= 0 && index < static_cast<int>(items_.size())) {
+        if (items_[index].enabled == enabled)
+            return;
         items_[index].enabled = enabled;
+        if (!enabled && hoveredIndex_ == index) {
+            hoveredIndex_ = getNextSelectableIndex(index, 1);
+            ensureItemVisible(hoveredIndex_);
+        }
         setDirty(true);
-        itemWidthCacheValid_ = false;
         cacheDirty_ = true;
     }
 }
 
 void NUIDropdown::clearItems() {
+    closeDropdown();
     items_.clear();
     selectedIndex_ = -1;
+    hoveredIndex_ = -1;
+    scrollOffset_ = 0;
     setDirty(true);
     itemWidthCacheValid_ = false;
     cacheDirty_ = true;
@@ -150,27 +170,49 @@ std::optional<DropdownItem> NUIDropdown::getSelectedItem() const {
 }
 
 void NUIDropdown::setSelectedIndex(int index) {
-    if (selectedIndex_ == index) return;
+    if (selectedIndex_ == index)
+        return;
 
-    if (index >= -1 && index < static_cast<int>(items_.size())) {
+    if (index >= -1 && index < static_cast<int>(items_.size()) && (index == -1 || items_[index].visible)) {
         selectedIndex_ = index;
         notifySelectionChanged();
-        
+
         if (selectedIndex_ >= 0 && items_[selectedIndex_].callback) {
             items_[selectedIndex_].callback();
         }
-        
+
         setDirty(true);
     }
 }
 
 void NUIDropdown::setSelectedByValue(int value) {
     for (int i = 0; i < static_cast<int>(items_.size()); ++i) {
-        if (items_[i].value == value) {
+        if (items_[i].visible && items_[i].value == value) {
             setSelectedIndex(i);
             return;
         }
     }
+    setSelectedIndex(-1);
+}
+
+void NUIDropdown::setMaxVisibleItems(int count) {
+    const int clamped = std::max(1, count);
+    if (maxVisibleItems_ == clamped)
+        return;
+    maxVisibleItems_ = clamped;
+    clampScrollOffset();
+    ensureItemVisible(hoveredIndex_ >= 0 ? hoveredIndex_ : selectedIndex_);
+    setDirty(true);
+    cacheDirty_ = true;
+}
+
+void NUIDropdown::setItemHeight(float height) {
+    const float clamped = std::max(1.0f, height);
+    if (itemHeight_ == clamped)
+        return;
+    itemHeight_ = clamped;
+    setDirty(true);
+    cacheDirty_ = true;
 }
 
 void NUIDropdown::onRender(NUIRenderer& renderer) {
@@ -262,24 +304,38 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
 }
 
 bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isEnabled()) return false;
+    if (!isVisible() || !isEnabled())
+        return false;
 
     auto bounds = getBounds();
 
+    if (isOpen_ && event.wheelDelta != 0.0f) {
+        const NUIRect listBounds = getDropdownBounds();
+        if (listBounds.contains(event.position)) {
+            const int previousOffset = scrollOffset_;
+            scrollOffset_ += event.wheelDelta > 0.0f ? -1 : 1;
+            clampScrollOffset();
+            hoveredIndex_ = getItemUnderMouse(event.position);
+            if (scrollOffset_ != previousOffset) {
+                setDirty(true);
+                cacheDirty_ = true;
+            }
+            return true;
+        }
+    }
+
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (isOpen_) {
-            int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-            float listHeight = itemHeight_ * visibleItems;
-            NUIRect listBounds(bounds.x, bounds.y + bounds.height + kDropdownGap, bounds.width, listHeight);
-            
+            const NUIRect listBounds = getDropdownBounds();
+
             if (listBounds.contains(event.position)) {
                 int clickedIndex = getItemUnderMouse(event.position);
                 if (clickedIndex >= 0 && clickedIndex < static_cast<int>(items_.size())) {
                     const auto& item = items_[clickedIndex];
                     if (item.enabled && item.visible) {
                         setSelectedIndex(clickedIndex);
+                        closeDropdown();
                     }
-                    closeDropdown();
                 }
                 return true;
             }
@@ -287,7 +343,7 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
 
         if (bounds.contains(event.position)) {
             if (!isOpen_ && s_openDropdown != nullptr && s_openDropdown != this) {
-                return false;
+                s_openDropdown->closeDropdown();
             }
             bringToFront();
             setFocused(true);
@@ -297,7 +353,9 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
 
         if (isOpen_) {
             closeDropdown();
-            return true;
+            // Let the same press continue through the parent dispatch so a
+            // sibling control can activate without requiring a second click.
+            return false;
         }
     }
 
@@ -310,36 +368,46 @@ bool NUIDropdown::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool NUIDropdown::onKeyEvent(const NUIKeyEvent& event) {
-    if (!isEnabled() || !isFocused()) return false;
+    if (!isEnabled() || !isFocused())
+        return false;
 
     if (event.pressed) {
         switch (event.keyCode) {
-            case NUIKeyCode::Enter:
-            case NUIKeyCode::Space:
-                toggleDropdown();
+        case NUIKeyCode::Enter:
+        case NUIKeyCode::Space:
+            if (!isOpen_) {
+                openDropdown();
+            } else {
+                if (hoveredIndex_ >= 0 && items_[hoveredIndex_].visible && items_[hoveredIndex_].enabled) {
+                    setSelectedIndex(hoveredIndex_);
+                }
+                closeDropdown();
+            }
+            return true;
+        case NUIKeyCode::Escape:
+            if (isOpen_) {
+                closeDropdown();
                 return true;
-            case NUIKeyCode::Escape:
-                if (isOpen_) {
-                    closeDropdown();
-                    return true;
-                }
-                break;
-            case NUIKeyCode::Up:
-                if (isOpen_) {
-                    int newIndex = selectedIndex_ > 0 ? selectedIndex_ - 1 : static_cast<int>(items_.size()) - 1;
-                    setSelectedIndex(newIndex);
-                    return true;
-                }
-                break;
-            case NUIKeyCode::Down:
-                if (isOpen_) {
-                    int newIndex = selectedIndex_ < static_cast<int>(items_.size()) - 1 ? selectedIndex_ + 1 : 0;
-                    setSelectedIndex(newIndex);
-                    return true;
-                }
-                break;
-            default:
-                break;
+            }
+            break;
+        case NUIKeyCode::Up:
+            if (isOpen_) {
+                hoveredIndex_ = getNextSelectableIndex(hoveredIndex_ >= 0 ? hoveredIndex_ : selectedIndex_, -1);
+                ensureItemVisible(hoveredIndex_);
+                setDirty(true);
+                return true;
+            }
+            break;
+        case NUIKeyCode::Down:
+            if (isOpen_) {
+                hoveredIndex_ = getNextSelectableIndex(hoveredIndex_ >= 0 ? hoveredIndex_ : selectedIndex_, 1);
+                ensureItemVisible(hoveredIndex_);
+                setDirty(true);
+                return true;
+            }
+            break;
+        default:
+            break;
         }
     }
     return false;
@@ -359,21 +427,33 @@ void NUIDropdown::toggleDropdown() {
 }
 
 void NUIDropdown::openDropdown() {
-    if (isOpen_) return;
+    if (isOpen_ || getVisibleItemCount() == 0)
+        return;
+    if (s_openDropdown && s_openDropdown != this) {
+        s_openDropdown->closeDropdown();
+    }
+    NUIComponent::hideRemoteTooltip();
     isOpen_ = true;
-    hoveredIndex_ = selectedIndex_;
-    if (onOpen_) onOpen_();
+    hoveredIndex_ =
+        selectedIndex_ >= 0 && items_[selectedIndex_].enabled ? selectedIndex_ : getNextSelectableIndex(-1, 1);
+    ensureItemVisible(hoveredIndex_);
+    if (onOpen_)
+        onOpen_();
     s_openDropdown = this;
     setDirty(true);
     cacheDirty_ = true;
 }
 
 void NUIDropdown::closeDropdown() {
-    if (!isOpen_) return;
+    if (!isOpen_)
+        return;
     isOpen_ = false;
     hoveredIndex_ = -1;
-    if (onClose_) onClose_();
-    if (s_openDropdown == this) s_openDropdown = nullptr;
+    scrollOffset_ = 0;
+    if (onClose_)
+        onClose_();
+    if (s_openDropdown == this)
+        s_openDropdown = nullptr;
     setDirty(true);
 }
 
@@ -394,15 +474,13 @@ void NUIDropdown::onUpdate(double deltaTime) {
 }
 
 void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
-    if (items_.empty()) return;
+    if (getVisibleItemCount() == 0)
+        return;
 
     refreshThemeColors();
     const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
-    auto bounds = getBounds();
-    int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-    float listHeight = itemHeight_ * visibleItems;
-
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + kDropdownGap, bounds.width, listHeight);
+    const NUIRect dropdownBounds = getDropdownBounds();
+    const int displayedRows = getDisplayedRowCount();
 
     renderer.setOpacity(1.0f);
     renderer.pushTransform(0, 0, 0, 1.0f);
@@ -423,13 +501,16 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
     renderer.fillRoundedRect(dropdownBounds, props.radiusL, backgroundColor_.withAlpha(0.985f));
     renderer.strokeRoundedRect(dropdownBounds, props.radiusL, 1.0f, borderColor_);
 
-    for (int i = 0; i < visibleItems && i < static_cast<int>(items_.size()); ++i) {
-        NUIRect itemBounds(dropdownBounds.x, dropdownBounds.y + i * itemHeight_, dropdownBounds.width, itemHeight_);
-        bool isSelected = (i == selectedIndex_);
-        bool isHovered = (i == hoveredIndex_);
-        renderItem(renderer, i, itemBounds, isSelected, isHovered);
+    for (int row = 0; row < displayedRows; ++row) {
+        const int itemIndex = getItemIndexForVisibleRow(scrollOffset_ + row);
+        if (itemIndex < 0)
+            break;
+        NUIRect itemBounds(dropdownBounds.x, dropdownBounds.y + row * itemHeight_, dropdownBounds.width, itemHeight_);
+        bool isSelected = (itemIndex == selectedIndex_);
+        bool isHovered = (itemIndex == hoveredIndex_);
+        renderItem(renderer, itemIndex, itemBounds, isSelected, isHovered);
         
-        if (i < visibleItems - 1) {
+        if (row < displayedRows - 1) {
             float dividerY = itemBounds.y + itemBounds.height;
             float dividerPadding = props.spacingS;
             renderer.drawLine(NUIPoint(itemBounds.x + dividerPadding, dividerY), 
@@ -442,13 +523,11 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
 }
 
 void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
-    if (items_.empty()) return;
+    if (getVisibleItemCount() == 0)
+        return;
     AESTRA_ZONE("Dropdown_RenderList");
 
-    auto bounds = getBounds();
-    int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-    float listHeight = itemHeight_ * visibleItems;
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + kDropdownGap, bounds.width, listHeight);
+    const NUIRect dropdownBounds = getDropdownBounds();
 
     if (cachedTextureId_ != 0 && !cacheDirty_) {
         renderer.drawTexture(cachedTextureId_, dropdownBounds, NUIRect(0,0,cachedTextureWidth_, cachedTextureHeight_));
@@ -508,15 +587,104 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
 }
 
 int NUIDropdown::getItemUnderMouse(const NUIPoint& mousePos) const {
-    if (!isOpen_) return -1;
-    auto bounds = getBounds();
-    int visibleItems = std::min(maxVisibleItems_, static_cast<int>(items_.size()));
-    NUIRect dropdownBounds(bounds.x, bounds.y + bounds.height + kDropdownGap, bounds.width, itemHeight_ * visibleItems);
-    if (!dropdownBounds.contains(mousePos)) return -1;
+    if (!isOpen_)
+        return -1;
+    const NUIRect dropdownBounds = getDropdownBounds();
+    if (!dropdownBounds.contains(mousePos))
+        return -1;
     float localY = mousePos.y - dropdownBounds.y;
-    int index = static_cast<int>(localY / itemHeight_);
-    if (index >= 0 && index < static_cast<int>(items_.size())) return index;
+    const int row = static_cast<int>(localY / itemHeight_);
+    return getItemIndexForVisibleRow(scrollOffset_ + row);
+}
+
+int NUIDropdown::getVisibleItemCount() const {
+    return static_cast<int>(
+        std::count_if(items_.begin(), items_.end(), [](const DropdownItem& item) { return item.visible; }));
+}
+
+int NUIDropdown::getItemIndexForVisibleRow(int row) const {
+    if (row < 0)
+        return -1;
+    int visibleRow = 0;
+    for (int index = 0; index < static_cast<int>(items_.size()); ++index) {
+        if (!items_[index].visible)
+            continue;
+        if (visibleRow == row)
+            return index;
+        ++visibleRow;
+    }
     return -1;
+}
+
+int NUIDropdown::getVisibleRowForItem(int index) const {
+    if (index < 0 || index >= static_cast<int>(items_.size()) || !items_[index].visible)
+        return -1;
+    int visibleRow = 0;
+    for (int current = 0; current < index; ++current) {
+        if (items_[current].visible)
+            ++visibleRow;
+    }
+    return visibleRow;
+}
+
+int NUIDropdown::getDisplayedRowCount() const {
+    return std::min(maxVisibleItems_, getVisibleItemCount());
+}
+
+int NUIDropdown::getNextSelectableIndex(int currentIndex, int direction) const {
+    if (items_.empty() || direction == 0)
+        return -1;
+    const int itemCount = static_cast<int>(items_.size());
+    int index = currentIndex;
+    for (int attempt = 0; attempt < itemCount; ++attempt) {
+        index += direction > 0 ? 1 : -1;
+        if (index >= itemCount)
+            index = 0;
+        if (index < 0)
+            index = itemCount - 1;
+        if (items_[index].visible && items_[index].enabled)
+            return index;
+    }
+    return -1;
+}
+
+NUIRect NUIDropdown::getDropdownBounds() const {
+    const NUIRect bounds = getBounds();
+    const float listHeight = itemHeight_ * getDisplayedRowCount();
+    float y = bounds.bottom() + kDropdownGap;
+
+    const NUIComponent* root = this;
+    while (root->getParent()) {
+        root = root->getParent();
+    }
+    const NUIRect viewport = root->getBounds();
+    const float aboveY = bounds.y - kDropdownGap - listHeight;
+    if (viewport.height > 0.0f && y + listHeight > viewport.bottom() && aboveY >= viewport.y) {
+        y = aboveY;
+    }
+
+    return {bounds.x, y, bounds.width, listHeight};
+}
+
+void NUIDropdown::clampScrollOffset() {
+    const int maxOffset = std::max(0, getVisibleItemCount() - getDisplayedRowCount());
+    scrollOffset_ = std::clamp(scrollOffset_, 0, maxOffset);
+}
+
+void NUIDropdown::ensureItemVisible(int index) {
+    const int row = getVisibleRowForItem(index);
+    if (row < 0) {
+        clampScrollOffset();
+        return;
+    }
+
+    const int displayedRows = getDisplayedRowCount();
+    if (row < scrollOffset_) {
+        scrollOffset_ = row;
+    } else if (row >= scrollOffset_ + displayedRows) {
+        scrollOffset_ = row - displayedRows + 1;
+    }
+    clampScrollOffset();
 }
 
 void NUIDropdown::notifySelectionChanged() {

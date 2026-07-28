@@ -47,8 +47,8 @@ public:
 
     // Visual configuration
     void setPlaceholderText(const std::string& text) { placeholderText_ = text; setDirty(true); }
-    void setMaxVisibleItems(int count) { maxVisibleItems_ = count; setDirty(true); }
-    void setItemHeight(float height) { itemHeight_ = height; setDirty(true); }
+    void setMaxVisibleItems(int count);
+    void setItemHeight(float height);
     
     // Render dropdown list separately for proper z-order
     void renderDropdownList(NUIRenderer& renderer);
@@ -94,6 +94,14 @@ protected:
 private:
     void renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered);
     int getItemUnderMouse(const NUIPoint& mousePos) const;
+    int getVisibleItemCount() const;
+    int getItemIndexForVisibleRow(int row) const;
+    int getVisibleRowForItem(int index) const;
+    int getDisplayedRowCount() const;
+    int getNextSelectableIndex(int currentIndex, int direction) const;
+    NUIRect getDropdownBounds() const;
+    void clampScrollOffset();
+    void ensureItemVisible(int index);
     void notifySelectionChanged();
 
     std::vector<DropdownItem> items_;
@@ -105,6 +113,7 @@ private:
     int maxVisibleItems_ = 5;
     float itemHeight_ = 28.0f;
     int hoveredIndex_ = -1;
+    int scrollOffset_ = 0;
 
     // Colors
     NUIColor backgroundColor_;
