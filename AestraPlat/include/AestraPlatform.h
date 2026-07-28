@@ -193,6 +193,24 @@ public:
     virtual void restore() = 0;
     /** @brief Check whether the window is currently maximized. */
     virtual bool isMaximized() const = 0;
+
+    /**
+     * @brief The window's NON-maximized geometry (#655).
+     *
+     * getPosition/getSize report where the window is *now*, which while
+     * maximized is the maximized rectangle. Persisting that destroys the size
+     * the user actually chose, and there is no way to recover it: applyWindowState
+     * skips size entirely when the maximized flag is set, so the value is never
+     * even read back.
+     *
+     * Implementations must track this independently of the current rect —
+     * Win32 has it natively as WINDOWPLACEMENT::rcNormalPosition; other backends
+     * record the last geometry observed while not maximized.
+     *
+     * @return false if no restore geometry is known yet, leaving the outputs
+     *         untouched, so callers can fall back rather than persist zeroes.
+     */
+    virtual bool getRestoreBounds(int& x, int& y, int& width, int& height) const = 0;
     /** @brief Check whether the window is currently minimized. */
     virtual bool isMinimized() const = 0;
     /** @brief Ask the windowing backend to close the window gracefully. */

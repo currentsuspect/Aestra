@@ -295,6 +295,10 @@ bool AestraApp::initializePlatformAndWindow(const UIState& uiState) {
     winConfig.width = uiState.windowWidth;
     winConfig.height = uiState.windowHeight;
     winConfig.fullscreen = false;
+    // #655: the persisted state decides this. It used to be forced true inside
+    // the window manager, so a window saved un-maximized still came back
+    // maximized and the stored size was never visible.
+    winConfig.startMaximized = uiState.maximized;
 
     if (!m_windowManager->initialize(winConfig)) {
         Log::error("Failed to initialize Window Manager");

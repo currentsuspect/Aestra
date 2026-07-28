@@ -95,7 +95,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     desc.height = config.height;
     desc.resizable = true;
     desc.decorated = false;  // Borderless for custom title bar
-    desc.startMaximized = true;  // Start maximized by default
+    // Honour the persisted maximized state instead of forcing it (#655). This
+    // was hard-coded true, so every window was born maximized and a stored
+    // "not maximized" could never take effect.
+    desc.startMaximized = config.startMaximized;
 
     if (!m_window->create(desc)) {
         Log::error("Failed to create window");
@@ -933,27 +936,43 @@ void AestraWindowManager::renderCustomCursor() {
 AestraWindowManager::WindowState AestraWindowManager::captureWindowState() const {
     WindowState state;
     if (m_window) {
-        m_window->getPosition(state.x, state.y);
-        m_window->getSize(state.width, state.height);
+        // Persist the RESTORE geometry, not the current rect (#655). While
+        // maximized, getSize() returns the maximized rectangle; writing that into
+        // width/height destroyed the size the user actually chose, and
+        // applyWindowState never reads it back because it skips sizing entirely
+        // when the maximized flag is set. Verified under a nested stacking WM:
+        // a 500x360 window, maximized and closed, persisted as 640x480.
         state.maximized = m_window->isMaximized();
+        if (!m_window->getRestoreBounds(state.x, state.y, state.width, state.height)) {
+            m_window->getPosition(state.x, state.y);
+            m_window->getSize(state.width, state.height);
+        }
     }
     return state;
 }
 
 void AestraWindowManager::applyWindowState(const WindowState& state) {
     if (!m_window) return;
-    
-    // Only apply position/size if not maximized (maximized state handled separately)
-    if (!state.maximized) {
-        // Validate reasonable bounds (prevent off-screen or tiny windows)
-        if (state.width >= 640 && state.height >= 480) {
-            m_window->setSize(state.width, state.height);
-            // Only set position if it seems reasonable (not negative/off-screen by much)
-            if (state.x > -1000 && state.y > -1000) {
-                m_window->setPosition(state.x, state.y);
-            }
+
+    // Restore geometry is applied ALWAYS, then the maximized state is layered on
+    // top (#655). Previously the two were exclusive, so a window restored as
+    // maximized had no restore geometry to un-maximize back to, and a window
+    // restored as non-maximized could not escape the maximized state it was born
+    // in (see startMaximized in initialize()).
+    if (state.width >= 640 && state.height >= 480) {
+        m_window->setSize(state.width, state.height);
+        if (state.x > -1000 && state.y > -1000) {
+            m_window->setPosition(state.x, state.y);
         }
-    } else {
+    }
+
+    if (state.maximized) {
         m_window->maximize();
+    } else {
+        // Explicitly leave the maximized state. The window is created with
+        // SDL_WINDOW_MAXIMIZED (see initialize()), so without this a persisted
+        // "not maximized" was silently ignored — observed under a nested
+        // stacking WM as a 500x360 request rendering full-screen.
+        m_window->restore();
     }
 }
