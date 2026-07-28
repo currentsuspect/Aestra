@@ -362,7 +362,20 @@ void AestraApp::initializeContent() {
 void AestraApp::initializeAutosave(bool enabled) {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = enabled;
-    config.autosaveInterval = std::chrono::seconds(60);
+    // Three numbers used to describe this interval and disagreed: Preferences
+    // said 300, AutosaveManager's own default said 30, and this line hard-coded
+    // 60 — which won, because the other two were never consulted. Preferences is
+    // the persisted authority; clamped because it is user-editable JSON on disk.
+    {
+        const int persisted = Preferences::instance().autoSaveIntervalSeconds;
+        const int seconds = std::clamp(persisted, 10, 3600);
+        if (seconds != persisted) {
+            Log::warning("[AutoSave] autoSaveIntervalSeconds " + std::to_string(persisted) +
+                         " out of range; using " + std::to_string(seconds));
+            Preferences::instance().autoSaveIntervalSeconds = seconds;
+        }
+        config.autosaveInterval = std::chrono::seconds(seconds);
+    }
     config.captureSnapshotOnCallingThread = true;
     config.autosavePathOverride = m_documentState.autosavePath();
     const std::string canonicalProjectPath = m_documentState.canonicalPath();
@@ -393,6 +406,11 @@ void AestraApp::buildSettingsAndDialogs() {
     auto generalPage = std::make_shared<GeneralSettingsPage>();
     generalPage->setOnAutoSaveToggled([this](bool enabled) {
         m_autoSaveManager.setEnabled(enabled);
+        // Persist as well as apply. Startup reads Preferences::autoSaveEnabled
+        // (see run()), but nothing ever wrote it back, so turning autosave off
+        // held for the session and silently came back on at the next launch.
+        // Preferences::save() runs at shutdown, so recording it here is enough.
+        Preferences::instance().autoSaveEnabled = enabled;
         Log::info(std::string("[AutoSave] ") + (enabled ? "Enabled" : "Disabled"));
     });
     settingsDialog->addPage(generalPage);
