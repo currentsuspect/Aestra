@@ -1916,16 +1916,47 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 // SECTION: View Management
 // =============================================================================
 
-bool AestraContent::isViewOpen(Audio::ViewType view) const {
+AestraContent::ViewOpenState AestraContent::getViewOpenState(Audio::ViewType view) const {
+    ViewOpenState state;
     switch (view) {
-    case Audio::ViewType::Mixer:     return m_viewState.mixerOpen;
-    case Audio::ViewType::PianoRoll: return m_viewState.pianoRollOpen;
-    case Audio::ViewType::Sequencer: return m_viewState.sequencerOpen;
-    case Audio::ViewType::Playlist:  return m_viewState.playlistActive;
-    case Audio::ViewType::History:   return m_historyPanel && m_historyPanel->isVisible();
-    case Audio::ViewType::Takes:     return m_takesPanel && m_takesPanel->isVisible();
+    case Audio::ViewType::Mixer:
+        state.requestedOpen = m_viewState.mixerOpen;
+        state.visible = m_mixerPanel && m_mixerPanel->isVisible();
+        break;
+    case Audio::ViewType::PianoRoll:
+        state.requestedOpen = m_viewState.pianoRollOpen;
+        state.visible = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+        break;
+    case Audio::ViewType::Sequencer:
+        state.requestedOpen = m_viewState.sequencerOpen;
+        state.visible = m_sequencerPanel && m_sequencerPanel->isVisible();
+        break;
+    case Audio::ViewType::Playlist:
+        // The timeline is the workspace itself rather than an overlay panel, so
+        // its intent and its visibility are the same stored flag. Reported as
+        // both so callers do not have to special-case it.
+        state.requestedOpen = m_viewState.playlistActive;
+        state.visible = m_viewState.playlistActive;
+        break;
+    case Audio::ViewType::History:
+        // History and Takes carry no separate restore state, because nothing
+        // hides them behind the user's back — setViewFocus() only touches the
+        // mixer, piano roll and Arsenal panels. The panel is therefore the
+        // authority for both halves. If a future mode does hide these, they need
+        // their own intent field rather than this equivalence.
+        state.visible = m_historyPanel && m_historyPanel->isVisible();
+        state.requestedOpen = state.visible;
+        break;
+    case Audio::ViewType::Takes:
+        state.visible = m_takesPanel && m_takesPanel->isVisible();
+        state.requestedOpen = state.visible;
+        break;
     }
-    return false;
+    return state;
+}
+
+bool AestraContent::isViewOpen(Audio::ViewType view) const {
+    return getViewOpenState(view).visible;
 }
 
 void AestraContent::setViewOpen(Audio::ViewType view, bool open) {

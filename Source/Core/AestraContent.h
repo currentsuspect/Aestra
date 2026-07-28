@@ -162,12 +162,41 @@ public:
     /** @brief Toggle visibility for a specific workspace overlay. */
     void toggleView(Aestra::Audio::ViewType view);
     /**
-     * @brief Whether a workspace overlay is currently open.
+     * @brief The two independent truths about a workspace overlay.
      *
-     * The view state was previously write-only from outside this class: callers
-     * could open and close overlays but had no way to ask what was showing. The
-     * Muse host verbs need to answer "what is on screen right now" without
-     * guessing, so the state is now readable as well as writable.
+     * These are genuinely different properties, and collapsing them into one
+     * boolean is what made the old single-value query misleading (see
+     * `docs/technical/settings_view_state_map.md`, B1).
+     *
+     * `requestedOpen` is the user's or agent's standing intent, and survives
+     * modes that hide panels temporarily. `visible` is what is on screen right
+     * now. They diverge in Audition mode, where setViewFocus() hides the mixer,
+     * piano roll and Arsenal panels WITHOUT clearing the intent — deliberately,
+     * because that intent is what restores them on the way out.
+     */
+    struct ViewOpenState {
+        /** @brief Standing intent: what the user asked to be open. */
+        bool requestedOpen = false;
+        /** @brief Ground truth: what is actually on screen right now. */
+        bool visible = false;
+    };
+
+    /**
+     * @brief Both truths about a workspace overlay.
+     *
+     * Every view answers from the same two sources. Previously the query read
+     * intent for four views and actual visibility for the other two, so its
+     * meaning depended on which view you asked about.
+     */
+    ViewOpenState getViewOpenState(Aestra::Audio::ViewType view) const;
+
+    /**
+     * @brief Whether a workspace overlay is currently on screen.
+     *
+     * Deliberately the VISIBLE half, not the intent: a caller asking a single
+     * yes/no question about a view almost always means "can the user see it".
+     * A caller that needs the standing intent — to restore it, or to report both
+     * — should use getViewOpenState().
      */
     bool isViewOpen(Aestra::Audio::ViewType view) const;
     /** @brief Toggle visibility of the left browser area. */
