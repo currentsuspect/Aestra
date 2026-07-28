@@ -724,12 +724,22 @@ void AudioSettingsPage::saveSettings() {
         // dropdown reports 0 — a legal device id — so writing it blindly is how
         // a stored selection got destroyed (#648). Persist the last known value
         // until the list has actually loaded.
+        // "Has a selection", not "has items". clearItems() leaves selectedIndex_
+        // at -1 and setSelectedByValue() silently no-ops when the value is
+        // absent, so a repopulated list whose stored device is gone is populated
+        // with nothing selected — and getSelectedValue() reports 0 there, which
+        // is a legal device id. getSelectedItem() is the accessor that can say
+        // "nothing" without inventing a value.
         using Aestra::Settings::valueToPersist;
-        const int driverValue =
-            valueToPersist(m_driverDropdown->getItemCount() > 0, m_driverDropdown->getSelectedValue(), m_savedDriverType);
-        const int deviceValue =
-            valueToPersist(m_deviceDropdown->getItemCount() > 0, m_deviceDropdown->getSelectedValue(), m_savedDeviceId);
-        const int inputDeviceValue = valueToPersist(m_inputDeviceDropdown->getItemCount() > 0,
+        const auto hasSelection = [](const auto& dropdown) {
+            return dropdown && dropdown->getItemCount() > 0 && dropdown->getSelectedItem().has_value();
+        };
+
+        const int driverValue = valueToPersist(hasSelection(m_driverDropdown),
+                                               m_driverDropdown->getSelectedValue(), m_savedDriverType);
+        const int deviceValue = valueToPersist(hasSelection(m_deviceDropdown),
+                                               m_deviceDropdown->getSelectedValue(), m_savedDeviceId);
+        const int inputDeviceValue = valueToPersist(hasSelection(m_inputDeviceDropdown),
                                                     m_inputDeviceDropdown->getSelectedValue(), m_savedInputDeviceId);
 
         file << "driver=" << driverValue << "\n";

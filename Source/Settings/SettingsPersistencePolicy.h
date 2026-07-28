@@ -25,20 +25,29 @@ namespace Settings {
 inline constexpr int kNoPersistedValue = -1;
 
 /**
- * @brief Decide what to write for a control that may not have finished loading.
+ * @brief Decide what to write for a control that may not have a real selection.
  *
- * @param listPopulated   Whether the control's item list has been filled in.
+ * @param hasSelection     Whether the control genuinely has an item selected.
  * @param currentSelection The control's current selected value.
- * @param lastKnownSaved  The value previously read from (or written to) the
- *                        config, or kNoPersistedValue if there was none.
+ * @param lastKnownSaved   The value previously read from (or written to) the
+ *                         config, or kNoPersistedValue if there was none.
  *
- * An unpopulated list is not a user selection. When the list has not loaded,
- * the previously persisted value is preserved; only when there was never one
- * does the current selection get written, since there is then no user intent
- * to protect.
+ * Only a genuine selection is user intent. Without one the previously persisted
+ * value is preserved; only when there was never one does the current selection
+ * get written, since there is then nothing to protect.
+ *
+ * @note This asks "is something selected", NOT "is the list populated". Those
+ * differ, and the difference is live: NUIDropdown::clearItems() sets
+ * selectedIndex_ to -1, and setSelectedByValue() silently does nothing when the
+ * value is absent — so a repopulated list whose stored id is no longer present
+ * ends up populated with NOTHING selected. getSelectedValue() returns 0 in that
+ * state, which is indistinguishable from the item whose value is 0. Persisting
+ * it would reproduce exactly the defect this file exists to prevent, through a
+ * narrower door. Callers must derive @p hasSelection from getSelectedItem(),
+ * which returns std::nullopt rather than a legal-looking 0.
  */
-inline int valueToPersist(bool listPopulated, int currentSelection, int lastKnownSaved) {
-    if (listPopulated) {
+inline int valueToPersist(bool hasSelection, int currentSelection, int lastKnownSaved) {
+    if (hasSelection) {
         return currentSelection;
     }
     if (lastKnownSaved != kNoPersistedValue) {

@@ -40,27 +40,85 @@ void expectEq(int got, int wanted, const std::string& what) {
 } // namespace
 
 int main() {
-    // --- the regression, stated directly -------------------------------------
-    // Saved device 129; dialog opens; list has not populated so the control
-    // reports 0. Writing 0 here is the bug.
-    expectEq(valueToPersist(/*listPopulated=*/false, /*currentSelection=*/0, /*lastKnownSaved=*/129), 129,
-             "unpopulated list must not overwrite a stored device id");
+    // =====================================================================
+    // The discriminator this whole file exists for:
+    //
+    //     "device 0 is selected"   !=   "nothing is selected"
+    //
+    // The predicate that shipped first asked "does the list have entries",
+    // which cannot tell those apart, because NUIDropdown::getSelectedValue()
+    // returns 0 for BOTH. Cases are stated in pairs so a future change cannot
+    // satisfy one reading and quietly break the other.
+    // =====================================================================
 
-    // Same shape for the input device and the driver.
-    expectEq(valueToPersist(false, 0, 7), 7, "unpopulated list preserves stored input device");
-    expectEq(valueToPersist(false, 0, 0), 0, "stored id of 0 is preserved as 0, not treated as absent");
+    // --- 1. items present, selectedIndex == -1 -> do NOT persist -------------
+    // Reachable today: clearItems() sets selectedIndex_ = -1, and
+    // setSelectedByValue() silently no-ops when the value is absent, so a
+    // repopulated list can hold items with nothing selected.
+    expectEq(valueToPersist(/*hasSelection=*/false, /*currentSelection=*/0, /*lastKnownSaved=*/129), 129,
+             "items present but nothing selected: stored id survives");
+    expectEq(valueToPersist(false, 0, 7), 7, "same for the input device");
+    expectEq(valueToPersist(false, 0, 3), 3, "same for the driver");
 
-    // --- once the list has loaded, the control is authoritative ---------------
-    expectEq(valueToPersist(true, 129, 129), 129, "populated list persists the selection");
-    expectEq(valueToPersist(true, 42, 129), 42, "populated list persists a NEW user selection");
-    expectEq(valueToPersist(true, 0, 129), 0,
-             "populated list persists 0 when 0 is genuinely selected");
+    // --- 2. saved id absent from the populated list -> do not invent 0 -------
+    // Enumeration succeeded, but the device the user chose is gone. The
+    // dropdown reports 0 because nothing matched; 0 must not overwrite the
+    // stored id, because the device may come back.
+    expectEq(valueToPersist(/*hasSelection=*/false, /*currentSelection=*/0, /*lastKnownSaved=*/129), 129,
+             "saved device absent from the list: 0 is not invented or persisted");
+
+    // --- 3. selected item hidden (a state #658 introduces) ------------------
+    // #658 sets selectedIndex_ = -1 when the selected item is hidden. Whatever
+    // product policy that PR settles on, the persistence answer is pinned here:
+    // a hidden selection is not a user selection, so the stored value survives
+    // rather than being overwritten by the 0 the widget reports. If #658
+    // instead retains a hidden logical selection, the caller passes
+    // hasSelection=true with the real value and case 4 covers it.
+    expectEq(valueToPersist(/*hasSelection=*/false, /*currentSelection=*/0, /*lastKnownSaved=*/129), 129,
+             "selection hidden: stored id survives, 0 is not persisted");
+
+    // --- 4. a REAL selection whose id happens to be 0 -> persist it ----------
+    // The other half of the discriminator. Were this to regress to "0 means
+    // nothing", a user on a backend where 0 is a legal device id could never
+    // save that choice.
+    expectEq(valueToPersist(/*hasSelection=*/true, /*currentSelection=*/0, /*lastKnownSaved=*/129), 0,
+             "device 0 GENUINELY selected: persist 0, overwriting the stored 129");
+    expectEq(valueToPersist(true, 0, kNoPersistedValue), 0,
+             "device 0 genuinely selected with nothing stored: persist 0");
+    expectEq(valueToPersist(true, 0, 0), 0, "device 0 selected and already stored: stays 0");
+
+    // --- 5. delayed enumeration eventually restores the saved selection ------
+    // Only once a real selection exists does the field become writable.
+    {
+        int stored = 129;
+        stored = valueToPersist(false, 0, stored);
+        expectEq(stored, 129, "lifecycle: pending enumeration preserves the stored id");
+        stored = valueToPersist(false, 0, stored);
+        expectEq(stored, 129, "lifecycle: populated-but-unselected still preserves it");
+        stored = valueToPersist(true, 129, stored);
+        expectEq(stored, 129, "lifecycle: restored selection persists the same id");
+        stored = valueToPersist(true, 42, stored);
+        expectEq(stored, 42, "lifecycle: a real user change is written");
+    }
+
+    // Repeated opens with enumeration never completing must not decay the value.
+    {
+        int stored = 129;
+        for (int i = 0; i < 5; ++i) {
+            stored = valueToPersist(false, 0, stored);
+        }
+        expectEq(stored, 129, "five open/close cycles with no selection preserve the id");
+    }
+
+    // --- once something IS selected, the control is authoritative -------------
+    expectEq(valueToPersist(true, 129, 129), 129, "selection persists");
+    expectEq(valueToPersist(true, 42, 129), 42, "a NEW user selection persists");
 
     // --- fresh install: nothing stored, so nothing to protect ----------------
     expectEq(valueToPersist(false, 0, kNoPersistedValue), 0,
-             "no stored value: current selection is written even unpopulated");
-    expectEq(valueToPersist(false, 3, kNoPersistedValue), 3, "no stored value: unpopulated fallback");
-    expectEq(valueToPersist(true, 5, kNoPersistedValue), 5, "no stored value: populated writes selection");
+             "no stored value: current selection is written even with no selection");
+    expectEq(valueToPersist(false, 3, kNoPersistedValue), 3, "no stored value: no-selection fallback");
+    expectEq(valueToPersist(true, 5, kNoPersistedValue), 5, "no stored value: a selection is written");
 
     // --- repeated opens must be idempotent -----------------------------------
     // Open, close, open again with the list still pending: the stored value must
