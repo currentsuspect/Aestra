@@ -254,8 +254,29 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         // intent", NOT "apply the default" — the two are indistinguishable
         // downstream, and conflating them is what pinned every install to 512
         // regardless of what the user chose (#649).
-        config.sampleRate = Aestra::isSet(saved.sampleRate) ? static_cast<uint32_t>(saved.sampleRate) : 48000u;
-        config.bufferSize = Aestra::isSet(saved.bufferSize) ? static_cast<uint32_t>(saved.bufferSize) : 512u;
+        // Presence is not sanity: kUnset rules out only -1, so a corrupted
+        // `buffersize=0` would otherwise reach the driver as a divisor and an
+        // allocation size. An implausible value carries no user intent, so it
+        // falls back to the default with a diagnostic rather than silently.
+        config.sampleRate = 48000u;
+        if (Aestra::isSet(saved.sampleRate)) {
+            if (Aestra::isPlausibleSampleRate(saved.sampleRate)) {
+                config.sampleRate = static_cast<uint32_t>(saved.sampleRate);
+            } else {
+                Log::warning("[Audio] samplerate " + std::to_string(saved.sampleRate) +
+                             " is out of range; using " + std::to_string(config.sampleRate));
+            }
+        }
+
+        config.bufferSize = 512u;
+        if (Aestra::isSet(saved.bufferSize)) {
+            if (Aestra::isPlausibleBufferSize(saved.bufferSize)) {
+                config.bufferSize = static_cast<uint32_t>(saved.bufferSize);
+            } else {
+                Log::warning("[Audio] buffersize " + std::to_string(saved.bufferSize) +
+                             " is out of range; using " + std::to_string(config.bufferSize));
+            }
+        }
 
         config.numInputChannels = inputDevice ? std::min<uint32_t>(inputDevice->maxInputChannels, 32u) : 0u;
         config.numOutputChannels = std::min<uint32_t>(2, std::max<uint32_t>(1, outputDevice->maxOutputChannels));

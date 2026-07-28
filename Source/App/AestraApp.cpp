@@ -848,12 +848,18 @@ void AestraApp::finalizeAudioSetup() {
     // Pass nullptr so openDefaultStream falls back to 'this' (the controller)
     // as the audio-callback userData, which the callback expects.
     if (m_audioController->openDefaultStream(nullptr)) {
+        // Establish the effective DSP configuration BEFORE the stream starts
+        // producing callbacks. This is not merely tidier ordering: setThreadCount
+        // replaces the engine's thread pool outright
+        // (m_threadPool = std::make_unique<RealTimeThreadPool>(count)), so running
+        // it against a live stream races the audio thread that is using that pool.
+        applyPersistedEngineSettings();
+
         m_audioController->startStream();
         if (m_content) {
             m_content->setAudioStatus(true);
         }
         connectAudioToUI(); // Sync configs now that stream is open
-        applyPersistedEngineSettings();
         m_audioStreamReady = true;
 
         // Re-wire the performance HUD in case the engine wasn't constructed
@@ -891,12 +897,20 @@ void AestraApp::applyPersistedEngineSettings() {
         engine->setDCRemovalEnabled(saved.dcRemoval != 0);
     }
     if (Aestra::isSet(saved.dithering)) {
-        engine->setDitheringMode(static_cast<Aestra::Audio::DitheringMode>(saved.dithering));
+        if (Aestra::isPlausibleDitheringMode(saved.dithering)) {
+            engine->setDitheringMode(static_cast<Aestra::Audio::DitheringMode>(saved.dithering));
+        } else {
+            Log::warning("[Audio] dithering " + std::to_string(saved.dithering) +
+                         " is not a valid mode; leaving the engine default");
+        }
     }
     if (Aestra::isSet(saved.previewDuckingDb)) {
         engine->setPreviewDuckingAttenuationDb(static_cast<float>(saved.previewDuckingDb));
     }
-    if (Aestra::isSet(saved.resampling)) {
+    if (Aestra::isSet(saved.resampling) && !Aestra::isPlausibleResamplingIndex(saved.resampling)) {
+        Log::warning("[Audio] resampling " + std::to_string(saved.resampling) +
+                     " is not a valid quality index; leaving the engine default");
+    } else if (Aestra::isSet(saved.resampling)) {
         // Index-to-quality mapping mirrors AudioSettingsPage::applyChanges. It is
         // duplicated rather than shared only because the page cannot be linked
         // headlessly; unifying it belongs with the page rewire.
@@ -908,7 +922,7 @@ void AestraApp::applyPersistedEngineSettings() {
             case 1: engineQ = InterpolationQuality::Sinc32; globalQ = Aestra::Audio::ClipResamplingQuality::Draft;    break;
             case 2: engineQ = InterpolationQuality::Cubic;  globalQ = Aestra::Audio::ClipResamplingQuality::Standard; break;
             case 3: engineQ = InterpolationQuality::Sinc64; globalQ = Aestra::Audio::ClipResamplingQuality::High;     break;
-            default: break;
+            default: break; // unreachable: guarded by isPlausibleResamplingIndex above
         }
         engine->setInterpolationQuality(engineQ);
         Aestra::Audio::PlaylistMixer::setResamplingQuality(globalQ);

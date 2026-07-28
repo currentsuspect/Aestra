@@ -54,6 +54,28 @@ struct AudioSettings {
 /// True when a field was actually present in the file.
 inline bool isSet(int field) { return field != AudioSettings::kUnset; }
 
+// Presence is not sanity. kUnset rules out exactly one value (-1), so a
+// hand-edited or corrupted config can still carry 0 or a negative through
+// isSet() and reach a consumer. buffersize=0 is the dangerous one: it is a
+// divisor and an allocation size. A value outside these ranges carries no user
+// intent, so consumers treat it as absent and fall back to their default —
+// loudly, never silently.
+
+/// Plausible device sample rates. Generous on purpose; this rejects garbage,
+/// not unusual-but-real hardware.
+inline bool isPlausibleSampleRate(int v) { return v >= 8000 && v <= 768000; }
+
+/// Plausible driver buffer sizes, in frames.
+inline bool isPlausibleBufferSize(int v) { return v >= 16 && v <= 16384; }
+
+/// Valid DitheringMode enumerators (None, Triangular, HighPass, NoiseShaped).
+/// Casting an out-of-range integer to the enum and handing it to the engine is
+/// not something the engine is required to survive.
+inline bool isPlausibleDitheringMode(int v) { return v >= 0 && v <= 3; }
+
+/// Valid resampling-quality indices as offered by the settings dropdown.
+inline bool isPlausibleResamplingIndex(int v) { return v >= 0 && v <= 3; }
+
 /**
  * @brief Parse `key=value` lines. Unknown keys are ignored; malformed values
  *        leave their field unset rather than defaulting.

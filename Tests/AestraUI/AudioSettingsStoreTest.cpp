@@ -25,6 +25,10 @@
 #include <string>
 
 using Aestra::AudioSettings;
+using Aestra::isPlausibleBufferSize;
+using Aestra::isPlausibleDitheringMode;
+using Aestra::isPlausibleResamplingIndex;
+using Aestra::isPlausibleSampleRate;
 using Aestra::isSet;
 using Aestra::parseAudioSettings;
 using Aestra::serializeAudioSettings;
@@ -203,6 +207,42 @@ int main() {
         expectEq(back.masterLimiter, 1, "rw master_limiter");
         expectEq(back.multiThreading, 0, "rw multi_threading");
     }
+
+    // --- presence is not sanity (review finding, #660) --------------------------
+    // kUnset rules out exactly one value (-1), so a hand-edited or corrupted
+    // config can still carry 0 or a negative through isSet() and reach a
+    // consumer. buffersize=0 is the dangerous one: a divisor and an allocation
+    // size. These are parsed faithfully — the store reports what the file said —
+    // and rejected at the point of application.
+    {
+        const AudioSettings s = parseText("buffersize=0\nsamplerate=0\n");
+        check(isSet(s.bufferSize), "buffersize=0 parses as SET (the file really said 0)");
+        expectEq(s.bufferSize, 0, "buffersize=0 is preserved by the parser");
+        check(!isPlausibleBufferSize(s.bufferSize), "buffersize=0 is rejected as implausible");
+        check(!isPlausibleSampleRate(s.sampleRate), "samplerate=0 is rejected as implausible");
+    }
+    {
+        const AudioSettings s = parseText("buffersize=-8\nsamplerate=-1\n");
+        check(!isPlausibleBufferSize(s.bufferSize), "negative buffersize rejected");
+        // samplerate=-1 collides with kUnset; it reads as absent, which is also safe.
+        check(!isSet(s.sampleRate) || !isPlausibleSampleRate(s.sampleRate),
+              "samplerate=-1 is either absent or implausible — never applied");
+    }
+
+    check(isPlausibleBufferSize(64) && isPlausibleBufferSize(256) && isPlausibleBufferSize(2048),
+          "the buffer sizes the UI offers are all plausible");
+    check(isPlausibleSampleRate(44100) && isPlausibleSampleRate(48000) && isPlausibleSampleRate(96000),
+          "the sample rates the UI offers are all plausible");
+    check(!isPlausibleBufferSize(15) && !isPlausibleBufferSize(16385), "buffer bounds are exclusive outside");
+    check(isPlausibleBufferSize(16) && isPlausibleBufferSize(16384), "buffer bounds are inclusive inside");
+    check(!isPlausibleSampleRate(7999) && !isPlausibleSampleRate(768001), "rate bounds exclusive outside");
+
+    // DitheringMode has four enumerators; casting anything else to the enum and
+    // handing it to the engine is not something the engine must survive.
+    for (int v : {0, 1, 2, 3}) check(isPlausibleDitheringMode(v), "valid dithering mode accepted");
+    for (int v : {-2, 4, 99}) check(!isPlausibleDitheringMode(v), "invalid dithering mode rejected");
+    for (int v : {0, 1, 2, 3}) check(isPlausibleResamplingIndex(v), "valid resampling index accepted");
+    for (int v : {-2, 4, 99}) check(!isPlausibleResamplingIndex(v), "invalid resampling index rejected");
 
     if (g_failures != 0) {
         std::cerr << "[FAIL] AudioSettingsStoreTest: " << g_failures << " failure(s)\n";
