@@ -77,12 +77,27 @@ public:
      */
     enum class LoadIntegrity { Unchecked, Verified, Mismatch };
 
+    /**
+     * @brief A plugin referenced by the project that could not be instantiated (#647).
+     *
+     * Deliberately NOT folded into `missingAssets`, which carries filesystem
+     * paths for samples. A plugin id is not a path, cannot be relinked by
+     * browsing for a file, and its slot state is retained in the project rather
+     * than dropped — so giving both the same collection would make the API lie
+     * about what a caller can do with the entry.
+     */
+    struct MissingPlugin {
+        std::string pluginId; ///< The id as stored in the project file.
+        std::string location; ///< Human-readable owner: mixer channel or lane name.
+    };
+
     struct LoadResult {
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
         std::string errorMessage;
         std::vector<std::string> missingAssets;
+        std::vector<MissingPlugin> missingPlugins;
         LoadIntegrity integrity{LoadIntegrity::Unchecked};
 
         std::optional<UIState> ui;
