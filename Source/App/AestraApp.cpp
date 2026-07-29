@@ -359,6 +359,28 @@ void AestraApp::initializeContent() {
     m_windowManager->setUnifiedHUD(unifiedHUD);
 }
 
+std::chrono::seconds AestraApp::resolveAutosaveInterval() {
+    // ONE place decides this. Three numbers used to describe the autosave
+    // interval and disagreed: Preferences said 300, AutosaveManager's own
+    // default said 30, and initializeAutosave hard-coded 60 — which won,
+    // because the other two were never consulted.
+    //
+    // reinitAutosaveManager() hard-coded 60 a second time, so a user's stored
+    // interval was silently discarded whenever the autosave manager was rebuilt
+    // (project load, save-as). Both sites now resolve through here.
+    //
+    // Clamped because this is user-editable JSON on disk, and the corrected
+    // value is written back so the file and the running config agree.
+    const int persisted = Preferences::instance().autoSaveIntervalSeconds;
+    const int seconds = std::clamp(persisted, 10, 3600);
+    if (seconds != persisted) {
+        Log::warning("[AutoSave] autoSaveIntervalSeconds " + std::to_string(persisted) +
+                     " out of range; using " + std::to_string(seconds));
+        Preferences::instance().autoSaveIntervalSeconds = seconds;
+    }
+    return std::chrono::seconds(seconds);
+}
+
 void AestraApp::initializeAutosave(bool enabled) {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = enabled;
@@ -366,16 +388,7 @@ void AestraApp::initializeAutosave(bool enabled) {
     // said 300, AutosaveManager's own default said 30, and this line hard-coded
     // 60 — which won, because the other two were never consulted. Preferences is
     // the persisted authority; clamped because it is user-editable JSON on disk.
-    {
-        const int persisted = Preferences::instance().autoSaveIntervalSeconds;
-        const int seconds = std::clamp(persisted, 10, 3600);
-        if (seconds != persisted) {
-            Log::warning("[AutoSave] autoSaveIntervalSeconds " + std::to_string(persisted) +
-                         " out of range; using " + std::to_string(seconds));
-            Preferences::instance().autoSaveIntervalSeconds = seconds;
-        }
-        config.autosaveInterval = std::chrono::seconds(seconds);
-    }
+    config.autosaveInterval = resolveAutosaveInterval();
     config.captureSnapshotOnCallingThread = true;
     config.autosavePathOverride = m_documentState.autosavePath();
     const std::string canonicalProjectPath = m_documentState.canonicalPath();
@@ -1842,7 +1855,7 @@ void AestraApp::wireTakesPanel() {
 void AestraApp::reinitAutosaveManager() {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = m_autoSaveManager.isEnabled();
-    config.autosaveInterval = std::chrono::seconds(60);
+    config.autosaveInterval = resolveAutosaveInterval();
     config.captureSnapshotOnCallingThread = true;
     config.autosavePathOverride = m_documentState.autosavePath();
     const std::string canonicalProjectPath = m_documentState.canonicalPath();

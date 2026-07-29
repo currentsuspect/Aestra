@@ -23,12 +23,19 @@ public:
     // it is. Keep this accurate — the audit that produced it is in
     // docs/technical/settings_view_state_map.md (B4).
 
-    // --- Audio settings: NOT WIRED -------------------------------------------
-    // Shadowed by AudioDeviceManager, which is the live authority and never
-    // consults these. Device choice therefore does not survive a restart.
-    // Wiring them means restoring a device by id at startup and handling the
-    // case where it is gone — a feature with real failure modes, not a
-    // one-liner. Do not write a settings path against these until that is done.
+    // --- Audio settings: NOT WIRED, and now a DUPLICATE ----------------------
+    // Nothing reads these. audio_settings.conf is the persisted authority — one
+    // parser, AudioSettingsStore — and AudioDeviceManager is the runtime one.
+    //
+    // Device, sample rate and buffer size DO survive a restart as of #649; they
+    // are applied at startup from that file, before any settings UI exists. So
+    // these fields are not an unimplemented feature waiting to be wired: they
+    // are a second, dead copy of settings that already work elsewhere, and the
+    // two have already drifted (this said bufferSize 512 while the live config
+    // said 256).
+    //
+    // Do not wire them. Removing them is tracked in #652; until then, anything
+    // written against these would silently override a working setting.
     std::string audioDeviceId = "default";
     int sampleRate = 48000;
     int bufferSize = 512;
