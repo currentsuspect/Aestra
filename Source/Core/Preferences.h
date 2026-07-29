@@ -55,8 +55,14 @@ public:
 
     // --- Auto-save: LIVE ------------------------------------------------------
     // Both are read at startup by AestraApp and applied to AutosaveManager.
+    //
+    // load() stores whatever the file says, unvalidated. The clamp to
+    // [10, 3600] happens in AestraApp::resolveAutosaveInterval(), which is the
+    // single place the interval is resolved for both autosave initialisation
+    // and reinitialisation, and which writes the corrected value back. So an
+    // out-of-range value can exist in memory between load() and that call.
     bool autoSaveEnabled = true;
-    int autoSaveIntervalSeconds = 300;  // clamped to [10, 3600] on load
+    int autoSaveIntervalSeconds = 300;
 
     // --- Recent files: NOT WIRED ---------------------------------------------
     // The storage, cap, and add/clear helpers below are implemented and correct;
