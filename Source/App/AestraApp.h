@@ -69,6 +69,9 @@ private:
     bool initializePlatformAndWindow(const Aestra::UIState& uiState);
     bool initializeAudio();
     void initializeContent();
+    /// The one place the autosave interval is decided (#646). Both the initial
+    /// setup and reinitAutosaveManager() resolve through this.
+    std::chrono::seconds resolveAutosaveInterval();
     void initializeAutosave(bool enabled);
     void buildRecoveryDialog(); // lightweight — needed during startup
     // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
