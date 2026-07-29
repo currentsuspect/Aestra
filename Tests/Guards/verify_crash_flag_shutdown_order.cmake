@@ -31,21 +31,48 @@ endif()
 file(READ "${APP_SOURCE}" APP_TEXT)
 
 # --- Property 2: the clear uses the retained path --------------------------
-string(FIND "${APP_TEXT}" "CrashFlagPath::isPrimed()" USES_PRIMED_CHECK)
-string(FIND "${APP_TEXT}" "CrashFlagPath::get()" USES_RETAINED_PATH)
+# Scoped to the body of clearCrashFlag(). A whole-file search is NOT sufficient:
+# the helper activeCrashFlagPath() legitimately contains both
+# CrashFlagPath::isPrimed() and CrashFlagPath::get(), so a file-wide match would
+# still succeed after clearCrashFlag() regressed to fresh resolution. That hole
+# was demonstrated, not hypothesised — the guard passed against a deliberately
+# regressed clear before this was scoped.
+string(FIND "${APP_TEXT}" "void AestraApp::clearCrashFlag()" CLEAR_FN_AT)
+if(CLEAR_FN_AT EQUAL -1)
+    message(FATAL_ERROR "Could not find AestraApp::clearCrashFlag() to inspect")
+endif()
+# Body runs to the next function definition at column 0, which is the closing
+# brace followed by a blank line and a new top-level definition.
+string(SUBSTRING "${APP_TEXT}" ${CLEAR_FN_AT} 1200 CLEAR_BODY)
+string(FIND "${CLEAR_BODY}" "\n}" CLEAR_END)
+if(NOT CLEAR_END EQUAL -1)
+    string(SUBSTRING "${CLEAR_BODY}" 0 ${CLEAR_END} CLEAR_BODY)
+endif()
+
+string(FIND "${CLEAR_BODY}" "CrashFlagPath::isPrimed()" USES_PRIMED_CHECK)
+string(FIND "${CLEAR_BODY}" "CrashFlagPath::get()" USES_RETAINED_PATH)
+string(FIND "${CLEAR_BODY}" "getCrashFlagPath()" CLEAR_RERESOLVES)
 if(USES_PRIMED_CHECK EQUAL -1 OR USES_RETAINED_PATH EQUAL -1)
     message(FATAL_ERROR
         "clearCrashFlag no longer uses the retained crash-flag path.\n"
         "Resolving it during shutdown goes through getAppDataPath(), which "
         "falls back to the working directory once Platform::shutdown() has "
         "released the platform utilities — the flag is then never cleared and "
-        "every launch offers a spurious recovery (#675).")
+        "a real crash is never detected (#675).")
+endif()
+if(NOT CLEAR_RERESOLVES EQUAL -1)
+    message(FATAL_ERROR
+        "clearCrashFlag calls getCrashFlagPath() again.\n"
+        "By that point Platform::shutdown() has released the platform "
+        "utilities, so the path resolves to the working directory (#675).")
 endif()
 
-string(FIND "${APP_TEXT}" "CrashFlagPath::prime(" PRIMES_PATH)
+# Priming must happen at a real call site, not merely be defined somewhere.
+string(FIND "${APP_TEXT}" "CrashFlagPath::prime(getCrashFlagPath())" PRIMES_PATH)
 if(PRIMES_PATH EQUAL -1)
     message(FATAL_ERROR
-        "Nothing primes the crash-flag path while platform utilities are alive (#675).")
+        "Nothing primes the crash-flag path from a resolved value while platform "
+        "utilities are alive (#675).")
 endif()
 
 # --- Property 1: the clear still happens after platform teardown -----------
@@ -84,10 +111,21 @@ if(DETECT_AT LESS PLATFORM_INIT_AT)
         "crash is ever detected (#675).")
 endif()
 
-string(FIND "${APP_TEXT}" "activeCrashFlagPath()" READS_RESOLVED)
+# Scoped for the same reason as Property 2: the helper's own definition would
+# otherwise satisfy a file-wide search.
+string(FIND "${APP_TEXT}" "bool AestraApp::isCrashedSession()" DETECT_FN_AT)
+if(DETECT_FN_AT EQUAL -1)
+    message(FATAL_ERROR "Could not find AestraApp::isCrashedSession() to inspect")
+endif()
+string(SUBSTRING "${APP_TEXT}" ${DETECT_FN_AT} 400 DETECT_BODY)
+string(FIND "${DETECT_BODY}" "\n}" DETECT_END)
+if(NOT DETECT_END EQUAL -1)
+    string(SUBSTRING "${DETECT_BODY}" 0 ${DETECT_END} DETECT_BODY)
+endif()
+string(FIND "${DETECT_BODY}" "activeCrashFlagPath()" READS_RESOLVED)
 if(READS_RESOLVED EQUAL -1)
     message(FATAL_ERROR
-        "Crash-flag readers no longer share the resolved path helper (#675).")
+        "isCrashedSession no longer reads through the resolved path helper (#675).")
 endif()
 
 message(STATUS "Verified crash-flag shutdown ordering, detection ordering and resolved-path use")
