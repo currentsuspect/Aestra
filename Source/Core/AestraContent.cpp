@@ -241,6 +241,17 @@ AestraContent::AestraContent()
 
     addDemoTracks();
 
+    // Building the default project is not an edit (#653). addDemoTracks() calls
+    // TrackManager::addChannel() fifty times, and addChannel legitimately marks
+    // the project modified — so construction left every fresh launch dirty, and
+    // closing without touching anything prompted "Unsaved Changes".
+    //
+    // resetToDefaultProject() already ends this way; only the constructor path
+    // omitted it. The clear belongs here rather than inside addDemoTracks(),
+    // which is named for what it adds and should not carry a surprising
+    // dirty-state side effect for any future caller.
+    m_trackManager->setModified(false);
+
     // Defer audio-engine wiring until setAudioEngine() receives the live controller engine.
 
     setupTrackManagerUI();
