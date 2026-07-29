@@ -447,6 +447,10 @@ bool NUIPlatformBridge::isMaximized() const {
     return m_window ? m_window->isMaximized() : false;
 }
 
+bool NUIPlatformBridge::getRestoreBounds(int& x, int& y, int& width, int& height) const {
+    return m_window ? m_window->getRestoreBounds(x, y, width, height) : false;
+}
+
 void NUIPlatformBridge::requestClose() {
     if (m_window) {
         m_window->requestClose();

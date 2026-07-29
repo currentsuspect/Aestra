@@ -1036,6 +1036,25 @@ bool PlatformWindowWin32::isMaximized() const {
     return wp.showCmd == SW_MAXIMIZE;
 }
 
+bool PlatformWindowWin32::getRestoreBounds(int& x, int& y, int& width, int& height) const {
+    // Win32 maintains this natively: rcNormalPosition IS the restore rectangle,
+    // updated by the OS as the user moves and resizes the un-maximized window.
+    // isMaximized() above already fetches the same structure and discards it (#655).
+    WINDOWPLACEMENT wp = {};
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (!GetWindowPlacement(m_hwnd, &wp))
+        return false;
+    const LONG w = wp.rcNormalPosition.right - wp.rcNormalPosition.left;
+    const LONG h = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top;
+    if (w <= 0 || h <= 0)
+        return false;
+    x = static_cast<int>(wp.rcNormalPosition.left);
+    y = static_cast<int>(wp.rcNormalPosition.top);
+    width = static_cast<int>(w);
+    height = static_cast<int>(h);
+    return true;
+}
+
 bool PlatformWindowWin32::isMinimized() const {
     return IsIconic(m_hwnd) == TRUE;
 }

@@ -68,6 +68,16 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     m_isFullscreen = desc.startFullscreen;
     m_isWindowVisible = true;
     m_isWindowMapped = true;
+    m_maximized = desc.startMaximized;
+
+    // Seed the restore geometry from what was requested. Without this, a session
+    // that starts maximized and is never un-maximized has no restore bounds to
+    // save, and the maximized size would win by default (#655).
+    m_restoreX = (x == SDL_WINDOWPOS_CENTERED) ? 0 : x;
+    m_restoreY = (y == SDL_WINDOWPOS_CENTERED) ? 0 : y;
+    m_restoreW = desc.width;
+    m_restoreH = desc.height;
+    m_hasRestoreBounds = desc.width > 0 && desc.height > 0;
 
     // Initial DPI check
     int dw, dh;
@@ -106,8 +116,15 @@ bool PlatformWindowLinux::pollEvents() {
         case SDL_WINDOWEVENT:
             if (e.window.windowID == SDL_GetWindowID(m_window)) {
                 switch (e.window.event) {
+                case SDL_WINDOWEVENT_MAXIMIZED:
+                    m_maximized = true;
+                    break;
+                case SDL_WINDOWEVENT_MOVED:
+                    rememberRestoreBoundsIfNormal();
+                    break;
                 case SDL_WINDOWEVENT_RESIZED:
                 case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    rememberRestoreBoundsIfNormal();
                     if (m_resizeCallback)
                         m_resizeCallback(e.window.data1, e.window.data2);
                     {
@@ -146,9 +163,11 @@ bool PlatformWindowLinux::pollEvents() {
                     m_isWindowMapped = false;
                     break;
                 case SDL_WINDOWEVENT_RESTORED:
+                    m_maximized = false;
                     if (m_isWindowVisible) {
                         m_isWindowMapped = true;
                     }
+                    rememberRestoreBoundsIfNormal();
                     break;
                 }
             }
@@ -311,20 +330,56 @@ void PlatformWindowLinux::minimize() {
 }
 
 void PlatformWindowLinux::maximize() {
-    if (m_window)
+    if (m_window) {
+        rememberRestoreBoundsIfNormal(); // capture before the rect becomes the maximized one
         SDL_MaximizeWindow(m_window);
+        m_maximized = true;
+    }
 }
 
 void PlatformWindowLinux::restore() {
-    if (m_window)
+    if (m_window) {
         SDL_RestoreWindow(m_window);
+        m_maximized = false;
+    }
 }
 
 bool PlatformWindowLinux::isMaximized() const {
     if (!m_window)
         return false;
+    // Union of the tracked state and the SDL flag. The flag alone missed
+    // WM-initiated maximize (#655): a window with _NET_WM_STATE_MAXIMIZED_VERT
+    // and _HORZ set reported false, so shutdown persisted "not maximized"
+    // together with the maximized dimensions.
+    if (m_maximized)
+        return true;
     Uint32 flags = SDL_GetWindowFlags(m_window);
     return (flags & SDL_WINDOW_MAXIMIZED) != 0;
+}
+
+bool PlatformWindowLinux::getRestoreBounds(int& x, int& y, int& width, int& height) const {
+    if (!m_hasRestoreBounds)
+        return false;
+    x = m_restoreX;
+    y = m_restoreY;
+    width = m_restoreW;
+    height = m_restoreH;
+    return true;
+}
+
+void PlatformWindowLinux::rememberRestoreBoundsIfNormal() {
+    if (!m_window || isMaximized() || m_isFullscreen)
+        return;
+    int w = 0, h = 0, x = 0, y = 0;
+    SDL_GetWindowSize(m_window, &w, &h);
+    SDL_GetWindowPosition(m_window, &x, &y);
+    if (w <= 0 || h <= 0)
+        return;
+    m_restoreX = x;
+    m_restoreY = y;
+    m_restoreW = w;
+    m_restoreH = h;
+    m_hasRestoreBounds = true;
 }
 
 bool PlatformWindowLinux::isMinimized() const {

@@ -43,6 +43,8 @@ public:
         int height;
         /** @brief Whether the window starts in fullscreen mode. */
         bool fullscreen;
+        /** @brief Whether the window starts maximized (#655: was hard-coded true). */
+        bool startMaximized = true;
     };
 
     using TransportAction = Aestra::TransportAction;

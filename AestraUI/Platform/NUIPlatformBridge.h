@@ -66,6 +66,8 @@ public:
     void maximize();
     void restore();
     bool isMaximized() const;
+    /// Non-maximized geometry; false when unknown, leaving outputs untouched (#655).
+    bool getRestoreBounds(int& x, int& y, int& width, int& height) const;
     void requestClose();  // Request window close through platform abstraction
     
     // Full screen support
