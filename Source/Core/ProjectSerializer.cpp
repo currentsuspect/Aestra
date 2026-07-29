@@ -1811,10 +1811,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                 if (channels[i].has("effectChainStateHex") && channels[i]["effectChainStateHex"].isString()) {
                     const auto effectState = hexToBytes(channels[i]["effectChainStateHex"].asString());
-                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager)) {
+                    std::vector<std::string> missingIds;
+                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &missingIds)) {
                         warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
                                                "[ProjectLoad] Failed to restore mixer effect chain on: " + channelName,
                                                "[ProjectLoad] Additional mixer effect-chain warnings suppressed.");
+                    }
+                    for (auto& id : missingIds) {
+                        result.missingPlugins.push_back({std::move(id), channelName});
                     }
                 }
             }
@@ -1956,11 +1960,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
-                                    if (!chain.loadState(effectState, pluginManager)) {
+                                    std::vector<std::string> missingIds;
+                                    if (!chain.loadState(effectState, pluginManager, &missingIds)) {
                                         warningLimiter.warning(
                                             ProjectLoadWarningCategory::EffectChain,
                                             "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
                                             "[ProjectLoad] Additional effect chain restore warnings suppressed.");
+                                    }
+                                    for (auto& id : missingIds) {
+                                        result.missingPlugins.push_back({std::move(id), lane->name});
                                     }
                                 }
                             }

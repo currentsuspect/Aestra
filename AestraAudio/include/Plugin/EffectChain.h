@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Aestra {
@@ -29,12 +30,40 @@ struct EffectSlotFaultState {
  * @brief Single slot in an effect chain
  */
 struct EffectSlot {
-    PluginInstancePtr plugin;           ///< Plugin instance (nullptr = empty)
+    PluginInstancePtr plugin;           ///< Plugin instance (nullptr = empty or missing)
     std::atomic<bool> bypassed{false};  ///< Bypass this slot
     std::atomic<float> dryWetMix{1.0f}; ///< 0.0 = dry only, 1.0 = wet only
     std::shared_ptr<EffectSlotFaultState> faultState{std::make_shared<EffectSlotFaultState>()};
 
+    // Missing-plugin placeholder (#647).
+    //
+    // When loadState() cannot instantiate a plugin — it is not installed, the
+    // scan cache is stale, or its id changed — the slot retains the plugin's
+    // identity and its opaque state here instead of silently becoming empty.
+    // saveState() re-emits the retained record verbatim, so a load/save cycle on
+    // a machine missing the plugin does not destroy it.
+    //
+    // Non-RT only. process() never reads these; the RT predicate is isEmpty(),
+    // which stays `plugin == nullptr` precisely so a placeholder is skipped by
+    // the audio path without a null check.
+    std::string missingPluginId;
+    std::vector<uint8_t> missingPluginState;
+
+    /// RT predicate: is there a plugin to process here? Placeholders answer true.
     bool isEmpty() const { return plugin == nullptr; }
+
+    /// Does this slot hold a retained record for a plugin that would not load?
+    bool hasMissingPlugin() const { return plugin == nullptr && !missingPluginId.empty(); }
+
+    /// Is this slot spoken for — by a live plugin or by a retained placeholder?
+    /// This, not isEmpty(), is what "can I put a plugin here" should ask.
+    bool isOccupied() const { return plugin != nullptr || !missingPluginId.empty(); }
+
+    void clearMissingPlugin() {
+        missingPluginId.clear();
+        missingPluginState.clear();
+        missingPluginState.shrink_to_fit();
+    }
 };
 
 /**
@@ -250,11 +279,38 @@ public:
 
     /**
      * @brief Load entire chain state
+     *
+     * A plugin the manager cannot instantiate does NOT make this fail and does
+     * NOT clear the slot. The slot retains the plugin id, bypass, dry/wet and
+     * opaque state as a placeholder (#647) so the next saveState() re-emits the
+     * record intact. The return value continues to mean "the blob parsed";
+     * unavailable plugins are reported through @p outMissingPluginIds.
+     *
+     * Same-session availability: a placeholder is NOT re-instantiated if the
+     * plugin becomes available later in the session — re-inserting a live plugin
+     * requires a graph rebuild and RT coordination the loader does not own. The
+     * placeholder resolves on the next project load. Inserting a plugin into the
+     * slot explicitly (insertPlugin) discards the placeholder, because the slot
+     * then genuinely holds what the user put there.
+     *
      * @param state State data from saveState()
      * @param manager PluginManager for recreating instances
-     * @return true on success
+     * @param outMissingPluginIds Optional; receives the id of every plugin that
+     *        could not be instantiated, in slot order. Not cleared on entry.
+     * @return true if the state blob was well-formed
      */
-    bool loadState(const std::vector<uint8_t>& state, PluginManager& manager);
+    bool loadState(const std::vector<uint8_t>& state, PluginManager& manager,
+                   std::vector<std::string>* outMissingPluginIds = nullptr);
+
+    /**
+     * @brief Number of slots currently holding a missing-plugin placeholder.
+     */
+    size_t getMissingPluginCount() const;
+
+    /**
+     * @brief Plugin id retained for a slot, or empty if the slot has no placeholder.
+     */
+    std::string getMissingPluginId(size_t slotIndex) const;
 
     // ==============================
     // Latency
