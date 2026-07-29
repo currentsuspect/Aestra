@@ -169,6 +169,9 @@ The requested foundation was **20% already present (4/20 points)** at
 - Reused #666 as the application-layer testability constraint; not solved here.
 - Reused #264 for asset hashes/smart relinking and #266 for serializer
   layering; both remain deferred.
+- Created #668 for the confirmed Windows autosave remove-before-rename gap;
+  this platform commit-boundary change is intentionally separate from the
+  project-format foundation.
 - PR #656 falsified the original assumption that missing-plugin preservation
   remained broadly unsolved. The implementation was already correct at the
   effect-chain layer; this slice only adds full-project evidence.
@@ -176,5 +179,4 @@ The requested foundation was **20% already present (4/20 points)** at
   preflight and commit validation. Cardinality is therefore not a stable
   public contract; this slice asserts that the preserved path remains reported
   and does not expand into unrelated result cleanup.
-- No new issue is required for the implemented gaps, and no existing issue is
-  duplicated.
+- No issue was duplicated.

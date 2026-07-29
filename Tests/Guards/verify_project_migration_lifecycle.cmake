@@ -9,4 +9,3 @@ if(MIGRATION_AWARE_CLEAR EQUAL -1)
 endif()
 
 message(STATUS "Verified migration-aware project lifecycle propagation")
-

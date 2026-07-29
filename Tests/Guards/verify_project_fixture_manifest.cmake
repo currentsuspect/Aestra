@@ -26,4 +26,3 @@ foreach(ENTRY IN LISTS FIXTURES)
 endforeach()
 
 message(STATUS "Verified immutable project-format fixture manifest")
-
