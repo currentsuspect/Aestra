@@ -135,6 +135,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
 
+      - name: Verify desktop font bundle
+        if: steps.scope.outputs.run == 'true'
+        run: >-
+          cmake
+          -DSOURCE_FONT_ROOT=${{github.workspace}}/AestraAssets/fonts
+          -DBUNDLED_FONT_ROOT=${{github.workspace}}/build-app/bin/AestraAssets/fonts
+          -P ${{github.workspace}}/Tests/Guards/verify_aestra_font_bundle.cmake
+
   build-windows:
     name: Windows (MSVC)
     runs-on: windows-latest
