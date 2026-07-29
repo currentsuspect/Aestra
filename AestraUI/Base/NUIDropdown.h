@@ -41,14 +41,27 @@ public:
     void addItem(const std::string& text, int value, const std::function<void()>& callback);
     void addItem(const DropdownItem& item);
     
+    /**
+     * @brief Show or hide an item.
+     *
+     * Hiding the CURRENTLY SELECTED item clears the selection outright — it does
+     * not retain a hidden logical selection, and it does not advance to another
+     * visible row. Auto-advancing would change the user's choice without asking,
+     * which for a settings control is a silent intent change.
+     *
+     * Consumers must therefore treat "no selection" as a real state. Use
+     * getSelectedItem(), which returns std::nullopt; getSelectedValue() returns
+     * 0 in that state, and 0 is a legal item value, so it cannot distinguish
+     * "nothing selected" from "the item whose value is 0".
+     */
     void setItemVisible(int index, bool visible);
     void setItemEnabled(int index, bool enabled);
     void clearItems();
 
     // Visual configuration
     void setPlaceholderText(const std::string& text) { placeholderText_ = text; setDirty(true); }
-    void setMaxVisibleItems(int count) { maxVisibleItems_ = count; setDirty(true); }
-    void setItemHeight(float height) { itemHeight_ = height; setDirty(true); }
+    void setMaxVisibleItems(int count);
+    void setItemHeight(float height);
     
     // Render dropdown list separately for proper z-order
     void renderDropdownList(NUIRenderer& renderer);
@@ -94,6 +107,14 @@ protected:
 private:
     void renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered);
     int getItemUnderMouse(const NUIPoint& mousePos) const;
+    int getVisibleItemCount() const;
+    int getItemIndexForVisibleRow(int row) const;
+    int getVisibleRowForItem(int index) const;
+    int getDisplayedRowCount() const;
+    int getNextSelectableIndex(int currentIndex, int direction) const;
+    NUIRect getDropdownBounds() const;
+    void clampScrollOffset();
+    void ensureItemVisible(int index);
     void notifySelectionChanged();
 
     std::vector<DropdownItem> items_;
@@ -105,6 +126,7 @@ private:
     int maxVisibleItems_ = 5;
     float itemHeight_ = 28.0f;
     int hoveredIndex_ = -1;
+    int scrollOffset_ = 0;
 
     // Colors
     NUIColor backgroundColor_;
