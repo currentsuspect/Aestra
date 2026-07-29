@@ -8,6 +8,7 @@
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 #include "AestraPlatform.h"
+#include "AudioSettingsStore.h"
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
@@ -48,42 +49,6 @@ uint64_t estimateCycleHz() {
 #else
     return 0;
 #endif
-}
-
-struct SavedAudioSelection {
-    int outputDeviceId{-1};
-    int inputDeviceId{-1};
-};
-
-SavedAudioSelection loadSavedAudioSelection() {
-    SavedAudioSelection selection;
-
-    const std::filesystem::path configPath = getAudioSettingsConfigPath();
-    std::ifstream file(configPath);
-    if (!file.is_open()) {
-        return selection;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        const auto eq = line.find('=');
-        if (eq == std::string::npos) {
-            continue;
-        }
-
-        const std::string key = line.substr(0, eq);
-        const std::string value = line.substr(eq + 1);
-        try {
-            if (key == "device") {
-                selection.outputDeviceId = std::stoi(value);
-            } else if (key == "input_device") {
-                selection.inputDeviceId = std::stoi(value);
-            }
-        } catch (const std::exception&) {
-        }
-    }
-
-    return selection;
 }
 
 const AudioDeviceInfo* findDeviceById(const std::vector<AudioDeviceInfo>& devices, int id) {
@@ -247,9 +212,12 @@ bool AestraAudioController::openDefaultStream(void* userData) {
                       " defaultOut=" + std::string(device.isDefaultOutput ? "yes" : "no"));
         }
 
-        const SavedAudioSelection savedSelection = loadSavedAudioSelection();
+        // One parser for audio_settings.conf (#649). The previous local reader
+        // understood only `device`/`input_device`, which is why the user's saved
+        // sample rate and buffer size reached nothing.
+        const Aestra::AudioSettings saved = Aestra::loadAudioSettings();
 
-        const AudioDeviceInfo* outputDevice = findDeviceById(devices, savedSelection.outputDeviceId);
+        const AudioDeviceInfo* outputDevice = findDeviceById(devices, saved.deviceId);
         if (!outputDevice || outputDevice->maxOutputChannels == 0) {
             AudioDeviceInfo defaultOutput = m_audioManager->getDefaultOutputDevice();
             outputDevice = findDeviceById(devices, static_cast<int>(defaultOutput.id));
@@ -270,7 +238,7 @@ bool AestraAudioController::openDefaultStream(void* userData) {
 
         Log::info("Using audio device: " + outputDevice->name);
 
-        const AudioDeviceInfo* inputDevice = choosePreferredInputDevice(devices, savedSelection.inputDeviceId);
+        const AudioDeviceInfo* inputDevice = choosePreferredInputDevice(devices, saved.inputDeviceId);
         if (inputDevice) {
             Log::info("Using input device: " + inputDevice->name + " (" +
                       std::to_string(inputDevice->maxInputChannels) + " channels)");
@@ -282,8 +250,33 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         AudioStreamConfig config;
         config.deviceId = outputDevice->id;
         config.inputDeviceId = inputDevice ? inputDevice->id : outputDevice->id;
-        config.sampleRate = 48000;
-        config.bufferSize = 512;
+        // Apply the persisted rate/buffer if present. Absent means "no stored
+        // intent", NOT "apply the default" — the two are indistinguishable
+        // downstream, and conflating them is what pinned every install to 512
+        // regardless of what the user chose (#649).
+        // Presence is not sanity: kUnset rules out only -1, so a corrupted
+        // `buffersize=0` would otherwise reach the driver as a divisor and an
+        // allocation size. An implausible value carries no user intent, so it
+        // falls back to the default with a diagnostic rather than silently.
+        config.sampleRate = 48000u;
+        if (Aestra::isSet(saved.sampleRate)) {
+            if (Aestra::isPlausibleSampleRate(saved.sampleRate)) {
+                config.sampleRate = static_cast<uint32_t>(saved.sampleRate);
+            } else {
+                Log::warning("[Audio] samplerate " + std::to_string(saved.sampleRate) +
+                             " is out of range; using " + std::to_string(config.sampleRate));
+            }
+        }
+
+        config.bufferSize = 512u;
+        if (Aestra::isSet(saved.bufferSize)) {
+            if (Aestra::isPlausibleBufferSize(saved.bufferSize)) {
+                config.bufferSize = static_cast<uint32_t>(saved.bufferSize);
+            } else {
+                Log::warning("[Audio] buffersize " + std::to_string(saved.bufferSize) +
+                             " is out of range; using " + std::to_string(config.bufferSize));
+            }
+        }
 
         config.numInputChannels = inputDevice ? std::min<uint32_t>(inputDevice->maxInputChannels, 32u) : 0u;
         config.numOutputChannels = std::min<uint32_t>(2, std::max<uint32_t>(1, outputDevice->maxOutputChannels));

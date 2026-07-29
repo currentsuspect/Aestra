@@ -30,6 +30,9 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include "../Core/AudioSettingsStore.h"
+#include "PlaylistMixer.h"
+#include "ClipResampler.h"
 #include <thread>
 #include <cmath>
 #include <algorithm>
@@ -845,6 +848,13 @@ void AestraApp::finalizeAudioSetup() {
     // Pass nullptr so openDefaultStream falls back to 'this' (the controller)
     // as the audio-callback userData, which the callback expects.
     if (m_audioController->openDefaultStream(nullptr)) {
+        // Establish the effective DSP configuration BEFORE the stream starts
+        // producing callbacks. This is not merely tidier ordering: setThreadCount
+        // replaces the engine's thread pool outright
+        // (m_threadPool = std::make_unique<RealTimeThreadPool>(count)), so running
+        // it against a live stream races the audio thread that is using that pool.
+        applyPersistedEngineSettings();
+
         m_audioController->startStream();
         if (m_content) {
             m_content->setAudioStatus(true);
@@ -859,6 +869,80 @@ void AestraApp::finalizeAudioSetup() {
             hud->setAudioEngine(m_audioController->getEngine());
         }
     }
+}
+
+// Apply the persisted DSP configuration once the engine exists (#649).
+//
+// These settings used to be applied by AudioSettingsPage's constructor, reached
+// lazily through ensureSettingsAndDialogs() — so whether the engine ran with the
+// user's safety-limiter, dither and multi-threading choices depended on whether
+// they had opened the Settings dialog this session. The safety limiter in
+// particular defaults to ON (AudioEngine.h), so a user who turned it off got it
+// back every launch and lost it again mid-session on opening Settings.
+//
+// Startup owns this now. The Settings dialog edits and displays; it does not
+// initialise.
+void AestraApp::applyPersistedEngineSettings() {
+    auto* engine = m_audioController ? m_audioController->getEngine() : nullptr;
+    if (!engine) {
+        return;
+    }
+
+    const Aestra::AudioSettings saved = Aestra::loadAudioSettings();
+
+    if (Aestra::isSet(saved.masterLimiter)) {
+        engine->setSafetyLimiterEnabled(saved.masterLimiter != 0);
+    }
+    if (Aestra::isSet(saved.dcRemoval)) {
+        engine->setDCRemovalEnabled(saved.dcRemoval != 0);
+    }
+    if (Aestra::isSet(saved.dithering)) {
+        if (Aestra::isPlausibleDitheringMode(saved.dithering)) {
+            engine->setDitheringMode(static_cast<Aestra::Audio::DitheringMode>(saved.dithering));
+        } else {
+            Log::warning("[Audio] dithering " + std::to_string(saved.dithering) +
+                         " is not a valid mode; leaving the engine default");
+        }
+    }
+    if (Aestra::isSet(saved.previewDuckingDb)) {
+        engine->setPreviewDuckingAttenuationDb(static_cast<float>(saved.previewDuckingDb));
+    }
+    if (Aestra::isSet(saved.resampling) && !Aestra::isPlausibleResamplingIndex(saved.resampling)) {
+        Log::warning("[Audio] resampling " + std::to_string(saved.resampling) +
+                     " is not a valid quality index; leaving the engine default");
+    } else if (Aestra::isSet(saved.resampling)) {
+        // Index-to-quality mapping mirrors AudioSettingsPage::applyChanges. It is
+        // duplicated rather than shared only because the page cannot be linked
+        // headlessly; unifying it belongs with the page rewire.
+        using Aestra::Audio::Interpolators::InterpolationQuality;
+        InterpolationQuality engineQ = InterpolationQuality::Sinc16;
+        Aestra::Audio::ClipResamplingQuality globalQ = Aestra::Audio::ClipResamplingQuality::High;
+        switch (saved.resampling) {
+            case 0: engineQ = InterpolationQuality::Cubic;  globalQ = Aestra::Audio::ClipResamplingQuality::Fast;     break;
+            case 1: engineQ = InterpolationQuality::Sinc32; globalQ = Aestra::Audio::ClipResamplingQuality::Draft;    break;
+            case 2: engineQ = InterpolationQuality::Cubic;  globalQ = Aestra::Audio::ClipResamplingQuality::Standard; break;
+            case 3: engineQ = InterpolationQuality::Sinc64; globalQ = Aestra::Audio::ClipResamplingQuality::High;     break;
+            default: break; // unreachable: guarded by isPlausibleResamplingIndex above
+        }
+        engine->setInterpolationQuality(engineQ);
+        Aestra::Audio::PlaylistMixer::setResamplingQuality(globalQ);
+    }
+    if (Aestra::isSet(saved.multiThreading)) {
+        const bool enabled = saved.multiThreading != 0;
+        engine->setMultiThreadingEnabled(enabled);
+        if (enabled && Aestra::isSet(saved.threads)) {
+            const unsigned hw = std::thread::hardware_concurrency();
+            const int maxThreads = hw > 0 ? static_cast<int>(hw) : 8;
+            const int clamped = std::max(1, std::min(saved.threads, maxThreads));
+            if (clamped != saved.threads) {
+                Log::warning("[Audio] threads " + std::to_string(saved.threads) + " out of range; using " +
+                             std::to_string(clamped));
+            }
+            engine->setThreadCount(clamped);
+        }
+    }
+
+    Log::info("[Audio] Applied persisted engine settings at startup");
 }
 
 void AestraApp::setupCallbacks() {
