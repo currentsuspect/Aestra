@@ -359,10 +359,36 @@ void AestraApp::initializeContent() {
     m_windowManager->setUnifiedHUD(unifiedHUD);
 }
 
+std::chrono::seconds AestraApp::resolveAutosaveInterval() {
+    // ONE place decides this. Three numbers used to describe the autosave
+    // interval and disagreed: Preferences said 300, AutosaveManager's own
+    // default said 30, and initializeAutosave hard-coded 60 — which won,
+    // because the other two were never consulted.
+    //
+    // reinitAutosaveManager() hard-coded 60 a second time, so a user's stored
+    // interval was silently discarded whenever the autosave manager was rebuilt
+    // (project load, save-as). Both sites now resolve through here.
+    //
+    // Clamped because this is user-editable JSON on disk, and the corrected
+    // value is written back so the file and the running config agree.
+    const int persisted = Preferences::instance().autoSaveIntervalSeconds;
+    const int seconds = std::clamp(persisted, 10, 3600);
+    if (seconds != persisted) {
+        Log::warning("[AutoSave] autoSaveIntervalSeconds " + std::to_string(persisted) +
+                     " out of range; using " + std::to_string(seconds));
+        Preferences::instance().autoSaveIntervalSeconds = seconds;
+    }
+    return std::chrono::seconds(seconds);
+}
+
 void AestraApp::initializeAutosave(bool enabled) {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = enabled;
-    config.autosaveInterval = std::chrono::seconds(60);
+    // Three numbers used to describe this interval and disagreed: Preferences
+    // said 300, AutosaveManager's own default said 30, and this line hard-coded
+    // 60 — which won, because the other two were never consulted. Preferences is
+    // the persisted authority; clamped because it is user-editable JSON on disk.
+    config.autosaveInterval = resolveAutosaveInterval();
     config.captureSnapshotOnCallingThread = true;
     config.autosavePathOverride = m_documentState.autosavePath();
     const std::string canonicalProjectPath = m_documentState.canonicalPath();
@@ -393,6 +419,11 @@ void AestraApp::buildSettingsAndDialogs() {
     auto generalPage = std::make_shared<GeneralSettingsPage>();
     generalPage->setOnAutoSaveToggled([this](bool enabled) {
         m_autoSaveManager.setEnabled(enabled);
+        // Persist as well as apply. Startup reads Preferences::autoSaveEnabled
+        // (see run()), but nothing ever wrote it back, so turning autosave off
+        // held for the session and silently came back on at the next launch.
+        // Preferences::save() runs at shutdown, so recording it here is enough.
+        Preferences::instance().autoSaveEnabled = enabled;
         Log::info(std::string("[AutoSave] ") + (enabled ? "Enabled" : "Disabled"));
     });
     settingsDialog->addPage(generalPage);
@@ -1824,7 +1855,7 @@ void AestraApp::wireTakesPanel() {
 void AestraApp::reinitAutosaveManager() {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = m_autoSaveManager.isEnabled();
-    config.autosaveInterval = std::chrono::seconds(60);
+    config.autosaveInterval = resolveAutosaveInterval();
     config.captureSnapshotOnCallingThread = true;
     config.autosavePathOverride = m_documentState.autosavePath();
     const std::string canonicalProjectPath = m_documentState.canonicalPath();
