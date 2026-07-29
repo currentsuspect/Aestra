@@ -2,6 +2,7 @@
 #include "AestraApp.h"
 #include "MuseHostVerbs.h"
 #include "AppLifecycle.h"
+#include "CrashFlagPath.h"
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
@@ -121,8 +122,19 @@ std::string AestraApp::getCrashFlagPath() {
     return (std::filesystem::path(getAppDataPath()) / "crash_flag").string();
 }
 
+std::string AestraApp::activeCrashFlagPath() {
+    // Prefer the path resolved while platform utilities were alive. The
+    // fallback only applies before priming, where getAppDataPath() is still
+    // able to resolve correctly.
+    return CrashFlagPath::isPrimed() ? CrashFlagPath::get() : getCrashFlagPath();
+}
+
 void AestraApp::writeCrashFlag() {
     std::string flagPath = getCrashFlagPath();
+    // Retain the authoritative path while platform utilities are still alive.
+    // shutdown() clears the flag after Platform::shutdown() has destroyed them,
+    // and re-resolving there silently yields <cwd>/crash_flag (#675).
+    CrashFlagPath::prime(flagPath);
     std::ofstream out(flagPath, std::ios::trunc);
     if (out) {
         out << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
@@ -143,7 +155,19 @@ void AestraApp::writeCrashFlag() {
 }
 
 void AestraApp::clearCrashFlag() {
-    std::string flagPath = getCrashFlagPath();
+    // Use the path retained at startup. Resolving it here would go through
+    // getAppDataPath(), which falls back to the working directory once
+    // Platform::shutdown() has released the platform utilities — the flag would
+    // then never be found and never be cleared (#675).
+    //
+    // Not primed means writeCrashFlag() never ran, so there is nothing this
+    // process wrote to clear. Say so loudly rather than resolving a path that
+    // is wrong by construction at this point in shutdown.
+    if (!CrashFlagPath::isPrimed()) {
+        Log::warning("[CrashDetection] Crash flag path was never resolved; nothing to clear");
+        return;
+    }
+    const std::string& flagPath = CrashFlagPath::get();
     std::error_code ec;
     if (std::filesystem::exists(flagPath, ec)) {
         std::filesystem::remove(flagPath, ec);
@@ -156,7 +180,7 @@ void AestraApp::clearCrashFlag() {
 }
 
 bool AestraApp::isCrashedSession() {
-    std::string flagPath = getCrashFlagPath();
+    const std::string flagPath = activeCrashFlagPath();
     std::error_code ec;
     return std::filesystem::exists(flagPath, ec);
 }
@@ -166,7 +190,7 @@ std::string AestraApp::getRecoveryMarkerPath(const std::string& autosavePath) {
 }
 
 std::string AestraApp::readCrashFlagToken() {
-    std::ifstream in(getCrashFlagPath(), std::ios::binary);
+    std::ifstream in(activeCrashFlagPath(), std::ios::binary);
     std::string token;
     std::getline(in, token);
     return token;
@@ -211,10 +235,6 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     Log::info("Aestra v1.0.0 - Initializing...");
 
-    // Check for crashed session BEFORE initializing platform.
-    bool crashedSession = isCrashedSession();
-    m_previousRecoverySessionToken = crashedSession ? readCrashFlagToken() : "";
-
     {
         StartupTimer t("Platform init");
         if (!Platform::initialize()) {
@@ -222,6 +242,26 @@ bool AestraApp::initialize(const std::string& projectPath) {
             return false;
         }
     }
+
+    // Resolve the crash-flag path ONCE, now that platform utilities exist, and
+    // reuse it for every crash-flag operation in this process (#675).
+    //
+    // Every one of those operations previously called getAppDataPath()
+    // independently, and that function silently falls back to the process
+    // working directory whenever platform utilities are absent. Detection used
+    // to run BEFORE Platform::initialize() and clearing runs AFTER
+    // Platform::shutdown(), so both sat in exactly that window: the flag was
+    // written to app-data, then looked for in the working directory. Clean
+    // exits never cleared it, and — worse — a real crash was never detected,
+    // because the read missed the file too. Proven by launching with a flag in
+    // the working directory only: recovery fired.
+    //
+    // Detection therefore moved below platform init. Nothing between the old
+    // and new positions consumed the result.
+    CrashFlagPath::prime(getCrashFlagPath());
+
+    const bool crashedSession = isCrashedSession();
+    m_previousRecoverySessionToken = crashedSession ? readCrashFlagToken() : "";
 
     // An app-data autosave is recovery state, never an implicit canonical project.
     m_documentState.startUntitled(getAutosavePath());

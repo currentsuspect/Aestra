@@ -105,3 +105,25 @@ add_test(NAME ProjectFixtureImmutabilityTest
 set_tests_properties(ProjectFixtureImmutabilityTest PROPERTIES
     LABELS "serialization;fixtures;compatibility"
 )
+
+# --- Crash-flag lifecycle (#675) -------------------------------------------
+# Header-only holder, so this links nothing from Source/ — which is why it can
+# exist at all while Source/ has no library target (#666).
+add_executable(CrashFlagPathTest App/CrashFlagPathTest.cpp)
+target_include_directories(CrashFlagPathTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/App)
+add_test(NAME CrashFlagPathTest COMMAND CrashFlagPathTest)
+set_tests_properties(CrashFlagPathTest PROPERTIES LABELS "app;recovery;regression")
+
+# Source guard: the shutdown ORDERING is the invariant that makes the crash flag
+# meaningful, and it is not expressible in a unit test while Source/ cannot be
+# linked. Path resolution lives in Tests/Guards/ so the blast-radius classifier
+# does not treat the app source path as a compiled input (lesson from #669).
+add_test(
+    NAME CrashFlagShutdownOrderGuardTest
+    COMMAND ${CMAKE_COMMAND}
+        -DAESTRA_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_crash_flag_shutdown_order.cmake
+)
+set_tests_properties(CrashFlagShutdownOrderGuardTest PROPERTIES
+    LABELS "app;recovery;guard"
+)
