@@ -1,5 +1,12 @@
 # Immutability guard for released project-format fixtures.
 #
+# Run via `cmake -P`. Script mode starts with NO policies set, so anything that
+# depends on one behaves differently across CMake versions — `if(x IN_LIST y)`
+# needs CMP0057 and errors with "Unknown arguments specified" without it. This
+# guard therefore uses `list(FIND)`, which is policy-independent, and states a
+# minimum so a future edit that does reach for IN_LIST still works.
+cmake_minimum_required(VERSION 3.16)
+#
 # The manifest is BIDIRECTIONAL on purpose. A one-way check (every manifest
 # entry exists and hashes correctly) proves nothing about a fixture that was
 # added, renamed or deleted-and-replaced: the corpus can change shape while
@@ -85,10 +92,12 @@ foreach(FOUND IN LISTS DISCOVERED)
     if(IS_DIRECTORY "${FIXTURE_ROOT}/${FOUND}")
         continue()
     endif()
-    if(FOUND IN_LIST NON_FIXTURE_FILES)
+    list(FIND NON_FIXTURE_FILES "${FOUND}" NON_FIXTURE_INDEX)
+    if(NOT NON_FIXTURE_INDEX EQUAL -1)
         continue()
     endif()
-    if(NOT FOUND IN_LIST EXPECTED_PATHS)
+    list(FIND EXPECTED_PATHS "${FOUND}" EXPECTED_INDEX)
+    if(EXPECTED_INDEX EQUAL -1)
         list(APPEND UNLISTED "${FOUND}")
     endif()
 endforeach()
