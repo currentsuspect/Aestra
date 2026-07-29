@@ -271,9 +271,14 @@ void AudioSettingsPage::createUI() {
     m_threadCountLabel = createLabel("Thread Count:");
     
     // Dropdowns
+    // Programmatic hydration is not a user edit (#648). The guard lives in the
+    // shared wrapper so it covers every control, including ones added later —
+    // five callbacks had it and eight did not, so loadSettings() still marked
+    // the page dirty by populating it.
     auto createDropdown = [&](std::function<void(int)> onChange) {
         auto d = std::make_shared<AestraUI::NUIDropdown>();
-        d->setOnSelectionChanged([onChange](int index, int, const std::string&) {
+        d->setOnSelectionChanged([this, onChange](int index, int, const std::string&) {
+            if (m_isInitializing || m_isPopulatingDeviceUI) return;
             onChange(index);
         });
         addChild(d);
@@ -282,10 +287,6 @@ void AudioSettingsPage::createUI() {
 
     m_driverDropdown = createDropdown([this](int idx) {
         m_dirty = true;
-
-        // Guard: skip audio calls during initialization and async UI population.
-        // The stream was opened once by AudioEngineController. UI must not mutate it.
-        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         // SWITCH DRIVER IMMEDIATELY so device list is correct
         if (m_audioManager) {
@@ -297,9 +298,12 @@ void AudioSettingsPage::createUI() {
     });
 
     m_deviceDropdown = createDropdown([this](int idx) {
-        m_dirty = true;
-
+        // Programmatic hydration is not a user edit (#648): the guard comes
+        // first, so loadSettings()/onDeviceLoadComplete() cannot mark the
+        // page dirty by populating it.
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
+
+        m_dirty = true;
 
         // SWITCH DEVICE IMMEDIATELY
         if (m_audioManager) {
@@ -308,9 +312,12 @@ void AudioSettingsPage::createUI() {
     });
 
     m_inputDeviceDropdown = createDropdown([this](int idx) {
-        m_dirty = true;
-
+        // Programmatic hydration is not a user edit (#648): the guard comes
+        // first, so loadSettings()/onDeviceLoadComplete() cannot mark the
+        // page dirty by populating it.
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
+
+        m_dirty = true;
 
         if (m_audioManager) {
             const int selected = m_inputDeviceDropdown->getSelectedValue();
@@ -321,8 +328,12 @@ void AudioSettingsPage::createUI() {
     });
 
     m_sampleRateDropdown = createDropdown([this](int idx) {
-        m_dirty = true;
+        // Programmatic hydration is not a user edit (#648): the guard comes
+        // first, so loadSettings()/onDeviceLoadComplete() cannot mark the
+        // page dirty by populating it.
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
+
+        m_dirty = true;
         if (!m_audioManager) return;
 
         uint32_t requested = (uint32_t)m_sampleRateDropdown->getSelectedValue();
@@ -342,9 +353,12 @@ void AudioSettingsPage::createUI() {
     });
 
     m_bufferSizeDropdown = createDropdown([this](int idx) {
-        m_dirty = true;
-
+        // Programmatic hydration is not a user edit (#648): the guard comes
+        // first, so loadSettings()/onDeviceLoadComplete() cannot mark the
+        // page dirty by populating it.
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
+
+        m_dirty = true;
 
         uint32_t newBufferSize = (uint32_t)m_bufferSizeDropdown->getSelectedValue();
         if (m_audioManager) {
@@ -405,13 +419,19 @@ void AudioSettingsPage::createUI() {
     if (maxThreads < 1) maxThreads = 4;
     m_threadCountInput->setRange(1, maxThreads);
     m_threadCountInput->setValue(maxThreads);
-    m_threadCountInput->setOnChange([this](int val) { m_dirty = true; });
+    m_threadCountInput->setOnChange([this](int val) {
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
+        m_dirty = true;
+    });
     addChild(m_threadCountInput);
 
     // Toggles
     auto createCheck = [&](std::function<void(bool)> onChange) {
         auto t = std::make_shared<AestraUI::NUIToggle>();
-        t->setOnToggle(onChange);
+        t->setOnToggle([this, onChange](bool value) {
+            if (m_isInitializing || m_isPopulatingDeviceUI) return;
+            onChange(value);
+        });
         addChild(t);
         return t;
     };
@@ -472,6 +492,18 @@ void AudioSettingsPage::createUI() {
 
 
 void AudioSettingsPage::applyChanges() {
+    // User-confirmed change: apply it, then persist it. This is the ONLY path
+    // that writes audio_settings.conf (#648).
+    applyEngineSettings();
+    // Clear the dirty flag only once the write actually succeeded. Clearing it
+    // first reported success for a save that failed, so the user was told their
+    // settings were stored when they were not (engineering-health §4).
+    if (saveSettings()) {
+        m_dirty = false;
+    }
+}
+
+void AudioSettingsPage::applyEngineSettings() {
     // 1. Resampling Quality
     int qIdx = m_resamplingDropdown->getSelectedIndex();
     ClipResamplingQuality globalQ = ClipResamplingQuality::High;
@@ -528,11 +560,6 @@ void AudioSettingsPage::applyChanges() {
     // 3. Driver/Device changes (Mock)
     // In real impl, we'd call m_audioManager->closeStream() and open new one.
     // For now, we assume user just changes quality mostly.
-    
-    m_dirty = false;
-    
-    // Save state to disk
-    saveSettings();
 }
 
 void AudioSettingsPage::cancelChanges() {
@@ -697,13 +724,35 @@ bool AudioSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 // Persistence
 // ============================================================================
 
-void AudioSettingsPage::saveSettings() {
+bool AudioSettingsPage::saveSettings() {
     const auto configPath = getAudioSettingsConfigPath();
     std::ofstream file(configPath);
     if (file.is_open()) {
-        file << "driver=" << m_driverDropdown->getSelectedValue() << "\n";
-        file << "device=" << m_deviceDropdown->getSelectedValue() << "\n";
-        file << "input_device=" << m_inputDeviceDropdown->getSelectedValue() << "\n";
+        // Driver/device lists are populated asynchronously. An unpopulated
+        // dropdown reports 0 — a legal device id — so writing it blindly is how
+        // a stored selection got destroyed (#648). Persist the last known value
+        // until the list has actually loaded.
+        // "Has a selection", not "has items". clearItems() leaves selectedIndex_
+        // at -1 and setSelectedByValue() silently no-ops when the value is
+        // absent, so a repopulated list whose stored device is gone is populated
+        // with nothing selected — and getSelectedValue() reports 0 there, which
+        // is a legal device id. getSelectedItem() is the accessor that can say
+        // "nothing" without inventing a value.
+        using Aestra::Settings::valueToPersist;
+        const auto hasSelection = [](const auto& dropdown) {
+            return dropdown && dropdown->getItemCount() > 0 && dropdown->getSelectedItem().has_value();
+        };
+
+        const int driverValue = valueToPersist(hasSelection(m_driverDropdown),
+                                               m_driverDropdown->getSelectedValue(), m_savedDriverType);
+        const int deviceValue = valueToPersist(hasSelection(m_deviceDropdown),
+                                               m_deviceDropdown->getSelectedValue(), m_savedDeviceId);
+        const int inputDeviceValue = valueToPersist(hasSelection(m_inputDeviceDropdown),
+                                                    m_inputDeviceDropdown->getSelectedValue(), m_savedInputDeviceId);
+
+        file << "driver=" << driverValue << "\n";
+        file << "device=" << deviceValue << "\n";
+        file << "input_device=" << inputDeviceValue << "\n";
         file << "samplerate=" << m_sampleRateDropdown->getSelectedValue() << "\n";
         file << "buffersize=" << m_bufferSizeDropdown->getSelectedValue() << "\n";
         file << "quality_preset=" << m_qualityPresetDropdown->getSelectedValue() << "\n";
@@ -715,10 +764,14 @@ void AudioSettingsPage::saveSettings() {
         file << "preview_ducking_db=" << m_previewDuckingDropdown->getSelectedValue() << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
         file.close();
+        m_savedDriverType = driverValue;
+        m_savedDeviceId = deviceValue;
+        m_savedInputDeviceId = inputDeviceValue;
         Log::info("[AudioSettingsPage] Settings saved to " + configPath.string());
-    } else {
-        Log::error("[AudioSettingsPage] Failed to save settings!");
+        return true;
     }
+    Log::error("[AudioSettingsPage] Failed to save settings to " + configPath.string());
+    return false;
 }
 
 void AudioSettingsPage::loadSettings() {
@@ -755,6 +808,7 @@ void AudioSettingsPage::loadSettings() {
         }
 
         if (key == "driver") {
+            m_savedDriverType = val;
             // Apply driver to engine FIRST to ensure device listing works
             if (m_audioManager && !skipAudioCalls) {
                 m_audioManager->setPreferredDriverType((AudioDriverType)val);
@@ -762,10 +816,12 @@ void AudioSettingsPage::loadSettings() {
             m_driverDropdown->setSelectedByValue(val);
         }
         else if (key == "device") {
+            m_savedDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchDevice((uint32_t)val);
             m_deviceDropdown->setSelectedByValue(val);
         }
         else if (key == "input_device") {
+            m_savedInputDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchInputDevice((uint32_t)val);
             m_inputDeviceDropdown->setSelectedByValue(val);
         }
@@ -807,12 +863,26 @@ void AudioSettingsPage::loadSettings() {
         }
     }
     
-    applyChanges();
+    // Apply what was loaded, but do NOT persist: hydrating the page is a read.
+    // Before #648 this called applyChanges(), whose final act is saveSettings() —
+    // which ran while the async device lists were still empty and wrote 0 over
+    // the user's stored device ids.
+    applyEngineSettings();
     Log::info("[AudioSettingsPage] Settings loaded successfully.");
 
     if (isLegacy) {
-        Log::info("[AudioSettingsPage] Loaded from legacy path, migrating to app-data.");
-        saveSettings();
+        // Deliberately does NOT write. Initialisation is read-only (#648), and
+        // this was the last remaining write reachable from the load path — with
+        // the async device lists still empty, so it could persist 0 over stored
+        // device ids exactly like the applyChanges() call removed above.
+        //
+        // Nothing is lost by deferring: saveSettings() resolves the path through
+        // getAudioSettingsConfigPath(), which returns the LEGACY file whenever
+        // that is the one that exists. The old call therefore rewrote the legacy
+        // file in place — the "migrating to app-data" it logged never happened.
+        // Migration needs its own change with a real destination; it is not a
+        // side effect of opening a dialog.
+        Log::info("[AudioSettingsPage] Loaded from legacy path; migration deferred to an explicit save.");
     }
 }
 
@@ -957,25 +1027,54 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     // hydration must not mutate audio device state.
     m_isPopulatingDeviceUI = true;
 
+    // Stored intent wins over the active value whenever the saved entry is
+    // actually present (#648). Populating used to select the *current* value
+    // unconditionally, discarding what loadSettings() had restored — so the next
+    // save persisted the runtime value over the user's choice.
+    using Aestra::Settings::selectionAfterPopulate;
+    const auto hasDriver = [](const auto& entries, int value) {
+        for (const auto& [name, entryValue] : entries) {
+            (void)name;
+            if (static_cast<int>(entryValue) == value) return true;
+        }
+        return false;
+    };
+    const auto hasDevice = [](const auto& devices, int id) {
+        for (const auto& [name, deviceId] : devices) {
+            (void)name;
+            if (static_cast<int>(deviceId) == id) return true;
+        }
+        return false;
+    };
+
     // Populate driver dropdown
     m_driverDropdown->clearItems();
     for (const auto& [name, value] : m_cachedDevices.driverTypes) {
         m_driverDropdown->addItem(name, value);
     }
-    m_driverDropdown->setSelectedByValue(m_cachedDevices.currentDriverType);
+    // Stored intent wins here too. Selecting currentDriverType unconditionally
+    // discarded what loadSettings() restored, exactly as it did for the device
+    // dropdowns before this PR.
+    m_driverDropdown->setSelectedByValue(selectionAfterPopulate(
+        m_savedDriverType, hasDriver(m_cachedDevices.driverTypes, m_savedDriverType),
+        m_cachedDevices.currentDriverType));
     
     // Populate device dropdown
     m_deviceDropdown->clearItems();
     for (const auto& [name, id] : m_cachedDevices.outputDevices) {
         m_deviceDropdown->addItem(name, id);
     }
-    m_deviceDropdown->setSelectedByValue(m_cachedDevices.currentDeviceId);
+    m_deviceDropdown->setSelectedByValue(selectionAfterPopulate(
+        m_savedDeviceId, hasDevice(m_cachedDevices.outputDevices, m_savedDeviceId),
+        static_cast<int>(m_cachedDevices.currentDeviceId)));
 
     m_inputDeviceDropdown->clearItems();
     for (const auto& [name, id] : m_cachedDevices.inputDevices) {
         m_inputDeviceDropdown->addItem(name, id);
     }
-    m_inputDeviceDropdown->setSelectedByValue(m_cachedDevices.currentInputDeviceId);
+    m_inputDeviceDropdown->setSelectedByValue(selectionAfterPopulate(
+        m_savedInputDeviceId, hasDevice(m_cachedDevices.inputDevices, m_savedInputDeviceId),
+        static_cast<int>(m_cachedDevices.currentInputDeviceId)));
     
     // Populate sample rates
     if (m_sampleRateDropdown->getItemCount() == 0) {
