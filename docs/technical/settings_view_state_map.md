@@ -14,7 +14,7 @@ The ownership audit answered "who owns this". It did not answer "does a change
 made here arrive there", and that is where the defects in this family live. So
 every row below is traced through five stages:
 
-```
+```text
 displayed value → editing state → committed model state → persistence source → runtime consumer
 ```
 
