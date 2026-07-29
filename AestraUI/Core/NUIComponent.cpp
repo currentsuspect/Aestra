@@ -74,8 +74,37 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
     bool wasHovered = hovered_;
 
     // First, let children handle the event (front to back)
+    //
+    // An invisible child must not be offered ordinary input (#672). The guard
+    // on line 71 is NOT sufficient on its own: this loop dispatches VIRTUALLY,
+    // so any subclass whose onMouseEvent returns before delegating to this
+    // implementation never executes it. That is exactly how a hidden
+    // AuditionPanel swallowed Timeline clicks (#671) — it returned true from
+    // its own override, and the base guard it would eventually have called was
+    // never reached. There are 80+ overrides in this codebase; relying on each
+    // one to re-check visibility is how the invariant gets lost.
+    //
+    // Enforcing it here, in the parent, is the only place an override cannot
+    // bypass.
+    //
+    // Deliberately visibility ONLY. No bounds check belongs here: captured
+    // drags, popovers and intentionally extended hit regions all rely on
+    // out-of-bounds delivery (TrackUIComponent's trim/clip-drag/fader-capture
+    // paths depend on it). Bounds remain each component's own business.
+    //
+    // Capture exemption: while the cursor is captured, the owning component
+    // must keep receiving events even if something hides it mid-drag, or the
+    // drag hangs with no terminating release. This framework has no capture-
+    // owner registry, so the captured flag on the event is the available
+    // signal — during capture the filter is skipped entirely, preserving the
+    // pre-existing delivery behaviour for that case.
+    const bool cursorCaptureInFlight = event.cursorCaptured;
+
     bool eventHandledByChild = false;
     for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
+        if (!cursorCaptureInFlight && !(*it)->isVisible()) {
+            continue;  // hidden: not eligible for ordinary input
+        }
         if ((*it)->onMouseEvent(event)) {
             eventHandledByChild = true;
             break;  // Stop at first child that handles the event

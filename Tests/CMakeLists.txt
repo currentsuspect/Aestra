@@ -1716,6 +1716,15 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME NUIComponentTooltipTest COMMAND NUIComponentTooltipTest)
     set_tests_properties(NUIComponentTooltipTest PROPERTIES LABELS "ui;tooltip;regression")
+
+    # #672: an inactive workspace must never intercept the active one's input.
+    add_executable(NUIHiddenChildDispatchTest AestraUI/NUIHiddenChildDispatchTest.cpp)
+    target_link_libraries(NUIHiddenChildDispatchTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIHiddenChildDispatchTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME NUIHiddenChildDispatchTest COMMAND NUIHiddenChildDispatchTest)
+    set_tests_properties(NUIHiddenChildDispatchTest PROPERTIES LABELS "ui;dispatch;regression")
 else()
     message(STATUS "Dropdown/tooltip interaction tests skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
