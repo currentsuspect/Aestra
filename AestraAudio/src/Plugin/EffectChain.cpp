@@ -121,6 +121,9 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     }
 
     m_slots[slotIndex].plugin = std::move(plugin);
+    // The slot now genuinely holds what the caller put here, so any retained
+    // missing-plugin record for it is superseded (#647).
+    m_slots[slotIndex].clearMissingPlugin();
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
@@ -142,6 +145,8 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 
     auto plugin = std::move(m_slots[slotIndex].plugin);
     m_slots[slotIndex].plugin = nullptr;
+    // Removing a slot removes it, placeholder included (#647).
+    m_slots[slotIndex].clearMissingPlugin();
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
@@ -163,12 +168,15 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
         return true;
     }
 
-    // Can only move to empty slot
-    if (!m_slots[toSlot].isEmpty()) {
+    // Can only move to a slot nothing else claims. A placeholder claims its slot
+    // (#647) — moving onto it would silently destroy a retained record.
+    if (m_slots[toSlot].isOccupied()) {
         return false;
     }
 
     m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
+    m_slots[toSlot].missingPluginId = std::move(m_slots[fromSlot].missingPluginId);
+    m_slots[toSlot].missingPluginState = std::move(m_slots[fromSlot].missingPluginState);
     m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
     m_slots[toSlot].dryWetMix.store(m_slots[fromSlot].dryWetMix.load());
     m_slots[toSlot].faultState = std::move(m_slots[fromSlot].faultState);
@@ -177,6 +185,7 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     }
 
     m_slots[fromSlot].plugin = nullptr;
+    m_slots[fromSlot].clearMissingPlugin();
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
     m_slots[fromSlot].faultState = std::make_shared<EffectSlotFaultState>();
@@ -198,6 +207,8 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     }
 
     std::swap(m_slots[slot1].plugin, m_slots[slot2].plugin);
+    std::swap(m_slots[slot1].missingPluginId, m_slots[slot2].missingPluginId);
+    std::swap(m_slots[slot1].missingPluginState, m_slots[slot2].missingPluginState);
     std::swap(m_slots[slot1].faultState, m_slots[slot2].faultState);
 
     bool bypass1 = m_slots[slot1].bypassed.load();
@@ -231,16 +242,35 @@ bool EffectChain::isSlotEmpty(size_t slotIndex) const {
     if (slotIndex >= MAX_SLOTS) {
         return true;
     }
-    return m_slots[slotIndex].isEmpty();
+    // "Free to use", not the RT predicate: a retained missing-plugin record
+    // claims its slot (#647).
+    return !m_slots[slotIndex].isOccupied();
 }
 
 size_t EffectChain::getFirstEmptySlot() const {
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
-        if (m_slots[i].isEmpty()) {
+        if (!m_slots[i].isOccupied()) {
             return i;
         }
     }
     return MAX_SLOTS;
+}
+
+size_t EffectChain::getMissingPluginCount() const {
+    size_t count = 0;
+    for (const auto& slot : m_slots) {
+        if (slot.hasMissingPlugin()) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::string EffectChain::getMissingPluginId(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS) {
+        return {};
+    }
+    return m_slots[slotIndex].missingPluginId;
 }
 
 size_t EffectChain::getActiveSlotCount() const {
@@ -259,6 +289,7 @@ void EffectChain::clear() {
     }
     for (auto& slot : m_slots) {
         slot.plugin = nullptr;
+        slot.clearMissingPlugin();
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
         slot.faultState = std::make_shared<EffectSlotFaultState>();
@@ -595,6 +626,32 @@ std::vector<uint8_t> EffectChain::saveState() const {
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
         const auto& slot = m_slots[i];
 
+        // A slot holding a placeholder for a plugin that would not load is NOT
+        // empty (#647). Re-emit the retained record verbatim so a load/save on a
+        // machine missing the plugin preserves it rather than deleting it. The
+        // layout is identical to the live-plugin case below, so the file format
+        // is unchanged and a machine that has the plugin loads it normally.
+        if (slot.hasMissingPlugin()) {
+            state.push_back(1); // Has plugin flag
+
+            uint32_t idLen = static_cast<uint32_t>(slot.missingPluginId.size());
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&idLen),
+                         reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
+            state.insert(state.end(), slot.missingPluginId.begin(), slot.missingPluginId.end());
+
+            state.push_back(slot.bypassed.load() ? 1 : 0);
+
+            float dryWet = slot.dryWetMix.load();
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&dryWet),
+                         reinterpret_cast<const uint8_t*>(&dryWet) + sizeof(dryWet));
+
+            uint32_t stateLen = static_cast<uint32_t>(slot.missingPluginState.size());
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&stateLen),
+                         reinterpret_cast<const uint8_t*>(&stateLen) + sizeof(stateLen));
+            state.insert(state.end(), slot.missingPluginState.begin(), slot.missingPluginState.end());
+            continue;
+        }
+
         if (slot.isEmpty()) {
             state.push_back(0); // Empty flag
             continue;
@@ -628,7 +685,8 @@ std::vector<uint8_t> EffectChain::saveState() const {
     return state;
 }
 
-bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager) {
+bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager,
+                            std::vector<std::string>* outMissingPluginIds) {
     if (reportRealtimeMisuse("EffectChain::loadState")) {
         return false;
     }
@@ -666,6 +724,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
+            m_slots[i].clearMissingPlugin();
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
             continue;
         }
@@ -728,9 +787,32 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             instance->activate();
 
             m_slots[i].plugin = std::move(instance);
+            m_slots[i].clearMissingPlugin();
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+        } else {
+            // The plugin is unavailable on this machine. Retain the record
+            // instead of dropping it (#647) — dropping it here is what made the
+            // next save erase the slot permanently and silently.
+            //
+            // The opaque state is stored exactly as it came off the wire; it is
+            // never interpreted or normalised, so repeated load/save cycles
+            // cannot progressively mutate it. bypass and dry/wet are stored
+            // post-sanitisation, which is what a live plugin round-trips to as
+            // well, so both paths converge after one cycle and stay fixed.
+            m_slots[i].plugin = nullptr;
+            m_slots[i].missingPluginId = pluginId;
+            m_slots[i].missingPluginState = std::move(pluginState);
+            m_slots[i].bypassed.store(bypassed);
+            m_slots[i].dryWetMix.store(dryWet);
+            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+
+            if (outMissingPluginIds) {
+                outMissingPluginIds->push_back(pluginId);
+            }
+            Aestra::Log::warning("[EffectChain] Plugin unavailable for slot " + std::to_string(i) + ": " + pluginId +
+                                 " — slot state retained and will be preserved on save");
         }
     }
 

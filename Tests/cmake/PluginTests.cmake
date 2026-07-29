@@ -212,3 +212,15 @@ target_include_directories(PluginInitContractTest PRIVATE
 )
 add_test(NAME PluginInitContractTest COMMAND PluginInitContractTest)
 set_tests_properties(PluginInitContractTest PROPERTIES LABELS "audio;plugins;lifecycle")
+
+# Missing-plugin state preservation (#647) — a plugin that cannot be
+# instantiated must survive load/save instead of being silently erased.
+add_executable(EffectChainMissingPluginTest AestraAudio/EffectChainMissingPluginTest.cpp)
+target_link_libraries(EffectChainMissingPluginTest PRIVATE AestraAudio)
+target_include_directories(EffectChainMissingPluginTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainMissingPluginTest COMMAND EffectChainMissingPluginTest)
+set_tests_properties(EffectChainMissingPluginTest PROPERTIES LABELS "audio;plugins;serialization")
