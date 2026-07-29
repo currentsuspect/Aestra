@@ -1163,7 +1163,13 @@ bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // this override may also be invoked directly, and because the base guard
     // this method eventually delegates to is only reached on some paths — the
     // queue branch returns long before it.
-    if (!isVisible()) {
+    // The captured-cursor exemption must match the parent's contract exactly:
+    // this panel keeps interaction state that deliberately survives the pointer
+    // leaving its bounds (`m_isScrubbingWaveform`, see the early-out below), so
+    // a panel hidden mid-scrub still needs its terminating move/release or the
+    // scrub stays latched. Guarding on visibility alone would strand it —
+    // the same class of defect this change exists to remove, one file over.
+    if (!isVisible() && !event.cursorCaptured) {
         return false;
     }
 

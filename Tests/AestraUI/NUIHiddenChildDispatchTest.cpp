@@ -152,6 +152,33 @@ void testCapturedCursorStillReachesHiddenChild() {
           "a captured drag must still reach a child hidden mid-drag");
 }
 
+void testCapturedReleaseReachesHiddenChildAfterPress() {
+    // The stranding scenario in full: a drag starts while the component is
+    // visible, the workspace is switched mid-drag, and the terminating release
+    // arrives captured. If the release is filtered out, the component's drag
+    // state stays latched forever. Panels that keep such state (AuditionPanel's
+    // waveform scrub) depend on this.
+    Fixture fixture;
+
+    NUIMouseEvent press = makePress(400.0f, 320.0f);
+    press.cursorCaptured = true;
+    fixture.root.onMouseEvent(press);
+    const int seenAfterPress = fixture.panel->pressesSeen;
+
+    fixture.panel->setVisible(false);  // hidden mid-drag
+
+    NUIMouseEvent release;
+    release.type = NUIMouseEventType::Up;
+    release.position = {400.0f, 320.0f};
+    release.button = NUIMouseButton::Left;
+    release.released = true;
+    release.cursorCaptured = true;
+    fixture.root.onMouseEvent(release);
+
+    check(fixture.panel->pressesSeen == seenAfterPress + 1,
+          "a captured release must reach a child hidden mid-drag so its state can unwind");
+}
+
 void testStaleGeometryOverlappingActiveWorkspace() {
     // The #671 shape specifically: the hidden panel's geometry covers only PART
     // of the visible surface (its queue rectangle), so some rows were dead and
@@ -174,6 +201,7 @@ int main() {
     testVisibleOverlapperStillIntercepts();
     testHiddenChildIsSkippedForMotionToo();
     testCapturedCursorStillReachesHiddenChild();
+    testCapturedReleaseReachesHiddenChildAfterPress();
     testStaleGeometryOverlappingActiveWorkspace();
 
     if (g_failures != 0) {
