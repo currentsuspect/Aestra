@@ -1,13 +1,15 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "TrackManager.h"
 #include "../AestraCore/include/AestraJSON.h"
-#include <string>
+#include "ProjectMigrations.h"
+#include "TrackManager.h"
+
+#include <chrono>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
-#include <chrono>
 
 namespace Aestra {
 
@@ -45,6 +47,9 @@ struct ProjectLoadReport {
 
 class ProjectSerializer {
 public:
+    static constexpr int PROJECT_VERSION_CURRENT = 3;
+    static constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
+
     struct PanelState {
         std::string title;
         double x{0.0};
@@ -95,6 +100,9 @@ public:
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
+        int sourceSchemaVersion{0};
+        int resultingSchemaVersion{0};
+        Aestra::MigrationOutcome migrationOutcome{Aestra::MigrationOutcome::None};
         std::string errorMessage;
         std::vector<std::string> missingAssets;
         std::vector<MissingPlugin> missingPlugins;
@@ -102,6 +110,14 @@ public:
 
         std::optional<UIState> ui;
         std::unique_ptr<::Aestra::ProjectLoadReport> report;
+
+        bool schemaVersionAdvanced() const noexcept {
+            return sourceSchemaVersion > 0 && resultingSchemaVersion > sourceSchemaVersion;
+        }
+
+        bool requiresSaveAfterLoad() const noexcept {
+            return migrationOutcome == Aestra::MigrationOutcome::Transformed;
+        }
     };
 
     struct SerializeResult {

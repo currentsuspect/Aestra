@@ -1481,7 +1481,10 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();
-            trackManager->setModified(false);
+            // Only an in-memory transformation requires a save. Merely
+            // advancing an older no-op schema stamp must not create a false
+            // dirty prompt (#662).
+            trackManager->setModified(result.requiresSaveAfterLoad());
         }
 
         if (auto transportBar = m_content->getTransportBar()) {
