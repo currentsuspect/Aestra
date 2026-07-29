@@ -30,6 +30,7 @@ set(Aestra_SOURCES
 	Core/TakeManager.h
 	Core/TakeManager.cpp
 	Core/Preferences.h
+	Core/AudioSettingsStore.cpp
 	Core/Preferences.cpp
 	Core/UIState.h
 	Core/UIState.cpp
