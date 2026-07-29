@@ -8,9 +8,9 @@
 **Companion:** [`AUDIT_RT_Safety_2026Q2.md`](AUDIT_RT_Safety_2026Q2.md), [`AUDIT_Threading_Concurrency_2026Q2.md`](AUDIT_Threading_Concurrency_2026Q2.md), [`../product/Muse-AI-Spec.md`](../product/Muse-AI-Spec.md), and the public agent protocol at <https://aestra.studio/.well-known/agent-skills/index.json>
 
 > **Aestra Diagnostics reuses MuseAgent transport and provider infrastructure — the socket, the JSONL verb protocol, the agent loop — but it is not a Muse creative capability and must never be presented as one.** Muse is the creative assistant; Aestra Diagnostics is the repair and investigation subsystem. They share plumbing, not purpose. That distinction is in the filename deliberately, so it does not need re-explaining for the next year.
-
+>
 > **This note does not amend `Muse-AI-Spec.md`.** That amendment should happen only after this design settles, so the spec can reference a concrete authority model instead of vaguely carving out an exception.
-
+>
 > **Blocking prerequisite found during drafting: Aestra has no stable UI identity today.** See §5.1. This moves work into a new Phase 0 and is the largest dependency in the plan.
 
 ---
@@ -21,7 +21,7 @@ Aestra publishes an agent protocol (`aestra-agent-protocol/v1`) telling outside 
 
 That gap is where a whole class of bugs lives — cursor capture, hover, drag/drop, DPI scaling, resize, focus, native dialogs, Wayland/X11 differences, visual clipping, rendering artifacts, keyboard shortcuts, plugin editor interaction. For these, no unit test constitutes proof. The reporter says *"the fader reads 0.73 but draws at zero"* and there is currently no way for anyone but a maintainer, on the reporter's machine, to establish whether that is a state bug or a render bug.
 
-The Muse Diagnostic Bridge closes that gap: it lets an authorized agent observe Aestra's runtime truth, drive a declared reproduction, and produce **evidence a maintainer can replay** without owning the reporter's hardware.
+The Muse Diagnostic Bridge closes that gap: it lets an authorized agent observe Aestra's runtime truth, drive a declared reproduction, and produce **evidence a maintainer can replay when the fixture's declared environment and experiment dependencies are available**. Semantic fixtures should be portable across equivalent environments; OS-input and rendering fixtures may require the recorded compositor, portal, injection method, DPI, window configuration, GPU and driver (§11). Replayability is therefore a verifiable environment contract, not a promise of reporter-hardware independence.
 
 The goal is not smarter Muse. It is **instrumentation, authority boundaries, and reproducibility**. Once those exist, the intelligence behind them is close to interchangeable.
 
@@ -31,7 +31,7 @@ The goal is not smarter Muse. It is **instrumentation, authority boundaries, and
 - **Not a replacement for unit and integration tests.** The bridge is for what those cannot reach.
 - **Not a creative-authoring path.** Nothing here changes how Muse proposes musical ideas.
 - **Not a headless-automation product.** `HeadlessMain.cpp` / `HeadlessExportMain.cpp` already cover batch rendering.
-- **Not a telemetry channel.** Nothing is transmitted anywhere. All of it is local, session-scoped, and user-initiated.
+- **Not a telemetry channel.** Nothing is transmitted automatically. Capture stays local and session-scoped by default; exporting evidence requires a separate, explicit user grant after the redacted export set is shown (§10, §14).
 - **Not a reverse-engineering surface.** See §12.
 
 ## 3. Muse vs Aestra Diagnostics
@@ -39,6 +39,7 @@ The goal is not smarter Muse. It is **instrumentation, authority boundaries, and
 `Muse-AI-Spec.md` commits, in writing:
 
 > **What Muse Never Becomes**
+>
 > - A tool that applies changes without user confirmation
 
 A diagnostic session in which an agent deletes a clip through the real UI appears to violate that. It does not — but only because **the confirmation moves up a level**, not because the rule is relaxed.
@@ -113,9 +114,26 @@ Rules:
 5. **Reversible mutations only.** Anything the fixture does must be undoable or confined to the working copy. Destructive operations are outside the capability set entirely — not gated behind a prompt.
 6. **Session end is authority end.** Crash, disconnect, timeout, window close: authority disappears. Fail closed.
 
+### 4.1 Fixture filesystem confinement
+
+Filesystem authority is expressed as canonical roots, never as a general "filesystem access" capability:
+
+- **Approved roots are declared before the session starts:** the preserved project-copy directory, the selected fixture-bundle directory, and a newly created per-session output directory. No current-working-directory, home-directory, environment-path or file-picker fallback is permitted.
+- **Every requested path is normalized and canonicalized before authorization.** An absolute path is accepted only when its canonical target is a descendant of one approved root. Relative paths are resolved against exactly one declared root. Paths containing unresolved traversal, invalid components or platform-specific alternate namespace forms fail closed.
+- **Links cannot widen authority.** Symlinks, junctions, reparse points and aliases are resolved before the access check; a target or intermediate component that escapes its declared root is rejected. Implementations must authorize the resolved file handle, or use the platform equivalent of beneath-root opening, so a link swap cannot create a check/use escape.
+- **Assets and archives inherit the fixture boundary.** Asset lookup cannot search outside the declared fixture bundle or project-copy roots. Archive entries with absolute paths, traversal, links, device files or destinations outside the per-session extraction root are rejected before extraction; entry count, expanded size and individual file size are bounded.
+- **Writes are narrower than reads.** The bridge may write only to the per-session output root. It cannot overwrite the fixture, project copy, source tree or an existing user file.
+- **The output root is unique per session, and the bridge alone names it.** It is created by atomic exclusive creation (`O_EXCL` / `mkdtemp` semantics, `CREATE_NEW` on Win32) under a fixed parent the bridge owns — never a path supplied by the fixture, the agent, or an environment variable. If creation fails because the path already exists, the session **fails closed**; it never reuses, appends to, or clears an existing directory. The name derives from a session identifier, never from fixture content, so a fixture cannot steer where output lands or force a collision.
+
+  This is what makes concurrent sessions safe: two bridges running at once cannot obtain the same root, because exclusive creation makes the winner unambiguous and the loser retries with a fresh identifier rather than sharing. There is no shared mutable state between sessions and no writes to the common parent — only to the session's own root. The parent must not be world-writable, which closes the classic shared-temp symlink race in which another user pre-creates the path the bridge is about to use.
+
+  Lifetime is explicit: the root persists until the evidence is exported or discarded, and cleanup is the bridge's responsibility, not the operating system's. That deliberately does not rely on a temp-directory sweeper, whose timing is not a contract.
+
+A hostile fixture that cannot prove a path remains within its approved root is malformed. There is no prompt-based override and no coordinate-like fallback to a nearby file.
+
 ## 5. Observation architecture
 
-Muse's current verb surface — from `@/home/currentsuspect/Dev/Aestra/Source/App/MuseReplMain.cpp` — is:
+Muse's current verb surface — from [`MuseReplMain.cpp`](../../Source/App/MuseReplMain.cpp) — is:
 
 ```text
 add_track      set_bpm      list_tracks
@@ -141,7 +159,7 @@ The read surface needs, by category (names indicative, not settled):
 
 Two of these already have real backing and should come first because they cost almost nothing:
 
-- **`get_project_load_report`** maps directly onto the existing `ProjectLoadReport` / `LoadIssue` structure in `@/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.h:19-40` — severity, category, message, objectId, referenceId, context, with categories `integrity`, `clip`, `unit` plus `missingAssets`. The public `recover-project` skill already instructs agents to consume exactly this shape. Exposing it over the bridge closes the loop between the published protocol and the runtime at nearly zero design cost.
+- **`get_project_load_report`** maps directly onto the existing `ProjectLoadReport` / `LoadIssue` structures in [`ProjectSerializer.h`](../../Source/Core/ProjectSerializer.h) — severity, category, message, objectId, referenceId, context, with categories `integrity`, `clip`, `unit` plus `missingAssets`. The public `recover-project` skill already instructs agents to consume exactly this shape. Exposing it over the bridge closes the loop between the published protocol and the runtime at nearly zero design cost.
 - **`get_rt_violations`** depends on P0.1 of the RT-safety audit landing first (see §6.1).
 
 ### 5.1 Stable diagnostic identity — a prerequisite that does not exist today
@@ -166,7 +184,7 @@ and the entire committable-reproduction premise collapses. A coordinate fixture 
 
 | Question | Finding |
 | --- | --- |
-| Is there an identity field? | Yes — `id_`, a plain `std::string`, `@/home/currentsuspect/Dev/Aestra/AestraUI/Core/NUIComponent.h:124-125,163` |
+| Is there an identity field? | Yes — `NUIComponent::id_`, a plain `std::string`, with `setId()` in [`NUIComponent.h`](../../AestraUI/Core/NUIComponent.h) |
 | Is it populated? | **Rarely.** 28 `setId()` call sites in the entire UI. Default is empty. |
 | Is it unique per instance? | **No.** Values are type/panel labels — `MenuBar`, `AestraEQEditor`, `UIMixerPanel_Inner`, `SegmentedControl`. Two EQ instances collide. |
 | Can you resolve an id to a component? | **No.** No `findById` / `getById` / `findComponent` exists anywhere in `AestraUI` or `Source`. |
@@ -175,8 +193,8 @@ and the entire committable-reproduction premise collapses. A coordinate fixture 
 
 So `id_` today is an occasional debug label, not an addressing scheme. **Aestra cannot express a durable UI fixture.**
 
-**The precedent to follow already exists one layer up.** `CommandRegistry`
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Commands/CommandRegistry.h:15-59`) keys commands by stable verb string in an `unordered_map<std::string, Factory>`, with real lookup and parse-safety tests in `Tests/Commands/`. Commands are stably addressable *today*; widgets are not. The UI needs the analogue of what the command layer already has.
+**The precedent to follow already exists one layer up.** [`CommandRegistry`](../../AestraAudio/include/Commands/CommandRegistry.h)
+keys commands by stable verb string in an `unordered_map<std::string, Factory>`, with real lookup and parse-safety tests in `Tests/Commands/`. Commands are stably addressable *today*; widgets are not. The UI needs the analogue of what the command layer already has.
 
 **Consequences for this design:**
 
@@ -211,11 +229,11 @@ Aestra has already solved this correctly at least three times. The diagnostic br
 
 | Existing mechanism | Reference |
 | --- | --- |
-| Atomically flipped immutable snapshot | `std::shared_ptr<const EffectChainSnapshot>` — `@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Plugin/EffectChain.h:282,290,299`, consumed at `@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioGraph.h:72`. The RT audit calls this out as the "correct lock-free pattern." |
+| Atomically flipped immutable snapshot | `std::shared_ptr<const EffectChainSnapshot>` in [`EffectChain.h`](../../AestraAudio/include/Plugin/EffectChain.h), consumed by `AudioGraph::processBlock()` in [`AudioGraph.h`](../../AestraAudio/include/Core/AudioGraph.h). The RT audit calls this out as the "correct lock-free pattern." |
 | Lock-free atomics for scalar transport state | `m_transportPlaying`, `m_fadeState` |
 | Lock-free command queue into the audio thread | `applyPendingCommands` |
 | SPSC queue draining to a non-RT consumer | the `recording/` path |
-| Canonical RT-thread detection | `isRealtimeAudioThread()` / `ScopedRealtimeAudioThread`, `@/home/currentsuspect/Dev/Aestra/Source/AudioThreadConstraints.h:76` |
+| Canonical RT-thread detection | `isRealtimeAudioThread()` / `ScopedRealtimeAudioThread` in [`AudioThreadConstraints.h`](../../Source/AudioThreadConstraints.h) |
 
 The diagnostic publication path is the `EffectChainSnapshot` pattern applied to observability: build the snapshot off-thread, publish by atomic pointer flip, let readers take a `shared_ptr` copy and read it at leisure.
 
@@ -261,7 +279,7 @@ Escalate only as far as the bug requires. A bug reproducible by verbs must be re
 
 **A reproduction must be an artifact, not an instruction.**
 
-"Muse, reproduce the sequence like before" is an agent improvising the same thing twice, which is precisely the non-determinism the whole design is trying to escape. A fixture is a file: declared steps, declared observation points, replayable by anyone.
+"Muse, reproduce the sequence like before" is an agent improvising the same thing twice, which is precisely the non-determinism the whole design is trying to escape. A fixture is a file: declared steps, declared observation points, replayable by a maintainer who can satisfy its recorded environment contract.
 
 Illustrative only — **the serialization format is deliberately not settled here:**
 
@@ -293,8 +311,8 @@ steps:
 
 Consequences worth being explicit about:
 
-- **Fixtures are committable.** They belong in the repository next to the regression tests they support.
-- **A PR can now carry real evidence:** bug report + project fixture + interaction fixture + regression test + source fix. That is a categorically stronger claim than *"unit test green, probably fixed."*
+- **Sanitized fixtures are committable.** A fixture may enter the repository only after the export rules in §10 remove or replace project names, user names, absolute paths, unreleased audio, private runtime state and any other value not required to reproduce the defect. The local working record is not itself a committable artifact.
+- **A PR can now carry reviewed evidence:** bug report + sanitized project fixture + interaction fixture + regression test + source fix. The user must explicitly approve that export set after seeing what will leave the machine. That is a categorically stronger claim than *"unit test green, probably fixed."*
 - **Replay is the verification step.** After the patch, rerun R17 and compare observations. The public `prepare-pr` skill already insists that a passing build is not proof the bug is fixed; a replayable fixture is what makes that demand satisfiable for UI bugs.
 - **Observation points are assertions.** A fixture that records only actions is a macro; one that records expected observations is a test.
 - **This section is blocked on §5.1.** Every `target:` in the example above presumes an addressing scheme Aestra does not yet have. Until Phase 0 lands, fixtures can only address the command layer.
@@ -304,7 +322,9 @@ Consequences worth being explicit about:
 - **Screenshots are corroboration, never diagnosis.** The semantic read says what Aestra believes; the screenshot says what it drew. A bug is proven by the *disagreement between them*, which requires both.
 - **Frame capture is scoped to Aestra's own surface**, never the whole desktop.
 - **Audio evidence is measurement, not recording** where possible — peak/RMS, silence detection, null-difference against an expected render. "No audio after undo" should be provable numerically, not by a maintainer listening to an attachment.
-- **Privacy is a first-class constraint.** Screenshots and project fixtures contain the user's unreleased music, project names, and sample paths. The bridge must warn before any capture leaves the machine, and any skill that instructs an agent to attach evidence to a **public** GitHub issue must repeat that warning. The public `collect-diagnostics` skill already flags that project files can identify the user; visual evidence is strictly worse.
+- **Privacy is a first-class constraint.** Project names, user names, absolute paths, unreleased audio, screenshots, sample content and private runtime state are protected diagnostic data.
+- **Persistence requires sanitization.** Before a fixture, audit record or evidence file is retained beyond the session, the bridge produces a redacted derivative: replace identifying names and paths with stable placeholders; exclude unrelated state; prefer numeric audio measurements over captured audio; and omit private implementation state entirely. Sanitization failure means the artifact remains session-local and non-exportable.
+- **Export is a separate consent event.** The bridge shows the exact redacted files, destination and remaining sensitive-data warnings. Nothing is uploaded, attached to an issue, copied into the source tree or committed until the user explicitly approves that export. Any skill that proposes attaching evidence to a **public** GitHub issue must repeat the warning. The public `collect-diagnostics` skill already flags that project files can identify the user; visual evidence is strictly worse.
 
 ## 11. Environment provenance
 
@@ -363,17 +383,25 @@ Every diagnostic session produces a complete, self-contained record:
 
 This mirrors the provenance discipline already shipped in the public protocol, where reports cite an artifact URL and digest so a reader can verify the exact instructions an agent followed. **The same principle applies one layer down: a session record should let a maintainer verify the exact experiment that was run**, not merely read an agent's summary of it.
 
+The complete record is protected local data, not an automatic export:
+
+- It is stored under an application-owned, per-user diagnostics directory with owner-only permissions; the bridge never serves records from a shared or web-accessible directory.
+- The consent screen declares a retention period. Session output is deleted at session end unless the user chooses short-term retention; retained records expire automatically after a bounded period and can be deleted immediately from the diagnostics UI.
+- A crash may leave a record only in the same protected directory. Startup cleanup applies the declared expiry and removes incomplete records that are not needed for an explicitly retained crash investigation.
+- Export creates a separate sanitized bundle under §10. Deleting or expiring the local record does not silently delete a user-approved external copy; the export confirmation states that boundary.
+
 ## 15. Security boundaries
 
 The bridge is a local socket that can read application state and synthesize input. It must be treated as an attack surface, not a convenience.
 
 - **Off by default.** Not merely disabled — not listening.
-- **Loopback only.** Never a routable interface. The existing Muse surface already defaults to `127.0.0.1` (`@/home/currentsuspect/Dev/Aestra/Source/MuseAgent/MuseCliRequest.h:17`); the diagnostic bridge must make that a hard constraint rather than a default.
+- **Loopback only.** Never a routable interface. The existing Muse surface already defaults to `127.0.0.1` in [`MuseCliRequest.h`](../../Source/MuseAgent/MuseCliRequest.h); the diagnostic bridge must make that a hard constraint rather than a default.
 - **Per-session token**, issued when the user enables the session, never persisted.
+- **Local access is still authenticated.** The socket/runtime directory and retained records are owner-only, peer credentials are checked where the platform supports them, and the session token is required even over loopback. Another local user or process does not inherit diagnostic authority merely by reaching the endpoint.
 - **Capability-scoped**, not all-or-nothing. A session granted read-only observation cannot synthesize input.
 - **Fail closed** on any ambiguity — expired token, unknown verb, capability not granted, malformed fixture.
 - **Bounded input.** The fixture parser is parsing hostile input by assumption. Apply the same discipline the project loader already uses: bounded strings, bounded sizes, structural validation before use.
-- **No filesystem access outside fixture scope.** The fixture declares its project and asset paths; nothing else is reachable.
+- **No filesystem access outside fixture scope.** Every read and write follows the canonical-root, link-escape and archive rules in §4.1; authorization is performed on the resolved target, not the untrusted path string.
 - **The session cannot escalate itself** — it cannot enable capabilities, extend its own lifetime, or start another session.
 
 ## 16. Incremental implementation plan
