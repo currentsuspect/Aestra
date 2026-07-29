@@ -90,7 +90,7 @@ set_tests_properties(ProjectCompatibilityPolicyTest PROPERTIES
 add_test(
     NAME ProjectMigrationLifecycleGuardTest
     COMMAND ${CMAKE_COMMAND}
-        -DAESTRA_APP_SOURCE=${CMAKE_SOURCE_DIR}/Source/App/AestraApp.cpp
+        -DAESTRA_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_migration_lifecycle.cmake
 )
 set_tests_properties(ProjectMigrationLifecycleGuardTest PROPERTIES
