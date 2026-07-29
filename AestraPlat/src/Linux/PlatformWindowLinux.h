@@ -36,6 +36,7 @@ public:
     void maximize() override;
     void restore() override;
     bool isMaximized() const override;
+    bool getRestoreBounds(int& x, int& y, int& width, int& height) const override;
     bool isMinimized() const override;
     void requestClose() override;
 
@@ -93,6 +94,23 @@ private:
     SDL_Window* m_window = nullptr;
     SDL_GLContext m_glContext = nullptr;
     bool m_isFullscreen = false;
+
+    // Restore (non-maximized) geometry, tracked from window events (#655).
+    // SDL_GetWindowSize reports the maximized rect while maximized, so the
+    // user's chosen size has to be remembered separately or it is lost on save.
+    // Also tracks maximized state from SDL_WINDOWEVENT_MAXIMIZED/RESTORED rather
+    // than SDL_GetWindowFlags: a maximize initiated by the window manager (a
+    // keybind, a titlebar double-click, a tiling compositor) was observed NOT to
+    // update the flag, so the app recorded "not maximized" for a window the WM
+    // had genuinely maximized.
+    int m_restoreX = 0;
+    int m_restoreY = 0;
+    int m_restoreW = 0;
+    int m_restoreH = 0;
+    bool m_hasRestoreBounds = false;
+    bool m_maximized = false;
+
+    void rememberRestoreBoundsIfNormal();
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;

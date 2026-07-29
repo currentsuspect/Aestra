@@ -36,6 +36,7 @@ public:
     void maximize() override;
     void restore() override;
     bool isMaximized() const override;
+    bool getRestoreBounds(int& x, int& y, int& width, int& height) const override;
     bool isMinimized() const override;
 
     void setFullscreen(bool fullscreen) override;
