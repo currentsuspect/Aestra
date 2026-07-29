@@ -86,7 +86,7 @@ public:
         // Audio settings dialog is handled by its own render method
         
         // Fix: Render global tooltips last so they appear on top of everything
-        NUIComponent::renderGlobalTooltip(renderer);
+        NUIComponent::renderGlobalTooltip(renderer, getBounds());
     }
     
     bool onKeyEvent(const NUIKeyEvent& event) override;
