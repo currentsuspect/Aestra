@@ -85,6 +85,12 @@ Complete every item in the schema-bump pull request:
 - [ ] Make the migration report `Unchanged`, `Transformed`, or `Failed`
       truthfully.
 - [ ] Keep interpretation for every older supported schema intact.
+- [ ] **Precondition — resolve #670 before introducing a genuinely required new
+      field.** Load validates the common structural envelope *before* migrations
+      run and never re-validates after. That is safe only while every required
+      field exists in all supported schemas; the first bump that adds one will
+      have the pre-migration validator reject the very file the migration exists
+      to repair.
 - [ ] If the loader reads the older shape natively instead of routing it through
       the migration, prove representation-equivalence and round-trip stability
       with a fixture-backed test — or report the load as `Transformed`. Do not

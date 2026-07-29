@@ -102,7 +102,15 @@ public:
         double playhead{0.0};
         int sourceSchemaVersion{0};
         int resultingSchemaVersion{0};
+        /// Combined verdict: migration functions AND loader-side interpretation.
+        /// See Aestra::combineMigrationOutcome.
         Aestra::MigrationOutcome migrationOutcome{Aestra::MigrationOutcome::None};
+
+        /// Pre-v3 audio patterns the loader had to split into one pattern per
+        /// destination channel. Non-zero means patterns exist in memory that are
+        /// not in the file, which is why such a load reports `Transformed`.
+        size_t legacyAudioPatternsSplit{0};
+
         std::string errorMessage;
         std::vector<std::string> missingAssets;
         std::vector<MissingPlugin> missingPlugins;
@@ -115,6 +123,8 @@ public:
             return sourceSchemaVersion > 0 && resultingSchemaVersion > sourceSchemaVersion;
         }
 
+        /// True only when an actual transformation occurred. A schema version
+        /// bump alone must never make this true — see schemaVersionAdvanced().
         bool requiresSaveAfterLoad() const noexcept {
             return migrationOutcome == Aestra::MigrationOutcome::Transformed;
         }

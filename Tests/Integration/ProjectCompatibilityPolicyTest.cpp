@@ -153,6 +153,8 @@ void testLoadNeverModifiesTheOriginal() {
         "v1_rich_assets/kick.wav",
         "v2/serializer-v2-identity.aes",
         "v2/serializer-v2-positional-mixer.aes",
+        "v2/serializer-v2-legacy-audio-split.aes",
+        "v2/legacy_audio_assets/shared.wav",
         "v3/serializer-v3-independent-mixer.aes",
     };
 
@@ -389,6 +391,79 @@ void assertV2PositionalMixerSemantics(TrackManager& tracks, const std::string& g
     }
 }
 
+// The loader-side transformation this PR's contract exists to make observable.
+//
+// v2 never writes `mixerChannelId` on a pattern — the token appears zero times
+// in the v2 serializer — so every v2 audio pattern is "legacy" to the v3
+// loader. When ONE such pattern is placed on TWO lanes, v3 cannot represent it
+// as a single pattern (a pattern now owns its destination channel), so the
+// loader calls clonePattern and repoints the second clip.
+//
+// That MANUFACTURES a pattern the file does not contain. Before this was
+// wired, the load still reported MigrationOutcome::None and AestraApp marked
+// the project clean: the user was never told their project had changed shape,
+// and closing without saving discarded the loader's work silently.
+void assertV2LegacyAudioSplitSemantics(TrackManager& tracks, const ProjectSerializer::LoadResult& result,
+                                       const std::string& generation) {
+    auto& playlist = tracks.getPlaylistModel();
+    const auto laneIdList = playlist.getLaneIDs();
+
+    require(laneIdList.size() == 2, generation + ": legacy-audio lane count");
+    require(tracks.getChannelCount() == 2, generation + ": legacy-audio channel count");
+    if (laneIdList.size() != 2 || tracks.getChannelCount() != 2) {
+        return;
+    }
+
+    // The split produced one pattern per destination channel.
+    auto patterns = tracks.getPatternManager().getAllPatterns();
+    size_t audioPatterns = 0;
+    for (const auto& pattern : patterns) {
+        if (pattern && pattern->isAudio()) ++audioPatterns;
+    }
+    require(audioPatterns == 2,
+            generation + ": one legacy audio pattern must become two in memory (got " +
+                std::to_string(audioPatterns) + ")");
+
+    // Each lane's clip must address a DIFFERENT pattern, and each of those
+    // patterns must be routed to that lane's own channel. A split that produced
+    // two patterns but left both clips on one of them would be worse than none.
+    std::vector<uint64_t> clipPatternIds;
+    std::vector<uint32_t> laneChannelIds;
+    for (size_t i = 0; i < laneIdList.size(); ++i) {
+        const auto* lane = playlist.getLane(laneIdList[i]);
+        const auto* channel = tracks.getChannel(i);
+        require(lane && lane->clips.size() == 1,
+                generation + ": lane " + std::to_string(i) + " must hold exactly one clip");
+        if (!lane || lane->clips.size() != 1 || !channel) continue;
+        clipPatternIds.push_back(lane->clips[0].patternId.value);
+        laneChannelIds.push_back(channel->getChannelId());
+
+        const auto* pattern = tracks.getPatternManager().getPattern(lane->clips[0].patternId);
+        require(pattern != nullptr, generation + ": lane " + std::to_string(i) + " clip pattern missing");
+        if (pattern) {
+            require(pattern->getMixerChannelId() == channel->getChannelId(),
+                    generation + ": lane " + std::to_string(i) + " pattern routed to channel " +
+                        std::to_string(pattern->getMixerChannelId()) + ", expected " +
+                        std::to_string(channel->getChannelId()));
+        }
+    }
+    require(clipPatternIds.size() == 2 && clipPatternIds[0] != clipPatternIds[1],
+            generation + ": the two lanes must address distinct patterns after the split");
+    require(laneChannelIds.size() == 2 && laneChannelIds[0] != laneChannelIds[1],
+            generation + ": the two lanes must own distinct mixer channels");
+
+    // On the FIRST load the split is work the file does not contain, so it must
+    // be reported. On the second (post-save) load the file already holds both
+    // patterns, so nothing is split and the count is zero — asserted by the
+    // caller, which knows which generation this is.
+    if (result.legacyAudioPatternsSplit > 0) {
+        require(result.migrationOutcome == MigrationOutcome::Transformed,
+                generation + ": a legacy split must report Transformed");
+        require(result.requiresSaveAfterLoad(),
+                generation + ": a legacy split must require saving");
+    }
+}
+
 void assertV3Semantics(TrackManager& tracks, const ProjectSerializer::LoadResult& result,
                        const std::string& generation) {
     require(tracks.getChannelCount() == 2, generation + ": v3 independent channel count");
@@ -415,18 +490,25 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
     // `semantics` selects the per-fixture assertions: two fixtures can share a
     // schema version while pinning different things about it, so the version
     // number alone cannot dispatch.
-    enum class Semantics { Structural, V2Identity, V2PositionalMixer, V3IndependentMixer };
+    enum class Semantics { Structural, V2Identity, V2PositionalMixer, V2LegacyAudioSplit, V3IndependentMixer };
     struct Fixture {
         int version;
         const char* relativePath;
         Semantics semantics;
+        // What the FIRST load must report. Most historical fixtures are read
+        // without transformation, so version advancement alone leaves them
+        // clean. A fixture whose shape forces the loader to manufacture data
+        // must report Transformed instead — stated per fixture so neither
+        // answer can be assumed.
+        MigrationOutcome expectedFirstLoadOutcome;
     };
     const std::vector<Fixture> fixtures = {
-        {1, "v1_minimal.aes", Semantics::Structural},
-        {1, "v1_rich.aes", Semantics::Structural},
-        {2, "v2/serializer-v2-identity.aes", Semantics::V2Identity},
-        {2, "v2/serializer-v2-positional-mixer.aes", Semantics::V2PositionalMixer},
-        {3, "v3/serializer-v3-independent-mixer.aes", Semantics::V3IndependentMixer},
+        {1, "v1_minimal.aes", Semantics::Structural, MigrationOutcome::None},
+        {1, "v1_rich.aes", Semantics::Structural, MigrationOutcome::None},
+        {2, "v2/serializer-v2-identity.aes", Semantics::V2Identity, MigrationOutcome::None},
+        {2, "v2/serializer-v2-positional-mixer.aes", Semantics::V2PositionalMixer, MigrationOutcome::None},
+        {2, "v2/serializer-v2-legacy-audio-split.aes", Semantics::V2LegacyAudioSplit, MigrationOutcome::Transformed},
+        {3, "v3/serializer-v3-independent-mixer.aes", Semantics::V3IndependentMixer, MigrationOutcome::None},
     };
 
     for (int version = ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED;
@@ -454,9 +536,18 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         require(first.sourceSchemaVersion == fixture.version, "source schema metadata mismatch");
         require(first.resultingSchemaVersion == ProjectSerializer::PROJECT_VERSION_CURRENT,
                 "resulting schema metadata mismatch");
-        require(first.migrationOutcome == MigrationOutcome::None,
-                "existing no-op fixture migration must not report a transformation");
-        require(!first.requiresSaveAfterLoad(), "no-op/current fixture load must remain clean");
+        require(first.migrationOutcome == fixture.expectedFirstLoadOutcome,
+                std::string("unexpected migration outcome for ") + fixture.relativePath);
+        const bool expectDirty = fixture.expectedFirstLoadOutcome == MigrationOutcome::Transformed;
+        require(first.requiresSaveAfterLoad() == expectDirty,
+                std::string("dirty-state decision wrong for ") + fixture.relativePath +
+                    (expectDirty ? " (a transformed load must require saving)"
+                                 : " (a no-op/current load must remain clean)"));
+        // Version advancement alone must never be the reason a load is dirty.
+        if (!expectDirty && first.schemaVersionAdvanced()) {
+            require(!first.requiresSaveAfterLoad(),
+                    std::string("schema advancement alone marked ") + fixture.relativePath + " dirty");
+        }
 
         const auto firstLaneIds = laneIds(*firstTracks);
         const auto firstPatternIds = patternIds(*firstTracks);
@@ -466,6 +557,7 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         switch (fixture.semantics) {
             case Semantics::V2Identity: assertV2Semantics(*firstTracks, label); break;
             case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*firstTracks, label); break;
+            case Semantics::V2LegacyAudioSplit: assertV2LegacyAudioSplitSemantics(*firstTracks, first, label); break;
             case Semantics::V3IndependentMixer: assertV3Semantics(*firstTracks, first, label); break;
             case Semantics::Structural: break;
         }
@@ -487,6 +579,16 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         if (!second.ok) {
             continue;
         }
+        // Save -> load must reach a STABLE current representation: whatever the
+        // loader had to manufacture is now in the file, so reloading it performs
+        // no further transformation and the project comes back clean.
+        require(second.migrationOutcome == MigrationOutcome::None,
+                std::string("re-saved ") + fixture.relativePath + " must not transform again");
+        require(!second.requiresSaveAfterLoad(),
+                std::string("re-saved ") + fixture.relativePath + " must reload clean");
+        require(second.legacyAudioPatternsSplit == 0,
+                std::string("re-saved ") + fixture.relativePath + " must not need another legacy split");
+
         require(laneIds(*secondTracks) == firstLaneIds, "lane identities changed across fixture re-save");
         require(patternIds(*secondTracks) == firstPatternIds, "pattern identities changed across fixture re-save");
         require(clipIds(*secondTracks) == firstClipIds, "clip identities changed across fixture re-save");
@@ -498,6 +600,7 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         switch (fixture.semantics) {
             case Semantics::V2Identity: assertV2Semantics(*secondTracks, secondLabel); break;
             case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*secondTracks, secondLabel); break;
+            case Semantics::V2LegacyAudioSplit: assertV2LegacyAudioSplitSemantics(*secondTracks, second, secondLabel); break;
             case Semantics::V3IndependentMixer: assertV3Semantics(*secondTracks, second, secondLabel); break;
             case Semantics::Structural: break;
         }

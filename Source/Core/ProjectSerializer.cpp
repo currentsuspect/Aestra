@@ -2064,9 +2064,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     if (variant == variants.end()) {
                                         PatternID routedPattern = clip.patternId;
                                         if (!variants.empty()) {
+                                            // A pre-v3 pattern carries no mixerChannelId, so one old
+                                            // pattern used on several lanes has to become one pattern
+                                            // per destination channel. This MANUFACTURES a pattern the
+                                            // file does not contain and repoints the clip at it.
+                                            //
+                                            // That is a loader-side transformation under the contract
+                                            // in ProjectMigrations.h: re-serializing now emits more
+                                            // patterns than were read, so the document must be saved.
+                                            // Flagged here rather than at the `else` branch below,
+                                            // because that branch can only reach a manufactured
+                                            // variant after this clone has already run.
                                             routedPattern = patternManager.clonePattern(clip.patternId);
                                         }
                                         if (routedPattern.isValid()) {
+                                            if (routedPattern != clip.patternId) {
+                                                ++result.legacyAudioPatternsSplit;
+                                            }
                                             patternManager.setPatternMixerChannel(routedPattern, legacyDestination);
                                             variants.emplace(legacyDestination, routedPattern);
                                             clip.patternId = routedPattern;
@@ -2239,6 +2253,21 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         namespace fs = std::filesystem;
         std::error_code rmEc;
         fs::remove(rollbackPath, rmEc);
+    }
+
+    // A load has two independent sources of transformation: the migration
+    // registry, and version-conditional interpretation inside this loader. The
+    // reported outcome must be their combination — reporting only the registry's
+    // verdict is exactly how a loader-side upgrade goes silent and the user is
+    // never prompted to save the upgraded representation.
+    //
+    // Note this cannot be folded into the migration block above: the legacy
+    // audio split happens in Phase 4, long after migrations run.
+    if (result.legacyAudioPatternsSplit > 0) {
+        result.migrationOutcome =
+            combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+        Log::info("[ProjectLoad] Split " + std::to_string(result.legacyAudioPatternsSplit) +
+                  " legacy audio pattern(s) across mixer channels — project must be saved to keep the split");
     }
 
     result.ok = true;

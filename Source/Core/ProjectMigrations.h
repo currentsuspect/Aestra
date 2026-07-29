@@ -63,6 +63,29 @@ enum class MigrationOutcome { None, Transformed, Failed };
 
 using MigrationFn = std::function<MigrationStepResult(JSON& root)>;
 
+/**
+ * @brief Combine a migration-function outcome with a loader-side one.
+ *
+ * A load has two independent sources of transformation: the migration registry,
+ * and version-conditional interpretation inside the loader itself. Both are
+ * bound by the same contract (see MigrationStepResult), so the reported outcome
+ * must be their combination — reporting only the registry's verdict is how a
+ * loader-side upgrade goes silent.
+ *
+ * `Failed` dominates: a failed load must not be reported as merely transformed.
+ * Otherwise `Transformed` dominates `None`, because any transformation anywhere
+ * means the in-memory project no longer matches the bytes on disk.
+ */
+inline MigrationOutcome combineMigrationOutcome(MigrationOutcome a, MigrationOutcome b) noexcept {
+    if (a == MigrationOutcome::Failed || b == MigrationOutcome::Failed) {
+        return MigrationOutcome::Failed;
+    }
+    if (a == MigrationOutcome::Transformed || b == MigrationOutcome::Transformed) {
+        return MigrationOutcome::Transformed;
+    }
+    return MigrationOutcome::None;
+}
+
 struct Migration {
     int fromVersion;
     int toVersion;

@@ -35,6 +35,8 @@ set(FIXTURES
     "v1_rich_assets/kick.wav|9ccf1d5147ca6f0d9f12cdb392b04b6a9d1c99409ec7ec96333224cd1892da4e"
     "v2/serializer-v2-identity.aes|3f4f801643e4bf24920b343b72395039b2d83c3e6f6e8fc83f03993ba5721347"
     "v2/serializer-v2-positional-mixer.aes|56159ce3af222e2405595a44883503610670975ba1a29b6f6f0b584c8b6649a2"
+    "v2/serializer-v2-legacy-audio-split.aes|d41550c593bc4a6f4a60d4dc61737b6c931af76101864f4b04414f0fcb28765f"
+    "v2/legacy_audio_assets/shared.wav|856b60bb9680b5cc5bd5ea6925f38df292bf76e807813b51334ac30b74d85134"
     "v3/serializer-v3-independent-mixer.aes|8a5cf58ed79f994421464c163fc555fcf2516eb45c0dd0e4c58f53c83c272ab4"
 )
 
