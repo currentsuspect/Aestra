@@ -23,6 +23,7 @@
 // no linkable library target (#666).
 
 #include <string>
+#include <utility>  // std::move — used below; do not rely on <string> pulling it in
 
 namespace Aestra {
 

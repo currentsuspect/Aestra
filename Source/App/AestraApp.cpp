@@ -130,11 +130,14 @@ std::string AestraApp::activeCrashFlagPath() {
 }
 
 void AestraApp::writeCrashFlag() {
-    std::string flagPath = getCrashFlagPath();
-    // Retain the authoritative path while platform utilities are still alive.
-    // shutdown() clears the flag after Platform::shutdown() has destroyed them,
-    // and re-resolving there silently yields <cwd>/crash_flag (#675).
-    CrashFlagPath::prime(flagPath);
+    // initialize() primes this immediately after Platform::initialize(). Prime
+    // here only as a fallback for callers that reach the write without going
+    // through startup — re-resolving unconditionally would let detection use
+    // one path while the write and the clear use another (#675).
+    if (!CrashFlagPath::isPrimed()) {
+        CrashFlagPath::prime(getCrashFlagPath());
+    }
+    const std::string flagPath = activeCrashFlagPath();
     std::ofstream out(flagPath, std::ios::trunc);
     if (out) {
         out << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
