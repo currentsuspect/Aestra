@@ -320,6 +320,24 @@ void testMissingArsenalUnitReference() {
         assert(foundWarning);
     }
 
+    const auto patterns = trackManager->getPatternManager().getAllPatterns();
+    assert(patterns.size() == 1);
+    assert(patterns[0] && patterns[0]->getMidiNotes().size() == 1);
+    assert(patterns[0]->getMidiNotes()[0].unitId == 888);
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "missing-unit-roundtrip.aes";
+    std::ofstream(roundTripPath) << serialized.contents;
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    const auto roundTripPatterns = roundTripManager->getPatternManager().getAllPatterns();
+    assert(roundTripPatterns.size() == 1);
+    assert(roundTripPatterns[0] && roundTripPatterns[0]->getMidiNotes().size() == 1);
+    assert(roundTripPatterns[0]->getMidiNotes()[0].unitId == 888);
+
     std::cout << "[PASS] Missing Arsenal unit reference preserves note" << std::endl;
 }
 
@@ -428,6 +446,27 @@ void testMissingAudioFileNonDestructive() {
     // Load should succeed but with missing asset warning
     assert(result.ok);
     assert(!result.missingAssets.empty());
+
+    const auto sourceIds = trackManager->getSourceManager().getAllSourceIDs();
+    assert(sourceIds.size() == 1);
+    const auto* source = trackManager->getSourceManager().getSource(sourceIds.front());
+    assert(source);
+    const std::string missingPath = source->getFilePath();
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "missing-audio-roundtrip.aes";
+    std::ofstream(roundTripPath) << serialized.contents;
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    assert(std::find(roundTripResult.missingAssets.begin(), roundTripResult.missingAssets.end(), missingPath) !=
+           roundTripResult.missingAssets.end());
+    const auto roundTripSourceIds = roundTripManager->getSourceManager().getAllSourceIDs();
+    assert(roundTripSourceIds.size() == 1);
+    const auto* roundTripSource = roundTripManager->getSourceManager().getSource(roundTripSourceIds.front());
+    assert(roundTripSource && roundTripSource->getFilePath() == missingPath);
 
     std::cout << "[PASS] Missing audio file is non-destructive" << std::endl;
 }

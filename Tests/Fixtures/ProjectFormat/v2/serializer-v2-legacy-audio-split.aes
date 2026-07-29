@@ -1,0 +1,121 @@
+{
+  "arsenal": {
+    "nextId": 1,
+    "units": []
+  },
+  "integrity": {
+    "algo": "fnv1a64",
+    "hash": "0cb91375f161b660"
+  },
+  "lanes": [
+    {
+      "armed": false,
+      "automation": [],
+      "clips": [
+        {
+          "color": "4294967295",
+          "durationSeconds": 1,
+          "edits": {
+            "fadeIn": 0,
+            "fadeOut": 0,
+            "gain": 1,
+            "muted": false,
+            "pan": 0,
+            "playbackRate": 1,
+            "sourceStart": 0
+          },
+          "id": "00000000000000000000000000000000",
+          "name": "",
+          "patternId": 1,
+          "sourceOffset": 0,
+          "sourceOffsetSeconds": 0,
+          "start": 0
+        }
+      ],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "8907c4f6eb466d3f0000000000000001",
+      "inputChannelIndex": 1,
+      "monitorInput": false,
+      "mute": false,
+      "name": "Legacy Lane A",
+      "pan": -0.5,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": 4,
+      "volume": 0.5,
+      "width": 1
+    },
+    {
+      "armed": false,
+      "automation": [],
+      "clips": [
+        {
+          "color": "4294967295",
+          "durationSeconds": 1,
+          "edits": {
+            "fadeIn": 0,
+            "fadeOut": 0,
+            "gain": 1,
+            "muted": false,
+            "pan": 0,
+            "playbackRate": 1,
+            "sourceStart": 0
+          },
+          "id": "00000000000000000000000000000000",
+          "name": "",
+          "patternId": 1,
+          "sourceOffset": 0,
+          "sourceOffsetSeconds": 0,
+          "start": 8
+        }
+      ],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "8907c4f6eb466d3f0000000000000002",
+      "inputChannelIndex": 3,
+      "monitorInput": false,
+      "mute": false,
+      "name": "Legacy Lane B",
+      "pan": 0.25,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": 6,
+      "volume": 0.800000011920929,
+      "width": 1
+    }
+  ],
+  "patterns": [
+    {
+      "id": 1,
+      "length": 4,
+      "name": "Shared Legacy Audio",
+      "slices": [
+        {
+          "length": 0,
+          "start": 0
+        }
+      ],
+      "sourceId": 1,
+      "type": "audio"
+    }
+  ],
+  "playhead": 2,
+  "sources": [
+    {
+      "id": 1,
+      "name": "shared",
+      "path": "legacy_audio_assets/shared.wav"
+    }
+  ],
+  "tempo": 124,
+  "version": 2
+}

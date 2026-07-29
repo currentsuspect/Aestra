@@ -37,8 +37,6 @@ namespace {
     // - Increment CURRENT when making breaking changes
     // - MIN_SUPPORTED is the oldest version we can still load
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
-    constexpr int PROJECT_VERSION_CURRENT = 3;
-    constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
     constexpr size_t PROJECT_HISTORY_DEFAULT_MAX_ENTRIES = 50;
     // Total on-disk cap for a project's .history directory. A large project can
     // produce multi-MB snapshots, so a count-only limit (50) let history grow to
@@ -757,7 +755,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     if (!trackManager) return result;
 
     JSON root = JSON::object();
-    root.set("version", JSON(static_cast<double>(PROJECT_VERSION_CURRENT)));
+    root.set("version", JSON(static_cast<double>(ProjectSerializer::PROJECT_VERSION_CURRENT)));
     root.set("tempo", JSON(tempo));
     root.set("playhead", JSON(playheadSeconds));
 
@@ -1222,18 +1220,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     if (root.has("version") && root["version"].isNumber() && std::isfinite(root["version"].asNumber())) {
         fileVersion = static_cast<int>(root["version"].asNumber());
     }
-    
-    if (fileVersion < PROJECT_VERSION_MIN_SUPPORTED) {
-        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
-                   " is too old. Minimum supported: " + std::to_string(PROJECT_VERSION_MIN_SUPPORTED);
+
+    result.sourceSchemaVersion = fileVersion;
+    result.resultingSchemaVersion = fileVersion;
+
+    if (fileVersion < ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED) {
+        result.errorMessage =
+            "Project file version " + std::to_string(fileVersion) +
+            " is too old. Minimum supported: " + std::to_string(ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED);
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
-    
-    if (fileVersion > PROJECT_VERSION_CURRENT) {
-        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
-                   " is newer than this version of AESTRA (" + std::to_string(PROJECT_VERSION_CURRENT) + 
-                   "). Please update AESTRA to open this project.";
+
+    if (fileVersion > ProjectSerializer::PROJECT_VERSION_CURRENT) {
+        result.errorMessage = "Project file version " + std::to_string(fileVersion) +
+                              " is newer than this version of AESTRA (" +
+                              std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT) +
+                              "). Please update AESTRA to open this project.";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
@@ -1242,22 +1245,27 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
-    
-    Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) + " (current: " + 
-              std::to_string(PROJECT_VERSION_CURRENT) + ")");
+
+    Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) +
+              " (current: " + std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT) + ")");
 
     // Run migrations if needed
-    if (fileVersion < PROJECT_VERSION_CURRENT) {
-        Log::info("[ProjectLoad] Migrating from v" + std::to_string(fileVersion) + 
-                  " to v" + std::to_string(PROJECT_VERSION_CURRENT));
-        if (!ProjectMigrations::runMigrations(root, fileVersion, PROJECT_VERSION_CURRENT)) {
-            result.errorMessage = "Failed to migrate project from version " + 
-                                  std::to_string(fileVersion) + " to " + 
-                                  std::to_string(PROJECT_VERSION_CURRENT);
+    if (fileVersion < ProjectSerializer::PROJECT_VERSION_CURRENT) {
+        Log::info("[ProjectLoad] Migrating from v" + std::to_string(fileVersion) + " to v" +
+                  std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT));
+        const auto migration =
+            ProjectMigrations::runMigrations(root, fileVersion, ProjectSerializer::PROJECT_VERSION_CURRENT);
+        result.migrationOutcome = migration.outcome;
+        result.resultingSchemaVersion = migration.resultingVersion;
+        if (!migration.ok()) {
+            result.errorMessage = "Failed to migrate project from version " + std::to_string(fileVersion) + " to " +
+                                  std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT);
             Log::error("[ProjectLoad] " + result.errorMessage);
             return result;
         }
         Log::info("[ProjectLoad] Migration complete");
+    } else {
+        result.resultingSchemaVersion = ProjectSerializer::PROJECT_VERSION_CURRENT;
     }
 
     // ========================================================================
@@ -2056,9 +2064,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     if (variant == variants.end()) {
                                         PatternID routedPattern = clip.patternId;
                                         if (!variants.empty()) {
+                                            // A pre-v3 pattern carries no mixerChannelId, so one old
+                                            // pattern used on several lanes has to become one pattern
+                                            // per destination channel. This MANUFACTURES a pattern the
+                                            // file does not contain and repoints the clip at it.
+                                            //
+                                            // That is a loader-side transformation under the contract
+                                            // in ProjectMigrations.h: re-serializing now emits more
+                                            // patterns than were read, so the document must be saved.
+                                            // Flagged here rather than at the `else` branch below,
+                                            // because that branch can only reach a manufactured
+                                            // variant after this clone has already run.
                                             routedPattern = patternManager.clonePattern(clip.patternId);
                                         }
                                         if (routedPattern.isValid()) {
+                                            if (routedPattern != clip.patternId) {
+                                                ++result.legacyAudioPatternsSplit;
+                                            }
                                             patternManager.setPatternMixerChannel(routedPattern, legacyDestination);
                                             variants.emplace(legacyDestination, routedPattern);
                                             clip.patternId = routedPattern;
@@ -2231,6 +2253,21 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         namespace fs = std::filesystem;
         std::error_code rmEc;
         fs::remove(rollbackPath, rmEc);
+    }
+
+    // A load has two independent sources of transformation: the migration
+    // registry, and version-conditional interpretation inside this loader. The
+    // reported outcome must be their combination — reporting only the registry's
+    // verdict is exactly how a loader-side upgrade goes silent and the user is
+    // never prompted to save the upgraded representation.
+    //
+    // Note this cannot be folded into the migration block above: the legacy
+    // audio split happens in Phase 4, long after migrations run.
+    if (result.legacyAudioPatternsSplit > 0) {
+        result.migrationOutcome =
+            combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+        Log::info("[ProjectLoad] Split " + std::to_string(result.legacyAudioPatternsSplit) +
+                  " legacy audio pattern(s) across mixer channels — project must be saved to keep the split");
     }
 
     result.ok = true;

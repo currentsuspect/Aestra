@@ -54,3 +54,54 @@ target_include_directories(AudioClipInstanceRenderTest PRIVATE
 )
 add_test(NAME AudioClipInstanceRenderTest COMMAND AudioClipInstanceRenderTest)
 set_tests_properties(AudioClipInstanceRenderTest PROPERTIES LABELS "audio;routing")
+
+# Project-format compatibility policy: migration completeness, observable
+# outcomes, historical fixtures, and non-destructive unsupported-version loads.
+add_executable(ProjectCompatibilityPolicyTest
+    Integration/ProjectCompatibilityPolicyTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(ProjectCompatibilityPolicyTest PRIVATE AestraAudio)
+target_include_directories(ProjectCompatibilityPolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+target_compile_definitions(ProjectCompatibilityPolicyTest PRIVATE
+    AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+)
+add_test(NAME ProjectCompatibilityPolicyTest COMMAND ProjectCompatibilityPolicyTest)
+set_tests_properties(ProjectCompatibilityPolicyTest PROPERTIES
+    LABELS "integration;serialization;migration;compatibility"
+)
+
+# Source/ has no linkable application-layer target (#666), so this narrow
+# source guard keeps the load lifecycle call site from reverting to an
+# unconditional clean until the application layer can have a behavioral test.
+add_test(
+    NAME ProjectMigrationLifecycleGuardTest
+    COMMAND ${CMAKE_COMMAND}
+        -DAESTRA_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_migration_lifecycle.cmake
+)
+set_tests_properties(ProjectMigrationLifecycleGuardTest PROPERTIES
+    LABELS "project;migration;compatibility;guard"
+)
+
+add_test(NAME ProjectFixtureImmutabilityTest
+    COMMAND ${CMAKE_COMMAND}
+        "-DFIXTURE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_fixture_manifest.cmake"
+)
+set_tests_properties(ProjectFixtureImmutabilityTest PROPERTIES
+    LABELS "serialization;fixtures;compatibility"
+)
