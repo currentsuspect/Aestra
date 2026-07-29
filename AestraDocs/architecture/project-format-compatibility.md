@@ -33,6 +33,47 @@ Project compatibility failures block release.
 10. A schema version number alone does not make a project dirty. Only an actual
     in-memory transformation requires the upgraded representation to be saved.
 
+## What counts as a transformation
+
+Rule 10 is only enforceable if "transformation" has one meaning. It does:
+
+> A **transformation** is any load-time work that produces an in-memory project
+> whose faithful re-serialization would differ **semantically** from the bytes on
+> disk, in a way the older schema cannot express.
+
+Consequences, all binding:
+
+- **Version advancement is not, by itself, a transformation.** Reading a v2 file
+  and stamping the result as v3 changes nothing about the session. If every
+  field means the same thing in both schemas, the load is `Unchanged` and the
+  project stays clean.
+- **Migration functions must report transformations truthfully.** A migration
+  that rewrites, defaults, splits, merges, or reinterprets any field returns
+  `MigrationStepResult::Transformed`. One that only inspects returns
+  `Unchanged`. Returning `Transformed` "to be safe" is also wrong: it prompts
+  users to save documents that did not change.
+- **Loader-side compatibility interpretation is held to the same standard.**
+  Aestra permits the loader to read an older shape directly instead of routing
+  it through a migration function — `migrateV2ToV3` is deliberately a no-op
+  because the v3 loader reads v2's lane-local mixer state natively. That is only
+  legitimate when the interpretation is **representation-equivalent and
+  round-trip stable**: loading the old shape and re-saving must yield a document
+  the loader reads back with identical semantics, and no information the old
+  file carried may be dropped or invented. A version-conditional branch in the
+  loader that upgrades meaning — inventing an identity, redistributing a value,
+  changing a default — **is a transformation** and must be reported as one, not
+  hidden in the branch.
+- **Therefore**: whoever adds version-conditional loader code owes one of two
+  proofs. Either demonstrate representation-equivalence and round-trip
+  stability with a fixture-backed test, or make the load report that the
+  document requires saving. Silently doing neither is the failure mode this
+  section exists to prevent — the user's only signal that their project was
+  upgraded is the modified marker.
+
+Contributors must not hide semantic upgrades in version-conditional loader
+code. If the loader knows the document changed meaning, the application must
+know too.
+
 ## Schema-bump checklist
 
 Complete every item in the schema-bump pull request:
@@ -44,6 +85,13 @@ Complete every item in the schema-bump pull request:
 - [ ] Make the migration report `Unchanged`, `Transformed`, or `Failed`
       truthfully.
 - [ ] Keep interpretation for every older supported schema intact.
+- [ ] If the loader reads the older shape natively instead of routing it through
+      the migration, prove representation-equivalence and round-trip stability
+      with a fixture-backed test — or report the load as `Transformed`. Do not
+      hide a semantic upgrade in a version-conditional branch.
+- [ ] Record the new fixture's path and SHA-256 in
+      `Tests/Guards/verify_project_fixture_manifest.cmake`. The manifest is
+      bidirectional: an unlisted fixture on disk fails the guard.
 - [ ] Produce the new historical fixture with the serializer that writes
       version `N+1`; record the source commit and generation command.
 - [ ] Do not edit any earlier fixture.

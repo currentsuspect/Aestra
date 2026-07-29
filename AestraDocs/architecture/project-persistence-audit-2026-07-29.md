@@ -96,10 +96,35 @@ project save, and second project load.
 
 ### 9. Are plugin automation targets stable identities?
 
-No. Mixer automation carries a stable `mixerChannelId`, and the parameter uses
-a stable plugin `paramId`, but the plugin instance is addressed by positional
-`effectSlot`. There is no permanent plugin-instance ID, so slot reorder can
-retarget automation. This is explicitly deferred from the EOD slice.
+No — and this is a **live silent-integrity defect**, tracked as **#667**. Not
+hypothetical, not latent debt awaiting a future schema: it misdirects automation
+in the shipping build today.
+
+`AutomationCurve` addresses a plugin parameter with the pair
+`{effectSlot, paramId}` (`AestraAudio/include/Core/AutomationCurve.h`).
+`paramId` is stable — plugins guarantee it per AGENTS.md §19. `effectSlot` is a
+**positional index** into the channel's effect chain. There is no permanent
+plugin-instance ID, so any operation that renumbers the chain — reorder, insert,
+or remove a slot — silently repoints every curve addressed through it at
+whatever plugin now occupies that position. `AudioEngine.cpp:2884` evaluates
+`AutomationTarget::Custom` and `:2900` dereferences `effectSlot`, so the
+mis-addressed curve is applied, not ignored.
+
+Why it is *silent*: the file is well-formed, the load succeeds, no placeholder
+or warning is produced, and the curve continues to modulate a real parameter.
+The user's evidence of the fault is an automation lane that now moves the wrong
+knob — which reads as their own mistake, not corruption.
+
+Note for anyone reading older tracker entries: **#467 claims
+`AutomationTarget::Custom` is dead code and is stale.** Verification against the
+current tree shows the path is live. #467 was flagged accordingly; #667 is the
+accurate issue.
+
+**Deferred from this PR**, deliberately and with scope stated: repairing it
+requires permanent plugin-instance identity plus identity-based automation
+addressing and a migration for existing curves. That is a schema change with its
+own fixture and gate obligations, and folding it into a compatibility-foundation
+change would put two independently risky format changes in one review.
 
 ### 10. Does CI fail when a supported version lacks a migration or fixture?
 
@@ -140,7 +165,8 @@ claim: migration transformations could be silently marked clean; v2/v3 had no
 historical fixture; v1 fixtures were not authentic writer output; compatibility
 completeness was not a merge gate; Phase 4 rollback and cross-platform atomic
 replacement are not absolute; assets have paths but no content hashes (#264);
-plugin automation is positional; unknown fields are not preserved; and the
+plugin automation addressing is positional and misdirects curves today (#667,
+a live silent-integrity defect — see §9); unknown fields are not preserved; and the
 application lifecycle cannot yet be behaviorally tested without #666.
 
 The EOD work makes compatibility enforceable from this point forward. It does
@@ -169,6 +195,12 @@ The requested foundation was **20% already present (4/20 points)** at
 - Reused #666 as the application-layer testability constraint; not solved here.
 - Reused #264 for asset hashes/smart relinking and #266 for serializer
   layering; both remain deferred.
+- **#667** records positional plugin-automation addressing
+  (`{effectSlot, paramId}`) as a **live silent-integrity defect**, not latent
+  debt — see §9 for the evidence that the path executes. Deferred from this PR
+  because the fix is a schema change with its own fixture and gate obligations.
+  Tracker note: **#467 is stale** — it claims `AutomationTarget::Custom` is
+  dead code, which the current tree contradicts.
 - Created #668 for the confirmed Windows autosave remove-before-rename gap;
   this platform commit-boundary change is intentionally separate from the
   project-format foundation.

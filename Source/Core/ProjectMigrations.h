@@ -26,6 +26,37 @@ namespace Aestra {
  * 3. Register in getMigrations()
  */
 
+/**
+ * @brief Outcome of one migration edge.
+ *
+ * WHAT COUNTS AS A TRANSFORMATION — this is a contract, not a hint. See
+ * AestraDocs/architecture/project-format-compatibility.md.
+ *
+ * A transformation is any load-time work producing an in-memory project whose
+ * faithful re-serialization would differ SEMANTICALLY from the bytes on disk,
+ * in a way the older schema cannot express.
+ *
+ * - `Unchanged`  — the step only inspected the document. Advancing the version
+ *                  number is NOT a transformation: it happens on every edge and
+ *                  says nothing about whether the session changed. Reporting
+ *                  `Transformed` "to be safe" is equally wrong; it prompts the
+ *                  user to save a document that did not change.
+ * - `Transformed` — the step rewrote, defaulted, split, merged or reinterpreted
+ *                  data. The application must mark the project modified so the
+ *                  upgraded representation gets saved.
+ * - `Failed`      — the document could not be brought forward. The caller must
+ *                  leave the existing in-memory project untouched.
+ *
+ * The same standard binds the LOADER. Aestra allows the loader to read an older
+ * shape natively instead of routing it through a migration function (see
+ * migrateV2ToV3 below), but only when that interpretation is
+ * representation-equivalent and round-trip stable: re-saving must yield a
+ * document the loader reads back with identical semantics, dropping and
+ * inventing nothing. A version-conditional loader branch that upgrades meaning
+ * is a transformation and must be reported as one — it may not be hidden inside
+ * the branch. The modified marker is the user's only signal that their project
+ * was upgraded.
+ */
 enum class MigrationStepResult { Unchanged, Transformed, Failed };
 
 enum class MigrationOutcome { None, Transformed, Failed };
@@ -151,10 +182,22 @@ public:
     }
 
 private:
+    // v1 and v2 differ only in the identity guarantees the writer made; every
+    // v1 field means in v2 exactly what it meant in v1. Nothing to transform.
     static MigrationStepResult migrateV1ToV2(JSON&) { return MigrationStepResult::Unchanged; }
 
-    // The v3 loader understands v2 lane-local mixer state and performs the
-    // source-route migration after stable channel identities are restored.
+    // Deliberately a no-op. The v3 loader reads v2's lane-local mixer state
+    // natively and derives channel records from it, rather than rewriting the
+    // JSON here.
+    //
+    // That is permitted only because the interpretation is
+    // representation-equivalent and round-trip stable, which is not asserted by
+    // this comment but PROVEN by the historical-fixture tests: an authentic v2
+    // document with a topology that would expose merging or positional
+    // collision loads, re-saves as v3, and reloads with identical semantics.
+    // If that ever stops holding, this function must start reporting
+    // `Transformed` (and do the rewrite) rather than the loader quietly
+    // upgrading meaning.
     static MigrationStepResult migrateV2ToV3(JSON&) { return MigrationStepResult::Unchanged; }
 };
 

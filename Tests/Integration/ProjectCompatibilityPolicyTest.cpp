@@ -113,6 +113,92 @@ MigrationStepResult unchanged(JSON&) {
     return MigrationStepResult::Unchanged;
 }
 
+// Everything about a fixture file that loading it must leave alone. Bytes are
+// the substantive claim; last-write time and size are metadata a rewrite would
+// disturb even if the new contents happened to be identical.
+struct FileSnapshot {
+    bool exists{false};
+    std::string bytes;
+    std::uintmax_t size{0};
+    std::filesystem::file_time_type lastWrite{};
+
+    bool operator==(const FileSnapshot& other) const {
+        return exists == other.exists && size == other.size && lastWrite == other.lastWrite && bytes == other.bytes;
+    }
+};
+
+FileSnapshot snapshotFile(const std::filesystem::path& path) {
+    FileSnapshot snapshot;
+    std::error_code ec;
+    snapshot.exists = std::filesystem::exists(path, ec);
+    if (!snapshot.exists) {
+        return snapshot;
+    }
+    snapshot.size = std::filesystem::file_size(path, ec);
+    snapshot.lastWrite = std::filesystem::last_write_time(path, ec);
+    std::ifstream in(path, std::ios::binary);
+    snapshot.bytes.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    return snapshot;
+}
+
+// Constitution rule 3: migration runs on an in-memory parse and never
+// overwrites the original project. Asserted directly rather than inferred from
+// "load does not call save" — a future asset-relink, integrity-repair or
+// index-rebuild path could touch the file without going through save at all,
+// and the user's only original copy is what is at stake.
+void testLoadNeverModifiesTheOriginal() {
+    const std::vector<const char*> fixtures = {
+        "v1_minimal.aes",
+        "v1_rich.aes",
+        "v1_rich_assets/kick.wav",
+        "v2/serializer-v2-identity.aes",
+        "v2/serializer-v2-positional-mixer.aes",
+        "v3/serializer-v3-independent-mixer.aes",
+    };
+
+    for (const char* relative : fixtures) {
+        const auto path = std::filesystem::path(AESTRA_PROJECT_FIXTURE_DIR) / relative;
+        const FileSnapshot before = snapshotFile(path);
+        require(before.exists, std::string("immutability probe: fixture missing: ") + relative);
+        if (!before.exists) {
+            continue;
+        }
+
+        // The referenced asset is not itself loadable as a project; snapshotting
+        // it still proves a project load does not rewrite its dependencies.
+        if (std::filesystem::path(relative).extension() == ".aes") {
+            auto tracks = makeTracks();
+            const auto result = ProjectSerializer::load(path.string(), tracks);
+            require(result.ok, std::string("immutability probe: load failed: ") + relative + " " + result.errorMessage);
+        }
+
+        const FileSnapshot after = snapshotFile(path);
+        require(after == before,
+                std::string("loading modified the original fixture on disk: ") + relative +
+                    " (bytes " + (after.bytes == before.bytes ? "same" : "CHANGED") + ", size " +
+                    std::to_string(before.size) + " -> " + std::to_string(after.size) + ", mtime " +
+                    (after.lastWrite == before.lastWrite ? "same" : "CHANGED") + ")");
+    }
+}
+
+// Constitution rule 7: PROJECT_VERSION_MIN_SUPPORTED is a product promise, not
+// a cleanup knob.
+//
+// Deliberately NOT a second copy of the constant — a mirrored value would be a
+// competing version authority that drifts. This is a one-directional tripwire:
+// it pins only the OLDEST schema Aestra ever released, so bumping
+// PROJECT_VERSION_CURRENT needs no edit here, while narrowing compatibility
+// fails and forces an explicit compatibility-policy decision in the same PR.
+void testMinimumSupportedVersionIsAProductPromise() {
+    constexpr int kOldestReleasedSchemaVersion = 1;
+    require(ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED <= kOldestReleasedSchemaVersion,
+            "PROJECT_VERSION_MIN_SUPPORTED was raised to " +
+                std::to_string(ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED) +
+                ", dropping support for schema v" + std::to_string(kOldestReleasedSchemaVersion) +
+                ". That is a product decision requiring a release plan (compatibility constitution rule 7), "
+                "not a convenience edit — update this test only alongside that decision.");
+}
+
 void testMigrationRegistry() {
     const auto& migrations = ProjectMigrations::getMigrations();
     std::string error;
@@ -215,6 +301,94 @@ void assertV2Semantics(TrackManager& tracks, const std::string& generation) {
     require(tracks.getChannelCount() == 1, generation + ": v2 channel count");
 }
 
+// The v2 -> v3 change is topological: v2 pairs a lane with a mixer channel
+// POSITIONALLY and writes the channel's state into the lane object; v3 persists
+// lanes and channels as independent records with stable identities.
+//
+// serializer-v2-identity.aes has one lane and one channel, so it proves the
+// traversal works but cannot distinguish a correct pairing from a wrong one.
+// This fixture has three lanes, two of which SHARE A NAME, with every value
+// distinct per position. A loader that pairs by name merges the first two; one
+// that loses order swaps them; one that merges channels collapses the count.
+// Each of those changes at least one assertion below.
+void assertV2PositionalMixerSemantics(TrackManager& tracks, const std::string& generation) {
+    auto& playlist = tracks.getPlaylistModel();
+    const auto ids = playlist.getLaneIDs();
+
+    require(ids.size() == 3, generation + ": v2 positional lane count (got " + std::to_string(ids.size()) + ")");
+    require(tracks.getChannelCount() == 3,
+            generation + ": v2 positional channel count (got " + std::to_string(tracks.getChannelCount()) +
+                ") — a name-keyed pairing would merge the two same-named lanes");
+    if (ids.size() != 3 || tracks.getChannelCount() != 3) {
+        return;
+    }
+
+    struct Expected {
+        const char* name;
+        float volume;
+        float pan;
+        bool muted;
+        bool solo;
+        float width;
+        int colorIndex;
+        int inputIndex;
+        bool soloSafe;
+        bool armed;
+    };
+    // Ordered by position, matching generation order.
+    const Expected expected[3] = {
+        {"Shared Name",   0.40f, -0.75f, true,  false, 0.50f, 1, 2, true,  false},
+        {"Shared Name",   0.90f,  0.50f, false, true,  1.50f, 2, 5, false, true},
+        {"Distinct Lane", 0.65f,  0.25f, false, false, 1.00f, 3, 7, false, false},
+    };
+
+    for (size_t i = 0; i < 3; ++i) {
+        const std::string at = generation + ": lane " + std::to_string(i);
+        const auto* lane = playlist.getLane(ids[i]);
+        require(lane != nullptr, at + " missing");
+        if (lane) {
+            require(lane->name == expected[i].name, at + " name (got '" + lane->name + "')");
+            require(lane->volume == expected[i].volume, at + " volume");
+            require(lane->pan == expected[i].pan, at + " pan");
+            require(lane->muted == expected[i].muted, at + " mute");
+            require(lane->solo == expected[i].solo, at + " solo");
+        }
+
+        const auto* channel = tracks.getChannel(i);
+        require(channel != nullptr, at + " channel missing");
+        if (channel) {
+            require(channel->getWidth() == expected[i].width, at + " channel width");
+            require(channel->getTrackColorIndex() == expected[i].colorIndex, at + " channel color index");
+            require(channel->getInputChannelIndex() == expected[i].inputIndex, at + " channel input index");
+            require(channel->isSoloSafe() == expected[i].soloSafe, at + " channel solo-safe");
+            require(channel->isArmed() == expected[i].armed, at + " channel armed");
+        }
+    }
+
+    // Routing is a separate concern from level state: it must survive the
+    // topology change with its target still resolving to the intended channel.
+    const auto* first = tracks.getChannel(0);
+    const auto* second = tracks.getChannel(1);
+    const auto* third = tracks.getChannel(2);
+    if (first && second && third) {
+        const auto sends = first->getSends();
+        require(sends.size() == 1, generation + ": channel 0 send count (got " + std::to_string(sends.size()) + ")");
+        if (sends.size() == 1) {
+            require(sends[0].targetChannelId == third->getChannelId(),
+                    generation + ": channel 0 send target must still resolve to channel 2");
+            require(sends[0].gain == 0.625f, generation + ": channel 0 send gain");
+            require(sends[0].pan == -0.25f, generation + ": channel 0 send pan");
+            require(!sends[0].postFader, generation + ": channel 0 send pre-fader tap");
+        }
+        require(second->getMainOutputId() == third->getChannelId(),
+                generation + ": channel 1 non-default main output");
+        require(first->getChannelId() != second->getChannelId() &&
+                    second->getChannelId() != third->getChannelId() &&
+                    first->getChannelId() != third->getChannelId(),
+                generation + ": v3 channel identities must be distinct");
+    }
+}
+
 void assertV3Semantics(TrackManager& tracks, const ProjectSerializer::LoadResult& result,
                        const std::string& generation) {
     require(tracks.getChannelCount() == 2, generation + ": v3 independent channel count");
@@ -238,15 +412,21 @@ void assertV3Semantics(TrackManager& tracks, const ProjectSerializer::LoadResult
 }
 
 void testFixtureCorpus(const std::filesystem::path& tempDir) {
+    // `semantics` selects the per-fixture assertions: two fixtures can share a
+    // schema version while pinning different things about it, so the version
+    // number alone cannot dispatch.
+    enum class Semantics { Structural, V2Identity, V2PositionalMixer, V3IndependentMixer };
     struct Fixture {
         int version;
         const char* relativePath;
+        Semantics semantics;
     };
     const std::vector<Fixture> fixtures = {
-        {1, "v1_minimal.aes"},
-        {1, "v1_rich.aes"},
-        {2, "v2/serializer-v2-identity.aes"},
-        {3, "v3/serializer-v3-independent-mixer.aes"},
+        {1, "v1_minimal.aes", Semantics::Structural},
+        {1, "v1_rich.aes", Semantics::Structural},
+        {2, "v2/serializer-v2-identity.aes", Semantics::V2Identity},
+        {2, "v2/serializer-v2-positional-mixer.aes", Semantics::V2PositionalMixer},
+        {3, "v3/serializer-v3-independent-mixer.aes", Semantics::V3IndependentMixer},
     };
 
     for (int version = ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED;
@@ -282,10 +462,12 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         const auto firstPatternIds = patternIds(*firstTracks);
         const auto firstClipIds = clipIds(*firstTracks);
         const auto firstMixerChannelIds = mixerChannelIds(*firstTracks);
-        if (fixture.version == 2) {
-            assertV2Semantics(*firstTracks, "first load");
-        } else if (fixture.version == 3) {
-            assertV3Semantics(*firstTracks, first, "first load");
+        const std::string label = std::string(fixture.relativePath) + " first load";
+        switch (fixture.semantics) {
+            case Semantics::V2Identity: assertV2Semantics(*firstTracks, label); break;
+            case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*firstTracks, label); break;
+            case Semantics::V3IndependentMixer: assertV3Semantics(*firstTracks, first, label); break;
+            case Semantics::Structural: break;
         }
 
         const auto serialized = ProjectSerializer::serialize(firstTracks, first.tempo, first.playhead, 2);
@@ -310,10 +492,14 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
         require(clipIds(*secondTracks) == firstClipIds, "clip identities changed across fixture re-save");
         require(mixerChannelIds(*secondTracks) == firstMixerChannelIds,
                 "mixer channel identities changed across fixture re-save");
-        if (fixture.version == 2) {
-            assertV2Semantics(*secondTracks, "second load");
-        } else if (fixture.version == 3) {
-            assertV3Semantics(*secondTracks, second, "second load");
+        // Save -> load stability: the same assertions must hold after the
+        // document has been re-emitted as v3 and read back.
+        const std::string secondLabel = std::string(fixture.relativePath) + " second load";
+        switch (fixture.semantics) {
+            case Semantics::V2Identity: assertV2Semantics(*secondTracks, secondLabel); break;
+            case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*secondTracks, secondLabel); break;
+            case Semantics::V3IndependentMixer: assertV3Semantics(*secondTracks, second, secondLabel); break;
+            case Semantics::Structural: break;
         }
     }
 }
@@ -342,9 +528,11 @@ void testCurrentLoadMetadata(const std::filesystem::path& tempDir) {
 int main() {
     const Aestra::Tests::ScopedTempDirectory tempDir{"ProjectCompatibilityPolicy"};
     testMigrationRegistry();
+    testMinimumSupportedVersionIsAProductPromise();
     testUnsupportedVersionsAreNonDestructive(tempDir.path());
     testCurrentLoadMetadata(tempDir.path());
     testFixtureCorpus(tempDir.path());
+    testLoadNeverModifiesTheOriginal();
 
     if (g_failures != 0) {
         std::cerr << "[FAIL] ProjectCompatibilityPolicyTest: " << g_failures << " failure(s)\n";
