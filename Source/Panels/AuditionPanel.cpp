@@ -1143,6 +1143,36 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
 
 
 bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    // A hidden Audition workspace must never intercept input belonging to the
+    // active one (#671).
+    //
+    // This panel is laid out even while hidden, and its bounds cover the whole
+    // content area, so with Timeline showing its `m_queueArea` lands squarely
+    // over two playlist lanes. Any press there used to reach the queue branch
+    // below and be swallowed by `if (queueSize <= 0) return true;` — the lane
+    // never saw the click, and because motion events are never marked handled
+    // the rows still hovered normally, which made it look like a dead zone
+    // rather than an interception.
+    //
+    // Verified by controlled toggle on the live process: visible_ is 1 with
+    // Audition active and 0 with Timeline active, so visibility is the correct
+    // predicate for "this workspace is active".
+    //
+    // NUIComponent's parent-level filter (#672) already skips hidden children,
+    // making this redundant for the child-dispatch path. It is kept because
+    // this override may also be invoked directly, and because the base guard
+    // this method eventually delegates to is only reached on some paths — the
+    // queue branch returns long before it.
+    // The captured-cursor exemption must match the parent's contract exactly:
+    // this panel keeps interaction state that deliberately survives the pointer
+    // leaving its bounds (`m_isScrubbingWaveform`, see the early-out below), so
+    // a panel hidden mid-scrub still needs its terminating move/release or the
+    // scrub stays latched. Guarding on visibility alone would strand it —
+    // the same class of defect this change exists to remove, one file over.
+    if (!isVisible() && !event.cursorCaptured) {
+        return false;
+    }
+
     auto bounds = getBounds();
     constexpr float queueHeaderH = 24.0f;
     constexpr float queueRowPitch = 42.0f;
