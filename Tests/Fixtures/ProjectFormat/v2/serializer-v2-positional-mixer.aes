@@ -1,0 +1,92 @@
+{
+  "arsenal": {
+    "nextId": 1,
+    "units": []
+  },
+  "integrity": {
+    "algo": "fnv1a64",
+    "hash": "8001ccadc37a27c4"
+  },
+  "lanes": [
+    {
+      "armed": false,
+      "automation": [],
+      "clips": [],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "94f5afde1877835c0000000000000001",
+      "inputChannelIndex": 2,
+      "monitorInput": false,
+      "mute": true,
+      "name": "Shared Name",
+      "pan": -0.75,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": [
+          {
+            "gain": 0.625,
+            "mute": false,
+            "pan": -0.25,
+            "postFader": false,
+            "sidechainOnly": false,
+            "targetId": 3
+          }
+        ]
+      },
+      "solo": false,
+      "soloSafe": true,
+      "trackColorIndex": 1,
+      "volume": 0.4000000059604645,
+      "width": 0.5
+    },
+    {
+      "armed": true,
+      "automation": [],
+      "clips": [],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "94f5afde1877835c0000000000000002",
+      "inputChannelIndex": 5,
+      "monitorInput": false,
+      "mute": false,
+      "name": "Shared Name",
+      "pan": 0.5,
+      "routing": {
+        "mainOutputId": 3,
+        "sends": []
+      },
+      "solo": true,
+      "soloSafe": false,
+      "trackColorIndex": 2,
+      "volume": 0.8999999761581421,
+      "width": 1.5
+    },
+    {
+      "armed": false,
+      "automation": [],
+      "clips": [],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "94f5afde1877835c0000000000000003",
+      "inputChannelIndex": 7,
+      "monitorInput": false,
+      "mute": false,
+      "name": "Distinct Lane",
+      "pan": 0.25,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": 3,
+      "volume": 0.6499999761581421,
+      "width": 1
+    }
+  ],
+  "patterns": [],
+  "playhead": 4.5,
+  "sources": [],
+  "tempo": 132,
+  "version": 2
+}
