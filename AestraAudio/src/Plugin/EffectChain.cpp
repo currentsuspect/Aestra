@@ -5,11 +5,45 @@
 #include "AestraLog.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+// Process-wide plugin-instance id counter (#667). Atomic because chains on
+// different channels are mutated from the main/control thread but nothing
+// guarantees a single thread across a session; the RT thread never touches it.
+std::atomic<uint64_t> g_nextPluginInstanceId{1};
+}  // namespace
+
+uint64_t mintPluginInstanceId() {
+    uint64_t id = g_nextPluginInstanceId.fetch_add(1, std::memory_order_relaxed);
+    // Wrap guard, mirroring the unit-id counter (#528). Exhausting 2^64 ids is not
+    // reachable in practice, but returning 0 would silently mean "no instance" and
+    // un-address every curve pointing at this slot, so refuse to produce it.
+    if (id == 0) {
+        g_nextPluginInstanceId.store(1, std::memory_order_relaxed);
+        id = 1;
+    }
+    return id;
+}
+
+void reserveMintedPluginInstanceId(uint64_t seenId) {
+    if (seenId == 0) {
+        return;
+    }
+    uint64_t expected = g_nextPluginInstanceId.load(std::memory_order_relaxed);
+    while (expected <= seenId) {
+        if (g_nextPluginInstanceId.compare_exchange_weak(expected, seenId + 1,
+                                                         std::memory_order_relaxed)) {
+            return;
+        }
+        // expected is refreshed by compare_exchange_weak; loop re-tests it.
+    }
+}
 
 namespace {
 bool processPluginNoexcept(IPluginInstance& plugin, const float* const* inputs, float** outputs,
@@ -120,10 +154,19 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
         (void)plugin->getInfo();
     }
 
+    // Whether the CALLER handed us a plugin — checked before the move, which
+    // leaves `plugin` null either way.
+    const bool receivedPlugin = plugin != nullptr;
     m_slots[slotIndex].plugin = std::move(plugin);
     // The slot now genuinely holds what the caller put here, so any retained
     // missing-plugin record for it is superseded (#647).
     m_slots[slotIndex].clearMissingPlugin();
+    // A different plugin instance occupies this slot, so it is a different
+    // identity — mint a fresh one rather than inheriting whatever was here
+    // (#667). Inheriting would silently hand the previous plugin's automation to
+    // its replacement, which is the same class of defect as the positional
+    // addressing this id exists to remove.
+    m_slots[slotIndex].instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
@@ -147,6 +190,10 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
     m_slots[slotIndex].plugin = nullptr;
     // Removing a slot removes it, placeholder included (#647).
     m_slots[slotIndex].clearMissingPlugin();
+    // The instance is gone, so its identity goes with it (#667). Anything still
+    // addressing this id now resolves to nothing, which is the honest outcome —
+    // far better than resolving to whatever occupies the index next.
+    m_slots[slotIndex].instanceId = 0;
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
@@ -175,6 +222,10 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     }
 
     m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
+    // The identity travels with the instance (#667). This is the whole point of
+    // the id: a move changes which index holds the plugin and nothing else, so
+    // automation addressed to it keeps resolving to the same plugin.
+    m_slots[toSlot].instanceId = m_slots[fromSlot].instanceId;
     m_slots[toSlot].missingPluginId = std::move(m_slots[fromSlot].missingPluginId);
     m_slots[toSlot].missingPluginState = std::move(m_slots[fromSlot].missingPluginState);
     m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
@@ -186,6 +237,7 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
 
     m_slots[fromSlot].plugin = nullptr;
     m_slots[fromSlot].clearMissingPlugin();
+    m_slots[fromSlot].instanceId = 0;  // vacated — no instance lives here now (#667)
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
     m_slots[fromSlot].faultState = std::make_shared<EffectSlotFaultState>();
@@ -207,6 +259,8 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     }
 
     std::swap(m_slots[slot1].plugin, m_slots[slot2].plugin);
+    // Identities swap with their instances (#667) — see movePlugin.
+    std::swap(m_slots[slot1].instanceId, m_slots[slot2].instanceId);
     std::swap(m_slots[slot1].missingPluginId, m_slots[slot2].missingPluginId);
     std::swap(m_slots[slot1].missingPluginState, m_slots[slot2].missingPluginState);
     std::swap(m_slots[slot1].faultState, m_slots[slot2].faultState);
@@ -245,6 +299,27 @@ bool EffectChain::isSlotEmpty(size_t slotIndex) const {
     // "Free to use", not the RT predicate: a retained missing-plugin record
     // claims its slot (#647).
     return !m_slots[slotIndex].isOccupied();
+}
+
+uint64_t EffectChain::getSlotInstanceId(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS) {
+        return 0;
+    }
+    return m_slots[slotIndex].instanceId;
+}
+
+size_t EffectChain::findSlotByInstanceId(uint64_t instanceId) const {
+    // Id 0 means "no instance". Unoccupied slots carry 0, so matching on it would
+    // resolve every un-addressed curve to the first empty slot (#667).
+    if (instanceId == 0) {
+        return MAX_SLOTS;
+    }
+    for (size_t i = 0; i < MAX_SLOTS; ++i) {
+        if (m_slots[i].instanceId == instanceId) {
+            return i;
+        }
+    }
+    return MAX_SLOTS;
 }
 
 size_t EffectChain::getFirstEmptySlot() const {
@@ -290,6 +365,7 @@ void EffectChain::clear() {
     for (auto& slot : m_slots) {
         slot.plugin = nullptr;
         slot.clearMissingPlugin();
+        slot.instanceId = 0;  // every instance is gone, so every identity is (#667)
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
         slot.faultState = std::make_shared<EffectSlotFaultState>();

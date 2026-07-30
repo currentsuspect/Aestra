@@ -224,3 +224,15 @@ target_include_directories(EffectChainMissingPluginTest PRIVATE
 )
 add_test(NAME EffectChainMissingPluginTest COMMAND EffectChainMissingPluginTest)
 set_tests_properties(EffectChainMissingPluginTest PROPERTIES LABELS "audio;plugins;serialization")
+
+# Plugin-instance identity must survive chain reordering (#667) — automation
+# addresses the instance a curve was drawn for, never the position it occupied.
+add_executable(EffectChainInstanceIdentityTest AestraAudio/EffectChainInstanceIdentityTest.cpp)
+target_link_libraries(EffectChainInstanceIdentityTest PRIVATE AestraAudio)
+target_include_directories(EffectChainInstanceIdentityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainInstanceIdentityTest COMMAND EffectChainInstanceIdentityTest)
+set_tests_properties(EffectChainInstanceIdentityTest PROPERTIES LABELS "audio;plugins;automation;regression")
