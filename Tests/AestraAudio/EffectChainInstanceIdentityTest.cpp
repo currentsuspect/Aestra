@@ -27,6 +27,7 @@
 
 #include "Plugin/EffectChain.h"
 
+#include "Commands/EffectCommands.h"
 #include "Commands/PluginCommands.h"
 #include "Core/MixerChannel.h"
 #include "Plugin/PluginManager.h"
@@ -452,6 +453,40 @@ void testRedoOfAddKeepsTheOriginalIdentity() {
           "redoing an add restores the original identity");
 }
 
+void testUndoOfEffectRemoveRestoresTheSameIdentity() {
+    // EffectCommands.h carries a second, independent add/remove pair with the
+    // same shape as PluginCommands.h — different constructor, same defect. Both
+    // are wired into history, so covering only one would leave the identity
+    // guarantee true through one undo path and false through the other.
+    TrackManager trackManager;
+    MixerChannel channel("Identity", 3);
+    auto& chain = channel.getEffectChain();
+    chain.insertPlugin(2, makePlugin("effect.undo.subject"));
+    const uint64_t original = chain.getSlotInstanceId(2);
+
+    RemoveEffectCommand command(trackManager, channel, 2);
+    command.execute();
+    command.undo();
+
+    check(chain.getSlotInstanceId(2) == original,
+          "undoing RemoveEffectCommand restores the identity too");
+}
+
+void testRedoOfEffectAddKeepsTheOriginalIdentity() {
+    TrackManager trackManager;
+    MixerChannel channel("Identity", 4);
+    auto& chain = channel.getEffectChain();
+
+    AddEffectCommand command(trackManager, channel, 0, makePlugin("effect.redo.subject"), "Reverb");
+    command.execute();
+    const uint64_t original = chain.getSlotInstanceId(0);
+    command.undo();
+    command.redo();
+
+    check(chain.getSlotInstanceId(0) == original,
+          "redoing AddEffectCommand restores the original identity too");
+}
+
 void testPreservedIdentityIsReservedAgainstFutureMints() {
     // A preserved id can come from outside this process once v2 persists it. If
     // restoring one did not advance the mint counter, the very next insert could
@@ -499,6 +534,8 @@ int main() {
     testLoadClearsIdentityOnSerializedEmptySlots();
     testUndoOfRemoveRestoresTheSameIdentity();
     testRedoOfAddKeepsTheOriginalIdentity();
+    testUndoOfEffectRemoveRestoresTheSameIdentity();
+    testRedoOfEffectAddKeepsTheOriginalIdentity();
     testPreservedIdentityIsReservedAgainstFutureMints();
     testPreservedZeroStillMints();
 
