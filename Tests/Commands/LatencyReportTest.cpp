@@ -200,6 +200,26 @@ void testPendingSolveStaysObservational() {
           "query does not recalculate or mutate the published topology");
 }
 
+void testDisabledCompensationStatus() {
+    Fixture fx;
+    auto* channel = fx.tracks->addChannelWithId("Disabled", 123);
+    check(channel != nullptr, "disabled latency fixture created");
+    if (!channel)
+        return;
+
+    fx.engine.calculateLatencyCompensation();
+    const uint64_t generationBefore = fx.engine.getLastSolvedLatencyTopology().generation;
+    fx.engine.setLatencyCompensationEnabled(false);
+
+    JSON response = call(fx.service, R"({"id":7,"verb":"get_latency_report"})");
+    JSON& report = response["result"];
+    check(report["status"].asString() == "disabled" && report["observed"].asBool() &&
+              !report["compensationEnabled"].asBool(),
+          "disabled global compensation has an explicit report status");
+    check(fx.engine.getLastSolvedLatencyTopology().generation == generationBefore,
+          "disabled query does not publish a replacement topology");
+}
+
 void testSchemaAndArgumentRejection() {
     JSON schema = JSON::parse(Aestra::Audio::MuseGrammar::schemaToJsonString());
     bool documented = false;
@@ -212,7 +232,7 @@ void testSchemaAndArgumentRejection() {
 
     TrackManager tracks;
     MuseService service(&tracks, nullptr);
-    JSON response = call(service, R"({"id":7,"verb":"get_latency_report","args":{"recalculate":true}})");
+    JSON response = call(service, R"({"id":8,"verb":"get_latency_report","args":{"recalculate":true}})");
     check(response["status"].asString() == "validation_error",
           "get_latency_report rejects recalculation and all other arguments");
 }
@@ -224,6 +244,7 @@ int main() {
     testCleanSolveExposesNodeAndAppliedLatency();
     testBranchCompensationAndSidechainLimitation();
     testPendingSolveStaysObservational();
+    testDisabledCompensationStatus();
     testSchemaAndArgumentRejection();
 
     if (g_failures == 0) {
