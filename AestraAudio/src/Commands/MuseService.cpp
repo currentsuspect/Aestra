@@ -127,7 +127,8 @@ bool isQueryVerb(const std::string& verb) {
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
            verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
-           verb == "get_capabilities" || verb == "get_audio_health";
+           verb == "get_capabilities" || verb == "get_audio_health" ||
+           verb == "get_project_load_report";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -622,6 +623,19 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             result.set("resampling", resampling);
             result.set("signal", signal);
 
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_project_load_report") {
+            JSON result = JSON::object();
+            if (m_projectLoadReport) {
+                result = *m_projectLoadReport;
+            } else {
+                result.set("status", JSON("unobserved"));
+                result.set("observed", JSON(false));
+            }
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);

@@ -127,3 +127,13 @@ add_test(
 set_tests_properties(CrashFlagShutdownOrderGuardTest PROPERTIES
     LABELS "app;recovery;guard"
 )
+
+add_test(
+    NAME ProjectLoadReportLifecycleGuardTest
+    COMMAND ${CMAKE_COMMAND}
+        -DAESTRA_SOURCE_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_load_report_lifecycle.cmake
+)
+set_tests_properties(ProjectLoadReportLifecycleGuardTest PROPERTIES
+    LABELS "app;project;muse;recovery;guard"
+)

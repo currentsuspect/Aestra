@@ -148,6 +148,33 @@ target_include_directories(MuseCliRequestTest PRIVATE
 add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
 set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse")
 
+add_executable(ProjectLoadReportTest
+    Commands/ProjectLoadReportTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/App/MuseProjectLoadReport.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(ProjectLoadReportTest PRIVATE AestraAudio)
+target_include_directories(ProjectLoadReportTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_compile_definitions(ProjectLoadReportTest PRIVATE
+    AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+)
+add_test(NAME ProjectLoadReportTest COMMAND ProjectLoadReportTest)
+set_tests_properties(ProjectLoadReportTest PROPERTIES LABELS "commands;muse;project;serialization")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.
@@ -233,4 +260,3 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
-
