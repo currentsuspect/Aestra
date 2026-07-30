@@ -3980,6 +3980,9 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     }
     const auto& state = rtStates[trackIndex];
     snap.valid = true;
+    snap.pluginLatencySamples = state.pluginLatencySamples;
+    snap.outputCompensationSamples = state.compensationDelaySamples;
+    snap.compensationEnabled = state.compensationEnabled;
 
     // writePos is updated on m_trackState by the RT thread each block.
     // m_graphStates edge delays do not have double-buffered EdgeDelayState
