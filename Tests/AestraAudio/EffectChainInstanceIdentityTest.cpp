@@ -27,6 +27,10 @@
 
 #include "Plugin/EffectChain.h"
 
+#include "Commands/PluginCommands.h"
+#include "Core/MixerChannel.h"
+#include "Plugin/PluginManager.h"
+
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -336,6 +340,143 @@ void testSnapshotCarriesIdentity() {
           "the snapshot also refuses the reserved 0");
 }
 
+// ---------------------------------------------------------------------------
+// Restoration: load, and the undo/redo round trips (CodeRabbit review, #681)
+// ---------------------------------------------------------------------------
+//
+// Minting on insert is only half the invariant. The other half is that every
+// path which puts an occupant into a slot leaves a coherent identity behind —
+// including the paths that RESTORE an occupant rather than introduce one.
+//
+// The load tests deliberately serialize plugins whose ids are not registered
+// with PluginManager, so loadState takes the missing-plugin branch (#647). That
+// keeps them independent of the plugin registry and scan cache while still
+// exercising real restoration: a placeholder is an occupant and must carry an
+// identity like any other.
+
+/// Build a serialized chain: slot 0 occupied, everything else empty.
+std::vector<uint8_t> serializeChainWithOccupantInSlotZero() {
+    EffectChain chain;
+    chain.insertPlugin(0, makePlugin("aestra.test.identity.unregistered"));
+    return chain.saveState();
+}
+
+void testLoadMintsIdentityForRestoredSlots() {
+    // Before this, loadState never touched instanceId, so every plugin in a
+    // freshly opened project came back with identity 0 — i.e. unaddressable, and
+    // indistinguishable from an empty slot to findSlotByInstanceId.
+    EffectChain source;
+    source.insertPlugin(0, makePlugin("aestra.test.identity.unregistered.a"));
+    source.insertPlugin(3, makePlugin("aestra.test.identity.unregistered.b"));
+    const std::vector<uint8_t> blob = source.saveState();
+
+    EffectChain restored;
+    std::vector<std::string> missing;
+    check(restored.loadState(blob, PluginManager::getInstance(), &missing),
+          "the serialized chain loads");
+
+    const uint64_t a = restored.getSlotInstanceId(0);
+    const uint64_t b = restored.getSlotInstanceId(3);
+    check(a != 0, "a restored occupant has an identity");
+    check(b != 0, "every restored occupant has one, not just the first");
+    check(a != b, "restored occupants get distinct identities");
+    check(restored.findSlotByInstanceId(a) == 0, "a restored identity resolves to its slot");
+    check(restored.findSlotByInstanceId(b) == 3, "and so does the second");
+}
+
+void testLoadClearsIdentityOnSerializedEmptySlots() {
+    // The inverse, and the more dangerous half: loading into a chain that was
+    // already populated. A slot the blob says is empty must not keep the
+    // previous occupant's id, or a lookup for that id resolves to a slot holding
+    // nothing — a dangling identity rather than a missing one.
+    const std::vector<uint8_t> blob = serializeChainWithOccupantInSlotZero();
+
+    EffectChain reused;
+    reused.insertPlugin(0, makePlugin("occupant.0"));
+    reused.insertPlugin(2, makePlugin("occupant.2"));
+    const uint64_t staleId = reused.getSlotInstanceId(2);
+    check(staleId != 0, "the slot about to be emptied really had an identity");
+
+    std::vector<std::string> missing;
+    check(reused.loadState(blob, PluginManager::getInstance(), &missing),
+          "the blob loads over the populated chain");
+
+    check(reused.getSlotInstanceId(2) == 0,
+          "a slot the blob says is empty must not keep its old identity");
+    check(reused.findSlotByInstanceId(staleId) == EffectChain::MAX_SLOTS,
+          "the retired identity must not resolve to the now-empty slot");
+    check(reused.getSlotInstanceId(0) != staleId,
+          "nor may it drift onto the slot the blob did fill");
+}
+
+void testUndoOfRemoveRestoresTheSameIdentity() {
+    // The path that actually ships. MixerViewModel::removeInsert pushes a
+    // RemovePluginCommand, and its undo re-inserts the very same instance. Before
+    // the preserved-id parameter, insertPlugin minted there, so Ctrl+Z after a
+    // remove returned a plugin the user saw as unchanged but which every curve
+    // addressed to it no longer matched.
+    MixerChannel channel("Identity", 1);
+    auto& chain = channel.getEffectChain();
+    chain.insertPlugin(1, makePlugin("undo.subject"));
+    const uint64_t original = chain.getSlotInstanceId(1);
+    check(original != 0, "the plugin has an identity before removal");
+
+    RemovePluginCommand command(channel, 1);
+    command.execute();
+    check(chain.getSlotInstanceId(1) == 0, "removal retires the identity");
+
+    command.undo();
+    check(chain.getSlotInstanceId(1) == original,
+          "undoing a removal restores the identity, it does not mint a new one");
+    check(chain.findSlotByInstanceId(original) == 1,
+          "and the restored identity resolves to the slot again");
+}
+
+void testRedoOfAddKeepsTheOriginalIdentity() {
+    // Same defect through AddPluginCommand: undo then redo has to be a round
+    // trip. If redo minted, automation drawn before the undo would be orphaned by
+    // a redo the user reads as "put it back exactly as it was".
+    MixerChannel channel("Identity", 2);
+    auto& chain = channel.getEffectChain();
+
+    AddPluginCommand command(channel, 0, makePlugin("redo.subject"));
+    command.execute();
+    const uint64_t original = chain.getSlotInstanceId(0);
+    check(original != 0, "the added plugin has an identity");
+
+    command.undo();
+    check(chain.getSlotInstanceId(0) == 0, "undoing the add empties the slot");
+
+    command.redo();
+    check(chain.getSlotInstanceId(0) == original,
+          "redoing an add restores the original identity");
+}
+
+void testPreservedIdentityIsReservedAgainstFutureMints() {
+    // A preserved id can come from outside this process once v2 persists it. If
+    // restoring one did not advance the mint counter, the very next insert could
+    // hand out the same value and two slots would share an identity — the exact
+    // ambiguity the id exists to remove.
+    EffectChain chain;
+    const uint64_t farFuture = 9'000'000'000ULL;
+    chain.insertPlugin(0, makePlugin("restored"), farFuture);
+    check(chain.getSlotInstanceId(0) == farFuture, "the preserved identity is taken as given");
+
+    chain.insertPlugin(1, makePlugin("fresh"));
+    check(chain.getSlotInstanceId(1) > farFuture,
+          "a later mint must clear a restored identity, not collide with it");
+}
+
+void testPreservedZeroStillMints() {
+    // 0 is the "no identity" sentinel, so passing it must mean "mint one" rather
+    // than "install 0 as the identity" — otherwise every existing caller, which
+    // relies on the default, would insert unaddressable plugins.
+    EffectChain chain;
+    chain.insertPlugin(0, makePlugin("defaulted"), 0);
+    check(chain.getSlotInstanceId(0) != 0,
+          "passing the reserved 0 mints a real identity instead of storing 0");
+}
+
 }  // namespace
 
 int main() {
@@ -354,6 +495,12 @@ int main() {
     testMintNeverReturnsZero();
     testResetPreservesIdentities();
     testSnapshotCarriesIdentity();
+    testLoadMintsIdentityForRestoredSlots();
+    testLoadClearsIdentityOnSerializedEmptySlots();
+    testUndoOfRemoveRestoresTheSameIdentity();
+    testRedoOfAddKeepsTheOriginalIdentity();
+    testPreservedIdentityIsReservedAgainstFutureMints();
+    testPreservedZeroStillMints();
 
     if (g_failures != 0) {
         std::cerr << "[FAIL] EffectChainInstanceIdentityTest: " << g_failures << " failure(s)\n";

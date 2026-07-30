@@ -173,9 +173,23 @@ public:
      *
      * @param slotIndex Slot index (0 to MAX_SLOTS-1)
      * @param plugin Plugin instance to insert
+     * @param preservedInstanceId Identity to restore, or 0 to mint a fresh one.
+     *
+     * Pass 0 (the default) whenever the slot is genuinely acquiring a new
+     * occupant — that is the ordinary case, and a fresh identity is what stops
+     * a replacement from inheriting its predecessor's automation.
+     *
+     * Pass a non-zero id only when re-seating an occupant that already had one
+     * and never stopped being the same plugin to the user. Undo of a plugin
+     * removal is the case that ships today: RemovePluginCommand hands back the
+     * very same instance, so minting there would change the identity of a
+     * plugin the user only ever saw disappear and come back. The id is reserved
+     * against the mint counter, so restoring an id from outside this process
+     * (a loaded project) can never collide with one minted inside it.
+     *
      * @return true if inserted successfully
      */
-    bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin);
+    bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint64_t preservedInstanceId = 0);
 
     /**
      * @brief Remove plugin from slot

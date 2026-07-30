@@ -129,7 +129,7 @@ void EffectChain::publishSnapshot() {
 // Slot Management
 // ==============================
 
-bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
+bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint64_t preservedInstanceId) {
     if (reportRealtimeMisuse("EffectChain::insertPlugin")) {
         return false;
     }
@@ -166,7 +166,18 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     // (#667). Inheriting would silently hand the previous plugin's automation to
     // its replacement, which is the same class of defect as the positional
     // addressing this id exists to remove.
-    m_slots[slotIndex].instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
+    //
+    // The exception is a caller re-seating an occupant that already HAD an
+    // identity and, to the user, never stopped being the same plugin. Undo of a
+    // removal is that case: minting there would mean Ctrl+Z silently orphaned
+    // every curve pointing at the plugin it just brought back. Reserve the id
+    // first so one restored from outside this process can never be minted again.
+    if (receivedPlugin && preservedInstanceId != 0) {
+        reserveMintedPluginInstanceId(preservedInstanceId);
+        m_slots[slotIndex].instanceId = preservedInstanceId;
+    } else {
+        m_slots[slotIndex].instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
+    }
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
@@ -801,6 +812,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
             m_slots[i].clearMissingPlugin();
+            // Loading into a chain that was already populated must not leave the
+            // previous occupant's identity behind on a now-empty slot, or a
+            // lookup for that id would resolve to a slot holding nothing (#667).
+            m_slots[i].instanceId = 0;
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
             continue;
         }
@@ -864,6 +879,12 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
             m_slots[i].plugin = std::move(instance);
             m_slots[i].clearMissingPlugin();
+            // v1 chains predate identity, so there is nothing on the wire to
+            // restore — mint. Reserving would be wrong here for the same reason:
+            // there is no persisted id that a future mint could collide with.
+            // When v2 lands, this is the branch that reads the stored id and
+            // calls reserveMintedPluginInstanceId instead (#667).
+            m_slots[i].instanceId = mintPluginInstanceId();
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
@@ -880,6 +901,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             m_slots[i].plugin = nullptr;
             m_slots[i].missingPluginId = pluginId;
             m_slots[i].missingPluginState = std::move(pluginState);
+            // A placeholder is an occupant, so it gets an identity like any
+            // other (#647/#667). Automation addressed to a plugin that failed to
+            // load has to survive the round trip exactly as the placeholder does.
+            m_slots[i].instanceId = mintPluginInstanceId();
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
