@@ -175,6 +175,15 @@ target_compile_definitions(ProjectLoadReportTest PRIVATE
 add_test(NAME ProjectLoadReportTest COMMAND ProjectLoadReportTest)
 set_tests_properties(ProjectLoadReportTest PROPERTIES LABELS "commands;muse;project;serialization")
 
+add_executable(RoutingGraphTest Commands/RoutingGraphTest.cpp)
+target_link_libraries(RoutingGraphTest PRIVATE AestraAudioCore)
+target_include_directories(RoutingGraphTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RoutingGraphTest COMMAND RoutingGraphTest)
+set_tests_properties(RoutingGraphTest PROPERTIES LABELS "commands;muse;routing")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.
