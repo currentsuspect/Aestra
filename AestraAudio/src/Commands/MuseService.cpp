@@ -648,7 +648,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
 
             constexpr uint32_t kMasterSentinel = 0xFFFFFFFFu;
-            const auto isMixerMasterTarget = [](uint32_t channelId) {
+            const auto isMixerMasterTarget = [kMasterSentinel](uint32_t channelId) {
                 return channelId == kMasterSentinel;
             };
             const auto mixerRouteNodeId = [&](uint32_t channelId) {
