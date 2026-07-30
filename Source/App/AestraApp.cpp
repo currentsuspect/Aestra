@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
 #include "MuseHostVerbs.h"
+#include "MuseProjectLoadReport.h"
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
@@ -526,6 +527,7 @@ void AestraApp::buildMenuBar() {
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
+            clearProjectLoadReport();
             m_documentState.startUntitled(getAutosavePath());
             reinitAutosaveManager();
             syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
@@ -737,9 +739,11 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                 m_recoveryHandled = true;
                 m_pendingAutosavePath.clear();
                 if (response == Aestra::RecoveryResponse::Recover) {
+                    beginProjectLoadAttempt();
                     auto selected = ProjectSerializer::loadFirstValid(
                         recoveryCandidates, m_content ? m_content->getTrackManager() : nullptr, originalProjectPath);
                     auto result = std::move(selected.result);
+                    recordProjectLoadAttempt(result, ProjectLoadSource::Recovery);
                     if (result.ok) {
                         result = applyLoadedProject(selected.loadedPath, ProjectLoadSource::Recovery,
                                                     originalProjectPath, std::move(result));
@@ -753,6 +757,7 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                         Log::error("[Recovery] Failed to load autosave");
                         if (m_content)
                             m_content->resetToDefaultProject();
+                        clearProjectLoadReport();
                         m_documentState.startUntitled(getAutosavePath());
                         reinitAutosaveManager();
                         syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
@@ -774,6 +779,7 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                     } else {
                         if (m_content)
                             m_content->resetToDefaultProject();
+                        clearProjectLoadReport();
                         m_documentState.startUntitled(getAutosavePath());
                         reinitAutosaveManager();
                         syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
@@ -790,6 +796,8 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
             m_recoveryHandled = true;
             if (hasRequestedProject) {
                 loadProjectFromPath(projectPath);
+            } else {
+                clearProjectLoadReport();
             }
         }
         return;
@@ -1225,6 +1233,9 @@ void AestraApp::startMuseSocketIfConfigured() {
 
     m_museService = std::make_unique<Aestra::Audio::MuseService>(
         m_content->getTrackManager().get(), m_audioController->getEngine());
+    if (m_projectLoadReport) {
+        m_museService->setProjectLoadReport(*m_projectLoadReport);
+    }
 
     // Requests are executed from the frame pump (see processPending in UI_Update),
     // so UI-affine host verbs can be honoured here. Headless processes leave this
@@ -1464,21 +1475,51 @@ bool AestraApp::saveProjectAs() {
 
 ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, ProjectLoadSource source,
                                                              const std::string& canonicalPath) {
+    beginProjectLoadAttempt();
     ProjectSerializer::LoadResult result;
     if (path.empty()) {
         result.errorMessage = "Project path is empty";
+        recordProjectLoadAttempt(result, source);
         return result;
     }
 
     const std::string assetBasePath =
         source == ProjectLoadSource::Canonical || canonicalPath.empty() ? path : canonicalPath;
     result = ProjectSerializer::load(path, m_content ? m_content->getTrackManager() : nullptr, assetBasePath);
+    recordProjectLoadAttempt(result, source);
     if (!result.ok) {
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
         return result;
     }
 
     return applyLoadedProject(path, source, canonicalPath, std::move(result));
+}
+
+void AestraApp::beginProjectLoadAttempt() {
+    m_projectLoadReport.reset();
+    if (m_museService) m_museService->clearProjectLoadReport();
+}
+
+void AestraApp::recordProjectLoadAttempt(const ProjectSerializer::LoadResult& result,
+                                        ProjectLoadSource source) {
+    Aestra::MuseProjectLoadOrigin origin = Aestra::MuseProjectLoadOrigin::Canonical;
+    switch (source) {
+    case ProjectLoadSource::Canonical:
+        break;
+    case ProjectLoadSource::Recovery:
+        origin = Aestra::MuseProjectLoadOrigin::Recovery;
+        break;
+    case ProjectLoadSource::Snapshot:
+        origin = Aestra::MuseProjectLoadOrigin::Snapshot;
+        break;
+    }
+
+    m_projectLoadReport = Aestra::makeMuseProjectLoadReport(result, origin);
+    if (m_museService) m_museService->setProjectLoadReport(*m_projectLoadReport);
+}
+
+void AestraApp::clearProjectLoadReport() {
+    beginProjectLoadAttempt();
 }
 
 ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& path, ProjectLoadSource source,

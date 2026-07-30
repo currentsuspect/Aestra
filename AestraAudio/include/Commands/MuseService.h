@@ -3,7 +3,9 @@
 
 #include "Commands/HostVerbRegistry.h"
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
 namespace Aestra {
 namespace Audio {
@@ -75,11 +77,22 @@ public:
     void setHostUiThreadAvailable(bool available) { m_hostUiThreadAvailable = available; }
     bool hostUiThreadAvailable() const { return m_hostUiThreadAvailable; }
 
+    /**
+     * @brief Publish the application-owned result of the latest project load attempt.
+     *
+     * The application maps ProjectSerializer::LoadResult into this protocol
+     * payload because AestraAudio must not depend on Source/. A new/blank
+     * project clears it; beginning or completing another load replaces it.
+     */
+    void setProjectLoadReport(JSON report) { m_projectLoadReport = std::move(report); }
+    void clearProjectLoadReport() { m_projectLoadReport.reset(); }
+
 private:
     TrackManager* m_trackManager = nullptr;
     AudioEngine* m_engine = nullptr;
     HostVerbRegistry m_hostVerbs;
     bool m_hostUiThreadAvailable = false;
+    std::optional<JSON> m_projectLoadReport;
 };
 
 } // namespace Audio
