@@ -164,6 +164,51 @@ void testHiddenButtonDoesNotLatchPressedState() {
           "a release after re-showing must not complete a press that was never accepted");
 }
 
+void testHidingMidPressCancelsTheGesture() {
+    // The inverse of the case above, and a regression the visibility guard itself
+    // introduced. Before the guard, EVERY release cleared pressed_ — either via
+    // the out-of-bounds branch or the in-bounds one. An early return skips both,
+    // so a press accepted while visible stayed latched when its release arrived
+    // hidden. The button then reappeared looking pressed, and the next release
+    // landing inside it completed a click whose press had been cancelled.
+    //
+    // Hiding a component mid-gesture must cancel that gesture, not suspend it.
+    ButtonFixture fixture;
+
+    fixture.button->onMouseEvent(makePress(160.0f, 216.0f));  // accepted, visible
+    check(fixture.button->isPressed(), "the visible press is accepted and latched");
+
+    fixture.button->setVisible(false);
+    fixture.button->onMouseEvent(makeRelease(160.0f, 216.0f));  // swallowed
+
+    check(!fixture.button->isPressed(),
+          "hiding mid-press must clear the latched press, not suspend it");
+
+    fixture.button->setVisible(true);
+    fixture.button->onMouseEvent(makeRelease(160.0f, 216.0f));  // unmatched release
+
+    check(fixture.clicks == 0,
+          "an unmatched release after re-showing must not complete the cancelled press");
+}
+
+void testDisablingMidPressCancelsTheGesture() {
+    // Same latch, reached through the enabled_ half of the same guard. Buttons are
+    // disabled far more often than they are hidden (transport state, sign-in
+    // state), so this path is the more likely one in practice.
+    ButtonFixture fixture;
+
+    fixture.button->onMouseEvent(makePress(160.0f, 216.0f));
+    fixture.button->setEnabled(false);
+    fixture.button->onMouseEvent(makeRelease(160.0f, 216.0f));
+
+    check(!fixture.button->isPressed(), "disabling mid-press must clear the latched press");
+
+    fixture.button->setEnabled(true);
+    fixture.button->onMouseEvent(makeRelease(160.0f, 216.0f));
+
+    check(fixture.clicks == 0, "an unmatched release after re-enabling must not fire a click");
+}
+
 }  // namespace
 
 int main() {
@@ -173,6 +218,8 @@ int main() {
     testHiddenToggleDoesNotToggle();
     testReshownButtonWorksAgain();
     testHiddenButtonDoesNotLatchPressedState();
+    testHidingMidPressCancelsTheGesture();
+    testDisablingMidPressCancelsTheGesture();
 
     if (g_failures != 0) {
         std::cout << "[FAIL] NUIWidgetHiddenInputTest: " << g_failures << " failure(s)\n";

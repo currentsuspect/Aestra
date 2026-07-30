@@ -163,7 +163,20 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
     // sibling base widgets (NUISlider, NUIDropdown, NUITextInput, NUIContextMenu,
     // NUIScrollbar, NUIToggle, NUICheckbox) all already self-guard. NUIButton was
     // the only one that did not.
-    if (!isVisible() || !isEnabled()) return false;
+    // Refusing the event is not enough on its own: every release used to clear
+    // pressed_, via either the out-of-bounds branch below or the in-bounds one, and
+    // returning early here skips both. A press accepted while visible would stay
+    // latched when its release arrived hidden — the button reappeared looking
+    // pressed, and the next release landing inside it completed a click whose press
+    // had been cancelled. Hiding or disabling mid-gesture must CANCEL the gesture,
+    // not suspend it.
+    if (!isVisible() || !isEnabled()) {
+        if (pressed_) {
+            pressed_ = false;
+            setDirty();
+        }
+        return false;
+    }
 
     // CRITICAL: Call base class to handle hover state and callbacks (onMouseMove, etc.)
     // This allows parents to use onMouseMove for forced repaints when buttons are hovered.
