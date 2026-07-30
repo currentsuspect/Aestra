@@ -52,7 +52,6 @@ namespace {
 
 UIRoutingMap::UIRoutingMap(Mode mode) : m_mode(mode) {
     cacheThemeColors();
-    setHitTestVisible(true);
 }
 
 void UIRoutingMap::setMode(Mode mode) {
