@@ -230,6 +230,7 @@ struct AudioTelemetry {
     uint64_t getOverruns() const noexcept { return overruns.load(std::memory_order_relaxed); }
     uint64_t getMaxCallbackNs() const noexcept { return maxCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getLastCallbackNs() const noexcept { return lastCallbackNs.load(std::memory_order_relaxed); }
+    uint64_t getTimedCallbackCount() const noexcept { return timedCallbackCount.load(std::memory_order_relaxed); }
     uint64_t getRtAllocationViolations() const noexcept {
         return rtAllocationViolations.load(std::memory_order_relaxed);
     }

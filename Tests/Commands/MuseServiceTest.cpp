@@ -163,6 +163,66 @@ int main() {
         r = call(service, "{\"id\": 2, \"verb\": \"get_session_state\"}");
         check(status(r) == "ok", "get_session_state ok");
         check(r["result"]["transport"]["playing"].isBool(), "session state reports transport");
+
+        r = call(service, "{\"id\": 3, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok", "get_audio_health ok");
+        check(r["result"]["status"].asString() == "unobserved" &&
+                  !r["result"]["observed"].asBool(),
+              "audio health does not call an untouched engine healthy");
+        check(r["result"]["counterScope"].asString() == "engine_lifetime",
+              "audio health declares its counter scope");
+        check(r["result"]["timing"]["callbackBudgetMs"].isNumber() &&
+                  r["result"]["realtime"]["xruns"].isNumber() &&
+                  r["result"]["commandQueue"]["dropped"].isNumber() &&
+                  r["result"]["signal"]["nanSamplesSanitized"].isNumber(),
+              "audio health publishes timing, realtime, queue, and signal evidence");
+
+        auto& telemetry = engine.telemetry();
+        telemetry.incrementBlocksProcessed();
+        telemetry.incrementSrcActiveBlocks();
+        telemetry.recordCallbackDuration(2000000, 256, 48000);
+        telemetry.setThreadPriorityBit(Aestra::Audio::AudioTelemetry::kPriorityBits_PlatformSuccess);
+
+        r = call(service, "{\"id\": 4, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok" && r["result"]["status"].asString() == "healthy" &&
+                  r["result"]["issues"].size() == 0,
+              "audio health calls observed issue-free telemetry healthy");
+
+        telemetry.incrementXruns();
+        telemetry.incrementUnderruns();
+        telemetry.incrementRtAllocationViolations();
+        engine.commandQueue().push(Aestra::Audio::AudioQueueCommand{});
+
+        r = call(service, "{\"id\": 5, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok" && r["result"]["status"].asString() == "degraded",
+              "audio health classifies observed failures as degraded");
+        check(r["result"]["observed"].asBool(), "audio health marks callback evidence observed");
+        check(r["result"]["timing"]["blocksProcessed"].asNumber() == 1.0 &&
+                  std::abs(r["result"]["timing"]["maxCallbackMs"].asNumber() - 2.0) < 1e-9 &&
+                  r["result"]["timing"]["callbackBudgetMs"].asNumber() > 5.3,
+              "audio health reports callback count, duration, and budget");
+        check(r["result"]["realtime"]["xruns"].asNumber() == 1.0 &&
+                  r["result"]["realtime"]["underruns"].asNumber() == 1.0 &&
+                  r["result"]["realtime"]["allocationViolations"].asNumber() == 1.0,
+              "audio health reports xrun, underrun, and RT violation counters");
+        check(r["result"]["commandQueue"]["maxDepth"].asNumber() == 1.0 &&
+                  r["result"]["commandQueue"]["capacity"].asNumber() > 1.0,
+              "audio health reports command-queue pressure");
+        check(std::abs(r["result"]["resampling"]["activePercent"].asNumber() - 100.0) < 1e-9,
+              "audio health reports resampling activity");
+
+        bool sawXrun = false;
+        bool sawRtAllocation = false;
+        for (size_t i = 0; i < r["result"]["issues"].size(); ++i) {
+            const std::string issue = r["result"]["issues"][i].asString();
+            sawXrun = sawXrun || issue == "xruns";
+            sawRtAllocation = sawRtAllocation || issue == "rt_allocation_violations";
+        }
+        check(sawXrun && sawRtAllocation, "audio health provides machine-readable issue codes");
+
+        r = call(service,
+                 "{\"id\": 6, \"verb\": \"get_audio_health\", \"args\": {\"reset\": true}}");
+        check(status(r) == "validation_error", "get_audio_health refuses ignored arguments");
     }
 
     // --- Hands: build a session through mutations ---
@@ -584,6 +644,14 @@ int main() {
               "schema notes document the sampler root");
         check(manifest["commands"][0].has("description"),
               "mutation entries carry descriptions");
+        bool audioHealthDocumented = false;
+        for (size_t i = 0; i < manifest["queries"].size(); ++i) {
+            if (manifest["queries"][i]["verb"].asString() == "get_audio_health") {
+                audioHealthDocumented = manifest["queries"][i]["description"].asString().find(
+                                            "engine-lifetime") != std::string::npos;
+            }
+        }
+        check(audioHealthDocumented, "schema documents get_audio_health and counter lifetime");
     }
 
     // --- Pattern lifecycle: clone and length ---
