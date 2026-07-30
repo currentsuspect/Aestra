@@ -15,6 +15,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 
 /**
@@ -100,6 +101,10 @@ private:
     ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path,
                                                       ProjectLoadSource source = ProjectLoadSource::Canonical,
                                                       const std::string& canonicalPath = "");
+    void beginProjectLoadAttempt();
+    void recordProjectLoadAttempt(const ProjectSerializer::LoadResult& result,
+                                  ProjectLoadSource source);
+    void clearProjectLoadReport();
     ProjectSerializer::LoadResult applyLoadedProject(const std::string& path,
                                                      ProjectLoadSource source,
                                                      const std::string& canonicalPath,
@@ -134,6 +139,7 @@ private:
     // its own thread; requests execute on the main thread once per frame.
     std::unique_ptr<Aestra::Audio::MuseService> m_museService;
     std::unique_ptr<Aestra::Audio::MuseSocketServer> m_museSocketServer;
+    std::optional<Aestra::JSON> m_projectLoadReport;
     void startMuseSocketIfConfigured();
 
     std::shared_ptr<AestraContent> m_content;
