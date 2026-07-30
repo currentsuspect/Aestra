@@ -60,6 +60,7 @@ public:
     static void writeCrashFlag();
     static void clearCrashFlag();
     static bool isCrashedSession();
+    static std::string activeCrashFlagPath();
 
 private:
     enum class ProjectLoadSource { Canonical, Recovery, Snapshot };
