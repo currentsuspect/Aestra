@@ -29,6 +29,7 @@
 #include <exception>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Aestra {
@@ -128,7 +129,7 @@ bool isQueryVerb(const std::string& verb) {
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
            verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
            verb == "get_capabilities" || verb == "get_audio_health" ||
-           verb == "get_project_load_report";
+           verb == "get_project_load_report" || verb == "get_routing_graph";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -636,6 +637,267 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 result.set("status", JSON("unobserved"));
                 result.set("observed", JSON(false));
             }
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_routing_graph") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+
+            constexpr uint32_t kMasterSentinel = 0xFFFFFFFFu;
+            const auto isMixerMasterTarget = [](uint32_t channelId) {
+                return channelId == kMasterSentinel;
+            };
+            const auto mixerRouteNodeId = [&](uint32_t channelId) {
+                return isMixerMasterTarget(channelId)
+                           ? std::string("master")
+                           : std::string("mixer:") + std::to_string(channelId);
+            };
+            const auto sourceRouteNodeId = [](uint32_t channelId) {
+                return channelId == MASTER_MIXER_CHANNEL_ID
+                           ? std::string("master")
+                           : std::string("mixer:") + std::to_string(channelId);
+            };
+
+            const auto channels = m_trackManager->getChannelsSnapshot();
+            std::unordered_set<uint32_t> channelIds;
+            channelIds.reserve(channels.size());
+            for (const auto* channel : channels) {
+                if (channel) channelIds.insert(channel->getChannelId());
+            }
+            const auto mixerTargetResolves = [&](uint32_t channelId) {
+                return isMixerMasterTarget(channelId) || channelIds.count(channelId) > 0;
+            };
+            const auto sourceTargetResolves = [&](uint32_t channelId) {
+                return channelId == MASTER_MIXER_CHANNEL_ID || channelIds.count(channelId) > 0;
+            };
+
+            JSON sources = JSON::array();
+            JSON destinations = JSON::array();
+            JSON mainRoutes = JSON::array();
+            JSON sends = JSON::array();
+            JSON unresolvedRoutes = JSON::array();
+
+            const auto addUnresolved = [&](const char* issueCode, const char* routeType,
+                                           const std::string& sourceNodeId, uint32_t targetId,
+                                           int sendIndex = -1) {
+                JSON evidence = JSON::object();
+                evidence.set("sourceNodeId", JSON(sourceNodeId));
+                evidence.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                evidence.set("stableSourceIdentityAvailable", JSON(true));
+                evidence.set("positionalIdentityAvailable", JSON(sendIndex >= 0));
+                if (sendIndex >= 0) evidence.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+
+                JSON issue = JSON::object();
+                issue.set("issueCode", JSON(issueCode));
+                issue.set("routeType", JSON(routeType));
+                issue.set("evidence", evidence);
+                unresolvedRoutes.push(issue);
+            };
+
+            JSON master = JSON::object();
+            master.set("nodeId", JSON("master"));
+            master.set("destinationType", JSON("master"));
+            master.set("mixerChannelId", JSON(0.0));
+            master.set("stableIdentityAvailable", JSON(true));
+            master.set("insertChainAvailable", JSON(false));
+            destinations.push(master);
+
+            for (size_t channelIndex = 0; channelIndex < channels.size(); ++channelIndex) {
+                const auto* channel = channels[channelIndex];
+                if (!channel) continue;
+                const uint32_t channelId = channel->getChannelId();
+                const std::string sourceNodeId = mixerRouteNodeId(channelId);
+
+                JSON pluginSlots = JSON::array();
+                const auto& chain = channel->getEffectChain();
+                for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
+                    JSON position = JSON::object();
+                    position.set("mixerChannelId", JSON(static_cast<double>(channelId)));
+                    position.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+
+                    JSON slot = JSON::object();
+                    slot.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+                    slot.set("stableIdentityAvailable", JSON(false));
+                    slot.set("positionalIdentityAvailable", JSON(true));
+                    slot.set("position", position);
+
+                    if (auto plugin = chain.getPlugin(slotIndex)) {
+                        slot.set("state", JSON("active"));
+                        slot.set("pluginId", JSON(plugin->getInfo().id));
+                        slot.set("pluginName", JSON(plugin->getInfo().name));
+                        slot.set("bypassed", JSON(chain.isSlotBypassed(slotIndex)));
+                    } else {
+                        const std::string missingPluginId = chain.getMissingPluginId(slotIndex);
+                        if (!missingPluginId.empty()) {
+                            slot.set("state", JSON("missing_plugin_placeholder"));
+                            slot.set("pluginId", JSON(missingPluginId));
+                            slot.set("placeholderPreserved", JSON(true));
+                        } else {
+                            slot.set("state", JSON("empty"));
+                        }
+                    }
+                    pluginSlots.push(slot);
+                }
+
+                JSON insertChain = JSON::object();
+                insertChain.set("slotCount", JSON(static_cast<double>(EffectChain::MAX_SLOTS)));
+                insertChain.set("identityKind", JSON("positional"));
+                insertChain.set("stableSlotIdentityAvailable", JSON(false));
+                insertChain.set("slots", pluginSlots);
+
+                JSON destination = JSON::object();
+                destination.set("nodeId", JSON(sourceNodeId));
+                destination.set("destinationType", JSON("mixer_channel"));
+                destination.set("mixerChannelId", JSON(static_cast<double>(channelId)));
+                destination.set("name", JSON(channel->getName()));
+                destination.set("index", JSON(static_cast<double>(channelIndex)));
+                destination.set("stableIdentityAvailable", JSON(true));
+                destination.set("insertChainAvailable", JSON(true));
+                destination.set("insertChain", insertChain);
+                destinations.push(destination);
+
+                const uint32_t mainTargetId = channel->getMainOutputId();
+                const bool mainResolved = mixerTargetResolves(mainTargetId);
+                JSON mainRoute = JSON::object();
+                mainRoute.set("routeType", JSON("main"));
+                mainRoute.set("sourceNodeId", JSON(sourceNodeId));
+                mainRoute.set("sourceMixerChannelId", JSON(static_cast<double>(channelId)));
+                mainRoute.set("targetMixerChannelId",
+                              JSON(static_cast<double>(isMixerMasterTarget(mainTargetId) ? 0u
+                                                                                       : mainTargetId)));
+                mainRoute.set("resolved", JSON(mainResolved));
+                if (mainResolved) {
+                    mainRoute.set("destinationNodeId", JSON(mixerRouteNodeId(mainTargetId)));
+                }
+                mainRoutes.push(mainRoute);
+                if (!mainResolved) {
+                    addUnresolved("unresolved_main_destination", "main", sourceNodeId, mainTargetId);
+                }
+
+                const auto channelSends = channel->getSends();
+                for (size_t sendIndex = 0; sendIndex < channelSends.size(); ++sendIndex) {
+                    const auto& route = channelSends[sendIndex];
+                    if (!std::isfinite(route.gain) || !std::isfinite(route.pan)) {
+                        return makeError(id, "execution_error",
+                                         "mixer channel " + std::to_string(channelId) +
+                                             " send " + std::to_string(sendIndex) +
+                                             " has non-finite routing values",
+                                         verb)
+                            .toString();
+                    }
+                    const bool sendResolved = mixerTargetResolves(route.targetChannelId);
+                    JSON send = JSON::object();
+                    send.set("routeType", JSON(route.sidechainOnly ? "sidechain_send" : "send"));
+                    send.set("sourceNodeId", JSON(sourceNodeId));
+                    send.set("sourceMixerChannelId", JSON(static_cast<double>(channelId)));
+                    send.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+                    send.set("stableIdentityAvailable", JSON(false));
+                    send.set("positionalIdentityAvailable", JSON(true));
+                    send.set("targetMixerChannelId",
+                             JSON(static_cast<double>(isMixerMasterTarget(route.targetChannelId)
+                                                          ? 0u
+                                                          : route.targetChannelId)));
+                    send.set("resolved", JSON(sendResolved));
+                    if (sendResolved) {
+                        send.set("destinationNodeId", JSON(mixerRouteNodeId(route.targetChannelId)));
+                    }
+                    send.set("gain", JSON(static_cast<double>(route.gain)));
+                    send.set("pan", JSON(static_cast<double>(route.pan)));
+                    send.set("postFader", JSON(route.postFader));
+                    send.set("muted", JSON(route.mute));
+                    send.set("sidechainOnly", JSON(route.sidechainOnly));
+                    sends.push(send);
+                    if (!sendResolved) {
+                        addUnresolved("unresolved_send_destination",
+                                      route.sidechainOnly ? "sidechain_send" : "send",
+                                      sourceNodeId, route.targetChannelId,
+                                      static_cast<int>(sendIndex));
+                    }
+                }
+            }
+
+            const auto& unitManager = m_trackManager->getUnitManager();
+            for (const UnitID unitId : unitManager.getAllUnitIDs()) {
+                const auto* unit = unitManager.getUnit(unitId);
+                if (!unit) continue;
+                const uint32_t targetId = unitManager.getUnitMixerChannel(unitId);
+                const bool resolved = sourceTargetResolves(targetId);
+                const std::string sourceNodeId = "unit:" + std::to_string(unitId);
+
+                JSON destination = JSON::object();
+                destination.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                destination.set("resolved", JSON(resolved));
+                if (resolved) destination.set("nodeId", JSON(sourceRouteNodeId(targetId)));
+
+                JSON source = JSON::object();
+                source.set("nodeId", JSON(sourceNodeId));
+                source.set("sourceType", JSON("unit"));
+                source.set("unitId", JSON(std::to_string(unitId)));
+                source.set("name", JSON(unit->name));
+                source.set("unitType", JSON(unitTypeName(unit->type)));
+                source.set("stableIdentityAvailable", JSON(true));
+                source.set("destination", destination);
+                sources.push(source);
+
+                if (!resolved) {
+                    addUnresolved("unresolved_unit_destination", "source", sourceNodeId, targetId);
+                }
+            }
+
+            auto patterns = m_trackManager->getPatternManager().getAllPatterns();
+            std::sort(patterns.begin(), patterns.end(), [](const auto& lhs, const auto& rhs) {
+                if (!lhs) return false;
+                if (!rhs) return true;
+                return lhs->id.value < rhs->id.value;
+            });
+            for (const auto& pattern : patterns) {
+                if (!pattern || !pattern->isAudio()) continue;
+                const uint32_t targetId = pattern->getMixerChannelId();
+                const bool resolved = sourceTargetResolves(targetId);
+                const std::string patternId = std::to_string(pattern->id.value);
+                const std::string sourceNodeId = "audio_pattern:" + patternId;
+
+                JSON destination = JSON::object();
+                destination.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                destination.set("resolved", JSON(resolved));
+                if (resolved) destination.set("nodeId", JSON(sourceRouteNodeId(targetId)));
+
+                JSON source = JSON::object();
+                source.set("nodeId", JSON(sourceNodeId));
+                source.set("sourceType", JSON("audio_pattern"));
+                source.set("patternId", JSON(patternId));
+                source.set("name", JSON(pattern->name));
+                source.set("stableIdentityAvailable", JSON(true));
+                source.set("destination", destination);
+                sources.push(source);
+
+                if (!resolved) {
+                    addUnresolved("unresolved_audio_pattern_destination", "source",
+                                  sourceNodeId, targetId);
+                }
+            }
+
+            JSON identityPolicy = JSON::object();
+            identityPolicy.set("mixerChannels", JSON("stable_id"));
+            identityPolicy.set("units", JSON("stable_id"));
+            identityPolicy.set("audioPatterns", JSON("stable_id"));
+            identityPolicy.set("pluginSlots", JSON("positional"));
+            identityPolicy.set("sends", JSON("positional"));
+
+            JSON result = JSON::object();
+            result.set("status", JSON(unresolvedRoutes.size() > 0 ? "degraded" : "resolved"));
+            result.set("authority", JSON("project_model"));
+            result.set("identityPolicy", identityPolicy);
+            result.set("sources", sources);
+            result.set("destinations", destinations);
+            result.set("mainRoutes", mainRoutes);
+            result.set("sends", sends);
+            result.set("unresolvedRoutes", unresolvedRoutes);
+
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
