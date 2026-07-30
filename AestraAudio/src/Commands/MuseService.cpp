@@ -29,6 +29,7 @@
 #include <exception>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Aestra {
@@ -127,7 +128,8 @@ bool isQueryVerb(const std::string& verb) {
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
            verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
-           verb == "get_capabilities";
+           verb == "get_capabilities" || verb == "get_audio_health" ||
+           verb == "get_project_load_report" || verb == "get_routing_graph";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -512,6 +514,390 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             // The tool manifest, over the wire: a socket client can bootstrap
             // without access to the binary's --schema flag.
             JSON result = JSON::parse(MuseGrammar::schemaToJsonString());
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_audio_health") {
+            if (!m_engine) {
+                return makeError(id, "execution_error", "no audio engine", verb).toString();
+            }
+
+            // Consume only lock-free state the callback already publishes. A
+            // diagnostic read must never make the realtime thread wait.
+            const auto& telemetry = m_engine->telemetry();
+            const uint64_t blocks = telemetry.getBlocksProcessed();
+            const uint64_t timedCallbacks = telemetry.getTimedCallbackCount();
+            const uint64_t xruns = telemetry.getXruns();
+            const uint64_t underruns = telemetry.getUnderruns();
+            const uint64_t overruns = telemetry.getOverruns();
+            const uint64_t queueDrops = m_engine->commandQueue().droppedCount();
+            const uint64_t rtAllocations = telemetry.getRtAllocationViolations();
+            const uint64_t rtLocks = telemetry.getRtLockViolations();
+            const uint64_t rtLogs = telemetry.getRtLogViolations();
+            const uint64_t nanSamples = m_engine->getNaNCount();
+            const uint64_t clippedSamples = m_engine->getClipCount();
+            const bool recoveryActive = telemetry.isInRecoveryMode();
+            const int32_t linuxPriorityErrno = telemetry.getLinuxRtPriorityErrno();
+
+            JSON issues = JSON::array();
+            const auto addIssue = [&](bool present, const char* code) {
+                if (present) issues.push(JSON(code));
+            };
+            addIssue(xruns > 0, "xruns");
+            addIssue(underruns > 0, "underruns");
+            addIssue(overruns > 0, "callback_deadline_overruns");
+            addIssue(queueDrops > 0, "command_queue_drops");
+            addIssue(rtAllocations > 0, "rt_allocation_violations");
+            addIssue(rtLocks > 0, "rt_lock_violations");
+            addIssue(rtLogs > 0, "rt_log_violations");
+            addIssue(nanSamples > 0, "nan_samples_sanitized");
+            addIssue(clippedSamples > 0, "hard_clipped_samples");
+            addIssue(recoveryActive, "underrun_recovery_active");
+            addIssue(timedCallbacks > 0 && !telemetry.isThreadPriorityOptimal(),
+                     "realtime_priority_incomplete");
+            addIssue(linuxPriorityErrno != 0, "realtime_priority_error");
+
+            const bool observed = blocks > 0 || timedCallbacks > 0;
+            const bool degraded = issues.size() > 0;
+
+            JSON timing = JSON::object();
+            timing.set("blocksProcessed", JSON(static_cast<double>(blocks)));
+            timing.set("timedCallbacks", JSON(static_cast<double>(timedCallbacks)));
+            timing.set("lastCallbackMs",
+                       JSON(static_cast<double>(telemetry.getLastCallbackNs()) / 1.0e6));
+            timing.set("averageCallbackMs",
+                       JSON(static_cast<double>(telemetry.getAverageCallbackNs()) / 1.0e6));
+            timing.set("maxCallbackMs",
+                       JSON(static_cast<double>(telemetry.getMaxCallbackNs()) / 1.0e6));
+            timing.set("callbackBudgetMs",
+                       JSON(static_cast<double>(telemetry.getCallbackBudgetNs()) / 1.0e6));
+            timing.set("bufferFrames", JSON(static_cast<double>(telemetry.getLastBufferFrames())));
+            timing.set("sampleRate", JSON(static_cast<double>(telemetry.getLastSampleRate())));
+            timing.set("deadlineOverruns", JSON(static_cast<double>(overruns)));
+
+            JSON realtime = JSON::object();
+            realtime.set("xruns", JSON(static_cast<double>(xruns)));
+            realtime.set("underruns", JSON(static_cast<double>(underruns)));
+            realtime.set("consecutiveUnderruns",
+                         JSON(static_cast<double>(telemetry.getConsecutiveUnderruns())));
+            realtime.set("recoveryActive", JSON(recoveryActive));
+            realtime.set("recoveryActivations",
+                         JSON(static_cast<double>(telemetry.getRecoveryModeActivations())));
+            realtime.set("allocationViolations", JSON(static_cast<double>(rtAllocations)));
+            realtime.set("lockViolations", JSON(static_cast<double>(rtLocks)));
+            realtime.set("logViolations", JSON(static_cast<double>(rtLogs)));
+            realtime.set("threadPriorityStatus",
+                         JSON(static_cast<double>(telemetry.getThreadPriorityStatus())));
+            realtime.set("threadPriorityOptimal", JSON(telemetry.isThreadPriorityOptimal()));
+            realtime.set("linuxPriorityErrno", JSON(static_cast<double>(linuxPriorityErrno)));
+
+            JSON commandQueue = JSON::object();
+            commandQueue.set("depth",
+                             JSON(static_cast<double>(m_engine->commandQueue().approxDepth())));
+            commandQueue.set("maxDepth",
+                             JSON(static_cast<double>(m_engine->commandQueue().maxDepth())));
+            commandQueue.set("capacity", JSON(static_cast<double>(AudioCommandQueue::capacity())));
+            commandQueue.set("dropped", JSON(static_cast<double>(queueDrops)));
+
+            const uint64_t srcBlocks = telemetry.getSrcActiveBlocks();
+            JSON resampling = JSON::object();
+            resampling.set("activeBlocks", JSON(static_cast<double>(srcBlocks)));
+            resampling.set("activePercent",
+                           JSON(blocks > 0 ? 100.0 * static_cast<double>(srcBlocks) /
+                                                 static_cast<double>(blocks)
+                                           : 0.0));
+
+            JSON signal = JSON::object();
+            signal.set("nanSamplesSanitized", JSON(static_cast<double>(nanSamples)));
+            signal.set("hardClippedSamples", JSON(static_cast<double>(clippedSamples)));
+
+            JSON result = JSON::object();
+            result.set("status", JSON(degraded ? "degraded" : observed ? "healthy" : "unobserved"));
+            result.set("observed", JSON(observed));
+            result.set("counterScope", JSON("engine_lifetime"));
+            result.set("issues", issues);
+            result.set("timing", timing);
+            result.set("realtime", realtime);
+            result.set("commandQueue", commandQueue);
+            result.set("resampling", resampling);
+            result.set("signal", signal);
+
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_project_load_report") {
+            JSON result = JSON::object();
+            if (m_projectLoadReport) {
+                result = *m_projectLoadReport;
+            } else {
+                result.set("status", JSON("unobserved"));
+                result.set("observed", JSON(false));
+            }
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_routing_graph") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+
+            constexpr uint32_t kMasterSentinel = 0xFFFFFFFFu;
+            const auto isMixerMasterTarget = [kMasterSentinel](uint32_t channelId) {
+                return channelId == kMasterSentinel;
+            };
+            const auto mixerRouteNodeId = [&](uint32_t channelId) {
+                return isMixerMasterTarget(channelId)
+                           ? std::string("master")
+                           : std::string("mixer:") + std::to_string(channelId);
+            };
+            const auto sourceRouteNodeId = [](uint32_t channelId) {
+                return channelId == MASTER_MIXER_CHANNEL_ID
+                           ? std::string("master")
+                           : std::string("mixer:") + std::to_string(channelId);
+            };
+
+            const auto channels = m_trackManager->getChannelsSnapshot();
+            std::unordered_set<uint32_t> channelIds;
+            channelIds.reserve(channels.size());
+            for (const auto* channel : channels) {
+                if (channel) channelIds.insert(channel->getChannelId());
+            }
+            const auto mixerTargetResolves = [&](uint32_t channelId) {
+                return isMixerMasterTarget(channelId) || channelIds.count(channelId) > 0;
+            };
+            const auto sourceTargetResolves = [&](uint32_t channelId) {
+                return channelId == MASTER_MIXER_CHANNEL_ID || channelIds.count(channelId) > 0;
+            };
+
+            JSON sources = JSON::array();
+            JSON destinations = JSON::array();
+            JSON mainRoutes = JSON::array();
+            JSON sends = JSON::array();
+            JSON unresolvedRoutes = JSON::array();
+
+            const auto addUnresolved = [&](const char* issueCode, const char* routeType,
+                                           const std::string& sourceNodeId, uint32_t targetId,
+                                           int sendIndex = -1) {
+                JSON evidence = JSON::object();
+                evidence.set("sourceNodeId", JSON(sourceNodeId));
+                evidence.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                evidence.set("stableSourceIdentityAvailable", JSON(true));
+                evidence.set("positionalIdentityAvailable", JSON(sendIndex >= 0));
+                if (sendIndex >= 0) evidence.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+
+                JSON issue = JSON::object();
+                issue.set("issueCode", JSON(issueCode));
+                issue.set("routeType", JSON(routeType));
+                issue.set("evidence", evidence);
+                unresolvedRoutes.push(issue);
+            };
+
+            JSON master = JSON::object();
+            master.set("nodeId", JSON("master"));
+            master.set("destinationType", JSON("master"));
+            master.set("mixerChannelId", JSON(0.0));
+            master.set("stableIdentityAvailable", JSON(true));
+            master.set("insertChainAvailable", JSON(false));
+            destinations.push(master);
+
+            for (size_t channelIndex = 0; channelIndex < channels.size(); ++channelIndex) {
+                const auto* channel = channels[channelIndex];
+                if (!channel) continue;
+                const uint32_t channelId = channel->getChannelId();
+                const std::string sourceNodeId = mixerRouteNodeId(channelId);
+
+                JSON pluginSlots = JSON::array();
+                const auto& chain = channel->getEffectChain();
+                for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
+                    JSON position = JSON::object();
+                    position.set("mixerChannelId", JSON(static_cast<double>(channelId)));
+                    position.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+
+                    JSON slot = JSON::object();
+                    slot.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+                    slot.set("stableIdentityAvailable", JSON(false));
+                    slot.set("positionalIdentityAvailable", JSON(true));
+                    slot.set("position", position);
+
+                    if (auto plugin = chain.getPlugin(slotIndex)) {
+                        slot.set("state", JSON("active"));
+                        slot.set("pluginId", JSON(plugin->getInfo().id));
+                        slot.set("pluginName", JSON(plugin->getInfo().name));
+                        slot.set("bypassed", JSON(chain.isSlotBypassed(slotIndex)));
+                    } else {
+                        const std::string missingPluginId = chain.getMissingPluginId(slotIndex);
+                        if (!missingPluginId.empty()) {
+                            slot.set("state", JSON("missing_plugin_placeholder"));
+                            slot.set("pluginId", JSON(missingPluginId));
+                            slot.set("placeholderPreserved", JSON(true));
+                        } else {
+                            slot.set("state", JSON("empty"));
+                        }
+                    }
+                    pluginSlots.push(slot);
+                }
+
+                JSON insertChain = JSON::object();
+                insertChain.set("slotCount", JSON(static_cast<double>(EffectChain::MAX_SLOTS)));
+                insertChain.set("identityKind", JSON("positional"));
+                insertChain.set("stableSlotIdentityAvailable", JSON(false));
+                insertChain.set("slots", pluginSlots);
+
+                JSON destination = JSON::object();
+                destination.set("nodeId", JSON(sourceNodeId));
+                destination.set("destinationType", JSON("mixer_channel"));
+                destination.set("mixerChannelId", JSON(static_cast<double>(channelId)));
+                destination.set("name", JSON(channel->getName()));
+                destination.set("index", JSON(static_cast<double>(channelIndex)));
+                destination.set("stableIdentityAvailable", JSON(true));
+                destination.set("insertChainAvailable", JSON(true));
+                destination.set("insertChain", insertChain);
+                destinations.push(destination);
+
+                const uint32_t mainTargetId = channel->getMainOutputId();
+                const bool mainResolved = mixerTargetResolves(mainTargetId);
+                JSON mainRoute = JSON::object();
+                mainRoute.set("routeType", JSON("main"));
+                mainRoute.set("sourceNodeId", JSON(sourceNodeId));
+                mainRoute.set("sourceMixerChannelId", JSON(static_cast<double>(channelId)));
+                mainRoute.set("targetMixerChannelId",
+                              JSON(static_cast<double>(isMixerMasterTarget(mainTargetId) ? 0u
+                                                                                       : mainTargetId)));
+                mainRoute.set("resolved", JSON(mainResolved));
+                if (mainResolved) {
+                    mainRoute.set("destinationNodeId", JSON(mixerRouteNodeId(mainTargetId)));
+                }
+                mainRoutes.push(mainRoute);
+                if (!mainResolved) {
+                    addUnresolved("unresolved_main_destination", "main", sourceNodeId, mainTargetId);
+                }
+
+                const auto channelSends = channel->getSends();
+                for (size_t sendIndex = 0; sendIndex < channelSends.size(); ++sendIndex) {
+                    const auto& route = channelSends[sendIndex];
+                    if (!std::isfinite(route.gain) || !std::isfinite(route.pan)) {
+                        return makeError(id, "execution_error",
+                                         "mixer channel " + std::to_string(channelId) +
+                                             " send " + std::to_string(sendIndex) +
+                                             " has non-finite routing values",
+                                         verb)
+                            .toString();
+                    }
+                    const bool sendResolved = mixerTargetResolves(route.targetChannelId);
+                    JSON send = JSON::object();
+                    send.set("routeType", JSON(route.sidechainOnly ? "sidechain_send" : "send"));
+                    send.set("sourceNodeId", JSON(sourceNodeId));
+                    send.set("sourceMixerChannelId", JSON(static_cast<double>(channelId)));
+                    send.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+                    send.set("stableIdentityAvailable", JSON(false));
+                    send.set("positionalIdentityAvailable", JSON(true));
+                    send.set("targetMixerChannelId",
+                             JSON(static_cast<double>(isMixerMasterTarget(route.targetChannelId)
+                                                          ? 0u
+                                                          : route.targetChannelId)));
+                    send.set("resolved", JSON(sendResolved));
+                    if (sendResolved) {
+                        send.set("destinationNodeId", JSON(mixerRouteNodeId(route.targetChannelId)));
+                    }
+                    send.set("gain", JSON(static_cast<double>(route.gain)));
+                    send.set("pan", JSON(static_cast<double>(route.pan)));
+                    send.set("postFader", JSON(route.postFader));
+                    send.set("muted", JSON(route.mute));
+                    send.set("sidechainOnly", JSON(route.sidechainOnly));
+                    sends.push(send);
+                    if (!sendResolved) {
+                        addUnresolved("unresolved_send_destination",
+                                      route.sidechainOnly ? "sidechain_send" : "send",
+                                      sourceNodeId, route.targetChannelId,
+                                      static_cast<int>(sendIndex));
+                    }
+                }
+            }
+
+            const auto& unitManager = m_trackManager->getUnitManager();
+            for (const UnitID unitId : unitManager.getAllUnitIDs()) {
+                const auto* unit = unitManager.getUnit(unitId);
+                if (!unit) continue;
+                const uint32_t targetId = unitManager.getUnitMixerChannel(unitId);
+                const bool resolved = sourceTargetResolves(targetId);
+                const std::string sourceNodeId = "unit:" + std::to_string(unitId);
+
+                JSON destination = JSON::object();
+                destination.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                destination.set("resolved", JSON(resolved));
+                if (resolved) destination.set("nodeId", JSON(sourceRouteNodeId(targetId)));
+
+                JSON source = JSON::object();
+                source.set("nodeId", JSON(sourceNodeId));
+                source.set("sourceType", JSON("unit"));
+                source.set("unitId", JSON(std::to_string(unitId)));
+                source.set("name", JSON(unit->name));
+                source.set("unitType", JSON(unitTypeName(unit->type)));
+                source.set("stableIdentityAvailable", JSON(true));
+                source.set("destination", destination);
+                sources.push(source);
+
+                if (!resolved) {
+                    addUnresolved("unresolved_unit_destination", "source", sourceNodeId, targetId);
+                }
+            }
+
+            auto patterns = m_trackManager->getPatternManager().getAllPatterns();
+            std::sort(patterns.begin(), patterns.end(), [](const auto& lhs, const auto& rhs) {
+                if (!lhs) return false;
+                if (!rhs) return true;
+                return lhs->id.value < rhs->id.value;
+            });
+            for (const auto& pattern : patterns) {
+                if (!pattern || !pattern->isAudio()) continue;
+                const uint32_t targetId = pattern->getMixerChannelId();
+                const bool resolved = sourceTargetResolves(targetId);
+                const std::string patternId = std::to_string(pattern->id.value);
+                const std::string sourceNodeId = "audio_pattern:" + patternId;
+
+                JSON destination = JSON::object();
+                destination.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
+                destination.set("resolved", JSON(resolved));
+                if (resolved) destination.set("nodeId", JSON(sourceRouteNodeId(targetId)));
+
+                JSON source = JSON::object();
+                source.set("nodeId", JSON(sourceNodeId));
+                source.set("sourceType", JSON("audio_pattern"));
+                source.set("patternId", JSON(patternId));
+                source.set("name", JSON(pattern->name));
+                source.set("stableIdentityAvailable", JSON(true));
+                source.set("destination", destination);
+                sources.push(source);
+
+                if (!resolved) {
+                    addUnresolved("unresolved_audio_pattern_destination", "source",
+                                  sourceNodeId, targetId);
+                }
+            }
+
+            JSON identityPolicy = JSON::object();
+            identityPolicy.set("mixerChannels", JSON("stable_id"));
+            identityPolicy.set("units", JSON("stable_id"));
+            identityPolicy.set("audioPatterns", JSON("stable_id"));
+            identityPolicy.set("pluginSlots", JSON("positional"));
+            identityPolicy.set("sends", JSON("positional"));
+
+            JSON result = JSON::object();
+            result.set("status", JSON(unresolvedRoutes.size() > 0 ? "degraded" : "resolved"));
+            result.set("authority", JSON("project_model"));
+            result.set("identityPolicy", identityPolicy);
+            result.set("sources", sources);
+            result.set("destinations", destinations);
+            result.set("mainRoutes", mainRoutes);
+            result.set("sends", sends);
+            result.set("unresolvedRoutes", unresolvedRoutes);
+
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
