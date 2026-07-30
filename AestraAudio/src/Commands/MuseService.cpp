@@ -127,7 +127,7 @@ bool isQueryVerb(const std::string& verb) {
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
            verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
-           verb == "get_capabilities";
+           verb == "get_capabilities" || verb == "get_audio_health";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -512,6 +512,116 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             // The tool manifest, over the wire: a socket client can bootstrap
             // without access to the binary's --schema flag.
             JSON result = JSON::parse(MuseGrammar::schemaToJsonString());
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_audio_health") {
+            if (!m_engine) {
+                return makeError(id, "execution_error", "no audio engine", verb).toString();
+            }
+
+            // Consume only lock-free state the callback already publishes. A
+            // diagnostic read must never make the realtime thread wait.
+            const auto& telemetry = m_engine->telemetry();
+            const uint64_t blocks = telemetry.getBlocksProcessed();
+            const uint64_t timedCallbacks = telemetry.getTimedCallbackCount();
+            const uint64_t xruns = telemetry.getXruns();
+            const uint64_t underruns = telemetry.getUnderruns();
+            const uint64_t overruns = telemetry.getOverruns();
+            const uint64_t queueDrops = m_engine->commandQueue().droppedCount();
+            const uint64_t rtAllocations = telemetry.getRtAllocationViolations();
+            const uint64_t rtLocks = telemetry.getRtLockViolations();
+            const uint64_t rtLogs = telemetry.getRtLogViolations();
+            const uint64_t nanSamples = m_engine->getNaNCount();
+            const uint64_t clippedSamples = m_engine->getClipCount();
+            const bool recoveryActive = telemetry.isInRecoveryMode();
+            const int32_t linuxPriorityErrno = telemetry.getLinuxRtPriorityErrno();
+
+            JSON issues = JSON::array();
+            const auto addIssue = [&](bool present, const char* code) {
+                if (present) issues.push(JSON(code));
+            };
+            addIssue(xruns > 0, "xruns");
+            addIssue(underruns > 0, "underruns");
+            addIssue(overruns > 0, "callback_deadline_overruns");
+            addIssue(queueDrops > 0, "command_queue_drops");
+            addIssue(rtAllocations > 0, "rt_allocation_violations");
+            addIssue(rtLocks > 0, "rt_lock_violations");
+            addIssue(rtLogs > 0, "rt_log_violations");
+            addIssue(nanSamples > 0, "nan_samples_sanitized");
+            addIssue(clippedSamples > 0, "hard_clipped_samples");
+            addIssue(recoveryActive, "underrun_recovery_active");
+            addIssue(timedCallbacks > 0 && !telemetry.isThreadPriorityOptimal(),
+                     "realtime_priority_incomplete");
+            addIssue(linuxPriorityErrno != 0, "realtime_priority_error");
+
+            const bool observed = blocks > 0 || timedCallbacks > 0;
+            const bool degraded = issues.size() > 0;
+
+            JSON timing = JSON::object();
+            timing.set("blocksProcessed", JSON(static_cast<double>(blocks)));
+            timing.set("timedCallbacks", JSON(static_cast<double>(timedCallbacks)));
+            timing.set("lastCallbackMs",
+                       JSON(static_cast<double>(telemetry.getLastCallbackNs()) / 1.0e6));
+            timing.set("averageCallbackMs",
+                       JSON(static_cast<double>(telemetry.getAverageCallbackNs()) / 1.0e6));
+            timing.set("maxCallbackMs",
+                       JSON(static_cast<double>(telemetry.getMaxCallbackNs()) / 1.0e6));
+            timing.set("callbackBudgetMs",
+                       JSON(static_cast<double>(telemetry.getCallbackBudgetNs()) / 1.0e6));
+            timing.set("bufferFrames", JSON(static_cast<double>(telemetry.getLastBufferFrames())));
+            timing.set("sampleRate", JSON(static_cast<double>(telemetry.getLastSampleRate())));
+            timing.set("deadlineOverruns", JSON(static_cast<double>(overruns)));
+
+            JSON realtime = JSON::object();
+            realtime.set("xruns", JSON(static_cast<double>(xruns)));
+            realtime.set("underruns", JSON(static_cast<double>(underruns)));
+            realtime.set("consecutiveUnderruns",
+                         JSON(static_cast<double>(telemetry.getConsecutiveUnderruns())));
+            realtime.set("recoveryActive", JSON(recoveryActive));
+            realtime.set("recoveryActivations",
+                         JSON(static_cast<double>(telemetry.getRecoveryModeActivations())));
+            realtime.set("allocationViolations", JSON(static_cast<double>(rtAllocations)));
+            realtime.set("lockViolations", JSON(static_cast<double>(rtLocks)));
+            realtime.set("logViolations", JSON(static_cast<double>(rtLogs)));
+            realtime.set("threadPriorityStatus",
+                         JSON(static_cast<double>(telemetry.getThreadPriorityStatus())));
+            realtime.set("threadPriorityOptimal", JSON(telemetry.isThreadPriorityOptimal()));
+            realtime.set("linuxPriorityErrno", JSON(static_cast<double>(linuxPriorityErrno)));
+
+            JSON commandQueue = JSON::object();
+            commandQueue.set("depth",
+                             JSON(static_cast<double>(m_engine->commandQueue().approxDepth())));
+            commandQueue.set("maxDepth",
+                             JSON(static_cast<double>(m_engine->commandQueue().maxDepth())));
+            commandQueue.set("capacity", JSON(static_cast<double>(AudioCommandQueue::capacity())));
+            commandQueue.set("dropped", JSON(static_cast<double>(queueDrops)));
+
+            const uint64_t srcBlocks = telemetry.getSrcActiveBlocks();
+            JSON resampling = JSON::object();
+            resampling.set("activeBlocks", JSON(static_cast<double>(srcBlocks)));
+            resampling.set("activePercent",
+                           JSON(blocks > 0 ? 100.0 * static_cast<double>(srcBlocks) /
+                                                 static_cast<double>(blocks)
+                                           : 0.0));
+
+            JSON signal = JSON::object();
+            signal.set("nanSamplesSanitized", JSON(static_cast<double>(nanSamples)));
+            signal.set("hardClippedSamples", JSON(static_cast<double>(clippedSamples)));
+
+            JSON result = JSON::object();
+            result.set("status", JSON(degraded ? "degraded" : observed ? "healthy" : "unobserved"));
+            result.set("observed", JSON(observed));
+            result.set("counterScope", JSON("engine_lifetime"));
+            result.set("issues", issues);
+            result.set("timing", timing);
+            result.set("realtime", realtime);
+            result.set("commandQueue", commandQueue);
+            result.set("resampling", resampling);
+            result.set("signal", signal);
+
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
