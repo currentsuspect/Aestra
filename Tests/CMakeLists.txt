@@ -1725,6 +1725,17 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME NUIHiddenChildDispatchTest COMMAND NUIHiddenChildDispatchTest)
     set_tests_properties(NUIHiddenChildDispatchTest PROPERTIES LABELS "ui;dispatch;regression")
+
+    # #672 leaf side: a widget handed an event directly (bypassing the parent-side
+    # filter added in #674) must still refuse it while hidden.
+    add_executable(NUIWidgetHiddenInputTest AestraUI/NUIWidgetHiddenInputTest.cpp)
+    target_link_libraries(NUIWidgetHiddenInputTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIWidgetHiddenInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    )
+    add_test(NAME NUIWidgetHiddenInputTest COMMAND NUIWidgetHiddenInputTest)
+    set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression")
 else()
     message(STATUS "Dropdown/tooltip interaction tests skipped (AestraUI_Core target unavailable in this build mode)")
 endif()

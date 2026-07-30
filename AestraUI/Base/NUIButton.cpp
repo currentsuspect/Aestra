@@ -145,8 +145,39 @@ void NUIButton::onUpdate(double deltaTime) {
 }
 
 bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isEnabled()) return false;
-    
+    // A hidden button must not act on input, and it has to say so itself (#672).
+    //
+    // NUIComponent::onMouseEvent already refuses events for invisible components,
+    // but that is not enough here: this override calls the base for its side
+    // effects and DISCARDS the result (below), then proceeds to hit-test and fire
+    // onClick_ regardless. Hidden components keep their bounds, so containsPoint
+    // still succeeds — a press forwarded to a hidden button used to invoke its
+    // callback.
+    //
+    // Only #674's parent-side visibility filter stands between that and a live
+    // defect, and it is bypassed by the ~12 places that forward directly to a
+    // named child instead of relying on the generic child walk (SettingsDialog's
+    // footer buttons, PianoRollToolbar's tool strip, TrackUIComponent's
+    // mute/solo/record routing). None of those buttons is hidden today, so this
+    // is a trap rather than a bug — but it is the exact shape of #671, and the
+    // sibling base widgets (NUISlider, NUIDropdown, NUITextInput, NUIContextMenu,
+    // NUIScrollbar, NUIToggle, NUICheckbox) all already self-guard. NUIButton was
+    // the only one that did not.
+    // Refusing the event is not enough on its own: every release used to clear
+    // pressed_, via either the out-of-bounds branch below or the in-bounds one, and
+    // returning early here skips both. A press accepted while visible would stay
+    // latched when its release arrived hidden — the button reappeared looking
+    // pressed, and the next release landing inside it completed a click whose press
+    // had been cancelled. Hiding or disabling mid-gesture must CANCEL the gesture,
+    // not suspend it.
+    if (!isVisible() || !isEnabled()) {
+        if (pressed_) {
+            pressed_ = false;
+            setDirty();
+        }
+        return false;
+    }
+
     // CRITICAL: Call base class to handle hover state and callbacks (onMouseMove, etc.)
     // This allows parents to use onMouseMove for forced repaints when buttons are hovered.
     NUIComponent::onMouseEvent(event);
