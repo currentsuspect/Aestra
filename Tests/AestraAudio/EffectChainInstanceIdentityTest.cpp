@@ -33,6 +33,7 @@
 #include "Plugin/PluginManager.h"
 
 #include <cstdint>
+#include <limits>
 #include <iostream>
 #include <memory>
 #include <set>
@@ -502,6 +503,76 @@ void testPreservedIdentityIsReservedAgainstFutureMints() {
           "a later mint must clear a restored identity, not collide with it");
 }
 
+void testPreservedMaxIdCannotPoisonTheCounter() {
+    // The boundary CodeRabbit caught on the second pass, and the reason it is
+    // dangerous rather than merely odd:
+    //
+    //   reserve(UINT64_MAX) stored seenId + 1, which wraps the counter to 0.
+    //   The next mint's fetch_add then returns 0, the wrap guard fires, and it
+    //   hands out 1 — an id that has almost certainly already been minted. Two
+    //   live occupants would share an identity, which is exactly the ambiguity
+    //   this whole mechanism exists to remove.
+    //
+    // The codebase already had a policy for this and I had not applied it:
+    // SourceManager and PatternManager both refuse to restore UINT64_MAX for the
+    // same wrap reason. This pins the same rule here.
+    EffectChain chain;
+    chain.insertPlugin(0, makePlugin("ordinary"));
+    const uint64_t ordinary = chain.getSlotInstanceId(0);
+    check(ordinary != 0, "an ordinary identity was minted first");
+
+    // Preserving the boundary value must fall back to a fresh mint rather than
+    // installing an id the counter cannot be advanced past.
+    chain.insertPlugin(1, makePlugin("boundary"), std::numeric_limits<uint64_t>::max());
+    const uint64_t boundary = chain.getSlotInstanceId(1);
+    check(boundary != std::numeric_limits<uint64_t>::max(),
+          "UINT64_MAX is refused as a preserved identity");
+    check(boundary != 0, "the fallback still produces a real identity");
+    check(boundary != ordinary, "and it does not collide with the one already minted");
+
+    // The counter must still be healthy afterwards: the failure mode was that
+    // every LATER mint got poisoned, so the next two ids are the real assertion.
+    chain.insertPlugin(2, makePlugin("after.a"));
+    chain.insertPlugin(3, makePlugin("after.b"));
+    const uint64_t afterA = chain.getSlotInstanceId(2);
+    const uint64_t afterB = chain.getSlotInstanceId(3);
+    std::set<uint64_t> unique{ordinary, boundary, afterA, afterB};
+    check(unique.size() == 4, "mints after the boundary attempt stay unique");
+    check(afterA != 0 && afterB != 0, "and stay non-zero");
+}
+
+void testReserveIgnoresTheMaxIdDirectly() {
+    // Same rule at the helper's own boundary, so the guarantee does not depend on
+    // insertPlugin being the only caller — v2 load will call reserve directly.
+    reserveMintedPluginInstanceId(std::numeric_limits<uint64_t>::max());
+
+    EffectChain chain;
+    chain.insertPlugin(0, makePlugin("after.reserve.max"));
+    const uint64_t first = chain.getSlotInstanceId(0);
+    chain.insertPlugin(1, makePlugin("after.reserve.max.2"));
+    const uint64_t second = chain.getSlotInstanceId(1);
+
+    check(first != 0 && second != 0, "minting still works after reserving the boundary value");
+    check(first != second, "and still produces distinct identities");
+}
+
+void testPreservedIdAlreadyLiveInChainFallsBackToMint() {
+    // A preserved id that is already occupied elsewhere in the same chain cannot
+    // be honoured without putting one identity in two slots. Fall back to a mint:
+    // the plugin still belongs in the slot, it just cannot keep a taken name.
+    EffectChain chain;
+    chain.insertPlugin(0, makePlugin("incumbent"));
+    const uint64_t incumbent = chain.getSlotInstanceId(0);
+
+    chain.insertPlugin(1, makePlugin("claimant"), incumbent);
+
+    check(chain.getSlotInstanceId(1) != incumbent,
+          "a preserved id already live in the chain is refused");
+    check(chain.getSlotInstanceId(1) != 0, "the claimant still gets a real identity");
+    check(chain.findSlotByInstanceId(incumbent) == 0,
+          "and the incumbent keeps its identity, unambiguously");
+}
+
 void testPreservedZeroStillMints() {
     // 0 is the "no identity" sentinel, so passing it must mean "mint one" rather
     // than "install 0 as the identity" — otherwise every existing caller, which
@@ -537,6 +608,9 @@ int main() {
     testUndoOfEffectRemoveRestoresTheSameIdentity();
     testRedoOfEffectAddKeepsTheOriginalIdentity();
     testPreservedIdentityIsReservedAgainstFutureMints();
+    testPreservedMaxIdCannotPoisonTheCounter();
+    testReserveIgnoresTheMaxIdDirectly();
+    testPreservedIdAlreadyLiveInChainFallsBackToMint();
     testPreservedZeroStillMints();
 
     if (g_failures != 0) {

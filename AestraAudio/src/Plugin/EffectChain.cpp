@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include <cmath>
 #include <cstring>
 
@@ -33,6 +34,15 @@ uint64_t mintPluginInstanceId() {
 
 void reserveMintedPluginInstanceId(uint64_t seenId) {
     if (seenId == 0) {
+        return;
+    }
+    // UINT64_MAX is never reserved, matching the house policy already stated for
+    // source ids (SourceManager.h) and pattern ids (PatternManager.h): advancing
+    // the counter past it wraps to zero, and the next mint then takes its wrap
+    // branch and hands out 1 — an id almost certainly already in use. Refusing
+    // here keeps the counter monotonic no matter what a caller passes, so the
+    // guarantee does not depend on every call site remembering the boundary.
+    if (seenId == std::numeric_limits<uint64_t>::max()) {
         return;
     }
     uint64_t expected = g_nextPluginInstanceId.load(std::memory_order_relaxed);
@@ -172,7 +182,17 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint6
     // removal is that case: minting there would mean Ctrl+Z silently orphaned
     // every curve pointing at the plugin it just brought back. Reserve the id
     // first so one restored from outside this process can never be minted again.
-    if (receivedPlugin && preservedInstanceId != 0) {
+    //
+    // A preserved id is honoured only if it can actually be held uniquely. Two
+    // cases fall back to a fresh mint, matching how SourceManager treats a
+    // requested source id: UINT64_MAX, which cannot be reserved without wrapping
+    // the counter to zero, and an id already live in this chain, which would put
+    // the same identity in two slots. Falling back is right rather than failing
+    // the insert — the plugin still belongs in the slot, it just cannot keep a
+    // name that is unusable or taken.
+    if (receivedPlugin && preservedInstanceId != 0
+        && preservedInstanceId != std::numeric_limits<uint64_t>::max()
+        && findSlotByInstanceId(preservedInstanceId) == MAX_SLOTS) {
         reserveMintedPluginInstanceId(preservedInstanceId);
         m_slots[slotIndex].instanceId = preservedInstanceId;
     } else {
