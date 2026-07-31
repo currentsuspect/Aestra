@@ -1106,6 +1106,35 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 }
             }
 
+            // Match solved edges to current routing by identity, not position.
+            // Pairing solved edge `i` with currentEdges[i] was only correct
+            // while the model was unchanged: inserting or removing one route
+            // shifted everything after it, so a single routing edit reported
+            // pdc_edge_mapping_mismatch on every subsequent edge instead of
+            // the one that actually moved. pdc_edge_count_mismatch already
+            // reports that the shapes differ.
+            //
+            // (src, dst, sidechain) is not unique — a channel may hold two
+            // sends to the same target — so equal keys are consumed in
+            // discovery order, which keeps the pairing deterministic and
+            // still localizes a mismatch to the edge that changed.
+            // Mixed-radix rather than bit-packed: both indices are bounded by
+            // nodes.size(), so this is exact and collision-free without
+            // assuming either fits in a fixed bit width.
+            const uint64_t nodeCount = static_cast<uint64_t>(topology.nodes.size());
+            const auto edgeKey = [nodeCount](uint32_t src, uint32_t dst, bool sidechain) -> uint64_t {
+                return ((static_cast<uint64_t>(src) * nodeCount) + static_cast<uint64_t>(dst)) * 2ull +
+                       (sidechain ? 1ull : 0ull);
+            };
+            std::unordered_map<uint64_t, std::vector<size_t>> currentEdgesByKey;
+            for (size_t j = 0; j < currentEdges.size(); ++j) {
+                currentEdgesByKey[edgeKey(currentEdges[j].srcNodeIdx, currentEdges[j].dstNodeIdx,
+                                          currentEdges[j].sidechain)]
+                    .push_back(j);
+            }
+            std::unordered_map<uint64_t, size_t> currentEdgeCursor;
+            constexpr size_t kNoCurrentEdge = static_cast<size_t>(-1);
+
             for (size_t i = 0; i < topology.edges.size(); ++i) {
                 const auto& solution = topology.edges[i];
                 const bool sourceValid = solution.srcNodeIdx < topology.nodes.size();
@@ -1116,10 +1145,18 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                                                           ? nodeId(topology.nodes[solution.dstNodeIdx].channelId)
                                                           : "unknown:" + std::to_string(solution.dstNodeIdx);
 
-                const bool mappingMatches = i < currentEdges.size() &&
-                                            currentEdges[i].srcNodeIdx == solution.srcNodeIdx &&
-                                            currentEdges[i].dstNodeIdx == solution.dstNodeIdx &&
-                                            currentEdges[i].sidechain == solution.sidechain;
+                size_t currentEdgeIndex = kNoCurrentEdge;
+                if (sourceValid && destinationValid) {
+                    const uint64_t key = edgeKey(solution.srcNodeIdx, solution.dstNodeIdx, solution.sidechain);
+                    const auto candidates = currentEdgesByKey.find(key);
+                    if (candidates != currentEdgesByKey.end()) {
+                        auto& cursor = currentEdgeCursor[key];
+                        if (cursor < candidates->second.size()) {
+                            currentEdgeIndex = candidates->second[cursor++];
+                        }
+                    }
+                }
+                const bool mappingMatches = currentEdgeIndex != kNoCurrentEdge;
                 bool main = false;
                 size_t sendIndex = 0;
                 bool appliedAvailable = false;
@@ -1127,7 +1164,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 bool mismatch = !mappingMatches;
 
                 if (mappingMatches) {
-                    const auto& current = currentEdges[i];
+                    const auto& current = currentEdges[currentEdgeIndex];
                     main = current.main;
                     sendIndex = current.sendIndex;
                     const auto snapshot = m_engine->getTrackEdgeDelaySnapshot(current.trackIndex);
@@ -1226,16 +1263,26 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 addMismatch("pdc_recalculation_pending", "the published topology is pending recalculation", evidence);
             }
 
-            for (const auto& message : topology.warnings) {
-                const char* issueCode = "pdc_solver_warning";
-                if (message.find("routing cycle") != std::string::npos) {
-                    issueCode = "pdc_routing_cycle";
-                } else if (message.find("out-of-range") != std::string::npos) {
-                    issueCode = "pdc_invalid_edge_indices";
+            // Map the solver's classification onto this report's stable issue
+            // codes. Switching on the enum keeps the contract structural: a
+            // reworded diagnostic can no longer silently demote a specific
+            // code to the generic fallback, and adding a SolverWarningCode
+            // shows up here as an unhandled-enum warning rather than as a
+            // string that quietly stops matching.
+            const auto issueCodeFor = [](SolverWarningCode code) -> const char* {
+                switch (code) {
+                case SolverWarningCode::RoutingCycle:
+                    return "pdc_routing_cycle";
+                case SolverWarningCode::InvalidEdgeIndices:
+                    return "pdc_invalid_edge_indices";
                 }
+                return "pdc_solver_warning";
+            };
+
+            for (const auto& solverWarning : topology.warnings) {
                 JSON warning = JSON::object();
-                warning.set("issueCode", JSON(issueCode));
-                warning.set("message", JSON(message));
+                warning.set("issueCode", JSON(issueCodeFor(solverWarning.code)));
+                warning.set("message", JSON(solverWarning.message));
                 warning.set("stableIdentityAvailable", JSON(false));
                 warning.set("positionalIdentityAvailable", JSON(false));
                 warnings.push(warning);

@@ -3961,7 +3961,7 @@ void AudioEngine::calculateLatencyCompensation() {
 
     // Off-RT: log any solver warnings once per generation.
     for (const auto& warning : topology.warnings) {
-        Aestra::Log::warning("[PDC] " + warning);
+        Aestra::Log::warning("[PDC] " + warning.message);
     }
 }
 
