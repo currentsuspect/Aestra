@@ -392,4 +392,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
     )
 endif()
 
+# PDC disable-clears-compensation regression (#684)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
+    add_executable(PDCDisableClearsCompensationTest PDCDisableClearsCompensationTest.cpp)
+    target_link_libraries(PDCDisableClearsCompensationTest PRIVATE AestraAudio)
+    target_include_directories(PDCDisableClearsCompensationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCDisableClearsCompensationTest COMMAND PDCDisableClearsCompensationTest)
+    set_tests_properties(PDCDisableClearsCompensationTest PROPERTIES
+        LABELS "headless;pdc;engine;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
