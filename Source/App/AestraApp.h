@@ -53,15 +53,28 @@ public:
         return m_audioController ? m_audioController->getEngine() : nullptr;
     }
 
-    // Helpers exposed for easier refactoring
-    static std::string getAppDataPath();
-    static std::string getAutosavePath();
-    static std::string getLegacyAutosavePath();
-    static std::string getCrashFlagPath();
+    // Helpers exposed for easier refactoring.
+    //
+    // These return std::nullopt rather than a substitute path when the app-data
+    // directory cannot be resolved. They used to fall back to the process
+    // working directory, which produced a different but equally valid-looking
+    // path that callers and the log could not distinguish from the real one —
+    // the mechanism behind both #675 defects. Callers must now decide what a
+    // missing app-data location means for them (#676).
+    static std::optional<std::string> getAppDataPath();
+    static std::optional<std::string> getAutosavePath();
+    static std::optional<std::string> getLegacyAutosavePath();
+    static std::optional<std::string> getCrashFlagPath();
     static void writeCrashFlag();
     static void clearCrashFlag();
     static bool isCrashedSession();
-    static std::string activeCrashFlagPath();
+    static std::optional<std::string> activeCrashFlagPath();
+
+    /// The autosave path, or an empty string when it cannot be resolved.
+    /// Empty disables autosave downstream (AutosaveManager treats an empty
+    /// override as "not set"), which is the correct degraded behaviour:
+    /// no autosave beats an autosave written somewhere unexpected.
+    static std::string autosavePathOrEmpty();
 
 private:
     enum class ProjectLoadSource { Canonical, Recovery, Snapshot };

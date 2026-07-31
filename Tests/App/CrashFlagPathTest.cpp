@@ -3,15 +3,20 @@
 // Regression coverage for #675: the crash flag must still be clearable after
 // platform teardown has destroyed the utilities that resolve app-data paths.
 //
-// The live defect: AestraApp::shutdown() deliberately clears the crash flag
+// The original defect: AestraApp::shutdown() deliberately clears the crash flag
 // LAST, so a crash during earlier teardown leaves the flag for recovery. But
 // Platform::shutdown() runs first and destroys the platform utilities, and
-// AestraApp::getAppDataPath() silently falls back to the process working
-// directory when they are gone. The final clear therefore looked for
+// AestraApp::getAppDataPath() *used to* silently fall back to the process
+// working directory when they were gone. The final clear therefore looked for
 // <cwd>/crash_flag, found nothing, removed nothing, and logged nothing —
 // because both its success and failure messages sit inside the exists() branch.
 // Every clean exit left the flag behind and every next launch offered a
 // spurious recovery.
+//
+// #676 removed that fallback: the path resolvers now return std::nullopt
+// instead of substituting a plausible wrong path. Retaining the primed path
+// (below) is still what makes the clear work, because after teardown there is
+// now no path to resolve at all.
 //
 // These tests pin the property that makes the fix work: a path resolved while
 // the platform was alive stays available and unchanged afterwards. Source/ has
@@ -22,6 +27,7 @@
 #include "CrashFlagPath.h"
 
 #include <iostream>
+#include <optional>
 #include <string>
 
 namespace {
@@ -35,16 +41,23 @@ void check(bool condition, const char* message) {
     }
 }
 
-/// Stands in for AestraApp::getAppDataPath(): resolves correctly while the
-/// platform is alive, and silently degrades to the working directory once it is
-/// gone — which is exactly what the real one does.
+/// Stands in for AestraApp::getAppDataPath(): resolves while the platform is
+/// alive and yields nothing once it is gone, matching the real one since #676.
+///
+/// It used to model the original behaviour — degrading to the working
+/// directory — because that is what the real function did. #676 removed that
+/// fallback: there is no portable-mode feature that wants a working-directory
+/// app-data location, so an unresolvable path is now reported as absent rather
+/// than substituted.
 struct FakePlatform {
     bool aliveFlag = true;
     std::string appData = "/home/user/.local/share/Aestra";
-    std::string cwd = "/some/working/dir";
 
-    std::string resolveCrashFlagPath() const {
-        return (aliveFlag ? appData : cwd) + "/crash_flag";
+    std::optional<std::string> resolveCrashFlagPath() const {
+        if (!aliveFlag) {
+            return std::nullopt;
+        }
+        return appData + "/crash_flag";
     }
     void shutdown() { aliveFlag = false; }
 };
@@ -60,7 +73,9 @@ void testPathSurvivesPlatformTeardown() {
     FakePlatform platform;
 
     // Startup: resolve while the platform is alive, as writeCrashFlag() does.
-    Aestra::CrashFlagPath::prime(platform.resolveCrashFlagPath());
+    const auto resolved = platform.resolveCrashFlagPath();
+    check(resolved.has_value(), "the path resolves while the platform is alive");
+    Aestra::CrashFlagPath::prime(*resolved);
     const std::string atStartup = Aestra::CrashFlagPath::get();
     check(atStartup == "/home/user/.local/share/Aestra/crash_flag",
           "the primed path is the app-data path");
@@ -68,16 +83,18 @@ void testPathSurvivesPlatformTeardown() {
     // Shutdown: platform utilities are destroyed before the final clear.
     platform.shutdown();
 
-    // The regression: re-resolving now yields the wrong path...
-    check(platform.resolveCrashFlagPath() == "/some/working/dir/crash_flag",
-          "re-resolving after teardown does produce the wrong path (defect premise)");
+    // Post-#676, re-resolving after teardown yields nothing at all. Before it,
+    // it produced a plausible working-directory path that nothing could
+    // distinguish from the real one — which is what made #675 silent.
+    check(!platform.resolveCrashFlagPath().has_value(),
+          "re-resolving after teardown yields nothing rather than a substitute path");
 
-    // ...but the retained one is unchanged, which is what the clear must use.
+    // The retained one is unchanged, which is what the clear must use.
     check(Aestra::CrashFlagPath::isPrimed(), "the path is still primed after teardown");
     check(Aestra::CrashFlagPath::get() == atStartup,
           "the retained path is unchanged after platform teardown");
-    check(Aestra::CrashFlagPath::get() != platform.resolveCrashFlagPath(),
-          "the retained path differs from what post-teardown resolution would give");
+    check(!Aestra::CrashFlagPath::get().empty() && !platform.resolveCrashFlagPath().has_value(),
+          "the retained path is usable precisely when fresh resolution is not");
 }
 
 void testPrimingIsIdempotentlyOverwritable() {

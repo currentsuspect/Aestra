@@ -8,8 +8,11 @@
 #      for #675 must NOT be "move clearCrashFlag() earlier".
 #   2. The clear uses the path retained at startup, not a freshly resolved one.
 #      Platform::shutdown() destroys the platform utilities, after which
-#      getAppDataPath() silently falls back to the working directory — so
-#      re-resolving there finds nothing, removes nothing, and logs nothing.
+#      getAppDataPath() cannot resolve at all. Before #676 it silently fell back
+#      to the working directory, so re-resolving there found nothing, removed
+#      nothing, and logged nothing; since #676 it returns std::nullopt, so
+#      re-resolving yields no path to clear. Either way the retained path is
+#      the only correct source, which is what this guard pins.
 #
 # The application source path is resolved HERE rather than passed in from
 # Tests/cmake/*.cmake: scripts/ci/classify-changes.sh derives its
@@ -68,8 +71,18 @@ if(NOT CLEAR_RERESOLVES EQUAL -1)
 endif()
 
 # Priming must happen at a real call site, not merely be defined somewhere.
-string(FIND "${APP_TEXT}" "CrashFlagPath::prime(getCrashFlagPath())" PRIMES_PATH)
-if(PRIMES_PATH EQUAL -1)
+#
+# Two shapes are accepted. The direct form primes straight from the resolver.
+# The guarded form — `if (const auto x = getCrashFlagPath())` — is what #676
+# required once getCrashFlagPath() became std::optional: the caller has to
+# check before priming, because there is no longer a substitute path to prime
+# with. The guarded pattern is matched by its trailing `)` so it identifies the
+# startup call site specifically, not writeCrashFlag()'s fallback priming,
+# which assigns to a local with `;`.
+string(FIND "${APP_TEXT}" "CrashFlagPath::prime(getCrashFlagPath())" PRIMES_DIRECT)
+string(FIND "${APP_TEXT}" "= getCrashFlagPath())" PRIMES_FROM_CHECKED_OPTIONAL)
+string(FIND "${APP_TEXT}" "CrashFlagPath::prime(" PRIMES_AT_ALL)
+if(PRIMES_AT_ALL EQUAL -1 OR (PRIMES_DIRECT EQUAL -1 AND PRIMES_FROM_CHECKED_OPTIONAL EQUAL -1))
     message(FATAL_ERROR
         "Nothing primes the crash-flag path from a resolved value while platform "
         "utilities are alive (#675).")
