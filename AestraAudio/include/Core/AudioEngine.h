@@ -650,6 +650,16 @@ public:
     }
 
 private:
+    /**
+     * @brief Withdraw all applied latency compensation from the RT state.
+     *
+     * Zeroes every per-node output compensation and per-edge compensation
+     * count in both m_trackState and the active m_graphStates slot, so the RT
+     * path stops delaying audio. Called from calculateLatencyCompensation()
+     * on the disabled path; not a substitute for the apply pass. Off-RT only.
+     */
+    void clearAppliedLatencyCompensation();
+
     struct ChannelPrepareConfig {
         std::atomic<uint32_t> sampleRate{48000};
         std::atomic<uint32_t> maxBlockSize{4096};

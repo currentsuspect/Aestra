@@ -149,9 +149,14 @@ struct TrackRTState {
 
     // === Plugin Delay Compensation ===
     uint32_t pluginLatencySamples{0};        // Total latency from effect chain
-    uint32_t compensationDelaySamples{0};    // Delay to apply for alignment
-    bool compensationEnabled{true};          // Can be disabled per-track
-    
+    // Delay to apply for alignment. Zero means "do not delay this track" —
+    // this is the single gate the RT path consults. There is deliberately no
+    // per-track enable flag: one existed, nothing ever wrote it, and being
+    // pinned true is what let a disabled engine keep compensating (#684).
+    // Engine-wide enablement lives in AudioEngine::m_latencyCompensationEnabled
+    // and reaches the RT path by zeroing this value.
+    uint32_t compensationDelaySamples{0};
+
     // Fixed-size compensation buffer (stereo interleaved)
     // 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz
     std::array<float, 32768> compensationBuffer{}; // 16384 frames * 2 channels
