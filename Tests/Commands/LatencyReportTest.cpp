@@ -50,6 +50,16 @@ bool hasIssueCode(JSON& entries, const std::string& code) {
     return findByString(entries, "issueCode", code) != nullptr;
 }
 
+size_t countIssueCode(JSON& entries, const std::string& code) {
+    size_t total = 0;
+    for (size_t i = 0; i < entries.size(); ++i) {
+        if (entries[i].has("issueCode") && entries[i]["issueCode"].asString() == code) {
+            ++total;
+        }
+    }
+    return total;
+}
+
 struct Fixture {
     std::shared_ptr<TrackManager> tracks{std::make_shared<TrackManager>()};
     AudioEngine engine;
@@ -233,6 +243,62 @@ void testDisabledCompensationStatus() {
           "repeated disabled queries remain observational");
 }
 
+void testRoutingEditIsReportedWithoutCascading() {
+    Fixture fx;
+    auto* source = fx.tracks->addChannelWithId("Source", 30);
+    auto* busA = fx.tracks->addChannelWithId("BusA", 31);
+    auto* busB = fx.tracks->addChannelWithId("BusB", 32);
+    auto* busC = fx.tracks->addChannelWithId("BusC", 33);
+    check(source != nullptr && busA != nullptr && busB != nullptr && busC != nullptr, "routing-edit fixture created");
+    if (!source || !busA || !busB || !busC)
+        return;
+
+    // Distinct latencies so each send edge carries its own compensation.
+    check(busA->getEffectChain().insertPlugin(0, std::make_shared<MockLatencyPlugin>(128, "A")), "bus A plugin");
+    check(busB->getEffectChain().insertPlugin(0, std::make_shared<MockLatencyPlugin>(256, "B")), "bus B plugin");
+    check(busC->getEffectChain().insertPlugin(0, std::make_shared<MockLatencyPlugin>(384, "C")), "bus C plugin");
+
+    for (uint32_t target : {31u, 32u, 33u}) {
+        AudioRoute send;
+        send.targetChannelId = target;
+        source->addSend(send);
+    }
+    fx.engine.calculateLatencyCompensation();
+
+    JSON baseline = call(fx.service, R"({"id":10,"verb":"get_latency_report"})");
+    check(baseline["result"]["status"].asString() == "clean" && baseline["result"]["mismatches"].size() == 0,
+          "multi-send routing solves clean before the edit");
+
+    // Remove the *first* send behind the published solve. Every later send
+    // shifts down a slot, which is precisely the case positional pairing got
+    // wrong: it reported every subsequent edge as unmappable.
+    source->removeSend(0);
+
+    JSON response = call(fx.service, R"({"id":11,"verb":"get_latency_report"})");
+    JSON& report = response["result"];
+    JSON* countMismatch = findByString(report["mismatches"], "issueCode", "pdc_edge_count_mismatch");
+    check(countMismatch != nullptr, "a routing edit behind the solve reports an edge count mismatch");
+    if (countMismatch) {
+        JSON& evidence = (*countMismatch)["evidence"];
+        check(evidence["solvedEdgeCount"].asNumber() == evidence["currentMappableEdgeCount"].asNumber() + 1.0,
+              "edge count evidence shows the solve carries exactly one edge more than the model");
+    }
+
+    // The removed send is the only edge that can no longer be mapped. Under
+    // the old index pairing this was 3 (the removed edge plus the two that
+    // merely shifted); identity matching localizes it to the one that moved.
+    check(countIssueCode(report["mismatches"], "pdc_edge_mapping_mismatch") == 1,
+          "only the removed edge is unmappable — the mismatch does not cascade");
+
+    size_t unresolved = 0;
+    for (size_t i = 0; i < report["edges"].size(); ++i) {
+        if (report["edges"][i]["routeType"].asString() == "unresolved") {
+            ++unresolved;
+        }
+    }
+    check(unresolved == 1, "exactly one edge is reported unresolved after a single-send removal");
+}
+
 void testSchemaAndArgumentRejection() {
     JSON schema = JSON::parse(Aestra::Audio::MuseGrammar::schemaToJsonString());
     bool documented = false;
@@ -258,6 +324,7 @@ int main() {
     testBranchCompensationAndSidechainLimitation();
     testPendingSolveStaysObservational();
     testDisabledCompensationStatus();
+    testRoutingEditIsReportedWithoutCascading();
     testSchemaAndArgumentRejection();
 
     if (g_failures == 0) {
