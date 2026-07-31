@@ -28,7 +28,11 @@ public:
 
     void execute() override {
         if (m_executed) return;
-        m_channel.getEffectChain().insertPlugin(m_slotIndex, m_plugin);
+        // A redo must restore the identity the first execute minted, not invent a
+        // second one for the same plugin (#667) — see AddPluginCommand. 0 on the
+        // first pass is exactly the "mint one" signal.
+        m_channel.getEffectChain().insertPlugin(m_slotIndex, m_plugin, m_instanceId);
+        m_instanceId = m_channel.getEffectChain().getSlotInstanceId(m_slotIndex);
         m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);
         m_executed = true;
     }
@@ -59,6 +63,7 @@ private:
     size_t m_slotIndex;
     PluginInstancePtr m_plugin;
     std::string m_effectName;
+    uint64_t m_instanceId{0};
     bool m_executed = false;
 };
 
@@ -72,6 +77,9 @@ public:
 
     void execute() override {
         if (m_executed) return;
+        // Capture before removing so undo re-seats the SAME plugin rather than a
+        // new one wearing its slot (#667) — see RemovePluginCommand.
+        m_removedInstanceId = m_channel.getEffectChain().getSlotInstanceId(m_slotIndex);
         m_removedPlugin = m_channel.getEffectChain().removePlugin(m_slotIndex);
         m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);
         m_executed = true;
@@ -80,7 +88,7 @@ public:
     void undo() override {
         if (!m_executed) return;
         if (m_removedPlugin) {
-            m_channel.getEffectChain().insertPlugin(m_slotIndex, m_removedPlugin);
+            m_channel.getEffectChain().insertPlugin(m_slotIndex, m_removedPlugin, m_removedInstanceId);
         }
         m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);
         m_executed = false;
@@ -100,6 +108,7 @@ private:
     MixerChannel& m_channel;
     size_t m_slotIndex;
     PluginInstancePtr m_removedPlugin;
+    uint64_t m_removedInstanceId{0};
     bool m_executed = false;
 };
 
