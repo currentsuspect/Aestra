@@ -98,36 +98,69 @@ AestraApp::~AestraApp() {
     shutdown();
 }
 
-std::string AestraApp::getAppDataPath() {
+std::optional<std::string> AestraApp::getAppDataPath() {
     IPlatformUtils* utils = Platform::getUtils();
     if (!utils) {
-        return std::filesystem::current_path().string();
+        // Deliberately no fallback. This used to return the process working
+        // directory, which is a perfectly valid-looking path that happens to
+        // be the wrong one — callers could not tell, and neither could the
+        // log. That is what made both #675 defects silent. There is no
+        // portable-mode feature in the tree that wants a working-directory
+        // app-data location, so failing is the honest answer (#676).
+        Log::warning("[AppData] Platform utilities unavailable; no app-data path can be resolved");
+        return std::nullopt;
     }
     std::string appDataDir = utils->getAppDataPath("Aestra");
     std::error_code ec;
     if (!std::filesystem::create_directories(appDataDir, ec) && ec) {
-        // Log?
+        // create_directories() returns false without setting ec when the
+        // directory already exists, so a set ec is a genuine failure. A
+        // directory we cannot create is one we cannot write to either.
+        Log::warning("[AppData] Cannot create app-data directory " + appDataDir + ": " + ec.message());
+        return std::nullopt;
     }
     return appDataDir;
 }
 
-std::string AestraApp::getAutosavePath() {
-    return (std::filesystem::path(getAppDataPath()) / "autosave.aes").string();
+namespace {
+/// Join a file name onto the app-data directory, propagating "unresolved".
+std::optional<std::string> appDataFile(const std::optional<std::string>& appDataDir, const char* fileName) {
+    if (!appDataDir) {
+        return std::nullopt;
+    }
+    return (std::filesystem::path(*appDataDir) / fileName).string();
+}
+} // namespace
+
+std::optional<std::string> AestraApp::getAutosavePath() {
+    return appDataFile(getAppDataPath(), "autosave.aes");
 }
 
-std::string AestraApp::getLegacyAutosavePath() {
-    return (std::filesystem::path(getAppDataPath()) / "autosave.Aestraproj").string();
+std::optional<std::string> AestraApp::getLegacyAutosavePath() {
+    return appDataFile(getAppDataPath(), "autosave.Aestraproj");
 }
 
-std::string AestraApp::getCrashFlagPath() {
-    return (std::filesystem::path(getAppDataPath()) / "crash_flag").string();
+std::optional<std::string> AestraApp::getCrashFlagPath() {
+    return appDataFile(getAppDataPath(), "crash_flag");
 }
 
-std::string AestraApp::activeCrashFlagPath() {
-    // Prefer the path resolved while platform utilities were alive. The
-    // fallback only applies before priming, where getAppDataPath() is still
-    // able to resolve correctly.
-    return CrashFlagPath::isPrimed() ? CrashFlagPath::get() : getCrashFlagPath();
+std::string AestraApp::autosavePathOrEmpty() {
+    const auto path = getAutosavePath();
+    if (!path) {
+        Log::warning("[Autosave] No app-data path could be resolved; autosave is disabled for this document");
+        return {};
+    }
+    return *path;
+}
+
+std::optional<std::string> AestraApp::activeCrashFlagPath() {
+    // Prefer the path resolved while platform utilities were alive. Resolving
+    // fresh is only correct before priming; afterwards the platform may be
+    // gone and there is no substitute path to offer.
+    if (CrashFlagPath::isPrimed()) {
+        return CrashFlagPath::get();
+    }
+    return getCrashFlagPath();
 }
 
 void AestraApp::writeCrashFlag() {
@@ -136,9 +169,14 @@ void AestraApp::writeCrashFlag() {
     // through startup — re-resolving unconditionally would let detection use
     // one path while the write and the clear use another (#675).
     if (!CrashFlagPath::isPrimed()) {
-        CrashFlagPath::prime(getCrashFlagPath());
+        const auto resolved = getCrashFlagPath();
+        if (!resolved) {
+            Log::warning("[CrashDetection] Cannot resolve crash flag path; no crash flag written this session");
+            return;
+        }
+        CrashFlagPath::prime(*resolved);
     }
-    const std::string flagPath = activeCrashFlagPath();
+    const std::string flagPath = CrashFlagPath::get();
     std::ofstream out(flagPath, std::ios::trunc);
     if (out) {
         out << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
@@ -184,9 +222,16 @@ void AestraApp::clearCrashFlag() {
 }
 
 bool AestraApp::isCrashedSession() {
-    const std::string flagPath = activeCrashFlagPath();
+    const auto flagPath = activeCrashFlagPath();
+    if (!flagPath) {
+        // Unresolvable is not the same as clean, but there is nothing to read
+        // and no substitute worth inventing. Say so rather than reporting a
+        // confident "no crash" derived from the wrong directory (#676).
+        Log::warning("[CrashDetection] Cannot resolve crash flag path; treating this session as not crashed");
+        return false;
+    }
     std::error_code ec;
-    return std::filesystem::exists(flagPath, ec);
+    return std::filesystem::exists(*flagPath, ec);
 }
 
 std::string AestraApp::getRecoveryMarkerPath(const std::string& autosavePath) {
@@ -194,7 +239,11 @@ std::string AestraApp::getRecoveryMarkerPath(const std::string& autosavePath) {
 }
 
 std::string AestraApp::readCrashFlagToken() {
-    std::ifstream in(activeCrashFlagPath(), std::ios::binary);
+    const auto flagPath = activeCrashFlagPath();
+    if (!flagPath) {
+        return {};
+    }
+    std::ifstream in(*flagPath, std::ios::binary);
     std::string token;
     std::getline(in, token);
     return token;
@@ -262,13 +311,18 @@ bool AestraApp::initialize(const std::string& projectPath) {
     //
     // Detection therefore moved below platform init. Nothing between the old
     // and new positions consumed the result.
-    CrashFlagPath::prime(getCrashFlagPath());
+    if (const auto crashFlagPath = getCrashFlagPath()) {
+        CrashFlagPath::prime(*crashFlagPath);
+    } else {
+        Log::error("[CrashDetection] Cannot resolve crash flag path at startup; "
+                   "crash detection and recovery are unavailable this session");
+    }
 
     const bool crashedSession = isCrashedSession();
     m_previousRecoverySessionToken = crashedSession ? readCrashFlagToken() : "";
 
     // An app-data autosave is recovery state, never an implicit canonical project.
-    m_documentState.startUntitled(getAutosavePath());
+    m_documentState.startUntitled(autosavePathOrEmpty());
 
     // ALWAYS write crash flag at session start. It is cleared only on clean
     // shutdown. If the app crashes at any point, the flag persists and the
@@ -528,7 +582,7 @@ void AestraApp::buildMenuBar() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
             clearProjectLoadReport();
-            m_documentState.startUntitled(getAutosavePath());
+            m_documentState.startUntitled(autosavePathOrEmpty());
             reinitAutosaveManager();
             syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
             m_lastWindowTitle.clear();
@@ -758,7 +812,7 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                         if (m_content)
                             m_content->resetToDefaultProject();
                         clearProjectLoadReport();
-                        m_documentState.startUntitled(getAutosavePath());
+                        m_documentState.startUntitled(autosavePathOrEmpty());
                         reinitAutosaveManager();
                         syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
                     }
@@ -780,7 +834,7 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                         if (m_content)
                             m_content->resetToDefaultProject();
                         clearProjectLoadReport();
-                        m_documentState.startUntitled(getAutosavePath());
+                        m_documentState.startUntitled(autosavePathOrEmpty());
                         reinitAutosaveManager();
                         syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
                         updateWindowTitle();
@@ -1427,10 +1481,15 @@ void AestraApp::requestClose() {
                      case Aestra::DialogResponse::DontSave: {
                          // User explicitly chose not to save — remove the autosave
                          // so it isn't offered for recovery on the next launch.
-                         std::error_code ec;
-                         std::filesystem::remove(getAutosavePath(), ec);
-                         if (ec) {
-                             Log::warning("[Close] Failed to remove autosave on Discard: " + ec.message());
+                         if (const auto autosavePath = getAutosavePath()) {
+                             std::error_code ec;
+                             std::filesystem::remove(*autosavePath, ec);
+                             if (ec) {
+                                 Log::warning("[Close] Failed to remove autosave on Discard: " + ec.message());
+                             }
+                         } else {
+                             // Never delete based on a guessed path.
+                             Log::warning("[Close] Cannot resolve autosave path; nothing removed on Discard");
                          }
                          m_running = false;
                          break;
