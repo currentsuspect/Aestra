@@ -208,28 +208,29 @@ void testDisabledCompensationStatus() {
         return;
 
     fx.engine.calculateLatencyCompensation();
-    const uint64_t generationBefore = fx.engine.getLastSolvedLatencyTopology().generation;
     fx.engine.setLatencyCompensationEnabled(false);
+
+    // Disabling withdraws the applied compensation and publishes an empty
+    // solve to say so (#684), so the report is observed but carries no nodes:
+    // with compensation off there is no per-node compensation to describe.
+    const uint64_t generationAfterDisable = fx.engine.getLastSolvedLatencyTopology().generation;
 
     JSON response = call(fx.service, R"({"id":7,"verb":"get_latency_report"})");
     JSON& report = response["result"];
     check(report["status"].asString() == "disabled" && report["observed"].asBool() &&
               !report["compensationEnabled"].asBool(),
           "disabled global compensation has an explicit report status");
-    check(fx.engine.getLastSolvedLatencyTopology().generation == generationBefore,
-          "disabled query does not publish a replacement topology");
+    check(report["nodes"].size() == 0 && report["edges"].size() == 0,
+          "disabled report describes no compensated nodes or edges");
 
-    // The per-node applied state must not contradict the top-level toggle.
-    // TrackRTState carries a vestigial per-track `compensationEnabled` that is
-    // pinned true because nothing writes it; forwarding it made every node
-    // claim compensation was on while the engine-wide toggle was off.
-    JSON* node = findByString(report["nodes"], "nodeId", "mixer:123");
-    check(node != nullptr, "disabled report still identifies the mixer node");
-    if (node) {
-        check((*node)["applied"]["available"].asBool() &&
-                  (*node)["applied"]["compensationEnabled"].asBool() == report["compensationEnabled"].asBool(),
-              "per-node applied compensation flag agrees with the engine-wide toggle");
-    }
+    // The query itself must stay observational. Baseline is taken *after* the
+    // toggle, because the toggle legitimately publishes; only the query is
+    // forbidden from mutating.
+    check(fx.engine.getLastSolvedLatencyTopology().generation == generationAfterDisable,
+          "disabled query does not publish a replacement topology");
+    call(fx.service, R"({"id":9,"verb":"get_latency_report"})");
+    check(fx.engine.getLastSolvedLatencyTopology().generation == generationAfterDisable,
+          "repeated disabled queries remain observational");
 }
 
 void testSchemaAndArgumentRejection() {

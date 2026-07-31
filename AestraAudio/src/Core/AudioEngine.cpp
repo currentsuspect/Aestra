@@ -2566,7 +2566,7 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     // === Apply Plugin Delay Compensation ===
     // Compensation must apply to dry tracks too; those are often the tracks
     // delayed to align with a parallel latent path elsewhere in the graph.
-    if (state.compensationEnabled && state.compensationDelaySamples > 0) {
+    if (state.compensationDelaySamples > 0) {
         const uint32_t delay = state.compensationDelaySamples;
         const uint32_t capacity = static_cast<uint32_t>(state.compensationBuffer.size() / 2);
         if (delay < capacity) {
@@ -3643,6 +3643,11 @@ void AudioEngine::calculateLatencyCompensation() {
     if (!m_latencyCompensationEnabled) {
         m_maxProjectLatency = 0;
         m_latencyDirty = false;
+        // Compensation that was already applied must be withdrawn, not merely
+        // left unsolved (#684). Returning here without clearing left every
+        // track delayed by its last solved amount, so switching PDC off did
+        // not stop it compensating.
+        clearAppliedLatencyCompensation();
         // Publish a zero topology via the double-buffer flip so off-RT readers
         // observe a consistent disabled state.
         {
@@ -4030,13 +4035,48 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     return snap;
 }
 
+void AudioEngine::clearAppliedLatencyCompensation() {
+    // Withdraw every delay the RT path could still act on. Buffers stay
+    // allocated: only the published sample counts decide whether the RT path
+    // reads them, and keeping the allocations lets a re-enable avoid churn.
+    // The ring-buffer cursors are deliberately left alone — the apply pass
+    // resets them whenever a delay changes from zero to non-zero, so a
+    // re-enable starts from silence without extra RT-visible writes here.
+    auto clearStates = [](std::vector<TrackRTState>& states) {
+        for (auto& state : states) {
+            state.compensationDelaySamples = 0;
+            if (state.mainOutEdgeDelay) {
+                state.mainOutEdgeDelay->compensationSamples.store(0, std::memory_order_release);
+            }
+            for (auto& slot : state.sendEdgeDelays) {
+                if (slot) {
+                    slot->compensationSamples.store(0, std::memory_order_release);
+                }
+            }
+        }
+    };
+
+    clearStates(m_trackState);
+
+    const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    clearStates(m_graphStates[activeIdx].trackStates);
+    m_graphStates[activeIdx].maxProjectLatencySamples = 0;
+    m_graphStates[activeIdx].latencyCompensationEnabled = m_latencyCompensationEnabled;
+}
+
 void AudioEngine::setLatencyCompensationEnabled(bool enabled) {
-    if (m_latencyCompensationEnabled != enabled) {
-        m_latencyCompensationEnabled = enabled;
+    if (m_latencyCompensationEnabled == enabled) {
+        return;
     }
-    if (m_latencyDirty && m_latencyCompensationEnabled) {
-        calculateLatencyCompensation();
-    }
+    m_latencyCompensationEnabled = enabled;
+    // Both directions need the solver. Enabling has to re-solve and re-apply;
+    // disabling has to clear what is already applied. Routing everything
+    // through calculateLatencyCompensation() keeps the one apply path as the
+    // sole writer of RT compensation state. The previous guard only re-solved
+    // when enabling *and* already dirty, which is why disabling was a no-op
+    // and why re-enabling an unchanged graph would not restore it (#684).
+    m_latencyDirty = true;
+    calculateLatencyCompensation();
 }
 
 bool AudioEngine::isLatencyCompensationEnabled() const {
