@@ -59,12 +59,55 @@ struct EffectSlot {
     /// This, not isEmpty(), is what "can I put a plugin here" should ask.
     bool isOccupied() const { return plugin != nullptr || !missingPluginId.empty(); }
 
+    // Permanent identity for whatever occupies this slot (#667).
+    //
+    // The slot INDEX is a position; this is an identity. Automation must address
+    // the plugin instance a curve was drawn for, never the position that instance
+    // happened to occupy — reordering a chain is a rearrangement, never a
+    // retarget. movePlugin/swapPlugins carry this value with the plugin, so a
+    // reorder cannot silently re-point anything that refers to it.
+    //
+    // Zero means "nothing here". Minted by insertPlugin() and by loadState() for
+    // slots restored from a pre-v2 chain that predates identity; cleared by
+    // removePlugin(). A missing-plugin placeholder (#647) keeps its id, because
+    // the slot still stands for the same plugin — automation addressed to a
+    // plugin that failed to load must survive the round trip exactly as the
+    // placeholder itself does.
+    //
+    // Minted process-wide rather than per-chain: a plugin dragged from one
+    // channel strip to another keeps its identity, and per-chain counters would
+    // collide across channels.
+    uint64_t instanceId{0};
+
     void clearMissingPlugin() {
         missingPluginId.clear();
         missingPluginState.clear();
         missingPluginState.shrink_to_fit();
     }
 };
+
+/**
+ * @brief Mint a process-unique plugin-instance id (#667).
+ *
+ * Follows the house pattern established for unit ids (#528): a monotonic
+ * counter, plus a re-mint guard on load so restored ids can never be handed out
+ * a second time (see EffectChain::loadState). Never returns zero, which is the
+ * reserved "no instance" value.
+ *
+ * Non-RT only. Called from slot mutation, which is already main/control-thread
+ * only per the EffectChain mutation contract.
+ */
+uint64_t mintPluginInstanceId();
+
+/**
+ * @brief Ensure future mints exceed @p seenId.
+ *
+ * Called for every id restored by loadState. Without this, a project whose ids
+ * were minted in a previous run would collide with ids minted in this one, and
+ * two slots could share an identity — which is precisely the ambiguity the id
+ * exists to remove.
+ */
+void reserveMintedPluginInstanceId(uint64_t seenId);
 
 /**
  * @brief Effect chain for insert effects on a mixer channel
@@ -130,9 +173,23 @@ public:
      *
      * @param slotIndex Slot index (0 to MAX_SLOTS-1)
      * @param plugin Plugin instance to insert
+     * @param preservedInstanceId Identity to restore, or 0 to mint a fresh one.
+     *
+     * Pass 0 (the default) whenever the slot is genuinely acquiring a new
+     * occupant — that is the ordinary case, and a fresh identity is what stops
+     * a replacement from inheriting its predecessor's automation.
+     *
+     * Pass a non-zero id only when re-seating an occupant that already had one
+     * and never stopped being the same plugin to the user. Undo of a plugin
+     * removal is the case that ships today: RemovePluginCommand hands back the
+     * very same instance, so minting there would change the identity of a
+     * plugin the user only ever saw disappear and come back. The id is reserved
+     * against the mint counter, so restoring an id from outside this process
+     * (a loaded project) can never collide with one minted inside it.
+     *
      * @return true if inserted successfully
      */
-    bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin);
+    bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint64_t preservedInstanceId = 0);
 
     /**
      * @brief Remove plugin from slot
@@ -172,6 +229,26 @@ public:
      * @brief Check if slot is empty
      */
     bool isSlotEmpty(size_t slotIndex) const;
+
+    /**
+     * @brief The permanent identity of whatever occupies @p slotIndex (#667).
+     * @return The instance id, or 0 for an out-of-range or unoccupied slot.
+     */
+    uint64_t getSlotInstanceId(size_t slotIndex) const;
+
+    /**
+     * @brief Find the slot currently holding plugin instance @p instanceId (#667).
+     *
+     * This is the identity→position translation that lets automation address a
+     * plugin instance instead of a chain position, mirroring what ChannelSlotMap
+     * does for channels. Callers must re-resolve rather than cache the index: the
+     * whole point is that the index moves and the id does not.
+     *
+     * @return The slot index, or MAX_SLOTS if no slot holds that id. Passing 0
+     *         always returns MAX_SLOTS — 0 means "no instance", so it must never
+     *         match an unoccupied slot's zeroed id.
+     */
+    size_t findSlotByInstanceId(uint64_t instanceId) const;
 
     /**
      * @brief Get first empty slot index
@@ -379,6 +456,10 @@ struct EffectChainSnapshotSlot {
     bool bypassed;                                    ///< Bypass state (copied value)
     float dryWetMix;                                  ///< Dry/wet mix (copied value)
     std::shared_ptr<EffectSlotFaultState> faultState; ///< Shared RT-visible fault state
+    /// Permanent identity of this slot's occupant, 0 if unoccupied (#667).
+    /// Carried into the snapshot so the render thread can resolve automation by
+    /// identity without touching the mutable chain.
+    uint64_t instanceId{0};
 
     bool isEmpty() const { return plugin == nullptr; }
 };
@@ -404,8 +485,28 @@ public:
             m_slots[i].bypassed = slots[i].bypassed.load(std::memory_order_acquire);
             m_slots[i].dryWetMix = slots[i].dryWetMix.load(std::memory_order_acquire);
             m_slots[i].faultState = slots[i].faultState;
+            m_slots[i].instanceId = slots[i].instanceId;
         }
         m_slotCount = MAX_SLOTS;
+    }
+
+    /**
+     * @brief Find the snapshot slot holding plugin instance @p instanceId (#667).
+     *
+     * RT-safe: a bounded linear scan over MAX_SLOTS with no allocation, the same
+     * shape as ChannelSlotMap::getSlotIndex(). Returns MAX_SLOTS when the id is
+     * absent, and always for id 0 ("no instance").
+     */
+    size_t findSlotByInstanceId(uint64_t instanceId) const noexcept {
+        if (instanceId == 0) {
+            return MAX_SLOTS;
+        }
+        for (size_t i = 0; i < MAX_SLOTS; ++i) {
+            if (m_slots[i].instanceId == instanceId) {
+                return i;
+            }
+        }
+        return MAX_SLOTS;
     }
 
     size_t slotCount() const noexcept { return m_slotCount; }
