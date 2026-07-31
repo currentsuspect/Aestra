@@ -124,12 +124,11 @@ namespace {
 
 // Query verbs MuseService answers directly (mutations live in MuseGrammar).
 bool isQueryVerb(const std::string& verb) {
-    return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
-           verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
-           verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
-           verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
-           verb == "get_capabilities" || verb == "get_audio_health" ||
-           verb == "get_project_load_report" || verb == "get_routing_graph";
+    return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" || verb == "get_session_state" ||
+           verb == "list_units" || verb == "get_pattern" || verb == "list_patterns" || verb == "list_plugins" ||
+           verb == "get_effects" || verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
+           verb == "get_capabilities" || verb == "get_audio_health" || verb == "get_project_load_report" ||
+           verb == "get_routing_graph" || verb == "get_latency_report";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -901,6 +900,354 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
+        }
+
+        if (verb == "get_latency_report") {
+            JSON result = JSON::object();
+            JSON nodes = JSON::array();
+            JSON edges = JSON::array();
+            JSON uncompensatedPaths = JSON::array();
+            JSON mismatches = JSON::array();
+            JSON warnings = JSON::array();
+            JSON graphMaximum = JSON::object();
+            graphMaximum.set("projectAlignmentSamples", JSON(0.0));
+            graphMaximum.set("monitoringLatencySamples", JSON(0.0));
+            graphMaximum.set("engineMaxProjectLatencySamples", JSON(0.0));
+
+            const auto complete = [&]() {
+                result.set("graphMaximum", graphMaximum);
+                result.set("nodes", nodes);
+                result.set("edges", edges);
+                result.set("uncompensatedPaths", uncompensatedPaths);
+                result.set("mismatches", mismatches);
+                result.set("warnings", warnings);
+                JSON response = makeOk();
+                response.set("result", result);
+                return finish(response);
+            };
+
+            if (!m_engine) {
+                result.set("status", JSON("unobserved"));
+                result.set("observed", JSON(false));
+                result.set("authority", JSON("audio_engine_pdc"));
+                result.set("compensationEnabled", JSON(false));
+                result.set("recalculationPending", JSON(false));
+                result.set("generation", JSON("0"));
+                return complete();
+            }
+
+            constexpr uint32_t kMasterSentinel = 0xFFFFFFFFu;
+            const auto nodeId = [kMasterSentinel](uint32_t channelId) {
+                return channelId == kMasterSentinel ? std::string("master")
+                                                    : std::string("mixer:") + std::to_string(channelId);
+            };
+            const auto topology = m_engine->getLastSolvedLatencyTopology();
+            const bool observed = topology.generation > 0;
+            const bool compensationEnabled = m_engine->isLatencyCompensationEnabled();
+            const bool recalculationPending = m_engine->isLatencyRecalculationPending();
+
+            result.set("observed", JSON(observed));
+            result.set("authority", JSON("audio_engine_pdc"));
+            result.set("compensationEnabled", JSON(compensationEnabled));
+            result.set("recalculationPending", JSON(recalculationPending));
+            result.set("generation", JSON(std::to_string(topology.generation)));
+            if (!observed) {
+                result.set("status", JSON("unobserved"));
+                return complete();
+            }
+
+            const auto addMismatch = [&](const char* issueCode, const std::string& message, JSON evidence) {
+                JSON issue = JSON::object();
+                issue.set("issueCode", JSON(issueCode));
+                issue.set("message", JSON(message));
+                issue.set("evidence", evidence);
+                mismatches.push(issue);
+            };
+
+            std::vector<MixerChannel*> channels;
+            if (m_trackManager)
+                channels = m_trackManager->getChannelsSnapshot();
+
+            std::unordered_map<uint32_t, size_t> currentTrackByChannelId;
+            currentTrackByChannelId.reserve(channels.size());
+            for (size_t i = 0; i < channels.size(); ++i) {
+                if (channels[i])
+                    currentTrackByChannelId[channels[i]->getChannelId()] = i;
+            }
+
+            std::unordered_map<uint32_t, size_t> topologyNodeByChannelId;
+            topologyNodeByChannelId.reserve(topology.nodes.size());
+            for (size_t i = 0; i < topology.nodes.size(); ++i) {
+                topologyNodeByChannelId[topology.nodes[i].channelId] = i;
+            }
+
+            if (!m_trackManager) {
+                JSON evidence = JSON::object();
+                evidence.set("generation", JSON(std::to_string(topology.generation)));
+                evidence.set("stableIdentityAvailable", JSON(false));
+                evidence.set("positionalIdentityAvailable", JSON(false));
+                addMismatch("pdc_project_model_unavailable",
+                            "the solved topology cannot be compared with the current project model", evidence);
+            }
+
+            for (const auto& solution : topology.nodes) {
+                const bool master = solution.channelId == kMasterSentinel;
+                const std::string stableNodeId = nodeId(solution.channelId);
+                bool mismatch = false;
+
+                JSON node = JSON::object();
+                node.set("nodeId", JSON(stableNodeId));
+                node.set("nodeType", JSON(master ? "master" : "mixer_channel"));
+                if (!master) {
+                    node.set("mixerChannelId", JSON(static_cast<double>(solution.channelId)));
+                }
+                node.set("stableIdentityAvailable", JSON(true));
+                node.set("intrinsicLatencySamples", JSON(static_cast<double>(solution.intrinsicLatency)));
+                node.set("downstreamLatencySamples", JSON(static_cast<double>(solution.downstreamLatency)));
+                node.set("totalPathLatencySamples", JSON(static_cast<double>(solution.totalPathLatency)));
+                node.set("outputCompensationSamples", JSON(static_cast<double>(solution.outputCompensationSamples)));
+
+                JSON applied = JSON::object();
+                applied.set("available", JSON(false));
+                if (!master) {
+                    const auto trackIt = currentTrackByChannelId.find(solution.channelId);
+                    if (trackIt == currentTrackByChannelId.end()) {
+                        JSON evidence = JSON::object();
+                        evidence.set("nodeId", JSON(stableNodeId));
+                        evidence.set("stableIdentityAvailable", JSON(true));
+                        evidence.set("positionalIdentityAvailable", JSON(false));
+                        addMismatch("pdc_node_missing_from_project",
+                                    "a solved PDC node is absent from the current project model", evidence);
+                        mismatch = true;
+                    } else {
+                        const size_t trackIndex = trackIt->second;
+                        const auto snapshot = m_engine->getTrackEdgeDelaySnapshot(trackIndex);
+                        const uint32_t currentIntrinsic = channels[trackIndex]->getEffectChain().getTotalLatency();
+                        applied.set("available", JSON(snapshot.valid));
+                        applied.set("currentIntrinsicLatencySamples", JSON(static_cast<double>(currentIntrinsic)));
+                        if (snapshot.valid) {
+                            applied.set("intrinsicLatencySamples",
+                                        JSON(static_cast<double>(snapshot.pluginLatencySamples)));
+                            applied.set("outputCompensationSamples",
+                                        JSON(static_cast<double>(snapshot.outputCompensationSamples)));
+                            applied.set("compensationEnabled", JSON(snapshot.compensationEnabled));
+                            if (snapshot.pluginLatencySamples != solution.intrinsicLatency ||
+                                snapshot.outputCompensationSamples != solution.outputCompensationSamples) {
+                                JSON evidence = JSON::object();
+                                evidence.set("nodeId", JSON(stableNodeId));
+                                evidence.set("stableIdentityAvailable", JSON(true));
+                                evidence.set("positionalIdentityAvailable", JSON(false));
+                                evidence.set("solvedIntrinsicLatencySamples",
+                                             JSON(static_cast<double>(solution.intrinsicLatency)));
+                                evidence.set("appliedIntrinsicLatencySamples",
+                                             JSON(static_cast<double>(snapshot.pluginLatencySamples)));
+                                evidence.set("solvedOutputCompensationSamples",
+                                             JSON(static_cast<double>(solution.outputCompensationSamples)));
+                                evidence.set("appliedOutputCompensationSamples",
+                                             JSON(static_cast<double>(snapshot.outputCompensationSamples)));
+                                addMismatch("pdc_node_application_mismatch",
+                                            "the RT-side node delay does not match the solved topology", evidence);
+                                mismatch = true;
+                            }
+                        }
+                        if (currentIntrinsic != solution.intrinsicLatency) {
+                            JSON evidence = JSON::object();
+                            evidence.set("nodeId", JSON(stableNodeId));
+                            evidence.set("stableIdentityAvailable", JSON(true));
+                            evidence.set("positionalIdentityAvailable", JSON(false));
+                            evidence.set("solvedIntrinsicLatencySamples",
+                                         JSON(static_cast<double>(solution.intrinsicLatency)));
+                            evidence.set("currentIntrinsicLatencySamples", JSON(static_cast<double>(currentIntrinsic)));
+                            addMismatch("pdc_node_intrinsic_latency_stale",
+                                        "the current plugin chain latency differs from the published solve", evidence);
+                            mismatch = true;
+                        }
+                    }
+                }
+                node.set("applied", applied);
+                node.set("mismatch", JSON(mismatch));
+                nodes.push(node);
+            }
+
+            struct CurrentEdge {
+                uint32_t srcNodeIdx{0};
+                uint32_t dstNodeIdx{0};
+                bool sidechain{false};
+                size_t trackIndex{0};
+                size_t sendIndex{0};
+                bool main{false};
+            };
+            std::vector<CurrentEdge> currentEdges;
+            for (size_t trackIndex = 0; trackIndex < channels.size(); ++trackIndex) {
+                const auto* channel = channels[trackIndex];
+                if (!channel)
+                    continue;
+                const auto src = topologyNodeByChannelId.find(channel->getChannelId());
+                if (src == topologyNodeByChannelId.end())
+                    continue;
+
+                const auto main = topologyNodeByChannelId.find(channel->getMainOutputId());
+                if (main != topologyNodeByChannelId.end() && main->second != src->second) {
+                    currentEdges.push_back({static_cast<uint32_t>(src->second), static_cast<uint32_t>(main->second),
+                                            false, trackIndex, 0, true});
+                }
+                const auto sends = channel->getSends();
+                for (size_t sendIndex = 0; sendIndex < sends.size(); ++sendIndex) {
+                    const auto& send = sends[sendIndex];
+                    if (send.mute)
+                        continue;
+                    const auto destination = topologyNodeByChannelId.find(send.targetChannelId);
+                    if (destination == topologyNodeByChannelId.end() || destination->second == src->second) {
+                        continue;
+                    }
+                    currentEdges.push_back({static_cast<uint32_t>(src->second),
+                                            static_cast<uint32_t>(destination->second), send.sidechainOnly, trackIndex,
+                                            sendIndex, false});
+                }
+            }
+
+            for (size_t i = 0; i < topology.edges.size(); ++i) {
+                const auto& solution = topology.edges[i];
+                const bool sourceValid = solution.srcNodeIdx < topology.nodes.size();
+                const bool destinationValid = solution.dstNodeIdx < topology.nodes.size();
+                const std::string sourceNodeId = sourceValid ? nodeId(topology.nodes[solution.srcNodeIdx].channelId)
+                                                             : "unknown:" + std::to_string(solution.srcNodeIdx);
+                const std::string destinationNodeId = destinationValid
+                                                          ? nodeId(topology.nodes[solution.dstNodeIdx].channelId)
+                                                          : "unknown:" + std::to_string(solution.dstNodeIdx);
+
+                const bool mappingMatches = i < currentEdges.size() &&
+                                            currentEdges[i].srcNodeIdx == solution.srcNodeIdx &&
+                                            currentEdges[i].dstNodeIdx == solution.dstNodeIdx &&
+                                            currentEdges[i].sidechain == solution.sidechain;
+                bool main = false;
+                size_t sendIndex = 0;
+                bool appliedAvailable = false;
+                uint32_t appliedCompensation = 0;
+                bool mismatch = !mappingMatches;
+
+                if (mappingMatches) {
+                    const auto& current = currentEdges[i];
+                    main = current.main;
+                    sendIndex = current.sendIndex;
+                    const auto snapshot = m_engine->getTrackEdgeDelaySnapshot(current.trackIndex);
+                    if (snapshot.valid && main) {
+                        appliedCompensation = snapshot.mainOutEdgeDelay.compensationSamples;
+                        appliedAvailable = true;
+                    } else if (snapshot.valid && sendIndex < snapshot.sendEdgeDelays.size()) {
+                        appliedCompensation = snapshot.sendEdgeDelays[sendIndex].compensationSamples;
+                        appliedAvailable = true;
+                    }
+                    mismatch = !appliedAvailable || appliedCompensation != solution.compensationSamples;
+                }
+
+                if (mismatch) {
+                    JSON evidence = JSON::object();
+                    evidence.set("edgeIndex", JSON(static_cast<double>(i)));
+                    evidence.set("sourceNodeId", JSON(sourceNodeId));
+                    evidence.set("destinationNodeId", JSON(destinationNodeId));
+                    evidence.set("stableEndpointIdentityAvailable", JSON(sourceValid && destinationValid));
+                    evidence.set("positionalIdentityAvailable", JSON(mappingMatches && !main));
+                    if (mappingMatches && !main) {
+                        evidence.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+                    }
+                    evidence.set("solvedCompensationSamples", JSON(static_cast<double>(solution.compensationSamples)));
+                    evidence.set("appliedCompensationAvailable", JSON(appliedAvailable));
+                    evidence.set("appliedCompensationSamples", JSON(static_cast<double>(appliedCompensation)));
+                    addMismatch(mappingMatches ? "pdc_edge_application_mismatch" : "pdc_edge_mapping_mismatch",
+                                mappingMatches ? "the RT-side edge delay does not match the solved topology"
+                                               : "the solved edge cannot be mapped to the current routing model",
+                                evidence);
+                }
+
+                JSON edge = JSON::object();
+                edge.set("edgeIndex", JSON(static_cast<double>(i)));
+                edge.set("sourceNodeId", JSON(sourceNodeId));
+                edge.set("destinationNodeId", JSON(destinationNodeId));
+                edge.set("stableEndpointIdentityAvailable", JSON(sourceValid && destinationValid));
+                const char* routeType = solution.sidechain ? "sidechain_send"
+                                        : !mappingMatches  ? "unresolved"
+                                        : main             ? "main"
+                                                           : "send";
+                edge.set("routeType", JSON(routeType));
+                edge.set("sidechainOnly", JSON(solution.sidechain));
+                edge.set("solverCompensationSamples", JSON(static_cast<double>(solution.compensationSamples)));
+                edge.set("appliedCompensationAvailable", JSON(appliedAvailable));
+                edge.set("appliedCompensationSamples", JSON(static_cast<double>(appliedCompensation)));
+                edge.set("positionalIdentityAvailable", JSON(mappingMatches && !main));
+                if (mappingMatches && !main) {
+                    edge.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+                }
+                edge.set("mismatch", JSON(mismatch));
+                edges.push(edge);
+
+                if (solution.sidechain) {
+                    JSON evidence = JSON::object();
+                    evidence.set("sourceNodeId", JSON(sourceNodeId));
+                    evidence.set("destinationNodeId", JSON(destinationNodeId));
+                    evidence.set("stableEndpointIdentityAvailable", JSON(sourceValid && destinationValid));
+                    evidence.set("positionalIdentityAvailable", JSON(mappingMatches && !main));
+                    if (mappingMatches && !main) {
+                        evidence.set("sendIndex", JSON(static_cast<double>(sendIndex)));
+                    }
+                    JSON issue = JSON::object();
+                    issue.set("issueCode", JSON("sidechain_latency_compensation_unavailable"));
+                    issue.set("message", JSON("sidechain paths are excluded from the current PDC solve"));
+                    issue.set("evidence", evidence);
+                    uncompensatedPaths.push(issue);
+                }
+            }
+
+            if (currentEdges.size() != topology.edges.size()) {
+                JSON evidence = JSON::object();
+                evidence.set("solvedEdgeCount", JSON(static_cast<double>(topology.edges.size())));
+                evidence.set("currentMappableEdgeCount", JSON(static_cast<double>(currentEdges.size())));
+                evidence.set("stableIdentityAvailable", JSON(false));
+                evidence.set("positionalIdentityAvailable", JSON(false));
+                addMismatch("pdc_edge_count_mismatch",
+                            "the current routing model and published solve have different edge counts", evidence);
+            }
+            if (m_engine->getMaxProjectLatency() != topology.projectAlignmentLatency) {
+                JSON evidence = JSON::object();
+                evidence.set("solvedProjectAlignmentSamples",
+                             JSON(static_cast<double>(topology.projectAlignmentLatency)));
+                evidence.set("engineMaxProjectLatencySamples",
+                             JSON(static_cast<double>(m_engine->getMaxProjectLatency())));
+                evidence.set("stableIdentityAvailable", JSON(false));
+                evidence.set("positionalIdentityAvailable", JSON(false));
+                addMismatch("pdc_graph_maximum_mismatch", "the engine maximum does not match the published topology",
+                            evidence);
+            }
+            if (recalculationPending) {
+                JSON evidence = JSON::object();
+                evidence.set("generation", JSON(std::to_string(topology.generation)));
+                evidence.set("stableIdentityAvailable", JSON(false));
+                evidence.set("positionalIdentityAvailable", JSON(false));
+                addMismatch("pdc_recalculation_pending", "the published topology is pending recalculation", evidence);
+            }
+
+            for (const auto& message : topology.warnings) {
+                const char* issueCode = "pdc_solver_warning";
+                if (message.find("routing cycle") != std::string::npos) {
+                    issueCode = "pdc_routing_cycle";
+                } else if (message.find("out-of-range") != std::string::npos) {
+                    issueCode = "pdc_invalid_edge_indices";
+                }
+                JSON warning = JSON::object();
+                warning.set("issueCode", JSON(issueCode));
+                warning.set("message", JSON(message));
+                warning.set("stableIdentityAvailable", JSON(false));
+                warning.set("positionalIdentityAvailable", JSON(false));
+                warnings.push(warning);
+            }
+
+            graphMaximum.set("projectAlignmentSamples", JSON(static_cast<double>(topology.projectAlignmentLatency)));
+            graphMaximum.set("monitoringLatencySamples", JSON(static_cast<double>(topology.monitoringLatency)));
+            graphMaximum.set("engineMaxProjectLatencySamples",
+                             JSON(static_cast<double>(m_engine->getMaxProjectLatency())));
+            const bool degraded = mismatches.size() > 0 || uncompensatedPaths.size() > 0 || warnings.size() > 0;
+            result.set("status", JSON(!compensationEnabled ? "disabled" : degraded ? "degraded" : "clean"));
+            return complete();
         }
 
         if (verb == "get_meters") {

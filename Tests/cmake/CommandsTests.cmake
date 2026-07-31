@@ -184,6 +184,16 @@ target_include_directories(RoutingGraphTest PRIVATE
 add_test(NAME RoutingGraphTest COMMAND RoutingGraphTest)
 set_tests_properties(RoutingGraphTest PROPERTIES LABELS "commands;muse;routing")
 
+add_executable(LatencyReportTest Commands/LatencyReportTest.cpp)
+target_link_libraries(LatencyReportTest PRIVATE AestraAudioCore)
+target_include_directories(LatencyReportTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Headless
+)
+add_test(NAME LatencyReportTest COMMAND LatencyReportTest)
+set_tests_properties(LatencyReportTest PROPERTIES LABELS "commands;muse;latency;pdc")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.
