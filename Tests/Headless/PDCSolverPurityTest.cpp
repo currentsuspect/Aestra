@@ -285,9 +285,12 @@ void testSolverCycleDetection() {
 
     const auto t = solveLatency(g);
     EXPECT_TRUE(!t.warnings.empty());
+    // Assert on the classification, not the prose. Matching message text was
+    // exactly the coupling that let a reword silently change a warning's
+    // meaning for downstream consumers.
     bool sawCycleWarning = false;
     for (const auto& w : t.warnings) {
-        if (w.find("cycle") != std::string::npos) {
+        if (w.code == SolverWarningCode::RoutingCycle) {
             sawCycleWarning = true;
             break;
         }
@@ -306,6 +309,14 @@ void testSolverOutOfRangeEdge() {
     g.edges.push_back({0, 42, false}); // dst out of range
     const auto t = solveLatency(g);
     EXPECT_TRUE(!t.warnings.empty());
+    bool sawInvalidEdgeWarning = false;
+    for (const auto& w : t.warnings) {
+        if (w.code == SolverWarningCode::InvalidEdgeIndices) {
+            sawInvalidEdgeWarning = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(sawInvalidEdgeWarning);
     EXPECT_EQ(t.edges.size(), 1u);
     EXPECT_EQ(t.edges[0].compensationSamples, 0u);
 }
