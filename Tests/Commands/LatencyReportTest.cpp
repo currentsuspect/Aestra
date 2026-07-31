@@ -218,6 +218,18 @@ void testDisabledCompensationStatus() {
           "disabled global compensation has an explicit report status");
     check(fx.engine.getLastSolvedLatencyTopology().generation == generationBefore,
           "disabled query does not publish a replacement topology");
+
+    // The per-node applied state must not contradict the top-level toggle.
+    // TrackRTState carries a vestigial per-track `compensationEnabled` that is
+    // pinned true because nothing writes it; forwarding it made every node
+    // claim compensation was on while the engine-wide toggle was off.
+    JSON* node = findByString(report["nodes"], "nodeId", "mixer:123");
+    check(node != nullptr, "disabled report still identifies the mixer node");
+    if (node) {
+        check((*node)["applied"]["available"].asBool() &&
+                  (*node)["applied"]["compensationEnabled"].asBool() == report["compensationEnabled"].asBool(),
+              "per-node applied compensation flag agrees with the engine-wide toggle");
+    }
 }
 
 void testSchemaAndArgumentRejection() {

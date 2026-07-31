@@ -3982,7 +3982,13 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     snap.valid = true;
     snap.pluginLatencySamples = state.pluginLatencySamples;
     snap.outputCompensationSamples = state.compensationDelaySamples;
-    snap.compensationEnabled = state.compensationEnabled;
+    // Report the global toggle, not TrackRTState::compensationEnabled. That
+    // per-track field is declared "can be disabled per-track" but nothing ever
+    // writes it, so it is pinned at its `true` default; forwarding it would
+    // make this snapshot claim compensation is on for every track even while
+    // the engine-wide toggle is off. Until per-track enablement actually
+    // exists, the global flag is the only honest answer.
+    snap.compensationEnabled = m_latencyCompensationEnabled;
 
     // writePos is updated on m_trackState by the RT thread each block.
     // m_graphStates edge delays do not have double-buffered EdgeDelayState

@@ -289,6 +289,8 @@ public:
         };
         uint32_t pluginLatencySamples{0};
         uint32_t outputCompensationSamples{0};
+        /// Engine-wide latency compensation toggle. Per-track enablement is not
+        /// implemented, so this is the same value for every track index.
         bool compensationEnabled{false};
         EdgeSlotSnapshot mainOutEdgeDelay;
         std::vector<EdgeSlotSnapshot> sendEdgeDelays;
