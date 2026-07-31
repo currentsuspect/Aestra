@@ -273,7 +273,7 @@ public:
      * @brief PDC v2 (P4b.2): per-track per-edge compensation snapshot for tests
      *        and tooling. NOT RT-SAFE: read from main / control thread only.
      *
-     * Returns the compensation sample counts and buffer-capacity-mask values
+     * Returns the node latency/compensation values and per-edge delay state
      * that the off-RT apply pass wrote into TrackRTState for the given track
      * index. The buffer contents themselves are not exposed; only the values
      * the RT-side P4b.3 consumer will read.
@@ -287,11 +287,25 @@ public:
             /// applies this edge's delay (i.e., comp > 0 and buffer is ready).
             uint32_t writePos{0};
         };
+        uint32_t pluginLatencySamples{0};
+        uint32_t outputCompensationSamples{0};
+        /// Engine-wide latency compensation toggle. Per-track enablement is not
+        /// implemented, so this is the same value for every track index.
+        bool compensationEnabled{false};
         EdgeSlotSnapshot mainOutEdgeDelay;
         std::vector<EdgeSlotSnapshot> sendEdgeDelays;
         bool valid{false};
     };
     TrackEdgeDelaySnapshot getTrackEdgeDelaySnapshot(size_t trackIndex) const;
+
+    /**
+     * @brief Whether the published latency topology is pending recalculation.
+     *
+     * NOT RT-SAFE: read from the main / control thread only. Diagnostic
+     * tooling uses this to distinguish a current solution from a stale one;
+     * reading it never triggers recalculation.
+     */
+    bool isLatencyRecalculationPending() const { return m_latencyDirty; }
 
     /**
      * @brief Mark latency as dirty (needs recalculation)
