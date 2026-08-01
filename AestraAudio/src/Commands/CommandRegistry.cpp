@@ -302,10 +302,11 @@ void CommandRegistry::initialize() {
         return std::make_unique<CreateLaneCommand>(*pm, name);
     });
 
-    // Imports the file for real: decode, register the source, then let the
-    // command create the pattern and place the clip. This used to record the
-    // path as the clip's name and nothing else, producing a silent clip with
-    // no pattern — a promise of import that the object never kept.
+    // Imports the file for real. This used to record the path as the clip's
+    // name and nothing else, producing a silent clip with no pattern — a
+    // promise of import that the object never kept. The decode happens here so
+    // a bad file is refused precisely; everything that touches the project
+    // happens inside ImportAudioClipCommand.
     reg.registerCommand("add_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
         TrackManager* tm = ctx.trackManager;
         if (!tm) return nullptr;
@@ -352,18 +353,13 @@ void CommandRegistry::initialize() {
             durationBeats <= 0.0)
             return CommandRegistry::fail("audio file has no usable duration: " + filePath);
 
-        // Registered only once the decode succeeded, so a bad file leaves no
-        // half-built source behind. Path is the dedupe key, as in the UI: the
-        // file is referenced where it lies and never copied into the project.
+        // The factory stops here: it decodes and validates, but registers
+        // nothing. Every project mutation belongs to the command, so the whole
+        // import is one entry the history owns and batches/dry runs can trust.
         const std::string displayName = std::filesystem::path(filePath).stem().string();
-        const uint64_t sourceFrames = buffer->numFrames;
-        const ClipSourceID sourceId = tm->getSourceManager().createRecordedSource(filePath, displayName, buffer);
-        if (!sourceId.isValid())
-            return CommandRegistry::fail("could not register the decoded audio source for: " + filePath);
-
         const double startBeat = (*barOpt - 1) * 4.0;
-        return std::make_unique<ImportAudioClipCommand>(*tm, laneId, sourceId, displayName, startBeat, durationSeconds,
-                                                        durationBeats, sourceFrames);
+        return std::make_unique<ImportAudioClipCommand>(*tm, laneId, filePath, displayName, std::move(buffer),
+                                                        startBeat, durationSeconds, durationBeats);
     });
 
     reg.registerCommand("delete_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

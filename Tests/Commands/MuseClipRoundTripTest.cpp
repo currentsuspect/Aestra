@@ -13,6 +13,8 @@
 // without decoding it, leaving a silent clip with no pattern.
 
 #include "Commands/CommandRegistry.h"
+#include "Commands/ImportAudioClipCommand.h"
+#include "IO/MiniAudioDecoder.h"
 #include "Commands/MuseService.h"
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
@@ -28,6 +30,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
 using Aestra::Audio::AudioEngine;
 using Aestra::Audio::CommandRegistry;
@@ -128,6 +131,68 @@ double halfEnergy(const Aestra::Audio::AudioBufferData& buffer, bool front) {
 
 } // namespace
 
+/**
+ * The failure the Muse verbs cannot reach: the decode succeeds, the source is
+ * registered, and then placement fails. Driven at the command level because
+ * add_clip validates the lane before building, so the verb can never get here.
+ */
+void testPlacementFailureLeavesNoOrphanSource(TrackManager& tm, const std::string& wavPath) {
+    const size_t sourcesBefore = tm.getSourceManager().getAllSourceIDs().size();
+    const size_t patternsBefore = tm.getPatternManager().getAllPatterns().size();
+
+    std::vector<float> decoded;
+    uint32_t sampleRate = 0;
+    uint32_t numChannels = 0;
+    if (!Aestra::Audio::decodeAudioFile(wavPath, decoded, sampleRate, numChannels)) {
+        check(false, "test fixture decodes");
+        return;
+    }
+    auto buffer = std::make_shared<Aestra::Audio::AudioBufferData>();
+    buffer->interleavedData = std::move(decoded);
+    buffer->sampleRate = sampleRate;
+    buffer->numChannels = numChannels;
+    buffer->numFrames = buffer->interleavedData.size() / numChannels;
+
+    // A lane id that belongs to no lane: addClip cannot place the clip.
+    Aestra::Audio::PlaylistLaneID nowhere = Aestra::Audio::PlaylistLaneID::generate();
+
+    Aestra::Audio::ImportAudioClipCommand command(tm, nowhere, wavPath, "orphan-probe", buffer, 0.0, 0.5, 1.0);
+    command.execute();
+
+    check(!command.isUndoable(), "an import that cannot place its clip reports failure");
+    check(tm.getSourceManager().getAllSourceIDs().size() == sourcesBefore,
+          "a failed placement withdraws the source it registered");
+    check(tm.getPatternManager().getAllPatterns().size() == patternsBefore,
+          "a failed placement leaves no orphan pattern");
+}
+
+/**
+ * A source the project already had must survive a failed import: this command
+ * did not introduce it, so it is not this command's to withdraw.
+ */
+void testPreexistingSourceSurvivesFailure(TrackManager& tm, const std::string& wavPath) {
+    // Put the file in the project first, the way a previous import would have.
+    auto seed = std::make_shared<Aestra::Audio::AudioBufferData>();
+    seed->sampleRate = 48000;
+    seed->numChannels = 2;
+    seed->numFrames = 128;
+    seed->interleavedData.assign(128 * 2, 0.25f);
+    const auto seeded = tm.getSourceManager().createRecordedSource(wavPath, "already-here", seed);
+    check(seeded.isValid(), "the fixture source registers");
+
+    const size_t sourcesBefore = tm.getSourceManager().getAllSourceIDs().size();
+
+    auto buffer = std::make_shared<Aestra::Audio::AudioBufferData>(*seed);
+    Aestra::Audio::PlaylistLaneID nowhere = Aestra::Audio::PlaylistLaneID::generate();
+    Aestra::Audio::ImportAudioClipCommand command(tm, nowhere, wavPath, "orphan-probe", buffer, 0.0, 0.5, 1.0);
+    command.execute();
+
+    check(!command.isUndoable(), "the import still fails");
+    check(tm.getSourceManager().getAllSourceIDs().size() == sourcesBefore,
+          "a source the project already had is not withdrawn");
+    check(tm.getSourceManager().getSource(seeded) != nullptr, "the pre-existing source is still addressable");
+}
+
 int main() {
     if (!Aestra::Audio::PluginManager::getInstance().initialize()) {
         std::cout << "FAIL: plugin manager initialize\n";
@@ -178,6 +243,34 @@ int main() {
         const bool noClip = !clips.has("result") || !clips["result"].has("lanes") ||
                             clips["result"]["lanes"][0]["clips"].size() == 0;
         check(noClip, "a refused import leaves no clip behind");
+        // Nothing may reach the project before the command runs: the factory
+        // decodes and validates, it does not register.
+        check(trackManager->getSourceManager().getAllSourceIDs().empty(),
+              "a refused import registers no source either");
+        check(trackManager->getPatternManager().getAllPatterns().empty(),
+              "a refused import creates no pattern");
+    }
+
+    // --- an undecodable file is refused just as cleanly ---------------------
+    {
+        const std::string junkPath = (std::filesystem::temp_directory_path() / "muse_clip_junk.wav").string();
+        std::FILE* junk = std::fopen(junkPath.c_str(), "wb");
+        if (junk) {
+            const char garbage[] = "this is not audio";
+            std::fwrite(garbage, 1, sizeof(garbage), junk);
+            std::fclose(junk);
+        }
+        JSON args = JSON::object();
+        args.set("track", JSON(0.0));
+        args.set("file", JSON(junkPath));
+        args.set("bar", JSON(1.0));
+        JSON r = call(service, request("add_clip", args));
+        check(status(r) != "ok", "add_clip on an undecodable file refuses");
+        check(trackManager->getSourceManager().getAllSourceIDs().empty(),
+              "an undecodable file leaves no source behind");
+
+        std::error_code junkEc;
+        std::filesystem::remove(junkPath, junkEc);
     }
 
     std::string clipId;
@@ -271,6 +364,18 @@ int main() {
                 }
             }
         }
+    }
+
+    // --- atomicity beyond what the verbs can reach --------------------------
+    {
+        // A fresh project so the counts mean something.
+        auto probeManager = std::make_shared<TrackManager>();
+        probeManager->getUnitManager().setPatternManager(&probeManager->getPatternManager());
+        testPlacementFailureLeavesNoOrphanSource(*probeManager, wavPath);
+
+        auto seededManager = std::make_shared<TrackManager>();
+        seededManager->getUnitManager().setPatternManager(&seededManager->getPatternManager());
+        testPreexistingSourceSurvivesFailure(*seededManager, wavPath);
     }
 
     std::error_code ec;

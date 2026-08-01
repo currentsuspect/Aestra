@@ -19,22 +19,31 @@ class TrackManager;
  *
  * Mirrors what the drag-and-drop import does, and for the same reason: a clip
  * that names a file but carries no pattern is a silent, structurally invalid
- * object. The decode happens before the command is built, so an unreadable or
- * unsupported file is reported as a precise error and nothing is created.
+ * object.
+ *
+ * The command owns every project mutation. Its factory only decodes and
+ * validates, then hands the finished buffer here — so an unreadable or
+ * unsupported file is refused before anything is constructed, and nothing
+ * touches the project until execute() runs inside the history. Registering the
+ * source in the factory instead would mutate state no undo entry covers, which
+ * breaks down as soon as batches, previews or dry runs enter the picture.
  *
  * Path ownership follows the UI: the source references the file where it lies
  * (path is SourceManager's dedupe key) and is never copied into the project.
  *
- * execute() creates the audio pattern and places the clip; undo() removes the
- * clip and detaches the pattern, so redo reuses it rather than re-decoding.
+ * Rollback is asymmetric on purpose. If the first execute() fails partway, a
+ * source this command introduced is taken back out, because nothing else has
+ * seen it. A normal undo keeps both the source and the detached pattern, so
+ * redo is instant and never decodes twice.
  */
 class ImportAudioClipCommand final : public ICommand {
 public:
-    ImportAudioClipCommand(TrackManager& manager, PlaylistLaneID laneId, ClipSourceID sourceId, std::string displayName,
-                           double startBeat, double durationSeconds, double durationBeats, uint64_t sourceFrames)
-        : m_manager(manager), m_laneId(laneId), m_sourceId(sourceId), m_displayName(std::move(displayName)),
-          m_startBeat(startBeat), m_durationSeconds(durationSeconds), m_durationBeats(durationBeats),
-          m_sourceFrames(sourceFrames) {}
+    ImportAudioClipCommand(TrackManager& manager, PlaylistLaneID laneId, std::string filePath, std::string displayName,
+                           std::shared_ptr<AudioBufferData> buffer, double startBeat, double durationSeconds,
+                           double durationBeats)
+        : m_manager(manager), m_laneId(laneId), m_filePath(std::move(filePath)),
+          m_displayName(std::move(displayName)), m_buffer(std::move(buffer)), m_startBeat(startBeat),
+          m_durationSeconds(durationSeconds), m_durationBeats(durationBeats) {}
 
     void execute() override;
     void undo() override;
@@ -49,18 +58,24 @@ public:
     ClipInstanceID getClipId() const { return m_clipId; }
 
 private:
+    /** @brief Unwind a partial first execute(): no clip, no pattern, no new source. */
+    void rollbackFailedFirstExecute();
+
     TrackManager& m_manager;
     PlaylistLaneID m_laneId;
-    ClipSourceID m_sourceId;
+    std::string m_filePath;
     std::string m_displayName;
+    std::shared_ptr<AudioBufferData> m_buffer;
     double m_startBeat{0.0};
     double m_durationSeconds{0.0};
     double m_durationBeats{0.0};
-    uint64_t m_sourceFrames{0};
 
     ClipInstanceID m_clipId;
+    ClipSourceID m_sourceId;
     PatternID m_patternId;
     std::unique_ptr<PatternSource> m_detachedPattern;
+    /** True when this command is what put m_sourceId into the project. */
+    bool m_createdSource{false};
     bool m_executed{false};
 };
 
