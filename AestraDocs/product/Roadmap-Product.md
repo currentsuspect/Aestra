@@ -180,6 +180,8 @@ Technical work: freeze, bug fixes, performance optimization.
 - Plugin marketplace (third-party plugins)
 - Community sound pack submissions
 
+Collaboration v1 is asynchronous sharing through Takes and must satisfy [Collaboration-Entitlements.md](./Collaboration-Entitlements.md). Real-time co-editing, shared transport, remote recording, and live audio streaming are not v1 scope.
+
 ---
 
 ## Audio Quality Status (as of 2026-05-14)

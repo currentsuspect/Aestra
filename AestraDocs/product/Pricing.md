@@ -95,9 +95,11 @@ Aestra is free. Revenue comes from making users better, not from restricting acc
 
 Collaboration is a future Supporter benefit. A Supporter creates and owns the shared workspace; invited Core users can join and edit without subscribing. Each active Supporter includes 10 GB of shared-project storage. Storage is charged to the workspace owner rather than every collaborator, and additional storage is priced separately.
 
-If Supporter ends, shared workspaces become read-only with at least 30 days to download or export. Users receive notice before any later deletion under the storage policy then in force.
+If Supporter ends, only the cloud workspace becomes read-only. Local projects remain editable and exportable with Core. The cloud workspace provides at least 30 days to download, transfer ownership, or reactivate, with repeated warnings before deletion.
 
 This model still requires storage caps, lifecycle rules, abuse controls, and measured unit economics. Backblaze B2 is a leading storage candidate, but provider pricing does not make a perpetual customer promise sustainable. No Founder copy may imply lifetime storage.
+
+The enforceable workspace state machine, roles, quota accounting, history safeguards, and launch tests live in [Collaboration-Entitlements.md](./Collaboration-Entitlements.md).
 
 ---
 

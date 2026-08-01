@@ -114,6 +114,7 @@ Music educators and collaborative production teams, after the core desktop produ
 ## Revenue Model
 
 See [Pricing.md](./Pricing.md) for full pricing matrix.
+See [Collaboration-Entitlements.md](./Collaboration-Entitlements.md) for the collaboration product contract.
 
 Summary:
 - **Core** (Free): Complete DAW with no feature gates; can join and edit invited collaborative projects when collaboration ships
