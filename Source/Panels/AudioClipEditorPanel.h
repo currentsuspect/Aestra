@@ -82,6 +82,8 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_normalizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_resetButton;
     std::shared_ptr<AestraUI::NUIButton> m_makeUniqueButton;
+    std::shared_ptr<AestraUI::NUIButton> m_reverseButton;
+    std::shared_ptr<AestraUI::NUIButton> m_commitButton;
 
     void buildUI();
     bool resolveClip(ClipInstance*& clip, PatternSource*& pattern) const;

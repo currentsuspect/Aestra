@@ -418,6 +418,29 @@ public:
     void setRecordingProjectPath(const std::string& projectPath) { m_recordingProjectPath = projectPath; }
 
     /**
+     * @brief Directory for audio committed by destructive clip operations.
+     *
+     * Sits beside Recordings so a project folder stays self-describing: takes
+     * the user performed in one place, audio Aestra rendered for them in
+     * another. Falls back to the same user-documents root as recording when
+     * the project has never been saved.
+     */
+    std::string renderRootDirectory() const {
+        namespace fs = std::filesystem;
+        if (!m_recordingProjectPath.empty()) {
+            fs::path projectPath(m_recordingProjectPath);
+            if (projectPath.has_extension()) {
+                return (projectPath.parent_path() / "Renders").string();
+            }
+            return (projectPath / "Renders").string();
+        }
+        if (const char* home = std::getenv("HOME")) {
+            return (fs::path(home) / "Documents" / "Aestra" / "Renders").string();
+        }
+        return (fs::current_path() / "Renders").string();
+    }
+
+    /**
      * @brief Get output sample rate
      * @return Output sample rate in Hz.
      */
@@ -1468,7 +1491,6 @@ private:
         clip.durationSeconds = durationSeconds;
         clip.patternId = patternId;
         clip.sourceId = patternId.value;
-        clip.edits.gain = playbackGain;
         clip.edits.gainLinear = playbackGain;
 
         // Recording destination and Playlist placement are separate. Create a
