@@ -227,6 +227,7 @@ automatic protection there.
 | Trim/crop trailing edge | preserve | **reset to `true`** |
 | Slip / source-offset change | **reset to `true`** | **reset to `true`** |
 | Replace source | **reset to `true`** | **reset to `true`** |
+| Reverse (raw source reversal) | **swap with trailing** | **swap with leading** |
 | Playback-rate / stretch change | reset unless the operation re-renders equivalent edge envelopes | same |
 | Undo / redo | restore the exact prior values | restore the exact prior values |
 
@@ -241,12 +242,60 @@ edits wholesale and then clears `fadeInBeats` on the right piece while
 follows the same asymmetry.
 
 **Reverse** deserves an explicit decision rather than falling out of generic
-edit copying. `ReverseAudioClipCommand` produces a **newly rendered source** and
-bakes no edge fades — `applyFades` runs only in `CommitAudioClipEditsCommand`.
-The reversed result therefore has no baked edge behaviour, so both flags reset
-to `true`. Were reverse instead implemented as a source-mapping flip, the two
-flags would swap; the distinction is what the renderer actually baked, never
-what the previous clip happened to carry.
+edit copying, and the deciding question is *what the resulting source contains*
+— not what the command itself called.
+
+`ReverseAudioClipCommand` extracts the clip's existing source region and
+reverses those raw samples. It neither removes previously baked envelopes nor
+renders through the fade kernel. So for a consolidated input, whose source
+already carries baked ramps at both ends:
+
+```text
+source:    leading ramp baked ───── trailing ramp baked      policy: false / false
+reversed:  old trailing ramp  ───── old leading ramp
+```
+
+The baked behaviour still exists — it has changed sides. The flags therefore
+**swap**:
+
+```cpp
+result.autoFadeLeading  = original.autoFadeTrailing;
+result.autoFadeTrailing = original.autoFadeLeading;
+```
+
+Resetting both to `true` would lay fresh automatic ramps over the already-baked
+ones and recreate exactly the double attenuation this policy exists to prevent.
+
+"The reverse command calls no fade function" is insufficient reasoning, because
+the *input* source may already contain those fades.
+
+The test uses an **asymmetric** original, since a symmetric one cannot
+distinguish swapping from preserving:
+
+```cpp
+original.autoFadeLeading  = false;   original.autoFadeTrailing = true;
+// after reverse
+result.autoFadeLeading   == true;    result.autoFadeTrailing   == false;
+```
+
+That single case catches all three plausible mistakes: preserving both
+unchanged, resetting both to `true`, and resetting both to `false`.
+
+**User fades are a separate policy and are preserved.** `fadeInBeats` and
+`fadeOutBeats` are properties of the *placed clip's timeline edges*, not of
+source content: fade-in belongs to the leading timeline edge, fade-out to the
+trailing one, and reverse changes the content underneath those boundaries.
+Swapping them would treat user fades as source properties, contradicting the
+split precedent above. So:
+
+```text
+automatic baked-edge policy under raw reversal:  swap
+nondestructive user fades on timeline edges:     preserve
+```
+
+Only a different command — "reverse the exact currently audible render" — would
+bake the user fades, reverse the rendered result, and reset their metadata.
+That is not what `ReverseAudioClipCommand` does.
 
 ##### The split test
 
