@@ -23,7 +23,7 @@ Two statements govern everything below.
 
 ## 1. Public command and range semantics
 
-```
+```text
 consolidate_audio --lane <canonical-lane-id> --start <beat> --end <beat>
 ```
 
@@ -122,7 +122,7 @@ ramps, where the original had a `max()`.
 **Lengths differ with clip length.** A 64-sample contributor consolidated into a
 512-sample result:
 
-```
+```text
 original automatic fade = min(64, 128)  =  64
 result automatic fade   = min(512, 128) = 128
 ```
@@ -160,13 +160,59 @@ to `false` with zero user fades, because all original edge behaviour is already
 present in the rendered source.
 
 That state must be stored on the model clip, copied into `ClipRenderState`,
-consumed by the shared renderer, serialized and restored, defaulted to `true`
-for old projects, and covered by save/load and audible-equivalence tests. It is
-therefore **its own PR, landing before consolidation** — a zero-default-change
-edge-policy change, gated on: default policy 6/6 exact; each edge suppressible
-independently; user fades still working when automatic fades are suppressed;
-very short clips; serialization round-trip; and sabotage proving that a missing
-suppression causes outer-edge double attenuation.
+consumed by the shared renderer, serialized and restored, and preserved through
+every path that copies a clip. It is therefore **its own PR, landing before
+consolidation** — a zero-default-change edge-policy change.
+
+#### Persisted contract
+
+Serialized inside the clip's existing `edits` object, alongside `gain`, `pan`
+and the fade lengths:
+
+```json
+{
+  "autoFadeLeading":  true,
+  "autoFadeTrailing": true
+}
+```
+
+Both keys are **independently optional**. An absent key loads as `true` — the
+engine's automatic safety ramp is the default, and a project written before
+these fields existed must sound exactly as it did. A present key is honoured
+verbatim; there is no inference from one edge to the other, since a
+consolidated clip could in principle abut another consolidation on one side
+only.
+
+#### Suppression is not "never fade"
+
+`applyLeading = false` means *do not add the engine's automatic safety ramp*,
+not *this edge may never fade*. A user fade set on a suppressed edge must still
+produce exactly its own ramp — that is what the `max(automatic, user)`
+decomposition buys, and asserting it is what proves the decomposition is real
+rather than a re-spelling of the old single expression.
+
+#### Gates
+
+- default policy → 6/6 digests exact;
+- each edge suppressible **independently** (leading only, trailing only, both);
+- a 500-sample user fade still yields a 500-sample ramp with automatic
+  suppression active;
+- very short clips, where `clipLength < kClipEdgeFadeSamples`;
+- **serialization round-trip** with both values `false`, and with each `false`
+  independently;
+- **legacy fixture** — load a project predating the fields (the frozen
+  `v1_minimal` / `v1_rich` corpus) and prove both edges default to enabled.
+  Asserting that a *newly constructed* clip defaults to `true` only tests the
+  member initializer; the absent-key path in the deserializer is where old
+  projects actually go;
+- **clone preservation** — duplicating, splitting or otherwise copying a clip
+  with automatic fades disabled must preserve both flags. An aggregate
+  initialization or constructor that silently restores `true` would recreate
+  the same divergence through *editing* rather than reopening, which is harder
+  to trace because no save/load boundary invites suspicion. `DuplicateClipCommand`
+  and `SplitClipCommand` both build clips from existing ones;
+- sabotage proving that a missing suppression causes outer-edge double
+  attenuation.
 
 Inverse compensation — dividing the rendered mix by the result clip's future
 automatic envelope — would avoid serialized state, but it needs severe
@@ -271,7 +317,7 @@ audio graph does not belong here.
 
 ## 6. Muse schema
 
-```
+```cpp
 {"consolidate_audio", CommandCategory::Clip, {
     {"lane",  FlagType::Id,    true},
     {"start", FlagType::Float, true},
