@@ -2,6 +2,7 @@
 #include "AudioClipEditorPanel.h"
 
 #include "Commands/MakeAudioClipUniqueCommand.h"
+#include "Commands/RenderAudioClipCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
 #include "NUIButton.h"
@@ -68,10 +69,9 @@ std::string formatGainDb(float linear) {
 }
 
 bool editsEqual(const ClipEdits& a, const ClipEdits& b) {
-    return a.fadeInBeats == b.fadeInBeats && a.fadeOutBeats == b.fadeOutBeats && a.gain == b.gain &&
-           a.gainLinear == b.gainLinear && a.pitchSemitones == b.pitchSemitones &&
-           a.timeStretchRatio == b.timeStretchRatio && a.pan == b.pan && a.muted == b.muted &&
-           a.playbackRate == b.playbackRate && a.sourceStart == b.sourceStart;
+    return a.fadeInBeats == b.fadeInBeats && a.fadeOutBeats == b.fadeOutBeats && a.gainLinear == b.gainLinear &&
+           a.pan == b.pan && a.muted == b.muted && a.playbackRate == b.playbackRate &&
+           a.sourceStart == b.sourceStart;
 }
 
 } // namespace
@@ -158,10 +158,14 @@ void AudioClipEditorPanel::buildUI() {
     m_normalizeButton = std::make_shared<NUIButton>("Normalize");
     m_resetButton = std::make_shared<NUIButton>("Reset instance");
     m_makeUniqueButton = std::make_shared<NUIButton>("Make unique");
+    m_reverseButton = std::make_shared<NUIButton>("Reverse");
+    m_commitButton = std::make_shared<NUIButton>("Commit");
     styleButton(m_muteButton);
     styleButton(m_normalizeButton);
     styleButton(m_resetButton);
     styleButton(m_makeUniqueButton);
+    styleButton(m_reverseButton);
+    styleButton(m_commitButton);
 
     const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update) {
         slider->setOnDragStart([this]() { beginEditGesture(); });
@@ -180,7 +184,6 @@ void AudioClipEditorPanel::buildUI() {
         slider->setOnDragEnd([this]() { commitEditGesture(); });
     };
     wireSlider(m_gainSlider, [](ClipEdits& edits, double value) {
-        edits.gain = static_cast<float>(value);
         edits.gainLinear = static_cast<float>(value);
     });
     wireSlider(m_panSlider, [](ClipEdits& edits, double value) { edits.pan = static_cast<float>(value); });
@@ -206,7 +209,6 @@ void AudioClipEditorPanel::buildUI() {
             return;
         auto edits = m_workingEdits;
         const float normalizedGain = std::clamp(kNormalizeTargetLinear / m_sourcePeak, 0.0f, 2.0f);
-        edits.gain = normalizedGain;
         edits.gainLinear = normalizedGain;
         applyDiscreteEdit(edits);
     });
@@ -217,6 +219,28 @@ void AudioClipEditorPanel::buildUI() {
         m_trackManager->getCommandHistory().pushAndExecute(command);
         openClip(m_clipId);
     });
+    m_reverseButton->setOnClick([this]() {
+        if (!m_trackManager || !m_clipId.isValid())
+            return;
+        auto command = std::make_shared<ReverseAudioClipCommand>(*m_trackManager, m_clipId);
+        m_trackManager->getCommandHistory().pushAndExecute(command);
+        // The clip now points at a different source, so re-read it to refresh
+        // the waveform and the edit values.
+        openClip(m_clipId);
+    });
+    m_commitButton->setOnClick([this]() {
+        if (!m_trackManager || !m_clipId.isValid())
+            return;
+        // Nothing baked means nothing to commit: rendering here would write a
+        // dead file, mint a source and pattern, and add an undo step that
+        // changes nothing audible.
+        if (m_workingEdits.gainLinear == 1.0f && m_workingEdits.fadeInBeats == 0.0f &&
+            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.sourceStart == 0.0)
+            return;
+        auto command = std::make_shared<CommitAudioClipEditsCommand>(*m_trackManager, m_clipId);
+        m_trackManager->getCommandHistory().pushAndExecute(command);
+        openClip(m_clipId);
+    });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
         m_sourceNameLabel,   m_sourceMetaLabel,   m_routeLabel,        m_routeHintLabel,   m_routePicker,
@@ -224,7 +248,8 @@ void AudioClipEditorPanel::buildUI() {
         m_fadeInLabel,       m_fadeOutLabel,      m_speedLabel,        m_sourceStartLabel, m_gainValueLabel,
         m_panValueLabel,     m_fadeInValueLabel,  m_fadeOutValueLabel, m_speedValueLabel,  m_sourceStartValueLabel,
         m_gainSlider,        m_panSlider,         m_fadeInSlider,      m_fadeOutSlider,    m_speedSlider,
-        m_sourceStartSlider, m_muteButton,        m_normalizeButton,   m_resetButton,      m_makeUniqueButton};
+        m_sourceStartSlider, m_muteButton,        m_normalizeButton,   m_resetButton,      m_makeUniqueButton,
+        m_reverseButton,     m_commitButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
@@ -500,13 +525,22 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     m_waveformHintLabel->setBounds({bounds.x + pad, controlsTop - 23.0f, contentWidth - 4.0f, 14.0f});
 
     m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, contentWidth, 14.0f});
-    const float buttonWidth = 104.0f;
-    m_makeUniqueButton->setBounds(
-        {bounds.right() - pad - buttonWidth * 4.0f - 18.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
-    m_normalizeButton->setBounds(
-        {bounds.right() - pad - buttonWidth * 3.0f - 12.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
-    m_muteButton->setBounds({bounds.right() - pad - buttonWidth * 2.0f - 6.0f, controlsTop + 8.0f, buttonWidth, 24.0f});
-    m_resetButton->setBounds({bounds.right() - pad - buttonWidth, controlsTop + 8.0f, buttonWidth, 24.0f});
+    // Right-aligned strip, laid out right-to-left so the row stays anchored to
+    // the panel edge as buttons are added. Destructive operations (Reverse,
+    // Commit) sit left of the reversible ones so a misclick is less likely to
+    // land on the one that writes a file.
+    const float buttonGap = 6.0f;
+    const std::shared_ptr<NUIButton> buttonRow[] = {m_resetButton,  m_muteButton,    m_normalizeButton,
+                                                    m_commitButton, m_reverseButton, m_makeUniqueButton};
+    constexpr size_t buttonCount = sizeof(buttonRow) / sizeof(buttonRow[0]);
+    const float availableWidth = contentWidth - buttonGap * static_cast<float>(buttonCount - 1);
+    const float buttonWidth = std::clamp(availableWidth / static_cast<float>(buttonCount), 64.0f, 104.0f);
+
+    float buttonRight = bounds.right() - pad;
+    for (const auto& button : buttonRow) {
+        button->setBounds({buttonRight - buttonWidth, controlsTop + 8.0f, buttonWidth, 24.0f});
+        buttonRight -= buttonWidth + buttonGap;
+    }
 
     const float columnGap = 20.0f;
     const float columnWidth = (contentWidth - columnGap) * 0.5f;

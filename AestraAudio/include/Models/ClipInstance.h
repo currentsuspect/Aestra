@@ -60,10 +60,9 @@ struct PlaylistLaneID : public AestraUUID {
 struct ClipEdits {
     float fadeInBeats = 0.0f;
     float fadeOutBeats = 0.0f;
-    float gain = 1.0f;
-    float gainLinear = 1.0f; // Alternative name for gain
-    float pitchSemitones = 0.0f;
-    double timeStretchRatio = 1.0;
+    /** Clip level, linear. The only gain field: the render path, the editor
+     *  display and the serializer all read this one. */
+    float gainLinear = 1.0f;
     float pan = 0.0f;
     bool muted = false;
     float playbackRate = 1.0f;
@@ -76,10 +75,21 @@ struct ClipEdits {
      */
     static ClipEdits forNewAudioClip() {
         ClipEdits edits;
-        edits.gain = DEFAULT_AUDIO_CLIP_GAIN_LINEAR;
         edits.gainLinear = DEFAULT_AUDIO_CLIP_GAIN_LINEAR;
         return edits;
     }
+
+    /**
+     * Compares every field. Callers deciding whether an edit needs persisting
+     * must not hand-pick fields: a check that named only gain and the fades
+     * silently dropped any other baked change.
+     */
+    bool operator==(const ClipEdits& other) const {
+        return fadeInBeats == other.fadeInBeats && fadeOutBeats == other.fadeOutBeats &&
+               gainLinear == other.gainLinear && pan == other.pan && muted == other.muted &&
+               playbackRate == other.playbackRate && sourceStart == other.sourceStart;
+    }
+    bool operator!=(const ClipEdits& other) const { return !(*this == other); }
 };
 
 /**

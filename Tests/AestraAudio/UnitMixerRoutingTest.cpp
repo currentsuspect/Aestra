@@ -247,7 +247,6 @@ int main() {
     playlist.addClip(laneA, audioClip);
 
     ClipEdits edited = audioClip.edits;
-    edited.gain = 0.5f;
     edited.gainLinear = 0.5f;
     edited.pan = -0.25f;
     edited.fadeInBeats = 0.25f;
