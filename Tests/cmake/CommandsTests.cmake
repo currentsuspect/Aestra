@@ -311,4 +311,15 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseC
     set_tests_properties(MuseClipRoundTripTest PROPERTIES LABELS "commands;muse;clip;roundtrip")
 endif()
 
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClipRenderCharacterizationTest.cpp")
+    add_executable(ClipRenderCharacterizationTest AestraAudio/ClipRenderCharacterizationTest.cpp)
+    target_link_libraries(ClipRenderCharacterizationTest PRIVATE AestraAudioCore)
+    target_include_directories(ClipRenderCharacterizationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipRenderCharacterizationTest COMMAND ClipRenderCharacterizationTest)
+    set_tests_properties(ClipRenderCharacterizationTest PROPERTIES LABELS "audio;clip-render;characterization")
+endif()
+
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
