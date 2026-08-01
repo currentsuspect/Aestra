@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Core/AudioGraph.h"
+#include "Models/PlaylistRuntimeSnapshot.h"
 #include "DSP/Interpolators.h"
 
 #include <cstdint>
@@ -40,6 +41,20 @@ inline constexpr uint32_t kClipEdgeFadeSamples = 128;
 struct ClipRenderResult {
     bool usedSampleRateConversion{false};
 };
+
+/**
+ * @brief Build the render state for one clip from its runtime snapshot entry.
+ *
+ * The single conversion from model-domain ClipRuntimeInfo to the engine's
+ * ClipRenderState: source buffer and channel count, absolute sample bounds,
+ * and the slip offset rescaled from project rate to the source's own rate.
+ *
+ * Shared rather than duplicated for the same reason the kernel itself is:
+ * an offline caller that rebuilt this mapping would be a second
+ * interpretation of ClipEdits, which consolidate-audio-range.md §3.1 forbids.
+ * A pure function of its two arguments — no engine, no graph, no manager.
+ */
+[[nodiscard]] ClipRenderState makeClipRenderState(const ClipRuntimeInfo& clipInfo, double projectSampleRate);
 
 /**
  * @brief Mix one clip into @p destination for the block [blockStart, blockEnd).
