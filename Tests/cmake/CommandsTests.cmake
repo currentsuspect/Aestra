@@ -322,4 +322,15 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/Cl
     set_tests_properties(ClipRenderCharacterizationTest PROPERTIES LABELS "audio;clip-render;characterization")
 endif()
 
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClipSrcTelemetryTest.cpp")
+    add_executable(ClipSrcTelemetryTest AestraAudio/ClipSrcTelemetryTest.cpp)
+    target_link_libraries(ClipSrcTelemetryTest PRIVATE AestraAudioCore)
+    target_include_directories(ClipSrcTelemetryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipSrcTelemetryTest COMMAND ClipSrcTelemetryTest)
+    set_tests_properties(ClipSrcTelemetryTest PROPERTIES LABELS "audio;clip-render;telemetry")
+endif()
+
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
