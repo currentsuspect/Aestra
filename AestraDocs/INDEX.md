@@ -50,6 +50,7 @@ Behavioral/interaction specs for subsystems.
 - [Transport-Aware Preview Ducking](specs/transport-aware-preview-ducking.md)
 - [Unbounded Timeline](specs/UNBOUNDED_TIMELINE.md)
 - [Routing Implementation Checklist](specs/Routing-Implementation-Checklist.md)
+- [Consolidate Audio Range](specs/consolidate-audio-range.md)
 
 ## Audio quality
 - [Path to All-A](audio/Path-to-All-A.md) — audio-quality grade roadmap
