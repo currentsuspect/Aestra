@@ -1,7 +1,7 @@
 # Aestra Product Strategy
 
-**Status:** Internal — Public December 2026 with v1 Beta
-**Last Updated:** 2026-04-11
+**Status:** Internal — public-beta direction
+**Last Updated:** 2026-08-01
 **Owner:** Dylan
 
 ---
@@ -14,7 +14,7 @@
 
 ## What Aestra Is
 
-Aestra is a free, full-featured DAW with no feature gates. It uses design metaphors borrowed from gaming, design tools, and developer workflows to create a creative environment that *thinks differently* from any other DAW. Revenue comes from a supporter tier that provides premium plugins, predictive AI (Muse), and collectible identity (card system) — not from feature restrictions.
+Aestra is a free, full-featured DAW with no feature gates. It uses design metaphors borrowed from gaming, design tools, and developer workflows to create a creative environment that *thinks differently* from any other DAW. Revenue comes primarily from a Supporter offer that provides the Native Suite, local Muse, collaboration when ready, development updates, and a feedback channel — not from feature restrictions.
 
 ## What Aestra Is Not
 
@@ -107,7 +107,7 @@ Hip-hop and electronic music producers, ages 16-30, globally. Price-sensitive (s
 Professional producers looking for a secondary DAW for specific workflows (pattern-based writing, audition/reference). Linux users underserved by existing DAWs.
 
 ### Tertiary (Future)
-Music educators (Campus tier). Collaborative production teams (cloud Takes).
+Music educators and collaborative production teams, after the core desktop product and business model are proven.
 
 ---
 
@@ -116,10 +116,12 @@ Music educators (Campus tier). Collaborative production teams (cloud Takes).
 See [Pricing.md](./Pricing.md) for full pricing matrix.
 
 Summary:
-- **Core** (Free): Full DAW, basic plugins, grey card
-- **Supporter** ($5/mo): Premium plugins, Muse AI, cloud storage, sound packs, silver card
-- **Founder** ($129 one-time, limited): Lifetime Supporter + physical gold card + credits
-- **Campus** (Free, .edu): Supporter perks, blue card
+- **Core** (Free): Complete DAW with no feature gates; can join and edit invited collaborative projects when collaboration ships
+- **Supporter** ($5/mo or $50/yr): Native Suite catalogue while active, new releases when ready, local Muse when ready, development updates, feedback, and the ability to create shared workspaces with 10 GB included
+- **Founder** ($129 one-time, limited to 500): Fixed Founder Collection, numbered digital card, optional credits, 24 months of Supporter, then a permanent 25% Supporter discount
+- **Additional storage**: Separate usage-backed add-on only if storage, operations, support, and abuse economics are proven
+
+Founder is fully digital. It includes no physical goods, lifetime cloud storage, lifetime Supporter, direct support, voting rights, or blanket entitlement to future products.
 
 ---
 
@@ -131,7 +133,7 @@ Summary:
 - **v1 Beta (Dec 2026):** Free DAW. No monetization. Build user base.
 - **v1.0 (Q1 2027):** Card system + Supporter tier launch.
 - **v1.1 (Q2 2027):** Muse AI launch (Supporters only).
-- **v1.2+ (Q3 2027+):** Cloud Takes, collaboration, mobile/tablet.
+- **v1.2+ (Q3 2027+):** Research collaboration and mobile/tablet; collaboration ships as a Supporter benefit with 10 GB included only after its unit economics are proven.
 
 ---
 
@@ -139,10 +141,11 @@ Summary:
 
 | Risk | Likelihood | Mitigation |
 |------|-----------|-----------|
-| Free tier too good, no one pays | Medium | Muse AI and premium plugins must be genuinely valuable |
-| Muse AI predictions are bad | High (early) | Don't ship until quality bar is met; train on Aestra usage data |
-| Card system feels gimmicky | Low | Keep card aesthetics premium; never make Core card feel like punishment |
-| Plugin release cadence too slow | Medium | Plan quarterly plugin releases; community can submit plugins (future) |
+| Free tier too good, no one pays | Medium | The Native Suite and local Muse must be genuinely valuable without weakening Core |
+| Muse AI predictions are bad | High (early) | Don't ship until the quality bar is met; local models first, with any training-data program separately opt-in |
+| Founder identity feels gimmicky | Low | Keep the numbered digital card restrained, permanent, and opt-in when displayed publicly |
+| Plugin catalogue grows too slowly | Medium | Promise useful releases when ready, not an artificial monthly or quarterly cadence |
+| Collaboration gross margin collapses | Medium | Cap included storage at 10 GB, price extra storage separately, and measure operations, egress, abuse, and support before launch |
 | Competitors copy the free model | Low (long-term) | The moat is community + design language, not the price tag |
 
 ---
@@ -152,8 +155,8 @@ Summary:
 | Metric | Target (Year 1) |
 |--------|----------------|
 | Free users | 10K-50K |
-| Supporter conversion | 5-8% |
-| Supporter retention (monthly) | >80% |
+| Supporter conversion | Establish from observed launch cohorts |
+| Supporter retention | Track monthly and annual churn separately |
 | Founder sales | 200-500 |
 | NPS (Net Promoter Score) | >60 |
 

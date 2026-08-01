@@ -1,7 +1,7 @@
 # Muse AI — Predictive Creative Assistant
 
 **Status:** Internal — Post-Beta (v1.1 target, Q2 2027)
-**Last Updated:** 2026-04-11
+**Last Updated:** 2026-08-01
 **Owner:** Dylan
 
 ---
@@ -110,8 +110,8 @@ Muse is the second one. Always.
 - Frequency masking detection via FFT analysis
 - No deep learning required for initial launch
 
-**Phase 2 (v1.2+):** Lightweight ML models
-- Trained on anonymized Aestra usage data
+**Phase 2 (v1.2+):** Lightweight local models
+- Any training on Aestra usage data requires a separate, explicit opt-in program and privacy review
 - Per-user personalization (Muse learns YOUR style)
 - Runs locally (no cloud inference for predictions)
 - Small model size (<100MB) for fast inference
@@ -192,11 +192,10 @@ Over time, Muse learns to stop suggesting things the user always dismisses. This
 | Tier | Muse Access |
 |------|------------|
 | Core (Free) | None |
-| Supporter ($5/mo) | Full Muse AI |
-| Founder ($129) | Full Muse AI, lifetime |
-| Campus (Free) | Full Muse AI |
+| Supporter ($5/mo or $50/yr) | Local Muse while active, when ready |
+| Founder ($129) | Local Muse through the included 24 months of Supporter; renewable afterward at the permanent Founder discount |
 
-Muse is the primary justification for the Supporter subscription. It must be genuinely useful or the subscription has no value prop beyond plugins.
+Muse is local-first and must be genuinely useful before it ships. If Aestra later trains or serves a hosted model, that is a separate opt-in product and pricing decision; the local-Muse promise does not silently become a cloud entitlement.
 
 ---
 

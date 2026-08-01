@@ -1,7 +1,7 @@
 # Aestra Product Roadmap
 
 **Status:** Internal — Execution plan
-**Last Updated:** 2026-05-14
+**Last Updated:** 2026-08-01
 **Owner:** Dylan
 
 Cross-ref:
@@ -138,16 +138,16 @@ Technical work: freeze, bug fixes, performance optimization.
 ## Phase 6: v1.0 — Cards + Subscriptions (Q1 2027)
 
 ### What ships:
-- Card system (Core Grey, Campus Blue)
-- Supporter tier ($5/mo, $50/yr) with Silver card
-- Founder tier ($129 one-time, limited) with Gold card + physical card
+- Core remains complete and free; Supporter launches at $5/mo or $50/yr
+- Restrained digital identity for the capped Founder offer
+- Founder offer ($129 one-time, limited to 500) with a numbered digital card, fixed Founder Collection, 24 months of Supporter, and a permanent 25% Supporter discount thereafter
 - Premium plugins (AestraRumble + 1-2 new plugins)
 - Community features (Discord integration, roles)
 
 ### Launch strategy:
-- **Message:** "Beta is over. Aestra stays free. Your Gold card is waiting."
-- **Special:** Beta users get first access to Founder tier (2-week exclusive window)
-- **Target:** 200-500 Founders, 5-8% Supporter conversion
+- **Message:** "Aestra stays free. Back the work early."
+- **Special:** Founder sales open at public beta; the waitlist sends notice and does not reserve a numbered card
+- **Target:** Up to 500 Founders; establish Supporter conversion from observed cohorts rather than a launch assumption
 
 ---
 
@@ -160,7 +160,7 @@ Technical work: freeze, bug fixes, performance optimization.
 - Arrangement assist (pattern variation, transition suggestions)
 
 ### Prerequisites:
-- Minimum 3-6 months of Aestra usage data for training
+- Local-first implementation; any future training-data program is a separate, explicit opt-in decision
 - Prediction quality must meet "useful, not annoying" bar
 - Opt-in data collection from Supporters (with clear privacy policy)
 
@@ -174,10 +174,9 @@ Technical work: freeze, bug fixes, performance optimization.
 ## Phase 8: v1.2+ — Platform Expansion (Q3 2027+)
 
 ### What ships (prioritized by demand):
-- Cloud Takes (sync version control to cloud)
+- Supporter collaboration research: workspace owners receive 10 GB, invited Core users participate without subscribing, and only extra storage is separately priced
 - macOS support
-- Collaboration features (share Takes with other Aestra users)
-- Mobile/tablet beta (Founders first)
+- Mobile/tablet research after desktop quality and demand justify it
 - Plugin marketplace (third-party plugins)
 - Community sound pack submissions
 

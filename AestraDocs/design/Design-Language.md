@@ -1,7 +1,7 @@
 # Aestra Design Language — Borrowed Metaphors
 
 **Status:** Internal — Core design philosophy
-**Last Updated:** 2026-04-11
+**Last Updated:** 2026-08-01
 **Owner:** Dylan
 
 ---
@@ -205,17 +205,15 @@ track | reverb_send | reverb_return | master
 **Cards:**
 | Tier | Color | Rarity | Obtained By |
 |------|-------|--------|-------------|
-| Core | Grey | Common | Free — everyone gets one |
-| Campus | Blue | Academic | Free — .edu verification |
-| Supporter | Silver | Uncommon | $5/mo subscription |
-| Founder | Gold | Legendary | $129 one-time (limited window) |
+| Core | Neutral | Standard | Free — everyone belongs |
+| Supporter | Violet | Active | $5/mo or $50/yr subscription |
+| Founder | Gold | Numbered | $129 one-time, maximum 500 |
 
 **Properties:**
 - Visual card art with tier-specific styling
-- Unique ID number (especially Founders: #0042)
-- Seasonal variants for active Supporters
-- Level/frame upgrades through usage (not payment)
-- Physical card for Founders (metal, engraved)
+- Unique digital ID number for Founders, for example #0042
+- Fully digital; no physical card, production, or shipping promise
+- Founder display is optional and must not imply product access superiority
 
 **Display locations:**
 - App header (small card icon)
