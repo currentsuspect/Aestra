@@ -1,4 +1,6 @@
 #include "Commands/CommandParser.h"
+
+#include "AestraUUID.h"
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Commands/CommandRegistry.h"
@@ -275,6 +277,21 @@ bool CommandParser::convertAndValidateValue(
     switch (flag.type) {
     case FlagType::String:
         return true;
+
+    case FlagType::Id: {
+        // Exactly the form queries print, so a listed id round-trips verbatim.
+        AestraUUID parsed;
+        if (!AestraUUID::tryParse(rawValue, parsed)) {
+            outError = "flag --" + flag.name + " requires a 32-character hex id as returned by the list_* queries, got: " +
+                       rawValue;
+            return false;
+        }
+        if (parsed.low == 0 && parsed.high == 0) {
+            outError = "flag --" + flag.name + " is the null id, which addresses no object: " + rawValue;
+            return false;
+        }
+        return true;
+    }
 
     case FlagType::Int: {
         char* end = nullptr;

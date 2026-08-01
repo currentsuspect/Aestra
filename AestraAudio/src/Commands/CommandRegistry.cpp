@@ -16,6 +16,9 @@
 #include "Commands/QuantizePatternCommand.h"
 #include "Commands/SetStepsCommand.h"
 #include "Commands/TransposePatternCommand.h"
+#include "Commands/CreateLaneCommand.h"
+#include "Commands/ImportAudioClipCommand.h"
+#include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
@@ -106,6 +109,19 @@ std::optional<uint64_t> safeStoull(std::string_view s) {
     } catch (const std::exception&) {
         return std::nullopt;
     }
+}
+
+/**
+ * Parse the canonical 32-hex-char object id the list_* queries print.
+ *
+ * Both halves matter: the old code assigned only `low`, so two ids sharing a
+ * low word addressed the same object and no listed id could be used at all.
+ */
+std::optional<AestraUUID> parseObjectId(std::string_view s) {
+    AestraUUID parsed;
+    if (!AestraUUID::tryParse(std::string(s), parsed)) return std::nullopt;
+    if (parsed.low == 0 && parsed.high == 0) return std::nullopt;
+    return parsed;
 }
 
 // Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
@@ -277,9 +293,23 @@ void CommandRegistry::initialize() {
     });
 
     // ===== Clip (5) =====
-    reg.registerCommand("add_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+    reg.registerCommand("add_lane", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
         PlaylistModel* pm = ctx.trackManager ? &ctx.trackManager->getPlaylistModel() : nullptr;
         if (!pm) return nullptr;
+        std::string name;
+        auto nameIt = flags.find("name");
+        if (nameIt != flags.end()) name = nameIt->second;
+        return std::make_unique<CreateLaneCommand>(*pm, name);
+    });
+
+    // Imports the file for real: decode, register the source, then let the
+    // command create the pattern and place the clip. This used to record the
+    // path as the clip's name and nothing else, producing a silent clip with
+    // no pattern — a promise of import that the object never kept.
+    reg.registerCommand("add_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        PlaylistModel* pm = &tm->getPlaylistModel();
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -289,26 +319,51 @@ void CommandRegistry::initialize() {
         auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
         if (*trackOpt < 0) return nullptr;
+        auto fileIt = flags.find("file");
+        if (fileIt == flags.end()) return nullptr;
+        const std::string& filePath = fileIt->second;
 
         PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
         if (!laneId.isValid())
             return CommandRegistry::fail("track " + std::string(*trackRaw) + " has no playlist lane");
 
-        ClipInstance clip;
-        clip.startBeat = (*barOpt - 1) * 4.0;
-        clip.durationBeats = 4.0;
-        auto fileIt = flags.find("file");
-        if (fileIt == flags.end()) return nullptr;
-        clip.name = fileIt->second;
+        std::error_code ec;
+        if (!std::filesystem::exists(filePath, ec) || ec)
+            return CommandRegistry::fail("no such audio file: " + filePath);
 
-        auto srcIt = flags.find("source");
-        if (srcIt != flags.end()) {
-            auto srcOpt = safeStoull(srcIt->second);
-            if (!srcOpt) return nullptr;
-            clip.sourceId = *srcOpt;
-        }
+        // Same decoder the UI import uses; there is no Muse-specific importer.
+        std::vector<float> decoded;
+        uint32_t sampleRate = 0;
+        uint32_t numChannels = 0;
+        if (!decodeAudioFile(filePath, decoded, sampleRate, numChannels))
+            return CommandRegistry::fail("could not decode audio file (unsupported or corrupt): " + filePath);
+        if (decoded.empty() || sampleRate == 0 || numChannels == 0)
+            return CommandRegistry::fail("audio file decoded to nothing: " + filePath);
 
-        return std::make_unique<AddClipCommand>(*pm, laneId, clip);
+        auto buffer = std::make_shared<AudioBufferData>();
+        buffer->interleavedData = std::move(decoded);
+        buffer->sampleRate = sampleRate;
+        buffer->numChannels = numChannels;
+        buffer->numFrames = buffer->interleavedData.size() / numChannels;
+
+        const double durationSeconds = buffer->durationSeconds();
+        const double durationBeats = pm->secondsToBeats(durationSeconds);
+        if (!std::isfinite(durationSeconds) || durationSeconds <= 0.0 || !std::isfinite(durationBeats) ||
+            durationBeats <= 0.0)
+            return CommandRegistry::fail("audio file has no usable duration: " + filePath);
+
+        // Registered only once the decode succeeded, so a bad file leaves no
+        // half-built source behind. Path is the dedupe key, as in the UI: the
+        // file is referenced where it lies and never copied into the project.
+        const std::string displayName = std::filesystem::path(filePath).stem().string();
+        const uint64_t sourceFrames = buffer->numFrames;
+        const ClipSourceID sourceId = tm->getSourceManager().createRecordedSource(filePath, displayName, buffer);
+        if (!sourceId.isValid())
+            return CommandRegistry::fail("could not register the decoded audio source for: " + filePath);
+
+        const double startBeat = (*barOpt - 1) * 4.0;
+        return std::make_unique<ImportAudioClipCommand>(*tm, laneId, sourceId, displayName, startBeat, durationSeconds,
+                                                        durationBeats, sourceFrames);
     });
 
     reg.registerCommand("delete_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
@@ -316,11 +371,10 @@ void CommandRegistry::initialize() {
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
-        auto idOpt = safeStoull(*idRaw);
-        if (!idOpt) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
 
-        ClipInstanceID clipId;
-        clipId.low = *idOpt;
+        ClipInstanceID clipId(*idOpt);
         return std::make_unique<RemoveClipCommand>(*pm, clipId);
     });
 
@@ -329,8 +383,8 @@ void CommandRegistry::initialize() {
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
-        auto idOpt = safeStoull(*idRaw);
-        if (!idOpt) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
@@ -341,8 +395,7 @@ void CommandRegistry::initialize() {
         auto startOpt = safeStof(*startRaw);
         if (!startOpt) return nullptr;
 
-        ClipInstanceID clipId;
-        clipId.low = *idOpt;
+        ClipInstanceID clipId(*idOpt);
         PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
         return std::make_unique<MoveClipCommand>(*pm, clipId, *startOpt, laneId);
     });
@@ -352,15 +405,14 @@ void CommandRegistry::initialize() {
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
-        auto idOpt = safeStoull(*idRaw);
-        if (!idOpt) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
         auto barRaw = requireFlag(flags, "bar");
         if (!barRaw) return nullptr;
         auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
 
-        ClipInstanceID clipId;
-        clipId.low = *idOpt;
+        ClipInstanceID clipId(*idOpt);
         return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(*barOpt));
     });
 
@@ -369,8 +421,8 @@ void CommandRegistry::initialize() {
         if (!pm) return nullptr;
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
-        auto idOpt = safeStoull(*idRaw);
-        if (!idOpt) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
         auto startRaw = requireFlag(flags, "start");
         if (!startRaw) return nullptr;
         auto startOpt = safeStof(*startRaw);
@@ -380,8 +432,7 @@ void CommandRegistry::initialize() {
         auto endOpt = safeStof(*endRaw);
         if (!endOpt) return nullptr;
 
-        ClipInstanceID clipId;
-        clipId.low = *idOpt;
+        ClipInstanceID clipId(*idOpt);
         return std::make_unique<TrimClipCommand>(*pm, clipId, *startOpt, *endOpt);
     });
 

@@ -298,6 +298,15 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/Rende
     )
     add_test(NAME RenderAudioClipCommandTest COMMAND RenderAudioClipCommandTest)
     set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo")
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseClipRoundTripTest.cpp")
+    add_executable(MuseClipRoundTripTest Commands/MuseClipRoundTripTest.cpp)
+    target_link_libraries(MuseClipRoundTripTest PRIVATE AestraAudioCore)
+    target_include_directories(MuseClipRoundTripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuseClipRoundTripTest COMMAND MuseClipRoundTripTest)
+    set_tests_properties(MuseClipRoundTripTest PROPERTIES LABELS "commands;muse;clip;roundtrip")
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")

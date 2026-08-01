@@ -7,7 +7,13 @@
 namespace Aestra {
 namespace Audio {
 
-enum class FlagType { String, Int, Float, Bool };
+/**
+ * Id is the canonical 32-hex-char object identifier that queries emit
+ * (AestraUUID::toString). It exists so an id an agent reads back from
+ * list_clips can be passed to a verb unchanged — the one representation, in
+ * both directions. Int is for indexes and counts, never for object identity.
+ */
+enum class FlagType { String, Int, Float, Bool, Id };
 enum class CommandCategory { Transport, Track, Clip, Unit, Pattern };
 
 struct FlagSchema {
