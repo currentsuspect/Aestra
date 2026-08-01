@@ -83,27 +83,95 @@ boundaries between the original clips**, so the engine will no longer apply
 those fades. It will, however, apply them at the two boundaries of the new
 consolidated clip.
 
-The policy:
+The policy — **revised**, see the correction below:
 
-> **Bake every original automatic clip-edge fade, except an edge exactly
-> coincident with the corresponding outer consolidation boundary.**
+> **Bake every contributor's fades exactly as the runtime renders them. Mark the
+> resulting consolidated clip so its own automatic edge fades are not applied
+> again.**
 
-Why each half matters:
+Internal boundaries must be baked: after consolidation there is no boundary
+there, so nothing re-applies the fade, and not baking it changes the sound at
+every original seam. This includes a clip that starts after `startBeat` or ends
+before `endBeat` even when separated by silence — that is still an internal
+boundary.
 
-- **Internal boundaries must be baked.** After consolidation there is no
-  boundary there, so nothing re-applies the fade. Not baking it changes the
-  sound at every original seam. This includes a clip that starts after
-  `startBeat` or ends before `endBeat` even when separated by silence — that is
-  still an internal boundary.
-- **Outer boundaries must not be baked.** The new clip receives the engine's
-  automatic edge fade at `startBeat` and `endBeat`. Baking it as well applies
-  the ramp twice — the outer edge is attenuated by `r²` instead of `r`.
+Outer boundaries must also be baked, and the *result* clip must be told not to
+fade them again. That is durable state on the clip, not a render-time argument.
 
-Delegating the outer boundary is mathematically safe. Where several clips begin
-exactly at the range boundary, applying the same linear ramp `r` to each before
-summing gives `r·A + r·B`, which equals `r·(A + B)` — applying it once to the
-sum. So the new clip's own edge fade reproduces it exactly, and baking is not
-merely redundant but wrong.
+#### Why the earlier strategy was wrong
+
+An earlier revision said to bake every fade *except* one coincident with the
+outer boundary, and to let the new clip's own automatic fade reproduce it —
+justified by linearity: applying ramp `r` to each contributor before summing
+gives `r·A + r·B = r·(A + B)`.
+
+That argument only holds when the delegated ramp is **the same ramp**. It is
+not, for two independent reasons.
+
+**User and automatic fades collapse into one ramp.** The runtime computes a
+single effective length:
+
+```cpp
+effectiveLength = min(clipLength, max(kClipEdgeFadeSamples, userFadeLength));
+```
+
+With a 500-sample user fade the original output has one 500-sample ramp. Baking
+the user ramp while delegating the automatic one yields the *product* of two
+ramps, where the original had a `max()`.
+
+**Lengths differ with clip length.** A 64-sample contributor consolidated into a
+512-sample result:
+
+```
+original automatic fade = min(64, 128)  =  64
+result automatic fade   = min(512, 128) = 128
+```
+
+Suppressing the original and relying on the result's fade substitutes a
+different envelope entirely.
+
+#### What this requires
+
+An ephemeral renderer argument (`suppressLeading`/`suppressTrailing`) is not
+sufficient: it would make consolidation sound correct only while being created.
+After save and reload the playback engine would have no durable explanation for
+why the result clip must not add another automatic fade.
+
+The state belongs on the clip:
+
+```cpp
+struct AutomaticEdgeFadePolicy {
+    bool applyLeading{true};
+    bool applyTrailing{true};
+};
+```
+
+and the runtime becomes:
+
+```cpp
+const uint64_t automaticLeading =
+    clip.edgeFadePolicy.applyLeading ? std::min<uint64_t>(clipLength, kClipEdgeFadeSamples) : 0;
+const uint64_t userLeading = std::min<uint64_t>(clipLength, clip.fadeInSamples);
+const uint64_t fadeInLen = std::max(automaticLeading, userLeading);
+```
+
+Defaults keep every existing clip bit-identical. A consolidated result sets both
+to `false` with zero user fades, because all original edge behaviour is already
+present in the rendered source.
+
+That state must be stored on the model clip, copied into `ClipRenderState`,
+consumed by the shared renderer, serialized and restored, defaulted to `true`
+for old projects, and covered by save/load and audible-equivalence tests. It is
+therefore **its own PR, landing before consolidation** — a zero-default-change
+edge-policy change, gated on: default policy 6/6 exact; each edge suppressible
+independently; user fades still working when automatic fades are suppressed;
+very short clips; serialization round-trip; and sabotage proving that a missing
+suppression causes outer-edge double attenuation.
+
+Inverse compensation — dividing the rendered mix by the result clip's future
+automatic envelope — would avoid serialized state, but it needs severe
+pre-emphasis for short boundary clips and can exceed the representable range of
+the stored format. Rejected as operationally fragile.
 
 ### 3.3 Why boundary alignment is required in v1
 
