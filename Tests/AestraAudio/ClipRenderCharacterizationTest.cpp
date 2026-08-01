@@ -185,8 +185,14 @@ bool compareAgainstBaseline(const std::string& baselineDir, const std::string& n
     namespace fs = std::filesystem;
     const std::string path = (fs::path(baselineDir) / (name + ".wav")).string();
     std::error_code ec;
-    if (!fs::exists(path, ec)) {
-        return true; // nothing recorded yet; the caller writes it
+    if (!fs::exists(path, ec) || ec) {
+        // Never "matched" — a baseline that is absent or unreadable is a
+        // failure, not a pass. This returned true when recording and verifying
+        // shared one mode and a missing file meant "record it"; leaving that
+        // behind would be a second way for verification to succeed against an
+        // oracle that does not exist.
+        std::printf("  %s: baseline is missing or unreadable at %s\n", name.c_str(), path.c_str());
+        return false;
     }
 
     std::vector<float> expected;
