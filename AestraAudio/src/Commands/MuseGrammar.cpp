@@ -59,35 +59,48 @@ static const std::vector<CommandSchema> s_schemas = {
     },
      "Set track pan (-1 left .. 1 right)."},
 
-    // === Clip (5) ===
+    // === Clip (8) ===
+    // Every "id" here is FlagType::Id: the same 32-hex-char string list_clips
+    // prints. These used to be Int, which no listed id could satisfy.
+    {"add_lane", CommandCategory::Clip, {
+        {"name", FlagType::String, false}
+    },
+     "Create a playlist lane. Clips live on lanes, so a blank project needs one before add_clip."},
     {"add_clip", CommandCategory::Clip, {
         {"track", FlagType::Int, true},
         {"file", FlagType::String, true},
-        {"bar", FlagType::Int, true}
+        {"bar", FlagType::Int, true, 1.0}
     },
-     "Add a file-based clip on a track at a bar position."},
+     "Import an audio file and place it as a playable clip on a lane at a bar position. Decodes the file, registers it as a source and creates its audio pattern; on any failure nothing is added."},
     {"delete_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true}
+        {"id", FlagType::Id, true}
     },
      "Delete a clip by id."},
     {"move_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
+        {"id", FlagType::Id, true},
         {"track", FlagType::Int, true},
         {"start", FlagType::Float, true}
     },
      "Move a clip to a track and start beat."},
     {"duplicate_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
-        {"bar", FlagType::Int, true}
+        {"id", FlagType::Id, true},
+        {"bar", FlagType::Int, true, 1.0}
     },
      "Duplicate a clip to a bar position."},
     {"trim_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
+        {"id", FlagType::Id, true},
         {"start", FlagType::Float, true},
         {"end", FlagType::Float, true}
     },
      "Trim a clip to a start/end beat range."},
-
+    {"reverse_clip", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Replace an audio clip's source with a reversed render of itself. Writes a new file; undo restores the original."},
+    {"commit_clip_edits", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Bake an audio clip's own gain and fades into a new source file and reset those edits to unity. Clip-local only: this does not render the track's plugins, automation, sends or routing."},
     // === Unit (2) ===
     // "type" accepts: sampler (default), 808. The schema format cannot
     // express enums yet; the factory rejects anything else.
@@ -248,6 +261,7 @@ std::string schemaToJsonString() {
             case FlagType::Int: typeStr = "int"; break;
             case FlagType::Float: typeStr = "float"; break;
             case FlagType::Bool: typeStr = "bool"; break;
+            case FlagType::Id: typeStr = "id"; break;
             }
             out << "      {\n";
             out << "        \"name\": \"" << flag.name << "\",\n";
