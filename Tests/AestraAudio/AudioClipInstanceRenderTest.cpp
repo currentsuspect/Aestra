@@ -83,7 +83,6 @@ int main() {
             "New audio clip did not start with the headroom-preserving gain");
 
     ClipEdits edits = clip->edits;
-    edits.gain = 0.5f;
     edits.gainLinear = 0.5f;
     edits.pan = -1.0f;
     edits.fadeInBeats = 0.5f;
@@ -108,7 +107,6 @@ int main() {
     for (uint32_t frame = 0; frame < kTotalFrames; ++frame) {
         sourceBuffer->interleavedData[frame] = static_cast<float>(frame) / static_cast<float>(kTotalFrames);
     }
-    edits.gain = 1.0f;
     edits.gainLinear = 1.0f;
     edits.pan = 0.0f;
     edits.fadeInBeats = 0.0f;

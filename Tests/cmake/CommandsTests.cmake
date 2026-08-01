@@ -278,4 +278,26 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
     set_tests_properties(RumbleUnauthorizedOutputSafetyTest PROPERTIES LABELS "plugins;rumble;license;safety")
 endif()
 
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/ClipRenderServiceTest.cpp")
+    add_executable(ClipRenderServiceTest Commands/ClipRenderServiceTest.cpp)
+    target_link_libraries(ClipRenderServiceTest PRIVATE AestraAudioCore)
+    target_include_directories(ClipRenderServiceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipRenderServiceTest COMMAND ClipRenderServiceTest)
+    set_tests_properties(ClipRenderServiceTest PROPERTIES LABELS "commands;audio;clip-render")
+endif()
+
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RenderAudioClipCommandTest.cpp")
+    add_executable(RenderAudioClipCommandTest Commands/RenderAudioClipCommandTest.cpp)
+    target_link_libraries(RenderAudioClipCommandTest PRIVATE AestraAudioCore)
+    target_include_directories(RenderAudioClipCommandTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RenderAudioClipCommandTest COMMAND RenderAudioClipCommandTest)
+    set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo")
+endif()
+
 message(STATUS "Commands tests added - Phase 2 undo/redo system")

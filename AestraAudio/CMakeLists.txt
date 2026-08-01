@@ -203,6 +203,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
+    src/Models/ClipRenderService.cpp
     src/Models/AudioClip.cpp
 
     # DSP
@@ -237,6 +238,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandHistory.cpp
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
+    src/Commands/RenderAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/CreateLaneCommand.cpp
     src/Commands/AddNoteCommand.cpp
