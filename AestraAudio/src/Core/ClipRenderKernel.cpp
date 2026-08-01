@@ -150,8 +150,9 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                         sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
                                                            (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
                                                            (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
-                        dst[i * 2] += sample * clipGainL * fade;
-                        dst[i * 2 + 1] += sample * clipGainR * fade;
+                        const double s = MixMath::sanitizeMix(static_cast<double>(sample));
+                        dst[i * 2] += s * clipGainL * fade;
+                        dst[i * 2 + 1] += s * clipGainR * fade;
                         phase += ratio;
                     }
                     return result;
@@ -165,8 +166,9 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                         const double fade = clipFadeAt(projectSample);
                         double val =
                             Interpolators::sincInterpolateMono(data, totalFrames, phase, quality);
-                        dst[i * 2] += val * clipGainL * fade;
-                        dst[i * 2 + 1] += val * clipGainR * fade;
+                        const double v = MixMath::sanitizeMix(static_cast<double>(val));
+                        dst[i * 2] += v * clipGainL * fade;
+                        dst[i * 2 + 1] += v * clipGainR * fade;
                         phase += ratio;
                     }
                     return result;
@@ -180,8 +182,9 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                         float s0 = data[idx];
                         float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
                         double val = s0 + frac * (s1 - s0);
-                        dst[i * 2] += val * clipGainL * fade;
-                        dst[i * 2 + 1] += val * clipGainR * fade;
+                        const double v = MixMath::sanitizeMix(static_cast<double>(val));
+                        dst[i * 2] += v * clipGainL * fade;
+                        dst[i * 2 + 1] += v * clipGainR * fade;
                         phase += ratio;
                     }
                     return result;
@@ -204,8 +207,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
                     const uint64_t projectSample = start + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
-                    dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
+                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
@@ -215,8 +218,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
                     const uint64_t projectSample = start + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
-                    dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
+                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
@@ -226,8 +229,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
                     const uint64_t projectSample = start + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
-                    dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
+                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
@@ -237,8 +240,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
                     const uint64_t projectSample = start + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
-                    dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
+                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
@@ -248,8 +251,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
                     const uint64_t projectSample = start + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += static_cast<double>(outL) * clipGainL * fade;
-                    dst[i * 2 + 1] += static_cast<double>(outR) * clipGainR * fade;
+                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
