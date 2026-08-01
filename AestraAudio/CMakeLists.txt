@@ -179,6 +179,7 @@ endif()
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
+    src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
     src/Core/ArsenalProcessingContext.cpp
