@@ -205,14 +205,72 @@ rather than a re-spelling of the old single expression.
   Asserting that a *newly constructed* clip defaults to `true` only tests the
   member initializer; the absent-key path in the deserializer is where old
   projects actually go;
-- **clone preservation** — duplicating, splitting or otherwise copying a clip
-  with automatic fades disabled must preserve both flags. An aggregate
-  initialization or constructor that silently restores `true` would recreate
-  the same divergence through *editing* rather than reopening, which is harder
-  to trace because no save/load boundary invites suspicion. `DuplicateClipCommand`
-  and `SplitClipCommand` both build clips from existing ones;
+- **boundary-policy propagation** — see the table below. This is *not* simple
+  preservation: an operation that creates, moves or remaps an edge must restore
+  automatic protection at that edge;
 - sabotage proving that a missing suppression causes outer-edge double
   attenuation.
+
+#### Boundary-policy propagation
+
+**The policy follows boundary provenance, not clip identity.** An edge flag is
+preserved only when the operation preserves that exact source boundary and its
+sample mapping. Anything that creates, moves or remaps an edge must restore
+automatic protection there.
+
+| Operation | Leading | Trailing |
+|---|---|---|
+| Duplicate, copy/paste, move, make unique | preserve | preserve |
+| Split — left result | preserve | **reset to `true`** |
+| Split — right result | **reset to `true`** | preserve |
+| Trim/crop leading edge | **reset to `true`** | preserve |
+| Trim/crop trailing edge | preserve | **reset to `true`** |
+| Slip / source-offset change | **reset to `true`** | **reset to `true`** |
+| Replace source | **reset to `true`** | **reset to `true`** |
+| Playback-rate / stretch change | reset unless the operation re-renders equivalent edge envelopes | same |
+| Undo / redo | restore the exact prior values | restore the exact prior values |
+
+Getting split wrong is quiet in the dangerous direction. A consolidated clip
+split in two would leave `applyLeading = false` on the right-hand piece, so the
+new seam gets **no** anti-click ramp — an audible click on a cut, blamed on the
+splitter rather than on a consolidation performed weeks earlier.
+
+Split already sets the precedent for user fades: `PlaylistModel` copies the
+edits wholesale and then clears `fadeInBeats` on the right piece while
+`SplitClipCommand` clears `fadeOutBeats` on the left. The automatic policy
+follows the same asymmetry.
+
+**Reverse** deserves an explicit decision rather than falling out of generic
+edit copying. `ReverseAudioClipCommand` produces a **newly rendered source** and
+bakes no edge fades — `applyFades` runs only in `CommitAudioClipEditsCommand`.
+The reversed result therefore has no baked edge behaviour, so both flags reset
+to `true`. Were reverse instead implemented as a source-mapping flip, the two
+flags would swap; the distinction is what the renderer actually baked, never
+what the previous clip happened to carry.
+
+##### The split test
+
+Start from a clip with **both** flags disabled, which is what a consolidated
+clip looks like:
+
+```cpp
+original.autoFadeLeading  = false;
+original.autoFadeTrailing = false;
+```
+
+After splitting:
+
+```cpp
+left.autoFadeLeading   == false;   left.autoFadeTrailing  == true;
+right.autoFadeLeading  == true;    right.autoFadeTrailing == false;
+```
+
+That single asymmetric result catches both plausible wrong implementations —
+copying all four flags unchanged, and resetting all four to `true`. Symmetric
+expectations catch neither.
+
+The same test confirms the existing user-fade behaviour at the seam: the left
+fade-out and right fade-in cleared, the untouched outer user fades preserved.
 
 Inverse compensation — dividing the rendered mix by the result clip's future
 automatic envelope — would avoid serialized state, but it needs severe
