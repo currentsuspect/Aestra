@@ -38,7 +38,7 @@ void RenderAudioClipCommand::execute() {
         }
 
         ClipRenderService service(m_manager.getSourceManager(), m_manager.getPatternManager());
-        const auto region = service.resolveClipRegion(clipCopy);
+        const auto region = service.resolveClipRegion(clipCopy, m_manager.getPlaylistModel().getProjectSampleRate());
         const std::string baseName = (region.name.empty() ? clipCopy.name : region.name) + " " + renderSuffix();
 
         const auto result = service.commit(*rendered, m_manager.renderRootDirectory(), baseName, region.lengthBeats,
@@ -56,10 +56,24 @@ void RenderAudioClipCommand::execute() {
     }
 
     ClipEdits edits = m_originalEdits;
+    // The rendered source begins exactly at the region that was resolved, so
+    // the slip that selected that region is already baked in. Leaving it set
+    // would apply the offset a second time against the new full-length source.
+    edits.sourceStart = 0.0;
     adjustEditsAfterRender(edits);
-    if (!(edits.gainLinear == m_originalEdits.gainLinear && edits.fadeInBeats == m_originalEdits.fadeInBeats &&
-          edits.fadeOutBeats == m_originalEdits.fadeOutBeats)) {
+    // Compare every field: a subclass may reset anything it baked.
+    if (edits != m_originalEdits) {
         m_editsChanged = m_manager.getPlaylistModel().setClipEdits(m_clipId, edits);
+    }
+    // Same reasoning for the canonical per-clip offset.
+    if (auto* placed = m_manager.getPlaylistModel().getClip(m_clipId)) {
+        m_originalSourceOffset = placed->sourceOffset;
+        m_originalSourceOffsetSeconds = placed->sourceOffsetSeconds;
+        if (placed->sourceOffset != 0.0 || placed->sourceOffsetSeconds != 0.0) {
+            placed->sourceOffset = 0.0;
+            placed->sourceOffsetSeconds = 0.0;
+            m_offsetsCleared = true;
+        }
     }
 
     m_manager.markModified();
@@ -78,6 +92,13 @@ void RenderAudioClipCommand::undo() {
         m_manager.getPlaylistModel().setClipEdits(m_clipId, m_originalEdits);
         m_editsChanged = false;
     }
+    if (m_offsetsCleared) {
+        if (auto* restored = m_manager.getPlaylistModel().getClip(m_clipId)) {
+            restored->sourceOffset = m_originalSourceOffset;
+            restored->sourceOffsetSeconds = m_originalSourceOffsetSeconds;
+        }
+        m_offsetsCleared = false;
+    }
     // Detach rather than remove: redo reinserts this exact pattern, and the
     // rendered file it points at is still on disk.
     m_detachedPattern = m_manager.getPatternManager().detachPattern(m_renderedPatternId);
@@ -90,7 +111,7 @@ void RenderAudioClipCommand::undo() {
 
 std::shared_ptr<AudioBufferData> ReverseAudioClipCommand::renderBuffer(const ClipInstance& clip) {
     ClipRenderService service(m_manager.getSourceManager(), m_manager.getPatternManager());
-    const auto region = service.resolveClipRegion(clip);
+    const auto region = service.resolveClipRegion(clip, m_manager.getPlaylistModel().getProjectSampleRate());
     if (!region.isValid()) {
         Log::warning("[ReverseAudioClipCommand] Clip has no resolvable audio to reverse.");
         return nullptr;
@@ -108,7 +129,7 @@ std::shared_ptr<AudioBufferData> ReverseAudioClipCommand::renderBuffer(const Cli
 
 std::shared_ptr<AudioBufferData> CommitAudioClipEditsCommand::renderBuffer(const ClipInstance& clip) {
     ClipRenderService service(m_manager.getSourceManager(), m_manager.getPatternManager());
-    const auto region = service.resolveClipRegion(clip);
+    const auto region = service.resolveClipRegion(clip, m_manager.getPlaylistModel().getProjectSampleRate());
     if (!region.isValid()) {
         Log::warning("[CommitAudioClipEditsCommand] Clip has no resolvable audio to commit.");
         return nullptr;

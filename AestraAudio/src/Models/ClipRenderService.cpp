@@ -36,7 +36,8 @@ bool framesToSamples(uint64_t frames, uint32_t channels, size_t& outSamples) {
 
 } // namespace
 
-ClipRenderService::SourceRegion ClipRenderService::resolveClipRegion(const ClipInstance& clip) const {
+ClipRenderService::SourceRegion ClipRenderService::resolveClipRegion(const ClipInstance& clip,
+                                                                     double projectSampleRate) const {
     SourceRegion region;
     if (!clip.patternId.isValid()) {
         return region;
@@ -69,10 +70,37 @@ ClipRenderService::SourceRegion ClipRenderService::resolveClipRegion(const ClipI
             frameCount = static_cast<uint64_t>(slice.lengthSamples);
         }
     }
+    // Same offsets the runtime snapshot applies (PlaylistModel::buildSnapshot):
+    // the canonical per-clip offset, then the instance slip. sourceStart is in
+    // project-rate samples, so convert it into this source's frames.
+    const double sourceRate = static_cast<double>(buffer->sampleRate);
+    double offsetFrames = 0.0;
+    if (clip.durationSeconds > 0.0 && std::isfinite(clip.sourceOffsetSeconds) && clip.sourceOffsetSeconds > 0.0) {
+        offsetFrames += clip.sourceOffsetSeconds * sourceRate;
+    }
+    if (std::isfinite(clip.edits.sourceStart) && clip.edits.sourceStart > 0.0) {
+        const double rateScale = (projectSampleRate > 0.0) ? sourceRate / projectSampleRate : 1.0;
+        offsetFrames += clip.edits.sourceStart * rateScale;
+    }
+    if (offsetFrames > 0.0) {
+        const double maxOffset = static_cast<double>(buffer->numFrames);
+        startFrame += static_cast<uint64_t>(std::min(offsetFrames, maxOffset));
+    }
+
     if (startFrame >= buffer->numFrames) {
         return region;
     }
     frameCount = std::min(frameCount, buffer->numFrames - startFrame);
+
+    // A trimmed clip plays only its own duration, so that is what gets
+    // rendered; otherwise reversing a trim would drag in audio the user
+    // cannot hear.
+    if (clip.durationSeconds > 0.0 && std::isfinite(clip.durationSeconds)) {
+        const double audibleFrames = clip.durationSeconds * sourceRate;
+        if (audibleFrames >= 1.0) {
+            frameCount = std::min(frameCount, static_cast<uint64_t>(audibleFrames));
+        }
+    }
 
     region.buffer = std::move(buffer);
     region.startFrame = startFrame;
@@ -157,35 +185,39 @@ void ClipRenderService::applyFades(AudioBufferData& buffer, uint64_t fadeInFrame
         return;
     }
 
-    // Ramps that together exceed the clip would otherwise multiply in the
-    // overlap and dig a hole in the middle. Shrink them proportionally so they
-    // meet exactly once, which is what a DAW crossfade-at-the-seam looks like.
-    if (fadeInFrames + fadeOutFrames > buffer.numFrames) {
-        const long double total = static_cast<long double>(fadeInFrames) + static_cast<long double>(fadeOutFrames);
-        if (total <= 0.0L) {
-            return;
-        }
-        const long double scale = static_cast<long double>(buffer.numFrames) / total;
-        fadeInFrames = static_cast<uint64_t>(static_cast<long double>(fadeInFrames) * scale);
-        fadeOutFrames = buffer.numFrames - fadeInFrames;
+    // Clamp BEFORE any arithmetic on the pair: a fade longer than the clip is
+    // legal input (a corrupt project, or a tempo change shrinking the clip),
+    // and summing two unclamped uint64 lengths can wrap past the guard and
+    // send the ramp loop off the end of the buffer.
+    const uint64_t fadeIn = std::min(fadeInFrames, buffer.numFrames);
+    const uint64_t fadeOut = std::min(fadeOutFrames, buffer.numFrames);
+    if (fadeIn == 0 && fadeOut == 0) {
+        return;
     }
 
+    // Mirrors AudioEngine's clipFadeAt so a committed clip sounds like the one
+    // that was playing: the fade-in starts at zero, the fade-out's seam sample
+    // stays at unity (strict >), and overlapping ramps take the MINIMUM rather
+    // than multiplying into a notch.
+    //
+    // The engine's CLIP_EDGE_FADE_SAMPLES micro-fade is deliberately not baked
+    // in: it is a playback-time anti-click that still applies to the committed
+    // clip, so baking it too would attenuate those 128 samples twice.
     float* data = buffer.interleavedData.data();
-
-    for (uint64_t frame = 0; frame < fadeInFrames; ++frame) {
-        const float g = static_cast<float>(static_cast<double>(frame + 1) / static_cast<double>(fadeInFrames + 1));
-        float* f = data + static_cast<size_t>(frame) * channels;
-        for (uint32_t ch = 0; ch < channels; ++ch) {
-            f[ch] *= g;
+    for (uint64_t frame = 0; frame < buffer.numFrames; ++frame) {
+        double gain = 1.0;
+        if (fadeIn > 0 && frame < fadeIn) {
+            gain = std::min(gain, static_cast<double>(frame) / static_cast<double>(fadeIn));
         }
-    }
-
-    for (uint64_t i = 0; i < fadeOutFrames; ++i) {
-        const uint64_t frame = buffer.numFrames - 1 - i;
-        const float g = static_cast<float>(static_cast<double>(i + 1) / static_cast<double>(fadeOutFrames + 1));
+        if (fadeOut > 0 && frame + fadeOut > buffer.numFrames) {
+            gain = std::min(gain, static_cast<double>(buffer.numFrames - frame) / static_cast<double>(fadeOut));
+        }
+        if (gain >= 1.0) {
+            continue;
+        }
         float* f = data + static_cast<size_t>(frame) * channels;
         for (uint32_t ch = 0; ch < channels; ++ch) {
-            f[ch] *= g;
+            f[ch] = static_cast<float>(static_cast<double>(f[ch]) * gain);
         }
     }
 }

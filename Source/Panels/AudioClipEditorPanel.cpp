@@ -231,6 +231,12 @@ void AudioClipEditorPanel::buildUI() {
     m_commitButton->setOnClick([this]() {
         if (!m_trackManager || !m_clipId.isValid())
             return;
+        // Nothing baked means nothing to commit: rendering here would write a
+        // dead file, mint a source and pattern, and add an undo step that
+        // changes nothing audible.
+        if (m_workingEdits.gainLinear == 1.0f && m_workingEdits.fadeInBeats == 0.0f &&
+            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.sourceStart == 0.0)
+            return;
         auto command = std::make_shared<CommitAudioClipEditsCommand>(*m_trackManager, m_clipId);
         m_trackManager->getCommandHistory().pushAndExecute(command);
         openClip(m_clipId);

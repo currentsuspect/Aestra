@@ -67,10 +67,18 @@ public:
 
     /**
      * @brief Resolve the audio a clip currently plays.
+     *
+     * Applies the same offset contract as playback: the pattern slice, plus
+     * the clip's canonical source offset, plus the instance-level
+     * ClipEdits::sourceStart — which is stored in *project*-rate samples and
+     * so must be rescaled to the source's own rate. Ignoring these rendered
+     * the wrong audio for any slipped or trimmed clip.
+     *
+     * @param projectSampleRate Rate ClipEdits::sourceStart is expressed in.
      * @return An invalid region when the clip is missing, is not an audio
      *         clip, or its source has no decoded buffer.
      */
-    SourceRegion resolveClipRegion(const ClipInstance& clip) const;
+    SourceRegion resolveClipRegion(const ClipInstance& clip, double projectSampleRate) const;
 
     // --- Pure transforms -----------------------------------------------------
 

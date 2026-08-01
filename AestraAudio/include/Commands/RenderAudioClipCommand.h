@@ -62,7 +62,10 @@ private:
     PatternID m_renderedPatternId;
     std::unique_ptr<PatternSource> m_detachedPattern;
     ClipEdits m_originalEdits;
+    double m_originalSourceOffset{0.0};
+    double m_originalSourceOffsetSeconds{0.0};
     bool m_editsChanged{false};
+    bool m_offsetsCleared{false};
     bool m_executed{false};
 };
 

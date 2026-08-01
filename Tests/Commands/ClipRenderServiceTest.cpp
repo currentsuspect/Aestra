@@ -5,9 +5,11 @@
 
 #include "Models/ClipRenderService.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -124,8 +126,9 @@ void testFades() {
     buffer.interleavedData.assign(100, 1.0f);
 
     ClipRenderService::applyFades(buffer, 10, 10);
-    require(buffer.interleavedData[0] < 1.0f, "fade-in attenuates the first frame");
-    require(buffer.interleavedData[0] > 0.0f, "fade-in does not fully mute the first frame");
+    // The engine's clipFadeAt starts a fade-in at silence, so a baked fade
+    // must too; see testFadeMatchesEngineShape for the exact contract.
+    requireClose(buffer.interleavedData[0], 0.0f, "fade-in starts at silence");
     requireClose(buffer.interleavedData[50], 1.0f, "the middle is left at unity");
     require(buffer.interleavedData[99] < 1.0f, "fade-out attenuates the last frame");
 
@@ -145,6 +148,63 @@ void testFades() {
         require(sample >= 0.0f && sample <= 1.0f, "over-long fades stay within unity");
     }
     require(overlapped.interleavedData[10] > 0.0f, "over-long fades do not silence the middle");
+}
+
+void testFadeLengthsCannotOverrun() {
+    std::printf("applyFades: absurd fade lengths are clamped...\n");
+    // A fade longer than the clip is legal input (corrupt project, or a tempo
+    // change shrinking the clip). Summing two unclamped uint64 lengths wraps
+    // past the guard, so the ramp loop used to run off the end of the buffer.
+    const uint64_t huge = std::numeric_limits<uint64_t>::max() - 4;
+
+    AudioBufferData buffer = makeRamp(64);
+    const size_t originalSamples = buffer.interleavedData.size();
+    ClipRenderService::applyFades(buffer, huge, 8);
+    require(buffer.numFrames == 64, "an absurd fade-in leaves the length alone");
+    require(buffer.interleavedData.size() == originalSamples, "an absurd fade-in does not resize the buffer");
+
+    AudioBufferData both = makeRamp(64);
+    ClipRenderService::applyFades(both, huge, huge);
+    require(both.numFrames == 64, "two absurd fades leave the length alone");
+    require(both.interleavedData.size() == originalSamples, "two absurd fades do not resize the buffer");
+    for (size_t i = 0; i < both.interleavedData.size(); ++i) {
+        const float original = static_cast<float>(i / 2);
+        const float actual = std::fabs(both.interleavedData[i]);
+        require(std::isfinite(actual) && actual <= original + 1.0e-4f, "clamped fades never amplify");
+    }
+}
+
+void testFadeMatchesEngineShape() {
+    std::printf("applyFades: ramps match the engine's clip fade...\n");
+    AudioBufferData buffer;
+    buffer.sampleRate = 48000;
+    buffer.numChannels = 1;
+    buffer.numFrames = 100;
+    buffer.interleavedData.assign(100, 1.0f);
+
+    ClipRenderService::applyFades(buffer, 10, 10);
+    // AudioEngine::clipFadeAt starts the fade-in at zero...
+    requireClose(buffer.interleavedData[0], 0.0f, "fade-in starts at silence like the engine");
+    requireClose(buffer.interleavedData[5], 0.5f, "fade-in is linear in frame/fadeLen");
+    requireClose(buffer.interleavedData[10], 1.0f, "fade-in reaches unity at its length");
+    // ...and leaves the fade-out's seam sample at unity (strict >).
+    requireClose(buffer.interleavedData[90], 1.0f, "the fade-out seam sample stays at unity");
+    requireClose(buffer.interleavedData[95], 0.5f, "fade-out is linear in remaining/fadeLen");
+    requireClose(buffer.interleavedData[99], 0.1f, "the last frame is one step above silence");
+
+    // Overlapping ramps take the minimum, as the engine does, not the product.
+    AudioBufferData overlap;
+    overlap.sampleRate = 48000;
+    overlap.numChannels = 1;
+    overlap.numFrames = 10;
+    overlap.interleavedData.assign(10, 1.0f);
+    ClipRenderService::applyFades(overlap, 8, 8);
+    for (uint64_t i = 0; i < overlap.numFrames; ++i) {
+        const double fadeIn = (i < 8) ? static_cast<double>(i) / 8.0 : 1.0;
+        const double fadeOut = (i + 8 > 10) ? static_cast<double>(10 - i) / 8.0 : 1.0;
+        requireClose(overlap.interleavedData[i], static_cast<float>(std::min({1.0, fadeIn, fadeOut})),
+                     "overlapping fades take the minimum, not the product");
+    }
 }
 
 void testPeak() {
@@ -168,6 +228,8 @@ int main() {
     testReverse();
     testGain();
     testFades();
+    testFadeLengthsCannotOverrun();
+    testFadeMatchesEngineShape();
     testPeak();
 
     if (g_failures != 0) {

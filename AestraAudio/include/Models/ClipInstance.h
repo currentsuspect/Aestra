@@ -78,6 +78,18 @@ struct ClipEdits {
         edits.gainLinear = DEFAULT_AUDIO_CLIP_GAIN_LINEAR;
         return edits;
     }
+
+    /**
+     * Compares every field. Callers deciding whether an edit needs persisting
+     * must not hand-pick fields: a check that named only gain and the fades
+     * silently dropped any other baked change.
+     */
+    bool operator==(const ClipEdits& other) const {
+        return fadeInBeats == other.fadeInBeats && fadeOutBeats == other.fadeOutBeats &&
+               gainLinear == other.gainLinear && pan == other.pan && muted == other.muted &&
+               playbackRate == other.playbackRate && sourceStart == other.sourceStart;
+    }
+    bool operator!=(const ClipEdits& other) const { return !(*this == other); }
 };
 
 /**

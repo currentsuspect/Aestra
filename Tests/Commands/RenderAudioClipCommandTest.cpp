@@ -64,7 +64,7 @@ std::shared_ptr<const AudioBufferData> currentAudio(TrackManager& tm, ClipInstan
         return nullptr;
     }
     ClipRenderService service(tm.getSourceManager(), tm.getPatternManager());
-    return service.resolveClipRegion(*clip).buffer;
+    return service.resolveClipRegion(*clip, tm.getPlaylistModel().getProjectSampleRate()).buffer;
 }
 
 struct Fixture {
@@ -132,6 +132,18 @@ void testReverseChangesAudioAndUndoRestores(const std::string& dir) {
     command.execute();
 
     require(command.isUndoable(), "reverse reports that it changed something");
+
+    // commit() returning invalid makes execute() bail, which would otherwise
+    // look identical to "reverse did nothing"; pin the write path itself.
+    bool wroteWav = false;
+    std::error_code renderEc;
+    for (const auto& entry : std::filesystem::directory_iterator(fx.tm->renderRootDirectory(), renderEc)) {
+        if (entry.path().extension() == ".wav") {
+            wroteWav = true;
+            break;
+        }
+    }
+    require(wroteWav, "reverse writes its rendered audio to the render directory");
     const PatternID patternAfter = fx.tm->getPlaylistModel().getClip(fx.clipId)->patternId;
     require(!(patternAfter == patternBefore), "reverse repoints the clip at a new pattern");
 
@@ -202,6 +214,57 @@ void testCommitBakesGainAndResetsEdits(const std::string& dir) {
     }
 }
 
+void testSlipOffsetIsHonouredAndBaked(const std::string& dir) {
+    std::printf("reverse: a slipped clip renders the region it plays...\n");
+    Fixture fx = makeClipFixture(dir);
+
+    // Slip halfway in, the way the editor's "Source start" slider does. The
+    // region resolver used to ignore this and render from frame 0, so reverse
+    // committed audio the user could not hear.
+    auto* clip = fx.tm->getPlaylistModel().getClip(fx.clipId);
+    require(clip != nullptr, "fixture clip exists");
+    if (!clip) {
+        return;
+    }
+    const uint64_t sourceFrames = 2000;
+    const double projectRate = fx.tm->getPlaylistModel().getProjectSampleRate();
+    ClipEdits edits = clip->edits;
+    edits.gainLinear = 1.0f;
+    edits.sourceStart = static_cast<double>(sourceFrames / 2) * (projectRate / 48000.0);
+    fx.tm->getPlaylistModel().setClipEdits(fx.clipId, edits);
+
+    {
+        ClipRenderService service(fx.tm->getSourceManager(), fx.tm->getPatternManager());
+        const auto* live = fx.tm->getPlaylistModel().getClip(fx.clipId);
+        const auto region = service.resolveClipRegion(*live, projectRate);
+        require(region.isValid(), "a slipped clip still resolves");
+        if (region.isValid()) {
+            require(region.startFrame >= sourceFrames / 2 - 1 && region.startFrame <= sourceFrames / 2 + 1,
+                    "the resolved region starts at the slip, not at frame 0");
+            require(region.frameCount <= sourceFrames / 2 + 1, "the resolved region ends with the source");
+            // The fixture ramps down from 1.0, so the second half peaks near 0.5.
+            auto extracted = ClipRenderService::extractRegion(*region.buffer, region.startFrame, region.frameCount);
+            require(extracted != nullptr, "the slipped region extracts");
+            if (extracted) {
+                require(ClipRenderService::peakMagnitude(*extracted) < 0.6f,
+                        "the resolved audio is the second half, not the whole source");
+            }
+        }
+    }
+
+    ReverseAudioClipCommand command(*fx.tm, fx.clipId);
+    command.execute();
+    require(command.isUndoable(), "reversing a slipped clip succeeds");
+
+    // The new source starts at the region, so the slip is already baked in.
+    const ClipEdits after = fx.tm->getPlaylistModel().getClip(fx.clipId)->edits;
+    require(after.sourceStart == 0.0, "the baked slip is cleared so it is not applied twice");
+
+    command.undo();
+    const ClipEdits undone = fx.tm->getPlaylistModel().getClip(fx.clipId)->edits;
+    require(std::fabs(undone.sourceStart - edits.sourceStart) < 1.0e-6, "undo restores the original slip");
+}
+
 void testMidiClipIsRefused(const std::string& dir) {
     std::printf("reverse: a non-audio clip is refused, not corrupted...\n");
     Fixture fx = makeClipFixture(dir);
@@ -235,6 +298,7 @@ int main() {
 
     testReverseChangesAudioAndUndoRestores(dir.string());
     testCommitBakesGainAndResetsEdits(dir.string());
+    testSlipOffsetIsHonouredAndBaked(dir.string());
     testMidiClipIsRefused(dir.string());
 
     fs::remove_all(dir, ec);
