@@ -330,6 +330,43 @@ int main() {
         }
     }
 
+    // Stereo interpolation quality must actually be consulted.
+    //
+    // Guard for the block-snapshot normalization: pinning stereo to one
+    // quality by accident would leave every characterization digest matching,
+    // because none of those fixtures changes quality. Rendering the same
+    // resampled stereo clip at the cheapest and most expensive settings must
+    // produce different audio.
+    {
+        using Q = Aestra::Audio::Interpolators::InterpolationQuality;
+        double cubicEnergy = -1.0, sincEnergy = -1.0;
+        size_t cubicSamples = 0, sincSamples = 0;
+        {
+            Rig rig;
+            if (rig.init(d)) {
+                rig.engine->setInterpolationQuality(Q::Cubic);
+                rig.addClip("stereoCubic", makeSource(44100, 2, 22050));
+                rig.renderAndCountSrcBlocks(d + "/stereo_cubic.wav");
+                cubicEnergy = rig.lastRenderEnergy;
+                cubicSamples = rig.lastRenderSamples;
+            }
+        }
+        {
+            Rig rig;
+            if (rig.init(d)) {
+                rig.engine->setInterpolationQuality(Q::Sinc64);
+                rig.addClip("stereoSinc", makeSource(44100, 2, 22050));
+                rig.renderAndCountSrcBlocks(d + "/stereo_sinc.wav");
+                sincEnergy = rig.lastRenderEnergy;
+                sincSamples = rig.lastRenderSamples;
+            }
+        }
+        check(cubicSamples > 0 && sincSamples > 0, "stereo quality: both renders produced samples");
+        check(cubicEnergy > 0.0 && sincEnergy > 0.0, "stereo quality: both renders carry audio");
+        check(cubicEnergy != sincEnergy,
+              "stereo quality: cubic and sinc64 render differently, so quality is consulted");
+    }
+
     fs::remove_all(dir, ec);
 
     if (g_failures != 0) {
