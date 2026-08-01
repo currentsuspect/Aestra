@@ -20,6 +20,22 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
     // and pattern-mode guards stay at the call site; this never sees them.
     ClipRenderResult result{};
 
+        // Preconditions the call site used to guarantee.
+        //
+        // AudioEngine::renderGraph() returns early when the engine sample rate
+        // is zero, so this body never saw one. As a free function that the
+        // consolidation renderer also calls, it has to say so itself: with a
+        // zero output rate and a clip whose own rate is unset, ratio becomes
+        // 0/0 = NaN, the `phase >= totalFrames` guard is false for NaN, and
+        // the frame-count clamp then casts NaN to uint32_t — undefined.
+        //
+        // A zero-length source is the same class: both existing bounds checks
+        // are gated on totalFrames > 0, so it would fall through to the
+        // direct-rate branch and read past the buffer.
+        if (engineSampleRate == 0 || clip.totalFrames == 0) {
+            return result;
+        }
+
         if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
             return result;
         }
