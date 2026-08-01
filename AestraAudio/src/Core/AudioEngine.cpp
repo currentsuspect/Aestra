@@ -2390,7 +2390,15 @@ AudioEngine::ClipRenderResult AudioEngine::renderClipInto(const ClipRenderState&
             }
 
             // Select interpolator at block level, not per-sample
-            switch (m_interpQuality.load(std::memory_order_relaxed)) {
+            // Block snapshot, matching mono above and every other cached
+            // atomic renderGraph() takes once per block (slot map, params,
+            // meter snapshots, pattern mode, and this same quality value at
+            // its line 2168 read). Loading it again here let stereo observe a
+            // different quality from mono inside one block, and potentially a
+            // different one per clip — incoherent with the snapshot the
+            // context already carries, and unreachable once this body becomes
+            // a free kernel that has no engine to load from.
+            switch (cachedInterpQuality) {
             case Interpolators::InterpolationQuality::Cubic:
                 for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                     float outL, outR;
