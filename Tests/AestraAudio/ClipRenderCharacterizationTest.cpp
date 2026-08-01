@@ -177,8 +177,14 @@ float channelPeak(const std::vector<float>& data, uint32_t channels, uint32_t ch
  * knowing *where* the first sample diverged and by how much is the difference
  * between "something moved" and a debuggable defect.
  *
- * Baselines live in $AESTRA_CHAR_BASELINE. Absent, the comparison is skipped —
- * the digests are not bit-portable, so they cannot be committed.
+ * Baselines are written by $AESTRA_CHAR_RECORD_BASELINE and read by
+ * $AESTRA_CHAR_VERIFY_BASELINE, which are mutually exclusive. They are not
+ * committed, because float output is not bit-portable across architectures.
+ *
+ * A baseline that is absent or unreadable is a FAILURE, never a skip and never
+ * a match. Verification must never be able to succeed against an oracle that
+ * does not exist — and a comment claiming otherwise is its own hazard, since a
+ * future reader would take a missing baseline for harmless.
  */
 bool compareAgainstBaseline(const std::string& baselineDir, const std::string& name,
                             const std::vector<float>& actual, uint32_t channels) {
