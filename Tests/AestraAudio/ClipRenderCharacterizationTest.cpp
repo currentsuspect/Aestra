@@ -58,6 +58,12 @@ namespace {
 
 int g_failures = 0;
 
+/** Exactly one of these is set; both empty means semantic + determinism only. */
+std::string g_recordDir;
+std::string g_verifyDir;
+/** Counts cases actually compared against a pre-existing baseline. */
+int g_verifiedCases = 0;
+
 void check(bool condition, const std::string& label) {
     if (condition) {
         std::cout << "PASS: " << label << "\n";
@@ -313,32 +319,53 @@ CaseResult runCase(const std::string& name, const std::string& dir,
     result.rendered = true;
     result.digest = digestOf(result.data);
 
-    // Compare against the recorded baseline when one exists, and record it
-    // when it does not. This is what turns the digests into a refactor gate.
-    if (const char* baselineDir = std::getenv("AESTRA_CHAR_BASELINE")) {
-        namespace fs = std::filesystem;
-        std::error_code bec;
-        fs::create_directories(baselineDir, bec);
-        const std::string stored = (fs::path(baselineDir) / (name + ".wav")).string();
+    // Recording and verifying are separate, mutually exclusive modes.
+    //
+    // They used to be one: a missing baseline was silently recorded from the
+    // current render. That is fail-open in the worst possible way — pointed at
+    // an empty or mistyped directory during the extraction, a *changed*
+    // renderer would generate its own expected output and pass. The oracle
+    // must never be produced by the implementation under verification.
+    namespace fs = std::filesystem;
+    std::error_code bec;
+    if (!g_recordDir.empty()) {
+        const std::string stored = (fs::path(g_recordDir) / (name + ".wav")).string();
         if (fs::exists(stored, bec)) {
-            check(compareAgainstBaseline(baselineDir, name, result.data, result.channels),
-                  name + ": matches the recorded baseline exactly");
+            // Refuse to overwrite: re-recording over a baseline is how an
+            // unwanted change quietly becomes the new expectation.
+            check(false, name + ": baseline already exists, refusing to overwrite");
         } else {
-            fs::copy_file(file, stored, fs::copy_options::overwrite_existing, bec);
-            std::printf("  %s: baseline recorded\n", name.c_str());
+            fs::copy_file(file, stored, bec);
+            check(!bec, name + ": baseline recorded");
+        }
+    } else if (!g_verifyDir.empty()) {
+        const std::string stored = (fs::path(g_verifyDir) / (name + ".wav")).string();
+        if (!fs::exists(stored, bec)) {
+            // A missing baseline is a failure, never an invitation to write one.
+            check(false, name + ": baseline file is missing from the verify directory");
+        } else {
+            const bool matched = compareAgainstBaseline(g_verifyDir, name, result.data, result.channels);
+            check(matched, name + ": matches the recorded baseline exactly");
+            ++g_verifiedCases;
         }
     }
 
     // Determinism: the same project rendered twice must be byte-identical.
     // Portable to assert, and it catches accumulation-order drift that a
     // tolerance check would not see.
+    //
+    // Compared with memcmp, not by digest. Equal digests are overwhelmingly
+    // strong evidence of equal bytes but are not the same claim, and both
+    // buffers are already in memory, so there is no reason to assert the
+    // weaker one.
     std::vector<float> again;
     uint32_t againChannels = 0;
     const std::string file2 = dir + "/" + name + "_2.wav";
     if (h.render(file2, again, againChannels)) {
-        check(againChannels == result.channels && again.size() == result.data.size() &&
-                  digestOf(again) == result.digest,
-              name + ": rendering twice is byte-identical");
+        const bool identical =
+            againChannels == result.channels && again.size() == result.data.size() &&
+            std::memcmp(again.data(), result.data.data(), result.data.size() * sizeof(float)) == 0;
+        check(identical, name + ": rendering twice is byte-identical");
     } else {
         check(false, name + ": second render succeeds");
     }
@@ -355,6 +382,38 @@ int main() {
     CommandRegistry::initialize();
 
     namespace fs = std::filesystem;
+
+    // Resolve the mode before anything renders, and refuse ambiguity.
+    const char* recordEnv = std::getenv("AESTRA_CHAR_RECORD_BASELINE");
+    const char* verifyEnv = std::getenv("AESTRA_CHAR_VERIFY_BASELINE");
+    if (recordEnv && verifyEnv) {
+        std::cout << "FAIL: set only one of AESTRA_CHAR_RECORD_BASELINE / AESTRA_CHAR_VERIFY_BASELINE\n";
+        return 1;
+    }
+    if (recordEnv) {
+        g_recordDir = recordEnv;
+        std::error_code rec;
+        fs::create_directories(g_recordDir, rec);
+        if (rec) {
+            std::cout << "FAIL: could not create the record directory: " << g_recordDir << "\n";
+            return 1;
+        }
+        std::cout << "MODE: recording baselines into " << g_recordDir << "\n";
+    } else if (verifyEnv) {
+        g_verifyDir = verifyEnv;
+        std::error_code vec;
+        // Verification never creates anything. A wrong path must fail loudly
+        // rather than quietly become a recording run.
+        if (!fs::is_directory(g_verifyDir, vec)) {
+            std::cout << "FAIL: verify directory does not exist: " << g_verifyDir << "\n";
+            return 1;
+        }
+        std::cout << "MODE: verifying against baselines in " << g_verifyDir << "\n";
+    } else {
+        std::cout << "MODE: semantic and determinism checks only "
+                     "(set AESTRA_CHAR_VERIFY_BASELINE to gate a refactor)\n";
+    }
+
     const fs::path dir = fs::temp_directory_path() / "aestra_clip_characterization";
     std::error_code ec;
     fs::remove_all(dir, ec);
@@ -480,6 +539,13 @@ int main() {
     std::cout << "\n";
 
     check(digests.size() == 6, "every characterization case rendered");
+
+    // A wrong verify directory must produce six failures, not a silent pass
+    // over zero comparisons.
+    if (!g_verifyDir.empty()) {
+        check(g_verifiedCases == 6,
+              "exactly six pre-existing baselines were compared (got " + std::to_string(g_verifiedCases) + ")");
+    }
 
     fs::remove_all(dir, ec);
 
