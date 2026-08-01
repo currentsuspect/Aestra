@@ -339,6 +339,20 @@ int main() {
         std::filesystem::remove(junkPath, junkEc);
     }
 
+    // --- bar is 1-based, and says so ---------------------------------------
+    {
+        JSON args = JSON::object();
+        args.set("track", JSON(0.0));
+        args.set("file", JSON(wavPath));
+        args.set("bar", JSON(0.0));
+        JSON r = call(service, request("add_clip", args));
+        // bar 0 would place the clip at beat -4; refuse it rather than build
+        // a clip at a negative timeline position.
+        check(status(r) != "ok", "add_clip refuses bar 0 instead of placing at a negative beat");
+        check(trackManager->getSourceManager().getAllSourceIDs().empty(),
+              "a refused bar leaves no source behind");
+    }
+
     std::string clipId;
     {
         JSON args = JSON::object();

@@ -69,7 +69,7 @@ static const std::vector<CommandSchema> s_schemas = {
     {"add_clip", CommandCategory::Clip, {
         {"track", FlagType::Int, true},
         {"file", FlagType::String, true},
-        {"bar", FlagType::Int, true}
+        {"bar", FlagType::Int, true, 1.0}
     },
      "Import an audio file and place it as a playable clip on a lane at a bar position. Decodes the file, registers it as a source and creates its audio pattern; on any failure nothing is added."},
     {"delete_clip", CommandCategory::Clip, {
@@ -84,7 +84,7 @@ static const std::vector<CommandSchema> s_schemas = {
      "Move a clip to a track and start beat."},
     {"duplicate_clip", CommandCategory::Clip, {
         {"id", FlagType::Id, true},
-        {"bar", FlagType::Int, true}
+        {"bar", FlagType::Int, true, 1.0}
     },
      "Duplicate a clip to a bar position."},
     {"trim_clip", CommandCategory::Clip, {

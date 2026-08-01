@@ -329,8 +329,13 @@ void CommandRegistry::initialize() {
         if (!laneId.isValid())
             return CommandRegistry::fail("track " + std::string(*trackRaw) + " has no playlist lane");
 
+        // "cannot be read" and "is not there" are different problems for
+        // whoever has to fix it, so do not collapse them into one message.
         std::error_code ec;
-        if (!std::filesystem::exists(filePath, ec) || ec)
+        const bool present = std::filesystem::exists(filePath, ec);
+        if (ec)
+            return CommandRegistry::fail("could not read the path (" + ec.message() + "): " + filePath);
+        if (!present)
             return CommandRegistry::fail("no such audio file: " + filePath);
 
         // Same decoder the UI import uses; there is no Muse-specific importer.
