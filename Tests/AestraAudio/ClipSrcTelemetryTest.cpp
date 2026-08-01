@@ -119,6 +119,9 @@ struct Rig {
         tm->getPlaylistModel().addClip(lane, clip);
     }
 
+    /** Total squared sample energy of the last render, for "did it contribute?". */
+    double lastRenderEnergy{0.0};
+
     /** Render the timeline and report how far the SRC counter advanced. */
     uint64_t renderAndCountSrcBlocks(const std::string& file) {
         const uint64_t before = engine->telemetry().getSrcActiveBlocks();
@@ -131,6 +134,17 @@ struct Rig {
         req.set("args", args);
         JSON r = JSON::parse(service->handleRequest(req.toString()));
         if (!r.has("status") || r["status"].asString() != "ok") return UINT64_MAX;
+
+        lastRenderEnergy = 0.0;
+        std::FILE* f = std::fopen(file.c_str(), "rb");
+        if (f) {
+            std::fseek(f, 44, SEEK_SET); // past the canonical float32 header
+            float sample = 0.0f;
+            while (std::fread(&sample, sizeof(float), 1, f) == 1) {
+                if (std::isfinite(sample)) lastRenderEnergy += static_cast<double>(sample) * sample;
+            }
+            std::fclose(f);
+        }
         return engine->telemetry().getSrcActiveBlocks() - before;
     }
 };
@@ -228,6 +242,15 @@ int main() {
         check(oneClip > 0, "overlap: a single resampled clip advances the counter");
         check(twoClips == oneClip,
               "overlap: two resampled clips in the same blocks advance it once per block, not per clip");
+
+        // The counter alone cannot see this. If the caller ever aggregates the
+        // helper result with short-circuiting || instead of |=, the first
+        // resampled clip sets the flag and every later clip in the block is
+        // never rendered at all — telemetry still reports one SRC-active
+        // block, correctly, while the audio silently loses a clip.
+        check(one.lastRenderEnergy > 0.0, "overlap: the single-clip render carries audio");
+        check(two.lastRenderEnergy > one.lastRenderEnergy * 1.5,
+              "overlap: the second clip still contributes audio after the first set the flag");
     }
 
     // A resampled clip that reaches the frame-count clamp but yields
