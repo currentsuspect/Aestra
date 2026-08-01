@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Commands/HostVerbRegistry.h"
+#include "AestraUUID.h"
 
 #include <algorithm>
 #include <cctype>
@@ -41,6 +42,20 @@ bool valueMatches(const HostVerbArg& arg, const JSON& value, std::string& outErr
             return false;
         }
         return true;
+    case FlagType::Id: {
+        // Canonical 32-hex-char object id, exactly as the list_* queries print
+        // it, so a listed id can be handed straight back.
+        if (!value.isString()) {
+            outError = "arg '" + arg.name + "' must be a 32-character hex id string";
+            return false;
+        }
+        AestraUUID parsed;
+        if (!AestraUUID::tryParse(value.asString(), parsed) || (parsed.low == 0 && parsed.high == 0)) {
+            outError = "arg '" + arg.name + "' must be a 32-character hex id as returned by the list_* queries";
+            return false;
+        }
+        return true;
+    }
     case FlagType::Int:
     case FlagType::Float: {
         if (!value.isNumber()) {
@@ -81,6 +96,7 @@ const char* HostVerbRegistry::argTypeName(FlagType type) {
     case FlagType::Int:    return "int";
     case FlagType::Float:  return "float";
     case FlagType::Bool:   return "bool";
+    case FlagType::Id:     return "id";
     }
     return "string";
 }

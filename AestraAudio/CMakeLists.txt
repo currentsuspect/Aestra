@@ -239,6 +239,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/RenderAudioClipCommand.cpp
+    src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/CreateLaneCommand.cpp
     src/Commands/AddNoteCommand.cpp

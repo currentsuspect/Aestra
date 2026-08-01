@@ -136,6 +136,46 @@ public:
     }
 
     /**
+     * @brief Look up an existing source by file path without creating one.
+     *
+     * Lets a caller tell "this file was already in the project" from "I am the
+     * one who introduced it", which decides whether it may be taken back out
+     * again on failure.
+     * @return An invalid ID when no source holds that path.
+     */
+    ClipSourceID findSourceByPath(const std::string& filePath) const {
+        auto it = m_pathToId.find(filePath);
+        return it != m_pathToId.end() ? it->second : ClipSourceID{};
+    }
+
+    /**
+     * @brief Remove a source nothing references yet.
+     *
+     * Only safe for a source whose registration is being rolled back before it
+     * ever reached a pattern or a built AudioGraph — an import that failed
+     * partway. Never call it to "clean up" a source a project object still
+     * points at.
+     *
+     * Same reasoning as clear(): buffers are co-owned via
+     * shared_ptr<AudioBufferData>, so any in-flight graph keeps its audio
+     * alive regardless.
+     * @return True when a source was removed.
+     */
+    bool removeSource(ClipSourceID id) {
+        auto it = m_sources.find(id.value);
+        if (it == m_sources.end()) {
+            return false;
+        }
+        const std::string path = it->second ? it->second->getFilePath() : std::string{};
+        m_sources.erase(it);
+        auto pathIt = m_pathToId.find(path);
+        if (pathIt != m_pathToId.end() && pathIt->second.value == id.value) {
+            m_pathToId.erase(pathIt);
+        }
+        return true;
+    }
+
+    /**
      * @brief Clear all sources
      *
      * No mutex required: ClipSource buffers are now co-owned via
