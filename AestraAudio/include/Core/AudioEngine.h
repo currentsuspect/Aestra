@@ -723,32 +723,7 @@ private:
     void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
                      bool& srcActiveThisBlock);
 
-    /**
-     * @brief What rendering one clip reported back, beyond the audio it mixed.
-     *
-     * Not a bare bool: `false` means "direct-rate audio was mixed
-     * successfully", not "the clip contributed nothing". Naming the field
-     * keeps SRC meaning *sample-rate conversion ran*.
-     */
-    struct ClipRenderResult {
-        bool usedSampleRateConversion{false};
-    };
 
-    /**
-     * @brief Render one clip into @p destination. Pure relocation of the
-     *        per-clip body of renderClips(); the arithmetic is unchanged.
-     *
-     * Knows nothing about telemetry. The caller aggregates the result across
-     * the block and increments the counter once, preserving the existing
-     * contract of one SRC-active increment per block rather than per clip.
-     *
-     * [[nodiscard]] deliberately: discarding the result would keep every audio
-     * sample identical while silently deleting SRC telemetry, which the
-     * characterization digests cannot see.
-     */
-    [[nodiscard]] ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart, uint64_t blockEnd,
-                                                  double* destination, uint32_t cachedSampleRate,
-                                                  Interpolators::InterpolationQuality cachedInterpQuality);
     void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
     float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
                               uint32_t numFrames);
