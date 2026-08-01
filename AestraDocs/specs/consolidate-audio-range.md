@@ -138,6 +138,51 @@ into the rendered audio, so leaving them set would apply them twice.
 - **redo** — reuses the rendered file, source and pattern. It must **not**
   render again or write another file.
 
+## 4b. Reaching the runtime kernel — characterize before extracting
+
+§3.1 requires mirroring `AudioEngine`'s clip render path rather than re-deriving
+it. That logic currently sits inside `processBlock`, interleaved with graph
+concerns, so "mirror" will in practice mean extracting a shared clip-local
+kernel both callers use. **Characterize it before touching it.**
+
+Order of work, not negotiable:
+
+1. Add focused fixtures capturing **current** runtime output for the cases that
+   matter: unity-rate, resampled, panned, faded, overlapping, and short clips.
+2. Sabotage against those fixtures, so they are *known* to detect altered clip
+   behaviour before they are trusted to protect a refactor.
+3. Extract only the pure clip-local kernel.
+4. Re-run the characterization tests and require **identical** output.
+5. Build `AudioConsolidationRenderer` on that kernel.
+
+The extraction is acceptable while it moves arithmetic without changing
+ownership or scheduling. **Stop** the moment it requires touching any of:
+
+- `processBlock` orchestration
+- graph traversal or topology
+- track / effect / routing order
+- RT buffer ownership or allocation
+- transport state
+- callback timing
+- PDC or automation application
+
+At that point, copying the logic is **also not acceptable** — it would
+immediately create the second interpretation §3.1 exists to forbid. The correct
+response is to pause and decide whether the live-path refactor deserves its own
+narrowly scoped, zero-audio-change PR.
+
+If that preparatory PR happens, it carries one extra gate beyond the normal
+suite:
+
+> The refactor must pass a **before/after rendered-byte comparison on fixed
+> fixtures**, not merely the existing tests.
+
+Ordinary tolerance-based assertions can miss a shifted interpolation phase, an
+off-by-one in edge-ramp indexing, a changed pan law, a different overlap order,
+or altered floating-point accumulation order. Exact bytes are not portable
+across architectures, so keep the strict comparison **within one build and
+environment**, and keep tolerance-based semantic tests for cross-platform CI.
+
 ## 5. Separation from graph rendering
 
 This is **source-domain only**. It must not evaluate track plugins, sends,
