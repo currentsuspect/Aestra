@@ -23,7 +23,7 @@ Two statements govern everything below.
 
 ## 1. Public command and range semantics
 
-```
+```text
 consolidate_audio --lane <canonical-lane-id> --start <beat> --end <beat>
 ```
 
@@ -83,27 +83,248 @@ boundaries between the original clips**, so the engine will no longer apply
 those fades. It will, however, apply them at the two boundaries of the new
 consolidated clip.
 
-The policy:
+The policy — **revised**, see the correction below:
 
-> **Bake every original automatic clip-edge fade, except an edge exactly
-> coincident with the corresponding outer consolidation boundary.**
+> **Bake every contributor's fades exactly as the runtime renders them. Mark the
+> resulting consolidated clip so its own automatic edge fades are not applied
+> again.**
 
-Why each half matters:
+Internal boundaries must be baked: after consolidation there is no boundary
+there, so nothing re-applies the fade, and not baking it changes the sound at
+every original seam. This includes a clip that starts after `startBeat` or ends
+before `endBeat` even when separated by silence — that is still an internal
+boundary.
 
-- **Internal boundaries must be baked.** After consolidation there is no
-  boundary there, so nothing re-applies the fade. Not baking it changes the
-  sound at every original seam. This includes a clip that starts after
-  `startBeat` or ends before `endBeat` even when separated by silence — that is
-  still an internal boundary.
-- **Outer boundaries must not be baked.** The new clip receives the engine's
-  automatic edge fade at `startBeat` and `endBeat`. Baking it as well applies
-  the ramp twice — the outer edge is attenuated by `r²` instead of `r`.
+Outer boundaries must also be baked, and the *result* clip must be told not to
+fade them again. That is durable state on the clip, not a render-time argument.
 
-Delegating the outer boundary is mathematically safe. Where several clips begin
-exactly at the range boundary, applying the same linear ramp `r` to each before
-summing gives `r·A + r·B`, which equals `r·(A + B)` — applying it once to the
-sum. So the new clip's own edge fade reproduces it exactly, and baking is not
-merely redundant but wrong.
+#### Why the earlier strategy was wrong
+
+An earlier revision said to bake every fade *except* one coincident with the
+outer boundary, and to let the new clip's own automatic fade reproduce it —
+justified by linearity: applying ramp `r` to each contributor before summing
+gives `r·A + r·B = r·(A + B)`.
+
+That argument only holds when the delegated ramp is **the same ramp**. It is
+not, for two independent reasons.
+
+**User and automatic fades collapse into one ramp.** The runtime computes a
+single effective length:
+
+```cpp
+effectiveLength = min(clipLength, max(kClipEdgeFadeSamples, userFadeLength));
+```
+
+With a 500-sample user fade the original output has one 500-sample ramp. Baking
+the user ramp while delegating the automatic one yields the *product* of two
+ramps, where the original had a `max()`.
+
+**Lengths differ with clip length.** A 64-sample contributor consolidated into a
+512-sample result:
+
+```text
+original automatic fade = min(64, 128)  =  64
+result automatic fade   = min(512, 128) = 128
+```
+
+Suppressing the original and relying on the result's fade substitutes a
+different envelope entirely.
+
+#### What this requires
+
+An ephemeral renderer argument (`suppressLeading`/`suppressTrailing`) is not
+sufficient: it would make consolidation sound correct only while being created.
+After save and reload the playback engine would have no durable explanation for
+why the result clip must not add another automatic fade.
+
+The state belongs on the clip:
+
+```cpp
+struct AutomaticEdgeFadePolicy {
+    bool applyLeading{true};
+    bool applyTrailing{true};
+};
+```
+
+and the runtime becomes:
+
+```cpp
+const uint64_t automaticLeading =
+    clip.edgeFadePolicy.applyLeading ? std::min<uint64_t>(clipLength, kClipEdgeFadeSamples) : 0;
+const uint64_t userLeading = std::min<uint64_t>(clipLength, clip.fadeInSamples);
+const uint64_t fadeInLen = std::max(automaticLeading, userLeading);
+```
+
+Defaults keep every existing clip bit-identical. A consolidated result sets both
+to `false` with zero user fades, because all original edge behaviour is already
+present in the rendered source.
+
+That state must be stored on the model clip, copied into `ClipRenderState`,
+consumed by the shared renderer, serialized and restored, and preserved through
+every path that copies a clip. It is therefore **its own PR, landing before
+consolidation** — a zero-default-change edge-policy change.
+
+#### Persisted contract
+
+Serialized inside the clip's existing `edits` object, alongside `gain`, `pan`
+and the fade lengths:
+
+```json
+{
+  "autoFadeLeading":  true,
+  "autoFadeTrailing": true
+}
+```
+
+Both keys are **independently optional**. An absent key loads as `true` — the
+engine's automatic safety ramp is the default, and a project written before
+these fields existed must sound exactly as it did. A present key is honoured
+verbatim; there is no inference from one edge to the other, since a
+consolidated clip could in principle abut another consolidation on one side
+only.
+
+#### Suppression is not "never fade"
+
+`applyLeading = false` means *do not add the engine's automatic safety ramp*,
+not *this edge may never fade*. A user fade set on a suppressed edge must still
+produce exactly its own ramp — that is what the `max(automatic, user)`
+decomposition buys, and asserting it is what proves the decomposition is real
+rather than a re-spelling of the old single expression.
+
+#### Gates
+
+- default policy → 6/6 digests exact;
+- each edge suppressible **independently** (leading only, trailing only, both);
+- a 500-sample user fade still yields a 500-sample ramp with automatic
+  suppression active;
+- very short clips, where `clipLength < kClipEdgeFadeSamples`;
+- **serialization round-trip** with both values `false`, and with each `false`
+  independently;
+- **legacy fixture** — load a project predating the fields (the frozen
+  `v1_minimal` / `v1_rich` corpus) and prove both edges default to enabled.
+  Asserting that a *newly constructed* clip defaults to `true` only tests the
+  member initializer; the absent-key path in the deserializer is where old
+  projects actually go;
+- **boundary-policy propagation** — see the table below. This is *not* simple
+  preservation: an operation that creates, moves or remaps an edge must restore
+  automatic protection at that edge;
+- sabotage proving that a missing suppression causes outer-edge double
+  attenuation.
+
+#### Boundary-policy propagation
+
+**The policy follows boundary provenance, not clip identity.** An edge flag is
+preserved only when the operation preserves that exact source boundary and its
+sample mapping. Anything that creates, moves or remaps an edge must restore
+automatic protection there.
+
+| Operation | Leading | Trailing |
+|---|---|---|
+| Duplicate, copy/paste, move, make unique | preserve | preserve |
+| Split — left result | preserve | **reset to `true`** |
+| Split — right result | **reset to `true`** | preserve |
+| Trim/crop leading edge | **reset to `true`** | preserve |
+| Trim/crop trailing edge | preserve | **reset to `true`** |
+| Slip / source-offset change | **reset to `true`** | **reset to `true`** |
+| Replace source | **reset to `true`** | **reset to `true`** |
+| Reverse (raw source reversal) | **swap with trailing** | **swap with leading** |
+| Playback-rate / stretch change | reset unless the operation re-renders equivalent edge envelopes | same |
+| Undo / redo | restore the exact prior values | restore the exact prior values |
+
+Getting split wrong is quiet in the dangerous direction. A consolidated clip
+split in two would leave `applyLeading = false` on the right-hand piece, so the
+new seam gets **no** anti-click ramp — an audible click on a cut, blamed on the
+splitter rather than on a consolidation performed weeks earlier.
+
+Split already sets the precedent for user fades: `PlaylistModel` copies the
+edits wholesale and then clears `fadeInBeats` on the right piece while
+`SplitClipCommand` clears `fadeOutBeats` on the left. The automatic policy
+follows the same asymmetry.
+
+**Reverse** deserves an explicit decision rather than falling out of generic
+edit copying, and the deciding question is *what the resulting source contains*
+— not what the command itself called.
+
+`ReverseAudioClipCommand` extracts the clip's existing source region and
+reverses those raw samples. It neither removes previously baked envelopes nor
+renders through the fade kernel. So for a consolidated input, whose source
+already carries baked ramps at both ends:
+
+```text
+source:    leading ramp baked ───── trailing ramp baked      policy: false / false
+reversed:  old trailing ramp  ───── old leading ramp
+```
+
+The baked behaviour still exists — it has changed sides. The flags therefore
+**swap**:
+
+```cpp
+result.autoFadeLeading  = original.autoFadeTrailing;
+result.autoFadeTrailing = original.autoFadeLeading;
+```
+
+Resetting both to `true` would lay fresh automatic ramps over the already-baked
+ones and recreate exactly the double attenuation this policy exists to prevent.
+
+"The reverse command calls no fade function" is insufficient reasoning, because
+the *input* source may already contain those fades.
+
+The test uses an **asymmetric** original, since a symmetric one cannot
+distinguish swapping from preserving:
+
+```cpp
+original.autoFadeLeading  = false;   original.autoFadeTrailing = true;
+// after reverse
+result.autoFadeLeading   == true;    result.autoFadeTrailing   == false;
+```
+
+That single case catches all three plausible mistakes: preserving both
+unchanged, resetting both to `true`, and resetting both to `false`.
+
+**User fades are a separate policy and are preserved.** `fadeInBeats` and
+`fadeOutBeats` are properties of the *placed clip's timeline edges*, not of
+source content: fade-in belongs to the leading timeline edge, fade-out to the
+trailing one, and reverse changes the content underneath those boundaries.
+Swapping them would treat user fades as source properties, contradicting the
+split precedent above. So:
+
+```text
+automatic baked-edge policy under raw reversal:  swap
+nondestructive user fades on timeline edges:     preserve
+```
+
+Only a different command — "reverse the exact currently audible render" — would
+bake the user fades, reverse the rendered result, and reset their metadata.
+That is not what `ReverseAudioClipCommand` does.
+
+##### The split test
+
+Start from a clip with **both** flags disabled, which is what a consolidated
+clip looks like:
+
+```cpp
+original.autoFadeLeading  = false;
+original.autoFadeTrailing = false;
+```
+
+After splitting:
+
+```cpp
+left.autoFadeLeading   == false;   left.autoFadeTrailing  == true;
+right.autoFadeLeading  == true;    right.autoFadeTrailing == false;
+```
+
+That single asymmetric result catches both plausible wrong implementations —
+copying all four flags unchanged, and resetting all four to `true`. Symmetric
+expectations catch neither.
+
+The same test confirms the existing user-fade behaviour at the seam: the left
+fade-out and right fade-in cleared, the untouched outer user fades preserved.
+
+Inverse compensation — dividing the rendered mix by the result clip's future
+automatic envelope — would avoid serialized state, but it needs severe
+pre-emphasis for short boundary clips and can exceed the representable range of
+the stored format. Rejected as operationally fragile.
 
 ### 3.3 Why boundary alignment is required in v1
 
@@ -203,7 +424,7 @@ audio graph does not belong here.
 
 ## 6. Muse schema
 
-```
+```cpp
 {"consolidate_audio", CommandCategory::Clip, {
     {"lane",  FlagType::Id,    true},
     {"start", FlagType::Float, true},
