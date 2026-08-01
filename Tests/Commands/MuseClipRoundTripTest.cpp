@@ -509,14 +509,26 @@ int main() {
         const std::string postCommit = (std::filesystem::temp_directory_path() / "muse_rt_postcommit.wav").string();
 
         // Something to bake: a clear gain change.
+        //
+        // Every step here is asserted, because this test fails open otherwise:
+        // if the id did not parse, or the clip were unreachable, or the edit
+        // did not stick, the commit would have nothing to bake and the
+        // equivalence check below would compare two identical renders and
+        // pass while proving nothing.
         Aestra::Audio::AestraUUID parsedId;
-        Aestra::Audio::AestraUUID::tryParse(clipId, parsedId);
+        check(Aestra::Audio::AestraUUID::tryParse(clipId, parsedId),
+              "the listed id parses before the commit check");
         const Aestra::Audio::ClipInstanceID id(parsedId);
-        if (auto* clip = trackManager->getPlaylistModel().getClip(id)) {
+        auto* clip = trackManager->getPlaylistModel().getClip(id);
+        check(clip != nullptr, "the clip is addressable before the commit check");
+        if (clip) {
             Aestra::Audio::ClipEdits edits = clip->edits;
             edits.gainLinear = 0.35f;
-            trackManager->getPlaylistModel().setClipEdits(id, edits);
+            check(trackManager->getPlaylistModel().setClipEdits(id, edits), "the gain edit applies");
         }
+        const auto* staged = trackManager->getPlaylistModel().getClip(id);
+        check(staged != nullptr && std::fabs(staged->edits.gainLinear - 0.35f) < 1.0e-6f,
+              "there is a real gain to bake, so the commit is not a no-op");
 
         JSON args = JSON::object();
         args.set("file", JSON(preCommit));
@@ -529,6 +541,12 @@ int main() {
 
         r = call(service, verbWithId("commit_clip_edits", clipId));
         check(status(r) == "ok", "commit_clip_edits runs against the listed id");
+        // The other half of failing open: if the bake silently did nothing,
+        // the gain would still be 0.35 and the two renders would again match
+        // for the wrong reason.
+        const auto* committed = trackManager->getPlaylistModel().getClip(id);
+        check(committed != nullptr && std::fabs(committed->edits.gainLinear - 1.0f) < 1.0e-6f,
+              "the commit really baked the gain and reset it to unity");
 
         args = JSON::object();
         args.set("file", JSON(postCommit));
