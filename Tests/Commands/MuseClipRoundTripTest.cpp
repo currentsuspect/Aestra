@@ -22,9 +22,11 @@
 
 #include "AestraJSON.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -114,6 +116,70 @@ std::string writeDecayWav() {
     }
     std::fclose(f);
     return path;
+}
+
+/**
+ * Read back a float32 WAV that render_song produced, so the assertions are
+ * about audio that actually left the engine rather than about a buffer sitting
+ * in SourceManager.
+ */
+bool readFloatWav(const std::string& path, std::vector<float>& out, uint32_t& channels) {
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return false;
+    char riff[4], wave[4];
+    if (std::fread(riff, 1, 4, f) != 4) { std::fclose(f); return false; }
+    uint32_t chunkSize = 0;
+    if (std::fread(&chunkSize, 4, 1, f) != 1) { std::fclose(f); return false; }
+    if (std::fread(wave, 1, 4, f) != 4) { std::fclose(f); return false; }
+    if (std::memcmp(riff, "RIFF", 4) != 0 || std::memcmp(wave, "WAVE", 4) != 0) { std::fclose(f); return false; }
+
+    channels = 0;
+    uint16_t bits = 0;
+    while (true) {
+        char id[4];
+        uint32_t size = 0;
+        if (std::fread(id, 1, 4, f) != 4) break;
+        if (std::fread(&size, 4, 1, f) != 1) break;
+        if (std::memcmp(id, "fmt ", 4) == 0) {
+            uint16_t fmt = 0, ch = 0;
+            uint32_t rate = 0, byteRate = 0;
+            uint16_t block = 0;
+            std::fread(&fmt, 2, 1, f);
+            std::fread(&ch, 2, 1, f);
+            std::fread(&rate, 4, 1, f);
+            std::fread(&byteRate, 4, 1, f);
+            std::fread(&block, 2, 1, f);
+            std::fread(&bits, 2, 1, f);
+            channels = ch;
+            if (size > 16) std::fseek(f, static_cast<long>(size - 16), SEEK_CUR);
+        } else if (std::memcmp(id, "data", 4) == 0) {
+            if (bits != 32 || channels == 0) { std::fclose(f); return false; }
+            out.resize(size / sizeof(float));
+            const size_t read = std::fread(out.data(), sizeof(float), out.size(), f);
+            out.resize(read);
+            std::fclose(f);
+            return !out.empty();
+        } else {
+            std::fseek(f, static_cast<long>(size + (size & 1u)), SEEK_CUR);
+        }
+    }
+    std::fclose(f);
+    return false;
+}
+
+/** Energy in the first or last half of an interleaved buffer. */
+double halfEnergyOf(const std::vector<float>& data, uint32_t channels, bool front) {
+    if (channels == 0 || data.empty()) return 0.0;
+    const size_t frames = data.size() / channels;
+    const size_t half = frames / 2;
+    const size_t begin = front ? 0 : half;
+    const size_t end = front ? half : frames;
+    double energy = 0.0;
+    for (size_t f = begin; f < end; ++f) {
+        const double s = data[f * channels];
+        energy += s * s;
+    }
+    return energy;
 }
 
 /** Energy in the first or last half of whatever audio the clip resolves to. */
@@ -376,6 +442,101 @@ int main() {
         auto seededManager = std::make_shared<TrackManager>();
         seededManager->getUnitManager().setPatternManager(&seededManager->getPatternManager());
         testPreexistingSourceSurvivesFailure(*seededManager, wavPath);
+    }
+
+    // --- render_song proves the audio, not just the model -------------------
+    if (!clipId.empty()) {
+        const std::string beforePath = (std::filesystem::temp_directory_path() / "muse_rt_before.wav").string();
+        const std::string afterPath = (std::filesystem::temp_directory_path() / "muse_rt_after.wav").string();
+
+        JSON args = JSON::object();
+        args.set("file", JSON(beforePath));
+        args.set("tail", JSON(0.0));
+        JSON r = call(service, request("render_song", args));
+        check(status(r) == "ok", "render_song bounces the arranged timeline");
+
+        std::vector<float> before;
+        uint32_t beforeChannels = 0;
+        check(readFloatWav(beforePath, before, beforeChannels), "the rendered mix reads back");
+        const double frontBefore = halfEnergyOf(before, beforeChannels, true);
+        const double backBefore = halfEnergyOf(before, beforeChannels, false);
+        check(frontBefore > backBefore * 2.0, "the rendered mix is front-loaded, like the imported file");
+
+        // Reverse addressed by the id list_clips reported.
+        r = call(service, verbWithId("reverse_clip", clipId));
+        check(status(r) == "ok", "reverse_clip runs against the listed id");
+
+        args = JSON::object();
+        args.set("file", JSON(afterPath));
+        args.set("tail", JSON(0.0));
+        r = call(service, request("render_song", args));
+        check(status(r) == "ok", "render_song bounces the reversed timeline");
+
+        std::vector<float> after;
+        uint32_t afterChannels = 0;
+        check(readFloatWav(afterPath, after, afterChannels), "the reversed mix reads back");
+        const double frontAfter = halfEnergyOf(after, afterChannels, true);
+        const double backAfter = halfEnergyOf(after, afterChannels, false);
+        // The whole point of the round trip: audio that actually left the
+        // engine changed, in the direction reverse implies.
+        check(backAfter > frontAfter * 2.0, "the reversed mix is back-loaded");
+
+        r = call(service, request("undo", JSON::object()));
+        check(status(r) == "ok", "the reverse undoes");
+
+        std::error_code renderEc;
+        std::filesystem::remove(beforePath, renderEc);
+        std::filesystem::remove(afterPath, renderEc);
+    }
+
+    // --- commit_clip_edits is audibly equivalent ----------------------------
+    if (!clipId.empty()) {
+        const std::string preCommit = (std::filesystem::temp_directory_path() / "muse_rt_precommit.wav").string();
+        const std::string postCommit = (std::filesystem::temp_directory_path() / "muse_rt_postcommit.wav").string();
+
+        // Something to bake: a clear gain change.
+        Aestra::Audio::AestraUUID parsedId;
+        Aestra::Audio::AestraUUID::tryParse(clipId, parsedId);
+        const Aestra::Audio::ClipInstanceID id(parsedId);
+        if (auto* clip = trackManager->getPlaylistModel().getClip(id)) {
+            Aestra::Audio::ClipEdits edits = clip->edits;
+            edits.gainLinear = 0.35f;
+            trackManager->getPlaylistModel().setClipEdits(id, edits);
+        }
+
+        JSON args = JSON::object();
+        args.set("file", JSON(preCommit));
+        args.set("tail", JSON(0.0));
+        JSON r = call(service, request("render_song", args));
+        check(status(r) == "ok", "render_song bounces before the commit");
+        std::vector<float> pre;
+        uint32_t preChannels = 0;
+        check(readFloatWav(preCommit, pre, preChannels), "the pre-commit mix reads back");
+
+        r = call(service, verbWithId("commit_clip_edits", clipId));
+        check(status(r) == "ok", "commit_clip_edits runs against the listed id");
+
+        args = JSON::object();
+        args.set("file", JSON(postCommit));
+        args.set("tail", JSON(0.0));
+        r = call(service, request("render_song", args));
+        check(status(r) == "ok", "render_song bounces after the commit");
+        std::vector<float> post;
+        uint32_t postChannels = 0;
+        check(readFloatWav(postCommit, post, postChannels), "the post-commit mix reads back");
+
+        // The defining invariant: committing clip-local edits must not change
+        // what the timeline sounds like.
+        check(preChannels == postChannels, "the commit does not change the channel count");
+        const double preEnergy = halfEnergyOf(pre, preChannels, true) + halfEnergyOf(pre, preChannels, false);
+        const double postEnergy = halfEnergyOf(post, postChannels, true) + halfEnergyOf(post, postChannels, false);
+        const double denominator = std::max(preEnergy, 1.0e-9);
+        check(std::fabs(preEnergy - postEnergy) / denominator < 0.02,
+              "committing clip edits leaves the rendered mix audibly equivalent");
+
+        std::error_code renderEc;
+        std::filesystem::remove(preCommit, renderEc);
+        std::filesystem::remove(postCommit, renderEc);
     }
 
     std::error_code ec;

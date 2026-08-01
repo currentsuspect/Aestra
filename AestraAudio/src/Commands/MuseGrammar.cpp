@@ -59,7 +59,7 @@ static const std::vector<CommandSchema> s_schemas = {
     },
      "Set track pan (-1 left .. 1 right)."},
 
-    // === Clip (6) ===
+    // === Clip (8) ===
     // Every "id" here is FlagType::Id: the same 32-hex-char string list_clips
     // prints. These used to be Int, which no listed id could satisfy.
     {"add_lane", CommandCategory::Clip, {
@@ -93,6 +93,14 @@ static const std::vector<CommandSchema> s_schemas = {
         {"end", FlagType::Float, true}
     },
      "Trim a clip to a start/end beat range."},
+    {"reverse_clip", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Replace an audio clip's source with a reversed render of itself. Writes a new file; undo restores the original."},
+    {"commit_clip_edits", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Bake an audio clip's own gain and fades into a new source file and reset those edits to unity. Clip-local only: this does not render the track's plugins, automation, sends or routing."},
     // === Unit (2) ===
     // "type" accepts: sampler (default), 808. The schema format cannot
     // express enums yet; the factory rejects anything else.

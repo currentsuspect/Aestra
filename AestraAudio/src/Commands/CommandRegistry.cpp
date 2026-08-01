@@ -20,6 +20,7 @@
 #include "Commands/ImportAudioClipCommand.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/RenderAudioClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetPanCommand.h"
@@ -372,6 +373,25 @@ void CommandRegistry::initialize() {
 
         ClipInstanceID clipId(*idOpt);
         return std::make_unique<RemoveClipCommand>(*pm, clipId);
+    });
+
+    reg.registerCommand("reverse_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        if (!ctx.trackManager) return nullptr;
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
+        return std::make_unique<ReverseAudioClipCommand>(*ctx.trackManager, ClipInstanceID(*idOpt));
+    });
+
+    reg.registerCommand("commit_clip_edits", [](const auto& flags,
+                                                const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        if (!ctx.trackManager) return nullptr;
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
+        return std::make_unique<CommitAudioClipEditsCommand>(*ctx.trackManager, ClipInstanceID(*idOpt));
     });
 
     reg.registerCommand("move_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

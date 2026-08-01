@@ -298,6 +298,8 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/Rende
     )
     add_test(NAME RenderAudioClipCommandTest COMMAND RenderAudioClipCommandTest)
     set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo")
+endif()
+
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseClipRoundTripTest.cpp")
     add_executable(MuseClipRoundTripTest Commands/MuseClipRoundTripTest.cpp)
     target_link_libraries(MuseClipRoundTripTest PRIVATE AestraAudioCore)
