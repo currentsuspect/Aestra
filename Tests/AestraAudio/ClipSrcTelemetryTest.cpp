@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -121,6 +122,8 @@ struct Rig {
 
     /** Total squared sample energy of the last render, for "did it contribute?". */
     double lastRenderEnergy{0.0};
+    /** Samples actually read from the data chunk, so a misread cannot look like silence. */
+    size_t lastRenderSamples{0};
 
     /** Render the timeline and report how far the SRC counter advanced. */
     uint64_t renderAndCountSrcBlocks(const std::string& file) {
@@ -135,13 +138,37 @@ struct Rig {
         JSON r = JSON::parse(service->handleRequest(req.toString()));
         if (!r.has("status") || r["status"].asString() != "ok") return UINT64_MAX;
 
+        // Scan for the data chunk rather than assuming a 44-byte header.
+        // AudioExporter emits exactly RIFF+WAVE+fmt+data today, so a fixed
+        // seek happens to work — but ClipRenderService's writer already emits
+        // a fact chunk, and a misaligned seek would sum garbage floats into a
+        // value still greater than zero. This test exists to catch a silently
+        // lost clip; it cannot afford to pass or fail for an unrelated reason.
         lastRenderEnergy = 0.0;
+        lastRenderSamples = 0;
         std::FILE* f = std::fopen(file.c_str(), "rb");
         if (f) {
-            std::fseek(f, 44, SEEK_SET); // past the canonical float32 header
-            float sample = 0.0f;
-            while (std::fread(&sample, sizeof(float), 1, f) == 1) {
-                if (std::isfinite(sample)) lastRenderEnergy += static_cast<double>(sample) * sample;
+            char riff[4], wave[4];
+            uint32_t riffSize = 0;
+            if (std::fread(riff, 1, 4, f) == 4 && std::fread(&riffSize, 4, 1, f) == 1 &&
+                std::fread(wave, 1, 4, f) == 4 && std::memcmp(riff, "RIFF", 4) == 0 &&
+                std::memcmp(wave, "WAVE", 4) == 0) {
+                char id[4];
+                uint32_t size = 0;
+                while (std::fread(id, 1, 4, f) == 4 && std::fread(&size, 4, 1, f) == 1) {
+                    if (std::memcmp(id, "data", 4) == 0) {
+                        const size_t count = size / sizeof(float);
+                        float sample = 0.0f;
+                        for (size_t i = 0; i < count && std::fread(&sample, sizeof(float), 1, f) == 1; ++i) {
+                            if (std::isfinite(sample)) {
+                                lastRenderEnergy += static_cast<double>(sample) * sample;
+                            }
+                            ++lastRenderSamples;
+                        }
+                        break;
+                    }
+                    std::fseek(f, static_cast<long>(size + (size & 1u)), SEEK_CUR);
+                }
             }
             std::fclose(f);
         }
@@ -248,6 +275,8 @@ int main() {
         // resampled clip sets the flag and every later clip in the block is
         // never rendered at all — telemetry still reports one SRC-active
         // block, correctly, while the audio silently loses a clip.
+        check(one.lastRenderSamples > 0 && two.lastRenderSamples > 0,
+              "overlap: the data chunk was located in both renders");
         check(one.lastRenderEnergy > 0.0, "overlap: the single-clip render carries audio");
         check(two.lastRenderEnergy > one.lastRenderEnergy * 1.5,
               "overlap: the second clip still contributes audio after the first set the flag");
