@@ -20,7 +20,8 @@ inputs:
   lane:
     description: >
       Lane identifier: linux-gcc, windows-msvc, macos-clang, ui-app, asan, tsan,
-      lsan or tidy. An unrecognised value runs the lane (see lane-runs.sh).
+      lsan, tidy or plugin-host. An unrecognised value runs the lane (see
+      lane-runs.sh).
     required: true
   github-token:
     description: Token used to read the pull request's changed files.

@@ -143,6 +143,102 @@ jobs:
           -DBUNDLED_FONT_ROOT=${{github.workspace}}/build-app/bin/AestraAssets/fonts
           -P ${{github.workspace}}/Tests/Guards/verify_aestra_font_bundle.cmake
 
+  build-plugin-host:
+    name: Plugin hosting (VST3 + CLAP compile)
+    runs-on: ubuntu-latest
+    steps:
+      # Unlike every other lane, this one NEEDS a submodule. The VST3 SDK lives in
+      # one, and AestraAudio/CMakeLists.txt gates AESTRA_HAS_VST3 on its presence,
+      # so with submodules: false the entire VST3 host path — VST3Host.cpp and the
+      # SDK hosting sources it links — is silently excluded from every other job.
+      # That is why this lane exists: the plugin hosting code was not compiled by
+      # CI at all, so nothing caught a break in it until someone built locally.
+      #
+      # Only vst3sdk is fetched, shallow. Pulling every submodule would drag in
+      # FreeType and SDL2 for a lane that never touches the UI.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: plugin-host
+          github-token: ${{ github.token }}
+
+      - name: Fetch VST3 SDK submodule
+        if: steps.scope.outputs.run == 'true'
+        run: git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+
+      - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libsodium-dev libx11-dev
+
+      # Configure once, and assert on that same run's output. A lane that compiles
+      # nothing would otherwise report green - which is the precise failure mode
+      # this lane exists to eliminate, so the assertion is not optional polish.
+      - name: Configure and assert both plugin formats are enabled
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cmake -B build-plugins -S . \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DAestra_CORE_MODE=ON \
+            -DAESTRA_HEADLESS_ONLY=ON \
+            -DAESTRA_ENABLE_TESTS=ON 2>&1 | tee configure.log
+          grep -q "VST3 SDK: Found" configure.log \
+            || { echo "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1; }
+          grep -q "CLAP SDK: Found" configure.log \
+            || { echo "::error::CLAP SDK not detected - this lane would compile nothing"; exit 1; }
+
+      # Builds the default target, not just the two host targets. The plugin and
+      # sandbox tests below are separate executables: build only AestraAudioCore
+      # and AestraPluginHost and every test reports "(Not Run)", which fails the
+      # lane for a misleading reason instead of testing anything. Headless mode
+      # keeps the UI out, so this is comparable in cost to the Linux (GCC) lane -
+      # the difference being that here the plugin tests run against real VST3 and
+      # CLAP host code rather than against it compiled out.
+      - name: Build (headless, plugin formats enabled)
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cmake --build build-plugins --config ${{env.BUILD_TYPE}} --parallel
+          test -x build-plugins/bin/AestraPluginHost \
+            || { echo "::error::AestraPluginHost was not produced"; exit 1; }
+
+      # Proves both formats are linked in, not merely compiled and discarded.
+      - name: Assert host symbols are present
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          lib=$(find build-plugins -name 'libAestraAudioCore.a' -print -quit)
+          test -n "${lib}" || { echo "::error::libAestraAudioCore.a not found"; exit 1; }
+          nm -C "${lib}" > syms.txt
+          grep -q "VST3PluginInstance" syms.txt \
+            || { echo "::error::VST3 host symbols missing from libAestraAudioCore"; exit 1; }
+          grep -q "CLAPPluginInstance" syms.txt \
+            || { echo "::error::CLAP host symbols missing from libAestraAudioCore"; exit 1; }
+
+      # Two selectors, both required. The plugin/clap labels do NOT carry the
+      # sandbox isolation tests (those are labelled security), and they are the
+      # ones that actually exercise out-of-process hosting - so they are named
+      # explicitly. Deliberately not chained with `||`: that would turn a real
+      # test failure into a silent retry of a different selector.
+      - name: Run plugin tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        run: ctest -L "plugin|clap" --output-on-failure
+
+      - name: Run sandbox isolation tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        run: >-
+          ctest --output-on-failure -R
+          "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecPluginCacheBounds|SecPluginTrustedPath|PluginScannerSigpipeTest"
+
   build-windows:
     name: Windows (MSVC)
     runs-on: windows-latest
