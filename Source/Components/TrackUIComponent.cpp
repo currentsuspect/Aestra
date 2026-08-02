@@ -104,17 +104,9 @@ TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
     return trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
 }
 
-AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,
-                                    float alpha) {
-    const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
-    const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
-    return AestraUI::NUIColor(std::clamp(tonedR, 0.0f, 1.0f),
-                              std::clamp(tonedG, 0.0f, 1.0f),
-                              std::clamp(tonedB, 0.0f, 1.0f),
-                              alpha >= 0.0f ? alpha : color.a);
-}
+// Clip and lane tones all come from AestraUI/Widgets/TrackColorPalette.h now
+// (clipBodyTone / waveformTintTone / restrainLaneIdentityColor), so nothing here
+// open-codes a restraint the minimap cannot see.
 
 // Keep Playlist clip selection in the same visual language as Piano Roll
 // notes: a lifted secondary accent, crisp white edge, grounded shadow, and
@@ -146,8 +138,10 @@ struct WaveformInk {
 WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
     // Bold, near-solid waveform so it reads as a clear waveform shape (not faint
     // texture) against the clip fill: a bright lift of the clip hue at high alpha,
-    // with the min/max envelope nearly as opaque as the RMS body.
-    const AestraUI::NUIColor bright = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.52f);
+    // with the min/max envelope nearly as opaque as the RMS body. The lift amount
+    // is shared with clipBodyTone()'s counterpart so the contrast contract has one
+    // authority (see TrackColorPalette.h).
+    const AestraUI::NUIColor bright = AestraUI::liftWaveformInk(base);
     WaveformInk ink;
     ink.rms = bright.withAlpha(0.97f);
     ink.envTop = bright.withAlpha(0.90f);
@@ -572,8 +566,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
     // lifts it bright + near-opaque so the wave reads boldly over the fill.
     const bool clipSelected = (clip.id == m_selectedClipId);
-    AestraUI::NUIColor clipTint = restrainDawColor(resolveClipDisplayColor(clip), 1.0f, 0.92f, 1.0f);
-    if (clipSelected) clipTint = clipTint.lightened(0.12f);
+    const AestraUI::NUIColor clipTint = AestraUI::waveformTintTone(resolveClipDisplayColor(clip), clipSelected);
 
     const double samplesPerPixel = static_cast<double>(visibleFrames) / static_cast<double>(width);
 
@@ -902,10 +895,11 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
     // Deeper, less-saturated base so the clip reads rich rather than neon.
-    const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
-                                                         clipSelected ? 0.90f : 0.80f,
-                                                         clipSelected ? 0.62f : 0.56f,
-                                                         1.0f);
+    // Body sits lower than the waveform on purpose. Both tones are derived
+    // together in TrackColorPalette.h so the gap between them cannot drift: the
+    // clip stops reading as a bright slab and starts reading as a surface with
+    // audio drawn on it.
+    const AestraUI::NUIColor clipBase = AestraUI::clipBodyTone(clipColor, clipSelected);
     AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.88f : 0.80f);
     // Opaque deep base so the timeline grid doesn't bleed through the clip body.
     renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary"));
@@ -1340,7 +1334,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             
             const float stripWidth = 3.0f;
             const float stripAlpha = (m_selected || lane->solo) ? 0.82f : 0.40f;
-            const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
+            const auto stripBright = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
 
@@ -1542,7 +1536,10 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         
         const float stripWidth = 3.0f;
         const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.42f;
-        stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
+        // Was 0.86f here against 0.84f in the static pass, so one lane strip had
+        // two brightnesses depending on which pass drew it. Both now go through
+        // the shared lane-identity restraint the minimap uses.
+        stripColor = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
         
         // Draw strip
         renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);

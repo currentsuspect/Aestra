@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../Core/NUITypes.h"
+
+#include <algorithm>
 #include <cstdint>
 #include <climits>
 
@@ -31,6 +34,70 @@ static constexpr const char* PALETTE_NAMES[] = {
 inline uint32_t paletteIndexToARGB(int index) {
     if (index < 0 || index >= PALETTE_SIZE) return 0xFF808080;
     return TRACK_PALETTE[index];
+}
+
+/**
+ * @brief Pull a raw palette hue back to the timeline's restrained tone.
+ *
+ * TRACK_PALETTE stores identity hues at full strength. Nothing should paint
+ * them raw: the timeline deliberately tones lane and clip colour down so the
+ * musical content stays the brightest thing on screen. Any surface that shows
+ * the *same* lane identity has to apply the same restraint, or one view reads
+ * as a different colour system from the next.
+ *
+ * @param brightnessScale Multiplies final luma (below 1 darkens).
+ * @param saturationScale Pulls channels toward luma (below 1 desaturates).
+ * @param alpha Output alpha; negative keeps the input's.
+ */
+inline NUIColor restrainDawColor(const NUIColor& color, float brightnessScale, float saturationScale, float alpha) {
+    const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
+    const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
+    const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
+    const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
+    return NUIColor(std::clamp(tonedR, 0.0f, 1.0f), std::clamp(tonedG, 0.0f, 1.0f), std::clamp(tonedB, 0.0f, 1.0f),
+                    alpha >= 0.0f ? alpha : color.a);
+}
+
+/**
+ * @brief Restraint applied to a lane-identity stripe.
+ *
+ * Shared by the timeline's lane strips and the minimap's per-lane lines so a
+ * lane reads as one colour in both.
+ */
+inline NUIColor restrainLaneIdentityColor(const NUIColor& color, float alpha) {
+    return restrainDawColor(color, 0.84f, 0.62f, alpha);
+}
+
+// ---------------------------------------------------------------------------
+// Clip contrast contract
+//
+// A clip is a surface with audio drawn on it. The body is deliberately toned
+// well down; the waveform keeps the identity hue near full strength and is then
+// lifted toward white. Both halves live here, together, because the thing that
+// matters is not either constant but the *gap* between them — separate the two
+// derivations and a later edit can quietly invert the hierarchy, which is the
+// bug this pairing exists to prevent. TimelineClipContrastTest guards the gap.
+// ---------------------------------------------------------------------------
+
+/** @brief The clip body: a deep, desaturated surface that must stay the quieter half. */
+inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
+    return restrainDawColor(identity, selected ? 0.78f : 0.68f, selected ? 0.62f : 0.56f, 1.0f);
+}
+
+/** @brief The identity tint the waveform is lifted from — kept bright so it has headroom. */
+inline NUIColor waveformTintTone(const NUIColor& identity, bool selected) {
+    const NUIColor tint = restrainDawColor(identity, 1.0f, 0.92f, 1.0f);
+    return selected ? tint.lightened(0.12f) : tint;
+}
+
+/** @brief Lift a waveform tint toward white. Sole authority for the lift amount. */
+inline NUIColor liftWaveformInk(const NUIColor& tint) {
+    return NUIColor::lerp(tint, NUIColor::white(), 0.52f);
+}
+
+/** @brief The ink actually drawn over the body. Must stay brighter than clipBodyTone(). */
+inline NUIColor waveformInkTone(const NUIColor& identity, bool selected) {
+    return liftWaveformInk(waveformTintTone(identity, selected));
 }
 
 inline int nearestPaletteIndex(uint32_t argb) {

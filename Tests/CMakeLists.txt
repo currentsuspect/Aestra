@@ -1544,6 +1544,16 @@ target_include_directories(TimelineInteractionPolicyTest PRIVATE
 add_test(NAME TimelineInteractionPolicyTest COMMAND TimelineInteractionPolicyTest)
 set_tests_properties(TimelineInteractionPolicyTest PROPERTIES LABELS "ui;timeline;selection;regression")
 
+# Clip contrast contract: waveform ink must stay brighter than the clip body it
+# is drawn on, for every lane identity and both selection states.
+add_executable(TimelineClipContrastTest AestraUI/TimelineClipContrastTest.cpp)
+target_include_directories(TimelineClipContrastTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+)
+add_test(NAME TimelineClipContrastTest COMMAND TimelineClipContrastTest)
+set_tests_properties(TimelineClipContrastTest PROPERTIES LABELS "ui;timeline;color;regression")
+
 # Settings persistence policy (#648). Same shape as SafeClampFloatTest above:
 # header-only and widget-free so the decision that was destroying saved device
 # ids is reachable without linking AestraUI, which AESTRA_CI=ON disables.
