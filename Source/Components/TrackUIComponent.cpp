@@ -104,10 +104,9 @@ TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
     return trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
 }
 
-// restrainDawColor now lives in AestraUI/Widgets/TrackColorPalette.h next to the
-// palette it tones, so the minimap applies the identical restraint to the same
-// lane identities. Brought into scope here to keep the call sites unqualified.
-using AestraUI::restrainDawColor;
+// Clip and lane tones all come from AestraUI/Widgets/TrackColorPalette.h now
+// (clipBodyTone / waveformTintTone / restrainLaneIdentityColor), so nothing here
+// open-codes a restraint the minimap cannot see.
 
 // Keep Playlist clip selection in the same visual language as Piano Roll
 // notes: a lifted secondary accent, crisp white edge, grounded shadow, and
@@ -1329,7 +1328,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             
             const float stripWidth = 3.0f;
             const float stripAlpha = (m_selected || lane->solo) ? 0.82f : 0.40f;
-            const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
+            const auto stripBright = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
 
@@ -1531,7 +1530,10 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         
         const float stripWidth = 3.0f;
         const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.42f;
-        stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
+        // Was 0.86f here against 0.84f in the static pass, so one lane strip had
+        // two brightnesses depending on which pass drew it. Both now go through
+        // the shared lane-identity restraint the minimap uses.
+        stripColor = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
         
         // Draw strip
         renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
