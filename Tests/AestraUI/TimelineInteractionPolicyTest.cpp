@@ -45,6 +45,16 @@ void testStableSelectionLifecycle() {
     check(selection.empty(), "clear removes every selected lane");
 }
 
+void testModifierSelectionIntent() {
+    check(trackSelectionIntentForModifierState(false, false) == TrackSelectionIntent::Replace,
+          "plain clicks replace selection");
+    check(trackSelectionIntentForModifierState(false, true) == TrackSelectionIntent::Add, "Shift adds to selection");
+    check(trackSelectionIntentForModifierState(true, false) == TrackSelectionIntent::Toggle,
+          "the platform toggle modifier toggles selection");
+    check(trackSelectionIntentForModifierState(true, true) == TrackSelectionIntent::Toggle,
+          "the toggle modifier takes precedence over Shift");
+}
+
 void testProjectLoopPolicy() {
     check(timelineLoopPresetFromId(6) == TimelineLoopPreset::Project,
           "project preset id resolves to the single typed authority");
@@ -61,6 +71,7 @@ void testProjectLoopPolicy() {
 
 int main() {
     testStableSelectionLifecycle();
+    testModifierSelectionIntent();
     testProjectLoopPolicy();
 
     if (failures == 0) {

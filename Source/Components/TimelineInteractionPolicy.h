@@ -16,6 +16,16 @@ enum class TrackSelectionIntent {
     Toggle,
 };
 
+constexpr TrackSelectionIntent trackSelectionIntentForModifierState(bool toggleModifier, bool shiftModifier) {
+    if (toggleModifier) {
+        return TrackSelectionIntent::Toggle;
+    }
+    if (shiftModifier) {
+        return TrackSelectionIntent::Add;
+    }
+    return TrackSelectionIntent::Replace;
+}
+
 /** Stable, widget-independent selection authority for Playlist lanes. */
 class TimelineTrackSelection {
 public:

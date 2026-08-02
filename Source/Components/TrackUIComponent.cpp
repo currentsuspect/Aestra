@@ -99,14 +99,9 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
 }
 
 TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
-    if ((event.modifiers & AestraUI::NUIModifiers::Ctrl) ||
-        (event.modifiers & AestraUI::NUIModifiers::Super)) {
-        return TrackSelectionIntent::Toggle;
-    }
-    if (event.modifiers & AestraUI::NUIModifiers::Shift) {
-        return TrackSelectionIntent::Add;
-    }
-    return TrackSelectionIntent::Replace;
+    const bool toggleModifier =
+        (event.modifiers & AestraUI::NUIModifiers::Ctrl) || (event.modifiers & AestraUI::NUIModifiers::Super);
+    return trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
 }
 
 AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,

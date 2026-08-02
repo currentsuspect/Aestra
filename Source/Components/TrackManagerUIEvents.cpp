@@ -229,13 +229,10 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false;
     }
 
-    TrackSelectionIntent intent = TrackSelectionIntent::Replace;
-    if ((event.modifiers & AestraUI::NUIModifiers::Ctrl) ||
-        (event.modifiers & AestraUI::NUIModifiers::Super)) {
-        intent = TrackSelectionIntent::Toggle;
-    } else if (event.modifiers & AestraUI::NUIModifiers::Shift) {
-        intent = TrackSelectionIntent::Add;
-    }
+    const bool toggleModifier =
+        (event.modifiers & AestraUI::NUIModifiers::Ctrl) || (event.modifiers & AestraUI::NUIModifiers::Super);
+    const TrackSelectionIntent intent =
+        trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
     selectTrack(trackUI.get(), intent);
     invalidateCache();
     return true;

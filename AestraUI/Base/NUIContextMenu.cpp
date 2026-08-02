@@ -437,6 +437,8 @@ void NUIContextMenu::hide()
 {
     const bool ownedFocus = ownsMenuFocus();
     auto previousFocus = previousFocus_.lock();
+    // Mark the parent hidden before cascading so a submenu cannot restore focus
+    // to an already-hidden menu.
     isVisible_ = false;
     hoveredItemIndex_ = -1;
     pressedItemIndex_ = -1;

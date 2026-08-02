@@ -1590,7 +1590,7 @@ if(TARGET AestraUI_Core)
     add_test(NAME ModalDialogInteractionTest COMMAND ModalDialogInteractionTest)
     set_tests_properties(ModalDialogInteractionTest PROPERTIES LABELS "ui;modal;input;regression")
 else()
-    message(STATUS "NUIContextMenuInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+    message(STATUS "NUIContextMenuInteractionTest and ModalDialogInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no
