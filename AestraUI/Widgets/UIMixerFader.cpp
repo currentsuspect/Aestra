@@ -302,6 +302,7 @@ void UIMixerFader::beginEdit()
     // Printable characters are routed to the globally focused component, so the
     // field must take focus or it will never see any input.
     m_textInput->setFocused(true);
+    m_textInput->setCaretPosition(static_cast<int>(seed.length()));
     m_textInput->selectAll();
     repaint();
 }

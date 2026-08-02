@@ -1315,9 +1315,20 @@ void NUITextInput::deleteCharacter(int direction)
 
 void NUITextInput::insertCharacter(char character)
 {
+    if (readOnly_) return;
+
+    // Typing replaces the selection, exactly as insertText() already did.
+    // Without this the per-character path inserted at the caret and left the
+    // selected text in place: a select-all field seeded with "6.0" turned into
+    // "06.0" when the user typed "0" over it, because the caret sits at 0.
+    if (hasSelection_)
+    {
+        deleteSelectedText();
+    }
+
     if (maxLength_ > 0 && static_cast<int>(text_.length()) >= maxLength_)
         return;
-    
+
     text_.insert(caretPosition_, 1, character);
     setCaretPosition(caretPosition_ + 1);
     
