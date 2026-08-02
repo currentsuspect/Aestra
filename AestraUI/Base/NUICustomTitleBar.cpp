@@ -166,6 +166,9 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                                   + props.layout.viewToggleWidth * 0.5f;
     constexpr float kClusterGuard = 16.0f;
     const bool showBadge = badge.x > toggleRightEdge + kClusterGuard;
+    // Account state and plan are separate concepts: "Signed out" describes the
+    // session, while "Core" is the plan badge. Keep both visible when space
+    // allows rather than implying that Core is a selectable application mode.
     const bool showStatus = showBadge && statusX > toggleRightEdge + kClusterGuard;
 
     if (showStatus) {
@@ -179,10 +182,10 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
         const float badgeRadius = props.radiusM; // 8.0
         const NUIColor badgeFill = membershipVerified_
             ? accent.withAlpha(0.10f)
-            : accent.withAlpha(0.04f);
+            : themeManager.getColor("surfaceRaised").withAlpha(0.28f);
         const NUIColor badgeStroke = membershipVerified_
             ? accent.withAlpha(0.50f)
-            : accent.withAlpha(0.24f);
+            : themeManager.getColor("borderSubtle").withAlpha(0.42f);
         renderer.fillRoundedRect(badge, badgeRadius, badgeFill);
         renderer.strokeRoundedRect(badge, badgeRadius, 1.0f, badgeStroke);
 
@@ -194,7 +197,8 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
             renderer.fillCircle(dotCenter, dotRadius * 0.45f, NUIColor::white().withAlpha(0.55f));
         }
 
-        renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f, text.withAlpha(membershipVerified_ ? 0.92f : 0.78f));
+        renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f,
+                                  text.withAlpha(membershipVerified_ ? 0.92f : 0.72f));
     }
 
     // Render custom children (NUIMenuBar, view toggle, etc.)

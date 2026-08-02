@@ -26,17 +26,17 @@ constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
 // cluster together (transport buttons ↔ record-aid extras), a generous gap sets
 // the transport / musical-state / view clusters apart as distinct surfaces.
 constexpr float TRANSPORT_INTRA_GAP = 14.0f;
-constexpr float TRANSPORT_SURFACE_GAP = 46.0f;
-constexpr float TRANSPORT_INFO_WIDTH = 260.0f;
+constexpr float TRANSPORT_SURFACE_GAP = 32.0f;
+constexpr float TRANSPORT_INFO_WIDTH = 232.0f;
 
 // Semantic labels. Universal transport actions (play/stop/record), the
 // metronome and the piano roll read as icons on their own; every DAW-specific
 // concept carries a word so nobody has to memorise a glyph. The vocabulary is
-// deliberately terse. "LOOP REC" is never shortened to "LOOP" — that would
+// deliberately terse. "LOOP RECORD" is never shortened to "LOOP" — that would
 // collide with playback looping.
-constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT";
+constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT IN";
 constexpr const char* TRANSPORT_LABEL_WAIT = "WAIT";
-constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP REC";
+constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP RECORD";
 // The view switches carry no labels. Faders and a rack of channel strips are
 // vocabulary any producer already owns, so the glyphs stand on their own and
 // the workspace cluster stays visually light next to the labelled record aids.
@@ -70,7 +70,7 @@ inline float transportLabeledWidth(const char* text) {
            + transportLabelTextWidth(text);
 }
 
-// Record-aid cluster: COUNT · WAIT · LOOP REC · metronome (icon only).
+// Record-aid cluster: COUNT IN · WAIT · LOOP RECORD · metronome (icon only).
 inline float transportExtrasWidth() {
     return transportLabeledWidth(TRANSPORT_LABEL_COUNT_IN) + TRANSPORT_BUTTON_SPACING
          + transportLabeledWidth(TRANSPORT_LABEL_WAIT) + TRANSPORT_BUTTON_SPACING
@@ -94,7 +94,7 @@ inline float transportViewsWidth() {
 // buttons and info readout never hide.
 // Collapse must preserve MEANING, not merely save width: a control either
 // appears with its label intact or it does not appear at all. Degrading
-// "LOOP REC" to a bare glyph to squeeze it in would undo the whole point of
+// "LOOP RECORD" to a bare glyph to squeeze it in would undo the whole point of
 // labelling it.
 struct TransportLayoutTier {
     bool showExtras = true;   // count-in / wait / loop-record / metronome
@@ -376,7 +376,7 @@ void TransportBar::createButtons() {
         if (m_onCountInToggle) m_onCountInToggle(m_countInActive);
         setDirty(true);
     });
-    m_countInButton->setTooltip("Count-In");
+    m_countInButton->setTooltip("Count in");
     
     createBtn(m_waitButton, [this]() {
         m_waitActive = !m_waitActive;
@@ -770,7 +770,7 @@ void TransportBar::layoutComponents() {
     // Group 1: Transport (Play, Stop, Rec)
     float group1Width = (buttonSize * 3) + (spacing * 2);
     
-    // Group 2: Extras (COUNT, WAIT, LOOP REC, metronome) — labelled controls
+    // Group 2: Extras (COUNT IN, WAIT, LOOP RECORD, metronome) — labelled controls
     // size to their word, so this is no longer 4 uniform squares.
     float group2Width = transportExtrasWidth();
 
@@ -779,7 +779,7 @@ void TransportBar::layoutComponents() {
     // Let's check TransportInfoContainer first, but for now allow 170.
     // Group 3: Info Display (Center)
     // Expanded Info: 220px to accommodate children
-    float infoWidth = 260.0f;
+    float infoWidth = TRANSPORT_INFO_WIDTH;
     
     // Group 4: Views (MIX, RACK, piano roll) - 3 controls
     float group4Width = transportViewsWidth();
@@ -963,10 +963,12 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);
 
     renderer.fillRect(bounds, themeManager.getColor("backgroundSecondary"));
+    renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f,
+                      themeManager.getColor("textPrimary").withAlpha(0.025f));
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},
                       1.0f,
-                      themeManager.getColor("border").withAlpha(0.52f));
+                      themeManager.getColor("border").withAlpha(0.30f));
     
     // No per-group shells or separators: the toolbar reads as one purpose-built
     // instrument, with the transport / musical-state / workspace surfaces set
@@ -1006,7 +1008,7 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         {m_metronomeButton, "Metronome"},
         // Labelled controls: the word on the button already says what it is, so
         // the tooltip confirms and adds the shortcut instead of translating.
-        {m_countInButton, "Count-In"},
+        {m_countInButton, "Count in"},
         {m_waitButton, "Wait for Input"},
         {m_loopRecordButton, "Loop Record"},
         {m_mixerButton, "Mixer (F3)"},

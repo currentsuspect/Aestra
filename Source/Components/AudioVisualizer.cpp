@@ -47,7 +47,7 @@ AudioVisualizer::AudioVisualizer()
     // Load Liminal Dark v2.0 theme colors
     auto& themeManager = NUIThemeManager::getInstance();
     backgroundColor_ = themeManager.getColor("backgroundPrimary");  // #121214 - Deep charcoal with gradient
-    gridColor_ = themeManager.getColor("border");                   // #2e2e35 - Grid lines
+    gridColor_ = themeManager.getColor("border").withAlpha(0.38f);  // quiet shell; signal owns the contrast
     textColor_ = themeManager.getColor("textPrimary");              // #e6e6eb - Soft white
     primaryColor_ = themeManager.getColor("accentCyan");
     secondaryColor_ = themeManager.getColor("accentMagenta");
@@ -199,7 +199,7 @@ void AudioVisualizer::onResize(int width, int height) {
 
 void AudioVisualizer::onThemeChanged(const NUIThemeProperties& theme) {
     backgroundColor_ = theme.backgroundPrimary;
-    gridColor_ = theme.border;
+    gridColor_ = theme.border.withAlpha(0.38f);
     textColor_ = theme.textPrimary;
     if (!customColorScheme_) {
         primaryColor_ = theme.accentCyan;
@@ -772,6 +772,12 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
         NUIRect clipRect(rightMeter.x, rightMeter.y - 1.0f, rightMeter.width, 3.0f);
         renderer.fillRoundedRect(clipRect, 1.0f, theme.meterCrit.withAlpha(rightClipIndicator_));
     }
+
+    const float energy = std::max({leftPeakSmoothed_.load(), rightPeakSmoothed_.load(),
+                                   leftRMSSmoothed_.load(), rightRMSSmoothed_.load()});
+    if (energy < 0.001f) {
+        renderer.drawTextCentered("MASTER", bounds, 9.0f, textColor_.withAlpha(0.30f));
+    }
 }
 
 void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
@@ -794,14 +800,20 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     for (size_t i = 0; i < displayBufferSize_; ++i) {
         const size_t idx = (currentSample_ + i) % displayBufferSize_;
         const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f;
-        maxAbs = std::max(maxAbs, std::abs(s));
+        // A misbehaving source can hand us Inf/NaN; neither may reach the polyline.
+        if (std::isfinite(s)) maxAbs = std::max(maxAbs, std::abs(s));
+    }
+    if (maxAbs <= 0.00011f) {
+        renderer.drawTextCentered("SCOPE", bounds, 9.0f, textColor_.withAlpha(0.30f));
+        return;
     }
     const float autoGain = std::clamp(0.9f / maxAbs, 1.0f, 8.0f);
 
     const float halfH = bounds.height * 0.45f;
     for (size_t i = 0; i < displayBufferSize_; ++i) {
         const size_t idx = (currentSample_ + i) % displayBufferSize_;
-        const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f * autoGain;
+        const float raw = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f;
+        const float s = std::isfinite(raw) ? raw * autoGain : 0.0f;
         const float x = bounds.x + (static_cast<float>(i) * bounds.width) /
                                       static_cast<float>(displayBufferSize_ - 1);
         const float y = centerY - s * halfH;

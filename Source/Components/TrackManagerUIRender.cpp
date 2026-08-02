@@ -341,16 +341,14 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         track->renderStatic(renderer);
 
-        // Light separator strip filling the lane gap across the grid area
-        // (owner direction: the black gaps read as holes — lift them to a
-        // shade of white so rows stay legible). This is the only row
-        // separator; TrackUIComponent draws none. Kept very faint so track rows
-        // read as quietly separated lanes, not a hard spreadsheet grid — the
-        // musical content (clips) carries the visual weight, not the chrome.
+        // One pixel is enough to locate the next lane; filling the whole gap
+        // made empty arrangements read as a wall of outlined rectangles.
         const AestraUI::NUIRect gapRect(bounds.x + gridStartX, trackBounds.bottom(),
                                         std::max(0.0f, trackWidth - gridStartX),
                                         static_cast<float>(m_trackSpacing));
-        renderer.fillRect(gapRect, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.06f));
+        renderer.fillRect(gapRect, themeManager.getColor("timelineBed"));
+        renderer.drawLine({gapRect.x, gapRect.y}, {gapRect.right(), gapRect.y}, 1.0f,
+                          themeManager.getCurrentTheme().textPrimary.withAlpha(0.006f));
     }
 
     // Clear clip rect before drawing header/ruler (they should draw fully)
@@ -1058,12 +1056,13 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
     float loopStartX = gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
     float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
 
-    // Check if markers are visible
+    // Check whether the range intersects the visible ruler. A loop can span the
+    // whole viewport while both handles are off-screen; the band should remain
+    // visible in that case.
     bool startVisible = (loopStartX >= gridStartX && loopStartX <= gridEndX);
     bool endVisible = (loopEndX >= gridStartX && loopEndX <= gridEndX);
-
-    if (!startVisible && !endVisible)
-        return; // Both markers off-screen
+    if (loopEndX < gridStartX || loopStartX > gridEndX)
+        return;
 
     // Color based on enabled state and hover
     auto accentColor = themeManager.getColor("accentPrimary");
@@ -1075,9 +1074,19 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
         markerColor = accentColor.withAlpha(0.3f); // Dimmed when inactive
     }
 
-    // Marker dimensions
-    const float triangleWidth = 12.0f;
-    const float triangleHeight = 10.0f;
+    // A thin ruler-locked range band is visually distinct from the neutral
+    // minimap viewport and from canvas selection.
+    const float visibleStartX = std::max(gridStartX, loopStartX);
+    const float visibleEndX = std::min(gridEndX, loopEndX);
+    const float bandY = rulerBounds.bottom() - 4.0f;
+    renderer.fillRect({visibleStartX, bandY, std::max(0.0f, visibleEndX - visibleStartX), 3.0f},
+                      accentColor.withAlpha(0.16f));
+    renderer.drawLine({visibleStartX, bandY}, {visibleEndX, bandY}, 1.0f,
+                      accentColor.withAlpha(0.58f));
+
+    const float handleWidth = 4.0f;
+    const float handleHeight = 9.0f;
+    const float handleY = rulerBounds.bottom() - handleHeight;
 
     // === RENDER LOOP START MARKER ===
     if (startVisible) {
@@ -1086,19 +1095,8 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
             startColor = accentColor; // Full brightness on hover/drag
         }
 
-        // Draw triangle pointing down (using lines)
-        AestraUI::NUIPoint p1(loopStartX, rulerBounds.y + triangleHeight);    // Bottom center
-        AestraUI::NUIPoint p2(loopStartX - triangleWidth / 2, rulerBounds.y); // Top left
-        AestraUI::NUIPoint p3(loopStartX + triangleWidth / 2, rulerBounds.y); // Top right
-
-        // Draw filled triangle using lines
-        renderer.drawLine(p1, p2, 2.0f, startColor);
-        renderer.drawLine(p2, p3, 2.0f, startColor);
-        renderer.drawLine(p3, p1, 2.0f, startColor);
-
-        // Draw vertical line from triangle to bottom
-        renderer.drawLine(AestraUI::NUIPoint(loopStartX, rulerBounds.y + triangleHeight),
-                          AestraUI::NUIPoint(loopStartX, rulerBounds.y + rulerBounds.height), 2.0f, startColor);
+        renderer.fillRoundedRect({loopStartX + 1.0f, handleY, handleWidth, handleHeight},
+                                 1.5f, startColor);
     }
 
     // === RENDER LOOP END MARKER ===
@@ -1108,19 +1106,8 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
             endColor = accentColor; // Full brightness on hover/drag
         }
 
-        // Draw triangle pointing down (using lines)
-        AestraUI::NUIPoint p1(loopEndX, rulerBounds.y + triangleHeight);    // Bottom center
-        AestraUI::NUIPoint p2(loopEndX - triangleWidth / 2, rulerBounds.y); // Top left
-        AestraUI::NUIPoint p3(loopEndX + triangleWidth / 2, rulerBounds.y); // Top right
-
-        // Draw filled triangle using lines
-        renderer.drawLine(p1, p2, 2.0f, endColor);
-        renderer.drawLine(p2, p3, 2.0f, endColor);
-        renderer.drawLine(p3, p1, 2.0f, endColor);
-
-        // Draw vertical line from triangle to bottom
-        renderer.drawLine(AestraUI::NUIPoint(loopEndX, rulerBounds.y + triangleHeight),
-                          AestraUI::NUIPoint(loopEndX, rulerBounds.y + rulerBounds.height), 2.0f, endColor);
+        renderer.fillRoundedRect({loopEndX - handleWidth - 1.0f, handleY, handleWidth, handleHeight},
+                                 1.5f, endColor);
     }
 }
 // Draw playhead (vertical line showing current playback position)
@@ -1158,7 +1145,6 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (controlAreaWidth + kTimelineGridInsetX);
     float gridEndX = gridStartX + gridWidth;
-    float triangleSize = 6.0f; // Marker extends this much left/right from playhead center
 
     // Calculate playhead boundaries
     float headerHeight = kTimelineHeaderHeight;
@@ -1175,9 +1161,6 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // We allow the triangle to extend slightly outside for better visibility at boundaries
     // This ensures playhead shows at position 0 (start) and at the right edge
     // Only cull if the entire playhead is clearly outside the visible area
-    float playheadLeftEdge = playheadX - triangleSize;
-    float playheadRightEdge = playheadX + triangleSize;
-
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
@@ -1211,19 +1194,22 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
             );
         }
 
-        // Draw playhead line (thin, faint, pixel-aligned)
+        // Draw playhead line (thin, crisp, pixel-aligned)
         renderer.drawLine(AestraUI::NUIPoint(playheadX, playheadStartY), AestraUI::NUIPoint(playheadX, playheadEndY),
-                          1.0f, playheadColor.withAlpha(0.55f));
+                          1.0f, playheadColor.withAlpha(0.72f));
 
-        // Draw ruler-locked circular marker. It sits just above the grid start so the
-        // vertical line reads as anchored to the ruler rather than floating.
-        const float markerRadius = 6.0f;
-        const AestraUI::NUIPoint markerCenter(playheadX, playheadStartY - 1.0f);
-        renderer.fillCircle(markerCenter, markerRadius + 2.0f,
-                            themeManager.getColor("backgroundPrimary").withAlpha(0.92f));
-        renderer.fillCircle(markerCenter, markerRadius, playheadColor.withAlpha(0.20f));
-        renderer.strokeCircle(markerCenter, markerRadius, 1.3f, playheadColor.withAlpha(0.98f));
-        renderer.fillCircle(markerCenter, 1.7f, playheadColor);
+        // Small downward pointer in the ruler: unlike loop handles it has a
+        // single point, and unlike the old circle it does not collide with the
+        // loop handle at beat zero.
+        constexpr float markerHalfW = 4.0f;
+        constexpr float markerH = 5.0f;
+        const float markerTop = playheadStartY - markerH;
+        const AestraUI::NUIPoint tip(playheadX, playheadStartY);
+        const AestraUI::NUIPoint left(playheadX - markerHalfW, markerTop);
+        const AestraUI::NUIPoint right(playheadX + markerHalfW, markerTop);
+        renderer.drawLine(left, right, 1.2f, playheadColor.withAlpha(0.92f));
+        renderer.drawLine(left, tip, 1.2f, playheadColor.withAlpha(0.92f));
+        renderer.drawLine(right, tip, 1.2f, playheadColor.withAlpha(0.92f));
     }
 }
 

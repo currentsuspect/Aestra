@@ -496,7 +496,9 @@ void TrackUIComponent::updateUI() {
 void TrackUIComponent::updateTrackNameColors() {
     if (!m_nameLabel || !m_trackManager) return;
     if (const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
-        m_nameLabel->setTextColor(AestraUI::NUIColor::fromARGB(lane->colorRGBA).withAlpha(0.82f));
+        (void)lane;
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        m_nameLabel->setTextColor(theme.getColor("textPrimary").withAlpha(m_selected ? 0.92f : 0.72f));
     }
 }
 
@@ -1270,10 +1272,10 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     // Apply background
     renderer.fillRect(bounds, trackBgColor);
     if (isSelected()) {
-        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.42f);
+        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
         renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f, selectionEdge);
         renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f},
-                          1.0f, selectionEdge.withAlpha(0.28f));
+                          1.0f, selectionEdge.withAlpha(0.12f));
     }
 
     // Row separation is the light gap strip drawn by TrackManagerUI between
@@ -1331,7 +1333,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
             
             const float stripWidth = 3.0f;
-            const float stripAlpha = (m_selected || lane->solo) ? 0.86f : 0.52f;
+            const float stripAlpha = (m_selected || lane->solo) ? 0.82f : 0.40f;
             const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
@@ -1414,15 +1416,15 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
     // Layered control slab with cool depth.
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.30f : 0.18f));
+    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.22f : 0.12f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
-    renderer.fillRect(highlightRect, themeManager.getColor("primary").withAlpha(0.20f));
+    renderer.fillRect(highlightRect, themeManager.getColor("textPrimary").withAlpha(0.035f));
     
     // Right Border (Separator)
     AestraUI::NUIRect borderRect(controlAreaBounds.right() - 1.0f, controlAreaBounds.y, 1.0f, controlAreaBounds.height);
-    renderer.fillRect(borderRect, themeManager.getColor("borderSubtle").withAlpha(0.92f));
+    renderer.fillRect(borderRect, themeManager.getColor("borderSubtle").withAlpha(0.44f));
 
     // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
     if (m_channel && !m_channel->isMuted() && m_trackManager) {
@@ -1533,7 +1535,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
         
         const float stripWidth = 3.0f;
-        const float stripAlpha = (m_selected || lane->solo) ? 0.90f : 0.64f;
+        const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.42f;
         stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
         
         // Draw strip
@@ -1547,28 +1549,20 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // Selection Highlight Line (Inner Glow)
         if (m_selected) {
-            auto glowColor = AestraUI::NUIColor::white().withAlpha(0.52f);
+            auto glowColor = AestraUI::NUIColor::white().withAlpha(0.20f);
             // Top highlight line inside control area (skipping strip)
             renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
             // Bottom highlight
-            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.5f));
+            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.12f));
         }
     }
 
-    // Explicit Separators for Control Area (ensures they are on top of background)
-    // Top
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.y),
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-        1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.84f)
-    );
-    // Bottom
+    // A single quiet bottom rule separates rows without boxing every header.
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1),
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
         1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.84f)
+        themeManager.getColor("borderSubtle").withAlpha(0.10f)
     );
 
 
@@ -1577,12 +1571,15 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
         1.0f,
-        themeManager.getColor("glassBorder")
+        themeManager.getColor("glassBorder").withAlpha(0.46f)
     );
 
     // Render the track name directly; track control widgets remain hit targets only.
     // Drawing the button widgets here reintroduces bordered/pill artifacts in cached rows.
     if (m_nameLabel) {
+        m_nameLabel->setTextColor(themeManager.getColor("textPrimary").withAlpha(m_selected ? 0.92f
+                                                                                         : isHovered() ? 0.82f
+                                                                                                       : 0.70f));
         m_nameLabel->onRender(renderer);
     }
 
@@ -1600,15 +1597,17 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
             const auto rect = button->getBounds();
             const bool hovered = button->isHovered() && button->isEnabled();
-            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.070f : 0.035f);
-            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.35f : 0.18f);
+            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.070f : 0.0f);
+            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.30f : 0.0f);
             if (active) {
                 bg = activeColor.withAlpha(0.18f);
                 border = activeColor.withAlpha(0.55f);
             }
             const float pillRadius = rect.height * 0.5f;
-            renderer.fillRoundedRect(rect, pillRadius, bg);
-            renderer.strokeRoundedRect(rect, pillRadius, 1.0f, border);
+            if (hovered || active) {
+                renderer.fillRoundedRect(rect, pillRadius, bg);
+                renderer.strokeRoundedRect(rect, pillRadius, 1.0f, border);
+            }
             if (active) {
                 renderer.strokeRoundedRect(rect, pillRadius, 1.0f, activeColor.withAlpha(0.45f));
             }
@@ -1628,7 +1627,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                 return;
             }
             const auto rect = button->getBounds();
-            const float iconSize = std::round(std::min(rect.width, rect.height) - 6.0f);
+            const float iconSize = 11.0f;
             const AestraUI::NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
                                              std::round(rect.y + (rect.height - iconSize) * 0.5f),
                                              iconSize, iconSize);
@@ -1705,7 +1704,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         const auto nameBounds = m_nameLabel->getBounds();
         renderer.drawText(std::to_string(trackNumber),
                           AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-                          themeManager.getFontSize("xs"), AestraUI::NUIColor::white());
+                          themeManager.getFontSize("xs"),
+                          themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.90f : 0.70f));
     }
 }
 
@@ -1720,9 +1720,18 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const float gridStartX = bounds.x + controlAreaWidth + gridGap;
     const float gridEndX = bounds.right();
 
+    // The arrangement is a large empty canvas much more often than the Piano
+    // Roll, so its infrastructure recedes further while retaining the same
+    // bar > beat > subdivision grammar.
+    const AestraUI::TimelineGridStyle timelineStyle{
+        0.026f, // bars
+        0.006f, // beats
+        0.002f, // subdivisions
+        0.0f    // no empty-canvas zebra
+    };
     AestraUI::renderTimelineGrid(
         renderer, bounds, gridStartX, gridEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar,
-        themeManager.getCurrentTheme().textPrimary);
+        themeManager.getCurrentTheme().textPrimary, timelineStyle);
 }
 
 void TrackUIComponent::onMouseEnter() {
@@ -1778,9 +1787,11 @@ void TrackUIComponent::onResize(int width, int height) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
 
     // Buttons cluster (horizontal, right-aligned within the control area)
-    const float buttonW = 16.0f;
-    const float buttonH = 18.0f;
-    const float spacing = 6.0f;
+    // Keep the glyphs visually quiet while meeting a standard 24px pointer
+    // target. The hover shell reveals the full interactive area.
+    const float buttonW = 24.0f;
+    const float buttonH = 24.0f;
+    const float spacing = 2.0f;
     const int numButtons = m_channel ? 4 : 2; // Playlist lanes only own M/S.
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
