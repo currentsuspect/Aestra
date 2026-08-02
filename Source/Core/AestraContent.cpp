@@ -4160,6 +4160,11 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     case AestraUI::NUIKeyCode::F3:
         toggleView(Audio::ViewType::Mixer);
         return true;
+    case AestraUI::NUIKeyCode::F4:
+        // The browser permanently consumed ~20% of the window; toggleFileBrowser
+        // existed but had no caller anywhere, so it could never be collapsed.
+        toggleFileBrowser();
+        return true;
     case AestraUI::NUIKeyCode::F5:
         toggleView(Audio::ViewType::Playlist);
         return true;
