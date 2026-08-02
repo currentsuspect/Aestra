@@ -35,7 +35,7 @@ namespace AestraUI {
 
 namespace {
 
-constexpr float kPreviewPanelHeight = 68.0f;
+constexpr float kPreviewPanelHeight = 72.0f;
 constexpr float kCompactNavWidth = 52.0f;
 constexpr float kCompactNavStartWidth = 320.0f;
 constexpr float kExpandedNavStartWidth = 440.0f;
@@ -970,7 +970,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("selection");
+    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.07f);
     const NUIColor divider = themeManager.getColor("divider");
     const bool compact = layout.navWidth < 112.0f;
 
@@ -1003,13 +1003,13 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                                                 themeProps.fontSizeXS))},
             themeProps.fontSizeXS, themeManager.getColor("textPrimary").withAlpha(0.76f));
     } else {
-        const std::string compactLabel = "LIB";
-        const auto labelSize = renderer.measureText(compactLabel, 9.0f);
+        const std::string compactLabel = "Library";
+        const auto labelSize = renderer.measureText(compactLabel, 8.5f);
         renderer.drawText(compactLabel,
                           {navHeader.x + (navHeader.width - labelSize.width) * 0.5f,
                            std::round(renderer.calculateTextY(
-                               NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 9.0f))},
-                          9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
+                               NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 8.5f))},
+                          8.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
     }
 
     // Inner divider — aligned with the list header's inner rule (listHeader.y + 29)
@@ -3070,11 +3070,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     renderer.setClipRect(listClip);
 
-    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.72f);
+    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.12f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
-    const NUIColor selectedRow = themeManager.getColor("selection");
-    const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.12f);
-    const NUIColor gridLine = themeManager.getColor("gridMinor");
+    const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(previewPanelVisible_ ? 0.0f
+                                                                                                       : 0.065f);
+    const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.035f);
+    const NUIColor gridLine = themeManager.getColor("gridMinor").withAlpha(0.10f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
@@ -3133,7 +3134,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (icon) {
             NUIRect iconRect(contentX, itemRect.y + 5.0f, 14.0f, 14.0f);
             icon->setBounds(iconRect);
-            icon->setColor(item->isDirectory ? muted.withAlpha(0.86f) : muted);
+            icon->setColor(item->isDirectory ? folderText.withAlpha(0.78f) : muted);
             icon->onRender(renderer);
         }
         contentX += 20.0f;

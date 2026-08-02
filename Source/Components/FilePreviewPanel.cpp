@@ -266,8 +266,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (bounds.isEmpty()) return;
 
     const bool hasSelection = hasCurrentFile_;
-    NUIColor bgColor = theme.getColor("backgroundSecondary").darkened(0.03f);
-    NUIColor borderColor = theme.getColor("border").withAlpha(0.38f);
+    NUIColor bgColor = theme.getColor("backgroundPrimary").darkened(0.02f);
+    NUIColor borderColor = theme.getColor("borderSubtle").withAlpha(0.62f);
     NUIColor accent = theme.getColor("accentPrimary");
 
     // Background fill
@@ -326,43 +326,41 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     }
 
     // === AUDIO FILE STATE ===
-    const float padL = 14.0f;
-    const float padR = 14.0f;
+    const float padL = 10.0f;
+    const float padR = 10.0f;
     const float scrubberH = 3.0f;
     const float padB = 8.0f; // bottom padding below scrubber
-    const float playBtnSize = 30.0f;
+    const float playBtnSize = 26.0f;
     const float playBtnX = bounds.x + padL;
     const float centerY = bounds.y + bounds.height * 0.5f;
 
     // Play button bounds
     playButtonBounds_ = NUIRect(playBtnX, centerY - playBtnSize * 0.5f, playBtnSize, playBtnSize);
 
-    // Scrubber bounds (full width minus padding, at bottom)
-    scrubberBounds_ = NUIRect(bounds.x + padL, bounds.bottom() - padB - scrubberH,
-                              std::max(0.0f, bounds.width - padL - padR), scrubberH);
-
-    // Text takes the full width right of the play button.
-    const float textX = playButtonBounds_.right() + 12.0f;
+    // The text and waveform share a lane to the right of the play button.
+    const float textX = playButtonBounds_.right() + 8.0f;
     const float textMaxWidth = std::max(0.0f, bounds.right() - padR - textX);
+    scrubberBounds_ = NUIRect(textX, bounds.bottom() - padB - scrubberH, textMaxWidth, scrubberH);
 
     float progress = 0.0f;
     if (duration_ > 0.0) {
         progress = std::clamp(static_cast<float>(playheadPosition_ / duration_), 0.0f, 1.0f);
     }
 
-    // -- Background waveform (full-width; played portion tinted brighter) --
+    // -- Quiet waveform lane. Purple is reserved for played progress. --
     {
         std::lock_guard<std::mutex> lock(waveformMutex_);
-        if (!waveformData_.empty()) {
-            const NUIColor waveformFill = accent.withAlpha(0.16f);
-            const NUIColor waveformPlayed = accent.withAlpha(0.42f);
-            const float playedX = bounds.x + bounds.width * progress;
-            float wfY = bounds.y + bounds.height * 0.5f;
-            float maxAmp = bounds.height * 0.32f;
-            float samplesPerPixel = static_cast<float>(waveformData_.size()) / bounds.width;
+        if (!waveformData_.empty() && textMaxWidth > 0.0f) {
+            const NUIRect waveformRect(textX, bounds.y + 31.0f, textMaxWidth, 22.0f);
+            const NUIColor waveformFill = theme.getColor("textSecondary").withAlpha(0.10f);
+            const NUIColor waveformPlayed = accent.withAlpha(0.48f);
+            const float playedX = waveformRect.x + waveformRect.width * progress;
+            const float wfY = waveformRect.y + waveformRect.height * 0.5f;
+            const float maxAmp = waveformRect.height * 0.42f;
+            const float samplesPerPixel = static_cast<float>(waveformData_.size()) / waveformRect.width;
 
             if (samplesPerPixel > 0.0f) {
-                for (float x = 0; x < bounds.width; x += 2.0f) {
+                for (float x = 0; x < waveformRect.width; x += 2.0f) {
                     int startSample = static_cast<int>(x * samplesPerPixel);
                     int endSample = static_cast<int>((x + 2.0f) * samplesPerPixel);
                     startSample = std::clamp(startSample, 0, (int)waveformData_.size() - 1);
@@ -375,10 +373,10 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 
                     float barHeight = std::max(1.0f, amplitude * maxAmp * 2.0f);
                     float yStart = wfY - barHeight * 0.5f;
-                    const bool played = isPlaying_ && (bounds.x + x) <= playedX;
+                    const bool played = isPlaying_ && (waveformRect.x + x) <= playedX;
                     renderer.drawLine(
-                        NUIPoint(bounds.x + x, yStart),
-                        NUIPoint(bounds.x + x, yStart + barHeight),
+                        NUIPoint(waveformRect.x + x, yStart),
+                        NUIPoint(waveformRect.x + x, yStart + barHeight),
                         1.0f, played ? waveformPlayed : waveformFill
                     );
                 }
@@ -387,9 +385,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     }
 
     // -- Play button --
-    NUIColor btnBg = isPlaying_
-        ? accent.withAlpha(0.85f)
-        : bgColor;
+    NUIColor btnBg = isPlaying_ ? accent.withAlpha(0.22f) : NUIColor::transparent();
     NUIColor btnBorder = isPlaying_
         ? accent.withAlpha(0.20f)
         : theme.getColor("border").withAlpha(0.35f);
@@ -412,36 +408,14 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         icon->onRender(renderer);
     }
 
-    // -- File info --
-    // Audio icon (small, left of name)
-    float iconSizeSmall = 14.0f;
-    float infoTopY = bounds.y + 16.0f;
-    if (audioFileIcon_) {
-        audioFileIcon_->setBounds(NUIRect(textX, infoTopY - 1.0f, iconSizeSmall, iconSizeSmall));
-        audioFileIcon_->setColor(accent.withAlpha(0.65f));
-        audioFileIcon_->onRender(renderer);
-    }
-
-    float nameX = textX + iconSizeSmall + 6.0f;
-    float nameMaxW = std::max(0.0f, textMaxWidth - iconSizeSmall - 6.0f);
+    // -- File info. The row already establishes that this is audio, so the
+    // redundant glyph gives its width back to the filename. --
+    const float infoTopY = bounds.y + 8.0f;
+    const float nameX = bounds.x + padL;
+    const float nameMaxW = std::max(0.0f, bounds.width - padL - padR);
     const float nameFont = theme.getFontSize("m");
     std::string displayName = truncateToWidth(renderer, currentFile_.name, nameFont, nameMaxW);
     renderer.drawText(displayName, NUIPoint(nameX, infoTopY), nameFont, theme.getColor("textPrimary").withAlpha(0.92f));
-
-    // Metadata line only when the browser actually detected something —
-    // no extension fallback (it's already part of the file name).
-    std::string infoLine;
-    if (m_currentFileBpm > 0) {
-        infoLine = std::to_string(m_currentFileBpm) + " BPM";
-    }
-    if (!m_currentFileKey.empty()) {
-        if (!infoLine.empty()) infoLine += "  ";
-        infoLine += m_currentFileKey;
-    }
-    if (!infoLine.empty()) {
-        renderer.drawText(infoLine, NUIPoint(nameX, infoTopY + 15.0f), theme.getFontSize("xs"),
-                          theme.getColor("textSecondary").withAlpha(0.55f));
-    }
 
     // -- Scrubber / Progress bar --
     float trackY = scrubberBounds_.y + scrubberBounds_.height * 0.5f;

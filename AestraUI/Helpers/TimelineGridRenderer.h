@@ -8,6 +8,13 @@
 
 namespace AestraUI {
 
+struct TimelineGridStyle {
+    float barLineAlpha = 0.15f;
+    float beatLineAlpha = 0.05f;
+    float subdivisionLineAlpha = 0.026f;
+    float zebraAlpha = 0.016f;
+};
+
 inline float timelineGridLevelFade(float spacingPixels) {
     constexpr float kLevelHidePixels = 14.0f;
     constexpr float kLevelFullPixels = 28.0f;
@@ -37,7 +44,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                                float scrollX,
                                float pixelsPerBeat,
                                int beatsPerBar,
-                               const NUIColor& ink = NUIColor::white()) {
+                               const NUIColor& ink = NUIColor::white(),
+                               const TimelineGridStyle& style = {}) {
     const float gridWidth = std::max(0.0f, gridEndX - gridStartX);
     beatsPerBar = std::max(1, beatsPerBar);
     const float pixelsPerBar = pixelsPerBeat * static_cast<float>(beatsPerBar);
@@ -50,17 +58,13 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
     // holds at every zoom (a purely spacing-based alpha made beats as strong as
     // bars when zoomed in — the "spreadsheet" look). The fade only culls a tier
     // once its lines get too dense to read.
-    constexpr float kBarLineAlpha = 0.15f;      // bars: clearly visible
-    constexpr float kBeatLineAlpha = 0.05f;     // beats: subtle
-    constexpr float kSubBeatLineAlpha = 0.026f; // subdivisions: near-invisible until zoomed in
     const auto barAlpha = [&](float levelSpacing) {
-        return kBarLineAlpha * timelineGridLevelFade(levelSpacing);
+        return style.barLineAlpha * timelineGridLevelFade(levelSpacing);
     };
 
     const int barStride = timelineGridBarStride(pixelsPerBeat, beatsPerBar);
 
     // Very quiet zebra — a hint of bar-group alternation, not a checkerboard.
-    constexpr float kZebraAlpha = 0.016f;
     const auto drawZebraLevel = [&](int strideBars, float alpha) {
         if (alpha <= 0.001f) return;
         const float blockWidth = pixelsPerBar * static_cast<float>(strideBars);
@@ -86,8 +90,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
 
     const float pixelsPerBlock = pixelsPerBar * static_cast<float>(barStride);
     const float fineT = std::clamp((pixelsPerBlock - kLevelFullPx) / kLevelFullPx, 0.0f, 1.0f);
-    drawZebraLevel(barStride, kZebraAlpha * fineT);
-    drawZebraLevel(barStride * 2, kZebraAlpha * (1.0f - fineT));
+    drawZebraLevel(barStride, style.zebraAlpha * fineT);
+    drawZebraLevel(barStride * 2, style.zebraAlpha * (1.0f - fineT));
 
     const double startBeat = static_cast<double>(scrollX) / pixelsPerBeat;
     const double endBeat = startBeat + static_cast<double>(gridWidth / pixelsPerBeat);
@@ -99,8 +103,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                           1.0f,
                           ink.withAlpha(alpha));
     };
-    const float beatLineAlpha = kBeatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
-    const float halfBeatLineAlpha = kSubBeatLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
+    const float beatLineAlpha = style.beatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
+    const float halfBeatLineAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - scrollX;
