@@ -373,7 +373,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 
                     float barHeight = std::max(1.0f, amplitude * maxAmp * 2.0f);
                     float yStart = wfY - barHeight * 0.5f;
-                    const bool played = isPlaying_ && (waveformRect.x + x) <= playedX;
+                    // Keyed off the playhead, not isPlaying_, so pausing keeps the
+                    // accent in step with the scrubber fill below.
+                    const bool played = duration_ > 0.0 && (waveformRect.x + x) < playedX;
                     renderer.drawLine(
                         NUIPoint(waveformRect.x + x, yStart),
                         NUIPoint(waveformRect.x + x, yStart + barHeight),
@@ -408,11 +410,19 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         icon->onRender(renderer);
     }
 
+    // -- Loading spinner geometry. Declared up here so the filename lane can
+    // reserve the space instead of running underneath the spinner. --
+    const bool loading = isLoading_ || isWaveformLoading_;
+    const float spinnerR = 6.0f;
+    const float spinnerCX = bounds.right() - 28.0f;
+    const float spinnerLeft = spinnerCX - (spinnerR + 2.0f);
+
     // -- File info. The row already establishes that this is audio, so the
     // redundant glyph gives its width back to the filename. --
     const float infoTopY = bounds.y + 8.0f;
     const float nameX = bounds.x + padL;
-    const float nameMaxW = std::max(0.0f, bounds.width - padL - padR);
+    const float nameRight = loading ? spinnerLeft - 6.0f : bounds.right() - padR;
+    const float nameMaxW = std::max(0.0f, nameRight - nameX);
     const float nameFont = theme.getFontSize("m");
     std::string displayName = truncateToWidth(renderer, currentFile_.name, nameFont, nameMaxW);
     renderer.drawText(displayName, NUIPoint(nameX, infoTopY), nameFont, theme.getColor("textPrimary").withAlpha(0.92f));
@@ -441,13 +451,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         );
     }
 
-    // -- Loading spinner overlay (small, near play button) --
-    bool loading = isLoading_ || isWaveformLoading_;
-
+    // -- Loading spinner overlay (geometry hoisted above the filename lane) --
     if (loading) {
-        float spinnerCX = bounds.right() - 28.0f;
         float spinnerCY = infoTopY + 6.0f;
-        float spinnerR = 6.0f;
         int segments = 8;
         float angleOffset = loadingAnimationTime_ * 5.0f;
         for (int i = 0; i < segments; ++i) {
