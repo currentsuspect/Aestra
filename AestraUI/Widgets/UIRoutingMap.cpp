@@ -136,7 +136,7 @@ void UIRoutingMap::rebuildGraph() {
         Node node;
         node.id = ch->id;
         node.type = Node::Track;
-        node.label = ch->name.empty() ? ("Insert " + std::to_string(i + 1)) : ch->name;
+        node.label = ch->name.empty() ? ("Channel " + std::to_string(i + 1)) : ch->name;
         node.color = paletteIndexToARGB(ch->trackColorIndex);
         node.insertCount = ch->fxCount;
         node.muted = ch->muted;

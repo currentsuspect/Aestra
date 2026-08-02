@@ -399,7 +399,7 @@ void AudioClipEditorPanel::rebuildRoutes(bool force) {
         if (!channel)
             continue;
         const std::string name =
-            channel->getName().empty() ? "Insert " + std::to_string(index + 1) : channel->getName();
+            channel->getName().empty() ? "Channel " + std::to_string(index + 1) : channel->getName();
         routes.push_back({channel->getChannelId(), static_cast<int>(index + 1), name,
                           paletteIndexToARGB(channel->getTrackColorIndex())});
     }

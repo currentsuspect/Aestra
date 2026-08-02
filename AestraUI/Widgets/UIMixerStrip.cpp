@@ -50,9 +50,14 @@ namespace {
         if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
             return "M";
         }
-        const std::string insertPrefix = "Insert ";
-        if (targetName.rfind(insertPrefix, 0) == 0) {
-            return "I" + targetName.substr(insertPrefix.size());
+        const std::string channelPrefix = "Channel ";
+        if (targetName.rfind(channelPrefix, 0) == 0) {
+            return "C" + targetName.substr(channelPrefix.size());
+        }
+        // Projects saved before strips were renamed still carry "Insert N".
+        const std::string legacyInsertPrefix = "Insert ";
+        if (targetName.rfind(legacyInsertPrefix, 0) == 0) {
+            return "I" + targetName.substr(legacyInsertPrefix.size());
         }
         const std::string legacyTrackPrefix = "Track ";
         if (targetName.rfind(legacyTrackPrefix, 0) == 0) {
