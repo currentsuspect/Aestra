@@ -84,6 +84,8 @@ public:
     void setMouseMoveCallback(std::function<void(int, int)> callback);
     void setMouseButtonCallback(std::function<void(int, bool)> callback);
     void setMouseWheelCallback(std::function<void(float)> callback);
+    /** Block root-component pointer/text dispatch while an external modal owns input. */
+    void setRootInputBlockedCallback(std::function<bool()> callback);
     void setMousePositionFilter(std::function<void(int&, int&)> callback);
     void setKeyCallback(std::function<void(int, bool)> callback);
     void setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback);
@@ -219,6 +221,7 @@ private:
     std::function<void(int, int)> m_mouseMoveCallback;
     std::function<void(int, bool)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
+    std::function<bool()> m_rootInputBlockedCallback;
     std::function<void(int&, int&)> m_mousePositionFilter;
     std::function<void(int, bool)> m_keyCallback;
     std::function<void(int, bool, bool, bool, bool)> m_keyCallbackEx;

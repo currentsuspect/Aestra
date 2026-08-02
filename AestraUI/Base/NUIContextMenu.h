@@ -203,6 +203,13 @@ private:
     void triggerItemClick(std::shared_ptr<NUIContextMenuItem> item);
     void triggerShow();
     void triggerHide();
+    int findSelectableItem(int startIndex, int direction) const;
+    bool isSelectableItem(int index) const;
+    bool ownsMenuFocus() const;
+    float calculateContentHeight() const;
+    float maximumScrollOffset() const;
+    void clampScrollOffset();
+    void ensureItemVisible(int index);
 
     // Menu items
     std::vector<std::shared_ptr<NUIContextMenuItem>> items_;
@@ -233,6 +240,7 @@ private:
     int pressedItemIndex_ = -1;
     std::shared_ptr<NUIContextMenu> activeSubmenu_;
     int submenuItemIndex_ = -1;
+    std::weak_ptr<NUIComponent> previousFocus_;
 
     // Layout state
     float menuWidth_ = 0.0f;

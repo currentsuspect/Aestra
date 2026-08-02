@@ -30,8 +30,9 @@
 #include "AudioClipEditorPanel.h"
 
 // AestraUI includes
-#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Base/NUIContextMenu.h"
 #include "../AestraUI/Base/NUITextInput.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraUI/Widgets/NotificationToast.h"
@@ -4134,6 +4135,15 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
     if (!event.pressed)
         return false;
+
+    // Popup menus own navigation and activation while open. The application
+    // normally evaluates global shortcuts before focused widgets, so route the
+    // focused menu explicitly before Space or letter keys can trigger transport
+    // and musical typing underneath it.
+    if (auto* menu = dynamic_cast<AestraUI::NUIContextMenu*>(AestraUI::NUIComponent::getFocusedComponent());
+        menu && menu->isVisible() && menu->onKeyEvent(event)) {
+        return true;
+    }
 
     // Takes panel inline rename captures typing while active — it must win
     // over global shortcuts so Ctrl+Z etc. don't fire mid-edit.
