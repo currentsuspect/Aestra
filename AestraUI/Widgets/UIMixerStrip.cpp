@@ -400,7 +400,6 @@ void UIMixerStrip::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     m_selectedTint = theme.getColor("primary").withAlpha(0.022f);
     m_selectedOutline = theme.getColor("primary").withAlpha(0.18f);
-    m_selectedGlow = theme.getColor("primary").withAlpha(0.10f);
     m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.18f);
     
     // Master: Distinct Dark Glass
@@ -766,17 +765,12 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        // Flat selection: no drop shadow — a tint + top highlight + outline only.
+        // Selection is background contrast + a top accent bar + ONE outline.
+        // It previously stacked five layers on the same strip (tint, top bar,
+        // an inner 34px highlight, an outer glow ring and the outline), which
+        // is most of the "nested outlines" the mixer was accumulating.
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
-
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
-        renderer.fillRoundedRect(NUIRect{bounds.x + 2.0f, bounds.y + 2.0f, bounds.width - 4.0f, 34.0f},
-                                 std::max(0.0f, radius - 2.0f),
-                                 m_selectedTopHighlight.withAlpha(0.05f));
-        renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
-                                   radius + 1.0f,
-                                   1.0f,
-                                   m_selectedGlow.withAlpha(0.14f));
         renderer.strokeRoundedRect(bounds, radius, 1.0f, m_selectedOutline);
     }
 

@@ -80,11 +80,10 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
     const NUIColor border = hasFx
         ? m_accent.withAlpha(m_hovered ? 0.28f : 0.20f)
         : (m_hovered ? m_borderHover : m_border);
+    // One outline only. The inset bevel stroke that used to sit inside this one
+    // added a second concentric edge to a control that already lives inside a
+    // bordered strip.
     renderer.strokeRoundedRect(visualRect, RADIUS, 1.0f, border);
-    renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
-                               std::max(0.0f, RADIUS - 1.0f),
-                               1.0f,
-                               NUIColor::white().withAlpha(0.025f));
 
     const NUIColor text = hasFx ? m_textPrimary : (m_hovered ? m_textPrimary.withAlpha(0.92f) : m_textSecondary);
     const NUIRect chipRect{visualRect.x + 8.0f, visualRect.y + (visualRect.height - 10.0f) * 0.5f, 18.0f, 10.0f};

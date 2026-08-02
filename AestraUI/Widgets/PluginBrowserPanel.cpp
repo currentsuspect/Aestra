@@ -812,11 +812,12 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
+    // Background contrast groups the rack; it sits inside the inspector's own
+    // border, and each slot carries its own, so a third concentric outline here
+    // was pure nesting.
     renderer.fillRoundedRect(bounds, theme.radiusL, Colors::panelBackground().withAlpha(0.94f));
     renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, theme.layout.standardControlHeight},
                              theme.radiusL, Colors::panelTop().withAlpha(0.62f));
-    renderer.strokeRoundedRect(bounds, theme.radiusL, theme.layout.dividerWidth,
-                               Colors::panelBorder().withAlpha(0.84f));
 
     // Enable clipping
     renderer.setClipRect(bounds);
