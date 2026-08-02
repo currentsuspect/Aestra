@@ -104,17 +104,10 @@ TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
     return trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
 }
 
-AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,
-                                    float alpha) {
-    const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
-    const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
-    return AestraUI::NUIColor(std::clamp(tonedR, 0.0f, 1.0f),
-                              std::clamp(tonedG, 0.0f, 1.0f),
-                              std::clamp(tonedB, 0.0f, 1.0f),
-                              alpha >= 0.0f ? alpha : color.a);
-}
+// restrainDawColor now lives in AestraUI/Widgets/TrackColorPalette.h next to the
+// palette it tones, so the minimap applies the identical restraint to the same
+// lane identities. Brought into scope here to keep the call sites unqualified.
+using AestraUI::restrainDawColor;
 
 // Keep Playlist clip selection in the same visual language as Piano Roll
 // notes: a lifted secondary accent, crisp white edge, grounded shadow, and
@@ -902,8 +895,13 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
     // Deeper, less-saturated base so the clip reads rich rather than neon.
+    // Body sits lower than the waveform on purpose. deriveWaveformInk() lifts the
+    // ink from a separately restrained tint (1.0 brightness / 0.92 saturation), so
+    // dropping the body brightness here widens waveform-vs-body contrast without
+    // touching the waveform: the clip stops reading as a bright slab and starts
+    // reading as a surface with audio drawn on it.
     const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
-                                                         clipSelected ? 0.90f : 0.80f,
+                                                         clipSelected ? 0.78f : 0.68f,
                                                          clipSelected ? 0.62f : 0.56f,
                                                          1.0f);
     AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.88f : 0.80f);
