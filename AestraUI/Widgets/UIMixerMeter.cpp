@@ -32,6 +32,7 @@ void UIMixerMeter::cacheThemeColors()
     // shows only a fader and the "what is sounding" channel looks like padding.
     // At 0.3 alpha the track was invisible against the strip background.
     m_colorBackground = theme.getColor("meterBackground").withAlpha(0.72f);
+    m_colorRailEdge = theme.getColor("textPrimary").withAlpha(0.12f);
     m_colorPeakHold = theme.getColor("textPrimary"); // #E5E5E8
     m_colorPeakOverlay = m_colorPeakHold.withAlpha(0.8f);
     m_colorPeakOverlayDim = m_colorPeakOverlay.withSaturation(0.0f).withAlpha(0.6f);
@@ -177,8 +178,11 @@ NUIColor UIMixerMeter::getColorForLevel(float db) const
 void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
                                    float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip)
 {
-    // Background (flat fill - gradient caused edge artifacts)
+    // Resting rail. A bare dark fill was indistinguishable from the strip
+    // background, so a silent channel gave no clue where level would appear.
+    // The groove plus its top edge say "meter lives here" before any signal.
     renderer.fillRect(bounds, m_colorBackground);
+    renderer.strokeRect(bounds, 1.0f, m_colorRailEdge);
 
     const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
     const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
@@ -429,14 +433,17 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(lufsLabel, lufsRect, 7.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.45f));
         
     } else if (hasPeak) {
-        // Regular tracks: Show Peak dB or −∞ at silence floor
+        // Regular tracks: peak dB or −∞ at the silence floor.
+        // The "PK" prefix is what separates this from the fader's gain readout
+        // sitting a few pixels to the right — position alone left a bare "−∞"
+        // next to "0.0 dB" as a small decoding task on every strip.
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
             m_cachedDbPeak = peak;
             if (peak <= DB_MIN) {
-                m_cachedDbStr = "\xE2\x88\x92\xE2\x88\x9E";
+                m_cachedDbStr = "PK \xE2\x88\x92\xE2\x88\x9E";
             } else {
                 char buf[32];
-                std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+                std::snprintf(buf, sizeof(buf), "PK %.1f", peak);
                 m_cachedDbStr = buf;
             }
         }

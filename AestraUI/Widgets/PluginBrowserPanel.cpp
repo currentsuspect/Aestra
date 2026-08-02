@@ -827,6 +827,20 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
         renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
     }
 
+    // Deliberate empty state. Collapsing the rack to a single add row left a
+    // large blank region that read as unfinished rather than as "nothing here
+    // yet"; one quiet line under the add row names the state without
+    // reintroducing the column of dead slot outlines.
+    if (lastPopulatedSlot() < 0 && !m_isDraggingReorder) {
+        const float messageY = bounds.y + 8.0f + SLOT_HEIGHT - m_scrollOffset + 14.0f;
+        if (messageY < bounds.bottom() - 12.0f) {
+            renderer.drawTextCentered("No effects on this channel",
+                                      {bounds.x, messageY, bounds.width, 14.0f},
+                                      theme.fontSizeMicro,
+                                      Colors::textDisabled().withAlpha(0.55f));
+        }
+    }
+
     renderer.clearClipRect();
 
     // Render Drag Ghost

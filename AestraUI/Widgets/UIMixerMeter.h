@@ -126,6 +126,7 @@ private:
     NUIColor m_colorYellowDim;
     NUIColor m_colorRedDim;
     NUIColor m_colorBackground;
+    NUIColor m_colorRailEdge;   // faint resting outline so the rail reads at silence
     NUIColor m_colorPeakHold;
     NUIColor m_colorPeakOverlay;
     NUIColor m_colorPeakOverlayDim;
