@@ -234,9 +234,13 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  // Stop drawing if out of bounds (culling)
                  if (currentY + trackH > barBottom) break; 
                  
-                 // Shared TRACK_PALETTE, same modulo as the track-color fallback
-                 const NUIColor lineTint =
-                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))).withAlpha(0.9f);
+                 // Shared TRACK_PALETTE, same modulo as the track-color fallback.
+                 // Restrained through the same helper the timeline's lane strips
+                 // use: raw palette hues here read as a second, louder colour
+                 // system sitting above a timeline that deliberately tones the
+                 // very same lane identity down.
+                 const NUIColor lineTint = restrainLaneIdentityColor(
+                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))), 0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);
                  renderer.fillRect(lineRect, lineTint);
