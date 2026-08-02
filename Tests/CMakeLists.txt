@@ -1738,6 +1738,24 @@ else()
     message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# NUITextInput editing semantics — typing over a selection must replace it,
+# matching the paste path. Kept separate from the layout tests so the
+# behavioural regression stays legible.
+if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputEditingTest.cpp")
+    add_executable(NUITextInputEditingTest AestraUI/NUITextInputEditingTest.cpp)
+    target_link_libraries(NUITextInputEditingTest PRIVATE AestraUI_Core AestraPlat)
+    target_include_directories(NUITextInputEditingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+    )
+    add_test(NAME NUITextInputEditingTest COMMAND NUITextInputEditingTest)
+    set_tests_properties(NUITextInputEditingTest PROPERTIES LABELS "ui;textinput;regression")
+    message(STATUS "NUITextInputEditingTest added - selection-replace editing regression tests")
+else()
+    message(STATUS "NUITextInputEditingTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 if(TARGET AestraUI_Core)
     add_executable(NUIDropdownInteractionTest AestraUI/NUIDropdownInteractionTest.cpp)
     target_link_libraries(NUIDropdownInteractionTest PRIVATE AestraUI_Core)
