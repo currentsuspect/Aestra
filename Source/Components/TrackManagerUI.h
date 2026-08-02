@@ -636,6 +636,13 @@ private:
     // each source itself.
     uint64_t m_lastSourcesRevision{0};
 
+    // Waveform builds already dispatched, as source ID -> the content revision
+    // being built. A queued build installs its cache asynchronously, so this is
+    // what stops an import burst re-queueing the same source on every sweep.
+    // Main-thread only: written by buildAllWaveformCaches() and released from
+    // the drained pending task, never from the builder thread.
+    std::unordered_map<uint64_t, uint64_t> m_waveformBuildsInFlight;
+
     // Async Task Queue (for main thread callbacks)
     std::mutex m_pendingTasksMutex;
     std::vector<std::function<void()>> m_pendingTasks;

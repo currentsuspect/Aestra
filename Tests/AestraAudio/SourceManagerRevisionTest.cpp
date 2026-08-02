@@ -108,6 +108,25 @@ void testFailedRemoveDoesNotBump() {
     require(mgr.getRevision() == before, "failedRemove: a failed removeSource must not bump the revision");
 }
 
+// A source restored from a serialized project (#446) comes in through
+// getOrCreateSourceWithId, which also mints a source and so must bump — a loaded
+// project's clips need waveforms on the same terms as freshly imported ones.
+void testRestoredIdBumpsThenDedupes() {
+    SourceManager mgr;
+    const char* path = "/tmp/aestra-test-restored.wav";
+    const uint64_t before = mgr.getRevision();
+
+    const ClipSourceID restored = mgr.getOrCreateSourceWithId(ClipSourceID{4242}, path);
+    require(restored.isValid(), "restoredId: expected a valid source id");
+    require(restored.value == 4242, "restoredId: precondition — a free requested id must be restored verbatim");
+    require(mgr.getRevision() != before, "restoredId: restoring a source must bump the revision");
+
+    const uint64_t afterRestore = mgr.getRevision();
+    const ClipSourceID again = mgr.getOrCreateSourceWithId(ClipSourceID{7777}, path);
+    require(again.value == restored.value, "restoredId: precondition — path dedupe must win over the requested id");
+    require(mgr.getRevision() == afterRestore, "restoredId: a path-deduped restore must not bump the revision");
+}
+
 // The counter only has to change on mutation; a caller comparing snapshots must
 // never see it run backwards, or a sweep would be skipped.
 void testRevisionIsMonotonic() {
@@ -130,6 +149,7 @@ int main() {
     testReadinessFlipBumpsOnExistingSource();
     testRemoveAndClearBump();
     testFailedRemoveDoesNotBump();
+    testRestoredIdBumpsThenDedupes();
     testRevisionIsMonotonic();
 
     std::cout << "[PASS] SourceManagerRevisionTest\n";
