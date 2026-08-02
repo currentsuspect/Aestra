@@ -800,7 +800,8 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     for (size_t i = 0; i < displayBufferSize_; ++i) {
         const size_t idx = (currentSample_ + i) % displayBufferSize_;
         const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f;
-        maxAbs = std::max(maxAbs, std::abs(s));
+        // A misbehaving source can hand us Inf/NaN; neither may reach the polyline.
+        if (std::isfinite(s)) maxAbs = std::max(maxAbs, std::abs(s));
     }
     if (maxAbs <= 0.00011f) {
         renderer.drawTextCentered("SCOPE", bounds, 9.0f, textColor_.withAlpha(0.30f));
@@ -811,7 +812,8 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     const float halfH = bounds.height * 0.45f;
     for (size_t i = 0; i < displayBufferSize_; ++i) {
         const size_t idx = (currentSample_ + i) % displayBufferSize_;
-        const float s = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f * autoGain;
+        const float raw = (displayBuffer_[idx * 2] + displayBuffer_[idx * 2 + 1]) * 0.5f;
+        const float s = std::isfinite(raw) ? raw * autoGain : 0.0f;
         const float x = bounds.x + (static_cast<float>(i) * bounds.width) /
                                       static_cast<float>(displayBufferSize_ - 1);
         const float y = centerY - s * halfH;
