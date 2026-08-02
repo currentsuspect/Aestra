@@ -33,6 +33,44 @@ constexpr float kTimelineScrollbarWidth = 15.0f;
 constexpr float kTimelineGridInsetX = 5.0f;
 
 /**
+ * @brief Resolve the first grid pixel in the caller's stated coordinate basis.
+ *
+ * Timeline code uses component-relative, window-absolute, and ruler-relative
+ * coordinates. Requiring the basis origin as an argument keeps that choice
+ * visible while centralising the layout formula shared by rendering and input.
+ */
+inline float timelineGridStartX(float basisOriginX, float controlAreaWidth) {
+    return basisOriginX + controlAreaWidth + kTimelineGridInsetX;
+}
+
+/** @brief Resolve the last interactive grid pixel in the same stated basis. */
+inline float timelineGridEndX(float basisOriginX, float boundsWidth) {
+    return basisOriginX + boundsWidth - kTimelineScrollbarWidth;
+}
+
+/** @brief Resolve the first track-row pixel in the caller's stated y basis. */
+inline float timelineTrackAreaTopY(float basisOriginY) {
+    return basisOriginY + kTimelineHeaderHeight + kTimelineHorizontalScrollbarHeight + kTimelineRulerHeight;
+}
+
+/** @brief Convert a distance from the grid origin to an unclamped beat. */
+inline double timelineGridOffsetToBeat(float offsetFromGridStart, float scrollOffset, float pixelsPerBeat) {
+    if (!(pixelsPerBeat > 0.0f) || !std::isfinite(pixelsPerBeat)) {
+        return 0.0;
+    }
+    return (static_cast<double>(offsetFromGridStart) + static_cast<double>(scrollOffset)) /
+           static_cast<double>(pixelsPerBeat);
+}
+
+/** @brief Convert a beat to a distance from the grid origin. */
+inline float timelineBeatToGridOffset(double beat, float scrollOffset, float pixelsPerBeat) {
+    if (!(pixelsPerBeat > 0.0f) || !std::isfinite(pixelsPerBeat)) {
+        return 0.0f;
+    }
+    return static_cast<float>(beat * static_cast<double>(pixelsPerBeat)) - scrollOffset;
+}
+
+/**
  * @brief Clamp @p value into the interval described by @p a and @p b.
  *
  * The contract, in the order the function decides it:

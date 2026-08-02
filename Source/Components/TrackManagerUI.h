@@ -21,6 +21,7 @@
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
+#include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
 #include <functional>
@@ -571,19 +572,12 @@ private:
 
     /** @brief Convert a pixel distance from the grid's left edge into beats. */
     double gridOffsetToBeat(float offsetFromGridStart) const {
-        // A zero or non-finite zoom would otherwise divide by zero. Callers get
-        // beat 0 rather than an infinity that propagates into clip positions.
-        const float pixelsPerBeat = m_pixelsPerBeat;
-        if (!(pixelsPerBeat > 0.0f)) {
-            return 0.0;
-        }
-        return (static_cast<double>(offsetFromGridStart) + static_cast<double>(m_timelineScrollOffset)) /
-               static_cast<double>(pixelsPerBeat);
+        return timelineGridOffsetToBeat(offsetFromGridStart, m_timelineScrollOffset, m_pixelsPerBeat);
     }
 
     /** @brief Convert beats into a pixel distance from the grid's left edge. */
     float beatToGridOffset(double beat) const {
-        return static_cast<float>(beat * static_cast<double>(m_pixelsPerBeat)) - m_timelineScrollOffset;
+        return timelineBeatToGridOffset(beat, m_timelineScrollOffset, m_pixelsPerBeat);
     }
 
     // Helper to convert mouse position to track/time
