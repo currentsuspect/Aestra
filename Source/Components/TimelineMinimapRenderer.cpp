@@ -268,6 +268,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     // Viewport outline stays above the content; fill was rendered beneath it.
     if (hasViewportRect) {
         renderer.strokeRoundedRect(viewportRect, 5.0f, 1.0f, colors.viewOutline);
+        const float handleH = std::min(10.0f, std::max(4.0f, viewportRect.height - 4.0f));
+        const float handleY = viewportRect.y + (viewportRect.height - handleH) * 0.5f;
+        renderer.fillRoundedRect(NUIRect(viewportRect.x + 2.0f, handleY, 2.0f, handleH), 1.0f,
+                                 colors.viewHandle);
+        renderer.fillRoundedRect(NUIRect(viewportRect.right() - 4.0f, handleY, 2.0f, handleH), 1.0f,
+                                 colors.viewHandle);
     }
 
     // Playhead: collision-free outline (dark underlay + bright center).
