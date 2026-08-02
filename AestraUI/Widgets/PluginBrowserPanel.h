@@ -339,6 +339,11 @@ private:
      */
     int visibleSlotCount() const;
 
+    /// Keep m_scrollOffset within the rows actually drawn. The visible row set
+    /// shrinks when a plugin is removed or a reorder drag ends, and a stale
+    /// offset leaves the rack looking empty.
+    void clampScrollToContent();
+
     NUIPlatformBridge* m_platformBridge = nullptr;
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
     std::array<int, MAX_SLOTS> m_bypassOverride; // -1=None, 0=Active, 1=Bypassed

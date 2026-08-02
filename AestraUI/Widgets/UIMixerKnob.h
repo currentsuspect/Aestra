@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "NUIDoubleClick.h"
 
 #include <functional>
 #include <string>
@@ -68,12 +69,13 @@ private:
     NUIColor m_indicator;   // engaged (hover/drag) arc
     NUIColor m_arcResting;  // neutral resting arc
 
-    // The platform never sets NUIMouseEvent::doubleClick — pair presses here.
-    long long m_lastClickTimeMs{0};
     NUIColor m_text;
     NUIColor m_textSecondary;
     NUIColor m_tooltipBg;
     NUIColor m_tooltipText;
+
+    // The platform never sets NUIMouseEvent::doubleClick.
+    NUIDoubleClickTracker m_clickTracker;
 
     void cacheThemeColors();
     float clampValue(float value) const;

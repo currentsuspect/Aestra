@@ -286,12 +286,7 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     // quick same-button presses are paired up here (house pattern) — relying on
     // the flag alone left this reset unreachable.
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::steady_clock::now().time_since_epoch())
-                                    .count();
-        const bool isDoubleClick = (nowMs - m_lastClickTimeMs < 400) || event.doubleClick;
-        m_lastClickTimeMs = nowMs;
-        if (isDoubleClick) {
+        if (m_clickTracker.registerPress() || event.doubleClick) {
             setValue(defaultValue());
             updateGlobalTooltip();
             return true;

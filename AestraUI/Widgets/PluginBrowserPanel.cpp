@@ -1052,8 +1052,10 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     if (std::abs(event.wheelDelta) > 0.001f && m_activeKnobSlot == -1) {
         m_scrollOffset -= event.wheelDelta * 20.0f;
 
-        // Clamp scroll
-        float contentHeight = MAX_SLOTS * SLOT_HEIGHT + 10;
+        // Clamp against the rows actually drawn, not MAX_SLOTS. Bounding by ten
+        // rows let the offset run past the compact row set, and hitTestSlot then
+        // rejected the blank area — the rack looked empty until you scrolled back.
+        float contentHeight = visibleSlotCount() * SLOT_HEIGHT + 10;
         float viewHeight = getBounds().height;
         m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
 
@@ -1319,8 +1321,17 @@ void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
                 m_slots[index].bypassed = forcedState;
             }
         }
+        // Removing a plugin shrinks the drawn row set, which can leave the
+        // offset scrolled past the last row that still exists.
+        clampScrollToContent();
         repaint();
     }
+}
+
+void EffectChainRack::clampScrollToContent() {
+    const float contentHeight = visibleSlotCount() * SLOT_HEIGHT + 10.0f;
+    const float viewHeight = getBounds().height;
+    m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
 }
 
 const EffectChainRack::EffectSlotInfo& EffectChainRack::getSlot(int index) const {

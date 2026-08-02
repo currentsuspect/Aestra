@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "NUIDoubleClick.h"
 #include "NUITypes.h"
 #include <functional>
 #include <memory>
@@ -89,9 +90,8 @@ private:
     /// editor parks here and is released in onRender(), off that stack.
     std::shared_ptr<NUITextInput> m_retiredInput;
 
-    // The platform never populates NUIMouseEvent::doubleClick, so pair up quick
-    // same-spot presses here (house pattern — see UnitNameLabel).
-    long long m_lastClickTimeMs{0};
+    // The platform never populates NUIMouseEvent::doubleClick.
+    NUIDoubleClickTracker m_clickTracker;
 
     bool m_showScaleLabels{false};
 

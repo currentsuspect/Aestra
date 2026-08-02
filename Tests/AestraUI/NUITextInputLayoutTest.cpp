@@ -42,6 +42,9 @@ public:
     float callGetLineRenderY(const TextLine& line) const { return getLineRenderY(line); }
     NUIPoint callGetTextPosition(int idx) const { return getTextPosition(idx); }
     int callGetCharacterIndexAtPosition(const NUIPoint& pos) const { return getCharacterIndexAtPosition(pos); }
+    float callJustificationOffsetForLine(const TextLine& line, float availableWidth) const {
+        return justificationOffsetForLine(line, availableWidth);
+    }
 
     const std::vector<TextLine>& getLayoutLines() const { return layoutLines_; }
 
@@ -250,7 +253,7 @@ static void test_justification_offset_left_is_zero() {
     input.setJustification(NUITextInput::Justification::Left);
     const TextLine line = makeLineOfWidth(40.0f);
 
-    ASSERT(input.justificationOffsetForLine(line, 100.0f) == 0.0f,
+    ASSERT(input.callJustificationOffsetForLine(line, 100.0f) == 0.0f,
            "left-aligned text must not be offset");
     PASS("justification offset: left is zero");
 }
@@ -261,7 +264,7 @@ static void test_justification_offset_center_halves_the_slack() {
     const TextLine line = makeLineOfWidth(40.0f);
 
     // 100 available - 40 used = 60 slack, centred -> 30
-    ASSERT(input.justificationOffsetForLine(line, 100.0f) == 30.0f,
+    ASSERT(input.callJustificationOffsetForLine(line, 100.0f) == 30.0f,
            "centred text offset must be half the leftover width");
     PASS("justification offset: centre halves the slack");
 }
@@ -271,7 +274,7 @@ static void test_justification_offset_right_uses_all_slack() {
     input.setJustification(NUITextInput::Justification::Right);
     const TextLine line = makeLineOfWidth(40.0f);
 
-    ASSERT(input.justificationOffsetForLine(line, 100.0f) == 60.0f,
+    ASSERT(input.callJustificationOffsetForLine(line, 100.0f) == 60.0f,
            "right-aligned text offset must consume the whole leftover width");
     PASS("justification offset: right uses all slack");
 }
@@ -282,7 +285,7 @@ static void test_justification_offset_never_negative_when_overflowing() {
     const TextLine line = makeLineOfWidth(200.0f);
 
     // Text wider than the field must not drag the caret off to the left.
-    ASSERT(input.justificationOffsetForLine(line, 100.0f) == 0.0f,
+    ASSERT(input.callJustificationOffsetForLine(line, 100.0f) == 0.0f,
            "overflowing text must clamp the offset to zero, not go negative");
     PASS("justification offset: clamps to zero when text overflows");
 }
@@ -294,7 +297,7 @@ static void test_justification_offset_empty_line() {
     line.charX = {0.0f};  // INVARIANT: always at least position 0
 
     // An empty line has zero width, so the caret centres in the whole field.
-    ASSERT(input.justificationOffsetForLine(line, 100.0f) == 50.0f,
+    ASSERT(input.callJustificationOffsetForLine(line, 100.0f) == 50.0f,
            "empty centred line puts the caret at the field centre");
     PASS("justification offset: empty line centres the caret");
 }

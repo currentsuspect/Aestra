@@ -398,8 +398,14 @@ void AudioClipEditorPanel::rebuildRoutes(bool force) {
         const auto* channel = m_trackManager->getChannel(index);
         if (!channel)
             continue;
+        // Fall back to the stable channel id, matching TrackManager's own
+        // default naming. The dense list index drifts once a channel is
+        // deleted, which would label the same channel differently here than in
+        // the mixer.
         const std::string name =
-            channel->getName().empty() ? "Channel " + std::to_string(index + 1) : channel->getName();
+            channel->getName().empty()
+                ? "Channel " + std::to_string(channel->getChannelId())
+                : channel->getName();
         routes.push_back({channel->getChannelId(), static_cast<int>(index + 1), name,
                           paletteIndexToARGB(channel->getTrackColorIndex())});
     }

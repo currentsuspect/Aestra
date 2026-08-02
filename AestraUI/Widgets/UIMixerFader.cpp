@@ -31,12 +31,6 @@ namespace {
     // only one that gets emphasis and a label.
     constexpr float SCALE_TICKS[] = {6.0f, 0.0f, -6.0f, -12.0f, -24.0f, -48.0f};
 
-    long long nowMillis()
-    {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now().time_since_epoch())
-            .count();
-    }
 }
 
 UIMixerFader::UIMixerFader()
@@ -327,7 +321,14 @@ void UIMixerFader::commitEdit()
         setValueDb(m_minDb);
     } else {
         try {
-            setValueDb(std::stof(entered));
+            // std::stof accepts "nan"/"inf"/"-inf" without throwing. clampDb
+            // happens to swallow those today only because of its comparison
+            // order — reject them explicitly so the guard survives a future
+            // edit to clampDb.
+            const float parsed = std::stof(entered);
+            if (std::isfinite(parsed)) {
+                setValueDb(parsed);
+            }
         } catch (const std::exception&) {
             // Keep the current value on garbage input.
         }
@@ -402,11 +403,9 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
     if (!bounds.contains(event.position) && !m_dragging) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        // The platform never populates event.doubleClick, so pair up quick
-        // presses ourselves — without this the reset below is dead code.
-        const long long nowMs = nowMillis();
-        const bool isDoubleClick = (nowMs - m_lastClickTimeMs < 400) || event.doubleClick;
-        m_lastClickTimeMs = nowMs;
+        // The platform never populates event.doubleClick, so presses are paired
+        // up by the shared tracker — without this the reset below is dead code.
+        const bool isDoubleClick = m_clickTracker.registerPress() || event.doubleClick;
 
         // The readout is an entry field, not part of the track: clicking it used
         // to slam the fader to whatever value that Y mapped to.

@@ -107,18 +107,33 @@ void UIItemSelector::commitEditing() {
             // Check if user just typed a number "7"
             int trackNum = std::stoi(text);
             
-            // Prefer current "Channel NUM" labels while accepting saved legacy names.
-            const std::string channelPrefix = "channel " + std::to_string(trackNum);
-            const std::string legacyInsertPrefix = "insert " + std::to_string(trackNum);
-            const std::string legacyTrackPrefix = "track " + std::to_string(trackNum);
-            for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
-                std::string item = m_items[i];
-                std::transform(item.begin(), item.end(), item.begin(), ::tolower);
-                if (item.find(channelPrefix) == 0 || item.find(legacyInsertPrefix) == 0
-                    || item.find(legacyTrackPrefix) == 0) {
-                    matchIndex = i;
-                    break;
+            // "7" must not match "Channel 70", so the number has to end at a
+            // non-digit (or end of string) rather than merely prefix-match.
+            const std::string numText = std::to_string(trackNum);
+            auto matchesLabel = [&numText](const std::string& lowerItem,
+                                           const std::string& prefix) {
+                const std::string needle = prefix + numText;
+                if (lowerItem.rfind(needle, 0) != 0) {
+                    return false;
                 }
+                if (lowerItem.size() == needle.size()) {
+                    return true;
+                }
+                return std::isdigit(static_cast<unsigned char>(lowerItem[needle.size()])) == 0;
+            };
+
+            // Current labels win outright: a single pass would otherwise let a
+            // legacy "Insert 7" earlier in the list beat the real "Channel 7".
+            for (const char* prefix : {"channel ", "insert ", "track "}) {
+                for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
+                    std::string item = m_items[i];
+                    std::transform(item.begin(), item.end(), item.begin(), ::tolower);
+                    if (matchesLabel(item, prefix)) {
+                        matchIndex = i;
+                        break;
+                    }
+                }
+                if (matchIndex != -1) break;
             }
         } catch (...) {
             // Not a number
