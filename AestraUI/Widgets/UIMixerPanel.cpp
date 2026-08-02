@@ -224,6 +224,9 @@ void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
 
 void UIMixerPanel::layoutMeters()
 {
+    // Derived state first: the rest of the layout reads inspectorWidth().
+    updateInspectorWidthConstraint();
+
     auto bounds = getBounds();
     const NUIRect minimapRect = getMinimapRect();
     const float stripY = minimapRect.bottom() + MINIMAP_GAP;
@@ -242,8 +245,8 @@ void UIMixerPanel::layoutMeters()
         // Collapsed, the inspector yields its width to the channel strips and
         // leaves only the re-open rail drawn by the panel.
         m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
-        m_inspector->setVisible(!m_inspectorCollapsed);
-        if (!m_inspectorCollapsed) {
+        m_inspector->setVisible(!isInspectorCollapsed());
+        if (!isInspectorCollapsed()) {
             m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
         }
     }
@@ -279,17 +282,48 @@ NUIRect UIMixerPanel::getInspectorToggleRect() const
 
     // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
     // the inspector's leading edge.
-    const float railW = m_inspectorCollapsed ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
+    const float railW = isInspectorCollapsed() ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
     return NUIRect{inspectorX, stripY, railW, stripHeight};
 }
 
-void UIMixerPanel::setInspectorCollapsed(bool collapsed)
+void UIMixerPanel::updateInspectorWidthConstraint()
 {
-    if (m_inspectorCollapsed == collapsed) {
+    const float available = getBounds().width;
+    if (available <= 0.0f) {
+        return; // Pre-layout; leave the constraint alone rather than guessing.
+    }
+
+    // The inspector only earns its width if the strips it sits beside are still
+    // usable. Below that, collapse is imposed regardless of preference.
+    const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
+                       + kMinStripsBesideInspector * (STRIP_WIDTH + STRIP_SPACING);
+
+    m_inspectorCollapse.setForcedCollapsed(available < needed);
+}
+
+void UIMixerPanel::setInspectorExpandedPreference(bool expanded)
+{
+    if (m_inspectorCollapse.expandedPreference == expanded) {
         return;
     }
-    m_inspectorCollapsed = collapsed;
+    m_inspectorCollapse.expandedPreference = expanded;
+    if (onInspectorPreferenceChanged) {
+        onInspectorPreferenceChanged(expanded);
+    }
     layoutMeters();
+    repaint();
+}
+
+void UIMixerPanel::toggleInspectorCollapsed()
+{
+    const bool before = m_inspectorCollapse.expandedPreference;
+    m_inspectorCollapse.onRailClicked();
+    if (m_inspectorCollapse.expandedPreference != before) {
+        if (onInspectorPreferenceChanged) {
+            onInspectorPreferenceChanged(m_inspectorCollapse.expandedPreference);
+        }
+        layoutMeters();
+    }
     repaint();
 }
 
@@ -510,17 +544,26 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     {
         auto& theme = NUIThemeManager::getInstance();
         const NUIRect rail = getInspectorToggleRect();
+        const bool collapsed = isInspectorCollapsed();
+        const bool forced = isInspectorForcedCollapsed();
+
+        // A width-imposed collapse reads as unavailable rather than chosen: the
+        // rail still accepts the click (it records intent) but must not look
+        // like it will open the panel right now, or it feels broken.
         const NUIColor railColor = m_inspectorToggleHovered
-            ? theme.getColor("accentPrimary").withAlpha(0.34f)
-            : theme.getColor("surfaceTertiary").withAlpha(m_inspectorCollapsed ? 0.72f : 0.34f);
+            ? theme.getColor("accentPrimary").withAlpha(forced ? 0.18f : 0.34f)
+            : theme.getColor("surfaceTertiary").withAlpha(collapsed ? 0.72f : 0.34f);
         renderer.fillRoundedRect(rail, 3.0f, railColor);
 
         // Chevron points the way the panel will move.
-        const NUIColor glyph = theme.getColor("textSecondary")
-                                   .withAlpha(m_inspectorToggleHovered ? 0.95f : 0.6f);
+        float glyphAlpha = m_inspectorToggleHovered ? 0.95f : 0.6f;
+        if (forced) {
+            glyphAlpha *= 0.45f;
+        }
+        const NUIColor glyph = theme.getColor("textSecondary").withAlpha(glyphAlpha);
         const float cx = rail.x + rail.width * 0.5f;
         const float cy = rail.y + rail.height * 0.5f;
-        const float dir = m_inspectorCollapsed ? -1.0f : 1.0f;
+        const float dir = collapsed ? -1.0f : 1.0f;
         for (int i = 0; i < 5; ++i) {
             const float dy = static_cast<float>(i) - 2.0f;
             const float dx = dir * (2.0f - std::abs(dy));
@@ -568,6 +611,16 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         const bool overRail = rail.contains(event.position);
         if (m_inspectorToggleHovered != overRail) {
             m_inspectorToggleHovered = overRail;
+            if (overRail && isInspectorForcedCollapsed()) {
+                // Say why it will not open, so a recorded-but-not-applied click
+                // reads as "waiting for room" instead of "ignored".
+                NUIComponent::showRemoteTooltip(
+                    "Inspector hidden - window too narrow",
+                    NUIPoint{rail.x + rail.width + 8.0f, rail.y + rail.height * 0.5f},
+                    this);
+            } else if (!overRail) {
+                NUIComponent::hideRemoteTooltip(this);
+            }
             repaint();
         }
         if (overRail && event.pressed && event.button == NUIMouseButton::Left) {
