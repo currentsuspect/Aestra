@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -150,7 +151,11 @@ public:
 
 private:
     std::string m_executablePath;
-#ifndef _WIN32
+#ifdef _WIN32
+    HANDLE m_process = nullptr;   // child process
+    HANDLE m_stdinWrite = nullptr;  // our end of the child's stdin
+    HANDLE m_stdoutRead = nullptr;  // our end of the child's stdout
+#else
     pid_t m_pid = -1;
     int m_stdinFd = -1;
     int m_stdoutFd = -1;
@@ -159,7 +164,81 @@ private:
 
 bool PluginHostProcess::start() {
 #ifdef _WIN32
-    return false;
+    // Windows previously returned false here, which meant plugins were never
+    // sandboxed on Windows at all: the caller fell back to in-process hosting, so
+    // any plugin fault took Aestra down with it. Linux/macOS had fork() isolation
+    // the whole time.
+    if (m_process) {
+        return false; // already started
+    }
+
+    // Same pre-exec check the POSIX path performs. AESTRA_PLUGIN_HOST_PATH is
+    // attacker-influencable, so refuse anything that is not an absolute path to a
+    // regular file before handing it to CreateProcess (SEC-FIX parity).
+    std::error_code ec;
+    const std::filesystem::path exe(m_executablePath);
+    if (!exe.is_absolute() || !std::filesystem::is_regular_file(exe, ec)) {
+        return false;
+    }
+
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = nullptr;
+
+    HANDLE childStdinRead = nullptr;
+    HANDLE childStdoutWrite = nullptr;
+    if (!CreatePipe(&childStdinRead, &m_stdinWrite, &sa, 0)) {
+        return false;
+    }
+    if (!CreatePipe(&m_stdoutRead, &childStdoutWrite, &sa, 0)) {
+        CloseHandle(childStdinRead);
+        CloseHandle(m_stdinWrite);
+        m_stdinWrite = nullptr;
+        return false;
+    }
+
+    // Our ends must NOT be inheritable. If they are, the child holds a duplicate
+    // of the write end of its own stdout and the pipe never reports EOF when the
+    // child dies — readLine() would then block until its timeout on every crash
+    // instead of noticing immediately.
+    SetHandleInformation(m_stdinWrite, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(m_stdoutRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = childStdinRead;
+    si.hStdOutput = childStdoutWrite;
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+    // CreateProcess mutates lpCommandLine, so it cannot be a string literal or a
+    // c_str(). The path is quoted because plugin host paths routinely sit under
+    // "Program Files".
+    std::string commandLine = "\"" + m_executablePath + "\" --stdio";
+    std::vector<char> mutableCommandLine(commandLine.begin(), commandLine.end());
+    mutableCommandLine.push_back('\0');
+
+    PROCESS_INFORMATION pi{};
+    const BOOL created = CreateProcessA(m_executablePath.c_str(), mutableCommandLine.data(), nullptr, nullptr,
+                                        TRUE, // inherit the two pipe ends marked inheritable above
+                                        CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+
+    // The child owns these now either way.
+    CloseHandle(childStdinRead);
+    CloseHandle(childStdoutWrite);
+
+    if (!created) {
+        CloseHandle(m_stdinWrite);
+        CloseHandle(m_stdoutRead);
+        m_stdinWrite = nullptr;
+        m_stdoutRead = nullptr;
+        return false;
+    }
+
+    CloseHandle(pi.hThread);
+    m_process = pi.hProcess;
+    return true;
 #else
     int inPipe[2] = {-1, -1};
     int outPipe[2] = {-1, -1};
@@ -204,7 +283,30 @@ bool PluginHostProcess::start() {
 }
 
 void PluginHostProcess::stop() {
-#ifndef _WIN32
+#ifdef _WIN32
+    // Ask first, then insist. Closing stdin is itself a shutdown signal: the child
+    // sees EOF on its read loop even if it ignored EXIT.
+    if (m_stdinWrite) {
+        sendLine("EXIT");
+        CloseHandle(m_stdinWrite);
+        m_stdinWrite = nullptr;
+    }
+    if (m_stdoutRead) {
+        CloseHandle(m_stdoutRead);
+        m_stdoutRead = nullptr;
+    }
+    if (m_process) {
+        // Same 100ms grace as POSIX before escalating. A wedged plugin must not be
+        // able to hold shutdown open indefinitely, which is the whole point of
+        // hosting it out of process.
+        if (WaitForSingleObject(m_process, 100) != WAIT_OBJECT_0) {
+            TerminateProcess(m_process, 1);
+            WaitForSingleObject(m_process, INFINITE);
+        }
+        CloseHandle(m_process);
+        m_process = nullptr;
+    }
+#else
     if (m_stdinFd >= 0) {
         sendLine("EXIT");
         close(m_stdinFd);
@@ -232,6 +334,19 @@ void PluginHostProcess::stop() {
 
 bool PluginHostProcess::isRunning() {
 #ifdef _WIN32
+    if (!m_process) {
+        return false;
+    }
+    DWORD exitCode = 0;
+    if (!GetExitCodeProcess(m_process, &exitCode)) {
+        return false;
+    }
+    // STILL_ACTIVE is 259, which a process may also legitimately exit with. Confirm
+    // against the process handle rather than trusting the code alone, or a plugin
+    // that exits 259 would look alive forever and never be restarted.
+    if (exitCode == STILL_ACTIVE) {
+        return WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT;
+    }
     return false;
 #else
     if (m_pid <= 0) {
@@ -251,8 +366,22 @@ bool PluginHostProcess::isRunning() {
 
 bool PluginHostProcess::sendLine(const std::string& line) {
 #ifdef _WIN32
-    (void)line;
-    return false;
+    if (!m_stdinWrite || !isRunning()) {
+        return false;
+    }
+    std::string framed = line;
+    framed.push_back('\n');
+    const char* data = framed.data();
+    DWORD remaining = static_cast<DWORD>(framed.size());
+    while (remaining > 0) {
+        DWORD written = 0;
+        if (!WriteFile(m_stdinWrite, data, remaining, &written, nullptr) || written == 0) {
+            return false;
+        }
+        data += written;
+        remaining -= written;
+    }
+    return true;
 #else
     if (m_stdinFd < 0 || !isRunning()) {
         return false;
@@ -275,8 +404,43 @@ bool PluginHostProcess::sendLine(const std::string& line) {
 
 bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds timeout) {
 #ifdef _WIN32
-    (void)line;
-    (void)timeout;
+    if (!m_stdoutRead) {
+        return false;
+    }
+    line.clear();
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        // Anonymous pipes cannot be opened for overlapped I/O, so there is no
+        // WaitForSingleObject-able handle and no way to give ReadFile a timeout.
+        // PeekNamedPipe (which does work on anonymous pipes) supplies the
+        // "would block?" answer that O_NONBLOCK gives the POSIX path. Without the
+        // peek, ReadFile would block past the caller's deadline and a hung child
+        // would hang the caller with it.
+        DWORD available = 0;
+        if (!PeekNamedPipe(m_stdoutRead, nullptr, 0, nullptr, &available, nullptr)) {
+            return false; // broken pipe: child is gone
+        }
+        if (available == 0) {
+            if (!isRunning()) {
+                return false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+
+        char ch = '\0';
+        DWORD read = 0;
+        if (!ReadFile(m_stdoutRead, &ch, 1, &read, nullptr) || read != 1) {
+            return false;
+        }
+        if (ch == '\n') {
+            return true;
+        }
+        line.push_back(ch);
+        if (line.size() > 16ull * 1024ull * 1024ull) {
+            return false; // same runaway-line cap as the POSIX path
+        }
+    }
     return false;
 #else
     if (m_stdoutFd < 0) {
