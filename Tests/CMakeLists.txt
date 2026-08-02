@@ -1766,6 +1766,18 @@ else()
     message(STATUS "NUITextInputEditingTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Mixer inspector collapse — explicit preference vs. width-derived constraint.
+# Header-only state machine, so this needs no UI or renderer to run.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InspectorCollapseStateTest.cpp")
+    add_executable(InspectorCollapseStateTest AestraUI/InspectorCollapseStateTest.cpp)
+    target_include_directories(InspectorCollapseStateTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+    )
+    add_test(NAME InspectorCollapseStateTest COMMAND InspectorCollapseStateTest)
+    set_tests_properties(InspectorCollapseStateTest PROPERTIES LABELS "ui;mixer;regression")
+    message(STATUS "InspectorCollapseStateTest added - inspector collapse preference/constraint tests")
+endif()
+
 if(TARGET AestraUI_Core)
     add_executable(NUIDropdownInteractionTest AestraUI/NUIDropdownInteractionTest.cpp)
     target_link_libraries(NUIDropdownInteractionTest PRIVATE AestraUI_Core)

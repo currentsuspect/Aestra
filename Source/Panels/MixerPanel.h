@@ -37,6 +37,12 @@ public:
 
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
 
+    /// Mixer layout preferences live in ~/.config/aestra/mixer_settings.json —
+    /// application state, deliberately outside the project file so switching
+    /// projects never rearranges the mixer.
+    void loadUIPreferences();
+    void saveUIPreferences() const;
+
 private:
     std::shared_ptr<TrackManager> m_trackManager;
 

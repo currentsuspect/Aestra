@@ -1,0 +1,200 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+/**
+ * @file InspectorCollapseStateTest.cpp
+ * @brief Regression tests for mixer inspector collapse: explicit intent vs. derived fit.
+ *
+ * The contract under test:
+ *
+ *     effectiveExpanded = expandedPreference && !forcedCollapsed
+ *
+ * with the rule that a width change must NEVER write to expandedPreference.
+ * The transition orderings are the easy thing to get wrong and are invisible in
+ * a screenshot, which is why they are asserted directly.
+ */
+
+#include "Widgets/InspectorCollapseState.h"
+#include <iostream>
+#include <string>
+
+using namespace AestraUI;
+
+static int testsPassed = 0;
+static int testsFailed = 0;
+
+#define PASS(msg) do { std::cout << "  PASS: " << msg << "\n"; ++testsPassed; } while(0)
+#define FAIL(msg) do { std::cout << "  FAIL: " << msg << "\n"; ++testsFailed; } while(0)
+#define ASSERT(cond, msg) do { if (!(cond)) { FAIL(msg); return; } } while(0)
+
+// ---------------------------------------------------------------------------
+// Defaults and the core formula
+// ---------------------------------------------------------------------------
+static void test_first_run_defaults_expanded() {
+    InspectorCollapseState s;
+    ASSERT(s.expandedPreference, "first run preference is expanded");
+    ASSERT(!s.forcedCollapsed, "first run is not width-constrained");
+    ASSERT(s.effectiveExpanded(), "first run renders expanded");
+    PASS("first run defaults to expanded");
+}
+
+static void test_effective_is_preference_and_not_forced() {
+    InspectorCollapseState s;
+
+    s.expandedPreference = true;  s.forcedCollapsed = false;
+    ASSERT(s.effectiveExpanded(), "wants open, room available -> expanded");
+
+    s.expandedPreference = true;  s.forcedCollapsed = true;
+    ASSERT(!s.effectiveExpanded(), "wants open, no room -> collapsed");
+
+    s.expandedPreference = false; s.forcedCollapsed = false;
+    ASSERT(!s.effectiveExpanded(), "wants closed, room available -> collapsed");
+
+    s.expandedPreference = false; s.forcedCollapsed = true;
+    ASSERT(!s.effectiveExpanded(), "wants closed, no room -> collapsed");
+
+    PASS("effectiveExpanded = preference && !forced");
+}
+
+// ---------------------------------------------------------------------------
+// Width changes must not corrupt the stored intent
+// ---------------------------------------------------------------------------
+static void test_width_constraint_never_writes_preference() {
+    InspectorCollapseState s;  // preference = expanded
+
+    s.setForcedCollapsed(true);
+    ASSERT(s.expandedPreference,
+           "auto-collapse must not overwrite the user's explicit preference");
+    ASSERT(!s.effectiveExpanded(), "but it must collapse visually");
+
+    s.setForcedCollapsed(false);
+    ASSERT(s.expandedPreference, "preference still intact after the constraint lifts");
+    PASS("width constraint never writes the preference");
+}
+
+// ---------------------------------------------------------------------------
+// The two sequences that are easiest to get wrong
+// ---------------------------------------------------------------------------
+
+/// 1. user collapses -> 2. narrow -> 3. wide again -> 4. STAYS collapsed.
+/// The failure mode is the widen step "restoring" a panel the user closed.
+static void test_explicit_collapse_survives_narrow_then_wide() {
+    InspectorCollapseState s;
+
+    s.onRailClicked();                       // 1. explicit collapse
+    ASSERT(!s.expandedPreference, "click collapsed the preference");
+    ASSERT(!s.effectiveExpanded(), "collapsed on screen");
+
+    s.setForcedCollapsed(true);              // 2. narrow
+    ASSERT(!s.effectiveExpanded(), "still collapsed while narrow");
+
+    s.setForcedCollapsed(false);             // 3. wide again
+    ASSERT(!s.expandedPreference, "widening must not resurrect the preference");
+    ASSERT(!s.effectiveExpanded(),           // 4.
+           "regression: inspector reopened itself after a width round-trip "
+           "even though the user had explicitly collapsed it");
+    PASS("explicit collapse survives narrow -> wide round-trip");
+}
+
+/// 1. user prefers expanded -> 2. narrow auto-collapses -> 3. wide again ->
+/// 4. RESTORES expanded. The failure mode is the auto-collapse having
+/// overwritten the preference, so the panel never comes back.
+static void test_auto_collapse_restores_expanded_when_width_returns() {
+    InspectorCollapseState s;                // 1. preference = expanded
+    ASSERT(s.effectiveExpanded(), "starts expanded");
+
+    s.setForcedCollapsed(true);              // 2. narrow
+    ASSERT(!s.effectiveExpanded(), "auto-collapsed while narrow");
+
+    s.setForcedCollapsed(false);             // 3. wide again
+    ASSERT(s.effectiveExpanded(),            // 4.
+           "regression: auto-collapse clobbered the preference, so the "
+           "inspector never returned when the width did");
+    PASS("auto-collapse restores expanded when width returns");
+}
+
+// ---------------------------------------------------------------------------
+// Clicking the rail while width-constrained
+// ---------------------------------------------------------------------------
+static void test_click_while_forced_records_expand_intent() {
+    InspectorCollapseState s;
+    s.onRailClicked();            // user collapses
+    s.setForcedCollapsed(true);   // then the window narrows
+
+    s.onRailClicked();            // user clicks the rail: "open this"
+
+    ASSERT(s.expandedPreference,
+           "a click while width-constrained must record expand intent, not be discarded");
+    ASSERT(!s.effectiveExpanded(),
+           "…but it stays visually collapsed while there is still no room");
+
+    s.setForcedCollapsed(false);  // room returns
+    ASSERT(s.effectiveExpanded(), "the recorded intent takes effect once width allows");
+    PASS("click while constrained records intent, applies when width returns");
+}
+
+/// While constrained the panel is collapsed regardless, so a click can only
+/// mean "expand" — it must not toggle the preference off.
+static void test_click_while_forced_does_not_toggle_off() {
+    InspectorCollapseState s;      // preference = expanded
+    s.setForcedCollapsed(true);
+
+    s.onRailClicked();
+
+    ASSERT(s.expandedPreference,
+           "clicking a forced-collapsed rail must not flip an expanded preference to collapsed");
+    PASS("click while constrained never toggles the preference off");
+}
+
+static void test_click_toggles_normally_when_unconstrained() {
+    InspectorCollapseState s;
+
+    s.onRailClicked();
+    ASSERT(!s.expandedPreference, "first click collapses");
+    s.onRailClicked();
+    ASSERT(s.expandedPreference, "second click expands");
+    ASSERT(s.effectiveExpanded(), "and it shows");
+    PASS("click toggles normally when unconstrained");
+}
+
+// ---------------------------------------------------------------------------
+// Reset
+// ---------------------------------------------------------------------------
+static void test_reset_restores_default() {
+    InspectorCollapseState s;
+    s.onRailClicked();            // collapse
+    s.setForcedCollapsed(true);
+
+    s.reset();
+
+    ASSERT(s.expandedPreference, "reset restores the expanded default");
+    ASSERT(!s.forcedCollapsed, "reset clears the derived constraint");
+    ASSERT(s.effectiveExpanded(), "reset renders expanded");
+    PASS("reset restores the first-run default");
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+int main() {
+    std::cout << "============================================\n";
+    std::cout << "  Inspector Collapse State Regression Tests\n";
+    std::cout << "============================================\n\n";
+
+    test_first_run_defaults_expanded();
+    test_effective_is_preference_and_not_forced();
+    test_width_constraint_never_writes_preference();
+    test_explicit_collapse_survives_narrow_then_wide();
+    test_auto_collapse_restores_expanded_when_width_returns();
+    test_click_while_forced_records_expand_intent();
+    test_click_while_forced_does_not_toggle_off();
+    test_click_toggles_normally_when_unconstrained();
+    test_reset_restores_default();
+
+    std::cout << "\n============================================\n";
+    if (testsFailed == 0) {
+        std::cout << "  All " << testsPassed << " tests passed.\n";
+    } else {
+        std::cout << "  " << testsPassed << " passed, " << testsFailed << " failed.\n";
+    }
+    std::cout << "============================================\n";
+    return testsFailed > 0 ? 1 : 0;
+}

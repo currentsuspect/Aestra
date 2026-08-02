@@ -5,6 +5,7 @@
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
 #include "NUITypes.h"
+#include "InspectorCollapseState.h"
 #include "UIMixerInspector.h"
 #include "UIMixerMeter.h"
 #include "UIMixerPluginDropdown.h"
@@ -92,15 +93,31 @@ public:
      * A dedicated mixer view should be able to become almost entirely channel
      * strips; collapsing the inspector returns its width to the strips.
      */
-    void setInspectorCollapsed(bool collapsed);
-    bool isInspectorCollapsed() const { return m_inspectorCollapsed; }
-    void toggleInspectorCollapsed() { setInspectorCollapsed(!m_inspectorCollapsed); }
+    /// Explicit user intent. Persisted; width changes never write to it.
+    void setInspectorExpandedPreference(bool expanded);
+    bool getInspectorExpandedPreference() const { return m_inspectorCollapse.expandedPreference; }
+
+    /// What the panel actually draws right now.
+    bool isInspectorCollapsed() const { return !m_inspectorCollapse.effectiveExpanded(); }
+
+    /// True when the collapse is imposed by width rather than chosen.
+    bool isInspectorForcedCollapsed() const { return m_inspectorCollapse.forcedCollapsed; }
+
+    /// Rail click — records intent even while width-constrained.
+    void toggleInspectorCollapsed();
+
+    /// Fires only when the *explicit* preference changes, so the host can
+    /// persist it. Width-driven collapse deliberately does not fire.
+    std::function<void(bool expanded)> onInspectorPreferenceChanged;
 
 private:
     /// Current inspector width — the collapsed rail or the full panel.
     float inspectorWidth() const {
-        return m_inspectorCollapsed ? INSPECTOR_COLLAPSED_WIDTH : INSPECTOR_WIDTH;
+        return m_inspectorCollapse.effectiveExpanded() ? INSPECTOR_WIDTH : INSPECTOR_COLLAPSED_WIDTH;
     }
+
+    /// Recompute the width-driven constraint from the current bounds.
+    void updateInspectorWidthConstraint();
 
     /// Rail/handle that collapses or restores the inspector.
     NUIRect getInspectorToggleRect() const;
@@ -139,7 +156,7 @@ private:
 
     /// Inspector panel (pinned on the right, before master)
     std::shared_ptr<UIMixerInspector> m_inspector;
-    bool m_inspectorCollapsed{false};
+    InspectorCollapseState m_inspectorCollapse;
     bool m_inspectorToggleHovered{false};
 
     /// Plugin finder dropdown (topmost, shown on Add Insert click)
@@ -164,6 +181,9 @@ private:
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;
     static constexpr float INSPECTOR_WIDTH = 236.0f;
     static constexpr float INSPECTOR_COLLAPSED_WIDTH = 16.0f;
+    /// Strips that must remain usable beside the inspector before its width is
+    /// worth spending; below this the collapse is imposed by layout.
+    static constexpr int kMinStripsBesideInspector = 4;
     static constexpr float MINIMAP_HEIGHT = 22.0f;
     static constexpr float MINIMAP_GAP = 6.0f;
     static constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
