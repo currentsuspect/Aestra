@@ -31,6 +31,9 @@ namespace {
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
+    // Labelled Peak / LUFS / Gain block at the foot of the master strip.
+    constexpr float MASTER_READOUT_H = 56.0f;
+    constexpr float MASTER_READOUT_ROW_H = 15.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -323,11 +326,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_meter = std::make_shared<UIMixerMeter>();
     m_meter->setShowCorrelation(true);
+    m_meter->setMasterMode(m_channelId == 0);
     addChild(m_meter);
 
     m_fader = std::make_shared<UIMixerFader>();
     m_fader->setRangeDb(-90.0f, 6.0f);
     m_fader->setDefaultDb(0.0f);
+    // The master strip is wide enough to label its unity mark.
+    m_fader->setShowScaleLabels(m_channelId == 0);
     m_fader->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -470,13 +476,18 @@ void UIMixerStrip::layoutChildren()
         m_footer->setBounds(contentX, footerY, contentW, FOOTER_H);
     }
 
-    const float meterW = (m_channelId == 0) ? MASTER_METER_W : METER_W;
+    const bool isMaster = (m_channelId == 0);
+    const float meterW = isMaster ? MASTER_METER_W : METER_W;
+
+    // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
+    // strip; its footer is hidden, so that space is otherwise unused.
+    const float readoutH = isMaster ? MASTER_READOUT_H : 0.0f;
 
     // Meter + fader fill the strip between the channel controls and the footer.
     // (Previously sized to 62% of the free height and bottom-anchored, which
     // left a large dead gap above the fader — the tallest, most-used control.)
     const float meterY = y;
-    const float meterH = std::max(16.0f, (footerY - GAP) - y);
+    const float meterH = std::max(16.0f, (footerY - GAP - readoutH) - y);
     const float meterX = contentX + 2.0f;
 
     if (m_meter) {
@@ -488,6 +499,66 @@ void UIMixerStrip::layoutChildren()
         const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
         m_fader->setBounds(faderX, meterY, faderW, meterH);
     }
+
+    m_masterReadoutRect = isMaster
+        ? NUIRect{contentX, footerY - MASTER_READOUT_H, contentW, MASTER_READOUT_H}
+        : NUIRect{};
+}
+
+void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
+                                       const Aestra::ChannelViewModel& channel)
+{
+    const NUIRect& area = m_masterReadoutRect;
+    if (area.width <= 0.0f || area.height <= 0.0f) return;
+
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.72f);
+    const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.95f);
+    const NUIColor clipColor = theme.getColor("meterCrit");
+
+    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+
+    // Peak: prefer the held value, which is what the meter's hold line shows.
+    float peakDb = std::max(channel.smoothedPeakL, channel.smoothedPeakR);
+    if (channel.peakHoldL > Aestra::MixerMath::DB_MIN ||
+        channel.peakHoldR > Aestra::MixerMath::DB_MIN) {
+        peakDb = std::max(channel.peakHoldL, channel.peakHoldR);
+    }
+
+    char buf[32];
+    auto row = [&](int index, const char* label, const std::string& value, const NUIColor& color) {
+        const NUIRect rowRect{area.x, area.y + static_cast<float>(index) * MASTER_READOUT_ROW_H,
+                              area.width, MASTER_READOUT_ROW_H};
+        const float textY = renderer.calculateTextY(rowRect, 9.5f);
+        renderer.drawText(label, NUIPoint{rowRect.x, textY}, 9.5f, labelColor);
+
+        const float valueW = renderer.measureText(value, 9.5f).width;
+        renderer.drawText(value,
+                          NUIPoint{rowRect.x + rowRect.width - valueW, textY},
+                          9.5f, color);
+    };
+
+    // PEAK — dBFS, explicitly. Doubles as the clip/over indicator.
+    std::string peakText;
+    if (peakDb <= Aestra::MixerMath::DB_MIN) {
+        peakText = "\xE2\x88\x92\xE2\x88\x9E";
+    } else {
+        std::snprintf(buf, sizeof(buf), "%.1f", peakDb);
+        peakText = buf;
+    }
+    row(0, clipped ? "PEAK  OVER" : "PEAK  dBFS", peakText, clipped ? clipColor : valueColor);
+
+    // LUFS — integrated, and the sign always survives (see UIMixerMeter).
+    std::string lufsText = "--";
+    if (channel.integratedLufs > -100.0f) {
+        std::snprintf(buf, sizeof(buf), "%.1f", channel.integratedLufs);
+        lufsText = buf;
+    }
+    row(1, "LUFS  INT", lufsText, valueColor);
+
+    // GAIN — the fader's own value, named so it is not read as a level.
+    std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+    row(2, "GAIN  dB", buf, valueColor);
 }
 
 void UIMixerStrip::onResize(int width, int height)
@@ -718,6 +789,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     if (dragging) {
         invalidateStaticCache();
         renderChildren(renderer);
+        if (m_channelId == 0 && channel) {
+            renderMasterReadout(renderer, *channel);
+        }
         if (channel && channel->muted) {
             renderer.fillRect(getBounds(), m_mutedOverlay);
         }
@@ -751,6 +825,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     */
 
     renderChildren(renderer);
+    if (m_channelId == 0 && channel) {
+        renderMasterReadout(renderer, *channel);
+    }
     if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
         auto& theme = NUIThemeManager::getInstance();
         const float duckGain = m_viewModel->getPreviewDuckGain();
