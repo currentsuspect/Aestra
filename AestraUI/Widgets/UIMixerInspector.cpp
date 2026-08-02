@@ -529,10 +529,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         };
         renderer.fillRoundedRect(emptyCard, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
         renderer.strokeRoundedRect(emptyCard, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.42f));
-        renderer.strokeRoundedRect({emptyCard.x + 1.0f, emptyCard.y + 1.0f, emptyCard.width - 2.0f, emptyCard.height - 2.0f},
-                                   std::max(0.0f, HEADER_RADIUS - 1.0f),
-                                   1.0f,
-                                   NUIColor::white().withAlpha(0.022f));
 
         const NUIRect stateChip{emptyCard.center().x - 34.0f, emptyCard.y + 18.0f, 68.0f, 18.0f};
         renderer.fillRoundedRect(stateChip, 9.0f, m_bg.withAlpha(0.34f));
@@ -551,10 +547,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
     renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.70f));
     renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.50f));
-    renderer.strokeRoundedRect({headerRect.x + 1.0f, headerRect.y + 1.0f, headerRect.width - 2.0f, headerRect.height - 2.0f},
-                               std::max(0.0f, HEADER_RADIUS - 1.0f),
-                               1.0f,
-                               NUIColor::white().withAlpha(0.022f));
 
     NUIColor titleAccent = accent;
     if (channel && channel->trackColorIndex >= 0) {

@@ -83,7 +83,6 @@ private:
     // Cached theme colors
     NUIColor m_selectedTint;
     NUIColor m_selectedOutline;
-    NUIColor m_selectedGlow;
     NUIColor m_selectedTopHighlight;
     NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
