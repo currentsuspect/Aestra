@@ -139,8 +139,10 @@ struct WaveformInk {
 WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
     // Bold, near-solid waveform so it reads as a clear waveform shape (not faint
     // texture) against the clip fill: a bright lift of the clip hue at high alpha,
-    // with the min/max envelope nearly as opaque as the RMS body.
-    const AestraUI::NUIColor bright = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.52f);
+    // with the min/max envelope nearly as opaque as the RMS body. The lift amount
+    // is shared with clipBodyTone()'s counterpart so the contrast contract has one
+    // authority (see TrackColorPalette.h).
+    const AestraUI::NUIColor bright = AestraUI::liftWaveformInk(base);
     WaveformInk ink;
     ink.rms = bright.withAlpha(0.97f);
     ink.envTop = bright.withAlpha(0.90f);
@@ -565,8 +567,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
     // lifts it bright + near-opaque so the wave reads boldly over the fill.
     const bool clipSelected = (clip.id == m_selectedClipId);
-    AestraUI::NUIColor clipTint = restrainDawColor(resolveClipDisplayColor(clip), 1.0f, 0.92f, 1.0f);
-    if (clipSelected) clipTint = clipTint.lightened(0.12f);
+    const AestraUI::NUIColor clipTint = AestraUI::waveformTintTone(resolveClipDisplayColor(clip), clipSelected);
 
     const double samplesPerPixel = static_cast<double>(visibleFrames) / static_cast<double>(width);
 
@@ -895,15 +896,11 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
     // Deeper, less-saturated base so the clip reads rich rather than neon.
-    // Body sits lower than the waveform on purpose. deriveWaveformInk() lifts the
-    // ink from a separately restrained tint (1.0 brightness / 0.92 saturation), so
-    // dropping the body brightness here widens waveform-vs-body contrast without
-    // touching the waveform: the clip stops reading as a bright slab and starts
-    // reading as a surface with audio drawn on it.
-    const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
-                                                         clipSelected ? 0.78f : 0.68f,
-                                                         clipSelected ? 0.62f : 0.56f,
-                                                         1.0f);
+    // Body sits lower than the waveform on purpose. Both tones are derived
+    // together in TrackColorPalette.h so the gap between them cannot drift: the
+    // clip stops reading as a bright slab and starts reading as a surface with
+    // audio drawn on it.
+    const AestraUI::NUIColor clipBase = AestraUI::clipBodyTone(clipColor, clipSelected);
     AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.88f : 0.80f);
     // Opaque deep base so the timeline grid doesn't bleed through the clip body.
     renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary"));

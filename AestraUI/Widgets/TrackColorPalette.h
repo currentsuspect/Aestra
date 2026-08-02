@@ -68,6 +68,38 @@ inline NUIColor restrainLaneIdentityColor(const NUIColor& color, float alpha) {
     return restrainDawColor(color, 0.84f, 0.62f, alpha);
 }
 
+// ---------------------------------------------------------------------------
+// Clip contrast contract
+//
+// A clip is a surface with audio drawn on it. The body is deliberately toned
+// well down; the waveform keeps the identity hue near full strength and is then
+// lifted toward white. Both halves live here, together, because the thing that
+// matters is not either constant but the *gap* between them — separate the two
+// derivations and a later edit can quietly invert the hierarchy, which is the
+// bug this pairing exists to prevent. TimelineClipContrastTest guards the gap.
+// ---------------------------------------------------------------------------
+
+/** @brief The clip body: a deep, desaturated surface that must stay the quieter half. */
+inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
+    return restrainDawColor(identity, selected ? 0.78f : 0.68f, selected ? 0.62f : 0.56f, 1.0f);
+}
+
+/** @brief The identity tint the waveform is lifted from — kept bright so it has headroom. */
+inline NUIColor waveformTintTone(const NUIColor& identity, bool selected) {
+    const NUIColor tint = restrainDawColor(identity, 1.0f, 0.92f, 1.0f);
+    return selected ? tint.lightened(0.12f) : tint;
+}
+
+/** @brief Lift a waveform tint toward white. Sole authority for the lift amount. */
+inline NUIColor liftWaveformInk(const NUIColor& tint) {
+    return NUIColor::lerp(tint, NUIColor::white(), 0.52f);
+}
+
+/** @brief The ink actually drawn over the body. Must stay brighter than clipBodyTone(). */
+inline NUIColor waveformInkTone(const NUIColor& identity, bool selected) {
+    return liftWaveformInk(waveformTintTone(identity, selected));
+}
+
 inline int nearestPaletteIndex(uint32_t argb) {
     if (argb == 0) return -1;
     int best = 0;
