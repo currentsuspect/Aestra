@@ -107,12 +107,18 @@ void NUIPlatformBridge::setupEventBridges() {
         m_lastMouseX = x;
         m_lastMouseY = y;
 
+        const bool rootInputBlocked = m_rootInputBlockedCallback && m_rootInputBlockedCallback();
+
         if (m_mouseMoveCallback) {
             // Skip external callback during cursor capture to prevent hover effects,
             // cursor icon changes, and tooltip triggers in AestraWindowManager.
             if (m_currentCursorStyle != NUICursorStyle::Hidden) {
                 m_mouseMoveCallback(x, y);
             }
+        }
+
+        if (rootInputBlocked) {
+            return;
         }
 
         // Forward to root component for hover effects
@@ -164,8 +170,17 @@ void NUIPlatformBridge::setupEventBridges() {
         m_lastMouseX = x;
         m_lastMouseY = y;
         
+        // Snapshot modal ownership before the external callback. A button
+        // release may close the modal; that same release must still never be
+        // forwarded to the application underneath it.
+        const bool rootInputBlocked = m_rootInputBlockedCallback && m_rootInputBlockedCallback();
+
         if (m_mouseButtonCallback) {
             m_mouseButtonCallback(convertMouseButton(button), pressed);
+        }
+
+        if (rootInputBlocked) {
+            return;
         }
         
         // Forward to root component for AestraUI event handling
@@ -200,6 +215,10 @@ void NUIPlatformBridge::setupEventBridges() {
     // Mouse wheel
     m_window->setMouseWheelCallback([this](float delta) {
         if (!isWindowInteractive()) {
+            return;
+        }
+
+        if (m_rootInputBlockedCallback && m_rootInputBlockedCallback()) {
             return;
         }
 
@@ -254,6 +273,9 @@ void NUIPlatformBridge::setupEventBridges() {
     });
 
     m_window->setCharCallback([this](unsigned int codepoint) {
+        if (m_rootInputBlockedCallback && m_rootInputBlockedCallback()) {
+            return;
+        }
         if (m_charCallback) {
             m_charCallback(codepoint);
         }
@@ -505,6 +527,10 @@ void NUIPlatformBridge::setMouseButtonCallback(std::function<void(int, bool)> ca
 
 void NUIPlatformBridge::setMouseWheelCallback(std::function<void(float)> callback) {
     m_mouseWheelCallback = callback;
+}
+
+void NUIPlatformBridge::setRootInputBlockedCallback(std::function<bool()> callback) {
+    m_rootInputBlockedCallback = std::move(callback);
 }
 
 void NUIPlatformBridge::setMousePositionFilter(std::function<void(int&, int&)> callback) {

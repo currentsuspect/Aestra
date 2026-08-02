@@ -102,7 +102,12 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
 
     drawBackground(renderer);
 
-    // Draw items
+    // Tall menus keep their items inside the popup surface. Submenus are
+    // rendered after the clip is cleared so they remain independent popups.
+    const NUIRect bounds = getBounds();
+    renderer.setClipRect({bounds.x + borderWidth_, bounds.y + borderWidth_,
+                          std::max(0.0f, bounds.width - borderWidth_ * 2.0f),
+                          std::max(0.0f, bounds.height - borderWidth_ * 2.0f)});
     for (int i = 0; i < getItemCount(); ++i)
     {
         auto item = getItem(i);
@@ -117,6 +122,18 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
                 drawItem(renderer, item, i);
             }
         }
+    }
+    renderer.clearClipRect();
+
+    const float contentHeight = calculateContentHeight();
+    if (scrollable_ && contentHeight > bounds.height) {
+        const float trackHeight = std::max(1.0f, bounds.height - 8.0f);
+        const float thumbHeight = std::max(24.0f, trackHeight * (bounds.height / contentHeight));
+        const float travel = std::max(0.0f, trackHeight - thumbHeight);
+        const float progress = maximumScrollOffset() > 0.0f ? scrollOffset_ / maximumScrollOffset() : 0.0f;
+        const NUIRect thumb(bounds.right() - 4.0f, bounds.y + 4.0f + travel * progress, 2.0f, thumbHeight);
+        renderer.fillRoundedRect(thumb, 1.0f,
+                                 NUIThemeManager::getInstance().getColor("textMuted").withAlpha(0.55f));
     }
 
     // Render active submenu on top
@@ -164,6 +181,17 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
     if (!menuBounds.contains(event.position)) {
         if (event.pressed) hide(); // dismiss on click outside, don't consume the event
         return false;
+    }
+
+    if (event.wheelDelta != 0.0f && scrollable_ && maximumScrollOffset() > 0.0f) {
+        scrollOffset_ += event.wheelDelta > 0.0f ? -itemHeight_ : itemHeight_;
+        clampScrollOffset();
+        NUIPoint localPos = event.position;
+        localPos.x -= menuBounds.x;
+        localPos.y -= menuBounds.y;
+        hoveredItemIndex_ = getItemAtPosition(localPos);
+        setDirty(true);
+        return true;
     }
 
     // Convert absolute/window position to menu-local for item lookup
@@ -218,22 +246,43 @@ bool NUIContextMenu::onKeyEvent(const NUIKeyEvent& event)
                 hide();
                 return true;
             case NUIKeyCode::Up:
-                if (hoveredItemIndex_ > 0)
-                {
-                    hoveredItemIndex_--;
-                    setDirty(true);
-                }
+                navigateUp();
                 return true;
             case NUIKeyCode::Down:
-                if (hoveredItemIndex_ < getItemCount() - 1)
-                {
-                    hoveredItemIndex_++;
-                    setDirty(true);
+                navigateDown();
+                return true;
+            case NUIKeyCode::Home:
+                hoveredItemIndex_ = findSelectableItem(0, 1);
+                ensureItemVisible(hoveredItemIndex_);
+                setDirty(true);
+                return true;
+            case NUIKeyCode::End:
+                hoveredItemIndex_ = findSelectableItem(getItemCount() - 1, -1);
+                ensureItemVisible(hoveredItemIndex_);
+                setDirty(true);
+                return true;
+            case NUIKeyCode::Tab:
+                if (event.modifiers & NUIModifiers::Shift) navigateUp();
+                else navigateDown();
+                return true;
+            case NUIKeyCode::Right:
+                if (isSelectableItem(hoveredItemIndex_)) {
+                    auto item = getItem(hoveredItemIndex_);
+                    if (item && item->getType() == NUIContextMenuItem::Type::Submenu && item->getSubmenu()) {
+                        showSubmenu(hoveredItemIndex_);
+                    }
+                }
+                return true;
+            case NUIKeyCode::Left:
+                if (auto previous = previousFocus_.lock()) {
+                    if (dynamic_cast<NUIContextMenu*>(previous.get())) {
+                        hide();
+                    }
                 }
                 return true;
             case NUIKeyCode::Enter:
             case NUIKeyCode::Space:
-                if (hoveredItemIndex_ >= 0)
+                if (isSelectableItem(hoveredItemIndex_))
                 {
                     handleItemClick(hoveredItemIndex_);
                 }
@@ -319,6 +368,7 @@ void NUIContextMenu::addRadioItem(const std::string& text, const std::string& gr
 void NUIContextMenu::clear()
 {
     items_.clear();
+    scrollOffset_ = 0.0f;
     hoveredItemIndex_ = -1;
     pressedItemIndex_ = -1;
     updateLayout();
@@ -333,6 +383,7 @@ void NUIContextMenu::showAt(const NUIPoint& position)
 void NUIContextMenu::showAt(int x, int y)
 {
     updateLayout();
+    scrollOffset_ = 0.0f;
     float menuWidth = getBounds().width;
     float menuHeight = getBounds().height;
     
@@ -344,6 +395,12 @@ void NUIContextMenu::showAt(int x, int y)
         NUIRect parentBounds = parent->getBounds();
         float parentRight = parentBounds.x + parentBounds.width;
         float parentBottom = parentBounds.y + parentBounds.height;
+        const float availableHeight = std::max(1.0f, parentBounds.height - 20.0f);
+        if (menuHeight > availableHeight) {
+            menuHeight = availableHeight;
+            setSize(menuWidth, menuHeight);
+            clampScrollOffset();
+        }
         
         if (posX + menuWidth > parentRight) {
             posX = parentRight - menuWidth - 10.0f;
@@ -355,21 +412,45 @@ void NUIContextMenu::showAt(int x, int y)
         if (posY < parentBounds.y) posY = parentBounds.y + 10.0f;
     }
     
+    if (!isVisible_) {
+        previousFocus_.reset();
+        if (auto* focused = NUIComponent::getFocusedComponent(); focused && focused != this) {
+            try {
+                previousFocus_ = focused->shared_from_this();
+            } catch (const std::bad_weak_ptr&) {
+                // Stack-owned focus targets cannot be restored safely.
+            }
+        }
+    }
+
     setPosition(posX, posY);
     isVisible_ = true;
-    hoveredItemIndex_ = 0;
+    hoveredItemIndex_ = findSelectableItem(0, 1);
+    ensureItemVisible(hoveredItemIndex_);
     pressedItemIndex_ = -1;
+    setFocused(true);
     triggerShow();
     setDirty(true);
 }
 
 void NUIContextMenu::hide()
 {
+    const bool ownedFocus = ownsMenuFocus();
+    auto previousFocus = previousFocus_.lock();
+    // Mark the parent hidden before cascading so a submenu cannot restore focus
+    // to an already-hidden menu.
     isVisible_ = false;
     hoveredItemIndex_ = -1;
     pressedItemIndex_ = -1;
     hideSubmenu();
     triggerHide();
+    if (ownedFocus) {
+        setFocused(false);
+        if (previousFocus && previousFocus.get() != this && previousFocus->isVisible() && previousFocus->isEnabled()) {
+            previousFocus->setFocused(true);
+        }
+    }
+    previousFocus_.reset();
     setDirty(true);
 }
 
@@ -459,7 +540,8 @@ void NUIContextMenu::setCloseOnSelection(bool close)
 
 void NUIContextMenu::setMaxHeight(float height)
 {
-    maxHeight_ = height;
+    maxHeight_ = std::max(1.0f, height);
+    clampScrollOffset();
     updateLayout();
     setDirty(true);
 }
@@ -467,6 +549,8 @@ void NUIContextMenu::setMaxHeight(float height)
 void NUIContextMenu::setScrollable(bool scrollable)
 {
     scrollable_ = scrollable;
+    if (!scrollable_) scrollOffset_ = 0.0f;
+    clampScrollOffset();
     updateLayout();
     setDirty(true);
 }
@@ -488,18 +572,80 @@ void NUIContextMenu::setOnItemClick(std::function<void(std::shared_ptr<NUIContex
 
 void NUIContextMenu::navigateUp()
 {
-    if (hoveredItemIndex_ > 0) {
-        hoveredItemIndex_--;
+    const int start = hoveredItemIndex_ < 0 ? getItemCount() - 1 : hoveredItemIndex_ - 1;
+    const int next = findSelectableItem(start, -1);
+    if (next >= 0) {
+        hoveredItemIndex_ = next;
+        ensureItemVisible(next);
         setDirty(true);
     }
 }
 
 void NUIContextMenu::navigateDown()
 {
-    if (hoveredItemIndex_ < getItemCount() - 1) {
-        hoveredItemIndex_++;
+    const int start = hoveredItemIndex_ < 0 ? 0 : hoveredItemIndex_ + 1;
+    const int next = findSelectableItem(start, 1);
+    if (next >= 0) {
+        hoveredItemIndex_ = next;
+        ensureItemVisible(next);
         setDirty(true);
     }
+}
+
+bool NUIContextMenu::isSelectableItem(int index) const
+{
+    auto item = getItem(index);
+    return item && item->isVisible() && item->isEnabled() &&
+           item->getType() != NUIContextMenuItem::Type::Separator;
+}
+
+int NUIContextMenu::findSelectableItem(int startIndex, int direction) const
+{
+    if (direction == 0 || getItemCount() == 0) return -1;
+    for (int index = startIndex; index >= 0 && index < getItemCount(); index += direction) {
+        if (isSelectableItem(index)) return index;
+    }
+    return -1;
+}
+
+bool NUIContextMenu::ownsMenuFocus() const
+{
+    if (NUIComponent::getFocusedComponent() == this) return true;
+    return activeSubmenu_ && activeSubmenu_->ownsMenuFocus();
+}
+
+float NUIContextMenu::calculateContentHeight() const
+{
+    float height = 0.0f;
+    for (const auto& item : items_) {
+        if (!item || !item->isVisible()) continue;
+        height += item->getType() == NUIContextMenuItem::Type::Separator ? 8.0f : itemHeight_;
+    }
+    return height;
+}
+
+float NUIContextMenu::maximumScrollOffset() const
+{
+    if (!scrollable_) return 0.0f;
+    return std::max(0.0f, calculateContentHeight() - getBounds().height);
+}
+
+void NUIContextMenu::clampScrollOffset()
+{
+    scrollOffset_ = std::clamp(scrollOffset_, 0.0f, maximumScrollOffset());
+}
+
+void NUIContextMenu::ensureItemVisible(int index)
+{
+    if (!scrollable_ || index < 0 || index >= getItemCount()) return;
+    const NUIRect itemRect = getItemRect(index);
+    const NUIRect bounds = getBounds();
+    if (itemRect.y < bounds.y) {
+        scrollOffset_ -= bounds.y - itemRect.y;
+    } else if (itemRect.bottom() > bounds.bottom()) {
+        scrollOffset_ += itemRect.bottom() - bounds.bottom();
+    }
+    clampScrollOffset();
 }
 
 
@@ -657,12 +803,15 @@ NUIRect NUIContextMenu::getItemRect(int index) const
     if (index < 0 || index >= getItemCount()) return NUIRect();
     
     NUIRect bounds = getBounds();
-    float y = bounds.y;
+    float y = bounds.y - scrollOffset_;
     
     // Calculate Y position accounting for separator heights
     for (int i = 0; i < index; ++i)
     {
         auto item = getItem(i);
+        if (!item || !item->isVisible()) {
+            continue;
+        }
         if (item && item->getType() == NUIContextMenuItem::Type::Separator)
         {
             y += 8.0f; // Separators are shorter
@@ -681,23 +830,8 @@ NUIRect NUIContextMenu::getItemRect(int index) const
 
 float NUIContextMenu::calculateMenuHeight() const
 {
-    float height = 0.0f;
-    for (const auto& item : items_)
-    {
-        if (item && item->isVisible())
-        {
-            if (item->getType() == NUIContextMenuItem::Type::Separator)
-            {
-                height += 8.0f; // Separators are shorter
-            }
-            else
-            {
-                height += itemHeight_;
-            }
-        }
-    }
-    
-    return (height < maxHeight_) ? height : maxHeight_;
+    const float contentHeight = calculateContentHeight();
+    return scrollable_ ? std::min(contentHeight, maxHeight_) : contentHeight;
 }
 
 int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
@@ -707,7 +841,7 @@ int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
     NUIRect localRect(0, 0, localBounds.width, localBounds.height);
     if (!localRect.contains(position)) return -1;
     
-    float relativeY = position.y;
+    float relativeY = position.y + scrollOffset_;
     float currentY = 0.0f;
     
     for (int i = 0; i < getItemCount(); ++i)
@@ -790,6 +924,7 @@ void NUIContextMenu::updateSize()
     float width = 220.0f; // Clean, compact width
     
     setSize(width, height);
+    clampScrollOffset();
 }
 
 void NUIContextMenu::showSubmenu(int itemIndex)
@@ -810,8 +945,31 @@ void NUIContextMenu::showSubmenu(int itemIndex)
     // Calculate position: right edge of menu + gap, same Y as the item
     float targetX = myBounds.x + myBounds.width + 2.0f;
     float targetY = itemRect.y;
-    
+
     activeSubmenu_->showAt(static_cast<int>(targetX), static_cast<int>(targetY));
+
+    // Submenus are rendered by their owning menu rather than attached as root
+    // children, so constrain them explicitly to the root viewport. Prefer
+    // opening left when the right edge has no room.
+    if (auto* viewportOwner = getParent()) {
+        const NUIRect viewport = viewportOwner->getBounds();
+        NUIRect submenuBounds = activeSubmenu_->getBounds();
+        const float availableHeight = std::max(1.0f, viewport.height - 20.0f);
+        if (submenuBounds.height > availableHeight) {
+            activeSubmenu_->setSize(submenuBounds.width, availableHeight);
+            activeSubmenu_->clampScrollOffset();
+            submenuBounds = activeSubmenu_->getBounds();
+        }
+        if (targetX + submenuBounds.width > viewport.right()) {
+            targetX = myBounds.x - submenuBounds.width - 2.0f;
+        }
+        if (targetY + submenuBounds.height > viewport.bottom()) {
+            targetY = viewport.bottom() - submenuBounds.height - 10.0f;
+        }
+        targetX = std::max(viewport.x + 10.0f, targetX);
+        targetY = std::max(viewport.y + 10.0f, targetY);
+        activeSubmenu_->setPosition(targetX, targetY);
+    }
 }
 
 void NUIContextMenu::hideSubmenu()

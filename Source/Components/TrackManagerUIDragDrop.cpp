@@ -179,7 +179,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
     if (laneIndex < 0 || laneIndex > static_cast<int>(laneCount)) {
         result.accepted = false;
-        result.message = "Invalid lane position";
+        result.message = "Invalid track position";
         clearDropPreview();
         return result;
     }
@@ -217,13 +217,13 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     PlaylistLaneID targetLaneId;
     std::shared_ptr<CreateLaneCommand> laneCommand;
     if (laneIndex == static_cast<int>(laneCount)) {
-        laneCommand = std::make_shared<CreateLaneCommand>(playlist, "Lane " + std::to_string(laneIndex + 1));
+        laneCommand = std::make_shared<CreateLaneCommand>(playlist, "Track " + std::to_string(laneIndex + 1));
         laneCommand->execute();
         targetLaneId = laneCommand->getLaneId();
         if (!targetLaneId.isValid()) {
             laneCommand.reset();
             result.accepted = false;
-            result.message = "Could not create lane";
+            result.message = "Could not create track";
             clearDropPreview();
             return result;
         }

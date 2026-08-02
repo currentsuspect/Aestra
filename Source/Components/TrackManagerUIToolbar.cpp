@@ -426,7 +426,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         // === LOOP SUBMENU ===
         auto loopMenu = std::make_shared<AestraUI::NUIContextMenu>();
         auto addLoopItem = [&](const std::string& name, int id) {
-            bool isSelected = (m_loopPreset == id);
+            bool isSelected = (timelineLoopPresetId(m_loopPreset) == id);
             loopMenu->addRadioItem(name, "LoopGroup", isSelected, [this, id, name]() {
                 // m_loopPreset is assigned AFTER the branches below, not here. Two of
                 // them can decline to apply — "Selection" with no selection, "Project"
@@ -459,8 +459,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                     }
 
                     if (projectEnd <= 0.001) {
-                        const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
-                        projectEnd = emptyProjectBeats;
+                        projectEnd = resolveProjectLoopEndBeat(projectEnd, m_beatsPerBar);
                         Log::info("Loop Project: Empty arrangement fallback -> " + std::to_string(projectEnd) +
                                   " beats");
                     }
@@ -480,11 +479,21 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                 // the state the project is now in.
                 const bool intendedToEnable = (id != 0);
                 const int appliedPreset = (intendedToEnable && !loopEnabled) ? 0 : id;
-                m_loopPreset = appliedPreset;
+                m_loopPreset = timelineLoopPresetFromId(appliedPreset);
 
-                setLoopRegion(loopStartBeat, loopEndBeat, loopEnabled);
+                if (m_loopPreset != TimelineLoopPreset::Selection) {
+                    m_hasRulerSelection = false;
+                    m_hoveringLoopStart = false;
+                    m_hoveringLoopEnd = false;
+                }
 
-                if (m_onLoopRegionUpdate) {
+                if (m_loopPreset == TimelineLoopPreset::Selection && loopEnabled) {
+                    updateSelectionLoopRegion(loopStartBeat, loopEndBeat);
+                } else {
+                    setLoopRegion(loopStartBeat, loopEndBeat, loopEnabled);
+                }
+
+                if (m_loopPreset != TimelineLoopPreset::Selection && m_onLoopRegionUpdate) {
                     if (loopEnabled) {
                         m_onLoopRegionUpdate(loopStartBeat, loopEndBeat);
                     } else {
@@ -503,18 +512,18 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
             });
         };
 
-        addLoopItem("Off", 0);
-        addLoopItem("1 Bar", 1);
-        addLoopItem("2 Bars", 2);
-        addLoopItem("4 Bars", 3);
-        addLoopItem("8 Bars", 4);
-        addLoopItem("Selection", 5);
-        addLoopItem("Project", 6);
+        addLoopItem("Off", timelineLoopPresetId(TimelineLoopPreset::Off));
+        addLoopItem("1 Bar", timelineLoopPresetId(TimelineLoopPreset::OneBar));
+        addLoopItem("2 Bars", timelineLoopPresetId(TimelineLoopPreset::TwoBars));
+        addLoopItem("4 Bars", timelineLoopPresetId(TimelineLoopPreset::FourBars));
+        addLoopItem("8 Bars", timelineLoopPresetId(TimelineLoopPreset::EightBars));
+        addLoopItem("Selection", timelineLoopPresetId(TimelineLoopPreset::Selection));
+        addLoopItem("Project", timelineLoopPresetId(TimelineLoopPreset::Project));
         menu->addSubmenu("Loop", loopMenu);
 
         // === AUDITION MODE ===
         menu->addSeparator();
-        menu->addItem("Send to Audition", [this]() {
+        menu->addItem("Send Track to Audition", [this]() {
             // Get selected track or first track
             if (m_onSendToAudition && m_trackManager) {
                 auto& playlist = m_trackManager->getPlaylistModel();

@@ -222,52 +222,10 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
             AestraUI::NUIRect clippedRect(clipX, clipY, clipR - clipX, clipB - clipY);
 
-            // "Glass Tech" Theme Style - POLISHED
-            AestraUI::NUIColor accent = themeManager.getColor("accentCyan");
-
-            // 1. Vertical Gradient Fill for "Glass" depth
-            // Top: More transparent
-            // Bottom: Denser
-            AestraUI::NUIColor fillTop = accent.withAlpha(0.04f);
-            AestraUI::NUIColor fillBottom = accent.withAlpha(0.15f);
-            renderer.fillRectGradient(clippedRect, fillTop, fillBottom, true /* vertical */);
-
-            // 2. Main Border with Glow
-            // Outer Glow (Blurred/Wide)
-            renderer.strokeRect(clippedRect, 3.0f, accent.withAlpha(0.25f));
-            // Inner Core (Sharp)
-            renderer.strokeRect(clippedRect, 1.0f, accent.withAlpha(0.9f));
-
-            // 3. Glowing Corners
-            // Helper for corner rendering
-            auto drawCorner = [&](float x, float y, float w, float h) {
-                // Outer Glow
-                renderer.fillRect(AestraUI::NUIRect(x - 1, y - 1, w + 2, h + 2), accent.withAlpha(0.5f));
-                // Core
-                renderer.fillRect(AestraUI::NUIRect(x, y, w, h), accent.withAlpha(1.0f));
-            };
-
-            float cornerLen = 6.0f;
-            float cornerThick = 2.0f;
-
-            // Only draw corners if rect is large enough
-            if (clippedRect.width > cornerLen * 2 && clippedRect.height > cornerLen * 2) {
-                // Top-Left
-                drawCorner(clipX, clipY, cornerLen, cornerThick);
-                drawCorner(clipX, clipY, cornerThick, cornerLen);
-
-                // Top-Right
-                drawCorner(clipR - cornerLen, clipY, cornerLen, cornerThick);
-                drawCorner(clipR - cornerThick, clipY, cornerThick, cornerLen);
-
-                // Bottom-Left
-                drawCorner(clipX, clipB - cornerThick, cornerLen, cornerThick);
-                drawCorner(clipX, clipB - cornerLen, cornerThick, cornerLen);
-
-                // Bottom-Right
-                drawCorner(clipR - cornerLen, clipB - cornerThick, cornerLen, cornerThick);
-                drawCorner(clipR - cornerThick, clipB - cornerLen, cornerThick, cornerLen);
-            }
+            // Match the Piano Roll's quiet purple rubber-band treatment.
+            const AestraUI::NUIColor accent = themeManager.getColor("accentPrimary");
+            renderer.fillRoundedRect(clippedRect, 2.0f, accent.withAlpha(0.15f));
+            renderer.strokeRoundedRect(clippedRect, 2.0f, 1.0f, accent.withAlpha(0.55f));
         }
     }
 
@@ -649,12 +607,14 @@ void TrackManagerUI::onUpdate(double deltaTime) {
 
     NUIComponent::onUpdate(deltaTime);
 
-    if (m_loopPreset == 6 && m_trackManager) {
+    if (m_activeContextMenu && !m_activeContextMenu->isVisible()) {
+        detachContextMenu(m_activeContextMenu);
+        m_activeContextMenu = nullptr;
+    }
+
+    if (m_loopPreset == TimelineLoopPreset::Project && m_trackManager) {
         double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-        if (projectEndBeat <= 0.001) {
-            const double emptyProjectBeats = static_cast<double>(std::max(1, m_beatsPerBar)) * 16.0;
-            projectEndBeat = emptyProjectBeats;
-        }
+        projectEndBeat = resolveProjectLoopEndBeat(projectEndBeat, m_beatsPerBar);
 
         if (std::abs(projectEndBeat - m_lastProjectLoopExtentBeats) > 1e-3) {
             m_lastProjectLoopExtentBeats = projectEndBeat;
@@ -670,16 +630,6 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     // Animate Menu Icon Rotation
     float targetRot = m_activeContextMenu ? 90.0f : 0.0f;
     float diff = targetRot - m_menuIconRotation;
-
-    // Debug logging (throttled)
-    static double logTimer = 0.0;
-    logTimer += deltaTime;
-    if (logTimer > 1.0) {
-        if (m_activeContextMenu) {
-            Log::info("TrackManagerUI::onUpdate - Menu Active. Rot: " + std::to_string(m_menuIconRotation));
-        }
-        logTimer = 0.0;
-    }
 
     // Smooth lerp toward target
     if (std::abs(diff) > 0.5f) {
@@ -884,12 +834,11 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 double positionInBeats = std::max(0.0, snapBeatToGrid(localMouseX / m_pixelsPerBeat));
                 if (m_isDraggingLoopStart) {
                     if (positionInBeats < m_loopEndBeat) {
-                        setLoopRegion(positionInBeats, m_loopEndBeat, true);
+                        updateSelectionLoopRegion(positionInBeats, m_loopEndBeat);
                     }
                 } else if (positionInBeats > m_loopStartBeat) {
-                    setLoopRegion(m_loopStartBeat, positionInBeats, true);
+                    updateSelectionLoopRegion(m_loopStartBeat, positionInBeats);
                 }
-                m_minimapSelectionBeatRange = {m_loopStartBeat, m_loopEndBeat};
                 invalidateCache();
             } else if (m_isDraggingPlayhead && m_trackManager) {
                 auto& playlist = m_trackManager->getPlaylistModel();

@@ -20,6 +20,7 @@
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
+#include "TimelineInteractionPolicy.h"
 #include "WaveformCache.h"
 
 #include <functional>
@@ -139,7 +140,7 @@ public:
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
-    int getLoopPreset() const { return m_loopPreset; }
+    int getLoopPreset() const { return timelineLoopPresetId(m_loopPreset); }
 
     // Selection made callback - called when ruler selection is finalized (startBeat, endBeat)
     // This should jump playhead to start and set up the loop region
@@ -162,6 +163,7 @@ public:
 
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
+    void selectTrack(TrackUIComponent* track, TrackSelectionIntent intent);
     void deselectTrack(TrackUIComponent* track);
     void selectAllTracks();
     void clearSelection();
@@ -368,7 +370,7 @@ private:
     bool m_followPlayheadHovered = false;
 
     // Loop state
-    int m_loopPreset{0}; // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project
+    TimelineLoopPreset m_loopPreset{TimelineLoopPreset::Project};
     double m_lastProjectLoopExtentBeats{-1.0};
 
     // Current editing tool
@@ -377,6 +379,7 @@ private:
     std::function<void(bool)> m_onCursorVisibilityChanged;
 
     // Multi-selection
+    TimelineTrackSelection m_trackSelection;
     std::unordered_set<TrackUIComponent*> m_selectedTracks;
 
     // Instant clip dragging (no ghost)
@@ -415,8 +418,9 @@ private:
     bool m_hoveringLoopEnd = false;
     double m_loopDragStartBeat = 0.0; // Original beat position when drag started
 
-    // === SELECTION BOX (Right-click drag or MultiSelect tool) ===
+    // === SELECTION BOX (left- or right-drag with the Multi-Select tool) ===
     bool m_isDrawingSelectionBox = false;
+    ::AestraUI::NUIMouseButton m_selectionBoxButton = ::AestraUI::NUIMouseButton::None;
     ::AestraUI::NUIPoint m_selectionBoxStart;
     ::AestraUI::NUIPoint m_selectionBoxEnd;
 
@@ -523,6 +527,9 @@ private:
     void syncViewToggleButtons();
     void layoutTracks();
     void onAddTrackClicked();
+    void syncTrackSelectionView();
+    void selectClip(ClipInstanceID clipId);
+    void updateSelectionLoopRegion(double startBeat, double endBeat);
     void updateTrackPositions();
     void updateScrollbar();
     void onScroll(double position);

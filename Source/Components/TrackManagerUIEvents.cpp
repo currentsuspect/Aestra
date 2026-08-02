@@ -61,7 +61,9 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     // Claim keyboard focus on click so keyboard routing moves off the file browser.
-    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && bounds.contains(event.position)) {
+    if (event.pressed &&
+        (event.button == AestraUI::NUIMouseButton::Left || event.button == AestraUI::NUIMouseButton::Right) &&
+        bounds.contains(event.position)) {
         setFocused(true);
     }
 
@@ -116,10 +118,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return true;
     }
 
-    // Allow children (clips) to handle right-click press first.
-    // Right-click on a clip deletes it; only start selection
-    // box if nothing underneath handled the event.
-    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
+    // In the explicit Multi-Select tool, either mouse button owns the marquee.
+    // In every other tool, right-click remains a context-menu gesture.
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&
+        m_currentTool != PlaylistTool::MultiSelect) {
         if (AestraUI::NUIComponent::onMouseEvent(event)) {
             return true;
         }
@@ -227,9 +229,11 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false;
     }
 
-    const bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                       (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-    selectTrack(trackUI.get(), shift);
+    const bool toggleModifier =
+        (event.modifiers & AestraUI::NUIModifiers::Ctrl) || (event.modifiers & AestraUI::NUIModifiers::Super);
+    const TrackSelectionIntent intent =
+        trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
+    selectTrack(trackUI.get(), intent);
     invalidateCache();
     return true;
 }
@@ -358,12 +362,13 @@ bool TrackManagerUI::handleContextMenuMouse(const AestraUI::NUIMouseEvent& event
 }
 
 bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
-    // === SELECTION BOX: Right-click drag or MultiSelect tool or Ctrl+LeftClick ===
-    // Start selection box on right-click drag OR left-click with MultiSelect tool OR Ctrl+LeftClick
-    bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
-    bool startSelectionBox = (event.pressed && event.button == AestraUI::NUIMouseButton::Right) ||
-                             (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
-                              (m_currentTool == PlaylistTool::MultiSelect || ctrlHeld));
+    // Marquee selection is owned by the visible Multi-Select tool. Supporting
+    // both buttons preserves the timeline's established right-drag gesture;
+    // outside this tool, right-click remains reserved for context menus.
+    const bool selectionButton = event.button == AestraUI::NUIMouseButton::Left ||
+                                 event.button == AestraUI::NUIMouseButton::Right;
+    const bool startSelectionBox = event.pressed && selectionButton &&
+                                   m_currentTool == PlaylistTool::MultiSelect;
 
     if (startSelectionBox && !m_isDrawingSelectionBox) {
         float headerHeight = kTimelineHeaderHeight;
@@ -376,6 +381,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             m_isDrawingSelectionBox = true;
             m_selectionBoxStart = event.position;
             m_selectionBoxEnd = event.position;
+            m_selectionBoxButton = event.button;
 
             // Note: System cursor is always hidden by Main.cpp custom cursor system
             return true;
@@ -420,10 +426,9 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             m_selectionBoxEnd = event.position;
         }
 
-        // Check for release to finalize selection
-        // Allow release of Left button even if tool isn't MultiSelect (e.g. Ctrl override case)
-        bool endSelectionBox = (event.released && event.button == AestraUI::NUIMouseButton::Right) ||
-                               (event.released && event.button == AestraUI::NUIMouseButton::Left);
+        // Only the release matching the button that began the marquee may
+        // finalize it; this prevents the other button from ending a drag.
+        const bool endSelectionBox = event.released && event.button == m_selectionBoxButton;
 
         if (endSelectionBox) {
             // Calculate selection rectangle
@@ -445,6 +450,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             // Note: System cursor is always hidden by Main.cpp custom cursor system
 
             m_isDrawingSelectionBox = false;
+            m_selectionBoxButton = AestraUI::NUIMouseButton::None;
             invalidateCache();
 
             Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) + " tracks");
@@ -696,7 +702,8 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
 
                 // Update loop markers to match selection through centralized propagation.
-                setLoopRegion(selStartBeat, selEndBeat, true);
+                updateSelectionLoopRegion(selStartBeat, selEndBeat);
+                m_loopPreset = TimelineLoopPreset::Selection;
 
                 // Call selection callback - this will jump playhead and set loop region
                 if (m_onSelectionMade) {
@@ -705,7 +712,7 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
 
                 // Also notify loop preset changed to selection mode
                 if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(5); // 5 = Selection preset
+                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
                 }
 
                 Log::info("[TrackManagerUI] Ruler selection: " + std::to_string(selStartBeat) + " to " +
@@ -713,13 +720,14 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
             } else {
                 // Click without drag - clear selection and disable loop
                 setLoopRegion(0.0, 0.0, false);
+                m_loopPreset = TimelineLoopPreset::Off;
 
                 // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
                 // (Wait, this is handled in the isInRuler block if it's an instant click)
 
                 // Trigger loop OFF callback
                 if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(0); // 0 = Off
+                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
                 }
             }
 
@@ -777,10 +785,11 @@ bool TrackManagerUI::handleLoopMarkerDrag(const AestraUI::NUIMouseEvent& event, 
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_isDraggingLoopStart = false;
             m_isDraggingLoopEnd = false;
+            m_loopPreset = TimelineLoopPreset::Selection;
 
             // Update audio engine loop region
             if (m_onLoopPresetChanged) {
-                m_onLoopPresetChanged(5); // Selection preset
+                m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
             }
 
             return true;
@@ -797,17 +806,14 @@ bool TrackManagerUI::handleLoopMarkerDrag(const AestraUI::NUIMouseEvent& event, 
         if (m_isDraggingLoopStart) {
             // Don't allow start to go past end
             if (positionInBeats < m_loopEndBeat) {
-                setLoopRegion(positionInBeats, m_loopEndBeat, true);
+                updateSelectionLoopRegion(positionInBeats, m_loopEndBeat);
             }
         } else if (m_isDraggingLoopEnd) {
             // Don't allow end to go before start
             if (positionInBeats > m_loopStartBeat) {
-                setLoopRegion(m_loopStartBeat, positionInBeats, true);
+                updateSelectionLoopRegion(m_loopStartBeat, positionInBeats);
             }
         }
-
-        // Update minimap selection range
-        m_minimapSelectionBeatRange = {m_loopStartBeat, m_loopEndBeat};
 
         invalidateCache(); // Loop marker position changed
         return true;
@@ -915,8 +921,16 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
 
-        if (event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) {
+        if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
+            m_selectedClipId.isValid()) {
             deleteSelectedClip();
+            return true;
+        }
+
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
+            (m_selectedClipId.isValid() || !m_selectedTracks.empty())) {
+            selectClip(ClipInstanceID{});
+            clearSelection();
             return true;
         }
 
@@ -924,24 +938,29 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
         // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
-            if (event.keyCode == AestraUI::NUIKeyCode::X) {
+            if (event.keyCode == AestraUI::NUIKeyCode::A) {
+                selectAllTracks();
+                return true;
+            }
+            if (event.keyCode == AestraUI::NUIKeyCode::X && m_selectedClipId.isValid()) {
                 cutSelectedClip();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::C) {
+            if (event.keyCode == AestraUI::NUIKeyCode::C && m_selectedClipId.isValid()) {
                 copySelectedClip();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::V) {
+            if (event.keyCode == AestraUI::NUIKeyCode::V && hasClipboardClip()) {
                 pasteClipboardAtCursor();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::D) {
+            if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {
                 duplicateSelectedClip();
                 return true;
             }
             // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
-            if (event.keyCode == AestraUI::NUIKeyCode::B) {
+            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+                (m_selectedClipId.isValid() || hasClipboardClip())) {
                 pasteClipToRight();
                 return true;
             }
