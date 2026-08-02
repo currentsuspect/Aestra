@@ -59,7 +59,7 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     // Calculate offset (Cursor Beat - Clip Start Beat)
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    float gridStartX = getGlobalBounds().x + controlAreaWidth + kTimelineGridInsetX;
+    const float gridStartX = timelineGridStartX(getBounds().x, controlAreaWidth);
 
     double cursorBeat = gridOffsetToBeat(clickPos.x - gridStartX);
     m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
@@ -77,8 +77,8 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    const AestraUI::NUIRect bounds = getGlobalBounds();
-    const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
+    const AestraUI::NUIRect bounds = getBounds();
+    const float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     AestraUI::NUIPoint latchedPos = currentPos;
     clampInstantClipDragPosition(latchedPos);
 
@@ -128,14 +128,10 @@ bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) 
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
-    const AestraUI::NUIRect bounds = getGlobalBounds();
-    const float headerHeight = kTimelineHeaderHeight;
-    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    const float rulerHeight = kTimelineRulerHeight;
-    const float scrollbarWidth = kTimelineScrollbarWidth;
-    const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
-    const float gridEndX = bounds.x + bounds.width - scrollbarWidth;
-    const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    const AestraUI::NUIRect bounds = getBounds();
+    const float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
+    const float gridEndX = timelineGridEndX(bounds.x, bounds.width);
+    const float trackAreaTop = timelineTrackAreaTopY(bounds.y);
     const float trackAreaBottom = bounds.y + bounds.height;
 
     const float clampedX = safeClampFloat(position.x, gridStartX, gridEndX);
@@ -163,9 +159,9 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
 
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
-    const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
+    const float trackAreaStartY = timelineTrackAreaTopY(bounds.y);
     const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
-    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + kTimelineGridInsetX;
+    const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
     const float x =
@@ -196,9 +192,9 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
 
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
-    const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
+    const float trackAreaStartY = timelineTrackAreaTopY(bounds.y);
     const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
-    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + kTimelineGridInsetX;
+    const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
     const float x =
