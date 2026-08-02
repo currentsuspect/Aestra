@@ -65,7 +65,11 @@ private:
     NUIColor m_bgHover;
     NUIColor m_ring;
     NUIColor m_ringHover;
-    NUIColor m_indicator;
+    NUIColor m_indicator;   // engaged (hover/drag) arc
+    NUIColor m_arcResting;  // neutral resting arc
+
+    // The platform never sets NUIMouseEvent::doubleClick — pair presses here.
+    long long m_lastClickTimeMs{0};
     NUIColor m_text;
     NUIColor m_textSecondary;
     NUIColor m_tooltipBg;

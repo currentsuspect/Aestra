@@ -3,22 +3,40 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "NUITextInput.h"
 #include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
+#include <exception>
+#include <string>
 
 namespace AestraUI {
 
 namespace {
     constexpr float TRACK_RADIUS = 4.0f;
     constexpr float HANDLE_RADIUS = 4.0f;
-    constexpr float HANDLE_HEIGHT = 18.0f;
+    constexpr float HANDLE_HEIGHT = 22.0f;  // taller cap: a real grab target
+    constexpr float HANDLE_WIDTH = 36.0f;
+    constexpr float TRACK_WIDTH = 6.0f;     // was 4 — thin enough to look like a meter
     constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
     constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
     constexpr float SNAP_DB = 0.5f;
     constexpr float DRAG_SLOP = 1.5f;
+
+    // Restrained scale: unity plus a few orientation marks. Unity (0 dB) is the
+    // only one that gets emphasis and a label.
+    constexpr float SCALE_TICKS[] = {6.0f, 0.0f, -6.0f, -12.0f, -24.0f, -48.0f};
+
+    long long nowMillis()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    }
 }
 
 UIMixerFader::UIMixerFader()
@@ -32,13 +50,18 @@ void UIMixerFader::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     // Track: Deep Glass Slot
     m_trackBg = theme.getColor("meterBackground").withAlpha(0.72f);
-    // Fill: Gradient handled in render
-    m_trackFg = theme.getColor("accentPrimary"); 
+    // Rail fill is deliberately NEUTRAL. Colouring it with the channel accent
+    // made the fader read as a second level meter — the fader shows where the
+    // control is set, the meter beside it shows what the signal is doing.
+    m_railFill = theme.getColor("textPrimary").withAlpha(0.55f);
+    m_accent = theme.getColor("accentPrimary");
     m_handle = theme.getColor("backgroundSecondary"); // Handle Core
     m_handleHover = theme.getColor("textPrimary");    // Handle Active
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_border = theme.getColor("borderStrong");
+    m_tick = theme.getColor("textSecondary").withAlpha(0.34f);
+    m_tickUnity = theme.getColor("textPrimary").withAlpha(0.72f);
     m_tooltipBg = theme.getColor("elevatedPanel").withAlpha(0.98f);
 }
 
@@ -68,7 +91,7 @@ void UIMixerFader::updateCachedText()
     }
 
     char buf[16];
-    std::snprintf(buf, sizeof(buf), "%.1f", m_valueDb);
+    std::snprintf(buf, sizeof(buf), "%.1f dB", m_valueDb);
     m_cachedText = buf;
 }
 
@@ -88,6 +111,47 @@ void UIMixerFader::setValueDb(float db)
     }
 }
 
+NUIRect UIMixerFader::readoutRect() const
+{
+    const auto bounds = getBounds();
+    return NUIRect{bounds.x, bounds.y + 2.0f, bounds.width, TOP_PAD - 4.0f};
+}
+
+float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
+{
+    const float norm = (db - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
+    return trackTop + (1.0f - std::clamp(norm, 0.0f, 1.0f)) * trackHeight;
+}
+
+void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
+                               float trackTop, float trackHeight)
+{
+    // Ticks flank the rail on both sides so the cap never hides the scale.
+    constexpr float TICK_LEN = 4.0f;
+    constexpr float TICK_GAP = 3.0f;
+    const float leftEnd = trackX - TICK_GAP;
+    const float rightStart = trackX + trackWidth + TICK_GAP;
+
+    for (float db : SCALE_TICKS) {
+        if (db > m_maxDb || db < m_minDb) continue;
+
+        const bool unity = (std::abs(db) < 0.01f);
+        const float y = dbToY(db, trackTop, trackHeight);
+        const float len = unity ? TICK_LEN + 2.0f : TICK_LEN;
+        const float thickness = unity ? 2.0f : 1.0f;
+        const NUIColor color = unity ? m_tickUnity : m_tick;
+
+        renderer.fillRect(NUIRect{leftEnd - len, y - thickness * 0.5f, len, thickness}, color);
+        renderer.fillRect(NUIRect{rightStart, y - thickness * 0.5f, len, thickness}, color);
+    }
+
+    // Unity gets a label when there is room for it (master strip / wide layouts).
+    if (m_showScaleLabels && m_maxDb >= 0.0f && m_minDb <= 0.0f) {
+        const float y = dbToY(0.0f, trackTop, trackHeight);
+        renderer.drawText("0", NUIPoint{rightStart + TICK_LEN + 4.0f, y - 5.0f}, 9.0f, m_tickUnity);
+    }
+}
+
 void UIMixerFader::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
@@ -97,68 +161,73 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
 
-    // Narrow rail (4 px) centered in strip
-    const float trackWidth = 4.0f;
+    const float trackWidth = TRACK_WIDTH;
     const float trackX = bounds.x + (bounds.width - trackWidth) * 0.5f;
     NUIRect trackRect{trackX, trackTop, trackWidth, trackHeight};
 
-    // 1. Track Background (deep recessed slot)
-    renderer.fillRoundedRect(trackRect, 2.0f, m_trackBg);
-    renderer.strokeRoundedRect(trackRect, 2.0f, 1.0f, m_border.withAlpha(0.60f));
+    // 1. Scale first, so the rail and cap sit on top of it.
+    renderScale(renderer, trackX, trackWidth, trackTop, trackHeight);
 
-    // 2. Filled Portion (subtle, no wide glow)
+    // 2. Track Background (deep recessed slot)
+    renderer.fillRoundedRect(trackRect, 3.0f, m_trackBg);
+
+    // 3. Filled Portion — neutral. This is control state, not signal.
     const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
     const float filledH = std::clamp(norm, 0.0f, 1.0f) * trackHeight;
 
     if (filledH > 0.0f) {
         NUIRect fillRect{trackX, trackBottom - filledH, trackWidth, filledH};
-        // Core fill (slightly wider than track for crisp edge)
-        renderer.fillRoundedRect(fillRect, 2.0f, m_trackFg.withAlpha(0.85f));
-        // Very subtle inner glow (2px bleed)
-        renderer.fillRoundedRect(
-            NUIRect{fillRect.x - 1, fillRect.y, fillRect.width + 2, fillRect.height},
-            3.0f,
-            m_trackFg.withAlpha(0.15f)
-        );
+        renderer.fillRoundedRect(fillRect, 3.0f, m_railFill);
     }
 
-    // 3. Fader Handle (distinct grab block)
+    // 4. Fader Handle (distinct grab block)
     const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                      trackTop - HANDLE_HEIGHT * 0.5f,
                                      trackBottom - HANDLE_HEIGHT * 0.5f);
 
-    // Handle: wider than track, clear visual weight
-    const float handleW = 32.0f;
+    const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
     const float handleH = HANDLE_HEIGHT;
 
     NUIRect handleRect{handleX, handleY, handleW, handleH};
     float handleRad = 4.0f;
 
-    // Handle Body (dark surface) — flat, no drop shadow; the border + slit
+    // Handle Body (dark surface) — flat, no drop shadow; the border + grip
     // give it enough definition.
     renderer.fillRoundedRect(handleRect, handleRad, m_handle.withAlpha(0.98f));
 
-    // Handle Border (accent when active/hovered, subtle white otherwise)
+    // Handle Border — the one place the per-channel accent appears on the fader,
+    // and only while the control is actually engaged.
     bool handleActive = isHovered() || m_dragging;
-    NUIColor handleBorder = handleActive ? m_trackFg : m_border;
+    NUIColor handleBorder = handleActive ? m_accent : m_border;
     renderer.strokeRoundedRect(handleRect, handleRad, 1.0f, handleBorder);
 
-    // Center accent line (the "light slit")
-    float slitW = 16.0f;
-    float slitH = 3.0f;
-    renderer.fillRoundedRect(
-        NUIRect{handleX + (handleW - slitW)*0.5f, handleY + (handleH - slitH)*0.5f, slitW, slitH},
-        1.5f,
-        handleActive ? m_trackFg : m_textSecondary
-    );
+    // Grip: three short lines read as "grab me" better than a single slit.
+    const float gripW = std::min(18.0f, handleW - 10.0f);
+    const float gripX = handleX + (handleW - gripW) * 0.5f;
+    const float gripCy = handleY + handleH * 0.5f;
+    const NUIColor gripColor = handleActive ? m_accent : m_textSecondary.withAlpha(0.85f);
+    for (int i = -1; i <= 1; ++i) {
+        renderer.fillRoundedRect(
+            NUIRect{gripX, gripCy + static_cast<float>(i) * 4.0f - 1.0f, gripW, 2.0f},
+            1.0f,
+            i == 0 ? gripColor : gripColor.withAlpha(gripColor.a * 0.45f));
+    }
 
-    // 4. Fixed dB readout at top of fader area (not attached to handle)
-    const float fontSize = 10.5f;
-    NUIRect textRect{bounds.x, bounds.y + 2.0f, bounds.width, TOP_PAD - 4.0f};
-    renderer.drawTextCentered(m_cachedText, textRect, fontSize, m_textSecondary);
+    // 5. dB readout at top — click target for exact entry.
+    if (m_editing && m_textInput) {
+        renderChildren(renderer);
+    } else {
+        const float fontSize = 10.5f;
+        const NUIRect textRect = readoutRect();
+        if (isHovered()) {
+            renderer.fillRoundedRect(textRect, 3.0f, m_trackBg.withAlpha(0.55f));
+        }
+        renderer.drawTextCentered(m_cachedText, textRect, fontSize,
+                                  isHovered() ? m_text : m_textSecondary);
+    }
 
-    // 5. Drag Value Tooltip (only while dragging)
+    // 6. Drag Value Tooltip (only while dragging)
     if (m_dragging) {
         const float tipW = 38.0f;
         const float tipH = 18.0f;
@@ -171,7 +240,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         }
 
         renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, m_tooltipBg);
-        renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_trackFg.withAlpha(0.5f));
+        renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_accent.withAlpha(0.5f));
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }
 }
@@ -179,6 +248,96 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
 void UIMixerFader::setPlatformBridge(NUIPlatformBridge* bridge)
 {
     m_platformBridge = bridge;
+}
+
+void UIMixerFader::beginEdit()
+{
+    if (m_editing && m_textInput) {
+        return;
+    }
+
+    m_editing = true;
+
+    // Seed with the plain number so the user can just type over it. "−∞" is not
+    // round-trippable, so an inaudible fader starts from an empty field.
+    std::string seed;
+    if (m_valueDb > FADER_FLOOR_THRESHOLD) {
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%.1f", m_valueDb);
+        seed = buf;
+    }
+
+    auto& theme = NUIThemeManager::getInstance();
+    m_textInput = std::make_shared<NUITextInput>(seed);
+    m_textInput->setBounds(readoutRect());
+    m_textInput->setInputType(NUITextInput::InputType::Number);
+    m_textInput->setJustification(NUITextInput::Justification::Center);
+    m_textInput->setTextColor(theme.getColor("textPrimary"));
+    m_textInput->setBackgroundColor(theme.getColor("inputBgDefault"));
+    m_textInput->setBorderColor(theme.getColor("inputBorderFocus"));
+    m_textInput->setBorderWidth(1.0f);
+    m_textInput->setBorderRadius(3.0f);
+    m_textInput->setFocusedBorderColor(m_accent);
+
+    m_textInput->setOnReturnKey([this]() { commitEdit(); });
+    m_textInput->setOnEscapeKey([this]() { cancelEdit(); });
+    m_textInput->setOnFocusLost([this]() { commitEdit(); });
+
+    addChild(m_textInput);
+    // Printable characters are routed to the globally focused component, so the
+    // field must take focus or it will never see any input.
+    m_textInput->setFocused(true);
+    m_textInput->selectAll();
+    repaint();
+}
+
+void UIMixerFader::commitEdit()
+{
+    if (!m_editing) {
+        return;
+    }
+
+    const std::string entered = m_textInput ? m_textInput->getText() : std::string{};
+    m_editing = false;
+    if (m_textInput) {
+        removeChild(m_textInput);
+        m_textInput.reset();
+    }
+
+    // An empty field means "silence"; anything unparseable leaves the value alone.
+    if (entered.find_first_not_of(" \t") == std::string::npos) {
+        setValueDb(m_minDb);
+    } else {
+        try {
+            setValueDb(std::stof(entered));
+        } catch (const std::exception&) {
+            // Keep the current value on garbage input.
+        }
+    }
+
+    repaint();
+}
+
+void UIMixerFader::cancelEdit()
+{
+    if (!m_editing) {
+        return;
+    }
+
+    m_editing = false;
+    if (m_textInput) {
+        removeChild(m_textInput);
+        m_textInput.reset();
+    }
+    repaint();
+}
+
+bool UIMixerFader::onKeyEvent(const NUIKeyEvent& event)
+{
+    if (m_editing && m_textInput) {
+        return m_textInput->onKeyEvent(event);
+    }
+    return false;
 }
 
 UIMixerFader::~UIMixerFader() {
@@ -194,15 +353,41 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
     if (!isVisible() || !isEnabled()) return false;
 
     auto bounds = getBounds();
+
+    // While the value is being typed, the field owns the pointer.
+    if (m_editing && m_textInput) {
+        if (m_textInput->onMouseEvent(event)) {
+            return true;
+        }
+        if (event.pressed && !bounds.contains(event.position)) {
+            commitEdit();
+        }
+        return false;
+    }
+
     if (!event.cursorCaptured) {
         setHovered(bounds.contains(event.position));
     }
     if (!bounds.contains(event.position) && !m_dragging) return false;
 
-    // Double-click reset
-    if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left) {
-        setValueDb(m_defaultDb);
-        return true;
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        // The platform never populates event.doubleClick, so pair up quick
+        // presses ourselves — without this the reset below is dead code.
+        const long long nowMs = nowMillis();
+        const bool isDoubleClick = (nowMs - m_lastClickTimeMs < 400) || event.doubleClick;
+        m_lastClickTimeMs = nowMs;
+
+        // The readout is an entry field, not part of the track: clicking it used
+        // to slam the fader to whatever value that Y mapped to.
+        if (readoutRect().contains(event.position)) {
+            beginEdit();
+            return true;
+        }
+
+        if (isDoubleClick) {
+            setValueDb(m_defaultDb);
+            return true;
+        }
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -217,7 +402,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                          trackTop - HANDLE_HEIGHT * 0.5f,
                                          trackBottom - HANDLE_HEIGHT * 0.5f);
-        const float handleW = 32.0f;
+        const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
         const float handleH = HANDLE_HEIGHT;
         const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
         const NUIRect handleRect{handleX, handleY, handleW, handleH};
@@ -258,7 +443,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                              trackTop - HANDLE_HEIGHT * 0.5f,
                                              trackBottom - HANDLE_HEIGHT * 0.5f);
-            const float handleW = 32.0f;
+            const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
             const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
 
             // End capture: service warps to the handle, unhides, releases

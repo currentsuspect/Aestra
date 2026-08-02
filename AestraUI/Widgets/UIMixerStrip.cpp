@@ -550,15 +550,15 @@ void UIMixerStrip::onUpdate(double deltaTime)
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
 
-            // Thread the track colour through the strip's accent controls so each
-            // channel reads as its own instrument. Master (id 0) keeps the neutral
-            // primary accent, and unset tracks fall back to the widget defaults.
+            // The track colour is the channel's IDENTITY, so it is carried by the
+            // header (and the overview strip) only. It used to be threaded into
+            // the fader fill and all three knob arcs as well, which left every
+            // control looking permanently "active" and made the coloured fader
+            // rail read as a second level meter. The fader now takes the accent
+            // for its engaged handle edge alone; the knobs stay neutral.
             if (m_channelId != 0 && channel->trackColorIndex >= 0) {
                 const NUIColor accent = trackColorFromIndex(channel->trackColorIndex);
                 if (m_fader) m_fader->setAccentColor(accent);
-                if (m_trimKnob) m_trimKnob->setAccentColor(accent);
-                if (m_panKnob) m_panKnob->setAccentColor(accent);
-                if (m_widthKnob) m_widthKnob->setAccentColor(accent);
             }
         }
         m_header->setTrackColorIndex(channel->trackColorIndex);
