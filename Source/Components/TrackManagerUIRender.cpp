@@ -580,6 +580,18 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         }
     }
 
+    // Any source that became ready without a waveform cache renders as a bare
+    // centre line (drawWaveformForClip's mip fallback), so the caches cannot be
+    // left to whichever import path happened to remember to build them. Gated
+    // on SourceManager's revision so the steady state is one integer compare.
+    if (m_trackManager) {
+        const uint64_t sourcesRevision = m_trackManager->getSourceManager().getRevision();
+        if (sourcesRevision != m_lastSourcesRevision) {
+            m_lastSourcesRevision = sourcesRevision;
+            buildAllWaveformCaches();
+        }
+    }
+
     // Plugin insert/remove requests go through the PlaybackGraphController.
     // TrackManagerUI does NOT consume graph dirty state here - the controller drains in AestraApp::run().
     // UI code should only request rebuilds via requestAudioGraphRebuild().

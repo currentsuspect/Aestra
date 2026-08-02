@@ -631,6 +631,11 @@ private:
     // Async waveform builder
     ::Aestra::Audio::WaveformCacheBuilder m_waveformBuilder;
 
+    // Last SourceManager revision swept for missing waveform caches. Change-gate
+    // only; never a correctness authority, since buildAllWaveformCaches() checks
+    // each source itself.
+    uint64_t m_lastSourcesRevision{0};
+
     // Async Task Queue (for main thread callbacks)
     std::mutex m_pendingTasksMutex;
     std::vector<std::function<void()>> m_pendingTasks;

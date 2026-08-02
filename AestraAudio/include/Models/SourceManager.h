@@ -35,6 +35,7 @@ public:
 
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
+        ++m_revision;
 
         return id;
     }
@@ -76,6 +77,7 @@ public:
 
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
+        ++m_revision;
 
         return id;
     }
@@ -100,6 +102,10 @@ public:
         }
 
         source->setBuffer(std::move(buffer));
+        // Bumped unconditionally: an existing source deduped by path does not
+        // mint a new ID, but attaching a buffer still flips it to ready, which
+        // is the transition waveform-cache builders watch for.
+        ++m_revision;
         return id;
     }
 
@@ -172,6 +178,7 @@ public:
         if (pathIt != m_pathToId.end() && pathIt->second.value == id.value) {
             m_pathToId.erase(pathIt);
         }
+        ++m_revision;
         return true;
     }
 
@@ -188,6 +195,19 @@ public:
     void clear() {
         m_sources.clear();
         m_pathToId.clear();
+        ++m_revision;
+    }
+
+    /**
+     * @brief Monotonic counter bumped whenever the source set or a source's
+     *        readiness changes.
+     *
+     * Lets a UI change-gate an O(n) sweep over sources (such as building
+     * missing waveform caches) down to an O(1) comparison per frame, without
+     * every import path having to remember to notify anyone.
+     */
+    uint64_t getRevision() const {
+        return m_revision;
     }
 
 private:
@@ -208,6 +228,7 @@ private:
     }
 
     uint64_t nextId{1};
+    uint64_t m_revision{0};
     std::unordered_map<uint64_t, std::unique_ptr<ClipSource>> m_sources;
     std::unordered_map<std::string, ClipSourceID> m_pathToId;
 };

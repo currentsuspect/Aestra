@@ -137,3 +137,14 @@ add_test(
 set_tests_properties(ProjectLoadReportLifecycleGuardTest PROPERTIES
     LABELS "app;project;muse;recovery;guard"
 )
+
+# SourceManager revision counter — the change signal TrackManagerUI uses to
+# notice sources that are ready but still have no waveform cache.
+add_executable(SourceManagerRevisionTest AestraAudio/SourceManagerRevisionTest.cpp)
+target_link_libraries(SourceManagerRevisionTest PRIVATE AestraAudioCore)
+target_include_directories(SourceManagerRevisionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SourceManagerRevisionTest COMMAND SourceManagerRevisionTest)
+set_tests_properties(SourceManagerRevisionTest PROPERTIES LABELS "audio;waveform")
