@@ -821,7 +821,8 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     // Enable clipping
     renderer.setClipRect(bounds);
 
-    for (int i = 0; i < MAX_SLOTS; ++i) {
+    const int visible = visibleSlotCount();
+    for (int i = 0; i < visible; ++i) {
         renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
     }
 
@@ -913,12 +914,14 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     const float rowH = chipH; // 14 px — same height as the index chip
 
     if (slot.isEmpty) {
-        // Empty rows surface the affordance only on hover; the recessed row and
-        // subtle centre line already signal an available drop target, so the
-        // redundant em-dash placeholder is gone.
-        if (isHovered) {
+        // The single trailing empty row is the rack's call to action, so it is
+        // always labelled. Spare slots exposed during a reorder drag stay quiet
+        // and only name themselves on hover.
+        const bool isAddRow = (index == lastPopulatedSlot() + 1);
+        if (isAddRow || isHovered) {
             const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
-            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS, Colors::textPrimary());
+            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS,
+                                      Colors::textPrimary());
         }
     } else {
         // Bypass uses color plus an explicit badge so it cannot be confused with
@@ -1337,6 +1340,24 @@ void EffectChainRack::setOnSlotMixChanged(std::function<void(int, float)> callba
     m_onSlotMixChanged = std::move(callback);
 }
 
+int EffectChainRack::lastPopulatedSlot() const {
+    for (int i = MAX_SLOTS - 1; i >= 0; --i) {
+        if (!m_slots[i].isEmpty) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int EffectChainRack::visibleSlotCount() const {
+    // A reorder drag needs every numbered target available as a drop site.
+    if (m_isDraggingReorder) {
+        return MAX_SLOTS;
+    }
+    // Populated slots, plus exactly one "+ Add insert" row.
+    return std::min(MAX_SLOTS, lastPopulatedSlot() + 2);
+}
+
 int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
     float relativeY = y - bounds.y - 8 + m_scrollOffset;
@@ -1345,7 +1366,9 @@ int EffectChainRack::hitTestSlot(float y) const {
     }
 
     int index = static_cast<int>(std::floor(relativeY / SLOT_HEIGHT));
-    if (index >= 0 && index < MAX_SLOTS) {
+    // Only rows that are actually drawn are hittable — otherwise clicking the
+    // blank area below the rack silently targeted an invisible slot.
+    if (index >= 0 && index < visibleSlotCount()) {
         return index;
     }
     return -1;
