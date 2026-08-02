@@ -183,18 +183,25 @@ void TimelineMinimapBar::cacheThemeColors_()
     // Match the ruler's recessed material so the band remains continuous in
     // every theme.
     colors_.glassFill = theme.getColor("recessedPanel");
-    colors_.glassBorder = theme.getColor("border").withAlpha(0.28f);
-    colors_.cornerSeparator = theme.getColor("border").withAlpha(0.28f);
+    colors_.glassBorder = NUIColor(0.18f, 0.19f, 0.22f, 1.0f);
+    colors_.cornerSeparator = NUIColor(0.18f, 0.19f, 0.22f, 1.0f);
 
     colors_.audioTint = theme.getColor("accentAmber");
     colors_.midiTint = theme.getColor("accentCyan");
     colors_.automationTint = theme.getColor("accentPrimary");
     colors_.baseline = theme.getColor("textSecondary").withAlpha(0.10f);
 
-    colors_.viewFill = theme.getColor("accentPrimary").withAlpha(0.035f);
-    colors_.viewOutline = theme.getColor("accentPrimary").withAlpha(0.62f);
-    colors_.selectionFill = theme.getColor("accentCyan").withAlpha(0.10f);
-    colors_.loopFill = theme.getColor("accentPrimary").withAlpha(0.08f);
+    // The viewport is navigation chrome, not a loop or selection. Keep it
+    // neutral; semantic purple is reserved for actual musical ranges.
+    colors_.viewFill = NUIColor::transparent();
+    colors_.viewOutline = NUIColor(0.31f, 0.33f, 0.37f, 1.0f);
+    colors_.viewHandle = NUIColor(0.62f, 0.64f, 0.68f, 0.92f);
+    // Range semantics live in the ruler/canvas. Repeating selection or loop in
+    // this navigation band made three unrelated concepts share one shape.
+    colors_.selectionFill = NUIColor::transparent();
+    // Loop owns the ruler band below; duplicating it here is what made the
+    // overview look like a second loop/selection control.
+    colors_.loopFill = NUIColor::transparent();
 
     colors_.playheadDark = theme.getColor("shadow").withAlpha(0.75f);
     colors_.playheadBright = theme.getColor("textPrimary").withAlpha(0.85f);
@@ -329,7 +336,8 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
     renderer_.render(renderer, layout, model_, colors_);
     renderToggles_(renderer, layout);
 
-    // Active feedback: purple outline on click/drag + edge handles for resizing.
+    // Active feedback stays neutral: this is navigation chrome, not a musical
+    // range. The renderer already supplies slim persistent viewport handles.
     const TimelineSummary* s = (model_.summary) ? model_.summary->summary : nullptr;
     if (s && model_.view.isValid()) {
         const double denom = s->domainEndBeat - s->domainStartBeat;
@@ -342,8 +350,8 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
             const float vw = std::max(1.0f, std::abs(x1 - x0));
             const NUIRect vr(vx, layout.mapRect.y, vw, layout.mapRect.height);
 
-            if (dragKind_ != DragKind::None || !showModeToggles_) {
-                const NUIColor active = NUIThemeManager::getInstance().getColor("borderActive").withAlpha(0.85f);
+            if (dragKind_ != DragKind::None) {
+                const NUIColor active = colors_.viewHandle;
                 renderer.strokeRoundedRect(vr, 5.0f, 1.0f, active);
             }
 
@@ -351,18 +359,18 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
                                  (dragKind_ == DragKind::ResizeLeft);
             const bool rightHot = (hoverOnResizeEdge_ && hoverResizeEdge_ == TimelineMinimapResizeEdge::Right) ||
                                   (dragKind_ == DragKind::ResizeRight);
-            if (leftHot || rightHot || !showModeToggles_ || model_.view.isValid()) {
-                const NUIColor handleFill = NUIColor::white().withAlpha(0.30f);
+            if (leftHot || rightHot) {
+                const NUIColor handleFill = colors_.viewHandle.withAlpha(0.46f);
                 const NUIColor handleStroke = colors_.viewOutline.withAlpha(0.95f);
-                constexpr float handleW = 8.0f;
+                constexpr float handleW = 4.0f;
                 const float handleH = std::max(8.0f, vr.height - 8.0f);
 
-                if (leftHot || !showModeToggles_ || model_.view.isValid()) {
+                if (leftHot) {
                     NUIRect r(vr.x + 2.0f, vr.y + 4.0f, handleW, handleH);
                     renderer.fillRoundedRect(r, 3.0f, handleFill);
                     renderer.strokeRoundedRect(r, 3.0f, 1.0f, handleStroke);
                 }
-                if (rightHot || !showModeToggles_ || model_.view.isValid()) {
+                if (rightHot) {
                     NUIRect r(vr.right() - handleW - 2.0f, vr.y + 4.0f, handleW, handleH);
                     renderer.fillRoundedRect(r, 3.0f, handleFill);
                     renderer.strokeRoundedRect(r, 3.0f, 1.0f, handleStroke);

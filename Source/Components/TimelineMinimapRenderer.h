@@ -28,6 +28,7 @@ struct TimelineMinimapRenderColors
 
     NUIColor viewFill;
     NUIColor viewOutline;
+    NUIColor viewHandle;
     NUIColor selectionFill;
     NUIColor loopFill;
 
@@ -48,4 +49,3 @@ public:
 };
 
 } // namespace AestraUI
-
