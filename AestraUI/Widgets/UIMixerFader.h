@@ -52,6 +52,15 @@ public:
     bool isDragging() const { return m_dragging; }
     bool isEditing() const { return m_editing; }
 
+    /**
+     * @brief Commit an open inline edit when a press lands outside this fader.
+     *
+     * A press on another strip is never routed to this component, so the editor
+     * cannot dismiss itself and would stay open indefinitely. The panel calls
+     * this on every press so the mixer has one dismissal path.
+     */
+    void dismissEditAt(const NUIPoint& position);
+
     std::function<void(float db)> onValueChanged;
 
     // Platform bridge for cursor warp (infinite drag)

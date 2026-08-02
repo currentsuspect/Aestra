@@ -677,7 +677,7 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
                     ? line.charX[endCol] : line.charX.back();
         
         NUIRect selectionRect;
-        selectionRect.x = textRect.x + startX;
+        selectionRect.x = textRect.x + justificationOffsetForLine(line, textRect.width) + startX;
         selectionRect.y = singleLine ? singleLineTop : std::round(getLineRenderY(line));
         selectionRect.width = endX - startX;
         selectionRect.height = singleLine ? singleLineHeight : line.height;
@@ -685,6 +685,19 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
         // Draw selection highlight
         renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));
     }
+}
+
+float NUITextInput::justificationOffsetForLine(const TextLine& line, float availableWidth) const
+{
+    if (justification_ == Justification::Left)
+        return 0.0f;
+
+    const float lineWidth = line.charX.empty() ? 0.0f : line.charX.back();
+    const float slack = availableWidth - lineWidth;
+    if (slack <= 0.0f)
+        return 0.0f;
+
+    return (justification_ == Justification::Center) ? slack * 0.5f : slack;
 }
 
 void NUITextInput::drawCaret(NUIRenderer& renderer)
@@ -1399,11 +1412,12 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
 
     // Get caret X position for this line
     int column = getColumnInLine(caretPosition_, currentLine);
-    float caretX = textRect.x;
+    const float justifyX = justificationOffsetForLine(line, textRect.width);
+    float caretX = std::round(textRect.x + justifyX);
 
     if (column >= 0 && column < static_cast<int>(line.charX.size()))
     {
-        caretX = std::round(textRect.x + line.charX[column]);
+        caretX = std::round(textRect.x + justifyX + line.charX[column]);
     }
 
     // Use calculateTextY for proper baseline alignment in single-line mode

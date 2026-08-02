@@ -273,7 +273,18 @@ void UIMixerFader::beginEdit()
 
     auto& theme = NUIThemeManager::getInstance();
     m_textInput = std::make_shared<NUITextInput>(seed);
-    m_textInput->setBounds(readoutRect());
+
+    // NUITextInput always draws its text and caret at the theme's "m" size, and
+    // sizes the caret to that font's full line height. The 14 px readout band is
+    // shorter than that, so the caret overflowed the field. Give the editor the
+    // height the font actually needs; it grows down over the top of the track,
+    // which is fine for a transient editor.
+    const float fontM = theme.getFontSize("m");
+    const float editH = std::max(readoutRect().height, std::ceil(fontM * 1.9f) + 4.0f);
+    const NUIRect readout = readoutRect();
+    m_textInput->setBounds(NUIRect{readout.x, getBounds().y, readout.width, editH});
+    // Default 8 px padding on each side leaves almost nothing in a ~66 px strip.
+    m_textInput->setPadding(4.0f);
     m_textInput->setInputType(NUITextInput::InputType::Number);
     m_textInput->setJustification(NUITextInput::Justification::Center);
     m_textInput->setTextColor(theme.getColor("textPrimary"));
@@ -338,6 +349,17 @@ void UIMixerFader::cancelEdit()
         m_textInput.reset();
     }
     repaint();
+}
+
+void UIMixerFader::dismissEditAt(const NUIPoint& position)
+{
+    if (!m_editing) {
+        return;
+    }
+    if (getBounds().contains(position)) {
+        return;
+    }
+    commitEdit();
 }
 
 bool UIMixerFader::onKeyEvent(const NUIKeyEvent& event)

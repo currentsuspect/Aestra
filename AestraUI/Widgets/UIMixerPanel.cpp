@@ -553,6 +553,15 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     const float visibleW = getChannelViewportWidth();
     const float maxScroll = getChannelMaxScroll();
 
+    // One dismissal path for inline fader entry. A press on another strip is
+    // never routed to the editing fader, so without this the editor stays open.
+    if (event.pressed) {
+        for (const auto& strip : m_strips) {
+            if (strip) strip->dismissFaderEdit(event.position);
+        }
+        if (m_masterStrip) m_masterStrip->dismissFaderEdit(event.position);
+    }
+
     // Inspector collapse rail claims the pointer before anything underneath it.
     {
         const NUIRect rail = getInspectorToggleRect();

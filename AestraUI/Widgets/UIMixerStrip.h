@@ -52,6 +52,9 @@ public:
     /// Bounds of the FX summary (Add Insert) button in strip-local space.
     NUIRect getFXSummaryBounds() const;
 
+    /// Close this strip's inline fader entry when a press lands outside it.
+    void dismissFaderEdit(const NUIPoint& position);
+
     // Request opening the inspector on the Inserts tab for this channel.
     std::function<void(uint32_t channelId)> onFXClicked;
 

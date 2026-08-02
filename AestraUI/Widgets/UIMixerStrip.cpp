@@ -928,4 +928,11 @@ NUIRect UIMixerStrip::getFXSummaryBounds() const
     return m_fxSummary ? m_fxSummary->getBounds() : NUIRect{};
 }
 
+void UIMixerStrip::dismissFaderEdit(const NUIPoint& position)
+{
+    if (m_fader) {
+        m_fader->dismissEditAt(position);
+    }
+}
+
 } // namespace AestraUI
