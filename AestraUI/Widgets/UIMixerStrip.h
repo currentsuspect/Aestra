@@ -115,8 +115,10 @@ private:
     int m_cachedFxCount{0};
     std::string m_cachedFxStatus;
 
-    /// Master-only: labelled Peak / LUFS / Gain block, computed in layoutChildren.
-    NUIRect m_masterReadoutRect{};
+    /// Master-only readouts, computed in layoutChildren. Split so each number
+    /// sits under the column that owns it: observed signal vs applied gain.
+    NUIRect m_masterMeterReadoutRect{};
+    NUIRect m_masterGainReadoutRect{};
 
     void cacheThemeColors();
     void layoutChildren();

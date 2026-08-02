@@ -31,9 +31,16 @@ namespace {
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
-    // Labelled Peak / LUFS / Gain block at the foot of the master strip.
-    constexpr float MASTER_READOUT_H = 56.0f;
-    constexpr float MASTER_READOUT_ROW_H = 15.0f;
+    // Labelled Peak / LUFS / Gain blocks at the foot of the master strip.
+    // Each block is a label line stacked over a value line; two of them sit in
+    // the meter column, so the band must fit 2 * BLOCK_H exactly or the second
+    // value falls off the bottom of the strip.
+    constexpr float MASTER_LABEL_H = 12.0f;
+    constexpr float MASTER_VALUE_H = 14.0f;
+    constexpr float MASTER_BLOCK_H = MASTER_LABEL_H + MASTER_VALUE_H;  // 26
+    // Two stacked blocks plus bottom slack. With only 4px of slack the second
+    // value landed on the strip's bottom edge and was not drawn at all.
+    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;  // 66
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -499,16 +506,28 @@ void UIMixerStrip::layoutChildren()
         m_fader->setBounds(faderX, meterY, faderW, meterH);
     }
 
-    m_masterReadoutRect = isMaster
-        ? NUIRect{contentX, footerY - MASTER_READOUT_H, contentW, MASTER_READOUT_H}
-        : NUIRect{};
+    // Readouts sit under the column they describe: observed signal (Peak, LUFS)
+    // under the meter, user-controlled gain under the fader. Keeping all three
+    // in one bottom block made the eye travel from the live bars to a detached
+    // table to interpret state, and blurred which side owns which number.
+    if (isMaster) {
+        const float readoutY = footerY - MASTER_READOUT_H;
+        m_masterMeterReadoutRect = NUIRect{meterX, readoutY, meterW + GAP, MASTER_READOUT_H};
+        const float gainX = meterX + meterW + GAP;
+        m_masterGainReadoutRect =
+            NUIRect{gainX, readoutY, std::max(16.0f, (contentX + contentW) - gainX), MASTER_READOUT_H};
+    } else {
+        m_masterMeterReadoutRect = NUIRect{};
+        m_masterGainReadoutRect = NUIRect{};
+    }
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
                                        const Aestra::ChannelViewModel& channel)
 {
-    const NUIRect& area = m_masterReadoutRect;
-    if (area.width <= 0.0f || area.height <= 0.0f) return;
+    const NUIRect& meterArea = m_masterMeterReadoutRect;
+    const NUIRect& gainArea = m_masterGainReadoutRect;
+    if (meterArea.width <= 0.0f || meterArea.height <= 0.0f) return;
 
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.72f);
@@ -525,18 +544,18 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     }
 
     char buf[32];
-    auto row = [&](int index, const char* label, const std::string& value, const NUIColor& color) {
-        const NUIRect rowRect{area.x, area.y + static_cast<float>(index) * MASTER_READOUT_ROW_H,
-                              area.width, MASTER_READOUT_ROW_H};
-        const float textY = renderer.calculateTextY(rowRect, 9.5f);
-        renderer.drawText(label, NUIPoint{rowRect.x, textY}, 9.5f, labelColor);
-
-        const float valueW = renderer.measureText(value, 9.5f).width;
-        renderer.drawText(value,
-                          NUIPoint{rowRect.x + rowRect.width - valueW, textY},
-                          9.5f, color);
+    // Stacked label-over-value: the master columns are too narrow for a
+    // side-by-side label and a signed value.
+    auto block = [&](const NUIRect& area, int index, const char* label,
+                     const std::string& value, const NUIColor& color) {
+        const float y = area.y + static_cast<float>(index) * MASTER_BLOCK_H;
+        const NUIRect labelRect{area.x, y, area.width, MASTER_LABEL_H};
+        const NUIRect valueRect{area.x, y + MASTER_LABEL_H, area.width, MASTER_VALUE_H};
+        renderer.drawTextCentered(label, labelRect, 8.5f, labelColor);
+        renderer.drawTextCentered(value, valueRect, 10.0f, color);
     };
 
+    // --- Observed signal, under the meter ---
     // PEAK — dBFS, explicitly. Doubles as the clip/over indicator.
     std::string peakText;
     if (peakDb <= Aestra::MixerMath::DB_MIN) {
@@ -545,19 +564,23 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
         std::snprintf(buf, sizeof(buf), "%.1f", peakDb);
         peakText = buf;
     }
-    row(0, clipped ? "PEAK  OVER" : "PEAK  dBFS", peakText, clipped ? clipColor : valueColor);
+    block(meterArea, 0, clipped ? "OVER" : "PEAK dBFS", peakText, clipped ? clipColor : valueColor);
 
     // LUFS — integrated, and the sign always survives (see UIMixerMeter).
-    std::string lufsText = "--";
+    // Integrated LUFS is undefined until the gate has material; show the same
+    // silence marker the peak readout uses rather than an ambiguous dash.
+    std::string lufsText = "\xE2\x88\x92\xE2\x88\x9E";
     if (channel.integratedLufs > -100.0f) {
         std::snprintf(buf, sizeof(buf), "%.1f", channel.integratedLufs);
         lufsText = buf;
     }
-    row(1, "LUFS  INT", lufsText, valueColor);
+    block(meterArea, 1, "LUFS INT", lufsText, valueColor);
 
-    // GAIN — the fader's own value, named so it is not read as a level.
-    std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
-    row(2, "GAIN  dB", buf, valueColor);
+    // --- User-controlled gain, under the fader ---
+    if (gainArea.width > 0.0f) {
+        std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+        block(gainArea, 0, "GAIN dB", buf, valueColor);
+    }
 }
 
 void UIMixerStrip::onResize(int width, int height)
@@ -765,13 +788,15 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        // Selection is background contrast + a top accent bar + ONE outline.
-        // It previously stacked five layers on the same strip (tint, top bar,
-        // an inner 34px highlight, an outer glow ring and the outline), which
-        // is most of the "nested outlines" the mixer was accumulating.
+        // Selection = a slight tinted body + a strong top edge. No outline.
+        //
+        // This started at five layers (tint, top bar, inner highlight, outer
+        // glow ring, outline). The outline was the last redundant one: with a
+        // tinted body and a bright edge the strip is already unmistakable, and
+        // the border was what made a selected strip read as a different kind of
+        // component rather than the same strip, selected.
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_selectedOutline);
     }
 
     // While dragging, render live (no caching) so interactive controls update every frame.
