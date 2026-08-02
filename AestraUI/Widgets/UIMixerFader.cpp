@@ -154,6 +154,10 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
 
 void UIMixerFader::onRender(NUIRenderer& renderer)
 {
+    // Safe point to free a committed/cancelled editor: we are no longer inside
+    // any NUITextInput callback.
+    m_retiredInput.reset();
+
     auto bounds = getBounds();
 
     // Track area
@@ -301,6 +305,8 @@ void UIMixerFader::commitEdit()
     m_editing = false;
     if (m_textInput) {
         removeChild(m_textInput);
+        // Park, don't free: this can run from the editor's own onFocusLost.
+        m_retiredInput = std::move(m_textInput);
         m_textInput.reset();
     }
 
@@ -327,6 +333,8 @@ void UIMixerFader::cancelEdit()
     m_editing = false;
     if (m_textInput) {
         removeChild(m_textInput);
+        // Park, don't free: this can run from the editor's own onFocusLost.
+        m_retiredInput = std::move(m_textInput);
         m_textInput.reset();
     }
     repaint();
