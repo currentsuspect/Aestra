@@ -17,6 +17,7 @@
 
 namespace Aestra {
 class MixerViewModel;
+struct ChannelViewModel;
 namespace Audio {
 class MeterSnapshotBuffer;
 class ContinuousParamBuffer;
@@ -112,10 +113,14 @@ private:
     int m_cachedFxCount{0};
     std::string m_cachedFxStatus;
 
+    /// Master-only: labelled Peak / LUFS / Gain block, computed in layoutChildren.
+    NUIRect m_masterReadoutRect{};
+
     void cacheThemeColors();
     void layoutChildren();
     void invalidateStaticCache();
     void renderStaticLayer(NUIRenderer& renderer);
+    void renderMasterReadout(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
 };
 
 } // namespace AestraUI

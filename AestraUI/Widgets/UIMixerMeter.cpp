@@ -123,6 +123,22 @@ void UIMixerMeter::setDimmed(bool dimmed)
     }
 }
 
+void UIMixerMeter::setMasterMode(bool master)
+{
+    if (m_masterMode != master) {
+        m_masterMode = master;
+        repaint();
+    }
+}
+
+float UIMixerMeter::getDisplayPeakDb() const
+{
+    if (m_peakHoldL > DB_MIN || m_peakHoldR > DB_MIN) {
+        return std::max(m_peakHoldL, m_peakHoldR);
+    }
+    return std::max(m_peakL, m_peakR);
+}
+
 void UIMixerMeter::setIntegratedLufs(float lufs)
 {
     if (std::abs(m_integratedLufs - lufs) > 0.05f) {
@@ -279,18 +295,18 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         meterHeight -= (CORR_HEIGHT + CORR_GAP);
     }
 
-    // Calculate bar widths (L/R)
-    // Reserve space for Text Readout at top (increased for better readability)
+    // Reserve space for Text Readout at top (increased for better readability).
+    // In master mode the strip owns a wider, explicitly labelled readout block,
+    // so the meter reclaims that space and only labels its two bars L / R.
     constexpr float TEXT_HEIGHT = 24.0f;
-
-    // Calculate bar widths (L/R)
-    float totalWidth = bounds.width;
-    // float barWidth = (totalWidth - METER_GAP) / 2.0f; // Unused variable warning fix
+    constexpr float LR_LABEL_HEIGHT = 11.0f;
+    const float topReserve = m_masterMode ? 0.0f : TEXT_HEIGHT;
+    const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
     // Left Meter
     NUIRect leftBounds = bounds;
-    leftBounds.y += TEXT_HEIGHT;
-    leftBounds.height = std::max(1.0f, meterHeight - TEXT_HEIGHT);
+    leftBounds.y += topReserve;
+    leftBounds.height = std::max(1.0f, meterHeight - topReserve - bottomReserve);
     leftBounds.width = (bounds.width - METER_GAP) * 0.5f;
     renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
 
@@ -298,6 +314,17 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     NUIRect rightBounds = leftBounds;
     rightBounds.x += leftBounds.width + METER_GAP;
     renderMeterBar(renderer, rightBounds, m_peakR, m_rmsR, m_peakOverlayR, m_peakHoldR, m_clipR);
+
+    // Which bar is which — otherwise the master's two bars are unidentified.
+    if (m_masterMode) {
+        const NUIColor labelColor = m_colorPeakHold.withAlpha(0.55f);
+        const NUIRect lLabel{leftBounds.x, leftBounds.y + leftBounds.height,
+                             leftBounds.width, LR_LABEL_HEIGHT};
+        const NUIRect rLabel{rightBounds.x, rightBounds.y + rightBounds.height,
+                             rightBounds.width, LR_LABEL_HEIGHT};
+        renderer.drawTextCentered("L", lLabel, 9.0f, labelColor);
+        renderer.drawTextCentered("R", rLabel, 9.0f, labelColor);
+    }
 
     // Draw Correlation Meter
     if (m_showCorrelation) {
@@ -339,11 +366,16 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         renderer.fillRect(barRect, barColor);
     }
     
-    // Draw Value Readout (Top)
-    // Master: Peak dB primary, LUFS secondary (below, smaller, dimmed)
-    // Tracks: Show Peak dB only
-    
-    // Get peak value (used for both master and regular tracks)
+    // Draw Value Readout (Top) — track strips only.
+    // The master's numbers are rendered by the strip instead: stacking "x.x dB"
+    // over "LUFS -13.5" inside a 36 px meter clipped the text, and losing the
+    // minus sign turns -13.5 LUFS into a radically different claim.
+    if (m_masterMode) {
+        renderChildren(renderer);
+        return;
+    }
+
+    // Get peak value
     float peak = std::max(m_peakL, m_peakR);
     if (m_peakHoldL > DB_MIN || m_peakHoldR > DB_MIN) {
         peak = std::max(m_peakHoldL, m_peakHoldR);
