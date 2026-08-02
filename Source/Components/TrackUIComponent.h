@@ -4,6 +4,7 @@
 #include "MixerChannel.h"
 #include "ClipInstance.h"
 #include "PlaylistModel.h"
+#include "TimelineInteractionPolicy.h"
 #include "WaveformCache.h"
 
 #include "NUIComponent.h"
@@ -86,7 +87,9 @@ public:
     void setOnPatternClipDragStarted(std::function<void(PatternID)> callback) { m_onPatternClipDragStarted = std::move(callback); }
 
     // Callback for track selection
-    void setOnTrackSelected(std::function<void(TrackUIComponent*, bool)> callback) { m_onTrackSelectedCallback = callback; }
+    void setOnTrackSelected(std::function<void(TrackUIComponent*, TrackSelectionIntent)> callback) {
+        m_onTrackSelectedCallback = std::move(callback);
+    }
 
     // Audition integration
     void setOnSendToAudition(std::function<void()> callback) { m_onSendToAuditionCallback = callback; }
@@ -98,6 +101,13 @@ public:
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
     bool isSelected() const { return m_selected; }
+    void setSelectedClipId(ClipInstanceID clipId) {
+        if (m_selectedClipId != clipId) {
+            m_selectedClipId = clipId;
+            setDirty(true);
+        }
+    }
+    ClipInstanceID getSelectedClipId() const { return m_selectedClipId; }
     /** @brief Supply the parent-computed Playlist solo aggregate for this render pass. */
     void setAnyPlaylistLaneSoloed(bool anySoloed) { m_anyPlaylistLaneSoloed = anySoloed; }
     
@@ -161,6 +171,7 @@ protected:
 private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
+    ClipInstanceID m_selectedClipId; // Persistent clip selection supplied by TrackManagerUI
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
     bool m_anyPlaylistLaneSoloed = false;
     bool m_isLoading = false;
@@ -178,7 +189,7 @@ private:
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
     std::function<void(PatternID)> m_onPatternClipDragStarted;
-    std::function<void(TrackUIComponent*, bool)> m_onTrackSelectedCallback;
+    std::function<void(TrackUIComponent*, TrackSelectionIntent)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 
     

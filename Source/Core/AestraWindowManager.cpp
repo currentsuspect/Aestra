@@ -37,7 +37,12 @@ namespace {
         if (key == static_cast<int>(KC::Tab)) return NUIKC::Tab;
         if (key == static_cast<int>(KC::Backspace)) return NUIKC::Backspace;
         if (key == static_cast<int>(KC::Delete)) return NUIKC::Delete;
+        if (key == static_cast<int>(KC::Insert)) return NUIKC::Insert;
         if (key == static_cast<int>(KC::CapsLock)) return NUIKC::CapsLock;
+        if (key == static_cast<int>(KC::Home)) return NUIKC::Home;
+        if (key == static_cast<int>(KC::End)) return NUIKC::End;
+        if (key == static_cast<int>(KC::PageUp)) return NUIKC::PageUp;
+        if (key == static_cast<int>(KC::PageDown)) return NUIKC::PageDown;
 
         // Arrow keys
         if (key == static_cast<int>(KC::Left)) return NUIKC::Left;
@@ -206,6 +211,14 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     m_window->setRenderer(m_renderer.get());
     m_customWindow->setWindowHandle(m_window.get());
 
+    // Recovery and confirmation dialogs are routed explicitly below. Stop the
+    // bridge from subsequently forwarding the same pointer/text event into the
+    // root tree; the release that closes a modal must remain consumed too.
+    m_window->setRootInputBlockedCallback([this]() {
+        return (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) ||
+               (m_confirmationDialog && m_confirmationDialog->isDialogVisible());
+    });
+
     // Input Callbacks
     // CALLBACK ORDER CONTRACT: This AWM callback fires SECOND on every mouse move.
     // NUIPlatformBridge's internal handler fires FIRST (cache update, flag checks,
@@ -277,6 +290,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.button = (button == 0) ? AestraUI::NUIMouseButton::Left :
                           (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
             event.pressed = pressed;
+            event.released = !pressed;
             m_recoveryDialog->onMouseEvent(event);
             return; // Block all other mouse handling while recovery dialog is shown
         }

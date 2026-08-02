@@ -395,20 +395,13 @@ void TrackManagerUI::onHorizontalScroll(double position) {
 }
 
 void TrackManagerUI::deselectAllTracks() {
-    for (auto& trackUI : m_trackUIComponents) {
-        trackUI->setSelected(false);
-    }
+    clearSelection();
 }
 // Set loop region (called from Main.cpp when loop preset changes)
 void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enabled) {
     m_loopStartBeat = startBeat;
     m_loopEndBeat = endBeat;
     m_loopEnabled = enabled;
-    m_hasRulerSelection = enabled && (endBeat > startBeat);
-    if (m_hasRulerSelection) {
-        m_rulerSelectionStartBeat = startBeat;
-        m_rulerSelectionEndBeat = endBeat;
-    }
     for (auto& trackUI : m_trackUIComponents) {
         if (!trackUI) {
             continue;
@@ -417,6 +410,17 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
         trackUI->setLoopRegion(startBeat, endBeat);
     }
     invalidateCache(); // Redraw to show updated markers
+}
+
+void TrackManagerUI::updateSelectionLoopRegion(double startBeat, double endBeat) {
+    setLoopRegion(startBeat, endBeat, true);
+    m_rulerSelectionStartBeat = startBeat;
+    m_rulerSelectionEndBeat = endBeat;
+    m_hasRulerSelection = endBeat > startBeat;
+    m_minimapSelectionBeatRange = {startBeat, endBeat};
+    if (m_onLoopRegionUpdate) {
+        m_onLoopRegionUpdate(startBeat, endBeat);
+    }
 }
 // Calculate maximum timeline extent needed based on all samples
 // Calculate maximum timeline extent needed based on all clips

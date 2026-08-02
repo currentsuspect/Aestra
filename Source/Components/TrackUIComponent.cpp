@@ -98,6 +98,17 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
     return text.substr(0, maxChars - 2) + "..";
 }
 
+TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
+    if ((event.modifiers & AestraUI::NUIModifiers::Ctrl) ||
+        (event.modifiers & AestraUI::NUIModifiers::Super)) {
+        return TrackSelectionIntent::Toggle;
+    }
+    if (event.modifiers & AestraUI::NUIModifiers::Shift) {
+        return TrackSelectionIntent::Add;
+    }
+    return TrackSelectionIntent::Replace;
+}
+
 AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,
                                     float alpha) {
     const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
@@ -108,6 +119,23 @@ AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brigh
                               std::clamp(tonedG, 0.0f, 1.0f),
                               std::clamp(tonedB, 0.0f, 1.0f),
                               alpha >= 0.0f ? alpha : color.a);
+}
+
+// Keep Playlist clip selection in the same visual language as Piano Roll
+// notes: a lifted secondary accent, crisp white edge, grounded shadow, and
+// subtle edit handles. Clip identity colour remains visible underneath.
+void drawPianoRollStyleSelection(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float radius) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const auto selectedColor = themeManager.getColor("accentSecondary").lightened(0.12f);
+    renderer.drawShadow({bounds.x, bounds.y + 1.0f, bounds.width, bounds.height},
+                        0.0f, 2.0f, 5.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.22f));
+    renderer.fillRoundedRect(bounds, radius, selectedColor.withAlpha(0.12f));
+    renderer.strokeRoundedRect(bounds, radius, 1.5f, AestraUI::NUIColor::white().withAlpha(0.78f));
+    const float handleHeight = std::max(2.0f, bounds.height - 6.0f);
+    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 3.0f, 2.0f, handleHeight},
+                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
+    renderer.fillRoundedRect({bounds.right() - 3.0f, bounds.y + 3.0f, 2.0f, handleHeight},
+                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
 }
 
 // Waveform ink derived from the clip color so the waveform reads as part of
@@ -148,13 +176,13 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     // Create track name label
     m_nameLabel = std::make_shared<AestraUI::NUILabel>();
     
-    std::string name = "Lane";
+    std::string name = "Track";
     if (m_trackManager) {
         if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             name = lane->name;
         }
     }
-    m_nameLabel->setText(name.empty() ? "Lane" : name);
+    m_nameLabel->setText(name.empty() ? "Track" : name);
 
     {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -186,7 +214,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     configureFlatTrackButton(m_muteButton);
     m_muteButton->setToggleable(true);
     m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
-    m_muteButton->setTooltip("Mute Playlist lane (M)");
+    m_muteButton->setTooltip("Mute Track (M)");
     addChild(m_muteButton);
 
     // Create solo button
@@ -195,7 +223,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     configureFlatTrackButton(m_soloButton);
     m_soloButton->setToggleable(true);
     m_soloButton->setOnToggle([this](bool) { onSoloToggled(); });
-    m_soloButton->setTooltip("Solo Playlist lane (S)");
+    m_soloButton->setTooltip("Solo Track (S)");
     addChild(m_soloButton);
 
     // Recording is armed from mixer inserts. A Playlist lane only receives a
@@ -235,11 +263,37 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
     m_clipRoutingMenu = std::make_shared<AestraUI::NUIContextMenu>();
     m_clipRoutingMenu->setOnHide([this]() { detachContextMenu(m_clipRoutingMenu); });
 
+    auto addAction = [this](const std::string& label, const std::string& shortcut, std::function<void()> action) {
+        auto item = std::make_shared<AestraUI::NUIContextMenuItem>(label);
+        item->setShortcut(shortcut);
+        item->setOnClick(std::move(action));
+        m_clipRoutingMenu->addItem(item);
+    };
+
+    if (pattern && pattern->isMidi() && m_onPatternClipOpenRequested) {
+        addAction("Open in Piano Roll", "Enter", [this, patternId = pattern->id]() {
+            m_onPatternClipOpenRequested(patternId);
+        });
+    } else if (pattern && pattern->isAudio() && m_onAudioClipOpenRequested) {
+        addAction("Open in Audio Editor", "Enter", [this, clipId]() { m_onAudioClipOpenRequested(clipId); });
+    }
+
+    if (auto* parentManager = dynamic_cast<TrackManagerUI*>(getParent())) {
+        if (m_clipRoutingMenu->getItemCount() > 0) {
+            m_clipRoutingMenu->addSeparator();
+        }
+        addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
+        addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
+        addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+    }
+
     if (pattern && pattern->isAudio()) {
         const uint32_t selectedId = pattern->getMixerChannelId();
-        const auto addDestination = [this, patternId = pattern->id, selectedId](uint32_t channelId,
-                                                                                const std::string& label) {
-            m_clipRoutingMenu->addItem((selectedId == channelId ? "✓ " : "  ") + label, [this, patternId, channelId]() {
+        auto routingMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        const auto addDestination = [this, routingMenu, patternId = pattern->id, selectedId](uint32_t channelId,
+                                                                                            const std::string& label) {
+            routingMenu->addRadioItem(label, "ClipSourceRouting", selectedId == channelId,
+                                      [this, patternId, channelId]() {
                 if (m_trackManager->setAudioPatternMixerChannel(patternId, channelId)) {
                     repaint();
                     if (m_onCacheInvalidationCallback) {
@@ -249,7 +303,6 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
             });
         };
 
-        m_clipRoutingMenu->addItem("Source routing (all linked clips)", []() {});
         m_clipRoutingMenu->addSeparator();
         addDestination(0, "Master");
         for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
@@ -257,14 +310,18 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
                 addDestination(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
             }
         }
-        m_clipRoutingMenu->addSeparator();
+        m_clipRoutingMenu->addSubmenu("Route Linked Clips", routingMenu);
     }
 
-    m_clipRoutingMenu->addItem("Delete clip", [this, clipId, position]() {
+    m_clipRoutingMenu->addSeparator();
+    auto deleteItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Clip");
+    deleteItem->setShortcut("Delete");
+    deleteItem->setOnClick([this, clipId, position]() {
         if (m_onClipDeletedCallback) {
             m_onClipDeletedCallback(this, clipId, position);
         }
     });
+    m_clipRoutingMenu->addItem(deleteItem);
     attachAndShowContextMenu(this, m_clipRoutingMenu, position);
 }
 
@@ -517,7 +574,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
     // lifts it bright + near-opaque so the wave reads boldly over the fill.
-    const bool clipSelected = (clip.id == m_activeClipId);
+    const bool clipSelected = (clip.id == m_selectedClipId);
     AestraUI::NUIColor clipTint = restrainDawColor(resolveClipDisplayColor(clip), 1.0f, 0.92f, 1.0f);
     if (clipSelected) clipTint = clipTint.lightened(0.12f);
 
@@ -844,7 +901,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
         }
     }
     
-    bool clipSelected = (clip.id == m_activeClipId);
+    bool clipSelected = (clip.id == m_selectedClipId);
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
     // Deeper, less-saturated base so the clip reads rich rather than neon.
@@ -900,7 +957,7 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
             sampleName = pattern->name;
         }
     }
-    const bool clipSelected = (clip.id == m_activeClipId);
+    const bool clipSelected = (clip.id == m_selectedClipId);
 
     const AestraUI::NUIRect headerRect(clipBounds.x + 1.0f, clipBounds.y + 1.0f,
                                        std::max(0.0f, clipBounds.width - 2.0f), kClipHeaderHeight);
@@ -1031,6 +1088,10 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip);
                 }
+                if (clip.id == m_selectedClipId) {
+                    drawPianoRollStyleSelection(renderer, insetClippedClipBounds,
+                                                AestraUI::NUIThemeManager::getInstance().getRadius("s"));
+                }
             }
         }
     }
@@ -1050,7 +1111,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
             baseColor = themeManager.getColor("accentPrimary");
         }
     }
-    bool isSelected = (clip.id == m_activeClipId);
+    bool isSelected = (clip.id == m_selectedClipId);
 
     if (clip.edits.muted) {
         baseColor = baseColor.withAlpha(0.4f);
@@ -1206,14 +1267,19 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
 
     // Selection Highlight (Static base)
     if (isSelected()) {
-         AestraUI::NUIColor selectedColor = themeManager.getColor("accentPrimary").withAlpha(0.075f);
-         trackBgColor = selectedColor; 
+         trackBgColor = themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f);
     } else if (isHovered()) {
          trackBgColor = themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f);
     }
     
     // Apply background
     renderer.fillRect(bounds, trackBgColor);
+    if (isSelected()) {
+        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.42f);
+        renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f, selectionEdge);
+        renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f},
+                          1.0f, selectionEdge.withAlpha(0.28f));
+    }
 
     // Row separation is the light gap strip drawn by TrackManagerUI between
     // lanes — no per-row line here, so separators never stack.
@@ -1231,7 +1297,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         // Static Playlist-lane state is independent from mixer insert state.
         if (lane) {
             if (m_selected) {
-                 baseControlColor = themeManager.getColor("primary").withAlpha(0.022f);
+                 baseControlColor = themeManager.getColor("accentSecondary").withAlpha(0.035f);
             } else if (lane->solo) {
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
             } else if (lane->muted) {
@@ -1446,9 +1512,10 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // SELECTION OVERLAY
         if (m_selected) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("primary").withAlpha(0.022f));
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentSecondary").withAlpha(0.035f));
             AestraUI::NUIRect selectionBar(controlAreaBounds.x, controlAreaBounds.y, 3.0f, controlAreaBounds.height);
-            renderer.fillRect(selectionBar, themeManager.getColor("primary").withAlpha(0.18f));
+            renderer.fillRect(selectionBar,
+                              themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.82f));
         }
     }
 
@@ -1485,7 +1552,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // Selection Highlight Line (Inner Glow)
         if (m_selected) {
-            auto glowColor = themeManager.getColor("highlightGlow");
+            auto glowColor = AestraUI::NUIColor::white().withAlpha(0.52f);
             // Top highlight line inside control area (skipping strip)
             renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
             // Bottom highlight
@@ -1947,19 +2014,19 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         if (!event.cursorCaptured && isInsideBounds) {
             if (m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Playlist lane volume", event.position, this);
+                AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
             } else if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
                 const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
                 const std::string tooltip =
-                    lane && lane->muted && lane->solo ? "Muted • solo is held (M)" : "Mute Playlist lane (M)";
+                    lane && lane->muted && lane->solo ? "Muted • Solo is held (M)" : "Mute Track (M)";
                 AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_soloButton && m_soloButton->getBounds().contains(event.position)) {
                 const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
                 const std::string tooltip =
-                    lane && lane->muted && lane->solo ? "Solo held • lane is muted (S)" : "Solo Playlist lane (S)";
+                    lane && lane->muted && lane->solo ? "Solo held • Track is muted (S)" : "Solo Track (S)";
                 AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Arm for Recording (O)", event.position, this);
+                AestraUI::NUIComponent::showRemoteTooltip("Arm Track for Recording (O)", event.position, this);
             } else if (m_volumeKnobHovered) {
                 int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
                 AestraUI::NUIPoint tipPos(
@@ -1974,8 +2041,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&
             m_recordButton && m_recordButton->getBounds().contains(event.position)) {
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             showRecordModeMenu(event.position);
             return true;
         }
@@ -1983,9 +2051,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (handledByControls) {
             // Clicking controls should also select the track (v3.1)
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
+                if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             return true;
         }
@@ -1994,8 +2061,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && event.position.x <= controlAreaEndX) {
             // Select track on right-click too
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
 
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
@@ -2141,10 +2209,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             // Allow selecting track in automation mode if not interacting with points
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                 if (m_onTrackSelectedCallback) {
-                    const bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                       (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                    m_onTrackSelectedCallback(this, shift);
+                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
                 }
+                if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             
             if (isInsideBounds) return true;
@@ -2406,9 +2473,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                     (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                        m_onTrackSelectedCallback(this, shift);
+                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
                     } else {
                         m_selected = true;
                     }
@@ -2441,9 +2506,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                     (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                        m_onTrackSelectedCallback(this, shift);
+                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
                     } else {
                         m_selected = true;
                     }
@@ -2455,9 +2518,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_clipDragStartPos = event.position;
                 m_activeClipId = clickedClipId;
                 if (m_onTrackSelectedCallback) {
-                    bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                 (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                    m_onTrackSelectedCallback(this, shift);
+                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
                 } else {
                     m_selected = true;
                 }
@@ -2474,24 +2535,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Grid area click (not on any clip) - select track
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
             } else {
                 m_selected = true;
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
         
         // Click in control area (but not on a button) - just select the track
         if (event.position.x < controlAreaEndX) {
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
             } else {
                 m_selected = true;
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
     }
@@ -2510,7 +2569,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_activeClipId = clickedClipId;
 
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             } else {
                 m_selected = true;
             }
@@ -2522,6 +2581,18 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             showClipRoutingMenu(clickedClipId, event.position);
             return true;
         }
+
+        // Empty timeline space still belongs to its track. Right-click opens
+        // the same track menu as the header; marquee selection is an explicit
+        // tool gesture, not a hidden alternate meaning for the context button.
+        if (m_onTrackSelectedCallback) {
+            m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
+        }
+        if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
+        if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+            parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
+        }
+        return true;
     }
 
     // Pass through to parent if not handled
