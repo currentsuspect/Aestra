@@ -1153,8 +1153,14 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
 
     const std::string displayName = truncateClipLabel(clipName, clipBounds.width - 46.0f, 5.9f);
     if (!displayName.empty()) {
-        renderer.drawText(displayName, AestraUI::NUIPoint(clipBounds.x + 10.0f, clipBounds.y + 4.0f),
-                          9.5f, themeManager.getCurrentTheme().textPrimary);
+        // Centred in the header band rather than offset from the clip's top edge:
+        // headerHeight is clamped, so a fixed offset drifts as the band resizes and
+        // left the label flush against the band's lower edge at short clip heights.
+        constexpr float kClipLabelFontSize = 9.5f;
+        renderer.drawText(displayName,
+                          AestraUI::NUIPoint(clipBounds.x + 10.0f,
+                                             renderer.calculateTextY(headerRect, kClipLabelFontSize)),
+                          kClipLabelFontSize, themeManager.getCurrentTheme().textPrimary);
     }
 
     if (m_trackManager && clip.patternId.isValid()) {
