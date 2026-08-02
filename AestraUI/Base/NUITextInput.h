@@ -149,6 +149,16 @@ public:
     void setPadding(float padding);
     float getPadding() const { return padding_; }
 
+    /**
+     * @brief Horizontal offset a line's glyphs receive from the justification.
+     *
+     * Text drawing applies this offset, but the caret and selection rects were
+     * computed from raw charX values, so on a centred or right-aligned field
+     * both were drawn against the left edge while the text sat elsewhere.
+     * Left-aligned fields (the default) get 0 and are unaffected.
+     */
+    float justificationOffsetForLine(const TextLine& line, float availableWidth) const;
+
     // Scrolling
     void setScrollBarVisible(bool visible);
     bool isScrollBarVisible() const { return scrollBarVisible_; }
