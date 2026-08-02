@@ -30,7 +30,7 @@ expect() {
     fi
 }
 
-ALL_LANES=(linux-gcc windows-msvc macos-clang ui-app asan tsan lsan tidy)
+ALL_LANES=(linux-gcc windows-msvc macos-clang ui-app asan tsan lsan tidy plugin-host)
 
 # --- broad runs everything --------------------------------------------------
 for lane in "${ALL_LANES[@]}"; do
@@ -51,6 +51,7 @@ expect false ui-app-only asan
 expect false ui-app-only tsan
 expect false ui-app-only lsan
 expect false ui-app-only tidy
+expect false ui-app-only plugin-host
 
 # --- anything unrecognised must run -----------------------------------------
 # A typo in a verdict or a lane id is allowed to cost compute. It is never allowed to
