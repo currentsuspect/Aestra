@@ -72,6 +72,14 @@ private:
     bool m_editing{false};
     std::shared_ptr<NUITextInput> m_textInput;
 
+    /// Editor kept alive until the next frame.
+    ///
+    /// commitEdit() runs from NUITextInput::onFocusLost(), which touches its own
+    /// members again after the callback returns. Dropping the last reference
+    /// inside that callback would free the object mid-call, so the retired
+    /// editor parks here and is released in onRender(), off that stack.
+    std::shared_ptr<NUITextInput> m_retiredInput;
+
     // The platform never populates NUIMouseEvent::doubleClick, so pair up quick
     // same-spot presses here (house pattern — see UnitNameLabel).
     long long m_lastClickTimeMs{0};
