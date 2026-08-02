@@ -580,6 +580,18 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         }
     }
 
+    // Any source that became ready without a waveform cache renders as a bare
+    // centre line (drawWaveformForClip's mip fallback), so the caches cannot be
+    // left to whichever import path happened to remember to build them. Gated
+    // on SourceManager's revision so the steady state is one integer compare.
+    if (m_trackManager) {
+        const uint64_t sourcesRevision = m_trackManager->getSourceManager().getRevision();
+        if (sourcesRevision != m_lastSourcesRevision) {
+            m_lastSourcesRevision = sourcesRevision;
+            buildAllWaveformCaches();
+        }
+    }
+
     // Plugin insert/remove requests go through the PlaybackGraphController.
     // TrackManagerUI does NOT consume graph dirty state here - the controller drains in AestraApp::run().
     // UI code should only request rebuilds via requestAudioGraphRebuild().
@@ -1355,32 +1367,57 @@ void TrackManagerUI::buildAllWaveformCaches() {
     int queued = 0;
     for (auto srcId : ids) {
         auto* src = srcMgr.getSource(srcId);
-        if (src && src->isReady() && !src->getWaveformCache()) {
-            const uint64_t sourceRevision = src->getContentRevision();
-            ++queued;
-            m_waveformBuilder.buildAsync(
-                *src, [weakSelf, srcId, sourceRevision](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
-                    if (!cache) return;
+        if (!src || !src->isReady() || src->getWaveformCache()) {
+            continue;
+        }
+
+        const uint64_t sourceRevision = src->getContentRevision();
+
+        // A queued build installs its cache later, on the main thread, so the
+        // getWaveformCache() check above cannot see work that is still running.
+        // Without this guard a burst of imports re-queues the same source on
+        // every sweep until its cache lands. Keyed on content revision so a
+        // source that changes underneath an in-flight build still gets rebuilt.
+        auto inFlight = m_waveformBuildsInFlight.find(srcId.value);
+        if (inFlight != m_waveformBuildsInFlight.end() && inFlight->second == sourceRevision) {
+            continue;
+        }
+        m_waveformBuildsInFlight[srcId.value] = sourceRevision;
+
+        ++queued;
+        m_waveformBuilder.buildAsync(
+            *src, [weakSelf, srcId, sourceRevision](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
+                auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                if (!self) return;
+
+                // Marshalled even when the build failed (null cache): the
+                // in-flight slot has to be released on every outcome, or that
+                // source can never be retried.
+                std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                self->m_pendingTasks.push_back([weakSelf, srcId, sourceRevision, cache]() {
                     auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                     if (!self) return;
 
-                    std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
-                    self->m_pendingTasks.push_back([weakSelf, srcId, sourceRevision, cache]() {
-                        auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
-                        if (!self) return;
-                        if (!self->m_trackManager) return;
+                    // Release only our own slot: a newer revision may already
+                    // have claimed it while this build was running.
+                    auto slot = self->m_waveformBuildsInFlight.find(srcId.value);
+                    if (slot != self->m_waveformBuildsInFlight.end() && slot->second == sourceRevision) {
+                        self->m_waveformBuildsInFlight.erase(slot);
+                    }
 
-                        auto* src = self->m_trackManager->getSourceManager().getSource(srcId);
-                        if (!src) return;
-                        if (src->getContentRevision() != sourceRevision) return;
+                    if (!cache) return;
+                    if (!self->m_trackManager) return;
 
-                        src->setWaveformCache(cache);
-                        self->invalidateCache();
-                        self->m_backgroundNeedsUpdate = true;
-                        self->setDirty(true);
-                    });
+                    auto* src = self->m_trackManager->getSourceManager().getSource(srcId);
+                    if (!src) return;
+                    if (src->getContentRevision() != sourceRevision) return;
+
+                    src->setWaveformCache(cache);
+                    self->invalidateCache();
+                    self->m_backgroundNeedsUpdate = true;
+                    self->setDirty(true);
                 });
-        }
+            });
     }
     if (queued > 0) {
         Log::info("[TrackManagerUI] Queued " + std::to_string(queued) + " waveform cache builds (async)");
