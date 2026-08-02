@@ -86,7 +86,25 @@ public:
      */
     void setPlatformBridge(class NUIPlatformBridge* bridge);
 
+    /**
+     * @brief Collapse the inspector to a thin re-open rail.
+     *
+     * A dedicated mixer view should be able to become almost entirely channel
+     * strips; collapsing the inspector returns its width to the strips.
+     */
+    void setInspectorCollapsed(bool collapsed);
+    bool isInspectorCollapsed() const { return m_inspectorCollapsed; }
+    void toggleInspectorCollapsed() { setInspectorCollapsed(!m_inspectorCollapsed); }
+
 private:
+    /// Current inspector width — the collapsed rail or the full panel.
+    float inspectorWidth() const {
+        return m_inspectorCollapsed ? INSPECTOR_COLLAPSED_WIDTH : INSPECTOR_WIDTH;
+    }
+
+    /// Rail/handle that collapses or restores the inspector.
+    NUIRect getInspectorToggleRect() const;
+
     bool channelLayoutMatchesViewModel() const;
     NUIRect getMinimapRect() const;
     float getChannelViewportWidth() const;
@@ -121,6 +139,8 @@ private:
 
     /// Inspector panel (pinned on the right, before master)
     std::shared_ptr<UIMixerInspector> m_inspector;
+    bool m_inspectorCollapsed{false};
+    bool m_inspectorToggleHovered{false};
 
     /// Plugin finder dropdown (topmost, shown on Add Insert click)
     std::shared_ptr<UIMixerPluginDropdown> m_pluginDropdown;
@@ -143,6 +163,7 @@ private:
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;
     static constexpr float INSPECTOR_WIDTH = 236.0f;
+    static constexpr float INSPECTOR_COLLAPSED_WIDTH = 16.0f;
     static constexpr float MINIMAP_HEIGHT = 22.0f;
     static constexpr float MINIMAP_GAP = 6.0f;
     static constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
