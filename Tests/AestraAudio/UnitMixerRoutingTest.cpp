@@ -98,12 +98,13 @@ int main() {
     auto defaultNamesOwner = std::make_unique<TrackManager>();
     auto& defaultNames = *defaultNamesOwner;
     const auto* defaultInsert = defaultNames.addChannel();
-    require(defaultInsert && defaultInsert->getName() == "Insert 1",
-            "New mixer destinations must use Insert terminology");
-    require(defaultNames.removeChannelById(defaultInsert->getChannelId()), "Default insert deletion failed");
+    require(defaultInsert && defaultInsert->getName() == "Channel 1",
+            "New mixer destinations must use Channel terminology — 'Insert' is "
+            "reserved for the effect slots that live on a channel");
+    require(defaultNames.removeChannelById(defaultInsert->getChannelId()), "Default channel deletion failed");
     const auto* postDeleteInsert = defaultNames.addChannel();
-    require(postDeleteInsert && postDeleteInsert->getName() == "Insert 2",
-            "Default insert name reused a deleted channel number");
+    require(postDeleteInsert && postDeleteInsert->getName() == "Channel 2",
+            "Default channel name reused a deleted channel number");
 
     auto firstFreeTracksOwner = std::make_unique<TrackManager>();
     auto& firstFreeTracks = *firstFreeTracksOwner;

@@ -3331,7 +3331,10 @@ void AestraContent::addDemoTracks() {
     for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
         const std::string laneName = "Track " + std::to_string(i);
         PlaylistLaneID laneId = playlist.createLane(laneName);
-        m_trackManager->addChannel("Insert " + std::to_string(i));
+        // "Channel", not "Insert": an insert is an effect slot living *on* this
+        // strip, so naming the strip itself "Insert 1" produced instructions
+        // like "add an insert to Insert 1".
+        m_trackManager->addChannel("Channel " + std::to_string(i));
 
         if (auto* lane = playlist.getLane(laneId)) {
             // Cycle the shared track palette so the lane strip matches the

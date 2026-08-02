@@ -334,8 +334,8 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
 
     m_cachedTrackNumber = findTrackNumber(channel->id);
     const std::string trackLabel = (m_cachedTrackNumber > 0)
-        ? ("Insert " + std::to_string(m_cachedTrackNumber))
-        : "Insert";
+        ? ("Channel " + std::to_string(m_cachedTrackNumber))
+        : "Channel";
 
     m_cachedHeaderTitle = channel->name.empty()
         ? trackLabel

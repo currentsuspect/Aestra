@@ -107,13 +107,15 @@ void UIItemSelector::commitEditing() {
             // Check if user just typed a number "7"
             int trackNum = std::stoi(text);
             
-            // Prefer current "Insert NUM" labels while accepting saved legacy names.
-            const std::string insertPrefix = "insert " + std::to_string(trackNum);
+            // Prefer current "Channel NUM" labels while accepting saved legacy names.
+            const std::string channelPrefix = "channel " + std::to_string(trackNum);
+            const std::string legacyInsertPrefix = "insert " + std::to_string(trackNum);
             const std::string legacyTrackPrefix = "track " + std::to_string(trackNum);
             for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
                 std::string item = m_items[i];
                 std::transform(item.begin(), item.end(), item.begin(), ::tolower);
-                if (item.find(insertPrefix) == 0 || item.find(legacyTrackPrefix) == 0) {
+                if (item.find(channelPrefix) == 0 || item.find(legacyInsertPrefix) == 0
+                    || item.find(legacyTrackPrefix) == 0) {
                     matchIndex = i;
                     break;
                 }

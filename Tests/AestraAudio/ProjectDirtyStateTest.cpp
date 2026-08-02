@@ -206,7 +206,7 @@ int main() {
 
         // What addDemoTracks() does.
         for (int i = 1; i <= 50; ++i) {
-            tracks.addChannel("Insert " + std::to_string(i));
+            tracks.addChannel("Channel " + std::to_string(i));
         }
         require(tracks.isModified(),
                 "addChannel must still mark the project modified — the defect is not "
