@@ -1535,6 +1535,15 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression")
 
+add_executable(TimelineInteractionPolicyTest AestraUI/TimelineInteractionPolicyTest.cpp)
+target_include_directories(TimelineInteractionPolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+)
+add_test(NAME TimelineInteractionPolicyTest COMMAND TimelineInteractionPolicyTest)
+set_tests_properties(TimelineInteractionPolicyTest PROPERTIES LABELS "ui;timeline;selection;regression")
+
 # Settings persistence policy (#648). Same shape as SafeClampFloatTest above:
 # header-only and widget-free so the decision that was destroying saved device
 # ids is reachable without linking AestraUI, which AESTRA_CI=ON disables.
@@ -1552,6 +1561,36 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThem
     set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency")
 else()
     message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+if(TARGET AestraUI_Core)
+    add_executable(NUIContextMenuInteractionTest AestraUI/NUIContextMenuInteractionTest.cpp)
+    target_link_libraries(NUIContextMenuInteractionTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIContextMenuInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    )
+    add_test(NAME NUIContextMenuInteractionTest COMMAND NUIContextMenuInteractionTest)
+    set_tests_properties(NUIContextMenuInteractionTest PROPERTIES LABELS "ui;menu;input;regression")
+
+    add_executable(ModalDialogInteractionTest
+        AestraUI/ModalDialogInteractionTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ConfirmationDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/RecoveryDialog.cpp
+    )
+    target_link_libraries(ModalDialogInteractionTest PRIVATE AestraUI_Core AestraCore)
+    target_include_directories(ModalDialogInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ModalDialogInteractionTest COMMAND ModalDialogInteractionTest)
+    set_tests_properties(ModalDialogInteractionTest PROPERTIES LABELS "ui;modal;input;regression")
+else()
+    message(STATUS "NUIContextMenuInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no

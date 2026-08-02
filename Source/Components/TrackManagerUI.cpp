@@ -159,7 +159,9 @@ void TrackManagerUI::refreshTracks() {
     size_t laneCount = playlist.getLaneCount();
     Log::info("refreshTracks: looping over " + std::to_string(laneCount) + " lanes");
 
-    // Clear existing UI components
+    // Stable lane IDs own selection. Raw pointers only describe the current
+    // widget generation, so discard that view before destroying any rows.
+    m_selectedTracks.clear();
     for (auto& trackUI : m_trackUIComponents) {
         removeChild(trackUI);
     }
@@ -191,11 +193,13 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setOnSplitRequested(
             [this](TrackUIComponent* trackComp, double splitTime) { this->onSplitRequested(trackComp, splitTime); });
 
-        trackUI->setOnClipSelected([this](TrackUIComponent* trackComp, ClipInstanceID clipId) {
-            this->m_selectedClipId = clipId;
-            Log::info("TrackManagerUI: Clip selected " + clipId.toString());
-            // Auto-Picking: Selecting a clip automatically loads it into the clipboard/brush
-            copySelectedClip();
+        trackUI->setOnClipSelected([this](TrackUIComponent*, ClipInstanceID clipId) {
+            selectClip(clipId);
+            if (clipId.isValid()) {
+                Log::info("TrackManagerUI: Clip selected " + clipId.toString());
+                // Auto-Picking: Selecting a clip automatically loads it into the clipboard/brush
+                copySelectedClip();
+            }
         });
 
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
@@ -215,8 +219,9 @@ void TrackManagerUI::refreshTracks() {
             }
         });
 
-        trackUI->setOnTrackSelected(
-            [this](TrackUIComponent* trackComp, bool addToSelection) { this->selectTrack(trackComp, addToSelection); });
+        trackUI->setOnTrackSelected([this](TrackUIComponent* trackComp, TrackSelectionIntent intent) {
+            this->selectTrack(trackComp, intent);
+        });
 
         trackUI->setOnSendToAudition([this, i, lane]() {
             if (this->m_onSendToAudition) {
@@ -236,6 +241,21 @@ void TrackManagerUI::refreshTracks() {
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
     } // Close lane loop
+
+    std::vector<PlaylistLaneID> validLaneIds;
+    validLaneIds.reserve(m_trackUIComponents.size());
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            validLaneIds.push_back(trackUI->getLaneId());
+        }
+    }
+    m_trackSelection.retainOnly(validLaneIds);
+    syncTrackSelectionView();
+
+    if (m_selectedClipId.isValid() && !playlist.getClip(m_selectedClipId)) {
+        m_selectedClipId = ClipInstanceID{};
+    }
+    selectClip(m_selectedClipId);
 
     layoutTracks();
 
@@ -291,6 +311,9 @@ void TrackManagerUI::onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID c
     // Core deletion: remove from PlaylistModel using command for undo support
     auto cmd = std::make_shared<RemoveClipCommand>(playlist, clipId);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    if (m_selectedClipId == clipId) {
+        m_selectedClipId = ClipInstanceID{};
+    }
 
     // FL-style transport behavior: if we just cleared the last clip while playing,
     // snap back to bar 1.
@@ -445,20 +468,20 @@ void TrackManagerUI::setPatternMode(bool enabled) {
 // =============================================================================
 
 void TrackManagerUI::selectTrack(TrackUIComponent* track, bool addToSelection) {
+    selectTrack(track, addToSelection ? TrackSelectionIntent::Add : TrackSelectionIntent::Replace);
+}
+
+void TrackManagerUI::selectTrack(TrackUIComponent* track, TrackSelectionIntent intent) {
     if (!track)
         return;
 
-    if (!addToSelection) {
-        // Clear existing selection first
-        clearSelection();
-    }
+    m_trackSelection.apply(track->getLaneId(), intent);
+    syncTrackSelectionView();
 
-    m_selectedTracks.insert(track);
-    track->setSelected(true);
-
-    std::string trackName = track->getTrack() ? track->getTrack()->getName() : "Unknown";
-    Log::info("[TrackManagerUI] Selected track: " + trackName +
-              " (total selected: " + std::to_string(m_selectedTracks.size()) + ")");
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(track->getLaneId()) : nullptr;
+    const std::string trackName = lane ? lane->name : "Track";
+    Log::info("[TrackManagerUI] Track selection updated: " + trackName +
+              " (total selected: " + std::to_string(m_trackSelection.size()) + ")");
 
     invalidateCache();
 }
@@ -467,44 +490,62 @@ void TrackManagerUI::deselectTrack(TrackUIComponent* track) {
     if (!track)
         return;
 
-    auto it = m_selectedTracks.find(track);
-    if (it != m_selectedTracks.end()) {
-        m_selectedTracks.erase(it);
-        track->setSelected(false);
+    if (!m_trackSelection.contains(track->getLaneId()))
+        return;
 
-        std::string trackName = track->getTrack() ? track->getTrack()->getName() : "Unknown";
-        Log::info("[TrackManagerUI] Deselected track: " + trackName);
-        invalidateCache();
-    }
+    m_trackSelection.apply(track->getLaneId(), TrackSelectionIntent::Toggle);
+    syncTrackSelectionView();
+    invalidateCache();
 }
 
 void TrackManagerUI::clearSelection() {
-    for (auto* track : m_selectedTracks) {
-        if (track) {
-            track->setSelected(false);
-        }
-    }
-    m_selectedTracks.clear();
+    m_trackSelection.clear();
+    syncTrackSelectionView();
 
     Log::info("[TrackManagerUI] Cleared all track selection");
     invalidateCache();
 }
 
 bool TrackManagerUI::isTrackSelected(TrackUIComponent* track) const {
-    return m_selectedTracks.find(track) != m_selectedTracks.end();
+    return track && m_trackSelection.contains(track->getLaneId());
 }
 
 void TrackManagerUI::selectAllTracks() {
-    clearSelection();
-
+    std::vector<PlaylistLaneID> laneIds;
+    laneIds.reserve(m_trackUIComponents.size());
     for (auto& trackUI : m_trackUIComponents) {
         if (trackUI) {
-            m_selectedTracks.insert(trackUI.get());
-            trackUI->setSelected(true);
+            laneIds.push_back(trackUI->getLaneId());
         }
     }
+    m_trackSelection.selectAll(laneIds);
+    syncTrackSelectionView();
 
     Log::info("[TrackManagerUI] Selected all tracks (" + std::to_string(m_selectedTracks.size()) + ")");
+    invalidateCache();
+}
+
+void TrackManagerUI::syncTrackSelectionView() {
+    m_selectedTracks.clear();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (!trackUI) {
+            continue;
+        }
+        const bool selected = m_trackSelection.contains(trackUI->getLaneId());
+        trackUI->setSelected(selected);
+        if (selected) {
+            m_selectedTracks.insert(trackUI.get());
+        }
+    }
+}
+
+void TrackManagerUI::selectClip(ClipInstanceID clipId) {
+    m_selectedClipId = clipId;
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClipId(clipId);
+        }
+    }
     invalidateCache();
 }
 
@@ -540,10 +581,48 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
 
+    TrackUIComponent* selectedTrack = getSelectedTrackUI();
+    auto* lane = selectedTrack && m_trackManager
+                     ? m_trackManager->getPlaylistModel().getLane(selectedTrack->getLaneId())
+                     : nullptr;
+    if (lane && selectedTrack) {
+        const PlaylistLaneID laneId = lane->id;
+        menu->addCheckbox("Mute Track", lane->muted, [this, laneId](bool muted) {
+            if (auto* target = m_trackManager->getPlaylistModel().getLane(laneId)) {
+                target->muted = muted;
+                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                m_trackManager->markModified();
+                for (const auto& trackUI : m_trackUIComponents) {
+                    if (trackUI && trackUI->getLaneId() == laneId) trackUI->updateUI();
+                }
+                invalidateCache();
+            }
+        });
+        menu->addCheckbox("Solo Track", lane->solo, [this, laneId](bool soloed) {
+            if (auto* target = m_trackManager->getPlaylistModel().getLane(laneId)) {
+                target->solo = soloed;
+                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                m_trackManager->markModified();
+                for (const auto& trackUI : m_trackUIComponents) {
+                    if (trackUI && trackUI->getLaneId() == laneId) {
+                        onTrackSoloToggled(trackUI.get());
+                        break;
+                    }
+                }
+            }
+        });
+        menu->addSeparator();
+    }
+
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
         if (onSendToAudition)
             onSendToAudition();
     });
+    menu->addSeparator();
+    auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Tracks");
+    selectAllItem->setShortcut("Ctrl+A");
+    selectAllItem->setOnClick([this]() { selectAllTracks(); });
+    menu->addItem(selectAllItem);
 
     attachAndShowContextMenu(this, menu, position);
 }

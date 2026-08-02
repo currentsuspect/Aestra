@@ -527,6 +527,16 @@ KeyCode PlatformWindowLinux::translateKey(SDL_Keycode key) {
         return KeyCode::Backspace;
     case SDLK_DELETE:
         return KeyCode::Delete;
+    case SDLK_INSERT:
+        return KeyCode::Insert;
+    case SDLK_HOME:
+        return KeyCode::Home;
+    case SDLK_END:
+        return KeyCode::End;
+    case SDLK_PAGEUP:
+        return KeyCode::PageUp;
+    case SDLK_PAGEDOWN:
+        return KeyCode::PageDown;
     case SDLK_UP:
         return KeyCode::Up;
     case SDLK_DOWN:
