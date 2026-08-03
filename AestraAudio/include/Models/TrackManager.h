@@ -144,7 +144,8 @@ public:
             m_nextChannelId = std::max(m_nextChannelId, channelId + 1);
         }
         auto channel = std::make_unique<MixerChannel>(
-            name.empty() ? "Insert " + std::to_string(channelId) : name, channelId);
+            // "Insert" is reserved for effect slots — a mixer strip is a Channel.
+            name.empty() ? "Channel " + std::to_string(channelId) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {

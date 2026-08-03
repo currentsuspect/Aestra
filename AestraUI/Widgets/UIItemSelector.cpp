@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <stdexcept>
 
 namespace AestraUI {
 
@@ -101,25 +102,51 @@ void UIItemSelector::commitEditing() {
         }
     }
     
-    // 2. Mixer insert number parsing
+    // 2. Mixer channel number parsing
     if (matchIndex == -1) {
+        // Only the conversion is guarded. A blanket catch here would also
+        // swallow failures from the matching loop below and report them as
+        // "not a number".
+        int trackNum = 0;
+        bool isNumber = true;
         try {
             // Check if user just typed a number "7"
-            int trackNum = std::stoi(text);
-            
-            // Prefer current "Insert NUM" labels while accepting saved legacy names.
-            const std::string insertPrefix = "insert " + std::to_string(trackNum);
-            const std::string legacyTrackPrefix = "track " + std::to_string(trackNum);
-            for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
-                std::string item = m_items[i];
-                std::transform(item.begin(), item.end(), item.begin(), ::tolower);
-                if (item.find(insertPrefix) == 0 || item.find(legacyTrackPrefix) == 0) {
-                    matchIndex = i;
-                    break;
+            trackNum = std::stoi(text);
+        } catch (const std::invalid_argument&) {
+            isNumber = false;
+        } catch (const std::out_of_range&) {
+            isNumber = false;
+        }
+
+        if (isNumber) {
+            // "7" must not match "Channel 70", so the number has to end at a
+            // non-digit (or end of string) rather than merely prefix-match.
+            const std::string numText = std::to_string(trackNum);
+            auto matchesLabel = [&numText](const std::string& lowerItem,
+                                           const std::string& prefix) {
+                const std::string needle = prefix + numText;
+                if (lowerItem.rfind(needle, 0) != 0) {
+                    return false;
                 }
+                if (lowerItem.size() == needle.size()) {
+                    return true;
+                }
+                return std::isdigit(static_cast<unsigned char>(lowerItem[needle.size()])) == 0;
+            };
+
+            // Current labels win outright: a single pass would otherwise let a
+            // legacy "Insert 7" earlier in the list beat the real "Channel 7".
+            for (const char* prefix : {"channel ", "insert ", "track "}) {
+                for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
+                    std::string item = m_items[i];
+                    std::transform(item.begin(), item.end(), item.begin(), ::tolower);
+                    if (matchesLabel(item, prefix)) {
+                        matchIndex = i;
+                        break;
+                    }
+                }
+                if (matchIndex != -1) break;
             }
-        } catch (...) {
-            // Not a number
         }
     }
     

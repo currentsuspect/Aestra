@@ -5,6 +5,7 @@
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
+#include "ChannelDisplayName.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
 #include "NUIRenderer.h"
@@ -120,8 +121,8 @@ void AudioClipEditorPanel::buildUI() {
     m_sourceNameLabel = makeLabel("No audio clip selected", 14.0f);
     m_sourceNameLabel->setTextColor(theme.getColor("textPrimary"));
     m_sourceMetaLabel = makeLabel("");
-    m_routeLabel = makeLabel("OUTPUT INSERT", 10.0f);
-    m_routeHintLabel = makeLabel("Source route • Alt-drag this clip onto an Insert", 10.0f);
+    m_routeLabel = makeLabel("OUTPUT CHANNEL", 10.0f);
+    m_routeHintLabel = makeLabel("Source route • Alt-drag this clip onto a channel", 10.0f);
     m_routeHintLabel->setAlignment(NUILabel::Alignment::Right);
     m_routePicker = std::make_shared<UIInsertRoutePicker>();
     m_routePicker->setOnRouteSelected([this](uint32_t routeId) { selectRoute(routeId); });
@@ -335,8 +336,8 @@ void AudioClipEditorPanel::rebuildWaveform() {
     m_makeUniqueButton->setVisible(linkedInstances > 1);
     m_makeUniqueButton->setText(linkedInstances > 1 ? "Make unique" : "Unique");
     m_routeHintLabel->setText(linkedInstances > 1 ? "Shared source route • changes " + std::to_string(linkedInstances) +
-                                                        " clips • Alt-drag to an Insert"
-                                                  : "Unique source route • Alt-drag this clip onto an Insert");
+                                                        " clips • Alt-drag to a channel"
+                                                  : "Unique source route • Alt-drag this clip onto a channel");
 
     const size_t frameCount = static_cast<size_t>(buffer->numFrames);
     const size_t channels = static_cast<size_t>(buffer->numChannels);
@@ -399,7 +400,7 @@ void AudioClipEditorPanel::rebuildRoutes(bool force) {
         if (!channel)
             continue;
         const std::string name =
-            channel->getName().empty() ? "Insert " + std::to_string(index + 1) : channel->getName();
+            AestraUI::channelDisplayName(channel->getChannelId(), channel->getName());
         routes.push_back({channel->getChannelId(), static_cast<int>(index + 1), name,
                           paletteIndexToARGB(channel->getTrackColorIndex())});
     }

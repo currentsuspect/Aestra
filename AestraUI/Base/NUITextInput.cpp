@@ -677,7 +677,7 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
                     ? line.charX[endCol] : line.charX.back();
         
         NUIRect selectionRect;
-        selectionRect.x = textRect.x + startX;
+        selectionRect.x = textRect.x + justificationOffsetForLine(line, textRect.width) + startX;
         selectionRect.y = singleLine ? singleLineTop : std::round(getLineRenderY(line));
         selectionRect.width = endX - startX;
         selectionRect.height = singleLine ? singleLineHeight : line.height;
@@ -685,6 +685,26 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
         // Draw selection highlight
         renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));
     }
+}
+
+float NUITextInput::justificationOffsetForLine(const TextLine& line, float availableWidth) const
+{
+    if (justification_ == Justification::Left)
+        return 0.0f;
+
+    // drawText() lays every line of a multiline input at bounds.x + padding_,
+    // ignoring justification. Offsetting the caret and selection here while the
+    // glyphs stay left-aligned would desync them, so multiline stays at zero
+    // until drawing, hit-testing and this helper are aligned together.
+    if (multiline_ && layoutLines_.size() > 1)
+        return 0.0f;
+
+    const float lineWidth = line.charX.empty() ? 0.0f : line.charX.back();
+    const float slack = availableWidth - lineWidth;
+    if (slack <= 0.0f)
+        return 0.0f;
+
+    return (justification_ == Justification::Center) ? slack * 0.5f : slack;
 }
 
 void NUITextInput::drawCaret(NUIRenderer& renderer)
@@ -1302,9 +1322,20 @@ void NUITextInput::deleteCharacter(int direction)
 
 void NUITextInput::insertCharacter(char character)
 {
+    if (readOnly_) return;
+
+    // Typing replaces the selection, exactly as insertText() already did.
+    // Without this the per-character path inserted at the caret and left the
+    // selected text in place: a select-all field seeded with "6.0" turned into
+    // "06.0" when the user typed "0" over it, because the caret sits at 0.
+    if (hasSelection_)
+    {
+        deleteSelectedText();
+    }
+
     if (maxLength_ > 0 && static_cast<int>(text_.length()) >= maxLength_)
         return;
-    
+
     text_.insert(caretPosition_, 1, character);
     setCaretPosition(caretPosition_ + 1);
     
@@ -1399,11 +1430,12 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
 
     // Get caret X position for this line
     int column = getColumnInLine(caretPosition_, currentLine);
-    float caretX = textRect.x;
+    const float justifyX = justificationOffsetForLine(line, textRect.width);
+    float caretX = std::round(textRect.x + justifyX);
 
     if (column >= 0 && column < static_cast<int>(line.charX.size()))
     {
-        caretX = std::round(textRect.x + line.charX[column]);
+        caretX = std::round(textRect.x + justifyX + line.charX[column]);
     }
 
     // Use calculateTextY for proper baseline alignment in single-line mode

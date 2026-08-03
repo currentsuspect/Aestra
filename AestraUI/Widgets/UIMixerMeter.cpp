@@ -28,8 +28,11 @@ void UIMixerMeter::cacheThemeColors()
     m_colorGreenDim = m_colorGreen.withSaturation(0.0f).withAlpha(0.55f);
     m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);
     m_colorRedDim = m_colorRed.withSaturation(0.0f).withAlpha(0.55f);
-    // Match fader track background (Dark Glass)
-    m_colorBackground = theme.getColor("meterBackground").withAlpha(0.3f);
+    // The meter must read as a meter even at silence, otherwise a resting strip
+    // shows only a fader and the "what is sounding" channel looks like padding.
+    // At 0.3 alpha the track was invisible against the strip background.
+    m_colorBackground = theme.getColor("meterBackground").withAlpha(0.72f);
+    m_colorRailEdge = theme.getColor("textPrimary").withAlpha(0.12f);
     m_colorPeakHold = theme.getColor("textPrimary"); // #E5E5E8
     m_colorPeakOverlay = m_colorPeakHold.withAlpha(0.8f);
     m_colorPeakOverlayDim = m_colorPeakOverlay.withSaturation(0.0f).withAlpha(0.6f);
@@ -123,6 +126,22 @@ void UIMixerMeter::setDimmed(bool dimmed)
     }
 }
 
+void UIMixerMeter::setMasterMode(bool master)
+{
+    if (m_masterMode != master) {
+        m_masterMode = master;
+        repaint();
+    }
+}
+
+float UIMixerMeter::getDisplayPeakDb() const
+{
+    if (m_peakHoldL > DB_MIN || m_peakHoldR > DB_MIN) {
+        return std::max(m_peakHoldL, m_peakHoldR);
+    }
+    return std::max(m_peakL, m_peakR);
+}
+
 void UIMixerMeter::setIntegratedLufs(float lufs)
 {
     if (std::abs(m_integratedLufs - lufs) > 0.05f) {
@@ -159,8 +178,11 @@ NUIColor UIMixerMeter::getColorForLevel(float db) const
 void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
                                    float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip)
 {
-    // Background (flat fill - gradient caused edge artifacts)
+    // Resting rail. A bare dark fill was indistinguishable from the strip
+    // background, so a silent channel gave no clue where level would appear.
+    // The groove plus its top edge say "meter lives here" before any signal.
     renderer.fillRect(bounds, m_colorBackground);
+    renderer.strokeRect(bounds, 1.0f, m_colorRailEdge);
 
     const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
     const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
@@ -279,18 +301,18 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         meterHeight -= (CORR_HEIGHT + CORR_GAP);
     }
 
-    // Calculate bar widths (L/R)
-    // Reserve space for Text Readout at top (increased for better readability)
+    // Reserve space for Text Readout at top (increased for better readability).
+    // In master mode the strip owns a wider, explicitly labelled readout block,
+    // so the meter reclaims that space and only labels its two bars L / R.
     constexpr float TEXT_HEIGHT = 24.0f;
-
-    // Calculate bar widths (L/R)
-    float totalWidth = bounds.width;
-    // float barWidth = (totalWidth - METER_GAP) / 2.0f; // Unused variable warning fix
+    constexpr float LR_LABEL_HEIGHT = 11.0f;
+    const float topReserve = m_masterMode ? 0.0f : TEXT_HEIGHT;
+    const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
     // Left Meter
     NUIRect leftBounds = bounds;
-    leftBounds.y += TEXT_HEIGHT;
-    leftBounds.height = std::max(1.0f, meterHeight - TEXT_HEIGHT);
+    leftBounds.y += topReserve;
+    leftBounds.height = std::max(1.0f, meterHeight - topReserve - bottomReserve);
     leftBounds.width = (bounds.width - METER_GAP) * 0.5f;
     renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
 
@@ -298,6 +320,17 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     NUIRect rightBounds = leftBounds;
     rightBounds.x += leftBounds.width + METER_GAP;
     renderMeterBar(renderer, rightBounds, m_peakR, m_rmsR, m_peakOverlayR, m_peakHoldR, m_clipR);
+
+    // Which bar is which — otherwise the master's two bars are unidentified.
+    if (m_masterMode) {
+        const NUIColor labelColor = m_colorPeakHold.withAlpha(0.55f);
+        const NUIRect lLabel{leftBounds.x, leftBounds.y + leftBounds.height,
+                             leftBounds.width, LR_LABEL_HEIGHT};
+        const NUIRect rLabel{rightBounds.x, rightBounds.y + rightBounds.height,
+                             rightBounds.width, LR_LABEL_HEIGHT};
+        renderer.drawTextCentered("L", lLabel, 9.0f, labelColor);
+        renderer.drawTextCentered("R", rLabel, 9.0f, labelColor);
+    }
 
     // Draw Correlation Meter
     if (m_showCorrelation) {
@@ -339,11 +372,16 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         renderer.fillRect(barRect, barColor);
     }
     
-    // Draw Value Readout (Top)
-    // Master: Peak dB primary, LUFS secondary (below, smaller, dimmed)
-    // Tracks: Show Peak dB only
-    
-    // Get peak value (used for both master and regular tracks)
+    // Draw Value Readout (Top) — track strips only.
+    // The master's numbers are rendered by the strip instead: stacking "x.x dB"
+    // over "LUFS -13.5" inside a 36 px meter clipped the text, and losing the
+    // minus sign turns -13.5 LUFS into a radically different claim.
+    if (m_masterMode) {
+        renderChildren(renderer);
+        return;
+    }
+
+    // Get peak value
     float peak = std::max(m_peakL, m_peakR);
     if (m_peakHoldL > DB_MIN || m_peakHoldR > DB_MIN) {
         peak = std::max(m_peakHoldL, m_peakHoldR);
@@ -395,14 +433,17 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(lufsLabel, lufsRect, 7.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.45f));
         
     } else if (hasPeak) {
-        // Regular tracks: Show Peak dB or −∞ at silence floor
+        // Regular tracks: peak dB or −∞ at the silence floor.
+        // The "PK" prefix is what separates this from the fader's gain readout
+        // sitting a few pixels to the right — position alone left a bare "−∞"
+        // next to "0.0 dB" as a small decoding task on every strip.
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
             m_cachedDbPeak = peak;
             if (peak <= DB_MIN) {
-                m_cachedDbStr = "\xE2\x88\x92\xE2\x88\x9E";
+                m_cachedDbStr = "PK \xE2\x88\x92\xE2\x88\x9E";
             } else {
                 char buf[32];
-                std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+                std::snprintf(buf, sizeof(buf), "PK %.1f", peak);
                 m_cachedDbStr = buf;
             }
         }

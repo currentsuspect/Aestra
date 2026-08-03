@@ -237,11 +237,15 @@ void UIMixerPanel::layoutMeters()
     }
 
     // Layout inspector just to the left of master.
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     if (m_inspector) {
+        // Collapsed, the inspector yields its width to the channel strips and
+        // leaves only the re-open rail drawn by the panel.
         m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
-        m_inspector->setVisible(true);
-        m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+        m_inspector->setVisible(!m_inspectorCollapsed);
+        if (!m_inspectorCollapsed) {
+            m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+        }
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
@@ -262,6 +266,31 @@ void UIMixerPanel::layoutMeters()
         m_strips[i]->setVisible(visible);
         m_strips[i]->setBounds(stripX, stripY, STRIP_WIDTH, stripHeight);
     }
+}
+
+NUIRect UIMixerPanel::getInspectorToggleRect() const
+{
+    const auto bounds = getBounds();
+    const NUIRect minimapRect = getMinimapRect();
+    const float stripY = minimapRect.bottom() + MINIMAP_GAP;
+    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
+
+    // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
+    // the inspector's leading edge.
+    const float railW = m_inspectorCollapsed ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
+    return NUIRect{inspectorX, stripY, railW, stripHeight};
+}
+
+void UIMixerPanel::setInspectorCollapsed(bool collapsed)
+{
+    if (m_inspectorCollapsed == collapsed) {
+        return;
+    }
+    m_inspectorCollapsed = collapsed;
+    layoutMeters();
+    repaint();
 }
 
 void UIMixerPanel::onResize(int width, int height)
@@ -346,7 +375,7 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
     float y2 = bounds.y + bounds.height;
 
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float left = bounds.x;
     const float right = inspectorX - STRIP_SPACING;
 
@@ -439,7 +468,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
     const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
@@ -476,6 +505,29 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         m_inspector->onRender(renderer);
     }
 
+    // Inspector collapse rail. Collapsed it is the only thing left of the
+    // inspector; expanded it is a slim grip on the panel's leading edge.
+    {
+        auto& theme = NUIThemeManager::getInstance();
+        const NUIRect rail = getInspectorToggleRect();
+        const NUIColor railColor = m_inspectorToggleHovered
+            ? theme.getColor("accentPrimary").withAlpha(0.34f)
+            : theme.getColor("surfaceTertiary").withAlpha(m_inspectorCollapsed ? 0.72f : 0.34f);
+        renderer.fillRoundedRect(rail, 3.0f, railColor);
+
+        // Chevron points the way the panel will move.
+        const NUIColor glyph = theme.getColor("textSecondary")
+                                   .withAlpha(m_inspectorToggleHovered ? 0.95f : 0.6f);
+        const float cx = rail.x + rail.width * 0.5f;
+        const float cy = rail.y + rail.height * 0.5f;
+        const float dir = m_inspectorCollapsed ? -1.0f : 1.0f;
+        for (int i = 0; i < 5; ++i) {
+            const float dy = static_cast<float>(i) - 2.0f;
+            const float dx = dir * (2.0f - std::abs(dy));
+            renderer.fillRect(NUIRect{cx + dx - 0.5f, cy + dy * 2.0f, 1.5f, 2.0f}, glyph);
+        }
+    }
+
     // Master strip renders on top / outside the clip.
     if (m_masterStrip && m_masterStrip->isVisible()) {
         m_masterStrip->onRender(renderer);
@@ -500,6 +552,29 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     const float contentW = getChannelContentWidth();
     const float visibleW = getChannelViewportWidth();
     const float maxScroll = getChannelMaxScroll();
+
+    // One dismissal path for inline fader entry. A press on another strip is
+    // never routed to the editing fader, so without this the editor stays open.
+    if (event.pressed) {
+        for (const auto& strip : m_strips) {
+            if (strip) strip->dismissFaderEdit(event.position);
+        }
+        if (m_masterStrip) m_masterStrip->dismissFaderEdit(event.position);
+    }
+
+    // Inspector collapse rail claims the pointer before anything underneath it.
+    {
+        const NUIRect rail = getInspectorToggleRect();
+        const bool overRail = rail.contains(event.position);
+        if (m_inspectorToggleHovered != overRail) {
+            m_inspectorToggleHovered = overRail;
+            repaint();
+        }
+        if (overRail && event.pressed && event.button == NUIMouseButton::Left) {
+            toggleInspectorCollapsed();
+            return true;
+        }
+    }
 
     if (m_isDraggingMinimap) {
         if (event.released && event.button == NUIMouseButton::Left) {
@@ -532,7 +607,7 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
         const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-        const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+        const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
         const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
         const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
         const float maxScroll = std::max(0.0f, contentW - visibleW);
@@ -553,7 +628,7 @@ NUIRect UIMixerPanel::getMinimapRect() const
 {
     auto bounds = getBounds();
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float width = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
     return NUIRect(bounds.x, bounds.y + 2.0f, width, MINIMAP_HEIGHT);
 }
@@ -562,7 +637,7 @@ float UIMixerPanel::getChannelViewportWidth() const
 {
     auto bounds = getBounds();
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     return std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
 }
 
@@ -622,7 +697,7 @@ void UIMixerPanel::showPluginDropdown(uint32_t channelId)
 
     auto panelBounds = getBounds();
     const float masterX  = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorLeft = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorLeft = masterX - STRIP_SPACING - inspectorWidth();
     const float viewportRight = inspectorLeft - STRIP_SPACING;
 
     constexpr float DROP_W = 240.0f;
@@ -705,7 +780,7 @@ UIMixerStrip* UIMixerPanel::stripAt(const NUIPoint& position) const {
     // Channel strips are clipped to the viewport left of the inspector.
     auto panelBounds = getBounds();
     const float masterX = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float viewportRight = masterX - STRIP_SPACING - INSPECTOR_WIDTH - STRIP_SPACING;
+    const float viewportRight = masterX - STRIP_SPACING - inspectorWidth() - STRIP_SPACING;
     if (position.x > viewportRight) {
         return nullptr;
     }

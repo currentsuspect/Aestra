@@ -6,6 +6,7 @@
 #include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 
@@ -34,6 +35,9 @@ void UIMixerKnob::cacheThemeColors()
     m_ring = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_ringHover = theme.getColor("border").withAlpha(0.85f);
     m_indicator = theme.getColor("accentPrimary");
+    // Resting arcs are neutral. When every knob carried a saturated accent the
+    // whole strip read as "everything is active"; colour now marks engagement.
+    m_arcResting = theme.getColor("textPrimary").withAlpha(0.42f);
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_tooltipBg = theme.getColor("backgroundSecondary").withAlpha(0.95f);
@@ -211,9 +215,8 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
          currentAng = ARC_START + t * (ARC_END - ARC_START);
     }
     
-    NUIColor activeColor = m_indicator;
-    if (hovered) activeColor = activeColor.withAlpha(1.0f);
-    else activeColor = activeColor.withAlpha(0.85f);
+    // `hovered` already folds in m_dragging above.
+    NUIColor activeColor = hovered ? m_indicator.withAlpha(1.0f) : m_arcResting;
     
     drawRoughArc(renderer, {cx, cy}, r, std::min(startAng, currentAng), std::max(startAng, currentAng), 3.0f, activeColor);
 
@@ -279,11 +282,15 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     }
     if (!b.contains(event.position) && !m_dragging) return false;
 
-    // Double-click reset
-    if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left) {
-        setValue(defaultValue());
-        updateGlobalTooltip();
-        return true;
+    // Double-click reset. The platform never populates event.doubleClick, so
+    // quick same-button presses are paired up here (house pattern) — relying on
+    // the flag alone left this reset unreachable.
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (m_clickTracker.registerPress() || event.doubleClick) {
+            setValue(defaultValue());
+            updateGlobalTooltip();
+            return true;
+        }
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
