@@ -296,7 +296,7 @@ void UIMixerPanel::updateInspectorWidthConstraint()
     // The inspector only earns its width if the strips it sits beside are still
     // usable. Below that, collapse is imposed regardless of preference.
     const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
-                       + kMinStripsBesideInspector * (STRIP_WIDTH + STRIP_SPACING);
+                       + MIN_STRIPS_BESIDE_INSPECTOR * (STRIP_WIDTH + STRIP_SPACING);
 
     m_inspectorCollapse.setForcedCollapsed(available < needed);
 }

@@ -1772,6 +1772,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InspectorCollapseStateTest.cpp")
     add_executable(InspectorCollapseStateTest AestraUI/InspectorCollapseStateTest.cpp)
     target_include_directories(InspectorCollapseStateTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME InspectorCollapseStateTest COMMAND InspectorCollapseStateTest)
     set_tests_properties(InspectorCollapseStateTest PROPERTIES LABELS "ui;mixer;regression")
