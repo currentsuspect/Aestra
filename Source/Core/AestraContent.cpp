@@ -3331,7 +3331,10 @@ void AestraContent::addDemoTracks() {
     for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
         const std::string laneName = "Track " + std::to_string(i);
         PlaylistLaneID laneId = playlist.createLane(laneName);
-        m_trackManager->addChannel("Insert " + std::to_string(i));
+        // "Channel", not "Insert": an insert is an effect slot living *on* this
+        // strip, so naming the strip itself "Insert 1" produced instructions
+        // like "add an insert to Insert 1".
+        m_trackManager->addChannel("Channel " + std::to_string(i));
 
         if (auto* lane = playlist.getLane(laneId)) {
             // Cycle the shared track palette so the lane strip matches the
@@ -4156,6 +4159,11 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     switch (event.keyCode) {
     case AestraUI::NUIKeyCode::F3:
         toggleView(Audio::ViewType::Mixer);
+        return true;
+    case AestraUI::NUIKeyCode::F4:
+        // The browser permanently consumed ~20% of the window; toggleFileBrowser
+        // existed but had no caller anywhere, so it could never be collapsed.
+        toggleFileBrowser();
         return true;
     case AestraUI::NUIKeyCode::F5:
         toggleView(Audio::ViewType::Playlist);

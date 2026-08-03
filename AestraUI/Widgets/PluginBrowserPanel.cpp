@@ -812,17 +812,33 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
+    // Background contrast groups the rack; it sits inside the inspector's own
+    // border, and each slot carries its own, so a third concentric outline here
+    // was pure nesting.
     renderer.fillRoundedRect(bounds, theme.radiusL, Colors::panelBackground().withAlpha(0.94f));
     renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, theme.layout.standardControlHeight},
                              theme.radiusL, Colors::panelTop().withAlpha(0.62f));
-    renderer.strokeRoundedRect(bounds, theme.radiusL, theme.layout.dividerWidth,
-                               Colors::panelBorder().withAlpha(0.84f));
 
     // Enable clipping
     renderer.setClipRect(bounds);
 
-    for (int i = 0; i < MAX_SLOTS; ++i) {
+    const int visible = visibleSlotCount();
+    for (int i = 0; i < visible; ++i) {
         renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
+    }
+
+    // Deliberate empty state. Collapsing the rack to a single add row left a
+    // large blank region that read as unfinished rather than as "nothing here
+    // yet"; one quiet line under the add row names the state without
+    // reintroducing the column of dead slot outlines.
+    if (lastPopulatedSlot() < 0 && !m_isDraggingReorder) {
+        const float messageY = bounds.y + 8.0f + SLOT_HEIGHT - m_scrollOffset + 14.0f;
+        if (messageY < bounds.bottom() - 12.0f) {
+            renderer.drawTextCentered("No effects on this channel",
+                                      {bounds.x, messageY, bounds.width, 14.0f},
+                                      theme.fontSizeMicro,
+                                      Colors::textDisabled().withAlpha(0.55f));
+        }
     }
 
     renderer.clearClipRect();
@@ -913,12 +929,14 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     const float rowH = chipH; // 14 px — same height as the index chip
 
     if (slot.isEmpty) {
-        // Empty rows surface the affordance only on hover; the recessed row and
-        // subtle centre line already signal an available drop target, so the
-        // redundant em-dash placeholder is gone.
-        if (isHovered) {
+        // The single trailing empty row is the rack's call to action, so it is
+        // always labelled. Spare slots exposed during a reorder drag stay quiet
+        // and only name themselves on hover.
+        const bool isAddRow = (index == lastPopulatedSlot() + 1);
+        if (isAddRow || isHovered) {
             const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
-            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS, Colors::textPrimary());
+            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS,
+                                      Colors::textPrimary());
         }
     } else {
         // Bypass uses color plus an explicit badge so it cannot be confused with
@@ -1034,8 +1052,10 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     if (std::abs(event.wheelDelta) > 0.001f && m_activeKnobSlot == -1) {
         m_scrollOffset -= event.wheelDelta * 20.0f;
 
-        // Clamp scroll
-        float contentHeight = MAX_SLOTS * SLOT_HEIGHT + 10;
+        // Clamp against the rows actually drawn, not MAX_SLOTS. Bounding by ten
+        // rows let the offset run past the compact row set, and hitTestSlot then
+        // rejected the blank area — the rack looked empty until you scrolled back.
+        float contentHeight = visibleSlotCount() * SLOT_HEIGHT + 10;
         float viewHeight = getBounds().height;
         m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
 
@@ -1097,6 +1117,10 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
         m_draggingSlotIndex = -1;
         m_isDraggingReorder = false;
+        // The rack shows every numbered slot while a reorder is in flight and
+        // collapses back to the populated rows the moment it ends, so a scroll
+        // offset that was legal during the drag can now point past the content.
+        clampScrollToContent();
         repaint();
         return true;
     }
@@ -1301,8 +1325,17 @@ void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
                 m_slots[index].bypassed = forcedState;
             }
         }
+        // Removing a plugin shrinks the drawn row set, which can leave the
+        // offset scrolled past the last row that still exists.
+        clampScrollToContent();
         repaint();
     }
+}
+
+void EffectChainRack::clampScrollToContent() {
+    const float contentHeight = visibleSlotCount() * SLOT_HEIGHT + 10.0f;
+    const float viewHeight = getBounds().height;
+    m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
 }
 
 const EffectChainRack::EffectSlotInfo& EffectChainRack::getSlot(int index) const {
@@ -1337,6 +1370,24 @@ void EffectChainRack::setOnSlotMixChanged(std::function<void(int, float)> callba
     m_onSlotMixChanged = std::move(callback);
 }
 
+int EffectChainRack::lastPopulatedSlot() const {
+    for (int i = MAX_SLOTS - 1; i >= 0; --i) {
+        if (!m_slots[i].isEmpty) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int EffectChainRack::visibleSlotCount() const {
+    // A reorder drag needs every numbered target available as a drop site.
+    if (m_isDraggingReorder) {
+        return MAX_SLOTS;
+    }
+    // Populated slots, plus exactly one "+ Add insert" row.
+    return std::min(MAX_SLOTS, lastPopulatedSlot() + 2);
+}
+
 int EffectChainRack::hitTestSlot(float y) const {
     auto bounds = getBounds();
     float relativeY = y - bounds.y - 8 + m_scrollOffset;
@@ -1345,7 +1396,9 @@ int EffectChainRack::hitTestSlot(float y) const {
     }
 
     int index = static_cast<int>(std::floor(relativeY / SLOT_HEIGHT));
-    if (index >= 0 && index < MAX_SLOTS) {
+    // Only rows that are actually drawn are hittable — otherwise clicking the
+    // blank area below the rack silently targeted an invisible slot.
+    if (index >= 0 && index < visibleSlotCount()) {
         return index;
     }
     return -1;

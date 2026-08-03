@@ -167,11 +167,9 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
         // Flat active state (no glow): the coloured fill + border + white icon
         // carry the on-state, matching the flat-active language used elsewhere.
         renderer.fillRoundedRect(visualRect, BTN_RADIUS, bg);
+        // Single outline — the fill contrast carries the state, and the inset
+        // bevel only added another concentric edge.
         renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, border);
-        renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
-                                   std::max(0.0f, BTN_RADIUS - 1.0f),
-                                   1.0f,
-                                   NUIColor::white().withAlpha(0.025f));
         // Centre the glyph in the raw button bounds (not the half-pixel-inset
         // visualRect) so the offsets stay symmetric integers — matches the
         // track-header control icons exactly.

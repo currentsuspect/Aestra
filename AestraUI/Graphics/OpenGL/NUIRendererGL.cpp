@@ -2678,8 +2678,17 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         const float gy = baseline - scaledBearingY; // Top of glyph
         const float xpos = std::round(gx);
         const float ypos = std::round(gy);
-        const float xposR = std::round(gx + w);
-        const float yposB = std::round(gy + h);
+        float xposR = std::round(gx + w);
+        float yposB = std::round(gy + h);
+
+        // Rounding all four edges collapses glyphs that are only about a pixel
+        // thick: the hyphen-minus rasterises to 7x1 at the small atlases, so
+        // round(gy) == round(gy + h) produced a zero-height quad and the glyph
+        // silently disappeared — taking the sign off every negative number
+        // whose baseline happened to land on the wrong side of .5. Keep at
+        // least one pixel whenever the source glyph has real coverage.
+        if (ch.width > 0 && xposR <= xpos) xposR = xpos + 1.0f;
+        if (ch.height > 0 && yposB <= ypos) yposB = ypos + 1.0f;
 
         minX = std::min(minX, xpos);
         minY = std::min(minY, ypos);
