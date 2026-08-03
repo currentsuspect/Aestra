@@ -103,7 +103,12 @@ struct MixerUIPreferences {
         if (!consumedAll) {
             return prefs;
         }
-        if (root.has("inspectorExpanded")) {
+        // Type-checked, not merely present. JSON::asBool() returns its default
+        // false for any non-Boolean node, so {"inspectorExpanded": 1} would
+        // otherwise pass the has() check and collapse the inspector — the same
+        // failure the absent-key guard exists to prevent, arriving by a
+        // different route.
+        if (root.has("inspectorExpanded") && root["inspectorExpanded"].isBool()) {
             prefs.inspectorExpanded = root["inspectorExpanded"].asBool();
         }
         return prefs;
