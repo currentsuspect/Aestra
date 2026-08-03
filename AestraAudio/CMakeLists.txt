@@ -502,7 +502,20 @@ endif()
 
 # CLAP SDK includes (if available)
 if(AESTRA_HAS_CLAP)
-    target_include_directories(AestraAudioCore PRIVATE
+    # SYSTEM, not plain PRIVATE. Five vendored CLAP headers declare file-scope
+    # constants with internal linkage (CLAP_INVALID_ID, CLAP_COLOR_TRANSPARENT,
+    # CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR, CLAP_TIMESTAMP_UNKNOWN,
+    # CLAP_CORE_EVENT_SPACE_ID). That is upstream's deliberate pattern and is valid
+    # C and C++ — each translation unit gets its own copy, so there is no ODR
+    # problem — but GCC and Clang can emit -Wunused-const-variable in any TU that
+    # includes a header without reading its constant, which a stricter warning
+    # profile would turn into a build failure.
+    #
+    # Fixed here rather than in the headers, because External/clap/VENDOR.md records
+    # a sha256 of the vendored tree: editing those files would break the provenance
+    # contract that proves they match upstream at the pinned commit. One build-side
+    # line keeps the tree a byte-identical copy and keeps SDK updates a clean drop.
+    target_include_directories(AestraAudioCore SYSTEM PRIVATE
         ${CLAP_INCLUDE_DIRS}
     )
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_HAS_CLAP)
