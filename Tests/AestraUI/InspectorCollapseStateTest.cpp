@@ -246,6 +246,25 @@ static void test_absent_key_keeps_default() {
     PASS("settings file without the key keeps the expanded default");
 }
 
+static void test_wrong_typed_key_keeps_default() {
+    // JSON::asBool() yields its default false for any non-Boolean node, so a
+    // present-but-wrong-typed value slips past a bare has() check and collapses
+    // the inspector. Same failure as the absent-key case, different route.
+    const char* payloads[] = {
+        "{\"inspectorExpanded\": 1}",
+        "{\"inspectorExpanded\": \"true\"}",
+        "{\"inspectorExpanded\": null}",
+        "{\"inspectorExpanded\": []}",
+    };
+    for (const char* payload : payloads) {
+        const std::string path = scratchSettingsPath("wrong-type.json");
+        writeFile(path, payload);
+        const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
+        ASSERT(loaded.inspectorExpanded, "non-Boolean value does not collapse the inspector");
+    }
+    PASS("present-but-wrong-typed key keeps the expanded default");
+}
+
 static void test_corrupt_file_keeps_default() {
     const std::string path = scratchSettingsPath("corrupt.json");
     writeFile(path, "{\"inspectorExpanded\": fal");  // truncated mid-write
@@ -294,6 +313,7 @@ int main() {
     test_settings_round_trip_both_values();
     test_missing_file_keeps_default();
     test_absent_key_keeps_default();
+    test_wrong_typed_key_keeps_default();
     test_corrupt_file_keeps_default();
     test_saved_file_does_not_carry_forced_state();
 
