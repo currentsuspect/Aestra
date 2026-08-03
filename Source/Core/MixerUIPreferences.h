@@ -133,6 +133,10 @@ struct MixerUIPreferences {
             return false;
         }
         out << root.toString(2);
+        // Closed explicitly before the status check: the destructor would close
+        // too, but by then the flush result is unobservable — a settings file
+        // truncated by a full disk would report success.
+        out.close();
         return out.good();
     }
 };
