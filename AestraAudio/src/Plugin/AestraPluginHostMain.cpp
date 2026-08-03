@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <csignal>
 #include <cstdint>
@@ -11,7 +12,13 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 #ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
@@ -1180,6 +1187,18 @@ int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
 
+#ifdef _WIN32
+    // This is a binary protocol, not console text. In Windows' default text mode
+    // every '\n' written to stdout becomes "\r\n", which put a stray '\r' at the end
+    // of every reply. Commands that only checked for an "OK" prefix never noticed,
+    // but PROCESS and SAVESTATE hex-decode the rest of the line, and the extra byte
+    // made the payload an odd number of characters — rejected outright, so audio and
+    // plugin state through a sandboxed plugin failed on Windows while LOAD,
+    // INITIALIZE and ACTIVATE all looked healthy.
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stdin), _O_BINARY);
+#endif
+
     installFatalSignalHandlers();
 
     bool loaded = false;
@@ -1207,6 +1226,12 @@ int main(int argc, char** argv) {
 #endif
 
     while (std::getline(std::cin, line)) {
+        // Binary stdin (above) means getline no longer strips a '\r' for us. The
+        // parent frames with '\n' alone, so this is belt-and-braces on an untrusted
+        // parse boundary rather than a live case.
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
         std::istringstream input(line);
         std::string command;
         input >> command;
@@ -1466,6 +1491,32 @@ int main(int argc, char** argv) {
                     << static_cast<int>(e.midi[1]) << ':' << static_cast<int>(e.midi[2]);
             }
             reply(out.str());
+#endif
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+        } else if (command == "TESTSTALL") {
+            // Stall part-way through a reply, then finish it after the parent has
+            // certainly given up. This reproduces the one case that silently
+            // corrupts the channel: the parent consumes "OK stalled", hits its
+            // deadline mid-line, and (before the framing fix) discarded those bytes
+            // and kept the channel. The "-completed\n" written below then arrives
+            // first in the pipe and is returned as the reply to whatever command the
+            // parent sends NEXT — a mismatched request/response pair that still
+            // looks well-formed.
+            //
+            // The stall must outlast sendRawCommandForTest's 2s timeout; 3s leaves a
+            // wide margin without making the test slow. Deliberately not
+            // Windows-guarded: this exercises the transport, which both platforms
+            // now have.
+            std::cout << "OK stalled" << std::flush; // no '\n' yet, on purpose
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            std::cout << "-completed\n" << std::flush;
+        } else if (command == "TESTCRLF") {
+            // Terminate a reply with CRLF explicitly. This is what Windows' default
+            // text-mode stdout did to EVERY reply before _setmode above, and it broke
+            // PROCESS and SAVESTATE while leaving prefix-checked commands looking
+            // fine. Written literally so the parent's normalization is exercised on
+            // every platform instead of only where the bug reproduced.
+            std::cout << "OK 0badc0de\r\n" << std::flush;
 #endif
         } else if (command == "SAVESTATE") {
             if (!loaded) {

@@ -35,6 +35,7 @@ PluginInfo makeInfo(const std::string& id) {
     return info;
 }
 
+#ifndef _WIN32 // real-CLAP probe: the helper's ClapModule is POSIX-only (see main()).
 PluginInfo makeRealClapProbeInfo(const std::string& path) {
     PluginInfo info;
     info.id = "__aestra_probe_first__";
@@ -49,6 +50,7 @@ PluginInfo makeRealClapProbeInfo(const std::string& path) {
     info.numAudioOutputs = 2;
     return info;
 }
+#endif // !_WIN32
 
 PluginInstancePtr create(OutOfProcessPluginFactory& factory, const PluginInfo& info) {
     PluginInstancePtr created;
@@ -109,6 +111,10 @@ bool pumpUntilGain(const PluginInstancePtr& instance, const float* in, float gai
 }
 
 // --- #244 CLAP note-dialect e2e helpers -----------------------------------
+// POSIX-only, matching the caller in main(): the helper's fake-CLAP endpoints and
+// its TESTNOTES command are compiled out on Windows, so on that platform these
+// would be unused functions rather than merely unexercised ones.
+#ifndef _WIN32
 PluginInfo makeClapInfo(const std::string& id) {
     PluginInfo info;
     info.id = id;
@@ -200,6 +206,7 @@ std::vector<DeliveredEvent> deliverNotesToFakeClap(OutOfProcessPluginFactory& fa
     ok = true;
     return events;
 }
+#endif // !_WIN32
 
 } // namespace
 
@@ -219,18 +226,15 @@ int main(int argc, char** argv) {
         return 77;
     }
 
-#ifdef _WIN32
-    // Out-of-process hosting is a POSIX-only feature today: PluginHostProcess's
-    // start/sendLine/readLine/isRunning are all `#ifdef _WIN32 -> return false`
-    // (AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp), so no child is ever
-    // spawned and there is nothing to contain. Skip loudly rather than assert
-    // against a feature this platform does not have — and rather than hide it in
-    // a ctest -E regex, where the gap stops being visible in the run output.
-    std::cout << "Out-of-process plugin hosting is not implemented on Windows "
-                 "(PluginHostProcess::start always fails); skipping.\n";
-    return 77;
-#else
-
+    // This test used to skip wholesale on Windows, because PluginHostProcess's
+    // start/sendLine/readLine/isRunning were all `#ifdef _WIN32 -> return false`
+    // and no child was ever spawned. They are real now, so the containment proof
+    // below runs on every platform — the helper-missing check above is the only
+    // remaining reason to skip. The two CLAP-specific sections stay POSIX-only:
+    // they need the helper's fake-CLAP hooks and its TESTNOTES command, which are
+    // themselves still `!defined(_WIN32)` in AestraPluginHostMain.cpp. Everything
+    // else here drives the __aestra_test_echo__ fake, which is gated on
+    // AESTRA_ENABLE_TEST_HOOKS only and so is available on Windows too.
     OutOfProcessPluginFactory factory(argv[1]);
 
     auto instance = create(factory, makeInfo("__aestra_test_echo__"));
@@ -354,10 +358,82 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // --- Lost line framing must poison the channel, not desynchronize it ------
+    // A reply truncated mid-line leaves the rest of that response queued in the
+    // pipe. If the transport simply reported "timed out" and stayed usable, the
+    // next command would read that tail as its own reply and every later
+    // request/response pair would be mismatched — silently, since a stale reply
+    // often still looks well-formed. saveState()/loadState() would then report a
+    // plausible failure with no sign the transport itself was broken.
+    {
+        auto framing = create(factory, makeInfo("__aestra_test_echo__"));
+        if (!framing || !framing->initialize(48000.0, 64)) {
+            std::cerr << "failed to create instance for the framing-loss check\n";
+            return 1;
+        }
+        framing->activate();
+        auto* oopFraming = static_cast<OutOfProcessPluginInstance*>(framing.get());
+
+        // Sanity first: the channel works, so a failure below is the truncation and
+        // not a broken fixture.
+        if (oopFraming->sendRawCommandForTest("PING").find("OK") != 0) {
+            std::cerr << "framing-loss fixture: helper did not answer PING\n";
+            return 1;
+        }
+
+        // A CRLF-terminated reply must arrive with the '\r' gone. Windows' default
+        // text-mode stdout appended one to every reply, which prefix checks like
+        // find("OK") == 0 cannot see — so LOAD/INITIALIZE/ACTIVATE all passed while
+        // PROCESS and SAVESTATE rejected their payload for having an odd character
+        // count, and a sandboxed plugin on Windows produced no audio at all. Asserted
+        // on the exact payload rather than the prefix, because the prefix is the part
+        // that stayed healthy.
+        const std::string crlf = oopFraming->sendRawCommandForTest("TESTCRLF");
+        if (crlf != "OK 0badc0de") {
+            // A stray '\r' is invisible when printed, which is why this failed
+            // silently in the first place. Report the length and the offending byte.
+            std::cerr << "CRLF-terminated reply was not normalized; got \"" << crlf << "\" (" << crlf.size()
+                      << " bytes, expected 11";
+            if (!crlf.empty()) {
+                std::cerr << ", last byte 0x" << std::hex << static_cast<int>(static_cast<unsigned char>(crlf.back()))
+                          << std::dec;
+            }
+            std::cerr << ")\n";
+            return 1;
+        }
+
+        // The helper stalls mid-reply and finishes the line ~3s later, outlasting
+        // sendRawCommandForTest's 2s timeout.
+        if (!oopFraming->sendRawCommandForTest("TESTSTALL").empty()) {
+            std::cerr << "a reply truncated by the deadline should not be returned as a complete line\n";
+            return 1;
+        }
+        // The point of the test: the channel is refused afterwards rather than
+        // reused. Without the fix this PING is answered "-completed" — the tail of
+        // the abandoned TESTSTALL reply, accepted as PING's own answer.
+        const std::string afterStall = oopFraming->sendRawCommandForTest("PING");
+        if (!afterStall.empty()) {
+            std::cerr << "channel was reused after losing framing; PING returned \"" << afterStall << "\"\n";
+            return 1;
+        }
+        if (!framing->isCrashed()) {
+            std::cerr << "losing framing must fail the instance, not leave it live on a dead channel\n";
+            return 1;
+        }
+        framing->shutdown();
+    }
+
     // --- #244 CLAP note-dialect delivery, end to end through the proxy --------
-    // Drives real MIDI through OutOfProcessPluginInstance -> forked child ->
+    // Drives real MIDI through OutOfProcessPluginInstance -> child host ->
     // ClapModule::process, and reads back exactly what the fake CLAP plugin
     // received via process.in_events for each advertised dialect.
+    //
+    // POSIX-only because the pieces it reads back are: the helper's fake-CLAP
+    // endpoints and its TESTNOTES command are both compiled out on Windows
+    // (`#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)`), so there is
+    // nothing to interrogate there yet. This is a gap in the helper's CLAP support,
+    // not in the process isolation the rest of this test proves.
+#ifndef _WIN32
     {
         bool ran = false;
 
@@ -415,6 +491,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+#endif // !_WIN32
 
     auto missingVst3 = create(factory, makeInfo("com.aestra.missing-vst3"));
     if (missingVst3) {
@@ -428,6 +505,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Optional real-CLAP smoke, POSIX-only for the same reason as the #244 block:
+    // the helper only links ClapModule off Windows.
+#ifndef _WIN32
     if (argc >= 3) {
         auto realClap = create(factory, makeRealClapProbeInfo(argv[2]));
         if (!realClap) {
@@ -466,8 +546,8 @@ int main(int argc, char** argv) {
         }
         realClap->shutdown();
     }
+#endif // !_WIN32
 
     std::cout << "[PASS] Out-of-process plugin host contains helper crashes and keeps parent alive.\n";
     return 0;
-#endif // _WIN32
 }

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -112,6 +113,20 @@ std::string formatToken(PluginFormat format) {
     return "unknown";
 }
 
+// The frame terminator is '\n' alone, so a '\r' before it is never payload.
+//
+// The helper now sets its stdout to binary mode, but this stays as the transport's
+// own guarantee: without it, a child whose stdout is in Windows text mode silently
+// appends '\r' to every reply. Prefix checks like `response.find("OK") == 0` cannot
+// see that, while PROCESS and SAVESTATE hex-decode the remainder of the line and
+// reject it for having an odd character count — so audio and plugin state break
+// while load and activate look perfectly healthy.
+void stripTrailingCR(std::string& line) {
+    if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+    }
+}
+
 std::string defaultHostPath() {
     if (const char* env = std::getenv("AESTRA_PLUGIN_HOST_PATH")) {
         if (*env != '\0') {
@@ -135,6 +150,43 @@ std::string defaultHostPath() {
     return "AestraPluginHost";
 }
 
+#ifdef _WIN32
+// Owns one Win32 HANDLE. start() juggles five of them across four exit paths, and
+// every future early return would otherwise have to remember the right subset of
+// CloseHandle calls by hand.
+class ScopedHandle {
+public:
+    ScopedHandle() = default;
+    explicit ScopedHandle(HANDLE handle) : m_handle(handle) {}
+    ~ScopedHandle() { reset(); }
+
+    ScopedHandle(const ScopedHandle&) = delete;
+    ScopedHandle& operator=(const ScopedHandle&) = delete;
+
+    void reset(HANDLE handle = nullptr) {
+        if (m_handle && m_handle != INVALID_HANDLE_VALUE) {
+            CloseHandle(m_handle);
+        }
+        m_handle = handle;
+    }
+
+    HANDLE get() const { return m_handle; }
+    HANDLE* put() { return &m_handle; }
+
+    // Hand ownership to a long-lived member once the call has fully succeeded.
+    HANDLE release() {
+        HANDLE handle = m_handle;
+        m_handle = nullptr;
+        return handle;
+    }
+
+    explicit operator bool() const { return m_handle && m_handle != INVALID_HANDLE_VALUE; }
+
+private:
+    HANDLE m_handle = nullptr;
+};
+#endif
+
 } // namespace
 
 class PluginHostProcess {
@@ -148,9 +200,35 @@ public:
     bool sendLine(const std::string& line);
     bool readLine(std::string& line, std::chrono::milliseconds timeout);
 
+    // True once a command or a response was truncated part-way through a line.
+    // The newline framing cannot be recovered from that: the next read returns the
+    // tail of the abandoned response, so every later request/response pair is
+    // mismatched. Callers must fail the instance instead of continuing to talk.
+    //
+    // KNOWN GAP: this catches a reply cut off mid-line, not one that arrives
+    // complete but late. A command that times out with nothing read leaves the
+    // channel usable, and if the child answers afterwards that reply is returned to
+    // whichever command asks next — the same mismatch, undetectable from the byte
+    // stream alone. Closing it needs a sequence tag per command so a stale reply can
+    // be recognised and discarded instead of the channel being thrown away; that is
+    // a protocol change, deliberately not bundled with this fix.
+    bool framingLost() const { return m_framingLost; }
+
 private:
+    // Matches the POSIX and Windows runaway-line caps; a line this long means the
+    // child is malfunctioning, not that a reply is merely large.
+    static constexpr size_t kMaxLineBytes = 16ull * 1024ull * 1024ull;
+
     std::string m_executablePath;
-#ifndef _WIN32
+    bool m_framingLost = false;
+#ifdef _WIN32
+    ScopedHandle m_process;     // child process
+    ScopedHandle m_stdinWrite;  // our end of the child's stdin
+    ScopedHandle m_stdoutRead;  // our end of the child's stdout
+    // Bytes read past the current line. A bulk read can cross a response boundary,
+    // so the remainder is kept here rather than thrown away.
+    std::string m_readCarry;
+#else
     pid_t m_pid = -1;
     int m_stdinFd = -1;
     int m_stdoutFd = -1;
@@ -159,7 +237,146 @@ private:
 
 bool PluginHostProcess::start() {
 #ifdef _WIN32
-    return false;
+    // Windows previously returned false here, which meant plugins were never
+    // sandboxed on Windows at all: the caller fell back to in-process hosting, so
+    // any plugin fault took Aestra down with it. Linux/macOS had fork() isolation
+    // the whole time.
+    if (m_process) {
+        return false; // already started
+    }
+
+    // Same pre-exec check the POSIX path performs. AESTRA_PLUGIN_HOST_PATH is
+    // attacker-influencable, so refuse anything that is not an absolute path to a
+    // regular file before handing it to CreateProcess (SEC-FIX parity).
+    std::error_code ec;
+    const std::filesystem::path exe(m_executablePath);
+    if (!exe.is_absolute() || !std::filesystem::is_regular_file(exe, ec)) {
+        return false;
+    }
+
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = nullptr;
+
+    // Every handle below is scoped: on any failure they close themselves, and the
+    // two we keep are released into members only once CreateProcess has succeeded.
+    ScopedHandle childStdinRead;
+    ScopedHandle childStdoutWrite;
+    ScopedHandle stdinWrite;
+    ScopedHandle stdoutRead;
+    if (!CreatePipe(childStdinRead.put(), stdinWrite.put(), &sa, 0)) {
+        return false;
+    }
+    if (!CreatePipe(stdoutRead.put(), childStdoutWrite.put(), &sa, 0)) {
+        return false;
+    }
+
+    // Our ends must NOT be inheritable. If they are, the child holds a duplicate
+    // of the write end of its own stdout and the pipe never reports EOF when the
+    // child dies — readLine() would then block until its timeout on every crash
+    // instead of noticing immediately.
+    SetHandleInformation(stdinWrite.get(), HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(stdoutRead.get(), HANDLE_FLAG_INHERIT, 0);
+
+    // STARTF_USESTDHANDLES makes all three std handles significant, so stderr
+    // cannot just be whatever GetStdHandle returns. Two cases break it: a GUI
+    // process has no console and gets back NULL or INVALID_HANDLE_VALUE, and even a
+    // valid console handle is not necessarily inheritable — CreateProcess passes
+    // only inheritable handles. Either way the child would be left with an
+    // unusable stderr, losing exactly the diagnostics that matter most when an
+    // untrusted plugin dies inside the helper. Duplicating it inheritable keeps
+    // them; a NULL here (no console to forward to) is the documented way to say
+    // "no stderr", which is very different from a bogus handle.
+    ScopedHandle childStderr;
+    const HANDLE parentStderr = GetStdHandle(STD_ERROR_HANDLE);
+    if (parentStderr && parentStderr != INVALID_HANDLE_VALUE) {
+        if (!DuplicateHandle(GetCurrentProcess(), parentStderr, GetCurrentProcess(), childStderr.put(), 0,
+                             TRUE, // inheritable, or CreateProcess will not pass it on
+                             DUPLICATE_SAME_ACCESS)) {
+            childStderr.reset();
+        }
+    }
+
+    // bInheritHandles=TRUE below is all-or-nothing: it hands the child EVERY
+    // inheritable handle Aestra currently holds, not just the three std handles
+    // named here. For a process whose entire purpose is to contain untrusted
+    // third-party plugin code, that is a containment hole — an inheritable file or
+    // socket handle opened anywhere else in the application (a project being
+    // written, an audio device, a network connection) becomes reachable from inside
+    // a plugin, and which handles happen to be inheritable is not something this
+    // call can see. PROC_THREAD_ATTRIBUTE_HANDLE_LIST restricts inheritance to
+    // exactly the handles listed, so the child gets its pipes and nothing else.
+    //
+    // Every handle in the list must itself be inheritable or CreateProcess fails
+    // with ERROR_INVALID_PARAMETER, which is why childStderr is only included when
+    // the duplication above actually produced one.
+    HANDLE inheritList[3] = {childStdinRead.get(), childStdoutWrite.get(), nullptr};
+    DWORD inheritCount = 2;
+    if (childStderr) {
+        inheritList[inheritCount++] = childStderr.get();
+    }
+
+    SIZE_T attributeSize = 0;
+    // Deliberately unchecked: this call is documented to fail with
+    // ERROR_INSUFFICIENT_BUFFER while returning the size, which is the only reason
+    // to make it.
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &attributeSize);
+    if (attributeSize == 0) {
+        return false;
+    }
+    // Element type is a pointer, not char: the list stores pointers internally, and a
+    // char buffer only guarantees char alignment. That is latent UB everywhere and an
+    // actual fault on strict-alignment targets such as Windows on ARM64.
+    std::vector<void*> attributeBuffer((attributeSize + sizeof(void*) - 1) / sizeof(void*));
+    auto* attributeList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attributeBuffer.data());
+    if (!InitializeProcThreadAttributeList(attributeList, 1, 0, &attributeSize)) {
+        return false;
+    }
+    if (!UpdateProcThreadAttribute(attributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inheritList,
+                                   inheritCount * sizeof(HANDLE), nullptr, nullptr)) {
+        DeleteProcThreadAttributeList(attributeList);
+        return false;
+    }
+
+    STARTUPINFOEXA si{};
+    // Must be sizeof(STARTUPINFOEXA), not sizeof(STARTUPINFOA): the extended struct
+    // is how CreateProcess knows lpAttributeList is present and readable.
+    si.StartupInfo.cb = sizeof(si);
+    si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    si.StartupInfo.hStdInput = childStdinRead.get();
+    si.StartupInfo.hStdOutput = childStdoutWrite.get();
+    si.StartupInfo.hStdError = childStderr.get();
+    si.lpAttributeList = attributeList;
+
+    // CreateProcess mutates lpCommandLine, so it cannot be a string literal or a
+    // c_str(). The path is quoted because plugin host paths routinely sit under
+    // "Program Files".
+    std::string commandLine = "\"" + m_executablePath + "\" --stdio";
+    std::vector<char> mutableCommandLine(commandLine.begin(), commandLine.end());
+    mutableCommandLine.push_back('\0');
+
+    PROCESS_INFORMATION pi{};
+    const BOOL created =
+        CreateProcessA(m_executablePath.c_str(), mutableCommandLine.data(), nullptr, nullptr,
+                       TRUE, // narrowed to inheritList by the attribute list above
+                       CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, &si.StartupInfo, &pi);
+    // The list is only consulted during process creation, so it can go immediately —
+    // and must, on both outcomes.
+    DeleteProcThreadAttributeList(attributeList);
+    if (!created) {
+        return false;
+    }
+
+    CloseHandle(pi.hThread);
+    // The child holds its own duplicates of the pipe ends now, so our copies of
+    // those must go — the stdout write end especially, or the pipe never reports EOF
+    // when the child dies. ScopedHandle closes them on the way out of this function;
+    // only the two ends we keep talking on are moved into members.
+    m_process.reset(pi.hProcess);
+    m_stdinWrite.reset(stdinWrite.release());
+    m_stdoutRead.reset(stdoutRead.release());
+    return true;
 #else
     int inPipe[2] = {-1, -1};
     int outPipe[2] = {-1, -1};
@@ -204,7 +421,39 @@ bool PluginHostProcess::start() {
 }
 
 void PluginHostProcess::stop() {
-#ifndef _WIN32
+#ifdef _WIN32
+    // Ask first, then insist. Closing stdin is itself a shutdown signal: the child
+    // sees EOF on its read loop even if it ignored EXIT.
+    if (m_stdinWrite) {
+        sendLine("EXIT");
+        m_stdinWrite.reset(); // closing stdin is itself the second signal
+    }
+    m_stdoutRead.reset();
+    if (m_process) {
+        // Same 100ms grace as POSIX before escalating. A wedged plugin must not be
+        // able to hold shutdown open indefinitely, which is the whole point of
+        // hosting it out of process.
+        if (WaitForSingleObject(m_process.get(), 100) != WAIT_OBJECT_0) {
+            TerminateProcess(m_process.get(), 1);
+            // TerminateProcess only *requests* termination; it returns before the
+            // process object is signalled. That normally completes in microseconds,
+            // but a child blocked in an uninterruptible kernel call — a wedged
+            // driver, a hung network-share read reached from inside a plugin DLL —
+            // can stay unsignalled indefinitely, and untrusted third-party plugin
+            // code is exactly the population that produces those states. stop()
+            // runs from ~PluginHostProcess via shutdown(), so an unbounded wait
+            // here would block project close and application exit: the failure mode
+            // out-of-process hosting exists to prevent. We stop waiting and close our
+            // handle instead; the child stays in whatever state it is stuck in, which
+            // costs nothing we can recover anyway.
+            constexpr DWORD kTerminateWaitMs = 2000;
+            if (WaitForSingleObject(m_process.get(), kTerminateWaitMs) != WAIT_OBJECT_0) {
+                Log::warning("[PluginHost] helper process did not terminate; abandoning it to keep shutdown bounded");
+            }
+        }
+        m_process.reset();
+    }
+#else
     if (m_stdinFd >= 0) {
         sendLine("EXIT");
         close(m_stdinFd);
@@ -232,6 +481,19 @@ void PluginHostProcess::stop() {
 
 bool PluginHostProcess::isRunning() {
 #ifdef _WIN32
+    if (!m_process) {
+        return false;
+    }
+    DWORD exitCode = 0;
+    if (!GetExitCodeProcess(m_process.get(), &exitCode)) {
+        return false;
+    }
+    // STILL_ACTIVE is 259, which a process may also legitimately exit with. Confirm
+    // against the process handle rather than trusting the code alone, or a plugin
+    // that exits 259 would look alive forever and never be restarted.
+    if (exitCode == STILL_ACTIVE) {
+        return WaitForSingleObject(m_process.get(), 0) == WAIT_TIMEOUT;
+    }
     return false;
 #else
     if (m_pid <= 0) {
@@ -251,10 +513,30 @@ bool PluginHostProcess::isRunning() {
 
 bool PluginHostProcess::sendLine(const std::string& line) {
 #ifdef _WIN32
-    (void)line;
-    return false;
+    if (!m_stdinWrite || m_framingLost || !isRunning()) {
+        return false;
+    }
+    std::string framed = line;
+    framed.push_back('\n');
+    const char* data = framed.data();
+    DWORD remaining = static_cast<DWORD>(framed.size());
+    while (remaining > 0) {
+        DWORD written = 0;
+        if (!WriteFile(m_stdinWrite.get(), data, remaining, &written, nullptr) || written == 0) {
+            // A write that stopped part-way leaves half a command in the pipe, and
+            // the child would splice the next command onto its tail. Same
+            // unrecoverable framing loss as a truncated response.
+            if (remaining < framed.size()) {
+                m_framingLost = true;
+            }
+            return false;
+        }
+        data += written;
+        remaining -= written;
+    }
+    return true;
 #else
-    if (m_stdinFd < 0 || !isRunning()) {
+    if (m_stdinFd < 0 || m_framingLost || !isRunning()) {
         return false;
     }
     std::string framed = line;
@@ -264,6 +546,11 @@ bool PluginHostProcess::sendLine(const std::string& line) {
     while (remaining > 0) {
         const ssize_t written = write(m_stdinFd, data, remaining);
         if (written <= 0) {
+            // See the Windows branch: a half-written command cannot be recovered
+            // from, because the child splices the next one onto its tail.
+            if (remaining < framed.size()) {
+                m_framingLost = true;
+            }
             return false;
         }
         data += written;
@@ -275,11 +562,68 @@ bool PluginHostProcess::sendLine(const std::string& line) {
 
 bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds timeout) {
 #ifdef _WIN32
-    (void)line;
-    (void)timeout;
+    if (!m_stdoutRead || m_framingLost) {
+        return false;
+    }
+    line.clear();
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        // Drained before touching the pipe: a bulk read can cross a response
+        // boundary, so the newline this call needs may already be in hand.
+        const size_t newline = m_readCarry.find('\n');
+        if (newline != std::string::npos) {
+            line.assign(m_readCarry, 0, newline);
+            m_readCarry.erase(0, newline + 1);
+            stripTrailingCR(line);
+            return true;
+        }
+        if (m_readCarry.size() > kMaxLineBytes) {
+            m_framingLost = true;
+            return false; // same runaway-line cap as the POSIX path
+        }
+        if (std::chrono::steady_clock::now() >= deadline) {
+            break;
+        }
+
+        // Anonymous pipes cannot be opened for overlapped I/O, so there is no
+        // WaitForSingleObject-able handle and no way to give ReadFile a timeout.
+        // PeekNamedPipe (which does work on anonymous pipes) supplies the
+        // "would block?" answer that O_NONBLOCK gives the POSIX path. Without the
+        // peek, ReadFile would block past the caller's deadline and a hung child
+        // would hang the caller with it.
+        DWORD available = 0;
+        if (!PeekNamedPipe(m_stdoutRead.get(), nullptr, 0, nullptr, &available, nullptr)) {
+            break; // broken pipe: child is gone
+        }
+        if (available == 0) {
+            if (!isRunning()) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+
+        // Take everything the peek reported in one call. Reading a byte at a time
+        // costs two pipe operations per byte, where the POSIX path pays one.
+        char buffer[4096];
+        const DWORD wanted = static_cast<DWORD>(std::min<size_t>(available, sizeof(buffer)));
+        DWORD read = 0;
+        if (!ReadFile(m_stdoutRead.get(), buffer, wanted, &read, nullptr) || read == 0) {
+            break;
+        }
+        m_readCarry.append(buffer, read);
+    }
+
+    // A clean timeout consumed nothing, so the channel stays usable. Bytes left
+    // without a newline mean this response was abandoned part-way through: the
+    // caller gives up and issues its next command, and the tail still sitting here
+    // would come back as that command's reply. Framing is unrecoverable then.
+    if (!m_readCarry.empty()) {
+        m_framingLost = true;
+    }
     return false;
 #else
-    if (m_stdoutFd < 0) {
+    if (m_stdoutFd < 0 || m_framingLost) {
         return false;
     }
     line.clear();
@@ -289,18 +633,25 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         const ssize_t n = read(m_stdoutFd, &ch, 1);
         if (n == 1) {
             if (ch == '\n') {
+                stripTrailingCR(line);
                 return true;
             }
             line.push_back(ch);
-            if (line.size() > 16ull * 1024ull * 1024ull) {
+            if (line.size() > kMaxLineBytes) {
+                m_framingLost = true;
                 return false;
             }
         } else {
             if (!isRunning()) {
-                return false;
+                break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+    }
+    // Bytes already taken from the pipe are gone and the rest of this response is
+    // still queued — see the Windows branch for why that cannot be recovered from.
+    if (!line.empty()) {
+        m_framingLost = true;
     }
     return false;
 #endif
@@ -573,7 +924,13 @@ void OutOfProcessPluginInstance::resetWatchdog() {
     m_watchdogAvgExecutionTimeNs.store(0, std::memory_order_release);
     m_watchdogViolationCount.store(0, std::memory_order_release);
     m_watchdogBypassed.store(false, std::memory_order_release);
-    if (m_process && m_process->isRunning()) {
+    // A live child is not sufficient: a wedged-but-running child whose channel lost
+    // framing satisfies isRunning(), and un-crashing there would take process() off
+    // the passthrough path and onto a transport that cannot answer correctly. The
+    // next sendCommand() would re-crash it, so this is a narrow window rather than a
+    // lasting wrong state — but the invariant is "once framing is lost, stop
+    // talking", and this function is a caller like any other.
+    if (m_process && m_process->isRunning() && !m_process->framingLost()) {
         m_crashed.store(false, std::memory_order_release);
     }
 }
@@ -584,11 +941,25 @@ bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::st
     if (!m_process || !m_process->isRunning()) {
         return false;
     }
+    // A truncated command or response desynchronizes every later request/response
+    // pair on this channel, so it cannot be reused: the next reply read would be
+    // the tail of the abandoned one. Failing the instance here is what keeps that
+    // contained — saveState() and loadState() would otherwise hand their callers a
+    // plausible-looking failure with no sign that the transport itself is broken,
+    // and drainParamQueueToChild() would keep issuing commands into the desync
+    // because the child is still alive. Checked at this choke point so every
+    // caller, present and future, inherits it.
     if (!m_process->sendLine(command)) {
+        if (m_process->framingLost()) {
+            markCrashed();
+        }
         return false;
     }
     std::string localResponse;
     if (!m_process->readLine(localResponse, timeout)) {
+        if (m_process->framingLost()) {
+            markCrashed();
+        }
         return false;
     }
     if (response) {
