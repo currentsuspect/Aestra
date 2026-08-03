@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <csignal>
 #include <cstdint>
@@ -11,6 +12,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifdef AESTRA_HAS_VST3
@@ -1466,6 +1468,25 @@ int main(int argc, char** argv) {
                     << static_cast<int>(e.midi[1]) << ':' << static_cast<int>(e.midi[2]);
             }
             reply(out.str());
+#endif
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+        } else if (command == "TESTSTALL") {
+            // Stall part-way through a reply, then finish it after the parent has
+            // certainly given up. This reproduces the one case that silently
+            // corrupts the channel: the parent consumes "OK stalled", hits its
+            // deadline mid-line, and (before the framing fix) discarded those bytes
+            // and kept the channel. The "-completed\n" written below then arrives
+            // first in the pipe and is returned as the reply to whatever command the
+            // parent sends NEXT — a mismatched request/response pair that still
+            // looks well-formed.
+            //
+            // The stall must outlast sendRawCommandForTest's 2s timeout; 3s leaves a
+            // wide margin without making the test slow. Deliberately not
+            // Windows-guarded: this exercises the transport, which both platforms
+            // now have.
+            std::cout << "OK stalled" << std::flush; // no '\n' yet, on purpose
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            std::cout << "-completed\n" << std::flush;
 #endif
         } else if (command == "SAVESTATE") {
             if (!loaded) {
