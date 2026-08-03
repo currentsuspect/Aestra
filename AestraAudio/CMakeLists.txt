@@ -94,7 +94,20 @@ endif()
 
 set(VST3_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/vst3sdk)
 
-if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
+# Probe actual FILES, not directories. The VST3 SDK keeps base/, pluginterfaces/ and
+# public.sdk/ in nested submodules of its own, so a non-recursive
+# `git submodule update --init` leaves those directories present but EMPTY — and
+# `EXISTS <dir>` is satisfied by an empty directory. That combination announced
+# "VST3 SDK: Found", set AESTRA_HAS_VST3 ON, and then failed at add_library() with
+# "Cannot find source file", while any check that trusted the message was told the
+# SDK was usable. Tests/CMakeLists.txt already probes a real header for this reason;
+# this is the same test applied to the decision that actually gates the build.
+#
+# One file per nested submodule, each one the build genuinely compiles, so a
+# partially-initialised checkout cannot pass.
+if(EXISTS "${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp"
+   AND EXISTS "${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp"
+   AND EXISTS "${VST3_SDK_DIR}/base/source/fstring.cpp")
     set(AESTRA_HAS_VST3 ON)
     message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR}")
     

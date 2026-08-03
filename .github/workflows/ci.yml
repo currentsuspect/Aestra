@@ -179,9 +179,22 @@ jobs:
           lane: plugin-host
           github-token: ${{ github.token }}
 
+      # Two levels, because the VST3 SDK keeps its own tree in nested submodules.
+      # `--init` on the outer path alone leaves base/, pluginterfaces/ and
+      # public.sdk/ as empty directories, which is how this lane failed its second
+      # run: configure announced "VST3 SDK: Found" and then died at add_library.
+      #
+      # Named explicitly rather than --recursive: these three are the only ones the
+      # build compiles from (see VST3_HOST_SOURCES in AestraAudio/CMakeLists.txt).
+      # --recursive would additionally clone vstgui4, doc and tutorials, which
+      # nothing here touches and vstgui4 is the largest of the set.
       - name: Fetch VST3 SDK submodule
         if: steps.scope.outputs.run == 'true'
-        run: git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
 
       # libsecret-1-dev is not optional: AestraLicense/CMakeLists.txt does an
       # unconditional pkg_check_modules(LIBSECRET REQUIRED libsecret-1) on every
