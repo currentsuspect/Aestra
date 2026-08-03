@@ -146,6 +146,12 @@ jobs:
   build-plugin-host:
     name: Plugin hosting (VST3 + CLAP compile)
     runs-on: ubuntu-latest
+    # Least privilege, declared rather than inherited, matching the classifier
+    # self-test job below. This one only reads the repo and lets classify-scope read
+    # pull-request file lists; nothing here pushes.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       # Unlike every other lane, this one NEEDS a submodule. The VST3 SDK lives in
       # one, and AestraAudio/CMakeLists.txt gates AESTRA_HAS_VST3 on its presence,
@@ -159,6 +165,12 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
+          # Nothing here pushes, so do not leave a credential in .git/config. Safe
+          # for the submodule fetch below because steinbergmedia/vst3sdk is public
+          # (see .gitmodules) and clones anonymously — this job would break if that
+          # submodule were ever made private, which is worth knowing explicitly
+          # rather than discovering through a confusing auth failure.
+          persist-credentials: false
 
       - name: Classify change scope
         id: scope
@@ -171,11 +183,21 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: git submodule update --init --depth 1 AestraAudio/External/vst3sdk
 
+      # libsecret-1-dev is not optional: AestraLicense/CMakeLists.txt does an
+      # unconditional pkg_check_modules(LIBSECRET REQUIRED libsecret-1) on every
+      # non-Apple platform, so configure fails outright without it — which is exactly
+      # how this lane failed its own first run. Every other C++ lane in this file
+      # installs it; this list was written from scratch instead of copied from one of
+      # them, and a developer machine that already has the package cannot catch that.
+      #
+      # Deliberately NOT installed: libgl1-mesa-dev (headless build, no UI targets)
+      # and libgtest-dev (nothing in the tree uses GTest — its presence in the other
+      # lanes is vestigial and not worth copying).
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libasound2-dev libsodium-dev libx11-dev
+          sudo apt-get install -y build-essential cmake libasound2-dev libsodium-dev libx11-dev libsecret-1-dev
 
       # Configure once, and assert on that same run's output. A lane that compiles
       # nothing would otherwise report green - which is the precise failure mode
