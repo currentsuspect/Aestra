@@ -236,11 +236,28 @@ jobs:
       # keeps the UI out, so this is comparable in cost to the Linux (GCC) lane -
       # the difference being that here the plugin tests run against real VST3 and
       # CLAP host code rather than against it compiled out.
+      # Serial. `--parallel` with no argument uses one job per core, and this build
+      # has 200+ targets whose link steps are individually memory-hungry: the runner
+      # ran out of memory and the service killed the job — dozens of simultaneous
+      # "Terminated" lines and "The operation was canceled", with no compile error
+      # anywhere.
+      #
+      # Nothing in this file parallelises a full default-target build without a
+      # bound. Linux (GCC), macOS, Windows and ASan all build serially; the UI/App
+      # lane uses --parallel but scoped to a single target; TSan and LSan use an
+      # explicit --parallel 2. Unbounded on the whole target set was novel here, and
+      # this is why. `--parallel 2` would likely be fine and roughly halve wall time,
+      # but serial is the setting actually proven against this target set, and after
+      # three red runs the proven one wins.
+      #
+      # Do not reintroduce an unbounded --parallel without measuring peak memory:
+      # the failure presents as an infrastructure flake rather than as anything this
+      # lane did wrong, which makes it expensive to diagnose a second time.
       - name: Build (headless, plugin formats enabled)
         if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
-          cmake --build build-plugins --config ${{env.BUILD_TYPE}} --parallel
+          cmake --build build-plugins --config ${{env.BUILD_TYPE}}
           test -x build-plugins/bin/AestraPluginHost \
             || { echo "::error::AestraPluginHost was not produced"; exit 1; }
 
