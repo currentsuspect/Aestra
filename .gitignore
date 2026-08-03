@@ -215,3 +215,7 @@ autosave.*
 labs/reverb/listening/
 labs/reverb/tremolo/ab/
 labs/reverb/tremolo/proto/
+
+# CTest scratch written into the SOURCE tree when ctest runs from the repo root
+# rather than from a build directory. Generated scheduling data, never source.
+/Testing/
