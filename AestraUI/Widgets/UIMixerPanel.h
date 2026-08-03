@@ -183,7 +183,7 @@ private:
     static constexpr float INSPECTOR_COLLAPSED_WIDTH = 16.0f;
     /// Strips that must remain usable beside the inspector before its width is
     /// worth spending; below this the collapse is imposed by layout.
-    static constexpr int kMinStripsBesideInspector = 4;
+    static constexpr int MIN_STRIPS_BESIDE_INSPECTOR = 4;
     static constexpr float MINIMAP_HEIGHT = 22.0f;
     static constexpr float MINIMAP_GAP = 6.0f;
     static constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;

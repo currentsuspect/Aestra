@@ -13,6 +13,11 @@
  */
 
 #include "Widgets/InspectorCollapseState.h"
+#include "MixerUIPreferences.h"
+
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -171,6 +176,103 @@ static void test_reset_restores_default() {
     PASS("reset restores the first-run default");
 }
 
+
+// ---------------------------------------------------------------------------
+// Settings round trip
+//
+// The state machine above is only half the feature: the preference has to
+// survive a restart, and an absent or damaged settings file must leave the
+// default alone rather than collapsing the inspector. Driven through
+// MixerUIPreferences rather than MixerPanel so it needs no panel, TrackManager
+// or renderer.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+std::string scratchSettingsPath(const char* name) {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "aestra-mixer-prefs-test";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    return (dir / name).string();
+}
+
+void writeFile(const std::string& path, const std::string& contents) {
+    std::ofstream out(path, std::ios::trunc);
+    out << contents;
+}
+
+} // namespace
+
+static void test_settings_round_trip_both_values() {
+    std::cout << "\n[settings round trip]\n";
+
+    for (bool expanded : {true, false}) {
+        const std::string path = scratchSettingsPath("roundtrip.json");
+        std::filesystem::remove(path);
+
+        Aestra::MixerUIPreferences saved;
+        saved.inspectorExpanded = expanded;
+        ASSERT(saved.save(path), "save reports success");
+
+        const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
+        // Parenthesised: '<<' binds tighter than '?:', so an unbracketed
+        // ternary would be parsed as part of the stream expression.
+        ASSERT(loaded.inspectorExpanded == expanded,
+               (expanded ? "expanded=true survives the round trip"
+                         : "expanded=false survives the round trip"));
+    }
+    PASS("both preference values round-trip through the settings file");
+}
+
+static void test_missing_file_keeps_default() {
+    const std::string path = scratchSettingsPath("does-not-exist.json");
+    std::filesystem::remove(path);
+
+    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
+    ASSERT(loaded.inspectorExpanded, "first run leaves the inspector expanded");
+    PASS("absent settings file keeps the expanded default");
+}
+
+static void test_absent_key_keeps_default() {
+    // The trap this guards: reading a missing key as a default-constructed
+    // false, which would collapse the inspector for anyone whose settings file
+    // predates the key.
+    const std::string path = scratchSettingsPath("other-keys.json");
+    writeFile(path, "{\"version\": 1, \"somethingElse\": true}");
+
+    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
+    ASSERT(loaded.inspectorExpanded, "absent key does not apply false");
+    PASS("settings file without the key keeps the expanded default");
+}
+
+static void test_corrupt_file_keeps_default() {
+    const std::string path = scratchSettingsPath("corrupt.json");
+    writeFile(path, "{\"inspectorExpanded\": fal");  // truncated mid-write
+
+    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
+    ASSERT(loaded.inspectorExpanded, "unparseable settings do not collapse the inspector");
+    PASS("corrupt settings file keeps the expanded default");
+}
+
+static void test_saved_file_does_not_carry_forced_state() {
+    // forcedCollapsed is width-derived and must never reach disk: a session
+    // that happened to end in a narrow window must not rewrite the choice.
+    const std::string path = scratchSettingsPath("no-forced.json");
+    Aestra::MixerUIPreferences prefs;
+    prefs.inspectorExpanded = true;
+    ASSERT(prefs.save(path), "save reports success");
+
+    std::ifstream in(path);
+    const std::string contents((std::istreambuf_iterator<char>(in)),
+                               std::istreambuf_iterator<char>());
+    ASSERT(contents.find("forcedCollapsed") == std::string::npos,
+           "no width-derived state is written");
+    ASSERT(contents.find("inspectorExpanded") != std::string::npos,
+           "the explicit preference is written");
+    PASS("only the explicit preference is persisted");
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -188,6 +290,12 @@ int main() {
     test_click_while_forced_does_not_toggle_off();
     test_click_toggles_normally_when_unconstrained();
     test_reset_restores_default();
+
+    test_settings_round_trip_both_values();
+    test_missing_file_keeps_default();
+    test_absent_key_keeps_default();
+    test_corrupt_file_keeps_default();
+    test_saved_file_does_not_carry_forced_state();
 
     std::cout << "\n============================================\n";
     if (testsFailed == 0) {
