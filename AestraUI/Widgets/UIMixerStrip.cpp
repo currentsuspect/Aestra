@@ -578,8 +578,15 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
 
     // --- User-controlled gain, under the fader ---
     if (gainArea.width > 0.0f) {
-        std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
-        block(gainArea, 0, "GAIN dB", buf, valueColor);
+        // Same silence floor as UIMixerFader::updateCachedText. Without it the
+        // fader reads "−∞" while the readout right under it reads "-90.0",
+        // which looks like two different values for one control.
+        std::string gainText = "\xE2\x88\x92\xE2\x88\x9E";
+        if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
+            std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+            gainText = buf;
+        }
+        block(gainArea, 0, "GAIN dB", gainText, valueColor);
     }
 }
 

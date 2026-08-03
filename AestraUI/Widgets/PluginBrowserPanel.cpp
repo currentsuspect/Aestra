@@ -1117,6 +1117,10 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
         m_draggingSlotIndex = -1;
         m_isDraggingReorder = false;
+        // The rack shows every numbered slot while a reorder is in flight and
+        // collapses back to the populated rows the moment it ends, so a scroll
+        // offset that was legal during the drag can now point past the content.
+        clampScrollToContent();
         repaint();
         return true;
     }

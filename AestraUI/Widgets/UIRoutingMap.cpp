@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIRoutingMap.h"
 
+#include "ChannelDisplayName.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "MixerViewModel.h"
@@ -31,19 +32,6 @@ namespace {
     constexpr float kPortRadius = 5.0f;
     constexpr float kMinimapPortRadius = 3.0f;
     constexpr float kMinSplitHeight = 32.0f;
-
-    /// Display name for a channel with no explicit name.
-    ///
-    /// Derived from the *stable* channel id, matching TrackManager's own
-    /// default. Numbering from the dense list index instead drifts as soon as a
-    /// channel is deleted or an id is restored, so the map would label a strip
-    /// differently from the mixer and the engine.
-    std::string channelFallbackName(uint32_t channelId, const std::string& name)
-    {
-        if (!name.empty()) return name;
-        if (channelId == 0) return "MASTER";
-        return "Channel " + std::to_string(channelId);
-    }
 
     std::string fitLabel(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
     {
@@ -149,7 +137,7 @@ void UIRoutingMap::rebuildGraph() {
         Node node;
         node.id = ch->id;
         node.type = Node::Track;
-        node.label = channelFallbackName(ch->id, ch->name);
+        node.label = channelDisplayName(ch->id, ch->name);
         node.color = paletteIndexToARGB(ch->trackColorIndex);
         node.insertCount = ch->fxCount;
         node.muted = ch->muted;
@@ -232,7 +220,7 @@ void UIRoutingMap::rebuildFocusedGraph(const Aestra::ChannelViewModel* selected)
     Node node;
     node.id = selected->id;
     node.type = Node::Track;
-    node.label = channelFallbackName(selected->id, selected->name);
+    node.label = channelDisplayName(selected->id, selected->name);
     node.color = paletteIndexToARGB(selected->trackColorIndex);
     node.insertCount = selected->fxCount;
     node.muted = selected->muted;

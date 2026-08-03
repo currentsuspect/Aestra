@@ -50,6 +50,11 @@ public:
     /// Wider scale/readout treatment for the master strip.
     void setShowScaleLabels(bool show) { m_showScaleLabels = show; repaint(); }
 
+    /// At or below this, a gain readout shows "−∞" rather than a number.
+    /// Public because any readout of the same value has to agree with the
+    /// fader — two copies of the threshold drift the moment one is tuned.
+    static constexpr float FADER_FLOOR_THRESHOLD = -60.0f;
+
     bool isDragging() const { return m_dragging; }
     bool isEditing() const { return m_editing; }
 
@@ -116,11 +121,12 @@ private:
     NUIColor m_tickUnity;
     NUIColor m_tooltipBg;
 
-    static constexpr float FADER_FLOOR_THRESHOLD = -60.0f;
-
     void cacheThemeColors();
     void updateCachedText();
     float clampDb(float db) const;
+
+    /// Drawn width of the handle, and therefore its drag hit-box.
+    float handleWidth() const;
 
     /// Readout band at the top of the fader — click target for inline entry.
     NUIRect readoutRect() const;

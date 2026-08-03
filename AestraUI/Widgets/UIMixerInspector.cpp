@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
 
+#include "ChannelDisplayName.h"
 #include "NUIThemeSystem.h"
 #include "../../AestraCore/include/AestraLog.h"
 #include "NUIRenderer.h"
@@ -281,19 +282,6 @@ void UIMixerInspector::onResize(int width, int height)
     }
 }
 
-int UIMixerInspector::findTrackNumber(uint32_t channelId) const
-{
-    if (!m_viewModel || channelId == 0) return 0;
-    const size_t count = m_viewModel->getChannelCount();
-    for (size_t i = 0; i < count; ++i) {
-        const auto* ch = m_viewModel->getChannelByIndex(i);
-        if (ch && ch->id == channelId) {
-            return static_cast<int>(i + 1);
-        }
-    }
-    return 0;
-}
-
 void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel)
 {
     const uint32_t selectedId = channel ? channel->id : 0xFFFFFFFFu;
@@ -312,7 +300,6 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     m_cachedSelectedId = selectedId;
     m_cachedHeaderTitle.clear();
     m_cachedHeaderSubtitle.clear();
-    m_cachedTrackNumber = 0;
     m_cachedName = channel ? channel->name : std::string();
     m_cachedRoute = channel ? channel->routeName : std::string();
     m_cachedMainOutputId = channel ? channel->mainOutputId : 0xFFFFFFFFu;
@@ -332,10 +319,10 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
         return;
     }
 
-    m_cachedTrackNumber = findTrackNumber(channel->id);
-    const std::string trackLabel = (m_cachedTrackNumber > 0)
-        ? ("Channel " + std::to_string(m_cachedTrackNumber))
-        : "Channel";
+    // Same stable-id numbering as the strip and the routing map. Numbering from
+    // the dense list position instead meant the inspector could call the
+    // selected channel "Channel 3" while its own strip said "Channel 7".
+    const std::string trackLabel = channelFallbackLabel(channel->id);
 
     m_cachedHeaderTitle = channel->name.empty()
         ? trackLabel

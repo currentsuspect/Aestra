@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <stdexcept>
 
 namespace AestraUI {
 
@@ -101,12 +102,23 @@ void UIItemSelector::commitEditing() {
         }
     }
     
-    // 2. Mixer insert number parsing
+    // 2. Mixer channel number parsing
     if (matchIndex == -1) {
+        // Only the conversion is guarded. A blanket catch here would also
+        // swallow failures from the matching loop below and report them as
+        // "not a number".
+        int trackNum = 0;
+        bool isNumber = true;
         try {
             // Check if user just typed a number "7"
-            int trackNum = std::stoi(text);
-            
+            trackNum = std::stoi(text);
+        } catch (const std::invalid_argument&) {
+            isNumber = false;
+        } catch (const std::out_of_range&) {
+            isNumber = false;
+        }
+
+        if (isNumber) {
             // "7" must not match "Channel 70", so the number has to end at a
             // non-digit (or end of string) rather than merely prefix-match.
             const std::string numText = std::to_string(trackNum);
@@ -135,8 +147,6 @@ void UIItemSelector::commitEditing() {
                 }
                 if (matchIndex != -1) break;
             }
-        } catch (...) {
-            // Not a number
         }
     }
     

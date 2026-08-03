@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <exception>
+#include <locale>
+#include <sstream>
 #include <string>
 
 namespace AestraUI {
@@ -105,6 +107,13 @@ void UIMixerFader::setValueDb(float db)
     }
 }
 
+float UIMixerFader::handleWidth() const
+{
+    // The drawn handle and the drag hit-box must be the same rectangle; keeping
+    // one formula is what guarantees that.
+    return std::min(HANDLE_WIDTH, getBounds().width - 4.0f);
+}
+
 NUIRect UIMixerFader::readoutRect() const
 {
     const auto bounds = getBounds();
@@ -183,7 +192,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
                                      trackTop - HANDLE_HEIGHT * 0.5f,
                                      trackBottom - HANDLE_HEIGHT * 0.5f);
 
-    const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
+    const float handleW = handleWidth();
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
     const float handleH = HANDLE_HEIGHT;
 
@@ -320,17 +329,20 @@ void UIMixerFader::commitEdit()
     if (entered.find_first_not_of(" \t") == std::string::npos) {
         setValueDb(m_minDb);
     } else {
-        try {
-            // std::stof accepts "nan"/"inf"/"-inf" without throwing. clampDb
-            // happens to swallow those today only because of its comparison
-            // order — reject them explicitly so the guard survives a future
-            // edit to clampDb.
-            const float parsed = std::stof(entered);
-            if (std::isfinite(parsed)) {
-                setValueDb(parsed);
-            }
-        } catch (const std::exception&) {
-            // Keep the current value on garbage input.
+        // Parsed in the C locale, not the process locale. A DAW loads arbitrary
+        // third-party plugin binaries, and a plugin that calls
+        // setlocale(LC_ALL, "") on a comma-decimal system would otherwise make
+        // std::stof read "-6.5" as -6.
+        std::istringstream stream(entered);
+        stream.imbue(std::locale::classic());
+        float parsed = 0.0f;
+        stream >> parsed;
+
+        // Reject "nan"/"inf": clampDb happens to swallow those today only
+        // because of its comparison order, and that is not a guarantee worth
+        // depending on. Garbage input leaves the current value alone.
+        if (!stream.fail() && std::isfinite(parsed)) {
+            setValueDb(parsed);
         }
     }
 
@@ -377,6 +389,17 @@ UIMixerFader::~UIMixerFader() {
     // dangling owner and the cursor is never stranded hidden.
     if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
         m_platformBridge->cancelCursorCapture();
+    }
+
+    // Torn down mid-edit: the editor's callbacks capture `this`, and it can
+    // outlive the fader — removeChild() defers while an event is dispatching,
+    // parking a strong reference elsewhere. Nothing fires focus loss during
+    // teardown today, so this is not a live crash; dropping the callbacks makes
+    // that independent of a future change to component destruction order.
+    if (m_textInput) {
+        m_textInput->setOnReturnKey(nullptr);
+        m_textInput->setOnEscapeKey(nullptr);
+        m_textInput->setOnFocusLost(nullptr);
     }
 }
 
@@ -432,7 +455,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                          trackTop - HANDLE_HEIGHT * 0.5f,
                                          trackBottom - HANDLE_HEIGHT * 0.5f);
-        const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
+        const float handleW = handleWidth();
         const float handleH = HANDLE_HEIGHT;
         const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
         const NUIRect handleRect{handleX, handleY, handleW, handleH};
@@ -473,7 +496,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                              trackTop - HANDLE_HEIGHT * 0.5f,
                                              trackBottom - HANDLE_HEIGHT * 0.5f);
-            const float handleW = std::min(HANDLE_WIDTH, bounds.width - 4.0f);
+            const float handleW = handleWidth();
             const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
 
             // End capture: service warps to the handle, unhides, releases

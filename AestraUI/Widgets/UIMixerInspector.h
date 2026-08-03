@@ -101,7 +101,6 @@ private:
     std::string m_cachedRoute;
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
-    int m_cachedTrackNumber{0};
     uint32_t m_cachedMainOutputId{0xFFFFFFFFu};
     bool m_cachedMasterSendEnabled{true};
     size_t m_cachedSendsCount{0};
@@ -116,7 +115,6 @@ private:
     void cacheThemeColors();
     void layoutHitRects();
     int hitTestTab(const NUIPoint& p) const;
-    int findTrackNumber(uint32_t channelId) const;
     void updateHeaderCache(const Aestra::ChannelViewModel* channel);
     void clampScrollOffsets();
 };
