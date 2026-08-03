@@ -48,10 +48,46 @@ Measured against `develop` at `128fbf48`, not recalled:
 | VST3 editor | `VST3PluginInstance::openEditor()` attach block is inside `#ifdef _WIN32`. On Linux/macOS it always returns `false`. No `X11EmbedWindowID`, no `Steinberg::Linux::IRunLoop`, no `NSView`. |
 | CLAP in-process | Was never compiled — `External/clap/` held only `.gitkeep`, so `AESTRA_HAS_CLAP` was OFF and `CLAPHost.cpp` was excluded from every build. Fixed by vendoring the SDK; the file compiles clean. |
 | CLAP out-of-process | Works. `AestraPluginHostMain.cpp` hand-mirrors the CLAP ABI (descriptor, factory, entry, params, note-ports, state) with no SDK dependency. |
-| Editor wiring | **Nothing in the application calls `openEditor()` at all.** Every reference is a declaration or an override returning `false`. The path is unwired end to end. |
+| Editor wiring | Unreached, but not absent — see the note below. `AestraUI/Widgets/PluginUIController.cpp` contains a complete `PluginEditorWindow` that calls `openEditor()`. Nothing constructs that class, so the call site is dead. |
 | OOP editor | `OutOfProcessPluginInstance::openEditor()` → `return false;`. The child host contains no window, view, or display code whatsoever. |
 | Crash containment | Inverted by platform. `PluginHostProcess::start()` is `#ifdef _WIN32 return false;`, so **Windows runs plugins in-process and a plugin crash takes Aestra with it.** Linux/macOS have working `fork()`-based isolation. |
-| CI coverage | **Zero.** Every `actions/checkout` in `ci.yml` uses `submodules: false`, so the VST3 SDK is absent in CI, `AESTRA_HAS_VST3` is OFF, and `VST3Host.cpp` is never compiled by any lane. |
+| CI coverage | **Zero.** No `actions/checkout` in `ci.yml` fetches submodules — eight set `submodules: false` explicitly, and the two that omit the key (`format-check`, `static-analysis`) get the same result from the action's default. So the VST3 SDK is absent in CI, `AESTRA_HAS_VST3` is OFF, and `VST3Host.cpp` is never compiled by any lane. |
+
+### Correction: there is existing native-window prior art
+
+An earlier revision of this table asserted that "nothing in the application calls
+`openEditor()` at all" and that "the path is unwired end to end". The conclusion
+was right; the evidence was wrong, and the difference matters for planning.
+
+What is actually there, at `128fbf48`:
+
+- `AestraUI/Widgets/PluginUIController.cpp:630` calls `instance->openEditor(m_impl->hwnd)`
+  from `PluginEditorWindow::open()`, into a real `CreateWindowExW` window, and tears
+  the window down again if the call fails. Line 645 is the non-Windows branch, which
+  calls `openEditor(nullptr)`.
+- `PluginEditorWindow` is complete: `WindowProc`, `close()`, `bringToFront()`,
+  `setPosition()`/`getPosition()`, `setOnClose()`, `getNativeHandle()`.
+- **Nothing anywhere constructs it.** Its only references are its own definitions,
+  its header declaration, and the `AestraUI/CMakeLists.txt` source listing. So it
+  compiles and is unreachable.
+- The live in-app route is different code: `PluginUIController::openPluginEditor()`
+  hosts Aestra's *own* editors (`AestraCompEditor`, `AestraEQEditor`) directly and
+  never goes through `IPluginInstance::openEditor()`.
+
+Consequences for the phases below:
+
+1. Phase 4 (embedding) is not starting from nothing on Windows. There is a window
+   class, a message loop hook, and a close callback to read first — and to judge,
+   not inherit. It is unreached code, which per §16 of `AGENTS.md` may still encode
+   design decisions worth understanding.
+2. It is also unreached code that nobody has run, so it carries no evidence of
+   working. It is a reference, not a foundation.
+3. `openEditor()` returning `false` is therefore load-bearing in exactly one place
+   and dead in the other. Any editor-session API must decide which of the two it
+   replaces. This document's answer is: neither is kept — §8 supersedes both.
+
+Recorded here rather than silently corrected because the whole point of §3 is that
+it was measured. A section claiming to be verified has to say when it was wrong.
 
 Two consequences worth stating plainly:
 
