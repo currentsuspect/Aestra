@@ -189,17 +189,44 @@ static void test_reset_restores_default() {
 
 namespace {
 
+// Both helpers report failure rather than swallowing it. The reason is
+// specific: three of the tests below write a settings file and then assert the
+// expanded default is *kept*. If the write silently failed, load() would find
+// no file, return the default, and those assertions would pass — for entirely
+// the wrong reason. A scratch-directory problem would read as a green suite.
+
 std::string scratchSettingsPath(const char* name) {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "aestra-mixer-prefs-test";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
+    if (ec && !std::filesystem::exists(dir)) {
+        std::cout << "  FAIL: cannot create scratch directory " << dir.string()
+                  << " (" << ec.message() << ")\n";
+        ++testsFailed;
+        return {};
+    }
     return (dir / name).string();
 }
 
-void writeFile(const std::string& path, const std::string& contents) {
+bool writeFile(const std::string& path, const std::string& contents) {
+    if (path.empty()) {
+        return false;
+    }
     std::ofstream out(path, std::ios::trunc);
+    if (!out) {
+        return false;
+    }
     out << contents;
+    out.close();
+    if (!out.good()) {
+        return false;
+    }
+    // Prove the bytes actually landed: an assertion about "the default is kept"
+    // is only meaningful if the file it is reacting to really exists.
+    std::error_code ec;
+    return std::filesystem::exists(path, ec) &&
+           std::filesystem::file_size(path, ec) == contents.size();
 }
 
 } // namespace
@@ -209,6 +236,7 @@ static void test_settings_round_trip_both_values() {
 
     for (bool expanded : {true, false}) {
         const std::string path = scratchSettingsPath("roundtrip.json");
+        ASSERT(!path.empty(), "scratch path available");
         std::filesystem::remove(path);
 
         Aestra::MixerUIPreferences saved;
@@ -227,6 +255,7 @@ static void test_settings_round_trip_both_values() {
 
 static void test_missing_file_keeps_default() {
     const std::string path = scratchSettingsPath("does-not-exist.json");
+    ASSERT(!path.empty(), "scratch path available");
     std::filesystem::remove(path);
 
     const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
@@ -239,7 +268,8 @@ static void test_absent_key_keeps_default() {
     // false, which would collapse the inspector for anyone whose settings file
     // predates the key.
     const std::string path = scratchSettingsPath("other-keys.json");
-    writeFile(path, "{\"version\": 1, \"somethingElse\": true}");
+    ASSERT(writeFile(path, "{\"version\": 1, \"somethingElse\": true}"),
+           "scratch settings file written");
 
     const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
     ASSERT(loaded.inspectorExpanded, "absent key does not apply false");
@@ -258,7 +288,7 @@ static void test_wrong_typed_key_keeps_default() {
     };
     for (const char* payload : payloads) {
         const std::string path = scratchSettingsPath("wrong-type.json");
-        writeFile(path, payload);
+        ASSERT(writeFile(path, payload), "scratch settings file written");
         const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
         ASSERT(loaded.inspectorExpanded, "non-Boolean value does not collapse the inspector");
     }
@@ -267,7 +297,8 @@ static void test_wrong_typed_key_keeps_default() {
 
 static void test_corrupt_file_keeps_default() {
     const std::string path = scratchSettingsPath("corrupt.json");
-    writeFile(path, "{\"inspectorExpanded\": fal");  // truncated mid-write
+    ASSERT(writeFile(path, "{\"inspectorExpanded\": fal"),  // truncated mid-write
+           "scratch settings file written");
 
     const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
     ASSERT(loaded.inspectorExpanded, "unparseable settings do not collapse the inspector");
@@ -278,6 +309,7 @@ static void test_saved_file_does_not_carry_forced_state() {
     // forcedCollapsed is width-derived and must never reach disk: a session
     // that happened to end in a narrow window must not rewrite the choice.
     const std::string path = scratchSettingsPath("no-forced.json");
+    ASSERT(!path.empty(), "scratch path available");
     Aestra::MixerUIPreferences prefs;
     prefs.inspectorExpanded = true;
     ASSERT(prefs.save(path), "save reports success");
