@@ -381,6 +381,27 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        // A CRLF-terminated reply must arrive with the '\r' gone. Windows' default
+        // text-mode stdout appended one to every reply, which prefix checks like
+        // find("OK") == 0 cannot see — so LOAD/INITIALIZE/ACTIVATE all passed while
+        // PROCESS and SAVESTATE rejected their payload for having an odd character
+        // count, and a sandboxed plugin on Windows produced no audio at all. Asserted
+        // on the exact payload rather than the prefix, because the prefix is the part
+        // that stayed healthy.
+        const std::string crlf = oopFraming->sendRawCommandForTest("TESTCRLF");
+        if (crlf != "OK 0badc0de") {
+            // A stray '\r' is invisible when printed, which is why this failed
+            // silently in the first place. Report the length and the offending byte.
+            std::cerr << "CRLF-terminated reply was not normalized; got \"" << crlf << "\" (" << crlf.size()
+                      << " bytes, expected 11";
+            if (!crlf.empty()) {
+                std::cerr << ", last byte 0x" << std::hex << static_cast<int>(static_cast<unsigned char>(crlf.back()))
+                          << std::dec;
+            }
+            std::cerr << ")\n";
+            return 1;
+        }
+
         // The helper stalls mid-reply and finishes the line ~3s later, outlasting
         // sendRawCommandForTest's 2s timeout.
         if (!oopFraming->sendRawCommandForTest("TESTSTALL").empty()) {

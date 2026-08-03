@@ -113,6 +113,20 @@ std::string formatToken(PluginFormat format) {
     return "unknown";
 }
 
+// The frame terminator is '\n' alone, so a '\r' before it is never payload.
+//
+// The helper now sets its stdout to binary mode, but this stays as the transport's
+// own guarantee: without it, a child whose stdout is in Windows text mode silently
+// appends '\r' to every reply. Prefix checks like `response.find("OK") == 0` cannot
+// see that, while PROCESS and SAVESTATE hex-decode the remainder of the line and
+// reject it for having an odd character count — so audio and plugin state break
+// while load and activate look perfectly healthy.
+void stripTrailingCR(std::string& line) {
+    if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+    }
+}
+
 std::string defaultHostPath() {
     if (const char* env = std::getenv("AESTRA_PLUGIN_HOST_PATH")) {
         if (*env != '\0') {
@@ -516,6 +530,7 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         if (newline != std::string::npos) {
             line.assign(m_readCarry, 0, newline);
             m_readCarry.erase(0, newline + 1);
+            stripTrailingCR(line);
             return true;
         }
         if (m_readCarry.size() > kMaxLineBytes) {
@@ -574,6 +589,7 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         const ssize_t n = read(m_stdoutFd, &ch, 1);
         if (n == 1) {
             if (ch == '\n') {
+                stripTrailingCR(line);
                 return true;
             }
             line.push_back(ch);
