@@ -11,11 +11,29 @@ list, and containing plugin failures so they stop being Aestra's failures.
 
 ## 1. The invariant
 
-> **A plugin instance and its native editor always live together in the child
-> host process. Aestra owns only the editor session, the placeholder surface, and
-> the lifecycle.**
+> **A third-party plugin instance and its native editor always live together in
+> the same host process as each other — never split across the boundary. Under
+> every sandboxed topology that process is a child process, and Aestra owns only
+> the editor session, the placeholder surface, and the lifecycle.**
 
 Everything else here follows from that sentence.
+
+The load-bearing half is "**together**", not "in a child". What is rejected is
+splitting an instance from its own editor across a process boundary — DSP in the
+child, view in Aestra — because that is the arrangement that forces Aestra to run
+plugin GUI code on its own threads while pretending to be sandboxed.
+
+Two things are outside this invariant, and saying so is not a weakening:
+
+- **Aestra's own plugins** (`com.Aestrastudios.eq`, `.comp`, `.verb`, `.delay`,
+  `.sampler`) run in-process and their editors are Aestra's own code, hosted
+  directly by `PluginUIController`. They are first-party, they are not untrusted
+  input, and there is nothing to sandbox them from. Their `openEditor()` overrides
+  return `false` precisely because they never take the native-editor path.
+- **The in-process compatibility escape hatch** (§6) puts a third-party instance
+  and its editor in the Aestra process. That still satisfies "together"; it does
+  not satisfy "sandboxed", which is exactly why it is user-selected, warned about,
+  and never a silent fallback.
 
 The tempting alternative — get editors visible quickly by attaching the plugin's
 view directly inside the Aestra process — is explicitly rejected as an
@@ -111,9 +129,29 @@ Aestra process                          Plugin host child process
 │     ├ presentation policy    │        │ platform run-loop / event pump │
 │     └ liveness (heartbeat)   │        └────────────────────────────────┘
 └──────────────────────────────┘
-        Aestra never holds a plugin-owned window handle it did not
-        create, and never runs plugin GUI code on its own threads.
+        Aestra never runs plugin GUI code on its own threads, and never
+        owns a plugin's view. It may hold a child-created container
+        handle for embedding only — see the handle contract below.
 ```
+
+**The handle contract: use is not ownership.** Embedding requires Aestra to hold a
+handle it did not create — `SetParent` on the child's container `HWND`, or an X11
+reparent of the child's window — so an invariant reading "Aestra never holds a
+plugin-owned handle" would forbid §5's own platform policy. The real distinction is
+narrower:
+
+| | Allowed |
+| --- | --- |
+| Receive the **container** handle the child created, and reparent it | Yes |
+| Move, resize, show, hide, restack that container | Yes |
+| Hold the plugin's **own view** handle (`IPlugView`, `clap_plugin_gui` surface) | **No** — the child owns it, and only the child ever touches it |
+| Destroy the container, or outlive the child holding it | **No** — the child creates it and the child destroys it |
+| Call any plugin GUI entry point from an Aestra thread | **No**, in every mode |
+
+So Aestra receives a scoped, revocable capability to position a window, not
+ownership of a plugin's UI. If the child dies, the container dies with it, and
+Aestra's surface must already be able to survive that — which is what row 13 of the
+acceptance matrix tests.
 
 IPC verbs for the editor session, kept deliberately small: `open`, `close`,
 `resize`, `focus`, `scale`, `heartbeat`. Everything richer (popup behaviour, DnD)
@@ -127,7 +165,7 @@ degrades to a floating window rather than to in-process hosting.
 | Platform | Presentation | Mechanism |
 | --- | --- | --- |
 | Windows | Embedded | Child creates a container `HWND` and attaches the plugin view to it; Aestra embeds that container with `SetParent`. |
-| X11 / XWayland | Embedded | Child creates the plugin window; Aestra reparents it into the editor panel. |
+| X11 / XWayland | Embedded | Child creates a container window and gives the plugin its ID via `X11EmbedWindowID`; Aestra reparents that container into the editor panel. Aestra reparents the container, never the plugin's own view — same rule as Windows, see the handle contract in §4. |
 | Native Wayland | **Detached** | No general, reliable cross-process embedding exists. Child owns a real top-level window; Aestra coordinates position, stacking, and lifecycle. |
 | macOS | **Detached** | Cross-process `NSView` embedding is not a foundation worth building on. Child owns the window. |
 
@@ -149,6 +187,34 @@ not an acceptable default, so sandboxing must not be bound to that shape.
 
 Aestra itself is always isolated from plugin code, in every mode except the
 escape hatch.
+
+**The shared default has a blast radius, and choosing it is choosing that.** One
+child hosting many instances means one plugin's crash or hang takes every instance
+in that process with it. That is the price of the 4 GB target and it is acceptable,
+but only if the recovery behaviour is specified rather than discovered:
+
+- **Audio keeps running.** The engine must continue producing output. Instances in
+  the dead process go to bypass — passthrough for effects, silence for
+  instruments — and the audio thread must never block waiting on a dead or wedged
+  child. `OutOfProcessPluginInstance` already has the right shape here: a worker
+  thread owns the IPC, `process()` publishes into a single-slot buffer and returns.
+- **The user is told which instances were affected, by name**, not that "a plugin
+  crashed". With a shared process the answer is usually several plugins across
+  several tracks, and the one that actually crashed is the one worth naming.
+- **Project state survives.** Parameters and saved plugin state stay authoritative
+  in Aestra, so a relaunch restores rather than resets. This is why a poisoned IPC
+  channel must fail the instance loudly rather than desynchronize quietly.
+- **Relaunch is per-process, and it is not automatic-forever.** A child that dies
+  repeatedly must stop being restarted into the same crash — the same quarantine
+  reasoning as row 14, applied to hosting rather than scanning.
+- **A hang is not a crash.** A wedged child holds instances that still look alive.
+  Heartbeat detection (§4) is what separates the two, and the kill path must be
+  bounded — the lesson from #709, where an unbounded post-terminate wait would have
+  moved the hang from the plugin to Aestra's shutdown.
+
+Rows 12 and 13 of the acceptance matrix already cover child hang and child crash
+per instance. Row 21 adds the case this topology creates and those two do not: the
+multi-instance loss.
 
 **Escape hatch rules.** Surfaced as *"Run without sandboxing"*, never as a
 technical term. Carries an explicit warning that a plugin failure may terminate
@@ -184,6 +250,7 @@ by how early they tend to bite.
 | 18 | Multiple editors at once | Several plugins with open editors across shared and dedicated topologies. |
 | 19 | Session shutdown with editors open | Clean teardown; no orphaned child processes or windows. |
 | 20 | Detached-mode parity | On Wayland/macOS every row above still holds for a floating child-owned window. |
+| 21 | Shared-process multi-instance loss | One plugin taking down a shared child must not take down audio. Every instance in that process bypasses safely, the user is told **which** instances were lost and which plugin caused it, project state survives for all of them, and a repeatedly-crashing child stops being relaunched into the same crash (§6). |
 
 ## 8. Proposed API
 
