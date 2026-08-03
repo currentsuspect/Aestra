@@ -119,25 +119,28 @@ void testSeparatorRewrite() {
 
     char buf[64];
 
-    std::strcpy(buf, "1,5");
-    Aestra::JSON::normalizeDecimalPointToDot(buf, sizeof(buf), ",");
+    // Bounded copy rather than strcpy: every literal here is far under 64
+    // bytes, but SAST flags the unbounded form (CWE-120) and there is no
+    // reason to re-justify that on every review pass.
+    const auto rewrite = [&buf](const char* input, const char* separator) {
+        std::snprintf(buf, sizeof(buf), "%s", input);
+        Aestra::json_detail::normalizeDecimalPointToDot(buf, sizeof(buf), separator);
+    };
+
+    rewrite("1,5", ",");
     check(std::strcmp(buf, "1.5") == 0, "comma separator is rewritten to '.'");
 
-    std::strcpy(buf, "-1024,125");
-    Aestra::JSON::normalizeDecimalPointToDot(buf, sizeof(buf), ",");
+    rewrite("-1024,125", ",");
     check(std::strcmp(buf, "-1024.125") == 0, "negative value keeps its sign through the rewrite");
 
-    std::strcpy(buf, "42");
-    Aestra::JSON::normalizeDecimalPointToDot(buf, sizeof(buf), ",");
+    rewrite("42", ",");
     check(std::strcmp(buf, "42") == 0, "integral value with no separator is untouched");
 
-    std::strcpy(buf, "1.5");
-    Aestra::JSON::normalizeDecimalPointToDot(buf, sizeof(buf), ".");
+    rewrite("1.5", ".");
     check(std::strcmp(buf, "1.5") == 0, "'.' locale is a no-op");
 
     // POSIX permits a multi-byte separator; the tail must close up behind it.
-    std::strcpy(buf, "3<SEP>25");
-    Aestra::JSON::normalizeDecimalPointToDot(buf, sizeof(buf), "<SEP>");
+    rewrite("3<SEP>25", "<SEP>");
     check(std::strcmp(buf, "3.25") == 0, "multi-byte separator collapses to a single '.'");
 }
 

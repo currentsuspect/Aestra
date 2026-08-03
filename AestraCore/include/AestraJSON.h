@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <cassert>
 #include <clocale>
 #include <cmath>
 #include <cstdio>
@@ -14,6 +15,53 @@
 #include <vector>
 
 namespace Aestra {
+
+namespace json_detail {
+
+/// The active C locale's decimal separator (".", ",", …).
+///
+/// Read fresh every time: the process locale can change at runtime, and in a
+/// plugin host it changes without our involvement.
+inline const char* localeDecimalPoint() {
+    const std::lconv* conv = std::localeconv();
+    if (conv == nullptr || conv->decimal_point == nullptr || *conv->decimal_point == '\0') {
+        return ".";
+    }
+    return conv->decimal_point;
+}
+
+/// Rewrite the locale's decimal separator to '.', in place.
+///
+/// JSON has exactly one decimal separator and it is '.', regardless of what the
+/// process locale thinks. A free function in json_detail rather than a member:
+/// it holds no JSON state, and the regression test needs to drive it against a
+/// separator this machine's locales may not offer — without that widening
+/// JSON's own public surface.
+inline void normalizeDecimalPointToDot(char* buf, size_t bufSize, const char* decimalPoint) {
+    // The rewrite only ever shrinks the string, so it cannot overflow today.
+    // Asserted anyway so a future edit cannot turn bufSize into a promise this
+    // function silently stopped keeping.
+    assert(buf != nullptr && std::strlen(buf) < bufSize);
+    (void)bufSize;
+
+    if (decimalPoint == nullptr || std::strcmp(decimalPoint, ".") == 0) {
+        return;
+    }
+    char* found = std::strstr(buf, decimalPoint);
+    if (found == nullptr) {
+        return; // Integral value: printf emitted no separator at all.
+    }
+    const size_t sepLen = std::strlen(decimalPoint);
+    *found = '.';
+    if (sepLen > 1) {
+        // Multi-byte separator: close the gap left behind. POSIX permits this
+        // even though the common locales are single-byte.
+        const size_t tailLen = std::strlen(found + sepLen);
+        std::memmove(found + 1, found + sepLen, tailLen + 1);
+    }
+}
+
+} // namespace json_detail
 
 // =============================================================================
 // Lightweight JSON Parser
@@ -177,45 +225,6 @@ public:
         return value;
     }
 
-    // ---- Locale-independent number text (public so the regression test can
-    // drive them directly; they are pure functions with no JSON state) ----
-
-    /// The active C locale's decimal separator (".", ",", …).
-    ///
-    /// Read fresh every time: the process locale can change at runtime, and in
-    /// a plugin host it changes without our involvement.
-    static const char* localeDecimalPoint() {
-        const std::lconv* conv = std::localeconv();
-        if (conv == nullptr || conv->decimal_point == nullptr || *conv->decimal_point == '\0') {
-            return ".";
-        }
-        return conv->decimal_point;
-    }
-
-    /// Rewrite the locale's decimal separator to '.', in place.
-    ///
-    /// JSON has exactly one decimal separator and it is '.', regardless of what
-    /// the process locale thinks. Kept as its own function so it can be tested
-    /// directly against a separator this machine's locales may not offer.
-    static void normalizeDecimalPointToDot(char* buf, size_t bufSize, const char* decimalPoint) {
-        if (decimalPoint == nullptr || std::strcmp(decimalPoint, ".") == 0) {
-            return;
-        }
-        char* found = std::strstr(buf, decimalPoint);
-        if (found == nullptr) {
-            return; // Integral value: printf emitted no separator at all.
-        }
-        const size_t sepLen = std::strlen(decimalPoint);
-        *found = '.';
-        if (sepLen > 1) {
-            // Multi-byte separator: close the gap left behind. POSIX permits
-            // this even though the common locales are single-byte.
-            const size_t tailLen = std::strlen(found + sepLen);
-            std::memmove(found + 1, found + sepLen, tailLen + 1);
-        }
-        (void)bufSize;
-    }
-
 private:
     Type type_;
     bool boolValue_ = false;
@@ -291,7 +300,7 @@ private:
         }
         // Only now force JSON's separator; the trailing-zero trim below and
         // every consumer of this buffer expect '.'.
-        normalizeDecimalPointToDot(buf, bufSize, localeDecimalPoint());
+        json_detail::normalizeDecimalPointToDot(buf, bufSize, json_detail::localeDecimalPoint());
         char* dot = std::strchr(buf, '.');
         if (dot != nullptr) {
             char* end = buf + std::strlen(buf);
