@@ -8,8 +8,26 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull requests share a group per PR; pushes get a group of their own.
+  #
+  # Superseding a pull-request run is correct — only the newest head matters — and
+  # `refs/pull/N/merge` scopes the group to that one PR, so a new commit cancels
+  # only that PR's older run.
+  #
+  # Superseding a push to develop is not. Every merge is a distinct integration
+  # state, and because develop's protection sets `strict: false`, the PR that
+  # produced it was never built against the develop it landed on. Cancelling here
+  # meant the merged tree was verified by nothing until nightly — five of the
+  # eight develop merges before this change never completed a CI run.
+  #
+  # `cancel-in-progress: false` alone does NOT fix that. A concurrency group holds
+  # at most one running and one *pending* run; a third arrival cancels the pending
+  # one. Three merges in quick succession would still leave the middle commit with
+  # no completed run — the same hole, one step further along. Keying pushes to
+  # `github.run_id`, which is unique per run, removes them from contention
+  # entirely so no push can ever cancel another.
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   BUILD_TYPE: Release
