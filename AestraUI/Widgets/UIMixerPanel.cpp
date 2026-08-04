@@ -298,7 +298,17 @@ void UIMixerPanel::updateInspectorWidthConstraint()
     const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
                        + MIN_STRIPS_BESIDE_INSPECTOR * (STRIP_WIDTH + STRIP_SPACING);
 
+    const bool wasForced = m_inspectorCollapse.forcedCollapsed;
     m_inspectorCollapse.setForcedCollapsed(available < needed);
+
+    // The "window too narrow" tooltip is raised and cleared from onMouseEvent,
+    // and only when the pointer crosses the rail boundary. Widening the window
+    // lifts the constraint without moving the pointer, so a tooltip shown while
+    // narrow would keep asserting a reason that no longer holds until the user
+    // happened to move off the rail. Clear it as the constraint lifts.
+    if (wasForced && !m_inspectorCollapse.forcedCollapsed && m_inspectorToggleHovered) {
+        NUIComponent::hideRemoteTooltip(this);
+    }
 }
 
 void UIMixerPanel::setInspectorExpandedPreference(bool expanded)
