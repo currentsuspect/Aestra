@@ -223,7 +223,7 @@ target_include_directories(EffectChainMissingPluginTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME EffectChainMissingPluginTest COMMAND EffectChainMissingPluginTest)
-set_tests_properties(EffectChainMissingPluginTest PROPERTIES LABELS "audio;plugins;serialization")
+set_tests_properties(EffectChainMissingPluginTest PROPERTIES LABELS "audio;plugins;serialization;contract:durability")
 
 # Plugin-instance identity must survive chain reordering (#667) — automation
 # addresses the instance a curve was drawn for, never the position it occupied.

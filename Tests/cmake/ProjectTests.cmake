@@ -43,7 +43,7 @@ target_include_directories(ProjectDirtyStateTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ProjectDirtyStateTest COMMAND ProjectDirtyStateTest)
-set_tests_properties(ProjectDirtyStateTest PROPERTIES LABELS "audio;commands;project")
+set_tests_properties(ProjectDirtyStateTest PROPERTIES LABELS "audio;commands;project;contract:durability")
 
 # Audio clip instance gain, pan, and fade rendering regression test
 add_executable(AudioClipInstanceRenderTest AestraAudio/AudioClipInstanceRenderTest.cpp)
@@ -81,7 +81,7 @@ target_compile_definitions(ProjectCompatibilityPolicyTest PRIVATE
 )
 add_test(NAME ProjectCompatibilityPolicyTest COMMAND ProjectCompatibilityPolicyTest)
 set_tests_properties(ProjectCompatibilityPolicyTest PROPERTIES
-    LABELS "integration;serialization;migration;compatibility"
+    LABELS "integration;serialization;migration;compatibility;contract:durability"
 )
 
 # Source/ has no linkable application-layer target (#666), so this narrow
@@ -103,7 +103,7 @@ add_test(NAME ProjectFixtureImmutabilityTest
         -P "${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_fixture_manifest.cmake"
 )
 set_tests_properties(ProjectFixtureImmutabilityTest PROPERTIES
-    LABELS "serialization;fixtures;compatibility"
+    LABELS "serialization;fixtures;compatibility;contract:durability"
 )
 
 # --- Crash-flag lifecycle (#675) -------------------------------------------
@@ -112,7 +112,7 @@ set_tests_properties(ProjectFixtureImmutabilityTest PROPERTIES
 add_executable(CrashFlagPathTest App/CrashFlagPathTest.cpp)
 target_include_directories(CrashFlagPathTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/App)
 add_test(NAME CrashFlagPathTest COMMAND CrashFlagPathTest)
-set_tests_properties(CrashFlagPathTest PROPERTIES LABELS "app;recovery;regression")
+set_tests_properties(CrashFlagPathTest PROPERTIES LABELS "app;recovery;regression;contract:durability")
 
 # Source guard: the shutdown ORDERING is the invariant that makes the crash flag
 # meaningful, and it is not expressible in a unit test while Source/ cannot be
