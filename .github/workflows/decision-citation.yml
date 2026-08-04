@@ -131,11 +131,20 @@ jobs:
           # Every markdown file in the record directory is a candidate, rather than
           # one hard-coded filename. New decisions arrive as new files, so a fixed
           # path would need editing whenever a decision is recorded and would fail
-          # closed on a pull request that did nothing wrong. Searching the directory
-          # costs a few more API calls and survives any renaming.
-          tree=$(gh api "repos/${VAULT}/git/trees/${full_sha}?recursive=1" \
-                   --jq '.tree[] | select(.type=="blob") | .path' 2>/dev/null)
-          records=$(printf '%s\n' "${tree}" | grep -E "^${RECORD_DIR}/.*\.md$" || true)
+          # closed on a pull request that did nothing wrong. Binding to the FD-NN
+          # heading schema instead survives any renaming.
+          #
+          # The tree is asked for blob SHAs alongside paths, and the content is then
+          # read through git/blobs rather than /contents. This is not a stylistic
+          # choice. /contents addresses a file by PATH, and these paths contain
+          # spaces and an em dash, so every request needs URL encoding whose failure
+          # mode is a 404 that reads exactly like "this file does not exist" — a
+          # transport problem wearing the costume of a content problem. Blob SHAs
+          # come free from the tree call already being made, need no encoding at
+          # all, and keep the whole lookup inside the git/* namespace.
+          entries=$(gh api "repos/${VAULT}/git/trees/${full_sha}?recursive=1" \
+                      --jq '.tree[] | select(.type=="blob") | "\(.sha) \(.path)"' 2>/dev/null)
+          records=$(printf '%s\n' "${entries}" | grep -E " ${RECORD_DIR}/.*\.md$" || true)
 
           if [ -z "${records}" ]; then
             echo "::error::No decision record found under '${RECORD_DIR}/' at ${full_sha}."
@@ -143,30 +152,45 @@ jobs:
             exit 1
           fi
 
-          # Path is URL-encoded for the contents endpoint: the record directory and
-          # filenames both contain spaces, and an unencoded space yields a 404 that
-          # reads exactly like "the file does not exist".
+          # unreadable counts records this step could not fetch or decode. It exists
+          # so the verdict below can distinguish "every record was read and the entry
+          # is absent" from "some record could not be read". Reporting the first when
+          # only the second is known is how a check ends up asserting a conclusion it
+          # never established — the exact failure this lane exists to prevent, and
+          # one it committed itself on its first live run.
           found=""
-          while IFS= read -r path; do
-            [ -z "${path}" ] && continue
-            encoded=$(printf '%s' "${path}" | jq -sRr @uri)
-            if gh api "repos/${VAULT}/contents/${encoded}?ref=${full_sha}" \
-                 --jq '.content' 2>/dev/null | base64 -d 2>/dev/null \
-                 | grep -qE "^#{2,3} ${DECISION_ID} "; then
+          unreadable=0
+          while IFS= read -r entry; do
+            [ -z "${entry}" ] && continue
+            blob="${entry%% *}"
+            path="${entry#* }"
+            if ! gh api "repos/${VAULT}/git/blobs/${blob}" --jq '.content' 2>/tmp/blob-err \
+                 | base64 -d > /tmp/record.md 2>/dev/null; then
+              unreadable=$((unreadable + 1))
+              echo "::warning::could not read ${path} (blob ${blob:0:7})"
+              sed 's/^/  /' /tmp/blob-err
+              continue
+            fi
+            if grep -qE "^#{2,3} ${DECISION_ID} " /tmp/record.md; then
               found="${path}"
               break
             fi
           done <<< "${records}"
 
-          if [ -z "${found}" ]; then
+          if [ -n "${found}" ]; then
+            echo "${DECISION_ID} found in: ${found}"
+          elif [ "${unreadable}" -gt 0 ]; then
+            echo "::error::${unreadable} record(s) could not be read, so whether ${DECISION_ID} exists at ${full_sha} is unknown."
+            echo "This is a lookup failure, not a citation failure. Check the token's Contents permission on ${VAULT}."
+            exit 1
+          else
             echo "::error::${DECISION_ID} is not an entry in the strategic record at ${full_sha}."
-            echo "Records searched at that commit:"
-            printf '%s\n' "${records}" | sed 's/^/  /'
+            echo "All records at that commit were read successfully. Searched:"
+            printf '%s\n' "${records}" | sed -E 's/^[0-9a-f]+ /  /'
             echo ""
             echo "Either the entry id is wrong, or the SHA predates the decision."
             exit 1
           fi
-          echo "${DECISION_ID} found in: ${found}"
 
           # --- is it current ---------------------------------------------
           # A warning, never a failure. FD-12 requires that a mismatch between
