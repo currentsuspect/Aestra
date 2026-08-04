@@ -7,7 +7,7 @@
 
 > A digital audio workstation under active development, built in modern C++ with a custom UI stack and a native audio engine.
 
-![Aestra Interface](AestraDocs/images/aestra_daw_interface.png)
+![Aestra Interface](docs/images/aestra_daw_interface.png)
 
 ## Current Snapshot
 
@@ -68,7 +68,6 @@ render, batched all-or-nothing edits, and undo/redo.
   separate tree from `Tests`, and the two only coexist on a case-sensitive filesystem)
 - `workers` - Cloudflare Workers backing licence signing
 - `docs` - contributor and technical documentation, published to GitHub Pages
-- `AestraDocs` - internal engineering notes and images
 - `meta` - changelogs and project meta
 - `scripts`, `cmake`, `installer` - build, packaging and developer tooling
 

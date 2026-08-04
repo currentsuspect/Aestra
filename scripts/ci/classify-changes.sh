@@ -76,7 +76,7 @@ readonly MAX_TRUSTED_FILES=200
 is_cxx_irrelevant() {
     case "$1" in
         # Documentation trees and top-level prose.
-        docs/*|AestraDocs/*|meta/*) return 0 ;;
+        docs/*|meta/*) return 0 ;;
         README.md|LICENSE|LICENSING.md|NOTICE|CHANGELOG.md|CONTRIBUTING.md) return 0 ;;
         CODE_OF_CONDUCT.md|SECURITY.md|SUPPORT.md|RELEASES.md|BUILD.md|philosophy.md) return 0 ;;
         mkdocs.yml|Doxyfile) return 0 ;;
