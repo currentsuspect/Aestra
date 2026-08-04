@@ -588,6 +588,7 @@ add_executable(AestraAudioPerformanceTest
 )
 target_link_libraries(AestraAudioPerformanceTest PRIVATE AestraAudio)
 add_test(NAME AestraAudioPerformanceTest COMMAND AestraAudioPerformanceTest)
+set_tests_properties(AestraAudioPerformanceTest PROPERTIES LABELS "contract:realtime")
 if(WIN32)
     target_link_libraries(AestraAudioPerformanceTest PRIVATE avrt)
 endif()
@@ -720,6 +721,7 @@ endif()
 add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE)
 add_test(NAME AestraAtomicSaveTest COMMAND AestraAtomicSaveTest)
+set_tests_properties(AestraAtomicSaveTest PROPERTIES LABELS "contract:durability")
 
 # Deferred destruction / resource reclamation test
 add_executable(AestraGarbageCollectorTest AestraAudio/GarbageCollectorTest.cpp)
@@ -899,6 +901,7 @@ endif()
 add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
+set_tests_properties(AestraWavLoaderTest PROPERTIES LABELS "contract:audio")
 
 # Arsenal content-type transition regression
 add_executable(ArsenalUnitTypeTransitionTest AestraAudio/ArsenalUnitTypeTransitionTest.cpp)
@@ -910,6 +913,7 @@ set_tests_properties(ArsenalUnitTypeTransitionTest PROPERTIES LABELS "audio;arse
 add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
 add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
+set_tests_properties(AestraAuditionEngineLifecycleTest PROPERTIES LABELS "contract:application")
 
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
@@ -920,6 +924,7 @@ set_tests_properties(PreviewAuditionGainParityTest PROPERTIES LABELS "audio;prev
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
 target_link_libraries(SamplePoolTest PRIVATE AestraAudio)
 add_test(NAME SamplePoolTest COMMAND SamplePoolTest)
+set_tests_properties(SamplePoolTest PROPERTIES LABELS "contract:core")
 
 # Device Manager Test (Windows only)
 if(WIN32 AND AESTRA_ENABLE_RUNTIME_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerTest.cpp")
@@ -957,12 +962,14 @@ add_executable(AestraOscillatorTest AestraAudio/OscillatorTest.cpp)
 target_link_libraries(AestraOscillatorTest PRIVATE AestraAudio)
 target_compile_definitions(AestraOscillatorTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraOscillatorTest COMMAND AestraOscillatorTest)
+set_tests_properties(AestraOscillatorTest PROPERTIES LABELS "contract:audio")
 
 # Automation Stress Test
 add_executable(AutomationStressTest AestraAudio/AutomationStressTest.cpp)
 target_link_libraries(AutomationStressTest PRIVATE AestraAudio)
 target_compile_definitions(AutomationStressTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AutomationStressTest COMMAND AutomationStressTest)
+set_tests_properties(AutomationStressTest PROPERTIES LABELS "contract:audio")
 
 # Arsenal Parameter Stress Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins)
@@ -987,12 +994,14 @@ add_executable(MixerBusStressTest AestraAudio/MixerBusStressTest.cpp)
 target_link_libraries(MixerBusStressTest PRIVATE AestraAudio)
 target_compile_definitions(MixerBusStressTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME MixerBusStressTest COMMAND MixerBusStressTest)
+set_tests_properties(MixerBusStressTest PROPERTIES LABELS "contract:audio")
 
 # Mixer Bus Test
 add_executable(AestraMixerBusTest AestraAudio/MixerBusTest.cpp)
 target_link_libraries(AestraMixerBusTest PRIVATE AestraAudio)
 target_compile_definitions(AestraMixerBusTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraMixerBusTest COMMAND AestraMixerBusTest)
+set_tests_properties(AestraMixerBusTest PROPERTIES LABELS "contract:audio")
 
 # AestraUUID Test (header-only, no audio hardware required)
 add_executable(AestraUUIDTest AestraAudio/AestraUUIDTest.cpp)

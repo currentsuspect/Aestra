@@ -259,3 +259,20 @@ if(TARGET AestraLicense)
     )
     target_link_libraries(SecMembershipViewModel PRIVATE AestraLicense)
 endif()
+
+# --- Contract labels --------------------------------------------------------
+#
+# Every test in this directory protects the same promise: that untrusted input,
+# privilege, licence integrity, process isolation or an injection boundary is
+# safe. So the contract is assigned from the directory property rather than
+# repeated 27 times.
+#
+# Reading the registered set back is deliberate, not clever. Nine of these tests
+# live inside `if(TARGET AestraLicense)`, so a flat literal list would name tests
+# that do not exist whenever AestraLicense is absent — and set_tests_properties
+# on an unregistered test is a hard configure error. This form is correct under
+# both conditions, and a new security test inherits the contract by construction.
+get_property(_aestra_security_tests DIRECTORY PROPERTY TESTS)
+if(_aestra_security_tests)
+    set_tests_properties(${_aestra_security_tests} PROPERTIES LABELS "contract:security")
+endif()

@@ -192,6 +192,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbMaterialLab.cpp")
     # Register test only on Linux to avoid false failures from cross-platform FP drift.
     if(AESTRA_ENABLE_RUNTIME_TESTS AND UNIX AND NOT APPLE)
         add_test(NAME ReverbMaterialLabTest COMMAND AestraReverbMaterialLab)
+        set_tests_properties(ReverbMaterialLabTest PROPERTIES LABELS "contract:audio")
     elseif(NOT AESTRA_ENABLE_RUNTIME_TESTS)
         message(STATUS "ReverbMaterialLabTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
