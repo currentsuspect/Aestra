@@ -57,12 +57,13 @@ fi
 echo -e "\n${YELLOW}Checking Markdown Links...${NC}"
 
 if command -v markdown-link-check &> /dev/null; then
+    # AestraDocs/ was extracted to the private Aestra-Internals vault; internal
+    # engineering notes are no longer checked here.
     mapfile -d '' FILES < <(
         find ./docs -type f -name "*.md" \
             -not -path "./docs/api-reference/*" \
             -not -path "./docs/meta/*" \
             -not -path "./docs/TEMPLATE/*" -print0
-        find ./AestraDocs -type f -name "*.md" -print0
     )
 
     if [ ${#FILES[@]} -eq 0 ]; then

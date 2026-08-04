@@ -42,7 +42,7 @@ expect() {
 # --- changes that provably cannot affect a C++ build ------------------------
 expect skip-cxx "docs only"                      "docs/technical/roadmap.md"
 expect skip-cxx "top-level prose"                "README.md" "LICENSING.md" "NOTICE"
-expect skip-cxx "internal docs tree"             "AestraDocs/images/aestra_daw_interface.png"
+expect skip-cxx "docs image tree"                "docs/images/aestra_daw_interface.png"
 expect skip-cxx "worker only"                    "workers/license-signing/package.json"
 expect skip-cxx "worker + lockfile"              "workers/license-signing/package.json" \
                                                  "workers/license-signing/package-lock.json"
@@ -51,7 +51,11 @@ expect skip-cxx "mkdocs config"                  "mkdocs.yml"
 expect skip-cxx "changelog"                      "meta/CHANGELOGS/CHANGELOG_2026Q2.md"
 
 # Real PRs from 2026-07-25 that should have skipped the C++ matrix (#620).
-expect skip-cxx "#619 as merged"                 "AestraDocs/images/aestra_daw_interface.png" \
+# #619 originally touched AestraDocs/images/aestra_daw_interface.png. AestraDocs/
+# was extracted to the private Aestra-Internals vault and that image now lives at
+# docs/images/; the path is updated so the regression still exercises the same
+# shape (image + top-level prose + public docs must skip the C++ matrix).
+expect skip-cxx "#619 as merged"                 "docs/images/aestra_daw_interface.png" \
                                                  "LICENSING.md" "NOTICE" "README.md" \
                                                  "docs/about/licensing.md"
 expect skip-cxx "#615 as merged"                 "workers/license-signing/package.json" \
