@@ -1,10 +1,13 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <cassert>
+#include <clocale>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <locale>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -12,6 +15,53 @@
 #include <vector>
 
 namespace Aestra {
+
+namespace json_detail {
+
+/// The active C locale's decimal separator (".", ",", …).
+///
+/// Read fresh every time: the process locale can change at runtime, and in a
+/// plugin host it changes without our involvement.
+inline const char* localeDecimalPoint() {
+    const std::lconv* conv = std::localeconv();
+    if (conv == nullptr || conv->decimal_point == nullptr || *conv->decimal_point == '\0') {
+        return ".";
+    }
+    return conv->decimal_point;
+}
+
+/// Rewrite the locale's decimal separator to '.', in place.
+///
+/// JSON has exactly one decimal separator and it is '.', regardless of what the
+/// process locale thinks. A free function in json_detail rather than a member:
+/// it holds no JSON state, and the regression test needs to drive it against a
+/// separator this machine's locales may not offer — without that widening
+/// JSON's own public surface.
+inline void normalizeDecimalPointToDot(char* buf, size_t bufSize, const char* decimalPoint) {
+    // The rewrite only ever shrinks the string, so it cannot overflow today.
+    // Asserted anyway so a future edit cannot turn bufSize into a promise this
+    // function silently stopped keeping.
+    assert(buf != nullptr && std::strlen(buf) < bufSize);
+    (void)bufSize;
+
+    if (decimalPoint == nullptr || std::strcmp(decimalPoint, ".") == 0) {
+        return;
+    }
+    char* found = std::strstr(buf, decimalPoint);
+    if (found == nullptr) {
+        return; // Integral value: printf emitted no separator at all.
+    }
+    const size_t sepLen = std::strlen(decimalPoint);
+    *found = '.';
+    if (sepLen > 1) {
+        // Multi-byte separator: close the gap left behind. POSIX permits this
+        // even though the common locales are single-byte.
+        const size_t tailLen = std::strlen(found + sepLen);
+        std::memmove(found + 1, found + sepLen, tailLen + 1);
+    }
+}
+
+} // namespace json_detail
 
 // =============================================================================
 // Lightweight JSON Parser
@@ -218,8 +268,16 @@ private:
     // significant digits in [15..17] whose plain-decimal rendering strtod's
     // back to the identical bits, then trims trailing zeros. Plain decimal
     // (never exponent form) keeps output readable and parseable by every
-    // existing consumer. Note: like the stream insertion it replaces, this
-    // assumes the C numeric locale uses '.' as the decimal separator.
+    // existing consumer.
+    //
+    // Locale: snprintf("%f") and strtod both honour LC_NUMERIC, so under a
+    // comma-decimal locale this used to emit `1,5` — not merely ugly, but
+    // invalid JSON that no longer reloads. The exactness check is deliberately
+    // performed *before* normalisation, so printf and strtod stay in agreement
+    // with each other whatever the locale is; only the emitted text is forced
+    // to JSON's '.'. Aestra hosts third-party plugin binaries, and a plugin
+    // calling setlocale(LC_ALL, "") is a documented DAW hazard, so this cannot
+    // be dismissed as a configuration the user is responsible for avoiding.
     static void formatNumber(char* buf, size_t bufSize, double v) {
         if (!std::isfinite(v)) {
             // Preserve prior stream behavior for non-finite values ("nan"/"inf");
@@ -236,9 +294,13 @@ private:
                 int decimals = sigDigits - 1 - exp10 + bump;
                 decimals = decimals < 0 ? 0 : (decimals > 340 ? 340 : decimals);
                 std::snprintf(buf, bufSize, "%.*f", decimals, v);
+                // Same locale on both sides, so this comparison stays honest.
                 exact = (std::strtod(buf, nullptr) == v);
             }
         }
+        // Only now force JSON's separator; the trailing-zero trim below and
+        // every consumer of this buffer expect '.'.
+        json_detail::normalizeDecimalPointToDot(buf, bufSize, json_detail::localeDecimalPoint());
         char* dot = std::strchr(buf, '.');
         if (dot != nullptr) {
             char* end = buf + std::strlen(buf);
@@ -513,12 +575,19 @@ private:
             return JSON(0.0);
         }
 
-        try {
-            double value = std::stod(numStr);
-            return JSON(value);
-        } catch (const std::exception&) {
+        // std::stod honours LC_NUMERIC, so under a comma-decimal locale it read
+        // "1.5" as 1 — silent, unbounded truncation of every fractional value
+        // in a project on load, with no error to notice. An istringstream
+        // imbued with the classic locale is independent of both the C locale
+        // and any std::locale::global a host or plugin may have installed.
+        std::istringstream stream(numStr);
+        stream.imbue(std::locale::classic());
+        double value = 0.0;
+        stream >> value;
+        if (stream.fail()) {
             return JSON(0.0);
         }
+        return JSON(value);
     }
 
     static JSON parseBool(const std::string& str, size_t& pos) {

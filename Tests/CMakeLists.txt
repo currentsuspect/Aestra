@@ -2067,3 +2067,16 @@ target_include_directories(SlidingIndicatorTest PRIVATE
 )
 add_test(NAME SlidingIndicatorTest COMMAND SlidingIndicatorTest)
 set_tests_properties(SlidingIndicatorTest PROPERTIES LABELS "ui;regression")
+
+# AestraJSON must round-trip doubles independently of LC_NUMERIC. AestraJSON.h
+# is header-only, so this needs no library — but it backs ProjectSerializer,
+# so a regression here corrupts .aes files rather than merely a UI setting.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp")
+    add_executable(JSONLocaleIndependenceTest AestraCore/JSONLocaleIndependenceTest.cpp)
+    target_include_directories(JSONLocaleIndependenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME JSONLocaleIndependenceTest COMMAND JSONLocaleIndependenceTest)
+    set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression")
+    message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
+endif()
