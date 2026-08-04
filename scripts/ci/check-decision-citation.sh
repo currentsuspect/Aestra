@@ -242,9 +242,24 @@ main() {
             fail "Kind is unparked, so Reversal must name the decision entry authorising it."
             note "Unparking work a decision forbids requires a NEW entry in the strategic"
             note "record, cited by id. Without one, the deferral has no force."
-        elif ! printf '%s' "${reversal}" | grep -qiE 'FD-[0-9]{2}'; then
-            fail "Reversal is '${reversal}', which names no decision entry."
+        elif ! printf '%s' "${reversal}" | grep -qiE '^FD-[0-9]{2}([[:space:]]|$)'; then
+            # Anchored, not "contains". An unanchored match accepts "approved
+            # verbally, maybe see FD-13 sometime" — prose with an id somewhere in
+            # it, which is the thing this field exists to stop being sufficient.
+            fail "Reversal is '${reversal}', which does not begin with a decision entry id."
             note "Cite the entry that authorises the reversal, e.g. 'FD-13 — hosting unparked'."
+        else
+            # The governing decision cannot authorise its own reversal. Permitting
+            # it makes 'unparked' indistinguishable from the deferral never having
+            # existed, which is precisely the state this kind exists to surface.
+            local reversal_id
+            reversal_id="$(printf '%s' "${reversal}" \
+                | sed -E 's/^([Ff][Dd]-[0-9]{2}).*/\1/' | tr '[:lower:]' '[:upper:]')"
+            if [ -n "${decision_id:-}" ] && [ "${reversal_id}" = "${decision_id}" ]; then
+                fail "Reversal cites ${reversal_id}, which is the governing decision itself."
+                note "A decision cannot authorise its own reversal. Unparking requires a NEW"
+                note "entry in the strategic record."
+            fi
         fi
     elif ! is_placeholder "${reversal}" && [ "${kind_lc}" != "unparked" ]; then
         note "Reversal given but Kind is ${kind_lc}; ignored."

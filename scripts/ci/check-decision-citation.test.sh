@@ -220,6 +220,39 @@ Kind:       unparked
 Reversal:   approved verbally
 EOF
 
+# An unanchored "contains FD-NN" test accepts prose with an id buried in it,
+# which is the thing this field exists to stop being sufficient.
+expect fail "unparked with the entry id buried in prose" <<'EOF'
+Objective:  A4 — example objective
+Decision:   FD-03 @ a30696a
+Kind:       unparked
+Reversal:   approved verbally, maybe see FD-13 sometime
+EOF
+
+# Self-authorisation. A decision that parks work cannot be the decision that
+# authorises unparking it — that is the deferral never having existed, wearing
+# a citation. Both of these passed before the anchoring fix.
+expect fail "unparked authorised by the governing decision itself" <<'EOF'
+Objective:  A4 — example objective
+Decision:   FD-03 @ a30696a
+Kind:       unparked
+Reversal:   FD-03
+EOF
+
+expect fail "self-authorisation with trailing prose" <<'EOF'
+Objective:  A4 — example objective
+Decision:   FD-03 @ a30696a
+Kind:       unparked
+Reversal:   FD-03 — still fine in my opinion
+EOF
+
+expect pass "bare entry id with nothing after it" <<'EOF'
+Objective:  A4 — example objective
+Decision:   FD-03 @ a30696a
+Kind:       unparked
+Reversal:   FD-13
+EOF
+
 # ---------------------------------------------------------------------------
 # Rejected — objective
 # ---------------------------------------------------------------------------

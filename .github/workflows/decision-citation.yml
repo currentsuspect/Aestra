@@ -81,20 +81,49 @@ jobs:
       # Degrades to a warning rather than a pass or a hard failure. Without the
       # token the structural gate above still binds — which is most of the value —
       # but the claim "this SHA exists" becomes unverified, and an unverified claim
-      # must be visible rather than assumed. Failing outright instead would make
-      # every fork PR unmergeable for a reason the author cannot fix.
+      # must be visible rather than assumed.
+      #
+      # A missing token means two different things depending on where the pull
+      # request came from, and they cannot share a disposition:
+      #
+      #   fork        Secrets are withheld by design. The author cannot fix this and
+      #               never could, so failing would make every fork pull request
+      #               permanently unmergeable for a reason outside its control.
+      #               Warn, run the structural half, and let review carry the rest.
+      #
+      #   same-repo   The token is missing because the repository is misconfigured.
+      #               Passing here would let branch protection accept "referential
+      #               validation was never attempted" as though it were "referential
+      #               validation passed" — a green tick over a gate that is not
+      #               running, which is the one outcome this lane must never produce.
+      #               Deleting the secret would silently disarm the check.
       - name: Check for the vault token
         id: token
         env:
           INTERNALS_TOKEN: ${{ secrets.INTERNALS_RO_TOKEN }}
+          # Renders as the literal string "true" or "false". A head repo that no
+          # longer exists compares unequal and is treated as a fork, which is the
+          # safe direction: such a pull request could not have had the secret anyway.
+          IS_FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
           set -uo pipefail
-          if [ -z "${INTERNALS_TOKEN}" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::INTERNALS_RO_TOKEN is not configured, so the cited SHA was not resolved against Aestra-Internals. Structural checks still ran. Fork pull requests cannot see this secret by design."
-          else
+          if [ -n "${INTERNALS_TOKEN}" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          echo "available=false" >> "$GITHUB_OUTPUT"
+
+          if [ "${IS_FORK}" = "true" ]; then
+            echo "::warning::Fork pull request: INTERNALS_RO_TOKEN is withheld by design, so the cited SHA was not resolved against the record. Structural checks still ran; confirm the citation manually before merging."
+            exit 0
+          fi
+
+          echo "::error::INTERNALS_RO_TOKEN is not configured on this repository."
+          echo "This is a same-repository pull request, so the secret should be available."
+          echo "Passing here would report a referential check that never ran."
+          echo "Configure the secret with read-only Contents access to the record repository."
+          exit 1
 
       - name: Resolve the cited decision against the record
         if: steps.token.outputs.available == 'true'
