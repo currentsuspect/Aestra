@@ -343,7 +343,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     add_test(NAME ProjectLoadRegressionTest COMMAND ProjectLoadRegressionTest)
-    set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;regression;routing")
+    set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;regression;routing;contract:durability")
 endif()
 
 # Project History Cap (issue #274 — .history directory disk-usage bound)
@@ -543,7 +543,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerWarTest.cpp")
         target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_SOXR=1)
     endif()
     add_test(NAME ResamplerWarTest COMMAND ResamplerWarTest)
-    set_tests_properties(ResamplerWarTest PROPERTIES LABELS "audio;dsp;resampler;quality")
+    set_tests_properties(ResamplerWarTest PROPERTIES LABELS "audio;dsp;resampler;quality;contract:audio")
 endif()
 
 # =============================================================================
@@ -555,7 +555,7 @@ add_executable(AestraAudioTest AestraAudio/AudioTest.cpp)
 target_link_libraries(AestraAudioTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_RUNTIME_TESTS)
     add_test(NAME AestraAudioTest COMMAND AestraAudioTest)
-    set_tests_properties(AestraAudioTest PROPERTIES LABELS "audio;runtime;device")
+    set_tests_properties(AestraAudioTest PROPERTIES LABELS "audio;runtime;device;contract:audio")
 else()
     message(STATUS "AestraAudioTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
@@ -628,7 +628,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME SamplerStereoParityTest COMMAND SamplerStereoParityTest)
-    set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression")
+    set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
@@ -642,7 +642,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTes
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME PatternPlaybackTempoChangeTest COMMAND PatternPlaybackTempoChangeTest)
-    set_tests_properties(PatternPlaybackTempoChangeTest PROPERTIES LABELS "audio;transport;pattern;regression")
+    set_tests_properties(PatternPlaybackTempoChangeTest PROPERTIES LABELS "audio;transport;pattern;regression;contract:audio")
 endif()
 
 # Sinc Interpolator Benchmark
@@ -741,7 +741,7 @@ target_include_directories(AestraConnectionTest PRIVATE
     ${CMAKE_SOURCE_DIR}
 )
 add_test(NAME AestraConnectionTest COMMAND AestraConnectionTest)
-set_tests_properties(AestraConnectionTest PROPERTIES LABELS "audio;regression")
+set_tests_properties(AestraConnectionTest PROPERTIES LABELS "audio;regression;contract:audio")
 
 # EffectChain Snapshot Test (Pass 1: immutable snapshot type)
 add_executable(AestraEffectChainSnapshotTest AestraAudio/EffectChainSnapshotTest.cpp)
@@ -751,7 +751,7 @@ target_include_directories(AestraEffectChainSnapshotTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
-set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin")
+set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin;contract:plugins")
 
 add_executable(AestraEffectChainStateVersionTest AestraAudio/EffectChainStateVersionTest.cpp)
 target_link_libraries(AestraEffectChainStateVersionTest PRIVATE AestraAudio)
@@ -770,7 +770,7 @@ target_include_directories(AestraAudioEngineEffectChainPrepareTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraAudioEngineEffectChainPrepareTest COMMAND AestraAudioEngineEffectChainPrepareTest)
-set_tests_properties(AestraAudioEngineEffectChainPrepareTest PROPERTIES LABELS "audio;plugin;regression")
+set_tests_properties(AestraAudioEngineEffectChainPrepareTest PROPERTIES LABELS "audio;plugin;regression;contract:plugins")
 
 # Plugin insert/remove graph invalidation regression tests
 add_executable(AestraPluginGraphInvalidationTest AestraAudio/PluginGraphInvalidationTest.cpp)
@@ -782,7 +782,7 @@ target_include_directories(AestraPluginGraphInvalidationTest PRIVATE
 add_test(NAME PluginInsertTakesEffectWithoutClipMoveTest COMMAND AestraPluginGraphInvalidationTest)
 add_test(NAME PluginRemoveTakesEffectWithoutClipMoveTest COMMAND AestraPluginGraphInvalidationTest)
 set_tests_properties(PluginInsertTakesEffectWithoutClipMoveTest PluginRemoveTakesEffectWithoutClipMoveTest
-    PROPERTIES LABELS "audio;plugin;regression")
+    PROPERTIES LABELS "audio;plugin;regression;contract:audio")
 
 # MixerChannel scratch buffer regression tests
 add_executable(AestraMixerChannelScratchBufferTest AestraAudio/MixerChannelScratchBufferTest.cpp)
@@ -792,7 +792,7 @@ target_include_directories(AestraMixerChannelScratchBufferTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraMixerChannelScratchBufferTest COMMAND AestraMixerChannelScratchBufferTest)
-set_tests_properties(AestraMixerChannelScratchBufferTest PROPERTIES LABELS "audio;plugin;regression")
+set_tests_properties(AestraMixerChannelScratchBufferTest PROPERTIES LABELS "audio;plugin;regression;contract:audio")
 
 # AudioEngineDiagnostics Test
 add_executable(AestraAudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
@@ -838,18 +838,18 @@ target_include_directories(AestraAudioQualityRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraAudioQualityRegressionTest COMMAND AestraAudioQualityRegressionTest)
-set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression")
+set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression;contract:audio")
 
 # Playback path signal-integrity diagnostics
 add_executable(AestraPlaybackPathSignalIntegrityTest AestraAudio/PlaybackPathSignalIntegrityTest.cpp)
 target_link_libraries(AestraPlaybackPathSignalIntegrityTest PRIVATE AestraAudio)
 add_test(NAME AestraPlaybackPathSignalIntegrityTest COMMAND AestraPlaybackPathSignalIntegrityTest)
-set_tests_properties(AestraPlaybackPathSignalIntegrityTest PROPERTIES LABELS "audio;quality;regression;playback")
+set_tests_properties(AestraPlaybackPathSignalIntegrityTest PROPERTIES LABELS "audio;quality;regression;playback;contract:audio")
 
 add_executable(TrackManagerMasterDuckingAuditTest AestraAudio/TrackManagerMasterDuckingAuditTest.cpp)
 target_link_libraries(TrackManagerMasterDuckingAuditTest PRIVATE AestraAudio)
 add_test(NAME TrackManagerMasterDuckingAuditTest COMMAND TrackManagerMasterDuckingAuditTest)
-set_tests_properties(TrackManagerMasterDuckingAuditTest PROPERTIES LABELS "audio;quality;regression;playback;metering")
+set_tests_properties(TrackManagerMasterDuckingAuditTest PROPERTIES LABELS "audio;quality;regression;playback;metering;contract:audio")
 
 # AudioEngine output channel safety regression test
 add_executable(AestraAudioEngineOutputChannelTest AestraAudio/AudioEngineOutputChannelTest.cpp)
@@ -859,7 +859,7 @@ target_include_directories(AestraAudioEngineOutputChannelTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraAudioEngineOutputChannelTest COMMAND AestraAudioEngineOutputChannelTest)
-set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression")
+set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression;contract:audio")
 
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
@@ -907,7 +907,7 @@ set_tests_properties(AestraWavLoaderTest PROPERTIES LABELS "contract:audio")
 add_executable(ArsenalUnitTypeTransitionTest AestraAudio/ArsenalUnitTypeTransitionTest.cpp)
 target_link_libraries(ArsenalUnitTypeTransitionTest PRIVATE AestraAudio)
 add_test(NAME ArsenalUnitTypeTransitionTest COMMAND ArsenalUnitTypeTransitionTest)
-set_tests_properties(ArsenalUnitTypeTransitionTest PROPERTIES LABELS "audio;arsenal;unit-type")
+set_tests_properties(ArsenalUnitTypeTransitionTest PROPERTIES LABELS "audio;arsenal;unit-type;contract:audio")
 
 # Audition Engine lifecycle regression
 add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
@@ -918,7 +918,7 @@ set_tests_properties(AestraAuditionEngineLifecycleTest PROPERTIES LABELS "contra
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
 add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
-set_tests_properties(PreviewAuditionGainParityTest PROPERTIES LABELS "audio;preview;audition;gain;regression")
+set_tests_properties(PreviewAuditionGainParityTest PROPERTIES LABELS "audio;preview;audition;gain;regression;contract:audio")
 
 # SamplePool Test
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
@@ -1021,7 +1021,7 @@ target_include_directories(ArsenalRouteModeCompatibilityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalRouteModeCompatibilityTest COMMAND ArsenalRouteModeCompatibilityTest)
-set_tests_properties(ArsenalRouteModeCompatibilityTest PROPERTIES LABELS "audio;arsenal")
+set_tests_properties(ArsenalRouteModeCompatibilityTest PROPERTIES LABELS "audio;arsenal;contract:audio")
 
 # Arsenal processing context routing test
 add_executable(ArsenalProcessingContextRoutingTest AestraAudio/ArsenalProcessingContextRoutingTest.cpp)
@@ -1031,7 +1031,7 @@ target_include_directories(ArsenalProcessingContextRoutingTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalProcessingContextRoutingTest COMMAND ArsenalProcessingContextRoutingTest)
-set_tests_properties(ArsenalProcessingContextRoutingTest PROPERTIES LABELS "audio;arsenal")
+set_tests_properties(ArsenalProcessingContextRoutingTest PROPERTIES LABELS "audio;arsenal;contract:audio")
 
 # Stable unit-to-mixer routing and arrangement independence regression test
 add_executable(UnitMixerRoutingTest AestraAudio/UnitMixerRoutingTest.cpp)
@@ -1041,7 +1041,7 @@ target_include_directories(UnitMixerRoutingTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME UnitMixerRoutingTest COMMAND UnitMixerRoutingTest)
-set_tests_properties(UnitMixerRoutingTest PROPERTIES LABELS "audio;arsenal;routing")
+set_tests_properties(UnitMixerRoutingTest PROPERTIES LABELS "audio;arsenal;routing;contract:audio")
 
 # Arsenal route-mode project round-trip compatibility test
 add_executable(ArsenalRouteModeRoundTripTest
@@ -1108,7 +1108,7 @@ target_include_directories(ArsenalExportCurrentPolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalExportCurrentPolicyTest COMMAND ArsenalExportCurrentPolicyTest)
-set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline")
+set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline;contract:audio")
 
 # Arsenal live/export parity hardening test (Phase 3)
 add_executable(ArsenalExportLiveParityTest AestraAudio/ArsenalExportLiveParityTest.cpp)
@@ -1128,7 +1128,7 @@ target_include_directories(ArsenalExportLiveParityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME ArsenalExportLiveParityTest COMMAND ArsenalExportLiveParityTest)
-set_tests_properties(ArsenalExportLiveParityTest PROPERTIES LABELS "arsenal;offline;policy;regression")
+set_tests_properties(ArsenalExportLiveParityTest PROPERTIES LABELS "arsenal;offline;policy;regression;contract:audio")
 
 # Arsenal bridge metadata round-trip persistence guard (Phase 2D)
 add_executable(ArsenalBridgeModeRoundTripTest AestraAudio/ArsenalBridgeModeRoundTripTest.cpp)
@@ -1190,7 +1190,7 @@ target_include_directories(SummingEngineTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME SummingEngineTest COMMAND SummingEngineTest)
-set_tests_properties(SummingEngineTest PROPERTIES LABELS "audio;quality;summing;s-tier")
+set_tests_properties(SummingEngineTest PROPERTIES LABELS "audio;quality;summing;s-tier;contract:audio")
 
 # Golden Reference Test — Signal-level regression against in-memory
 # mathematical reference for 1kHz, 440Hz, 10kHz, and impulse signals.
@@ -1203,7 +1203,7 @@ target_include_directories(GoldenReferenceTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
-set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
+set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier;contract:audio")
 
 # Golden Audio Regression — analytic golden cases for the render path:
 # silence/empty project, impulse via master, multi-track gain+pan mix.
@@ -1218,7 +1218,7 @@ target_include_directories(GoldenAudioRegressionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME GoldenAudioRegressionTest COMMAND GoldenAudioRegressionTest)
-set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier" TIMEOUT 180)
+set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier;contract:audio" TIMEOUT 180)
 
 # Metronome restart regression — transport restart edges must clear retained
 # click tails and rebase beat scheduling from the applied RT transport position.
@@ -1231,7 +1231,7 @@ target_include_directories(MetronomeRestartTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MetronomeRestartTest COMMAND MetronomeRestartTest)
-set_tests_properties(MetronomeRestartTest PROPERTIES LABELS "audio;metronome;transport;regression" TIMEOUT 120)
+set_tests_properties(MetronomeRestartTest PROPERTIES LABELS "audio;metronome;transport;regression;contract:audio" TIMEOUT 120)
 
 # Realtime/Export Parity — realtime processBlock output vs offline
 # bounceRangeToWav output for the same session, plus the preview-ducking
@@ -1245,7 +1245,7 @@ target_include_directories(RealtimeExportParityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
-set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier" TIMEOUT 180)
+set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier;contract:audio" TIMEOUT 180)
 
 # RT Allocation Trap — overrides operator new/delete in the test binary and
 # renders a session; asserts ZERO steady-state heap activity on the audio
@@ -1334,7 +1334,7 @@ target_include_directories(SampleRateBufferTruthTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME SampleRateBufferTruthTest COMMAND SampleRateBufferTruthTest)
-set_tests_properties(SampleRateBufferTruthTest PROPERTIES LABELS "audio;quality;samplerate;buffers;integrity;s-tier" TIMEOUT 180)
+set_tests_properties(SampleRateBufferTruthTest PROPERTIES LABELS "audio;quality;samplerate;buffers;integrity;s-tier;contract:audio" TIMEOUT 180)
 
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
@@ -1347,7 +1347,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME AudioQualityAuditTest COMMAND AudioQualityAuditTest)
-    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier" TIMEOUT 180)
+    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier;contract:audio" TIMEOUT 180)
 endif()
 
 # Audio Purity Audit — transparent path, summing, buffer invariance, hidden clipping, SRC invariants
@@ -1363,7 +1363,7 @@ target_include_directories(AudioPurityAuditTest PRIVATE
 add_test(NAME AudioPurityAuditTest COMMAND AudioPurityAuditTest
     --report ${CMAKE_BINARY_DIR}/audio-purity-report.json
     --text-report ${CMAKE_BINARY_DIR}/audio-purity-report.txt)
-set_tests_properties(AudioPurityAuditTest PROPERTIES LABELS "audio;quality;audit;purity;s-tier" TIMEOUT 240)
+set_tests_properties(AudioPurityAuditTest PROPERTIES LABELS "audio;quality;audit;purity;s-tier;contract:audio" TIMEOUT 240)
 
 # AudioEngine Torture Test — stress harness: silence, NaN/Inf, extreme gain,
 # buffer switching, sample rate switching, transport hammering, multi-track load
@@ -1384,7 +1384,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineTortureTest.cpp")
     target_compile_definitions(AudioEngineTortureTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENGINE_ASSERTS_ACTIVE=1>)
     add_test(NAME AudioEngineTortureTest COMMAND AudioEngineTortureTest)
-    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier" TIMEOUT 300)
+    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier;contract:audio" TIMEOUT 300)
 endif()
 
 # Export/Bounce Parity Test — Master bounce must equal sum of isolated
@@ -1399,7 +1399,7 @@ target_include_directories(ExportBounceParityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ExportBounceParityTest COMMAND ExportBounceParityTest)
-set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier")
+set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier;contract:audio")
 
 # =============================================================================
 # Audio Research Bench (Tests/Research)
@@ -1414,7 +1414,7 @@ set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;exp
 # diff forensics) against analytic math before it is used to measure DSP.
 add_executable(MeasurementCoreSelfTest Research/MeasurementCoreSelfTest.cpp)
 add_test(NAME MeasurementCoreSelfTest COMMAND MeasurementCoreSelfTest)
-set_tests_properties(MeasurementCoreSelfTest PROPERTIES LABELS "audio;research;audio-research" TIMEOUT 120)
+set_tests_properties(MeasurementCoreSelfTest PROPERTIES LABELS "audio;research;audio-research;contract:audio" TIMEOUT 120)
 
 # Resampler Quality Audit — measures BOTH resampling engines: the production
 # clip-playback path (Interpolators + phase accumulator, as run by
@@ -1442,7 +1442,7 @@ if(SOXR_FOUND)
     target_compile_definitions(ResamplerQualityAuditTest PRIVATE AESTRA_HAS_SOXR=1)
 endif()
 add_test(NAME ResamplerQualityAuditTest COMMAND ResamplerQualityAuditTest)
-set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 180)
+set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler;contract:audio" TIMEOUT 180)
 
 # Anti-Alias Policy Lab (Phase 3) — test-side prototype comparison for finding F1
 # (downsampling anti-aliasing): baseline legacy kernel vs an integrated ratio-aware
@@ -1468,7 +1468,7 @@ if(SOXR_FOUND)
     target_compile_definitions(AntiAliasPolicyLab PRIVATE AESTRA_HAS_SOXR=1)
 endif()
 add_test(NAME AntiAliasPolicyLab COMMAND AntiAliasPolicyLab)
-set_tests_properties(AntiAliasPolicyLab PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
+set_tests_properties(AntiAliasPolicyLab PROPERTIES LABELS "audio;research;audio-research;resampler;contract:audio" TIMEOUT 300)
 
 # Session Resampling Truth (Phase 2D) — proves the isolated resampler findings
 # through the actual shipped paths: realtime playback (TrackManager ->
@@ -1487,7 +1487,7 @@ target_include_directories(SessionResamplingTruthTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME SessionResamplingTruthTest COMMAND SessionResamplingTruthTest)
-set_tests_properties(SessionResamplingTruthTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
+set_tests_properties(SessionResamplingTruthTest PROPERTIES LABELS "audio;research;audio-research;resampler;contract:audio" TIMEOUT 300)
 
 # =============================================================================
 # AestraPlat Tests
@@ -1910,7 +1910,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Audio/DelayLineTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME DelayLineTest COMMAND DelayLineTest)
-    set_tests_properties(DelayLineTest PROPERTIES LABELS "audio;dsp;delay")
+    set_tests_properties(DelayLineTest PROPERTIES LABELS "audio;dsp;delay;contract:audio")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DCBlockerTest.cpp")
@@ -1920,7 +1920,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DCBlockerTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME DCBlockerTest COMMAND DCBlockerTest)
-    set_tests_properties(DCBlockerTest PROPERTIES LABELS "audio;dsp;dc-removal")
+    set_tests_properties(DCBlockerTest PROPERTIES LABELS "audio;dsp;dc-removal;contract:audio")
 endif()
 
 # Shared CLAP note-conversion rules (#244) — SDK-free, header-only
@@ -1931,7 +1931,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClapNoteConversionTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ClapNoteConversionTest COMMAND ClapNoteConversionTest)
-    set_tests_properties(ClapNoteConversionTest PROPERTIES LABELS "audio;plugin;clap")
+    set_tests_properties(ClapNoteConversionTest PROPERTIES LABELS "audio;plugin;clap;contract:plugins")
 endif()
 
 # Transport pause preserves the authoritative playhead (#590)
@@ -1943,7 +1943,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME TransportPausePreservesPositionTest COMMAND TransportPausePreservesPositionTest)
-    set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety")
+    set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
 endif()
 
 # AudioEngine Diagnostics Test
@@ -1955,7 +1955,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cp
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME AudioEngineDiagnosticsTest COMMAND AudioEngineDiagnosticsTest)
-    set_tests_properties(AudioEngineDiagnosticsTest PROPERTIES LABELS "audio;engine;diagnostics")
+    set_tests_properties(AudioEngineDiagnosticsTest PROPERTIES LABELS "audio;engine;diagnostics;contract:realtime")
 endif()
 
 # True Peak Meter Test
@@ -1967,7 +1967,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TruePeakMeterTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME TruePeakMeterTest COMMAND TruePeakMeterTest)
-    set_tests_properties(TruePeakMeterTest PROPERTIES LABELS "audio;dsp;metering")
+    set_tests_properties(TruePeakMeterTest PROPERTIES LABELS "audio;dsp;metering;contract:audio")
 endif()
 
 # Piano Roll Edge Case Stress Test
@@ -1991,7 +1991,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PluginHostStressTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME PluginHostStressTest COMMAND PluginHostStressTest)
-    set_tests_properties(PluginHostStressTest PROPERTIES LABELS "audio;plugin;stress")
+    set_tests_properties(PluginHostStressTest PROPERTIES LABELS "audio;plugin;stress;contract:plugins")
 endif()
 
 # Transport Stress Test
@@ -2027,7 +2027,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/MixerChannelStressTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME MixerChannelStressTest COMMAND MixerChannelStressTest)
-    set_tests_properties(MixerChannelStressTest PROPERTIES LABELS "audio;mixer;stress")
+    set_tests_properties(MixerChannelStressTest PROPERTIES LABELS "audio;mixer;stress;contract:audio")
 endif()
 
 # Track Manager Stress Test

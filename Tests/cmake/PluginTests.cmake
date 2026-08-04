@@ -24,7 +24,7 @@ target_include_directories(AestraEQTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
-set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
+set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq;contract:audio")
 
 # Aestra EQ Measurement Test
 add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
@@ -35,7 +35,7 @@ target_include_directories(AestraEQMeasurementTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraEQMeasurementTest COMMAND AestraEQMeasurementTest)
-set_tests_properties(AestraEQMeasurementTest PROPERTIES LABELS "audio;plugins;eq;measurement")
+set_tests_properties(AestraEQMeasurementTest PROPERTIES LABELS "audio;plugins;eq;measurement;contract:audio")
 
 # Aestra EQ Material Lab
 add_executable(AestraEQMaterialLab AestraAudio/AestraEQMaterialLab.cpp)
@@ -58,7 +58,7 @@ target_include_directories(AestraCompPhase0Test PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraCompPhase0Test COMMAND AestraCompPhase0Test)
-set_tests_properties(AestraCompPhase0Test PROPERTIES LABELS "audio;plugins;comp;phase0")
+set_tests_properties(AestraCompPhase0Test PROPERTIES LABELS "audio;plugins;comp;phase0;contract:audio")
 
 # Aestra Comp Phase 1 Test
 add_executable(AestraCompPhase1Test AestraAudio/AestraCompPhase1Test.cpp)
@@ -69,7 +69,7 @@ target_include_directories(AestraCompPhase1Test PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraCompPhase1Test COMMAND AestraCompPhase1Test)
-set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1")
+set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1;contract:plugins")
 
 # Aestra Comp Oversampling Test (#228)
 add_executable(AestraCompOversamplingTest AestraAudio/AestraCompOversamplingTest.cpp)
@@ -80,7 +80,7 @@ target_include_directories(AestraCompOversamplingTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraCompOversamplingTest COMMAND AestraCompOversamplingTest)
-set_tests_properties(AestraCompOversamplingTest PROPERTIES LABELS "audio;plugins;comp;oversampling")
+set_tests_properties(AestraCompOversamplingTest PROPERTIES LABELS "audio;plugins;comp;oversampling;contract:audio")
 
 # Aestra Comp Upgrade Test
 add_executable(AestraCompUpgradeTest AestraAudio/AestraCompUpgradeTest.cpp)
@@ -92,7 +92,7 @@ target_include_directories(AestraCompUpgradeTest PRIVATE
 )
 if(AESTRA_ENABLE_RUNTIME_TESTS)
     add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
-    set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
+    set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade;contract:plugins")
 else()
     message(STATUS "AestraCompUpgradeTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
@@ -107,7 +107,7 @@ target_include_directories(AestraCompressorMaterialLab PRIVATE
 )
 target_compile_definitions(AestraCompressorMaterialLab PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 add_test(NAME AestraCompressorMaterialLab COMMAND AestraCompressorMaterialLab)
-set_tests_properties(AestraCompressorMaterialLab PROPERTIES LABELS "audio;plugins;comp;lab")
+set_tests_properties(AestraCompressorMaterialLab PROPERTIES LABELS "audio;plugins;comp;lab;contract:audio")
 
 # Aestra Delay Upgrade Test
 add_executable(AestraDelayUpgradeTest AestraAudio/AestraDelayUpgradeTest.cpp)
@@ -118,7 +118,7 @@ target_include_directories(AestraDelayUpgradeTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
-set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
+set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade;contract:audio")
 
 add_executable(AestraDriftQualityTest AestraAudio/AestraDriftQualityTest.cpp)
 target_link_libraries(AestraDriftQualityTest PRIVATE AestraAudio)
@@ -126,7 +126,7 @@ target_include_directories(AestraDriftQualityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
 )
 add_test(NAME AestraDriftQualityTest COMMAND AestraDriftQualityTest)
-set_tests_properties(AestraDriftQualityTest PROPERTIES LABELS "audio;plugins;drift;quality")
+set_tests_properties(AestraDriftQualityTest PROPERTIES LABELS "audio;plugins;drift;quality;contract:audio")
 
 # Aestra Limit Test
 add_executable(AestraLimitTest AestraAudio/AestraLimitTest.cpp)
@@ -137,7 +137,7 @@ target_include_directories(AestraLimitTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraLimitTest COMMAND AestraLimitTest)
-set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
+set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter;contract:audio")
 
 # Aestra Sat Test
 add_executable(AestraSatTest AestraAudio/AestraSatTest.cpp)
@@ -148,7 +148,7 @@ target_include_directories(AestraSatTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraSatTest COMMAND AestraSatTest)
-set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation")
+set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation;contract:audio")
 
 # Aestra Filter plugin test. Not to be confused with AestraFilterTest, which is
 # the DSP::Filter lab (AestraAudio/FilterTest.cpp, registered in Tests/CMakeLists.txt
@@ -161,7 +161,7 @@ target_include_directories(AestraFilterPluginTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraFilterPluginTest COMMAND AestraFilterPluginTest)
-set_tests_properties(AestraFilterPluginTest PROPERTIES LABELS "audio;plugins;filter")
+set_tests_properties(AestraFilterPluginTest PROPERTIES LABELS "audio;plugins;filter;contract:audio")
 
 # Aestra Filter multi-instance benchmark — build always, register only when
 # experimental tests are enabled (never in the always-on CI tier).
@@ -188,7 +188,7 @@ target_include_directories(AestraOTTTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraOTTTest COMMAND AestraOTTTest)
-set_tests_properties(AestraOTTTest PROPERTIES LABELS "audio;plugins;ott")
+set_tests_properties(AestraOTTTest PROPERTIES LABELS "audio;plugins;ott;contract:audio")
 
 # Aestra LFO Test
 add_executable(AestraLFOTest AestraAudio/AestraLFOTest.cpp)
@@ -199,7 +199,7 @@ target_include_directories(AestraLFOTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraLFOTest COMMAND AestraLFOTest)
-set_tests_properties(AestraLFOTest PROPERTIES LABELS "audio;plugins;lfo")
+set_tests_properties(AestraLFOTest PROPERTIES LABELS "audio;plugins;lfo;contract:audio")
 
 # Plugin initialization contract — parameters must survive EffectChain::prepare()
 # re-initialize (sample-rate/device changes), across every internal effect.
@@ -211,7 +211,7 @@ target_include_directories(PluginInitContractTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME PluginInitContractTest COMMAND PluginInitContractTest)
-set_tests_properties(PluginInitContractTest PROPERTIES LABELS "audio;plugins;lifecycle")
+set_tests_properties(PluginInitContractTest PROPERTIES LABELS "audio;plugins;lifecycle;contract:plugins")
 
 # Missing-plugin state preservation (#647) — a plugin that cannot be
 # instantiated must survive load/save instead of being silently erased.
@@ -235,4 +235,4 @@ target_include_directories(EffectChainInstanceIdentityTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME EffectChainInstanceIdentityTest COMMAND EffectChainInstanceIdentityTest)
-set_tests_properties(EffectChainInstanceIdentityTest PROPERTIES LABELS "audio;plugins;automation;regression")
+set_tests_properties(EffectChainInstanceIdentityTest PROPERTIES LABELS "audio;plugins;automation;regression;contract:plugins")

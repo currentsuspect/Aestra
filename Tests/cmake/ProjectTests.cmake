@@ -53,7 +53,7 @@ target_include_directories(AudioClipInstanceRenderTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AudioClipInstanceRenderTest COMMAND AudioClipInstanceRenderTest)
-set_tests_properties(AudioClipInstanceRenderTest PROPERTIES LABELS "audio;routing")
+set_tests_properties(AudioClipInstanceRenderTest PROPERTIES LABELS "audio;routing;contract:audio")
 
 # Project-format compatibility policy: migration completeness, observable
 # outcomes, historical fixtures, and non-destructive unsupported-version loads.
