@@ -40,7 +40,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSIMDParityTest.cpp")
     # actually a silent skip on every SSE machine.
     target_compile_definitions(ReverbSIMDParityTest PRIVATE AESTRA_ENABLE_RUNTIME_TESTS=1)
     add_test(NAME ReverbSIMDParityTest COMMAND ReverbSIMDParityTest)
-    set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb")
+    set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb;contract:audio")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSafetyRegressionTest.cpp")
@@ -52,7 +52,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSafetyRegressionTest.cp
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ReverbSafetyRegressionTest COMMAND ReverbSafetyRegressionTest)
-    set_tests_properties(ReverbSafetyRegressionTest PROPERTIES LABELS "audio;dsp;reverb;safety")
+    set_tests_properties(ReverbSafetyRegressionTest PROPERTIES LABELS "audio;dsp;reverb;safety;contract:audio")
 endif()
 
 # Reverb Consistency Probe — hunts for inconsistency/offness (bypass parity,
@@ -68,7 +68,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbConsistencyProbe.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ReverbConsistencyProbe COMMAND ReverbConsistencyProbe)
-    set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe")
+    set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe;contract:audio")
 endif()
 
 # Reverb F4 modulation regression test (taps the real per-line modulator)
@@ -81,7 +81,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ReverbModulationTest COMMAND ReverbModulationTest)
-    set_tests_properties(ReverbModulationTest PROPERTIES LABELS "audio;dsp;reverb;modulation")
+    set_tests_properties(ReverbModulationTest PROPERTIES LABELS "audio;dsp;reverb;modulation;contract:audio")
 endif()
 
 # Reverb F6 stereo regression test (mono compatibility + width)
@@ -94,7 +94,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ReverbStereoTest COMMAND ReverbStereoTest)
-    set_tests_properties(ReverbStereoTest PROPERTIES LABELS "audio;dsp;reverb;stereo")
+    set_tests_properties(ReverbStereoTest PROPERTIES LABELS "audio;dsp;reverb;stereo;contract:audio")
 endif()
 
 # Reverb F8 tail-dormancy test (idle-instance optimization correctness)
@@ -107,7 +107,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ReverbDormancyTest COMMAND ReverbDormancyTest)
-    set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
+    set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy;contract:audio")
 endif()
 
 # Reverb Harmonic-Motion / Tremolo investigation labs — experimental tooling,

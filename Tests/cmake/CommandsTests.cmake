@@ -286,7 +286,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/ClipR
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ClipRenderServiceTest COMMAND ClipRenderServiceTest)
-    set_tests_properties(ClipRenderServiceTest PROPERTIES LABELS "commands;audio;clip-render")
+    set_tests_properties(ClipRenderServiceTest PROPERTIES LABELS "commands;audio;clip-render;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RenderAudioClipCommandTest.cpp")
@@ -297,7 +297,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/Rende
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RenderAudioClipCommandTest COMMAND RenderAudioClipCommandTest)
-    set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo")
+    set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseClipRoundTripTest.cpp")
@@ -319,7 +319,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/Cl
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ClipRenderCharacterizationTest COMMAND ClipRenderCharacterizationTest)
-    set_tests_properties(ClipRenderCharacterizationTest PROPERTIES LABELS "audio;clip-render;characterization")
+    set_tests_properties(ClipRenderCharacterizationTest PROPERTIES LABELS "audio;clip-render;characterization;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClipSrcTelemetryTest.cpp")
@@ -330,7 +330,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/Cl
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ClipSrcTelemetryTest COMMAND ClipSrcTelemetryTest)
-    set_tests_properties(ClipSrcTelemetryTest PROPERTIES LABELS "audio;clip-render;telemetry")
+    set_tests_properties(ClipSrcTelemetryTest PROPERTIES LABELS "audio;clip-render;telemetry;contract:audio")
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
