@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
 #include "TrackManagerUI.h"
+#include "TrackManagerUIMath.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "MixerChannel.h"
 #include "TrackManager.h"
@@ -991,11 +992,11 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
     
     // Calculate waveform dimensions in pixel space
     double relStartX = (startBeat * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset);
-    float waveformStartX = bounds.x + controlAreaWidth + 5 + static_cast<float>(relStartX);
+    float waveformStartX = timelineGridStartX(bounds.x, controlAreaWidth) + static_cast<float>(relStartX);
     float waveformWidthInPixels = static_cast<float>(durationBeats * m_pixelsPerBeat);
     
     // Only draw if waveform is visible in the current viewport
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     float gridWidth = bounds.width - controlAreaWidth - 10;
     float gridEndX = gridStartX + gridWidth;
     
@@ -1889,7 +1890,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     float gridEndX = bounds.x + bounds.width - 5;
     
     // === HOVER EDGE DETECTION (for resize cursor) ===
@@ -2102,7 +2103,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     if (m_playlistMode == PlaylistMode::Automation && (isInsideBounds || m_isDraggingPoint)) {
         if (event.position.x >= gridStartX || m_isDraggingPoint) {
-            double beat = (event.position.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+            double beat =
+                timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
             double value = 1.0 - std::clamp((static_cast<double>(event.position.y) - bounds.y) / bounds.height, 0.0, 1.0);
             
             auto& playlist = m_trackManager->getPlaylistModel();
@@ -2404,9 +2406,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (isSplitToolActive && clickedClipId.isValid()) {
                 // Calculate beat position using same math as the visual cursor in TrackManagerUI
                 // This ensures the split occurs exactly where the preview line shows
-                float mouseRelX = event.position.x - gridStartX + m_timelineScrollOffset;
-                double mouseBeat = mouseRelX / static_cast<double>(m_pixelsPerBeat);
-                
+                double mouseBeat =
+                    timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
+
                 Log::info("Split requested at " + std::to_string(mouseBeat) + " beats");
                 
                 if (m_onSplitRequestedCallback) {
@@ -2419,9 +2421,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             // Handle PAINT TOOL - Click on empty space
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (parentMgr->getCurrentTool() == PlaylistTool::Paint && !clickedClipId.isValid()) {
-                     double beat = (event.position.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
-                     parentMgr->onPaintClip(this, beat);
-                     return true;
+                    double beat = timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset,
+                                                           m_pixelsPerBeat);
+                    parentMgr->onPaintClip(this, beat);
+                    return true;
                 }
             }
             
@@ -2727,7 +2730,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (!gotSnapshot || recordingData.empty()) return;
 
     // Layout parameters
-    const float gridStartX = bounds.x + controlAreaWidth + 5.0f; // + gap
+    const float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     const float centerY = bounds.y + bounds.height * 0.5f;
     const float halfHeight = bounds.height * 0.5f; // Use full height for live wave
     

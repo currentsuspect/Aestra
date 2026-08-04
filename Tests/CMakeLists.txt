@@ -1535,6 +1535,13 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression")
 
+add_executable(TimelineGeometryTest AestraUI/TimelineGeometryTest.cpp)
+target_include_directories(TimelineGeometryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
+set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression")
+
 add_executable(TimelineInteractionPolicyTest AestraUI/TimelineInteractionPolicyTest.cpp)
 target_include_directories(TimelineInteractionPolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components
