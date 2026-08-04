@@ -5,6 +5,23 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    # `edited` is not decoration. Without it, retargeting a pull request's base
+    # onto develop produces only an `edited` event, which the default type set
+    # (opened, synchronize, reopened) does not subscribe to — so no CI run is
+    # created and the five required contexts never report. The pull request then
+    # blocks permanently with nothing an author can do about it. #719 sat in that
+    # state until it was closed and reopened purely to manufacture a `reopened`
+    # event.
+    #
+    # The branch filter still evaluates the pull request's *target*, so adding
+    # `edited` widens which events are subscribed to, never which branches run.
+    #
+    # This also fires on title and description edits, which is wasteful and
+    # deliberate: the required jobs must not be conditionally skipped for
+    # non-base edits, because GitHub reports a skipped required job as
+    # successful. A selective implementation would turn a later metadata edit
+    # into false-green evidence over a matrix that had actually failed.
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
 
 concurrency:
