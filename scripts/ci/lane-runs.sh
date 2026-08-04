@@ -41,7 +41,7 @@ LANE="${2:-}"
 # force-disabled. None of them can observe a change confined to the UI/app trees.
 is_headless_lane() {
     case "$1" in
-        linux-gcc|windows-msvc|macos-clang|asan|tsan|lsan|tidy) return 0 ;;
+        linux-gcc|windows-msvc|macos-clang|asan|tsan|lsan|tidy|plugin-host) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -51,7 +51,7 @@ main() {
         skip-cxx)
             # Nothing compiles prose. The UI/App lane included.
             case "${LANE}" in
-                linux-gcc|windows-msvc|macos-clang|ui-app|asan|tsan|lsan|tidy)
+                linux-gcc|windows-msvc|macos-clang|ui-app|asan|tsan|lsan|tidy|plugin-host)
                     echo "false"; return 0 ;;
             esac
             ;;

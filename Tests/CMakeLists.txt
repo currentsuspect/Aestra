@@ -864,6 +864,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/i
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
     target_link_libraries(AestraWatchdogTest PRIVATE AestraAudio)
     add_test(NAME AestraWatchdogTest COMMAND AestraWatchdogTest)
+    # Labelled so label-based selection can find it. These two are the only tests in
+    # the tree gated on the VST3 SDK, and they were unlabelled — so the plugin-host
+    # lane compiled them and then never ran them, because its `ctest -L "plugin|clap"`
+    # had nothing to match on. Compiled is not executed.
+    set_tests_properties(AestraWatchdogTest PROPERTIES LABELS "plugin;vst3;watchdog")
     target_include_directories(AestraWatchdogTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
@@ -879,6 +884,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/i
     add_executable(AestraCrashTest AestraAudio/CrashTest.cpp)
     target_link_libraries(AestraCrashTest PRIVATE AestraAudio)
     add_test(NAME AestraCrashTest COMMAND AestraCrashTest)
+    set_tests_properties(AestraCrashTest PROPERTIES LABELS "plugin;vst3;crash")
     target_include_directories(AestraCrashTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
