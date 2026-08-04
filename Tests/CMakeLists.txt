@@ -1193,7 +1193,7 @@ set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden
 # Golden Audio Regression — analytic golden cases for the render path:
 # silence/empty project, impulse via master, multi-track gain+pan mix.
 # Harness: Tests/AestraAudio/GoldenAudio/GoldenAudioHarness.h.
-# Policy doc: AestraDocs/audio-integrity-infrastructure.md.
+# Policy doc: Aestra-Internals: aestra-docs/audio-integrity-infrastructure.md.
 add_executable(GoldenAudioRegressionTest AestraAudio/GoldenAudioRegressionTest.cpp)
 target_link_libraries(GoldenAudioRegressionTest PRIVATE AestraAudio)
 target_include_directories(GoldenAudioRegressionTest PRIVATE
@@ -1220,7 +1220,7 @@ set_tests_properties(MetronomeRestartTest PROPERTIES LABELS "audio;metronome;tra
 
 # Realtime/Export Parity — realtime processBlock output vs offline
 # bounceRangeToWav output for the same session, plus the preview-ducking
-# export-contamination probe. Doc: AestraDocs/audio-integrity-infrastructure.md.
+# export-contamination probe. Doc: Aestra-Internals: aestra-docs/audio-integrity-infrastructure.md.
 add_executable(RealtimeExportParityTest AestraAudio/RealtimeExportParityTest.cpp)
 target_link_libraries(RealtimeExportParityTest PRIVATE AestraAudio)
 target_include_directories(RealtimeExportParityTest PRIVATE
@@ -1235,7 +1235,7 @@ set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;e
 # RT Allocation Trap — overrides operator new/delete in the test binary and
 # renders a session; asserts ZERO steady-state heap activity on the audio
 # callback path (thread marked by ScopedRealtimeAudioThread in processBlock).
-# Findings doc: AestraDocs/rt-safety-audit.md.
+# Findings doc: Aestra-Internals: aestra-docs/rt-safety-audit.md.
 add_executable(RTAllocationTrapTest AestraAudio/RTAllocationTrapTest.cpp)
 target_link_libraries(RTAllocationTrapTest PRIVATE AestraAudio)
 target_include_directories(RTAllocationTrapTest PRIVATE
@@ -1392,7 +1392,7 @@ set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;exp
 # Scientific audio-quality measurement layer: deterministic signal generators
 # (SignalLab.h) + analysis routines (AudioMeasure.h), validated against
 # closed-form analytic expectations. Header-only, test-side, no engine deps.
-# Doc: AestraDocs/audio-research-bench.md.
+# Doc: Aestra-Internals: aestra-docs/audio-research-bench.md.
 
 # Measurement Core Self-Test — proves the measurement layer itself (peak, RMS,
 # DC, tone fit/SINAD-style residual, THD, impulse stats, stereo correlation,
@@ -1433,7 +1433,7 @@ set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research
 # (downsampling anti-aliasing): baseline legacy kernel vs an integrated ratio-aware
 # cutoff-scaled sinc (Option A) vs a designed delay-compensated Kaiser prefilter
 # (Option B), plus optional libsamplerate/soxr references. No production DSP is
-# changed; results feed the product decision in AestraDocs/audio-research-bench.md §9.
+# changed; results feed the product decision in Aestra-Internals: aestra-docs/audio-research-bench.md §9.
 add_executable(AntiAliasPolicyLab Research/AntiAliasPolicyLab.cpp)
 target_link_libraries(AntiAliasPolicyLab PRIVATE AestraAudioCore)
 target_include_directories(AntiAliasPolicyLab PRIVATE

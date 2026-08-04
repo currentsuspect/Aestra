@@ -9,7 +9,7 @@
  * cursor while dragging and restore it at a semantically meaningful position
  * on release. Before this service, three widgets each hand-rolled that
  * pattern with divergent warp targets, restore ordering, and no platform
- * awareness (see AestraDocs/cursor-unification-map-2026-07.md).
+ * awareness (see Aestra-Internals: aestra-docs/cursor-unification-map-2026-07.md).
  *
  * The service is the one place that knows:
  *  - hide/unhide ordering (always warp BEFORE unhide, so the cursor never

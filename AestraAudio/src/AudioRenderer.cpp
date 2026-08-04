@@ -252,7 +252,7 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
             // Sinc32/Sinc64 previously dispatched to the Turbo LUT kernels here, giving
             // solo bounces a measurably lower quality floor than the full mix (~88 dB vs
             // ~147 dB SINAD at fractional ratios) — resolved F6, measured by
-            // SessionResamplingTruthTest; see AestraDocs/audio-research-bench.md §8.
+            // SessionResamplingTruthTest; see Aestra-Internals: aestra-docs/audio-research-bench.md §8.
             // This path runs offline only, so the slower exact-sinc kernels are fine.
             InterpFn interpolateFunc = Interpolators::Sinc64Interpolator::interpolate;
             switch (cachedInterpQuality) {

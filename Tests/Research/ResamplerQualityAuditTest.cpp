@@ -9,11 +9,11 @@
 //      the MAINLINE session clip loop in AudioEngine::renderGraph — and, since the
 //      2E unification, AudioRenderer's isolated-bounce loop — dispatch Sinc64 to
 //      the legacy exact-sinc Sinc64Interpolator instead; measured end-to-end by
-//      SessionResamplingTruthTest, see AestraDocs/audio-research-bench.md §8.)
+//      SessionResamplingTruthTest, see Aestra-Internals: aestra-docs/audio-research-bench.md §8.)
 //      The kernel cutoff sits at the SOURCE Nyquist and there is no
 //      ratio-aware anti-alias filtering: when downsampling, content between the two
 //      Nyquist frequencies is EXPECTED to alias. The audit pins that behavior as a
-//      measured characteristic (see AestraDocs/audio-research-bench.md), it does not
+//      measured characteristic (see Aestra-Internals: aestra-docs/audio-research-bench.md), it does not
 //      bless it as ideal.
 //
 //   2. The streaming SampleRateConverter (polyphase, ratio-aware cutoff — it
@@ -190,7 +190,7 @@ void auditInterpolatorPair(CheckSession& t, const RatePair& p) {
         // sample lands on an input sample). The fractional-ratio floor matches
         // Sinc64Turbo's 2048-phase nearest-phase LUT quantization (worst phase error
         // 1/4096 sample -> ~ -89 dB at 1 kHz), NOT the header's "~144dB SNR" figure,
-        // which describes the kernel stopband. See AestraDocs/audio-research-bench.md.
+        // which describes the kernel stopband. See Aestra-Internals: aestra-docs/audio-research-bench.md.
         t.expect((name + ": 1 kHz residual SINAD > 84 dB").c_str(), fit.sinadDb > 84.0,
                  "sinadDb=" + std::to_string(fit.sinadDb));
     }
@@ -363,7 +363,7 @@ void auditStreamingPair(CheckSession& t, const RatePair& p) {
         // below the "mastering/reference grade" wording in SampleRateConverter.h.
         // Mechanism not fully attributed yet (256-phase bank without inter-phase
         // interpolation is the prime suspect but under-predicts the loss) — flagged
-        // as a Phase-2 research target in AestraDocs/audio-research-bench.md. The
+        // as a Phase-2 research target in Aestra-Internals: aestra-docs/audio-research-bench.md. The
         // converter has no production call sites today, so this is not user-facing.
         t.expect((name + ": 1 kHz residual SINAD > 35 dB (characterization; see FINDING)").c_str(),
                  fit.sinadDb > 35.0, "sinadDb=" + std::to_string(fit.sinadDb));

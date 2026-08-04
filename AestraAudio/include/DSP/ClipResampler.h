@@ -14,7 +14,7 @@ namespace Audio {
  * @brief Resampling quality modes for clip playback
  *
  * SNR figures are kernel design targets. Measured delivered behavior (see
- * AestraDocs/audio-research-bench.md): Sinc64Turbo reaches ~88 dB single-tone
+ * Aestra-Internals: aestra-docs/audio-research-bench.md): Sinc64Turbo reaches ~88 dB single-tone
  * SINAD at fractional rate ratios (~154 dB at exact 2:1), and no mode applies
  * a ratio-aware anti-alias low-pass when downsampling. These figures describe
  * this class's Sinc64Turbo-based consumers (e.g. AuditionEngine); mainline

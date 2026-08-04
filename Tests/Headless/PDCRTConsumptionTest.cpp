@@ -14,7 +14,7 @@
 // phase that adds a dedicated audio render harness. This file's scope is RT
 // safety + smoke-level path execution.
 //
-// See AestraDocs/PDC-v2-Design.md §12 P4b.3.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §12 P4b.3.
 
 #include "Core/AudioEngine.h"
 #include "Core/MixerChannel.h"

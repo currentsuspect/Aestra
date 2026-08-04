@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.16)
 #
 # Adding a fixture is therefore a deliberate two-part act: check in the file and
 # record its hash here. That is the intent — see
-# AestraDocs/architecture/project-format-compatibility.md.
+# Aestra-Internals: aestra-docs/architecture/project-format-compatibility.md.
 
 # Files under the fixture root that are documentation rather than fixture
 # evidence. Kept explicit: an unrecognised file must fail, not be guessed at.

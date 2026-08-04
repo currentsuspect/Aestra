@@ -3,7 +3,7 @@
 // offline export path produce the same audio for an equivalent session, and
 // that monitoring conveniences (preview ducking) cannot contaminate an export.
 //
-// Paths under test (see AestraDocs/audio-integrity-infrastructure.md §1):
+// Paths under test (see Aestra-Internals: aestra-docs/audio-integrity-infrastructure.md §1):
 //   realtime: AudioEngine::processBlock driven block-by-block (as the device
 //             callback does) — rendered here via GoldenAudio::renderBlocks.
 //   offline:  AudioEngine::bounceRangeToWav → AudioExporter::render, which
@@ -119,7 +119,7 @@ double rmsRange(const std::vector<float>& interleaved, size_t firstFrame, size_t
 // deliberately out of this test's assertions: on a FRESH engine, freshly set
 // ContinuousParamBuffer values take one processBlock to reach the mix — at
 // the exporter's 4096-frame block size that is the first ~85 ms. Documented
-// in AestraDocs/audio-integrity-infrastructure.md; real exports are unaffected
+// in Aestra-Internals: aestra-docs/audio-integrity-infrastructure.md; real exports are unaffected
 // because the app's engine is warm.)
 void warmupEngine(AudioEngine& engine, const SessionConfig& cfg) {
     engine.setTransportPlaying(true);

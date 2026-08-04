@@ -10,7 +10,7 @@
 //   3. (added below in this series) Multi-track mix with gain and pan.
 //
 // References are analytic; tolerance policy and update procedure are
-// documented in AestraDocs/audio-integrity-infrastructure.md.
+// documented in Aestra-Internals: aestra-docs/audio-integrity-infrastructure.md.
 
 #include "GoldenAudio/GoldenAudioHarness.h"
 

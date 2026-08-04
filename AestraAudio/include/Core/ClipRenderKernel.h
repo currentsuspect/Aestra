@@ -17,7 +17,7 @@ namespace ClipRenderKernel {
  * This is the single authority for what one audio clip sounds like: source
  * offset and slip, playback rate and resampling, clip gain, pan and fades. It
  * was the per-clip body of AudioEngine::renderClips() and is unchanged
- * arithmetic — see AestraDocs/specs/consolidate-audio-range.md §3.1 and §4b,
+ * arithmetic — see Aestra-Internals: aestra-docs/specs/consolidate-audio-range.md §3.1 and §4b,
  * which require the consolidation renderer to *mirror* the runtime rather than
  * re-derive an interpretation of ClipEdits.
  *
