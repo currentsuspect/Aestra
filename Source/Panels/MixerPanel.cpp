@@ -7,6 +7,8 @@
 #include "../AestraUI/Base/NUISlider.h"
 #include "../App/ServiceLocator.h"
 #include "AudioDeviceManager.h"
+#include "../Core/MixerUIPreferences.h"
+#include "../../AestraCore/include/AestraLog.h"
 
 using namespace AestraUI;
 using namespace Aestra::Audio;
@@ -38,7 +40,37 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     // Set as content of WindowPanel
     setContent(m_newMixer);
 
+    loadUIPreferences();
+    m_newMixer->onInspectorPreferenceChanged = [this](bool) { saveUIPreferences(); };
+
     refreshChannels();
+}
+
+void MixerPanel::loadUIPreferences()
+{
+    if (!m_newMixer) return;
+
+    const std::string path = Aestra::MixerUIPreferences::settingsPath();
+    if (path.empty()) {
+        AESTRA_LOG_WARNING("No config directory available; mixer layout will not persist");
+        return;
+    }
+
+    // Absent keys keep the panel's own defaults; load() never invents a false.
+    const Aestra::MixerUIPreferences prefs = Aestra::MixerUIPreferences::load(path);
+    m_newMixer->setInspectorExpandedPreference(prefs.inspectorExpanded);
+}
+
+void MixerPanel::saveUIPreferences() const
+{
+    if (!m_newMixer) return;
+
+    const std::string path = Aestra::MixerUIPreferences::settingsPath();
+    if (path.empty()) return;
+
+    Aestra::MixerUIPreferences prefs;
+    prefs.inspectorExpanded = m_newMixer->getInspectorExpandedPreference();
+    prefs.save(path);
 }
 
 
