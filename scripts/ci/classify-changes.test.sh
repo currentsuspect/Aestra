@@ -43,6 +43,7 @@ expect() {
 expect skip-cxx "docs only"                      "docs/technical/roadmap.md"
 expect skip-cxx "top-level prose"                "README.md" "LICENSING.md" "NOTICE"
 expect skip-cxx "docs image tree"                "docs/images/aestra_daw_interface.png"
+expect skip-cxx "extracted internal docs tree"   "AestraDocs/architecture/AUDIT_RT_Safety_2026Q2.md"
 expect skip-cxx "worker only"                    "workers/license-signing/package.json"
 expect skip-cxx "worker + lockfile"              "workers/license-signing/package.json" \
                                                  "workers/license-signing/package-lock.json"
@@ -51,11 +52,10 @@ expect skip-cxx "mkdocs config"                  "mkdocs.yml"
 expect skip-cxx "changelog"                      "meta/CHANGELOGS/CHANGELOG_2026Q2.md"
 
 # Real PRs from 2026-07-25 that should have skipped the C++ matrix (#620).
-# #619 originally touched AestraDocs/images/aestra_daw_interface.png. AestraDocs/
-# was extracted to the private Aestra-Internals vault and that image now lives at
-# docs/images/; the path is updated so the regression still exercises the same
-# shape (image + top-level prose + public docs must skip the C++ matrix).
-expect skip-cxx "#619 as merged"                 "docs/images/aestra_daw_interface.png" \
+# #619's real file list is replayed by the liveness check in ci.yml, so this case
+# keeps the historical AestraDocs/ path it actually touched. Changing it here
+# would hide a classifier regression that CI would still catch.
+expect skip-cxx "#619 as merged"                 "AestraDocs/images/aestra_daw_interface.png" \
                                                  "LICENSING.md" "NOTICE" "README.md" \
                                                  "docs/about/licensing.md"
 expect skip-cxx "#615 as merged"                 "workers/license-signing/package.json" \
