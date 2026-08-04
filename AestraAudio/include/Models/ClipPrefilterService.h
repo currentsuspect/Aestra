@@ -1,6 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 // ClipPrefilterService — background computation of anti-aliased clip copies
-// (Phase 4, F1; design: AestraDocs/clip-prefilter-lifecycle.md).
+// (Phase 4, F1; design: Aestra-Internals: aestra-docs/clip-prefilter-lifecycle.md).
 //
 // Threading model (deliberately narrow):
 //   * enqueue()/drainCompleted()/waitIdle() are called on the graph-build thread

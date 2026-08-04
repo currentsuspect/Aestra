@@ -12,7 +12,7 @@
 // LatencyGraph/SolvedLatencyTopology, P4 switches to graph-aware solving, etc.).
 // Public-API semantics may not regress.
 //
-// See AestraDocs/PDC-v2-Design.md §10 test #1 and §12 P1.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §10 test #1 and §12 P1.
 
 #include "Core/AudioEngine.h"
 #include "Core/MixerChannel.h"

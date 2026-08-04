@@ -180,7 +180,7 @@ public:
     // Wet makeup gain. With kWetCompGain this can push the full-wet output above
     // unity on hot input (measured wet peaks up to ~1.56). That is intentional
     // float headroom, not clipping — the path never clamps at +/-1. See
-    // AestraDocs/design/aestra-verb-gain-staging.md (N4).
+    // Aestra-Internals: aestra-docs/design/aestra-verb-gain-staging.md (N4).
     static constexpr float kWetMakeupGain = 4.2f;
     // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
     // Index: 0=Room, 1=Hall, 2=Plate, 3=Cathedral, 4=Chamber, 5=BrightHall, 6=Ambience, 7=Scoring, 8=SmoothPlate.

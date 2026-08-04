@@ -1,6 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// Characterization of the runtime clip render path — AestraDocs/specs/consolidate-audio-range.md §4b.
+// Characterization of the runtime clip render path — Aestra-Internals: aestra-docs/specs/consolidate-audio-range.md §4b.
 //
 // This exists to be written BEFORE the clip-local kernel is extracted out of
 // AudioEngine::processBlock, and to be sabotaged before it is trusted. It

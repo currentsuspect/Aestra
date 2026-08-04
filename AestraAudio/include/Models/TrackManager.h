@@ -1790,7 +1790,7 @@ private:
     bool m_recordingNoArmLogged{false};
     std::string m_recordingProjectPath;
 
-    // Anti-aliased clip prefiltering (Phase 4, F1; AestraDocs/clip-prefilter-lifecycle.md).
+    // Anti-aliased clip prefiltering (Phase 4, F1; Aestra-Internals: aestra-docs/clip-prefilter-lifecycle.md).
     // Declared LAST so it is destroyed FIRST: the worker joins while every member its
     // completion callback touches (the graph-dirty atomics above) is still alive.
     std::unique_ptr<ClipPrefilterService> m_clipPrefilterService;

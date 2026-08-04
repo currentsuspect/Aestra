@@ -34,7 +34,7 @@ namespace Audio {
  * - Sinc64:   64-point Kaiser-windowed sinc, ~144dB stopband design target
  *
  * Measured delivered behavior is PATH-SPECIFIC (Audio Research Bench Phases
- * 1 + 2D, 2026-07; see AestraDocs/audio-research-bench.md §8):
+ * 1 + 2D, 2026-07; see Aestra-Internals: aestra-docs/audio-research-bench.md §8):
  * - MAINLINE session playback and full-mix export (AudioEngine::renderGraph)
  *   dispatch quality Sinc64 to the legacy exact-sinc Sinc64Interpolator and
  *   measured ~146-154 dB full-band single-tone residual SINAD at 1 kHz in
@@ -522,7 +522,7 @@ struct Sinc32Interpolator {
 // 2048 phases, 144dB stopband design target, AVX2 Accelerated.
 // Measured delivered SINAD (1 kHz tone): ~88 dB at fractional rate ratios
 // (phase-LUT quantization bound), ~154 dB at exact 2:1.
-// See AestraDocs/audio-research-bench.md.
+// See Aestra-Internals: aestra-docs/audio-research-bench.md.
 // =============================================================================
 
 struct Sinc64Turbo {
@@ -873,7 +873,7 @@ struct Sinc64Interpolator {
 // =============================================================================
 
 // SNR figures below are kernel design targets; measured delivered behavior is
-// documented in AestraDocs/audio-research-bench.md and is path-specific:
+// documented in Aestra-Internals: aestra-docs/audio-research-bench.md and is path-specific:
 // quality Sinc64 measures ~146-154 dB SINAD through mainline playback and both
 // export flavors (renderGraph/AudioRenderer -> legacy exact-sinc
 // Sinc64Interpolator, unified in Phase 2E) but ~88 dB at fractional ratios

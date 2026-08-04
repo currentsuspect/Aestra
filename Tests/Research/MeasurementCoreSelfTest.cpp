@@ -6,7 +6,7 @@
 // never from a recorded buffer. If a check fails, either the generator or the
 // measurement is wrong — both live in Tests/Research/.
 //
-// Doc: AestraDocs/audio-research-bench.md
+// Doc: Aestra-Internals: aestra-docs/audio-research-bench.md
 
 #include "AudioMeasure.h"
 #include "SignalLab.h"

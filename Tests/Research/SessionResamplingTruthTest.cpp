@@ -16,7 +16,7 @@
 //      apply to mainline playback, which measures ~146-154 dB here.
 //      Phase 4: DOWNSAMPLED clips are additionally anti-aliased by the ClipPrefilter
 //      pipeline (worker-thread Kaiser low-pass at clip load / rate change; see
-//      AestraDocs/clip-prefilter-lifecycle.md) — the F1 downsampling gates in this
+//      Aestra-Internals: aestra-docs/clip-prefilter-lifecycle.md) — the F1 downsampling gates in this
 //      test flipped from "KNOWN LIMITATION" to "< -95 dBc", and a dedicated case
 //      proves the non-blocking fallback (unfiltered until the copy is ready).
 //   2. Offline full-mix export: AudioEngine::bounceRangeToWav(trackId=-1) ->
@@ -48,7 +48,7 @@
 // isolated and full-session numbers are directly comparable.
 //
 // Every gate threshold cites the measurement that justified it. Numbers printed
-// with [MEASURE] are the raw data quoted in AestraDocs/audio-research-bench.md.
+// with [MEASURE] are the raw data quoted in Aestra-Internals: aestra-docs/audio-research-bench.md.
 
 #include "AudioMeasure.h"
 #include "DSP/ClipPrefilter.h"

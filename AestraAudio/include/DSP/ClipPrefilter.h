@@ -1,7 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 // ClipPrefilter — anti-alias low-pass for DOWNSAMPLED clip playback (Phase 4, F1).
 //
-// Architecture selected by measurement (AestraDocs/audio-research-bench.md §9,
+// Architecture selected by measurement (Aestra-Internals: aestra-docs/audio-research-bench.md §9,
 // "Option B"): a designed linear-phase Kaiser low-pass applied ONCE to the clip at
 // its source rate, off the audio thread, feeding the existing interpolation kernels
 // unchanged. Spec: passband edge 0.9x destination Nyquist, stopband edge at the

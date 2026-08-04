@@ -265,7 +265,7 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
-# PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
+# PDC v2 P1 — scaffolding tests (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
     target_link_libraries(PDCFlatChainTest PRIVATE AestraAudio)

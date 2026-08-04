@@ -30,7 +30,7 @@ namespace Aestra {
  * @brief Outcome of one migration edge.
  *
  * WHAT COUNTS AS A TRANSFORMATION — this is a contract, not a hint. See
- * AestraDocs/architecture/project-format-compatibility.md.
+ * Aestra-Internals: aestra-docs/architecture/project-format-compatibility.md.
  *
  * A transformation is any load-time work producing an in-memory project whose
  * faithful re-serialization would differ SEMANTICALLY from the bytes on disk,

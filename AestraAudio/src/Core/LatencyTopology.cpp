@@ -4,7 +4,7 @@
 // P2: flat per-node solve (v1-equivalent).
 // P4a: graph-aware DFS + per-edge compensation + three-color cycle detection.
 //
-// See AestraDocs/PDC-v2-Design.md §4 for the architectural contract.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §4 for the architectural contract.
 
 #include "Core/LatencyTopology.h"
 
