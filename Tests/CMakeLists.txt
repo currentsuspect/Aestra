@@ -30,7 +30,7 @@ if(TARGET AestraLicense)
         ${CMAKE_SOURCE_DIR}/AestraLicense/include
     )
     add_test(NAME LocalAccountCacheTest COMMAND LocalAccountCacheTest)
-    set_tests_properties(LocalAccountCacheTest PROPERTIES LABELS "license;account;security")
+    set_tests_properties(LocalAccountCacheTest PROPERTIES LABELS "license;account;security;contract:security")
 else()
     message(STATUS "LocalAccountCacheTest skipped (AestraLicense target unavailable)")
 endif()
@@ -102,7 +102,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
     add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
     add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
-    set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization")
+    set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
 # Session Recovery Test (autosave + crash flag + recovery flow)
@@ -111,7 +111,7 @@ target_include_directories(ProjectDocumentStateTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Core
 )
 add_test(NAME ProjectDocumentStateTest COMMAND ProjectDocumentStateTest)
-set_tests_properties(ProjectDocumentStateTest PROPERTIES LABELS "unit;project;identity;recovery")
+set_tests_properties(ProjectDocumentStateTest PROPERTIES LABELS "unit;project;identity;recovery;contract:durability")
 
 add_executable(ProjectLifecycleInteractionTest
     Integration/ProjectLifecycleInteractionTest.cpp
@@ -135,7 +135,7 @@ target_include_directories(ProjectLifecycleInteractionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Tests
 )
 add_test(NAME ProjectLifecycleInteractionTest COMMAND ProjectLifecycleInteractionTest)
-set_tests_properties(ProjectLifecycleInteractionTest PROPERTIES LABELS "integration;project;recovery;integrity")
+set_tests_properties(ProjectLifecycleInteractionTest PROPERTIES LABELS "integration;project;recovery;integrity;contract:durability")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
     add_executable(SessionRecoveryTest
@@ -161,7 +161,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     add_test(NAME SessionRecoveryTest COMMAND SessionRecoveryTest)
-    set_tests_properties(SessionRecoveryTest PROPERTIES LABELS "integration;recovery;autosave")
+    set_tests_properties(SessionRecoveryTest PROPERTIES LABELS "integration;recovery;autosave;contract:durability")
 endif()
 
 # AutosaveManager unit test (background thread, dirty tracking, backup rotation)
@@ -174,7 +174,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AutosaveManagerTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME AutosaveManagerTest COMMAND AutosaveManagerTest)
-    set_tests_properties(AutosaveManagerTest PROPERTIES LABELS "unit;autosave;recovery")
+    set_tests_properties(AutosaveManagerTest PROPERTIES LABELS "unit;autosave;recovery;contract:durability")
 endif()
 
 # Project Round-Trip Integrity Test
@@ -204,7 +204,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest
     # Registered unconditionally: pure serializer/model roundtrip, no device
     # dependency (verified headless). See ProjectRoundTripTest note above.
     add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
-    set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization")
+    set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
 # Project Integrity Check Test — corrupt files must not load silently (#263)
@@ -233,7 +233,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectIntegrityCheckTest.cpp
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     add_test(NAME ProjectIntegrityCheckTest COMMAND ProjectIntegrityCheckTest)
-    set_tests_properties(ProjectIntegrityCheckTest PROPERTIES LABELS "integration;serialization")
+    set_tests_properties(ProjectIntegrityCheckTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
 # Project Fixture Corpus Test — checked-in v1 files are the compatibility contract (#249)
@@ -262,7 +262,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectFixtureCorpusTest.cpp"
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     add_test(NAME ProjectFixtureCorpusTest COMMAND ProjectFixtureCorpusTest)
-    set_tests_properties(ProjectFixtureCorpusTest PROPERTIES LABELS "integration;serialization")
+    set_tests_properties(ProjectFixtureCorpusTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
 # Project Value Fidelity Test — numeric fields must roundtrip bit-exactly (#273)
@@ -287,7 +287,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectValueFidelityTest.cpp"
         ${CMAKE_SOURCE_DIR}/Source
     )
     add_test(NAME ProjectValueFidelityTest COMMAND ProjectValueFidelityTest)
-    set_tests_properties(ProjectValueFidelityTest PROPERTIES LABELS "integration;serialization")
+    set_tests_properties(ProjectValueFidelityTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
 # Identity stability (#446): serialized clip/lane/pattern/source IDs survive
@@ -314,7 +314,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectIdentityStabilityTest.
         ${CMAKE_SOURCE_DIR}/Source
     )
     add_test(NAME ProjectIdentityStabilityTest COMMAND ProjectIdentityStabilityTest)
-    set_tests_properties(ProjectIdentityStabilityTest PROPERTIES LABELS "integration;serialization;identity")
+    set_tests_properties(ProjectIdentityStabilityTest PROPERTIES LABELS "integration;serialization;identity;contract:durability")
 endif()
 
 # Project Load Regression Tests (routing safety, missing references, non-destructive load)
@@ -361,7 +361,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectHistoryCapTest.cpp")
         ${CMAKE_SOURCE_DIR}/Source
     )
     add_test(NAME ProjectHistoryCapTest COMMAND ProjectHistoryCapTest)
-    set_tests_properties(ProjectHistoryCapTest PROPERTIES LABELS "integration;project;serialization")
+    set_tests_properties(ProjectHistoryCapTest PROPERTIES LABELS "integration;project;serialization;contract:durability")
 endif()
 
 # Takes manifest/snapshot regression test
@@ -388,7 +388,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerTest.cpp")
         ${CMAKE_SOURCE_DIR}/Source/Core
     )
     add_test(NAME TakeManagerTest COMMAND TakeManagerTest)
-    set_tests_properties(TakeManagerTest PROPERTIES LABELS "integration;takes;project")
+    set_tests_properties(TakeManagerTest PROPERTIES LABELS "integration;takes;project;contract:durability")
 endif()
 
 # Plugin Scanner Test
@@ -565,7 +565,7 @@ add_executable(AestraAudioSoakTest AestraAudio/AudioEngineSoakTest.cpp)
 target_link_libraries(AestraAudioSoakTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_RUNTIME_TESTS)
     add_test(NAME AestraAudioSoakTest COMMAND AestraAudioSoakTest)
-    set_tests_properties(AestraAudioSoakTest PROPERTIES LABELS "audio;runtime;soak;long")
+    set_tests_properties(AestraAudioSoakTest PROPERTIES LABELS "audio;runtime;soak;long;contract:realtime")
 else()
     message(STATUS "AestraAudioSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
@@ -575,7 +575,7 @@ add_executable(AestraAudioDriverSoakTest AestraAudio/AudioDriverSoakTest.cpp)
 target_link_libraries(AestraAudioDriverSoakTest PRIVATE AestraAudio AestraAudioCore)
 if(AESTRA_ENABLE_RUNTIME_TESTS)
     add_test(NAME AestraAudioDriverSoakTest COMMAND AestraAudioDriverSoakTest --duration-sec 60)
-    set_tests_properties(AestraAudioDriverSoakTest PROPERTIES LABELS "audio;runtime;soak;driver;long")
+    set_tests_properties(AestraAudioDriverSoakTest PROPERTIES LABELS "audio;runtime;soak;driver;long;contract:realtime")
 else()
     message(STATUS "AestraAudioDriverSoakTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
@@ -605,7 +605,7 @@ target_include_directories(AestraRealtimePathStressTest PRIVATE
 )
 if(AESTRA_ENABLE_RUNTIME_TESTS)
     add_test(NAME AestraRealtimePathStressTest COMMAND AestraRealtimePathStressTest)
-    set_tests_properties(AestraRealtimePathStressTest PROPERTIES LABELS "audio;realtime;stress")
+    set_tests_properties(AestraRealtimePathStressTest PROPERTIES LABELS "audio;realtime;stress;contract:realtime")
 else()
     message(STATUS "AestraRealtimePathStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
@@ -617,7 +617,7 @@ target_include_directories(RealtimeObjectPublisherTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
-set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression")
+set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)
@@ -731,7 +731,7 @@ target_include_directories(AestraGarbageCollectorTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraGarbageCollectorTest COMMAND AestraGarbageCollectorTest)
-set_tests_properties(AestraGarbageCollectorTest PROPERTIES LABELS "audio;memory;reclamation")
+set_tests_properties(AestraGarbageCollectorTest PROPERTIES LABELS "audio;memory;reclamation;contract:realtime")
 
 # Connection/ScopedCallback regression tests
 add_executable(AestraConnectionTest AestraAudio/ConnectionTest.cpp)
@@ -760,7 +760,7 @@ target_include_directories(AestraEffectChainStateVersionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraEffectChainStateVersionTest COMMAND AestraEffectChainStateVersionTest)
-set_tests_properties(AestraEffectChainStateVersionTest PROPERTIES LABELS "audio;plugin;serialization")
+set_tests_properties(AestraEffectChainStateVersionTest PROPERTIES LABELS "audio;plugin;serialization;contract:durability")
 
 # AudioEngine EffectChain prepare regression test
 add_executable(AestraAudioEngineEffectChainPrepareTest AestraAudio/AudioEngineEffectChainPrepareTest.cpp)
@@ -801,7 +801,7 @@ target_include_directories(AestraAudioEngineDiagnosticsTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
 )
 add_test(NAME AestraAudioEngineDiagnosticsTest COMMAND AestraAudioEngineDiagnosticsTest)
-set_tests_properties(AestraAudioEngineDiagnosticsTest PROPERTIES LABELS "audio;diagnostics;rt-safety")
+set_tests_properties(AestraAudioEngineDiagnosticsTest PROPERTIES LABELS "audio;diagnostics;rt-safety;contract:realtime")
 
 # AudioDeviceManager race/coherence coverage with a deterministic fake driver (#391)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
@@ -814,7 +814,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
     find_package(Threads REQUIRED)
     target_link_libraries(DeviceManagerRaceTest PRIVATE Threads::Threads)
     add_test(NAME DeviceManagerRaceTest COMMAND DeviceManagerRaceTest)
-    set_tests_properties(DeviceManagerRaceTest PROPERTIES LABELS "audio;device;rt-safety;concurrency" TIMEOUT 60)
+    set_tests_properties(DeviceManagerRaceTest PROPERTIES LABELS "audio;device;rt-safety;concurrency;contract:realtime" TIMEOUT 60)
 endif()
 
 # PathologicalChaosStressTest
@@ -1064,7 +1064,7 @@ target_include_directories(ArsenalRouteModeRoundTripTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME ArsenalRouteModeRoundTripTest COMMAND ArsenalRouteModeRoundTripTest)
-set_tests_properties(ArsenalRouteModeRoundTripTest PROPERTIES LABELS "audio;arsenal;roundtrip")
+set_tests_properties(ArsenalRouteModeRoundTripTest PROPERTIES LABELS "audio;arsenal;roundtrip;contract:durability")
 
 # Arsenal route-mode policy contract test (Phase 2B)
 add_executable(ArsenalRouteModePolicyTest AestraAudio/ArsenalRouteModePolicyTest.cpp)
@@ -1087,7 +1087,7 @@ if(NOT WIN32)
         target_compile_definitions(PluginScannerSigpipeTest PRIVATE AESTRA_TEST_HAS_CLAP=1)
     endif()
     add_test(NAME PluginScannerSigpipeTest COMMAND PluginScannerSigpipeTest)
-    set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security")
+    set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security;contract:security")
 endif()
 
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
@@ -1138,7 +1138,7 @@ target_include_directories(ArsenalBridgeModeRoundTripTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalBridgeModeRoundTripTest COMMAND ArsenalBridgeModeRoundTripTest)
-set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;policy;roundtrip")
+set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;policy;roundtrip;contract:durability")
 
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
@@ -1260,7 +1260,7 @@ target_include_directories(RTAllocationTrapTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME RTAllocationTrapTest COMMAND RTAllocationTrapTest)
-set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier" TIMEOUT 180)
+set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier;contract:realtime" TIMEOUT 180)
 
 # RT Guard Consolidation Test — proves the app-layer constraint macros in
 # Source/AudioThreadConstraints.h recognize a thread marked only by the canonical
@@ -1274,7 +1274,7 @@ target_include_directories(RTGuardConsolidationTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME RTGuardConsolidationTest COMMAND RTGuardConsolidationTest)
-set_tests_properties(RTGuardConsolidationTest PROPERTIES LABELS "audio;rt-safety;integrity" TIMEOUT 120)
+set_tests_properties(RTGuardConsolidationTest PROPERTIES LABELS "audio;rt-safety;integrity;contract:realtime" TIMEOUT 120)
 
 # AudioEngine Ownership Test — pins the explicit-ownership contract that
 # replaced the removed process-wide engine instance (R2): two live engines are
@@ -1320,7 +1320,7 @@ target_include_directories(CallbackDeadlineTelemetryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME CallbackDeadlineTelemetryTest COMMAND CallbackDeadlineTelemetryTest)
-set_tests_properties(CallbackDeadlineTelemetryTest PROPERTIES LABELS "audio;diagnostics;deadline;integrity" TIMEOUT 120)
+set_tests_properties(CallbackDeadlineTelemetryTest PROPERTIES LABELS "audio;diagnostics;deadline;integrity;contract:realtime" TIMEOUT 120)
 
 # Sample-Rate & Buffer Truth — 96 kHz impulse exactness, 48k-clip-in-96k-engine
 # SRC pitch/time truth, buffer-size independence sweep (64/193/512/1024/2048),
@@ -2064,7 +2064,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
     )
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_test(NAME RealtimeSchedulingTest COMMAND RealtimeSchedulingTest)
-        set_tests_properties(RealtimeSchedulingTest PROPERTIES LABELS "audio;realtime;scheduling")
+        set_tests_properties(RealtimeSchedulingTest PROPERTIES LABELS "audio;realtime;scheduling;contract:realtime")
     endif()
 endif()
 
