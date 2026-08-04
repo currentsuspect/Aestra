@@ -76,7 +76,13 @@ readonly MAX_TRUSTED_FILES=200
 is_cxx_irrelevant() {
     case "$1" in
         # Documentation trees and top-level prose.
-        docs/*|AestraDocs/*|meta/*) return 0 ;;
+        docs/*|meta/*) return 0 ;;
+        # AestraDocs/ was extracted to the private Aestra-Internals vault and no
+        # longer exists at the tip. The pattern stays: this predicate is asked
+        # about historical PRs too (the liveness checks in ci.yml replay #619's
+        # real file list), and "a path under AestraDocs/ cannot affect a C++
+        # compile" is true permanently, whether or not the tree still exists.
+        AestraDocs/*) return 0 ;;
         README.md|LICENSE|LICENSING.md|NOTICE|CHANGELOG.md|CONTRIBUTING.md) return 0 ;;
         CODE_OF_CONDUCT.md|SECURITY.md|SUPPORT.md|RELEASES.md|BUILD.md|philosophy.md) return 0 ;;
         mkdocs.yml|Doxyfile) return 0 ;;

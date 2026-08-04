@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // PDCTestHelpers — shared scaffolding for Plugin Delay Compensation tests (PDC-v2 P1+).
 //
-// See AestraDocs/PDC-v2-Design.md §10 for the full test plan.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §10 for the full test plan.
 //
 // Provides a minimal IPluginInstance mock that reports a configurable latency
 // and passes audio through unmodified. Pass-through is intentional: PDC tests

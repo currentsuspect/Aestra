@@ -92,7 +92,7 @@ if (sleepTime > 0.0) {
 | `AestraUI/Core/NUIAdaptiveFPS.cpp` | Implementation |
 | `AestraUI/Core/NUIApp.h/.cpp` | Framework integration |
 | `Source/Main.cpp` | DAW integration |
-| `AestraDocs/ADAPTIVE_FPS_GUIDE.md` | Full documentation |
+| Internal adaptive-FPS guide (unpublished) | Full documentation |
 
 ## ⚡ Performance
 

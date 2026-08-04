@@ -7,7 +7,7 @@ This document is not a plan and not a status report. It is the set of properties
 Aestra's architecture is expected to hold, written so a reviewer can point at one
 and say *"this change violates it"*.
 
-Weekly targets live in `AestraDocs/status/` and expire. Nothing in this file
+Weekly targets are tracked internally and expire. Nothing in this file
 should ever describe work in flight — if a principle here is satisfied, it stays
 here anyway, because it is what stops the problem from coming back.
 
@@ -266,4 +266,4 @@ old title into a new problem.
 - `docs/technical/muse_state_ownership.md` — per-domain state authorities
   (principle 1)
 - `docs/technical/THREADING_MODEL.md` — thread ownership
-- `AestraDocs/status/` — weekly targets and point-in-time status; expires
+- Internal status notes — weekly targets and point-in-time status; expires

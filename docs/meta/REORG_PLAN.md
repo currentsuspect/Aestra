@@ -14,7 +14,7 @@ High-level mapping (what to move)
   - AestraUI/
   - AestraAudio/ (core audio engine; keep only non-premium code)
   - AestraSDK/ (public headers/interface only; move private plugins elsewhere)
-  - docs/, AestraDocs/
+  - docs/ (internal notes live in the private Aestra-Internals vault)
   - build scripts that don't embed secrets, `cmake/`, `assets_mock/`, `.github/workflows/public-ci.yml`
 
 - Aestra-premium (private)

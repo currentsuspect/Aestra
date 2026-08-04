@@ -25,7 +25,8 @@ We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolatio
 > low-pass**, so content between the output and source Nyquist frequencies folds
 > back into the output band. Passband level and DC accuracy measure essentially
 > exact (<1e-5 dB / ≤3e-8). Methodology, full rate-matrix tables, and claim
-> boundaries: `AestraDocs/audio-research-bench.md` in the repository.
+> boundaries are recorded in the internal audio research bench, which is not
+> published with this repository.
 
 ---
 
@@ -195,8 +196,8 @@ The table below reflects the *filter design model*, not bench measurements.
 | THD+N | -144 | -100 | -60 | dB |
 | IMD | -140 | -96 | -55 | dB |
 
-**Measured corrections (Audio Research Bench Phases 1 + 2D, 2026-07 —
-`AestraDocs/audio-research-bench.md`):** delivered full-band single-tone residual
+**Measured corrections (Audio Research Bench Phases 1 + 2D, 2026-07 — internal
+audio research bench, unpublished):** delivered full-band single-tone residual
 (THD+N-style) for Sinc64Turbo is **~-88 dB at fractional rate ratios** (phase-LUT
 quantization bound; ~-154 dB at exact 2:1) — a path-specific figure: mainline
 session playback and both export flavors run the legacy exact-sinc

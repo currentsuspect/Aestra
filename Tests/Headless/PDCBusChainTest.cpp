@@ -19,7 +19,7 @@
 //   * outputCompensation(Bus / Master) = 0 (not audible sources)
 //   * edge compensation on every edge = 0 (no reconvergence at multi-output nodes)
 //
-// See AestraDocs/PDC-v2-Design.md §10 test #2.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §10 test #2.
 
 #include "Core/LatencyTopology.h"
 

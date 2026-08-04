@@ -11,7 +11,7 @@
 //     allocations and ZERO deallocations.
 //   - First-block (warmup) allocations are reported separately: they are a
 //     latent xrun risk on stream start and belong in the findings table
-//     (AestraDocs/rt-safety-audit.md), but only steady state is a hard gate
+//     (Aestra-Internals: aestra-docs/rt-safety-audit.md), but only steady state is a hard gate
 //     so this test stays green while any warmup work is triaged.
 //
 // Scope honesty: the trap covers C++ operator new/delete (all std containers,

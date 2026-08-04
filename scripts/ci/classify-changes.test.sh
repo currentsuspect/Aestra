@@ -42,7 +42,8 @@ expect() {
 # --- changes that provably cannot affect a C++ build ------------------------
 expect skip-cxx "docs only"                      "docs/technical/roadmap.md"
 expect skip-cxx "top-level prose"                "README.md" "LICENSING.md" "NOTICE"
-expect skip-cxx "internal docs tree"             "AestraDocs/images/aestra_daw_interface.png"
+expect skip-cxx "docs image tree"                "docs/images/aestra_daw_interface.png"
+expect skip-cxx "extracted internal docs tree"   "AestraDocs/architecture/AUDIT_RT_Safety_2026Q2.md"
 expect skip-cxx "worker only"                    "workers/license-signing/package.json"
 expect skip-cxx "worker + lockfile"              "workers/license-signing/package.json" \
                                                  "workers/license-signing/package-lock.json"
@@ -51,6 +52,9 @@ expect skip-cxx "mkdocs config"                  "mkdocs.yml"
 expect skip-cxx "changelog"                      "meta/CHANGELOGS/CHANGELOG_2026Q2.md"
 
 # Real PRs from 2026-07-25 that should have skipped the C++ matrix (#620).
+# #619's real file list is replayed by the liveness check in ci.yml, so this case
+# keeps the historical AestraDocs/ path it actually touched. Changing it here
+# would hide a classifier regression that CI would still catch.
 expect skip-cxx "#619 as merged"                 "AestraDocs/images/aestra_daw_interface.png" \
                                                  "LICENSING.md" "NOTICE" "README.md" \
                                                  "docs/about/licensing.md"

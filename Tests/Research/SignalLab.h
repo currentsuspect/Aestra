@@ -9,7 +9,7 @@
 //     the expected peak/RMS/DC/harmonic content instead of storing binary fixtures.
 //   * Test-side only. This header must never be included from production code.
 //
-// Doc: AestraDocs/audio-research-bench.md
+// Doc: Aestra-Internals: aestra-docs/audio-research-bench.md
 #pragma once
 
 #include <cassert>

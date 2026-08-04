@@ -4,7 +4,7 @@
 // All analysis runs in double precision over float buffers. Every routine is a pure
 // function of its inputs: no global state, no randomness, no wall-clock dependence.
 //
-// Measurement definitions (see AestraDocs/audio-research-bench.md for the full policy):
+// Measurement definitions (see Aestra-Internals: aestra-docs/audio-research-bench.md for the full policy):
 //   * peak            — max |sample| over the window.
 //   * RMS             — sqrt(mean(sample^2)) over the window; dBFS via 20*log10.
 //   * DC offset       — arithmetic mean over the window.

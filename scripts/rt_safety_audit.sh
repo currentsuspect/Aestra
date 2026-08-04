@@ -4,7 +4,7 @@
 #
 # This is a TRIPWIRE, not a verdict: these files mix RT and non-RT functions,
 # so every hit needs human classification. The classified baseline lives in
-# AestraDocs/rt-safety-audit.md — run this after touching RT code and explain
+# Aestra-Internals: aestra-docs/rt-safety-audit.md — run this after touching RT code and explain
 # any NEW hits there. The empirical allocation gate is RTAllocationTrapTest.
 #
 # Usage: scripts/rt_safety_audit.sh [--counts]
@@ -65,4 +65,4 @@ for entry in "${PATTERNS[@]}"; do
 done
 
 echo "TOTAL: ${total} hits across ${#RT_SOURCES[@]} RT-reachable sources."
-echo "Compare against the classified baseline in AestraDocs/rt-safety-audit.md."
+echo "Compare against the classified baseline in Aestra-Internals: aestra-docs/rt-safety-audit.md."

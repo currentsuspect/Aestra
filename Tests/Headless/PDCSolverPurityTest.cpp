@@ -20,7 +20,7 @@
 // commitment to keeping the solver pure: solver behavior is observable through
 // SolvedLatencyTopology and only through SolvedLatencyTopology.
 //
-// See AestraDocs/PDC-v2-Design.md §4.0 (solver/application separation) and
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §4.0 (solver/application separation) and
 // §10 test #9 (PDCSolverPurityTest).
 
 #include "Core/AudioEngine.h"
@@ -407,7 +407,7 @@ void testSolverMatchesEngineState() {
     EXPECT_EQ(topology.projectAlignmentLatency, fx.engine.getMaxProjectLatency());
     EXPECT_EQ(topology.projectAlignmentLatency, 768u);
     // Engine appends a synthetic master node since P4b.1 (see
-    // AestraDocs/PDC-v2-Design.md §12), so node count = tracks + 1.
+    // Aestra-Internals: aestra-docs/PDC-v2-Design.md §12), so node count = tracks + 1.
     EXPECT_EQ(topology.nodes.size(), 3u);
     // Track A carries the plugin -> intrinsic 768 -> output compensation 0.
     // Track B is empty       -> intrinsic 0   -> output compensation 768.

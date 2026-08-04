@@ -119,7 +119,6 @@ Aestra
 ├── Tests             — Centralized test suite
 ├── aestra-core       — Public core-mode variant/stub layer
 ├── docs/             — Public documentation
-├── AestraDocs/       — Internal architecture/design notes
 └── scripts/          — Build, audit, utility, and maintenance scripts
 ```
 
@@ -457,8 +456,15 @@ Do not claim:
 Use:
 
 * `docs/` for public documentation.
-* `AestraDocs/` for internal design notes, architecture reports, implementation plans, and status documents.
 * `labs/` for experiments, generated evidence, quality reports, and benchmark artifacts.
+
+**Internal notes do not live in this repository.** Architecture reports, design
+notes, implementation plans, audits, status documents, product strategy, and
+roadmaps belong in the private **Aestra-Internals** vault, not here. This repo is
+public: anything committed to it is world-readable forever, including in history.
+
+If a change needs internal write-up, record it in Aestra-Internals and reference
+it by title from the PR description. Do not recreate `AestraDocs/`.
 
 ---
 

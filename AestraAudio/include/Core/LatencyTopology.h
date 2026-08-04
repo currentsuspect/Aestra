@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // LatencyTopology — PDC v2 data model and pure solver.
 //
-// Architectural contract (see AestraDocs/PDC-v2-Design.md §4.0):
+// Architectural contract (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §4.0):
 //   * `LatencyGraph` is an immutable input artifact, built off-RT from routing state.
 //   * `solveLatency(LatencyGraph) -> SolvedLatencyTopology` is a pure function.
 //     No engine references, no globals, no I/O, fully deterministic.
