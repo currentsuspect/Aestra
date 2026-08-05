@@ -643,6 +643,92 @@ jobs:
 
           exit "${fail}"
 
+  contract-coverage:
+    name: Test contract coverage
+    runs-on: ubuntu-latest
+    # No `if:`, no `continue-on-error`, no `needs:`. A required context must
+    # always report. Gating this on a change classifier, or on another job whose
+    # failure could skip it, would make it reportable-sometimes — and GitHub
+    # counts a skipped required job as successful, so "sometimes" degrades to
+    # false green rather than to a block.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      # Level 1: the verifier in isolation. A green baseline plus every
+      # prohibited state, each asserted to be rejected with its specific
+      # diagnostic — because a crash also exits non-zero, and exit-code-only
+      # tests would let a refactor turn a precise rejection into a stack trace
+      # and still look covered. Run BEFORE the real census, so a broken verifier
+      # is reported as a broken verifier rather than as a policy violation.
+      - name: Verifier self-tests
+        run: python3 scripts/ci/test-verify-test-contracts.py
+
+      # The maximal configuration enables UI, which pulls in AestraLicense and
+      # its pkg_check_modules(libsodium). The four headless configurations do
+      # not, which is why the first run of this job configured four of five and
+      # then failed — a gap a local dry-run cannot reproduce on a developer
+      # machine that already has the library. Same set as build-linux-app
+      # installs, so the two jobs cannot drift into disagreeing about what a
+      # configurable tree needs.
+      - name: Install configure-time dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev \
+            libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
+
+      # Configure only. The census is a property of a *configured* tree, and
+      # nothing here needs a compiled binary — which is what keeps this job
+      # minutes rather than tens of minutes.
+      - name: Configure the five declared configurations
+        run: |
+          set -euo pipefail
+          for rt in OFF ON; do
+            for ex in OFF ON; do
+              cmake -S . -B "build-hlON-rt${rt}-ex${ex}" \
+                -DAestra_CORE_MODE=ON \
+                -DAESTRA_HEADLESS_ONLY=ON \
+                -DAESTRA_ENABLE_TESTS=ON \
+                -DAESTRA_ENABLE_RUNTIME_TESTS=$rt \
+                -DAESTRA_ENABLE_EXPERIMENTAL_TESTS=$ex \
+                -DCMAKE_BUILD_TYPE=Release > /dev/null
+            done
+          done
+          cmake -S . -B build-maximal \
+            -DAestra_CORE_MODE=ON \
+            -DAESTRA_HEADLESS_ONLY=OFF \
+            -DAESTRA_ENABLE_UI=ON \
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DAESTRA_ENABLE_RUNTIME_TESTS=ON \
+            -DAESTRA_ENABLE_EXPERIMENTAL_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Release > /dev/null
+
+      - name: Enumerate each configuration
+        run: |
+          set -euo pipefail
+          for d in build-hlON-rtOFF-exOFF build-hlON-rtOFF-exON \
+                   build-hlON-rtON-exOFF build-hlON-rtON-exON build-maximal; do
+            ctest --test-dir "$d" --show-only=json-v1 > "census-$d.json"
+          done
+
+      # The maximal configuration must equal the union of the five. That is an
+      # observed property of this tree, not a law, so the verifier re-proves it
+      # on every run rather than trusting it.
+      - name: Verify test contract coverage
+        run: |
+          python3 scripts/ci/verify-test-contracts.py \
+            --allowlist Tests/policy/benchmark-allowlist.txt \
+            --maximal maximal \
+            --census "hl-on-rtOFF-exOFF=census-build-hlON-rtOFF-exOFF.json" \
+            --census "hl-on-rtOFF-exON=census-build-hlON-rtOFF-exON.json" \
+            --census "hl-on-rtON-exOFF=census-build-hlON-rtON-exOFF.json" \
+            --census "hl-on-rtON-exON=census-build-hlON-rtON-exON.json" \
+            --census "maximal=census-build-maximal.json"
+
   format-check:
     name: Formatting (advisory)
     runs-on: ubuntu-latest
