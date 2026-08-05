@@ -94,9 +94,19 @@ jobs:
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
 
-      - name: License verification tests
+      - name: Security contract tests
         if: steps.scope.outputs.run == 'true'
-        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+        # Was a hand-written list of three names, repeated identically in the
+        # Linux, Windows and macOS lanes. Three copies of a literal drift
+        # independently, and the list could only ever name what someone
+        # remembered to add — it had not grown since it was written, while the
+        # security suite reached 29 cases.
+        #
+        # --no-tests=error is load-bearing: without it, a typo in the label or a
+        # renamed contract selects nothing and ctest exits 0. A security step
+        # that silently runs zero tests is worse than no step, because it
+        # reports success.
+        run: ctest --test-dir build -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
@@ -421,10 +431,12 @@ jobs:
         shell: bash
         run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
 
-      - name: License verification tests
+      - name: Security contract tests
         if: steps.scope.outputs.run == 'true'
         shell: bash
-        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+        # See the Linux lane for why this is a label selector rather than a
+        # literal list. -C is retained: this is a multi-config generator.
+        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
@@ -498,9 +510,19 @@ jobs:
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
 
-      - name: License verification tests
+      - name: Security contract tests
         if: steps.scope.outputs.run == 'true'
-        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+        # Was a hand-written list of three names, repeated identically in the
+        # Linux, Windows and macOS lanes. Three copies of a literal drift
+        # independently, and the list could only ever name what someone
+        # remembered to add — it had not grown since it was written, while the
+        # security suite reached 29 cases.
+        #
+        # --no-tests=error is load-bearing: without it, a typo in the label or a
+        # renamed contract selects nothing and ctest exits 0. A security step
+        # that silently runs zero tests is worse than no step, because it
+        # reports success.
+        run: ctest --test-dir build -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
