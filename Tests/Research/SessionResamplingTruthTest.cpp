@@ -16,7 +16,7 @@
 //      apply to mainline playback, which measures ~146-154 dB here.
 //      Phase 4: DOWNSAMPLED clips are additionally anti-aliased by the ClipPrefilter
 //      pipeline (worker-thread Kaiser low-pass at clip load / rate change; see
-//      AestraDocs/clip-prefilter-lifecycle.md) — the F1 downsampling gates in this
+//      Aestra-Internals: aestra-docs/clip-prefilter-lifecycle.md) — the F1 downsampling gates in this
 //      test flipped from "KNOWN LIMITATION" to "< -95 dBc", and a dedicated case
 //      proves the non-blocking fallback (unfiltered until the copy is ready).
 //   2. Offline full-mix export: AudioEngine::bounceRangeToWav(trackId=-1) ->
@@ -48,20 +48,18 @@
 // isolated and full-session numbers are directly comparable.
 //
 // Every gate threshold cites the measurement that justified it. Numbers printed
-// with [MEASURE] are the raw data quoted in AestraDocs/audio-research-bench.md.
+// with [MEASURE] are the raw data quoted in Aestra-Internals: aestra-docs/audio-research-bench.md.
 
 #include "AudioMeasure.h"
-#include "SignalLab.h"
-
-#include "GoldenAudio/GoldenAudioHarness.h"
-
 #include "DSP/ClipPrefilter.h"
 #include "DSP/Interpolators.h"
 #include "DSP/PanLaw.h"
+#include "GoldenAudio/GoldenAudioHarness.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h"
 #include "PluginHost.h"
+#include "SignalLab.h"
 
 #include <algorithm>
 #include <chrono>
@@ -71,6 +69,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -100,7 +99,7 @@ constexpr uint32_t kWinSkip = 8192;
 /// at native rate; PlaylistModel:428 copies buffer->sampleRate into the snapshot).
 void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::Signal& clip,
                          const GA::SessionConfig& cfg) {
-    tm.addChannel(label);
+    auto* channel = tm.addChannel(label);
 
     auto buffer = std::make_shared<AudioBufferData>();
     buffer->sampleRate = clip.sampleRate;
@@ -119,7 +118,13 @@ void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::S
     PlaylistLaneID laneId = tm.getPlaylistModel().createLane(label);
     const double durationBeats = payload.durationSeconds * (static_cast<double>(cfg.bpm) / 60.0);
     PatternID patternId = tm.getPatternManager().createAudioPattern(label, durationBeats, payload);
-    tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    if (channel) {
+        tm.getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    }
+    const ClipInstanceID clipId = tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    if (!tm.getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        throw std::runtime_error("Failed to configure unity-gain resampling fixture");
+    }
 }
 
 std::shared_ptr<TrackManager> buildSession(const std::string& label, const AR::Signal& clip,
@@ -620,7 +625,7 @@ void runIsolatedBounceCase(AR::CheckSession& t, const fs::path& tempRoot) {
     const fs::path outPath = tempRoot / "isolated_bounce.wav";
     std::error_code ec;
     fs::remove(outPath, ec);
-    if (!t.expect("isolated bounce: bounceRangeToWav(trackId=0) succeeds",
+    if (!t.expect("isolated bounce: bounceRangeToWav(track index 0) succeeds",
                   engine.bounceRangeToWav(0.0, durationBeats, outPath.string(), 0))) {
         return;
     }

@@ -3,7 +3,7 @@
 // reconvergence case. Solver level for P4a; gains audio-rendering coverage in
 // P4b once the engine consumes per-edge compensation.
 //
-// Topology (from AestraDocs/PDC-v2-Design.md §10 test #8):
+// Topology (from Aestra-Internals: aestra-docs/PDC-v2-Design.md §10 test #8):
 //
 //   TrackA (intrinsic 0)  --+--> Bus1 (intrinsic 100) --+--> Master (intrinsic 0)
 //                            |                         |

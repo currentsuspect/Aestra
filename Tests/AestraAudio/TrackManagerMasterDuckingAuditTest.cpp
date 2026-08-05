@@ -107,7 +107,11 @@ std::shared_ptr<TrackManager> createOneTrackManager() {
     const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("Track 1");
     const PatternID patternId =
         trackManager->getPatternManager().createAudioPattern("duck_audit_pattern", durationSeconds * 2.0, payload);
-    trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationSeconds * 2.0);
+    trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    const ClipInstanceID clipId =
+        trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationSeconds * 2.0);
+    require(trackManager->getPlaylistModel().setClipEdits(clipId, ClipEdits{}),
+            "failed to configure unity-gain ducking audit clip");
 
     trackManager->buildAndShareSlotMap();
     return trackManager;

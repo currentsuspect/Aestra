@@ -31,12 +31,26 @@ constexpr float kSampleEditorPitchRowH = 64.0f;
 constexpr float kSampleEditorADSRH = 140.0f;
 constexpr float kSampleEditorButtonRowH = 36.0f;
 constexpr float kSampleEditorWaveformMinH = 120.0f;
-constexpr float kADSRHandleHitRadius = 8.0f;
+constexpr float kADSRHandleHitRadius = 11.0f; // Generous grab area — handles were hard to pick up
 constexpr float kTwoPi = 6.28318530718f;
 
 float remapClamped(float value, float inMin, float inMax, float outMin, float outMax) {
     const float t = std::clamp((value - inMin) / std::max(0.001f, inMax - inMin), 0.0f, 1.0f);
     return outMin + t * (outMax - outMin);
+}
+
+// Perceptual (logarithmic) time mapping for the envelope handles. The linear
+// mapping put ~13ms of attack on every pixel, so the tiniest drag jumped to
+// hundreds of ms and made short one-shot samples inaudible ("ADSR = silence").
+// Log spacing gives the musically useful 1-100ms range most of the travel.
+float adsrTimeToNorm(float seconds, float minSeconds, float maxSeconds) {
+    seconds = std::clamp(seconds, minSeconds, maxSeconds);
+    return std::log(seconds / minSeconds) / std::log(maxSeconds / minSeconds);
+}
+
+float adsrNormToTime(float norm, float minSeconds, float maxSeconds) {
+    norm = std::clamp(norm, 0.0f, 1.0f);
+    return minSeconds * std::pow(maxSeconds / minSeconds, norm);
 }
 
 struct ADSRGeometry {
@@ -65,9 +79,9 @@ ADSRGeometry calculateADSRGeometry(const NUIRect& b, float attack, float decay, 
     const float leftEdge = g.baseX + kADSRHandleHitRadius;
     const float rightEdge = g.baseX + g.graphW - kADSRHandleHitRadius;
     const float handleRange = std::max(1.0f, rightEdge - leftEdge);
-    const float attackNorm = std::clamp((attack - kADSRMinAttack) / (kADSRMaxAttack - kADSRMinAttack), 0.0f, 1.0f);
-    const float decayNorm = std::clamp((decay - kADSRMinDecay) / (kADSRMaxDecay - kADSRMinDecay), 0.0f, 1.0f);
-    const float releaseNorm = std::clamp((release - kADSRMinRelease) / (kADSRMaxRelease - kADSRMinRelease), 0.0f, 1.0f);
+    const float attackNorm = adsrTimeToNorm(attack, kADSRMinAttack, kADSRMaxAttack);
+    const float decayNorm = adsrTimeToNorm(decay, kADSRMinDecay, kADSRMaxDecay);
+    const float releaseNorm = adsrTimeToNorm(release, kADSRMinRelease, kADSRMaxRelease);
     const float attackX = leftEdge + handleRange * attackNorm * 0.35f;
     const float decayXAbs = std::clamp(attackX + handleRange * decayNorm * 0.32f, leftEdge, rightEdge);
     const float releaseXAbs = std::clamp(rightEdge - handleRange * releaseNorm * 0.42f, leftEdge, rightEdge);
@@ -320,13 +334,15 @@ bool ADSRDisplayComponent::onMouseEvent(const NUIMouseEvent& event) {
             case Handle::Attack:
             {
                 const float x = std::clamp(startG.attack.x + dx, leftEdge, rightEdge);
-                m_attack = remapClamped(x, leftEdge, leftEdge + handleRange * 0.35f, kADSRMinAttack, kADSRMaxAttack);
+                const float norm = (x - leftEdge) / (handleRange * 0.35f);
+                m_attack = adsrNormToTime(norm, kADSRMinAttack, kADSRMaxAttack);
                 break;
             }
             case Handle::Decay:
             {
                 const float x = std::clamp(startG.decay.x + dx, leftEdge, rightEdge);
-                m_decay = remapClamped(x, startG.attack.x, startG.attack.x + handleRange * 0.32f, kADSRMinDecay, kADSRMaxDecay);
+                const float norm = (x - startG.attack.x) / (handleRange * 0.32f);
+                m_decay = adsrNormToTime(norm, kADSRMinDecay, kADSRMaxDecay);
                 break;
             }
             case Handle::Sustain:
@@ -335,7 +351,8 @@ bool ADSRDisplayComponent::onMouseEvent(const NUIMouseEvent& event) {
             case Handle::Release:
             {
                 const float x = std::clamp(startG.releaseStart.x + dx, leftEdge, rightEdge);
-                m_release = remapClamped(rightEdge - x, 0.0f, handleRange * 0.42f, kADSRMinRelease, kADSRMaxRelease);
+                const float norm = (rightEdge - x) / (handleRange * 0.42f);
+                m_release = adsrNormToTime(norm, kADSRMinRelease, kADSRMaxRelease);
                 break;
             }
             case Handle::None:

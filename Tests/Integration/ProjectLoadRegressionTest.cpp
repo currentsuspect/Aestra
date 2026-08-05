@@ -134,8 +134,37 @@ void testValidProjectLoad() {
     std::cout << "[PASS] Valid project load" << std::endl;
 }
 
-void testMissingPatternReference() {
-    std::cout << "[TEST] Missing pattern reference preserves placeholder..." << std::endl;
+void testTrailingJsonObjectIsRejectedNonDestructively() {
+    std::cout << "[TEST] Trailing JSON object is rejected non-destructively..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadTrailingJson"};
+    const auto projectPath = testDirScope.path() / "trailing.aes";
+
+    auto source = std::make_shared<TrackManager>();
+    source->getPlaylistModel().createLane("Serialized Lane");
+    source->addChannel("Serialized Lane");
+    auto serialized = ProjectSerializer::serialize(source, 120.0, 0.0, 0);
+    assert(serialized.ok);
+
+    std::ofstream out(projectPath, std::ios::binary | std::ios::trunc);
+    out << serialized.contents << "\n{\"unexpectedSuffix\":true}";
+    out.close();
+
+    auto destination = std::make_shared<TrackManager>();
+    destination->getPlaylistModel().createLane("Existing Lane");
+    destination->addChannel("Existing Lane");
+    const size_t channelsBefore = destination->getChannelCount();
+
+    auto result = ProjectSerializer::load(projectPath.string(), destination);
+    assert(!result.ok);
+    assert(result.errorMessage.find("exactly one") != std::string::npos);
+    assert(destination->getChannelCount() == channelsBefore);
+
+    std::cout << "[PASS] Trailing JSON object is rejected non-destructively" << std::endl;
+}
+
+void testRecoverablePatternReferences() {
+    std::cout << "[TEST] Missing or unresolved pattern references preserve placeholders..." << std::endl;
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
@@ -148,7 +177,8 @@ void testMissingPatternReference() {
         "playhead": 0.0,
         "sources": [],
         "patterns": [
-            {"id": 1, "name": "Existing Pattern", "type": "midi", "length": 4.0, "notes": []}
+            {"id": 1, "name": "Existing Pattern", "type": "midi", "length": 4.0, "notes": []},
+            {"id": 2, "name": "Missing Audio Source", "type": "audio", "length": 2.0, "sourceId": 77}
         ],
         "lanes": [
             {
@@ -157,7 +187,8 @@ void testMissingPatternReference() {
                 "volume": 1.0,
                 "pan": 0.0,
                 "clips": [
-                    {"id": "clip-1", "patternId": 999, "start": 0.0, "duration": 4.0, "name": "Missing Ref Clip"}
+                    {"id": "clip-1", "patternId": 999, "start": 0.0, "duration": 4.0, "name": "Missing Ref Clip"},
+                    {"id": "clip-2", "patternId": 2, "start": 4.0, "duration": 2.0, "name": "Missing Source Clip"}
                 ]
             }
         ],
@@ -173,19 +204,77 @@ void testMissingPatternReference() {
 
     assert(result.ok);
 
-    // Should have warning about missing pattern (report may contain warnings)
-    if (result.report) {
-        bool foundWarning = false;
-        for (const auto& issue : result.report->issues) {
-            if (issue.category == "clip" && issue.referenceId == "999") {
-                foundWarning = true;
-                break;
-            }
+    assert(result.report);
+    bool foundMissingPatternWarning = false;
+    bool foundMissingSourceWarning = false;
+    for (const auto& issue : result.report->issues) {
+        if (issue.category == "clip" && issue.referenceId == "999") {
+            foundMissingPatternWarning = true;
         }
-        assert(foundWarning);
+        if (issue.category == "clip" && issue.referenceId == "2") {
+            foundMissingSourceWarning = true;
+        }
     }
+    assert(foundMissingPatternWarning);
+    assert(foundMissingSourceWarning);
 
-    std::cout << "[PASS] Missing pattern reference preserves placeholder" << std::endl;
+    const auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(laneIds.size() == 1);
+    const auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->clips.size() == 2);
+    assert(lane->clips[0].name == "Missing Ref Clip");
+    assert(std::abs(lane->clips[0].startBeat) < 1e-9);
+    assert(std::abs(lane->clips[0].durationBeats - 4.0) < 1e-9);
+
+    const PatternID placeholderId = lane->clips[0].patternId;
+    assert(placeholderId.value == 999);
+    const auto* placeholder = trackManager->getPatternManager().getPattern(placeholderId);
+    assert(placeholder);
+    assert(placeholder->isMidi());
+    assert(placeholder->name == "[Missing Pattern 999]");
+    assert(placeholder->getMidiNotes().empty());
+
+    assert(lane->clips[1].name == "Missing Source Clip");
+    assert(std::abs(lane->clips[1].startBeat - 4.0) < 1e-9);
+    assert(std::abs(lane->clips[1].durationBeats - 2.0) < 1e-9);
+    assert(lane->clips[1].patternId.value == 2);
+    const auto* missingSourcePlaceholder =
+        trackManager->getPatternManager().getPattern(lane->clips[1].patternId);
+    assert(missingSourcePlaceholder);
+    assert(missingSourcePlaceholder->isMidi());
+    assert(missingSourcePlaceholder->name == "[Missing Pattern 2] Missing Audio Source");
+    assert(missingSourcePlaceholder->getMidiNotes().empty());
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "roundtrip.aes";
+    std::ofstream roundTripOut(roundTripPath);
+    roundTripOut << serialized.contents;
+    roundTripOut.close();
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    const auto roundTripLaneIds = roundTripManager->getPlaylistModel().getLaneIDs();
+    assert(roundTripLaneIds.size() == 1);
+    const auto* roundTripLane = roundTripManager->getPlaylistModel().getLane(roundTripLaneIds[0]);
+    assert(roundTripLane);
+    assert(roundTripLane->clips.size() == 2);
+    assert(roundTripLane->clips[0].name == "Missing Ref Clip");
+    assert(roundTripLane->clips[0].patternId.value == 999);
+    const auto* roundTripPlaceholder =
+        roundTripManager->getPatternManager().getPattern(roundTripLane->clips[0].patternId);
+    assert(roundTripPlaceholder);
+    assert(roundTripPlaceholder->name == "[Missing Pattern 999]");
+    assert(roundTripLane->clips[1].name == "Missing Source Clip");
+    assert(roundTripLane->clips[1].patternId.value == 2);
+    const auto* roundTripMissingSourcePlaceholder =
+        roundTripManager->getPatternManager().getPattern(roundTripLane->clips[1].patternId);
+    assert(roundTripMissingSourcePlaceholder);
+    assert(roundTripMissingSourcePlaceholder->name == "[Missing Pattern 2] Missing Audio Source");
+
+    std::cout << "[PASS] Missing or unresolved pattern references preserve placeholders" << std::endl;
 }
 
 void testMissingArsenalUnitReference() {
@@ -230,6 +319,24 @@ void testMissingArsenalUnitReference() {
         }
         assert(foundWarning);
     }
+
+    const auto patterns = trackManager->getPatternManager().getAllPatterns();
+    assert(patterns.size() == 1);
+    assert(patterns[0] && patterns[0]->getMidiNotes().size() == 1);
+    assert(patterns[0]->getMidiNotes()[0].unitId == 888);
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "missing-unit-roundtrip.aes";
+    std::ofstream(roundTripPath) << serialized.contents;
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    const auto roundTripPatterns = roundTripManager->getPatternManager().getAllPatterns();
+    assert(roundTripPatterns.size() == 1);
+    assert(roundTripPatterns[0] && roundTripPatterns[0]->getMidiNotes().size() == 1);
+    assert(roundTripPatterns[0]->getMidiNotes()[0].unitId == 888);
 
     std::cout << "[PASS] Missing Arsenal unit reference preserves note" << std::endl;
 }
@@ -339,6 +446,27 @@ void testMissingAudioFileNonDestructive() {
     // Load should succeed but with missing asset warning
     assert(result.ok);
     assert(!result.missingAssets.empty());
+
+    const auto sourceIds = trackManager->getSourceManager().getAllSourceIDs();
+    assert(sourceIds.size() == 1);
+    const auto* source = trackManager->getSourceManager().getSource(sourceIds.front());
+    assert(source);
+    const std::string missingPath = source->getFilePath();
+
+    const auto serialized = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0);
+    assert(serialized.ok);
+    const auto roundTripPath = testDir / "missing-audio-roundtrip.aes";
+    std::ofstream(roundTripPath) << serialized.contents;
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    const auto roundTripResult = ProjectSerializer::load(roundTripPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    assert(std::find(roundTripResult.missingAssets.begin(), roundTripResult.missingAssets.end(), missingPath) !=
+           roundTripResult.missingAssets.end());
+    const auto roundTripSourceIds = roundTripManager->getSourceManager().getAllSourceIDs();
+    assert(roundTripSourceIds.size() == 1);
+    const auto* roundTripSource = roundTripManager->getSourceManager().getSource(roundTripSourceIds.front());
+    assert(roundTripSource && roundTripSource->getFilePath() == missingPath);
 
     std::cout << "[PASS] Missing audio file is non-destructive" << std::endl;
 }
@@ -494,7 +622,7 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
-    assert(saved.find("\"version\": 2") != std::string::npos || saved.find("\"version\":2") != std::string::npos);
+    assert(saved.find("\"version\": 3") != std::string::npos || saved.find("\"version\":3") != std::string::npos);
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
@@ -830,7 +958,8 @@ int main() {
     std::cout << "=== Project Load Regression Tests ===" << std::endl;
 
     testValidProjectLoad();
-    testMissingPatternReference();
+    testTrailingJsonObjectIsRejectedNonDestructively();
+    testRecoverablePatternReferences();
     testMissingArsenalUnitReference();
     testFailedValidationDoesNotClear();
     testUnitManagerSurvivesFailedLoad();

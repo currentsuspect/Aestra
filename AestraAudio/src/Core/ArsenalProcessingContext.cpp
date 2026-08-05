@@ -29,6 +29,15 @@ ArsenalRouteMode ArsenalProcessingContext::resolveRouteMode(const UnitState& uni
     return routeModeFromRouteId(unit.routeId);
 }
 
+bool ArsenalProcessingContext::shouldRenderToMixerChannel(const UnitState& unit,
+                                                          uint32_t mixerChannelId) const noexcept {
+    return mixerChannelId != MASTER_MIXER_CHANNEL_ID && unit.mixerChannelId == mixerChannelId;
+}
+
+bool ArsenalProcessingContext::shouldRenderToMaster(const UnitState& unit) const noexcept {
+    return unit.mixerChannelId == MASTER_MIXER_CHANNEL_ID;
+}
+
 bool ArsenalProcessingContext::shouldRenderToTimelineTrack(const UnitState& unit, uint32_t trackIndex) const noexcept {
     return resolveRouteMode(unit) == ArsenalRouteMode::RoutedToTimelineTrack && unit.routeId == static_cast<int>(trackIndex);
 }

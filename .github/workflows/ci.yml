@@ -5,11 +5,46 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    # `edited` is not decoration. Without it, retargeting a pull request's base
+    # onto develop produces only an `edited` event, which the default type set
+    # (opened, synchronize, reopened) does not subscribe to — so no CI run is
+    # created and the five required contexts never report. The pull request then
+    # blocks permanently with nothing an author can do about it. #719 sat in that
+    # state until it was closed and reopened purely to manufacture a `reopened`
+    # event.
+    #
+    # The branch filter still evaluates the pull request's *target*, so adding
+    # `edited` widens which events are subscribed to, never which branches run.
+    #
+    # This also fires on title and description edits, which is wasteful and
+    # deliberate: the required jobs must not be conditionally skipped for
+    # non-base edits, because GitHub reports a skipped required job as
+    # successful. A selective implementation would turn a later metadata edit
+    # into false-green evidence over a matrix that had actually failed.
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull requests share a group per PR; pushes get a group of their own.
+  #
+  # Superseding a pull-request run is correct — only the newest head matters — and
+  # `refs/pull/N/merge` scopes the group to that one PR, so a new commit cancels
+  # only that PR's older run.
+  #
+  # Superseding a push to develop is not. Every merge is a distinct integration
+  # state, and because develop's protection sets `strict: false`, the PR that
+  # produced it was never built against the develop it landed on. Cancelling here
+  # meant the merged tree was verified by nothing until nightly — five of the
+  # eight develop merges before this change never completed a CI run.
+  #
+  # `cancel-in-progress: false` alone does NOT fix that. A concurrency group holds
+  # at most one running and one *pending* run; a third arrival cancels the pending
+  # one. Three merges in quick succession would still leave the middle commit with
+  # no completed run — the same hole, one step further along. Keying pushes to
+  # `github.run_id`, which is unique per run, removes them from contention
+  # entirely so no push can ever cancel another.
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   BUILD_TYPE: Release
@@ -24,26 +59,57 @@ jobs:
         with:
           submodules: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh and scripts/ci/lane-runs.sh.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: linux-gcc
+          github-token: ${{ github.token }}
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
 
-      - name: License verification tests
-        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+      - name: Security contract tests
+        if: steps.scope.outputs.run == 'true'
+        # Was a hand-written list of three names, repeated identically in the
+        # Linux, Windows and macOS lanes. Three copies of a literal drift
+        # independently, and the list could only ever name what someone
+        # remembered to add — it had not grown since it was written, while the
+        # security suite reached 29 cases.
+        #
+        # --no-tests=error is load-bearing: without it, a typo in the label or a
+        # renamed contract selects nothing and ctest exits 0. A security step
+        # that silently runs zero tests is worse than no step, because it
+        # reports success.
+        run: ctest --test-dir build -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-linux
@@ -51,7 +117,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -84,16 +150,191 @@ jobs:
         with:
           submodules: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh and scripts/ci/lane-runs.sh.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: ui-app
+          github-token: ${{ github.token }}
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
 
       - name: Configure (UI enabled)
+        if: steps.scope.outputs.run == 'true'
         run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
 
       - name: Build app target
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
+
+      - name: Verify desktop font bundle
+        if: steps.scope.outputs.run == 'true'
+        run: >-
+          cmake
+          -DSOURCE_FONT_ROOT=${{github.workspace}}/AestraAssets/fonts
+          -DBUNDLED_FONT_ROOT=${{github.workspace}}/build-app/bin/AestraAssets/fonts
+          -P ${{github.workspace}}/Tests/Guards/verify_aestra_font_bundle.cmake
+
+  build-plugin-host:
+    name: Plugin hosting (VST3 + CLAP compile)
+    runs-on: ubuntu-latest
+    # Least privilege, declared rather than inherited, matching the classifier
+    # self-test job below. This one only reads the repo and lets classify-scope read
+    # pull-request file lists; nothing here pushes.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # Unlike every other lane, this one NEEDS a submodule. The VST3 SDK lives in
+      # one, and AestraAudio/CMakeLists.txt gates AESTRA_HAS_VST3 on its presence,
+      # so with submodules: false the entire VST3 host path — VST3Host.cpp and the
+      # SDK hosting sources it links — is silently excluded from every other job.
+      # That is why this lane exists: the plugin hosting code was not compiled by
+      # CI at all, so nothing caught a break in it until someone built locally.
+      #
+      # Only vst3sdk is fetched, shallow. Pulling every submodule would drag in
+      # FreeType and SDL2 for a lane that never touches the UI.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          # Nothing here pushes, so do not leave a credential in .git/config. Safe
+          # for the submodule fetch below because steinbergmedia/vst3sdk is public
+          # (see .gitmodules) and clones anonymously — this job would break if that
+          # submodule were ever made private, which is worth knowing explicitly
+          # rather than discovering through a confusing auth failure.
+          persist-credentials: false
+
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: plugin-host
+          github-token: ${{ github.token }}
+
+      # Two levels, because the VST3 SDK keeps its own tree in nested submodules.
+      # `--init` on the outer path alone leaves base/, pluginterfaces/ and
+      # public.sdk/ as empty directories, which is how this lane failed its second
+      # run: configure announced "VST3 SDK: Found" and then died at add_library.
+      #
+      # Named explicitly rather than --recursive: these three are the only ones the
+      # build compiles from (see VST3_HOST_SOURCES in AestraAudio/CMakeLists.txt).
+      # --recursive would additionally clone vstgui4, doc and tutorials, which
+      # nothing here touches and vstgui4 is the largest of the set.
+      - name: Fetch VST3 SDK submodule
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
+
+      # libsecret-1-dev is not optional: AestraLicense/CMakeLists.txt does an
+      # unconditional pkg_check_modules(LIBSECRET REQUIRED libsecret-1) on every
+      # non-Apple platform, so configure fails outright without it — which is exactly
+      # how this lane failed its own first run. Every other C++ lane in this file
+      # installs it; this list was written from scratch instead of copied from one of
+      # them, and a developer machine that already has the package cannot catch that.
+      #
+      # Deliberately NOT installed: libgl1-mesa-dev (headless build, no UI targets)
+      # and libgtest-dev (nothing in the tree uses GTest — its presence in the other
+      # lanes is vestigial and not worth copying).
+      - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libsodium-dev libx11-dev libsecret-1-dev
+
+      # Configure once, and assert on that same run's output. A lane that compiles
+      # nothing would otherwise report green - which is the precise failure mode
+      # this lane exists to eliminate, so the assertion is not optional polish.
+      - name: Configure and assert both plugin formats are enabled
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cmake -B build-plugins -S . \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DAestra_CORE_MODE=ON \
+            -DAESTRA_HEADLESS_ONLY=ON \
+            -DAESTRA_ENABLE_TESTS=ON 2>&1 | tee configure.log
+          grep -q "VST3 SDK: Found" configure.log \
+            || { echo "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1; }
+          grep -q "CLAP SDK: Found" configure.log \
+            || { echo "::error::CLAP SDK not detected - this lane would compile nothing"; exit 1; }
+
+      # Builds the default target, not just the two host targets. The plugin and
+      # sandbox tests below are separate executables: build only AestraAudioCore
+      # and AestraPluginHost and every test reports "(Not Run)", which fails the
+      # lane for a misleading reason instead of testing anything. Headless mode
+      # keeps the UI out, so this is comparable in cost to the Linux (GCC) lane -
+      # the difference being that here the plugin tests run against real VST3 and
+      # CLAP host code rather than against it compiled out.
+      # Serial. `--parallel` with no argument uses one job per core, and this build
+      # has 200+ targets whose link steps are individually memory-hungry: the runner
+      # ran out of memory and the service killed the job — dozens of simultaneous
+      # "Terminated" lines and "The operation was canceled", with no compile error
+      # anywhere.
+      #
+      # Nothing in this file parallelises a full default-target build without a
+      # bound. Linux (GCC), macOS, Windows and ASan all build serially; the UI/App
+      # lane uses --parallel but scoped to a single target; TSan and LSan use an
+      # explicit --parallel 2. Unbounded on the whole target set was novel here, and
+      # this is why. `--parallel 2` would likely be fine and roughly halve wall time,
+      # but serial is the setting actually proven against this target set, and after
+      # three red runs the proven one wins.
+      #
+      # Do not reintroduce an unbounded --parallel without measuring peak memory:
+      # the failure presents as an infrastructure flake rather than as anything this
+      # lane did wrong, which makes it expensive to diagnose a second time.
+      - name: Build (headless, plugin formats enabled)
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cmake --build build-plugins --config ${{env.BUILD_TYPE}}
+          test -x build-plugins/bin/AestraPluginHost \
+            || { echo "::error::AestraPluginHost was not produced"; exit 1; }
+
+      # Proves both formats are linked in, not merely compiled and discarded.
+      - name: Assert host symbols are present
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          lib=$(find build-plugins -name 'libAestraAudioCore.a' -print -quit)
+          test -n "${lib}" || { echo "::error::libAestraAudioCore.a not found"; exit 1; }
+          nm -C "${lib}" > syms.txt
+          grep -q "VST3PluginInstance" syms.txt \
+            || { echo "::error::VST3 host symbols missing from libAestraAudioCore"; exit 1; }
+          grep -q "CLAPPluginInstance" syms.txt \
+            || { echo "::error::CLAP host symbols missing from libAestraAudioCore"; exit 1; }
+
+      # Two selectors, both required. The plugin/clap labels do NOT carry the
+      # sandbox isolation tests (those are labelled security), and they are the
+      # ones that actually exercise out-of-process hosting - so they are named
+      # explicitly. Deliberately not chained with `||`: that would turn a real
+      # test failure into a silent retry of a different selector.
+      - name: Run plugin tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        run: ctest -L "plugin|clap" --output-on-failure
+
+      - name: Run sandbox isolation tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        run: >-
+          ctest --output-on-failure -R
+          "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecPluginCacheBounds|SecPluginTrustedPath|PluginScannerSigpipeTest"
 
   build-windows:
     name: Windows (MSVC)
@@ -103,7 +344,24 @@ jobs:
         with:
           submodules: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh and scripts/ci/lane-runs.sh.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: windows-msvc
+          github-token: ${{ github.token }}
       - name: Cache vcpkg artifacts
+        if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -117,6 +375,7 @@ jobs:
             windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
 
       - name: Setup vcpkg and libsodium
+        if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -151,6 +410,7 @@ jobs:
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
@@ -162,19 +422,24 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build
         shell: bash
-        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
 
-      - name: License verification tests
+      - name: Security contract tests
+        if: steps.scope.outputs.run == 'true'
         shell: bash
-        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+        # See the Linux lane for why this is a label selector rather than a
+        # literal list. -C is retained: this is a multi-config generator.
+        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-windows
@@ -182,7 +447,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run == 'true'
         shell: bash
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -210,26 +475,57 @@ jobs:
         with:
           submodules: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # This job's NAME is a required status check on develop, so it must always run
+      # and always report a conclusion. A skipped workflow reports nothing at all, and
+      # a required context that never reports hangs every PR on "Expected — Waiting
+      # for status" forever. The job therefore runs unconditionally and decides
+      # internally whether the expensive steps below are worth doing.
+      #
+      # The classifier may only skip when certain: unknown paths, oversized change
+      # sets and anything targeting main fall back to running everything.
+      # See scripts/ci/classify-changes.sh and scripts/ci/lane-runs.sh.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: macos-clang
+          github-token: ${{ github.token }}
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           brew update
           brew install cmake pkg-config libsodium googletest
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
 
-      - name: License verification tests
-        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+      - name: Security contract tests
+        if: steps.scope.outputs.run == 'true'
+        # Was a hand-written list of three names, repeated identically in the
+        # Linux, Windows and macOS lanes. Three copies of a literal drift
+        # independently, and the list could only ever name what someone
+        # remembered to add — it had not grown since it was written, while the
+        # security suite reached 29 cases.
+        #
+        # --no-tests=error is load-bearing: without it, a typo in the label or a
+        # renamed contract selects nothing and ctest exits 0. A security step
+        # that silently runs zero tests is worse than no step, because it
+        # reports success.
+        run: ctest --test-dir build -L '^contract:security$' --no-tests=error --output-on-failure
 
       - name: Upload test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-macos
@@ -237,7 +533,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != ''
+        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run == 'true'
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -255,6 +551,205 @@ jobs:
           }
           EOF
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
+
+  classifier-selftest:
+    name: CI classifier self-test
+    runs-on: ubuntu-latest
+    # Least privilege, declared rather than inherited. This job shells out and
+    # queries two historical pull requests, so it reads repo contents and PR
+    # metadata and needs nothing else — least of all a token that could push.
+    permissions:
+      contents: read
+      pull-requests: read
+    # Two separate guarantees, and the second is the one that was missing.
+    #
+    #   SAFETY   uncertainty falls back to broad
+    #   LIVENESS a change that IS narrow actually produces a narrow verdict
+    #
+    # Safety alone is satisfiable by a classifier that has silently died: answer
+    # "broad" to everything and every correctness assertion still passes while the
+    # feature does nothing. That is exactly what shipped in this PR's first draft —
+    # the fetch asked for a GraphQL field name against a REST endpoint, returned
+    # blank lines with exit 0, and degraded into always-broad behind a fully green
+    # matrix. Nothing failed, because nothing could fail.
+    #
+    # So this job asserts both directions, at both levels: the script in isolation,
+    # and the real fetch pipeline end to end against two MERGED pull requests whose
+    # file lists can never change again.
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          # Nothing here pushes, so do not leave a credential in .git/config
+          # for the scripts this job runs to find.
+          persist-credentials: false
+
+      # Level 1: the classifier itself. 42 cases, both directions, including the
+      # look-alike paths and the degenerate input that produced a fail-open.
+      - name: Classifier unit tests
+        run: bash scripts/ci/classify-changes.test.sh
+
+      # The verdict is only half the decision; this is the other half. A wrong entry
+      # here removes a check just as effectively as a wrong verdict does.
+      - name: Lane policy unit tests
+        run: bash scripts/ci/lane-runs.test.sh
+
+      # Level 2: the wiring. The unit tests all passed while the pipeline was dead,
+      # because the bug was in how the file list was fetched, not in how it was
+      # judged. This runs the real command against known history.
+      - name: Fetch pipeline liveness and safety
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fail=0
+
+          # verdict_for <pr-number>  — the exact pipeline the scope steps run.
+          verdict_for() {
+            local pr="$1"
+            gh api --paginate "repos/${{ github.repository }}/pulls/${pr}/files" \
+              --jq '.[].filename' > "/tmp/files-${pr}.txt"
+            local expected
+            expected=$(gh pr view "${pr}" --repo "${{ github.repository }}" \
+              --json changedFiles --jq '.changedFiles')
+            local got
+            got=$(grep -c . "/tmp/files-${pr}.txt") || got=0
+            echo "  PR #${pr}: fetched ${got}, reports ${expected}" >&2
+            if [ "${got}" -eq 0 ] && [ "${expected}" -gt 0 ]; then
+              echo "::error::changed-file fetch returned nothing for #${pr} — the pipeline is dead" >&2
+              return 1
+            fi
+            bash scripts/ci/classify-changes.sh "/tmp/files-${pr}.txt" "${expected}"
+          }
+
+          # LIVENESS: #619 was documentation only. If this stops saying skip-cxx,
+          # the classifier has degraded to running everything and the feature is
+          # dead — the failure this job exists to make visible.
+          v=$(verdict_for 619) || fail=1
+          if [ "${v:-}" != "skip-cxx" ]; then
+            echo "::error::LIVENESS: docs-only #619 classified '${v:-<none>}', expected skip-cxx"
+            fail=1
+          else
+            echo "liveness ok: docs-only #619 -> skip-cxx"
+          fi
+
+          # SAFETY: #618 changed a workflow. It must never be skippable.
+          v=$(verdict_for 618) || fail=1
+          if [ "${v:-}" != "broad" ]; then
+            echo "::error::SAFETY: workflow change #618 classified '${v:-<none>}', expected broad"
+            fail=1
+          else
+            echo "safety ok: workflow-only #618 -> broad"
+          fi
+
+          # LIVENESS (phase 2): #596 changed one .cpp under Source/Components and
+          # nothing else. No headless target compiles that file — AESTRA_CI=ON
+          # force-disables the UI — so only the UI/App lane can observe it. If this
+          # stops saying ui-app-only, the phase 2 rule has gone inert.
+          v=$(verdict_for 596) || fail=1
+          if [ "${v:-}" != "ui-app-only" ]; then
+            echo "::error::LIVENESS: UI-only #596 classified '${v:-<none>}', expected ui-app-only"
+            fail=1
+          else
+            echo "liveness ok: UI-only #596 -> ui-app-only"
+          fi
+
+          # SAFETY: #610 touched AestraAudio and a test. Never narrow.
+          v=$(verdict_for 610) || fail=1
+          if [ "${v:-}" != "broad" ]; then
+            echo "::error::SAFETY: audio change #610 classified '${v:-<none>}', expected broad"
+            fail=1
+          else
+            echo "safety ok: audio+test #610 -> broad"
+          fi
+
+          exit "${fail}"
+
+  contract-coverage:
+    name: Test contract coverage
+    runs-on: ubuntu-latest
+    # No `if:`, no `continue-on-error`, no `needs:`. A required context must
+    # always report. Gating this on a change classifier, or on another job whose
+    # failure could skip it, would make it reportable-sometimes — and GitHub
+    # counts a skipped required job as successful, so "sometimes" degrades to
+    # false green rather than to a block.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      # Level 1: the verifier in isolation. A green baseline plus every
+      # prohibited state, each asserted to be rejected with its specific
+      # diagnostic — because a crash also exits non-zero, and exit-code-only
+      # tests would let a refactor turn a precise rejection into a stack trace
+      # and still look covered. Run BEFORE the real census, so a broken verifier
+      # is reported as a broken verifier rather than as a policy violation.
+      - name: Verifier self-tests
+        run: python3 scripts/ci/test-verify-test-contracts.py
+
+      # The maximal configuration enables UI, which pulls in AestraLicense and
+      # its pkg_check_modules(libsodium). The four headless configurations do
+      # not, which is why the first run of this job configured four of five and
+      # then failed — a gap a local dry-run cannot reproduce on a developer
+      # machine that already has the library. Same set as build-linux-app
+      # installs, so the two jobs cannot drift into disagreeing about what a
+      # configurable tree needs.
+      - name: Install configure-time dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev \
+            libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
+
+      # Configure only. The census is a property of a *configured* tree, and
+      # nothing here needs a compiled binary — which is what keeps this job
+      # minutes rather than tens of minutes.
+      - name: Configure the five declared configurations
+        run: |
+          set -euo pipefail
+          for rt in OFF ON; do
+            for ex in OFF ON; do
+              cmake -S . -B "build-hlON-rt${rt}-ex${ex}" \
+                -DAestra_CORE_MODE=ON \
+                -DAESTRA_HEADLESS_ONLY=ON \
+                -DAESTRA_ENABLE_TESTS=ON \
+                -DAESTRA_ENABLE_RUNTIME_TESTS=$rt \
+                -DAESTRA_ENABLE_EXPERIMENTAL_TESTS=$ex \
+                -DCMAKE_BUILD_TYPE=Release > /dev/null
+            done
+          done
+          cmake -S . -B build-maximal \
+            -DAestra_CORE_MODE=ON \
+            -DAESTRA_HEADLESS_ONLY=OFF \
+            -DAESTRA_ENABLE_UI=ON \
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DAESTRA_ENABLE_RUNTIME_TESTS=ON \
+            -DAESTRA_ENABLE_EXPERIMENTAL_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Release > /dev/null
+
+      - name: Enumerate each configuration
+        run: |
+          set -euo pipefail
+          for d in build-hlON-rtOFF-exOFF build-hlON-rtOFF-exON \
+                   build-hlON-rtON-exOFF build-hlON-rtON-exON build-maximal; do
+            ctest --test-dir "$d" --show-only=json-v1 > "census-$d.json"
+          done
+
+      # The maximal configuration must equal the union of the five. That is an
+      # observed property of this tree, not a law, so the verifier re-proves it
+      # on every run rather than trusting it.
+      - name: Verify test contract coverage
+        run: |
+          python3 scripts/ci/verify-test-contracts.py \
+            --allowlist Tests/policy/benchmark-allowlist.txt \
+            --maximal maximal \
+            --census "hl-on-rtOFF-exOFF=census-build-hlON-rtOFF-exOFF.json" \
+            --census "hl-on-rtOFF-exON=census-build-hlON-rtOFF-exON.json" \
+            --census "hl-on-rtON-exOFF=census-build-hlON-rtON-exOFF.json" \
+            --census "hl-on-rtON-exON=census-build-hlON-rtON-exON.json" \
+            --census "maximal=census-build-maximal.json"
 
   format-check:
     name: Formatting (advisory)
@@ -282,15 +777,29 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # Advisory lanes are not required contexts, but they are 38.8 of the 85
+      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
+      # the UI, so a docs-only or UI-only change cannot produce a finding here.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: tidy
+          github-token: ${{ github.token }}
+
       - name: Install dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-tidy-14 clang-format-14 libsodium-dev libsecret-1-dev
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang-tidy
+        if: steps.scope.outputs.run == 'true'
         run: |
           clang-tidy-14 --config-file=.clang-tidy \
             AestraCore/src/*.cpp \
@@ -309,12 +818,25 @@ jobs:
         with:
           submodules: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # Advisory lanes are not required contexts, but they are 38.8 of the 85
+      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
+      # the UI, so a docs-only or UI-only change cannot produce a finding here.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: asan
+          github-token: ${{ github.token }}
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: >
           cmake -B build-asan -S .
           -DCMAKE_BUILD_TYPE=Debug
@@ -324,14 +846,16 @@ jobs:
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build build-asan --config Debug
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build-asan
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-asan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-asan.xml
 
       - name: Upload sanitizer test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-asan
@@ -350,23 +874,38 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # Advisory lanes are not required contexts, but they are 38.8 of the 85
+      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
+      # the UI, so a docs-only or UI-only change cannot produce a finding here.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: tsan
+          github-token: ${{ github.token }}
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-tsan
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
-        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
@@ -388,23 +927,38 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      # --- Lane selection (#620) ---------------------------------------------
+      # Advisory lanes are not required contexts, but they are 38.8 of the 85
+      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
+      # the UI, so a docs-only or UI-only change cannot produce a finding here.
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: lsan
+          github-token: ${{ github.token }}
+
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-lsan
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-lsan --parallel 2
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-lsan
-        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-lsan.xml
 
       - name: Upload LSan test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-lsan

@@ -1,6 +1,9 @@
 #include "Core/AudioEngine.h"
+#include "Core/AudioGraphBuilder.h"
+#include "Core/ChannelSlotMap.h"
 #include "Core/MasterSafetyLimiter.h"
 #include "DSP/PanLaw.h"
+#include "Models/TrackManager.h"
 #include "Playback/AuditionEngine.h"
 #include "Playback/PreviewEngine.h"
 
@@ -12,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <thread>
 #include <vector>
@@ -273,6 +277,92 @@ void mainAudioEngineSafetyLimiterChangesHotMasterOutput() {
               << ", limitedPeak=" << limitedPeak << "\n";
 }
 
+// #207: a corrupted clip source containing NaN/Inf must not poison the mix.
+// The engine sanitizes clip sample reads at the mix boundary, so the non-finite
+// samples are neutralized BEFORE they accumulate into the master buffer or reach
+// any downstream per-track effect state. This is verified two ways:
+//   1. master output stays finite (end-to-end smoke), and
+//   2. getNaNCount() stays 0 — the final output-stage NaN sanitizer (which is a
+//      separate, last-resort guard) never fires, proving the poison was caught
+//      at the boundary rather than after it had spread through the mix. Without
+//      the boundary guard this counter is non-zero.
+void nanClipSourceProducesFiniteOutput() {
+    using namespace Aestra::Audio;
+
+    constexpr uint32_t kRenderBlock = 512;
+    constexpr double kBpm = 120.0;
+    constexpr double kDurationSeconds = 1.0;
+    constexpr double kDurationBeats = 2.0; // 1s at 120 BPM
+    const uint32_t numFrames = static_cast<uint32_t>(kSampleRate * kDurationSeconds);
+
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    trackManager->addChannel("NaN Track");
+
+    // Source buffer where every sample is non-finite (NaN and +/-Inf).
+    auto buffer = std::make_shared<AudioBufferData>();
+    buffer->sampleRate = kSampleRate;
+    buffer->numChannels = kChannels;
+    buffer->numFrames = numFrames;
+    buffer->interleavedData.resize(static_cast<size_t>(numFrames) * kChannels);
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float inf = std::numeric_limits<float>::infinity();
+    for (size_t i = 0; i < buffer->interleavedData.size(); ++i) {
+        buffer->interleavedData[i] = (i % 3 == 0) ? nan : (i % 3 == 1 ? inf : -inf);
+    }
+
+    const ClipSourceID sourceId =
+        trackManager->getSourceManager().createRecordedSource("nan_source.wav", "nan_source", buffer);
+    AudioSlicePayload payload;
+    payload.audioSourceId = sourceId;
+    payload.durationSeconds = kDurationSeconds;
+    payload.slices.push_back({0.0, kDurationSeconds, 0.0, static_cast<double>(numFrames)});
+
+    const PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("nan_lane");
+    const PatternID patternId =
+        trackManager->getPatternManager().createAudioPattern("nan_source", kDurationBeats, payload);
+    trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
+
+    AudioEngine engine;
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(kRenderBlock, kChannels);
+    engine.setTrackManager(trackManager);
+    engine.setBPM(static_cast<float>(kBpm));
+    trackManager->buildAndShareSlotMap();
+    if (auto slotMap = trackManager->getChannelSlotMapShared()) {
+        engine.setChannelSlotMap(slotMap);
+    }
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager));
+    engine.setSafetyLimiterEnabled(false); // isolate the boundary guard from the final limiter
+    engine.setMetronomeEnabled(false);
+    assert(engine.initialize());
+    engine.setGlobalSamplePos(0);
+    engine.setTransportPlaying(true);
+
+    std::vector<float> out(static_cast<size_t>(kRenderBlock) * kChannels, 0.0f);
+    bool allFinite = true;
+    const uint32_t blocks = (numFrames + kRenderBlock - 1) / kRenderBlock;
+    for (uint32_t b = 0; b < blocks; ++b) {
+        std::fill(out.begin(), out.end(), 0.0f);
+        engine.processBlock(out.data(), nullptr, kRenderBlock, 0.0);
+        for (float s : out) {
+            if (!std::isfinite(s)) {
+                allFinite = false;
+                break;
+            }
+        }
+        if (!allFinite) break;
+    }
+
+    assert(allFinite);
+    // The boundary guard caught every non-finite sample, so the last-resort
+    // final-stage sanitizer never had to fire. If the boundary guard were
+    // removed, the NaN/Inf would reach the output stage and this would be > 0.
+    assert(engine.getNaNCount() == 0);
+    std::cout << "PASS: NaN/Inf clip source is sanitized at the mix boundary "
+                 "(finite output, final-stage NaN guard never fired)\n";
+}
+
 } // namespace
 
 int main() {
@@ -294,6 +384,7 @@ int main() {
     previewMatchesCenteredTrackGainBelowLimiter(coldPath, coldDecoded);
     previewLimiterChangesBoostedHotMaterialButAuditionBypassDoesNot(hotPath, hotDecoded);
     mainAudioEngineSafetyLimiterChangesHotMasterOutput();
+    nanClipSourceProducesFiniteOutput();
 
     std::error_code ec;
     fs::remove(coldPath, ec);

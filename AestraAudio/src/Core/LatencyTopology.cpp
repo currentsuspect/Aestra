@@ -4,7 +4,7 @@
 // P2: flat per-node solve (v1-equivalent).
 // P4a: graph-aware DFS + per-edge compensation + three-color cycle detection.
 //
-// See AestraDocs/PDC-v2-Design.md §4 for the architectural contract.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §4 for the architectural contract.
 
 #include "Core/LatencyTopology.h"
 
@@ -65,7 +65,8 @@ SolvedLatencyTopology solveLatency(const LatencyGraph& graph) {
     }
     if (anyEdgeOutOfRange) {
         topology.warnings.push_back(
-            "LatencyGraph contains edge(s) with out-of-range node indices; their compensation was set to zero");
+            {SolverWarningCode::InvalidEdgeIndices,
+             "LatencyGraph contains edge(s) with out-of-range node indices; their compensation was set to zero"});
     }
 
     // Post-order DFS computing downstreamLatency per node, with three-color
@@ -121,7 +122,8 @@ SolvedLatencyTopology solveLatency(const LatencyGraph& graph) {
 
     if (cycleDetected) {
         topology.warnings.push_back(
-            "routing cycle detected in LatencyGraph; back edges contribute zero compensation");
+            {SolverWarningCode::RoutingCycle,
+             "routing cycle detected in LatencyGraph; back edges contribute zero compensation"});
     }
 
     // Per-edge compensation: for each audible edge F -> D, delay = F's slowest

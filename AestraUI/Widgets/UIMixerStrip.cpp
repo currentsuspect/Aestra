@@ -31,6 +31,16 @@ namespace {
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
+    // Labelled Peak / LUFS / Gain blocks at the foot of the master strip.
+    // Each block is a label line stacked over a value line; two of them sit in
+    // the meter column, so the band must fit 2 * BLOCK_H exactly or the second
+    // value falls off the bottom of the strip.
+    constexpr float MASTER_LABEL_H = 12.0f;
+    constexpr float MASTER_VALUE_H = 14.0f;
+    constexpr float MASTER_BLOCK_H = MASTER_LABEL_H + MASTER_VALUE_H;  // 26
+    // Two stacked blocks plus bottom slack. With only 4px of slack the second
+    // value landed on the strip's bottom edge and was not drawn at all.
+    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;  // 66
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -50,9 +60,18 @@ namespace {
         if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
             return "M";
         }
-        const std::string trackPrefix = "Track ";
-        if (targetName.rfind(trackPrefix, 0) == 0) {
-            return "T" + targetName.substr(trackPrefix.size());
+        const std::string channelPrefix = "Channel ";
+        if (targetName.rfind(channelPrefix, 0) == 0) {
+            return "C" + targetName.substr(channelPrefix.size());
+        }
+        // Projects saved before strips were renamed still carry "Insert N".
+        const std::string legacyInsertPrefix = "Insert ";
+        if (targetName.rfind(legacyInsertPrefix, 0) == 0) {
+            return "I" + targetName.substr(legacyInsertPrefix.size());
+        }
+        const std::string legacyTrackPrefix = "Track ";
+        if (targetName.rfind(legacyTrackPrefix, 0) == 0) {
+            return "I" + targetName.substr(legacyTrackPrefix.size());
         }
         const std::string lanePrefix = "Lane ";
         if (targetName.rfind(lanePrefix, 0) == 0) {
@@ -271,13 +290,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->muted = muted;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel) {
-            if (muted && mc->isSoloed()) {
-                mc->setSolo(false);
-                channel->soloed = false;
-            }
-        }
-
         // Fire undo/redo callback
         if (onMuteChanged) onMuteChanged(muted);
     };
@@ -289,51 +301,17 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         // Solo Safe Logic (Ctrl + Click)
         const bool isCtrl = (modifiers & NUIModifiers::Ctrl);
         if (isCtrl) {
-            // Revert the local toggle because pure solo state shouldn't change
-            // But wait, the button row just toggled its internal visual state.
-            // For Solo Safe, we actually want to toggle a *different* visual state 
-            // (maybe different color or icon?), but for now let's just update the logic.
-            // NOTE: UIMixerButtonRow tracks 'soloed' boolean. If we are setting 'solo safe',
-            // we should probably revert the 'soloed' state on the button if it wasn't already soloed.
-            // Or, ideally, Solo Safe is an independent state.
-            // Given the button row is simple, let's treat it as:
-            // Ctrl+Click -> Toggle Safe. Restore Solo button state to what it was.
-            
-            // Revert button state visually (hacky but works for stateless widget)
-            m_buttons->setSoloed(!soloed); 
-            
-            // Toggle proper safe state
+            // Solo-safe is independent from solo. Restore the button's prior
+            // state, then toggle only the processing-safe flag.
+            m_buttons->setSoloed(!soloed);
             if (auto mc = channel->channel) {
-               bool newSafe = !mc->isSoloSafe();
-               mc->setSoloSafe(newSafe);
-               // Visual feedback? UIMixerStrip doesn't have a distinct 'Safe' icon yet.
-               // We might rely on the user knowing they did it, or add a small indicator later.
+                mc->setSoloSafe(!mc->isSoloSafe());
             }
             return;
         }
 
-        // Exclusive solo: clear other solos first (matches playlist behavior).
-        if (soloed) {
-            const size_t count = m_viewModel->getChannelCount();
-            for (size_t i = 0; i < count; ++i) {
-                auto* other = m_viewModel->getChannelByIndex(i);
-                if (!other || other->id == channel->id) continue;
-                if (auto otherMC = other->channel) {
-                    otherMC->setSolo(false);
-                }
-                other->soloed = false;
-            }
-        }
-
         channel->soloed = soloed;
         invalidateStaticCache();
-
-        if (auto mc = channel->channel) {
-            if (soloed && mc->isMuted()) {
-                mc->setMute(false);
-                channel->muted = false;
-            }
-        }
 
         // Fire undo/redo callback
         if (onSoloChanged) onSoloChanged(soloed);
@@ -355,11 +333,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_meter = std::make_shared<UIMixerMeter>();
     m_meter->setShowCorrelation(true);
+    m_meter->setMasterMode(m_channelId == 0);
     addChild(m_meter);
 
     m_fader = std::make_shared<UIMixerFader>();
     m_fader->setRangeDb(-90.0f, 6.0f);
     m_fader->setDefaultDb(0.0f);
+    // The master strip is wide enough to label its unity mark.
+    m_fader->setShowScaleLabels(m_channelId == 0);
     m_fader->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -426,7 +407,6 @@ void UIMixerStrip::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     m_selectedTint = theme.getColor("primary").withAlpha(0.022f);
     m_selectedOutline = theme.getColor("primary").withAlpha(0.18f);
-    m_selectedGlow = theme.getColor("primary").withAlpha(0.10f);
     m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.18f);
     
     // Master: Distinct Dark Glass
@@ -502,14 +482,18 @@ void UIMixerStrip::layoutChildren()
         m_footer->setBounds(contentX, footerY, contentW, FOOTER_H);
     }
 
-    const float contentY = y;
-    const float contentH = std::max(1.0f, footerY - y);
+    const bool isMaster = (m_channelId == 0);
+    const float meterW = isMaster ? MASTER_METER_W : METER_W;
 
-    const float meterW = (m_channelId == 0) ? MASTER_METER_W : METER_W;
+    // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
+    // strip; its footer is hidden, so that space is otherwise unused.
+    const float readoutH = isMaster ? MASTER_READOUT_H : 0.0f;
 
-    const float availableH = std::max(1.0f, contentH - PAD);
-    const float meterH = availableH * 0.62f;
-    const float meterY = footerY - GAP - meterH;
+    // Meter + fader fill the strip between the channel controls and the footer.
+    // (Previously sized to 62% of the free height and bottom-anchored, which
+    // left a large dead gap above the fader — the tallest, most-used control.)
+    const float meterY = y;
+    const float meterH = std::max(16.0f, (footerY - GAP - readoutH) - y);
     const float meterX = contentX + 2.0f;
 
     if (m_meter) {
@@ -520,6 +504,89 @@ void UIMixerStrip::layoutChildren()
         const float faderX = meterX + meterW + GAP;
         const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
         m_fader->setBounds(faderX, meterY, faderW, meterH);
+    }
+
+    // Readouts sit under the column they describe: observed signal (Peak, LUFS)
+    // under the meter, user-controlled gain under the fader. Keeping all three
+    // in one bottom block made the eye travel from the live bars to a detached
+    // table to interpret state, and blurred which side owns which number.
+    if (isMaster) {
+        const float readoutY = footerY - MASTER_READOUT_H;
+        m_masterMeterReadoutRect = NUIRect{meterX, readoutY, meterW + GAP, MASTER_READOUT_H};
+        const float gainX = meterX + meterW + GAP;
+        m_masterGainReadoutRect =
+            NUIRect{gainX, readoutY, std::max(16.0f, (contentX + contentW) - gainX), MASTER_READOUT_H};
+    } else {
+        m_masterMeterReadoutRect = NUIRect{};
+        m_masterGainReadoutRect = NUIRect{};
+    }
+}
+
+void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
+                                       const Aestra::ChannelViewModel& channel)
+{
+    const NUIRect& meterArea = m_masterMeterReadoutRect;
+    const NUIRect& gainArea = m_masterGainReadoutRect;
+    if (meterArea.width <= 0.0f || meterArea.height <= 0.0f) return;
+
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.72f);
+    const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.95f);
+    const NUIColor clipColor = theme.getColor("meterCrit");
+
+    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+
+    // Peak: prefer the held value, which is what the meter's hold line shows.
+    float peakDb = std::max(channel.smoothedPeakL, channel.smoothedPeakR);
+    if (channel.peakHoldL > Aestra::MixerMath::DB_MIN ||
+        channel.peakHoldR > Aestra::MixerMath::DB_MIN) {
+        peakDb = std::max(channel.peakHoldL, channel.peakHoldR);
+    }
+
+    char buf[32];
+    // Stacked label-over-value: the master columns are too narrow for a
+    // side-by-side label and a signed value.
+    auto block = [&](const NUIRect& area, int index, const char* label,
+                     const std::string& value, const NUIColor& color) {
+        const float y = area.y + static_cast<float>(index) * MASTER_BLOCK_H;
+        const NUIRect labelRect{area.x, y, area.width, MASTER_LABEL_H};
+        const NUIRect valueRect{area.x, y + MASTER_LABEL_H, area.width, MASTER_VALUE_H};
+        renderer.drawTextCentered(label, labelRect, 8.5f, labelColor);
+        renderer.drawTextCentered(value, valueRect, 10.0f, color);
+    };
+
+    // --- Observed signal, under the meter ---
+    // PEAK — dBFS, explicitly. Doubles as the clip/over indicator.
+    std::string peakText;
+    if (peakDb <= Aestra::MixerMath::DB_MIN) {
+        peakText = "\xE2\x88\x92\xE2\x88\x9E";
+    } else {
+        std::snprintf(buf, sizeof(buf), "%.1f", peakDb);
+        peakText = buf;
+    }
+    block(meterArea, 0, clipped ? "OVER" : "PEAK dBFS", peakText, clipped ? clipColor : valueColor);
+
+    // LUFS — integrated, and the sign always survives (see UIMixerMeter).
+    // Integrated LUFS is undefined until the gate has material; show the same
+    // silence marker the peak readout uses rather than an ambiguous dash.
+    std::string lufsText = "\xE2\x88\x92\xE2\x88\x9E";
+    if (channel.integratedLufs > -100.0f) {
+        std::snprintf(buf, sizeof(buf), "%.1f", channel.integratedLufs);
+        lufsText = buf;
+    }
+    block(meterArea, 1, "LUFS INT", lufsText, valueColor);
+
+    // --- User-controlled gain, under the fader ---
+    if (gainArea.width > 0.0f) {
+        // Same silence floor as UIMixerFader::updateCachedText. Without it the
+        // fader reads "−∞" while the readout right under it reads "-90.0",
+        // which looks like two different values for one control.
+        std::string gainText = "\xE2\x88\x92\xE2\x88\x9E";
+        if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
+            std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+            gainText = buf;
+        }
+        block(gainArea, 0, "GAIN dB", gainText, valueColor);
     }
 }
 
@@ -588,15 +655,15 @@ void UIMixerStrip::onUpdate(double deltaTime)
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
 
-            // Thread the track colour through the strip's accent controls so each
-            // channel reads as its own instrument. Master (id 0) keeps the neutral
-            // primary accent, and unset tracks fall back to the widget defaults.
+            // The track colour is the channel's IDENTITY, so it is carried by the
+            // header (and the overview strip) only. It used to be threaded into
+            // the fader fill and all three knob arcs as well, which left every
+            // control looking permanently "active" and made the coloured fader
+            // rail read as a second level meter. The fader now takes the accent
+            // for its engaged handle edge alone; the knobs stay neutral.
             if (m_channelId != 0 && channel->trackColorIndex >= 0) {
                 const NUIColor accent = trackColorFromIndex(channel->trackColorIndex);
                 if (m_fader) m_fader->setAccentColor(accent);
-                if (m_trimKnob) m_trimKnob->setAccentColor(accent);
-                if (m_panKnob) m_panKnob->setAccentColor(accent);
-                if (m_widthKnob) m_widthKnob->setAccentColor(accent);
             }
         }
         m_header->setTrackColorIndex(channel->trackColorIndex);
@@ -728,18 +795,15 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        // Flat selection: no drop shadow — a tint + top highlight + outline only.
+        // Selection = a slight tinted body + a strong top edge. No outline.
+        //
+        // This started at five layers (tint, top bar, inner highlight, outer
+        // glow ring, outline). The outline was the last redundant one: with a
+        // tinted body and a bright edge the strip is already unmistakable, and
+        // the border was what made a selected strip read as a different kind of
+        // component rather than the same strip, selected.
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
-
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
-        renderer.fillRoundedRect(NUIRect{bounds.x + 2.0f, bounds.y + 2.0f, bounds.width - 4.0f, 34.0f},
-                                 std::max(0.0f, radius - 2.0f),
-                                 m_selectedTopHighlight.withAlpha(0.05f));
-        renderer.strokeRoundedRect(NUIRect{bounds.x - 1.0f, bounds.y - 1.0f, bounds.width + 2.0f, bounds.height + 2.0f},
-                                   radius + 1.0f,
-                                   1.0f,
-                                   m_selectedGlow.withAlpha(0.14f));
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_selectedOutline);
     }
 
     // While dragging, render live (no caching) so interactive controls update every frame.
@@ -751,6 +815,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     if (dragging) {
         invalidateStaticCache();
         renderChildren(renderer);
+        if (m_channelId == 0 && channel) {
+            renderMasterReadout(renderer, *channel);
+        }
         if (channel && channel->muted) {
             renderer.fillRect(getBounds(), m_mutedOverlay);
         }
@@ -784,6 +851,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     */
 
     renderChildren(renderer);
+    if (m_channelId == 0 && channel) {
+        renderMasterReadout(renderer, *channel);
+    }
     if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
         auto& theme = NUIThemeManager::getInstance();
         const float duckGain = m_viewModel->getPreviewDuckGain();
@@ -888,6 +958,13 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
 NUIRect UIMixerStrip::getFXSummaryBounds() const
 {
     return m_fxSummary ? m_fxSummary->getBounds() : NUIRect{};
+}
+
+void UIMixerStrip::dismissFaderEdit(const NUIPoint& position)
+{
+    if (m_fader) {
+        m_fader->dismissEditAt(position);
+    }
 }
 
 } // namespace AestraUI

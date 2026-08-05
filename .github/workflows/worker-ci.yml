@@ -1,0 +1,197 @@
+name: Worker CI (license-signing)
+
+# The license-signing worker had no CI at all: nothing under .github/workflows
+# referenced workers/**, so its 57 tests had never run on any commit. They passed
+# only when somebody ran them locally, which is how a broken dependency graph got
+# merged green (see #617).
+#
+# This lane asserts TWO different invariants, deliberately kept apart:
+#
+#   npm ci          reproducibility  — the frozen graph installs and works
+#   resolver check  consistency      — the graph can be RE-resolved
+#
+# The second is the one that was missing. #615 bumped wrangler to a version whose
+# peerOptional @cloudflare/workers-types is ^5 while the manifest stayed on ^4.
+# npm ci tolerated that (lockfile already resolved, peer optional) so every signal
+# stayed green — but any command that recomputed the tree died with ERESOLVE, and
+# ordinary dependency maintenance was broken until #616.
+#
+# WHAT EACH STEP OWNS — worth keeping straight before "strengthening" any of them:
+#
+#   npm ci                      the committed lockfile is installable and
+#                               reproducible, with integrity verified at install
+#   fresh lockfile resolution   npm can still resolve this graph at all
+#   semantic path->version diff a fresh resolution AGREES with the committed graph
+#   typecheck + tests           the worker behaves correctly
+#   wrangler --dry-run          the worker still packages for deployment
+#   runtime-dependency check    the deployed dependency surface has not changed
+#
+# The path->version comparison is DELIBERATELY NARROWER than full lockfile
+# equality. It ignores `integrity`, peer metadata and platform metadata whenever
+# the selected package and version are unchanged. That is not an oversight:
+# npm ci already owns "can this committed lockfile produce the installation",
+# including integrity verification, while this step owns "would npm resolve the
+# same tree today". Making one step enforce both leads straight back to coupling
+# on npm's serialisation format — which is what failed this lane's first run,
+# where CI's npm omitted a `libc` field that npm 11 writes and no dependency had
+# moved at all. Do not pin npm to restore textual equality; that hides the
+# brittleness instead of removing it.
+#
+# Hoisting changes still surface, because a package's path in the tree is part of
+# the compared key.
+
+# NO `paths:` FILTER, deliberately. This job is meant to become a REQUIRED check
+# on develop, and a path-filtered workflow that is skipped never reports a
+# conclusion at all — the required check then sits pending forever and blocks
+# every PR that does not touch workers/. So the job always runs, and decides for
+# itself whether there is work to do: if no worker file changed it says so and
+# exits successfully, which is a real green result rather than an absent one.
+# The cost of the no-op path is a checkout and one API call.
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+defaults:
+  run:
+    working-directory: workers/license-signing
+
+jobs:
+  worker:
+    name: license-signing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      # Pushes to develop/main always run the full lane: they are rare, the job is
+      # short, and it keeps the branch's baseline continuously verified. For pull
+      # requests, ask the API which files changed rather than diffing locally —
+      # that needs no extra fetch depth and is not confused by merge commits.
+      - name: Is there worker work to do?
+        id: scope
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "push build: running the full lane"
+            exit 0
+          fi
+          changed=$(gh pr view "${{ github.event.pull_request.number }}" \
+                      --repo "${{ github.repository }}" --json files \
+                      --jq '.files[].path')
+          if printf '%s\n' "$changed" | grep -qE '^(workers/|\.github/workflows/worker-ci\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "worker files changed: running the full lane"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "no worker files changed: nothing to verify, reporting success"
+          fi
+
+      # wrangler and miniflare both declare engines.node >=22.0.0.
+      - name: Set up Node
+        if: steps.scope.outputs.relevant == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: workers/license-signing/package-lock.json
+
+      # --- Reproducibility: the frozen graph, installed strictly ---------------
+      - name: Install (npm ci)
+        if: steps.scope.outputs.relevant == 'true'
+        run: npm ci
+
+      - name: Typecheck
+        if: steps.scope.outputs.relevant == 'true'
+        run: npm run typecheck
+
+      - name: Test
+        if: steps.scope.outputs.relevant == 'true'
+        run: npm test
+
+      # Builds the worker and resolves its bindings without touching the account,
+      # so a toolchain bump that breaks deployment fails here rather than at deploy.
+      - name: Build (wrangler dry-run)
+        if: steps.scope.outputs.relevant == 'true'
+        run: npx wrangler deploy --dry-run --outdir "${RUNNER_TEMP}/worker-dryrun"
+        env:
+          # wrangler phones home for anonymous usage stats; CI should not.
+          WRANGLER_SEND_METRICS: 'false'
+
+      # --- Consistency: can npm still RESOLVE this graph from scratch? ---------
+      # Deliberately not npm ci. This exercises the resolver instead of replaying
+      # an already-frozen answer, which is the only way an ERESOLVE or a drifted
+      # manifest shows up before it blocks the next person to touch the package.
+      #
+      # --ignore-scripts because workerd and esbuild have postinstall steps that
+      # download platform binaries; resolving the graph does not need them.
+      - name: Dependency graph is still resolvable
+        if: steps.scope.outputs.relevant == 'true'
+        run: |
+          cp package-lock.json "${RUNNER_TEMP}/lock-committed.json"
+          npm install --package-lock-only --ignore-scripts
+
+      # The committed manifests should already BE that resolution. Drift here means
+      # the lockfile was hand-edited, partially updated, or left behind by a bump —
+      # all of which install fine today and break the next change.
+      #
+      # Compared SEMANTICALLY (package -> resolved version), not as text. npm
+      # versions serialise lockfiles differently — npm 11 writes a `libc` field on
+      # optional platform packages that npm 10 omits — so a textual `git diff`
+      # fails whenever CI's npm differs from whoever last ran the install, which is
+      # serialisation drift rather than dependency drift. Comparing resolved
+      # versions tests the invariant we actually care about and does not couple
+      # this gate to npm's output format.
+      - name: Committed lockfile matches the resolved graph
+        if: steps.scope.outputs.relevant == 'true'
+        run: |
+          node -e '
+            const fs = require("fs");
+            const versions = (file) => {
+              const pkgs = JSON.parse(fs.readFileSync(file, "utf8")).packages || {};
+              return Object.fromEntries(
+                Object.entries(pkgs).map(([name, entry]) => [name, entry.version ?? ""]));
+            };
+            const committed = versions(process.env.RUNNER_TEMP + "/lock-committed.json");
+            const resolved  = versions("package-lock.json");
+            const names = [...new Set([...Object.keys(committed), ...Object.keys(resolved)])].sort();
+            const drift = names.filter((n) => committed[n] !== resolved[n]);
+            if (drift.length > 0) {
+              console.error("Resolved graph differs from the committed lockfile:");
+              for (const n of drift) {
+                console.error(`  ${n || "(root)"}: committed=${committed[n] ?? "(absent)"} resolved=${resolved[n] ?? "(absent)"}`);
+              }
+              process.exit(1);
+            }
+            console.log(`Resolved graph matches the committed lockfile (${names.length} entries).`);
+          '
+
+      # package.json is hand-written, so it must not move at all — no serialisation
+      # ambiguity to forgive here.
+      - name: Manifest is unchanged by resolution
+        if: steps.scope.outputs.relevant == 'true'
+        run: git diff --exit-code -- package.json
+
+      # Workers deploy bundled source, so a runtime dependency ships while a dev
+      # one never does. That distinction is what makes most advisories here
+      # non-urgent — worth asserting rather than remembering.
+      - name: Runtime dependencies are still only what we expect
+        if: steps.scope.outputs.relevant == 'true'
+        run: |
+          expected='["tweetnacl"]'
+          actual=$(node -p "JSON.stringify(Object.keys(require('./package.json').dependencies || {}).sort())")
+          echo "runtime dependencies: $actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Runtime dependencies changed: expected $expected, got $actual."
+            echo "A new runtime dependency ships in the deployed worker. If that is intended, update this check."
+            exit 1
+          fi

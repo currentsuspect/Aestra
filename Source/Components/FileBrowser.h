@@ -145,6 +145,11 @@ public:
     void applyFilter();
     std::string getSearchQuery() const;
     bool isSearchBoxFocused() const;
+    // Drop search-box focus when a press at `pos` lands outside it. The content
+    // root calls this on every left-press so clicks in sibling panels (which
+    // consume the event before it ever reaches the browser) still dismiss the
+    // search caret. Returns true if focus was actually cleared.
+    bool blurSearchIfPressOutside(const NUIPoint& pos);
     
     // Preview panel
     void setPreviewPanelVisible(bool visible);
@@ -315,6 +320,11 @@ public:
 		    void renderToolbar(NUIRenderer& renderer);
             void renderNavigationPane(NUIRenderer& renderer, const BrowserLayout& layout);
             void renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout);
+            /// Centered empty/scanning/error block: optional glyph, title,
+            /// balanced word-wrapped hint. Shared by all list placeholder states.
+            void drawListEmptyState(NUIRenderer& renderer, const NUIRect& listClip,
+                                    const std::shared_ptr<NUIIcon>& icon, const std::string& title,
+                                    const std::string& hint);
 	    void renderScrollbar(NUIRenderer& renderer);
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();
@@ -324,6 +334,17 @@ public:
 	    bool handleScrollbarMouseEvent(const NUIMouseEvent& event);
 	    bool handleBreadcrumbMouseEvent(const NUIMouseEvent& event);
         bool handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout);
+
+        // onMouseEvent decomposition — called by the dispatcher in this order;
+        // bool handlers return true when the event was consumed.
+        bool handleChromeMouse(const NUIMouseEvent& event, const BrowserLayout& browserLayout);
+        bool handleActiveDragMouse(const NUIMouseEvent& event);
+        bool handleDragInitiation(const NUIMouseEvent& event, const std::vector<const FileItem*>& view);
+        bool handleWheelScroll(const NUIMouseEvent& event, const BrowserLayout& browserLayout, bool mouseInside,
+                               const std::vector<const FileItem*>& view);
+        void updateBreadcrumbHover(const NUIMouseEvent& event);
+        bool handleListMouse(const NUIMouseEvent& event, const std::vector<const FileItem*>& view,
+                             const BrowserLayout& browserLayout);
 	    void updateScrollbarVisibility();
 	    void showFavoritesMenu();
 	    void showAddFolderMenu();
@@ -486,6 +507,7 @@ public:
     std::shared_ptr<NUIIcon> wavFileIcon_;
     std::shared_ptr<NUIIcon> mp3FileIcon_;
     std::shared_ptr<NUIIcon> flacFileIcon_;
+    std::shared_ptr<NUIIcon> midiFileIcon_;
     std::shared_ptr<NUIIcon> unknownFileIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;
     

@@ -13,6 +13,40 @@ AestraPanelWindow::AestraPanelWindow()
     cacheThemeColors();
 }
 
+AestraPanelWindow::~AestraPanelWindow()
+{
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
+void AestraPanelWindow::beginKnobCapture(const NUIPoint& knobCenter, const NUIPoint& grabPos)
+{
+    if (!m_platformBridge) return;
+    m_captureKnobCenter = knobCenter;
+    m_platformBridge->beginCursorCapture(
+        this, AestraUI::NUICursorRestorePolicy::KnobCenter,
+        static_cast<int>(grabPos.x), static_cast<int>(grabPos.y));
+}
+
+void AestraPanelWindow::endKnobCapture()
+{
+    if (!m_platformBridge) return;
+    m_platformBridge->endCursorCapture(
+        static_cast<int>(m_captureKnobCenter.x), static_cast<int>(m_captureKnobCenter.y));
+}
+
+float AestraPanelWindow::knobDragStep(const NUIMouseEvent& event, float rangePx) const
+{
+    // Shift = surgical precision (quarter speed). Held state is read per frame
+    // so it can be toggled mid-drag. Default (no modifier) speed is unchanged.
+    constexpr float kFineDragScale = 0.25f;
+    const float fine = (event.modifiers & NUIModifiers::Shift) ? kFineDragScale : 1.0f;
+    return (-event.delta.y / rangePx) * fine;
+}
+
 void AestraPanelWindow::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();

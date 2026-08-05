@@ -14,13 +14,13 @@
 #include "EngineState.h"
 #include "GarbageCollector.h"
 #include "Interpolators.h"
-#include "Playback/LiveMidiQueue.h"
 #include "LatencyTopology.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
 #include "MetronomeEngine.h"     // [NEW]
 #include "Models/TrackManager.h" // [NEW] For headless rendering
-#include "PluginHost.h"          // For MidiBuffer [NEW]
+#include "Playback/LiveMidiQueue.h"
+#include "PluginHost.h" // For MidiBuffer [NEW]
 
 #include <array>
 #include <atomic>
@@ -35,6 +35,7 @@ namespace Aestra {
 namespace Audio {
 
 class UnitManager;
+struct AudioArsenalSnapshot;
 class PatternPlaybackEngine;
 class AuditionEngine;
 class PreviewEngine;
@@ -83,11 +84,9 @@ public:
     /** @brief Destroy the realtime audio engine and release owned resources. */
     ~AudioEngine();
 
-    /**
-     * @brief Singleton Accessor (v3.1)
-     * @return Process-wide audio engine instance.
-     */
-    static AudioEngine& getInstance();
+    // No singleton accessor: every AudioEngine is explicitly owned by its
+    // creator (controller unique_ptr, headless tools, tests). Enforced by the
+    // NoAudioEngineSingletonGuard source check.
 
     /**
      * @brief Process a single audio block (driver callback entry).
@@ -274,7 +273,7 @@ public:
      * @brief PDC v2 (P4b.2): per-track per-edge compensation snapshot for tests
      *        and tooling. NOT RT-SAFE: read from main / control thread only.
      *
-     * Returns the compensation sample counts and buffer-capacity-mask values
+     * Returns the node latency/compensation values and per-edge delay state
      * that the off-RT apply pass wrote into TrackRTState for the given track
      * index. The buffer contents themselves are not exposed; only the values
      * the RT-side P4b.3 consumer will read.
@@ -288,11 +287,25 @@ public:
             /// applies this edge's delay (i.e., comp > 0 and buffer is ready).
             uint32_t writePos{0};
         };
+        uint32_t pluginLatencySamples{0};
+        uint32_t outputCompensationSamples{0};
+        /// Engine-wide latency compensation toggle. Per-track enablement is not
+        /// implemented, so this is the same value for every track index.
+        bool compensationEnabled{false};
         EdgeSlotSnapshot mainOutEdgeDelay;
         std::vector<EdgeSlotSnapshot> sendEdgeDelays;
         bool valid{false};
     };
     TrackEdgeDelaySnapshot getTrackEdgeDelaySnapshot(size_t trackIndex) const;
+
+    /**
+     * @brief Whether the published latency topology is pending recalculation.
+     *
+     * NOT RT-SAFE: read from the main / control thread only. Diagnostic
+     * tooling uses this to distinguish a current solution from a stale one;
+     * reading it never triggers recalculation.
+     */
+    bool isLatencyRecalculationPending() const { return m_latencyDirty; }
 
     /**
      * @brief Mark latency as dirty (needs recalculation)
@@ -318,6 +331,8 @@ public:
     bool isMetronomeEnabled() const { return m_metronomeEngine.isEnabled(); }
     /** @brief Set metronome output volume. */
     void setMetronomeVolume(float vol) { m_metronomeEngine.setVolume(vol); }
+    /** @brief Set metronome beats-per-bar (time-signature numerator). */
+    void setMetronomeBeatsPerBar(int beats) { m_metronomeEngine.setBeatsPerBar(beats); }
     /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
     /** @brief Set transport tempo in beats per minute. */
@@ -378,10 +393,7 @@ public:
     }
 
     /** @brief Enable or disable Arsenal pattern playback mode. */
-    void setPatternPlaybackMode(bool enabled, double lengthBeats) {
-        m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
-        m_patternLengthBeats.store(lengthBeats, std::memory_order_relaxed);
-    }
+    void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
 
@@ -638,6 +650,16 @@ public:
     }
 
 private:
+    /**
+     * @brief Withdraw all applied latency compensation from the RT state.
+     *
+     * Zeroes every per-node output compensation and per-edge compensation
+     * count in both m_trackState and the active m_graphStates slot, so the RT
+     * path stops delaying audio. Called from calculateLatencyCompensation()
+     * on the disabled path; not a substitute for the apply pass. Off-RT only.
+     */
+    void clearAppliedLatencyCompensation();
+
     struct ChannelPrepareConfig {
         std::atomic<uint32_t> sampleRate{48000};
         std::atomic<uint32_t> maxBlockSize{4096};
@@ -669,13 +691,68 @@ private:
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);
-    void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
+    void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
+    // Block-stable values renderGraph() derives once per call and every
+    // per-track render reads. Bundled so renderTrack() takes them as one
+    // argument instead of re-loading atomics per track.
+    struct RenderContext {
+        uint32_t numFrames;
+        double* masterBuf;
+        size_t availableTracks;
+        uint64_t blockStart;
+        uint64_t blockEnd;
+        bool isPlaying;
+        bool anySolo;
+        bool anyUnitSolo;
+        uint32_t cachedSampleRate;
+        const ChannelSlotMap* cachedSlotMap;
+        ContinuousParamBuffer* cachedParams;
+        MeterSnapshotBuffer* cachedSnaps;
+        bool cachedPatternMode;
+        Interpolators::InterpolationQuality cachedInterpQuality;
+        const AudioArsenalSnapshot* unitSnapshot;
+        const PatternPlaybackEngine::UnitMidiRoute* unitMidiRoutes;
+        size_t unitMidiRouteCount;
+    };
+    // Renders one track of graph.topologicalOrder (audio thread only):
+    // params/automation, clips, unit render, effect chain, PDC, routing to
+    // master/destination/sends, meter publication. Verbatim extraction of the
+    // renderGraph() per-track loop body; srcActiveThisBlock is the loop-carried
+    // "any resampling happened" telemetry flag.
+    // renderTrack phase helpers (verbatim extractions; RT path — no allocation).
+    void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
+                     bool& srcActiveThisBlock);
+
+
+    void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
+    float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
+                              uint32_t numFrames);
+    void mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
+                          std::vector<double>& buffer, const RenderContext& ctx, double volTarget, double panTarget,
+                          float trackSidechainPeak, bool muted, bool audibleEligible);
+    void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx, bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                             double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+                             double* targetBuffer = nullptr, int64_t isolatedMixerChannelId = -1);
+    // processBlock leaf phases (audio thread only). Each is a verbatim
+    // extraction of a self-contained section of processBlock; state lives in
+    // the members they always used.
+    void mixTestTone(uint32_t numFrames, uint32_t currentSampleRate);
+    // Per-block preview duck-gain ramp. The master output stage interpolates duck
+    // gain from `start` (the previous block's end value) to `end` (this block's
+    // smoothed target) once per sample — mirroring the master fader's per-sample
+    // ramp — so the 50ms/120ms fade never steps at block boundaries (zipper noise).
+    struct PreviewDuckRamp {
+        double start = 1.0;
+        double end = 1.0;
+    };
+    // Advances the smoothed duck gain one block and returns its start/end for the ramp.
+    PreviewDuckRamp computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
+    void mixMetronomeClicks(float* outputBuffer, uint32_t numFrames);
+    void updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels);
     void resetCachedSamplerVoicesRt() noexcept;
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
@@ -718,7 +795,6 @@ private:
     std::atomic<bool> m_transportPlaying{false};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
-    uint64_t m_rtLastTransportPos{0};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
     std::atomic<bool> m_transportRestartRequested{false};
     std::atomic<bool> m_transportStopRequested{false};
@@ -980,6 +1056,21 @@ private:
     // Pattern Playback Mode State
     std::atomic<bool> m_patternPlaybackMode{false};
     std::atomic<double> m_patternLengthBeats{4.0};
+    // Completed pattern-loop passes (audio thread writes at each wrap, reset
+    // while stopped). Gives pattern scheduling a MONOTONIC frame domain
+    // (iteration * loopLen + wrapped pos) so the next iteration's events are
+    // queued before the wrap instead of after a UI maintenance tick.
+    std::atomic<uint64_t> m_patternLoopIteration{0};
+    // Coherent (iteration * loopLen + wrapped pos) snapshot for maintenance,
+    // published in ONE store at the end of each callback alongside
+    // m_globalSamplePos. Reading iteration and position as separate atomics
+    // could pair a new iteration with a stale position (they are written at
+    // different points in the callback) and schedule an epoch ahead.
+    std::atomic<uint64_t> m_patternMonotonicFrame{0};
+    // Last loop length (samples) used for a maintenance refill. Only touched
+    // on the maintenance thread; a change (BPM / sample-rate) means queued
+    // timestamps are in a stale domain and the pattern engine must flush.
+    uint64_t m_lastRefillLoopLenSamples{0};
 
     // Test Tone State
     std::atomic<bool> m_testToneEnabled{false};

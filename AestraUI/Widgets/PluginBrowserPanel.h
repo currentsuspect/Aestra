@@ -271,6 +271,8 @@ private:
  * - Click to open plugin editor
  * - Slot context menu
  */
+class NUIPlatformBridge;
+
 class EffectChainRack : public NUIComponent {
 public:
     static constexpr int MAX_SLOTS = 10;
@@ -285,7 +287,10 @@ public:
     };
 
     EffectChainRack();
-    ~EffectChainRack() override = default;
+    ~EffectChainRack() override; // cancels an active knob capture (see .cpp)
+
+    /** Platform bridge for dry/wet knob cursor capture (may be null in tests). */
+    void setPlatformBridge(NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -321,6 +326,25 @@ private:
     int hitTestSlot(float y) const;
     NUIRect slotRectForTop(float slotY) const;
 
+    /// Index of the last slot holding a plugin, or -1 when the rack is empty.
+    int lastPopulatedSlot() const;
+
+    /**
+     * @brief Rows the rack actually shows: every populated slot plus one
+     *        "+ Add insert" row.
+     *
+     * Drawing all MAX_SLOTS produced a column of identical empty outlines that
+     * carried no information. The spare slots are revealed only while a reorder
+     * drag is in flight, when numbered drop targets are genuinely useful.
+     */
+    int visibleSlotCount() const;
+
+    /// Keep m_scrollOffset within the rows actually drawn. The visible row set
+    /// shrinks when a plugin is removed or a reorder drag ends, and a stale
+    /// offset leaves the rack looking empty.
+    void clampScrollToContent();
+
+    NUIPlatformBridge* m_platformBridge = nullptr;
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
     std::array<int, MAX_SLOTS> m_bypassOverride; // -1=None, 0=Active, 1=Bypassed
     int m_hoveredSlot = -1;
@@ -332,8 +356,7 @@ private:
 
     // Drag Interaction State
     int m_activeKnobSlot = -1;
-    NUIPoint m_dragStartPos{};
-    float m_dragStartValue = 0.0f;
+    NUIPoint m_dragStartPos{}; // slot-reorder drag origin (knob drag uses service deltas)
 
     std::function<void(int)> m_onSlotClicked;
     std::function<void(int, bool)> m_onSlotBypassToggled;

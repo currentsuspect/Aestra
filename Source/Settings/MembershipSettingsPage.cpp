@@ -55,47 +55,50 @@ inline std::shared_ptr<AestraUI::NUIIcon> NUIICON(const char* name) {
 
     const char* svg = "";
     if (std::strcmp(name, "shield-check") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 16 10"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 16 10"/></svg>)";
     } else if (std::strcmp(name, "mail") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>)";
     } else if (std::strcmp(name, "clock") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>)";
     } else if (std::strcmp(name, "check") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>)";
     } else if (std::strcmp(name, "lock") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>)";
     } else if (std::strcmp(name, "info") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>)";
     } else if (std::strcmp(name, "refresh") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>)";
     } else if (std::strcmp(name, "database") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>)";
     } else if (std::strcmp(name, "key") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5M19 11l2 2"/></svg>)";
+        // Solid key. The stroked Feather key loses its teeth entirely at the
+        // 14-15px this page draws at — what survived was a ring with a diagonal
+        // stub, which reads as the Mars symbol, not a key.
+        svg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M8.2 4.2a5.8 5.8 0 1 0 0 11.6 5.8 5.8 0 0 0 0-11.6zm0 3.5a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"/><path fill="currentColor" d="M13.4 8.2H22V15.2H20V11.8H17.6V14.4H15.6V11.8H13.4Z"/></svg>)";
     } else if (std::strcmp(name, "laptop") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>)";
     } else if (std::strcmp(name, "external-link") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>)";
     } else if (std::strcmp(name, "log-out") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>)";
     } else if (std::strcmp(name, "monitor") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>)";
     } else if (std::strcmp(name, "activity") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>)";
     } else if (std::strcmp(name, "headphones") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>)";
     } else if (std::strcmp(name, "layers") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>)";
     } else if (std::strcmp(name, "award") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>)";
     } else if (std::strcmp(name, "crown") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>)";
     } else if (std::strcmp(name, "cloud") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>)";
     } else if (std::strcmp(name, "zap") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>)";
     } else if (std::strcmp(name, "file-badge") == 0) {
-        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><circle cx="12" cy="15" r="2"/><path d="M12 13v-2"/><path d="M12 17v2"/></svg>)";
+        svg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><circle cx="12" cy="15" r="2"/><path d="M12 13v-2"/><path d="M12 17v2"/></svg>)";
     }
 
     auto icon = std::make_shared<AestraUI::NUIIcon>(svg);
@@ -110,6 +113,21 @@ inline void drawMembershipIcon(AestraUI::NUIRenderer& renderer, const char* name
     icon->setColor(color);
     icon->setBounds(AestraUI::NUIRect(cx - size * 0.5f, cy - size * 0.5f, size, size));
     icon->onRender(renderer);
+}
+
+// Draw a leading icon + label as one row, both vertically centred on centreY.
+// calculateTextY() centres the full line box against a zero-height rect at
+// centreY, exactly how the SYNC-card rows position their icon (at the row centre)
+// and label — those sit level to sub-pixel. Prefer this over hand-tuned Y offsets
+// like `cy + 2`, which measured ~5px low against the geometrically centred icon.
+inline void drawIconLabel(AestraUI::NUIRenderer& renderer, const char* iconName,
+                          const std::string& label, float iconCx, float textX,
+                          float centreY, float iconSize, float fontSize,
+                          const AestraUI::NUIColor& iconColor,
+                          const AestraUI::NUIColor& textColor) {
+    drawMembershipIcon(renderer, iconName, iconCx, centreY, iconSize, iconColor);
+    const AestraUI::NUIRect rowRect(textX, centreY, 0.0f, 0.0f);
+    renderer.drawText(label, {textX, renderer.calculateTextY(rowRect, fontSize)}, fontSize, textColor);
 }
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
@@ -550,23 +568,24 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
                                      statusColor.withAlpha(m_signedIn ? 0.14f : 0.08f));
             renderer.strokeRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f, 0.5f,
                                        statusColor.withAlpha(m_signedIn ? 0.35f : 0.22f));
-            drawMembershipIcon(renderer, statusIcon, px + 14.0f, py + pillH * 0.5f, 14.0f, statusColor);
-            renderer.drawText(statusText, {px + 24.0f, py + 5.0f}, props.fontSizeS, statusColor);
+            drawIconLabel(renderer, statusIcon, statusText, px + 14.0f, px + 24.0f,
+                          py + pillH * 0.5f, 14.0f, props.fontSizeS, statusColor, statusColor);
         }
 
-        // Account meta rows
-        drawMembershipIcon(renderer, "mail", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText(m_accountLabel->getText().empty() ? "currentsuspect@gmail.com"
-                                                            : m_accountLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        // Account meta rows. Icon + label share one centre line via drawIconLabel
+        // so they sit level; the old {cx+20, cy+2} text offset rendered ~5px low.
+        const AestraUI::NUIColor metaIcon = textSecondary.withAlpha(0.6f);
+        drawIconLabel(renderer, "mail",
+                      m_accountLabel->getText().empty() ? "Account unavailable" : m_accountLabel->getText(),
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
         cy += 22.0f;
-        drawMembershipIcon(renderer, "file-badge", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText(m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
-                                                               : m_verificationLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        drawIconLabel(renderer, "file-badge",
+                      m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
+                                                             : m_verificationLabel->getText(),
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
         cy += 22.0f;
-        drawMembershipIcon(renderer, "clock", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText("Last refresh: this session", {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
+        drawIconLabel(renderer, "clock", "Last refresh: this session",
+                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
     }
 
     // --- 2. FEATURES CARD ---
@@ -628,13 +647,14 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
 
         // Footer note
         float footY = fy + 4.0f * (chipH + chipGap) + 10.0f;
-        drawMembershipIcon(renderer, "info", fx + 7.0f, footY + 7.0f, 14.0f, textTertiary);
-        renderer.drawText("Locked features require verified membership", {fx + 22.0f, footY + 3.0f},
-                          props.fontSizeS, textTertiary);
+        drawIconLabel(renderer, "info", "Locked features require verified membership",
+                      fx + 7.0f, fx + 22.0f, footY + 7.0f, 14.0f, props.fontSizeS, textTertiary, textTertiary);
     }
 
     // --- 3. SYNC & SESSION CARD ---
-    {
+    // Hidden on narrow dialogs (layoutComponents collapses it to a zero rect so
+    // Features can take the full width).
+    if (m_syncCardBounds.width > 0.0f) {
         const auto& cb = m_syncCardBounds;
         const float r = 12.0f;
         renderer.fillRoundedRect(cb, r, bgPrimary);
@@ -872,17 +892,29 @@ void MembershipSettingsPage::layoutComponents() {
     m_founderCardBounds = AestraUI::NUIRect(x, y, contentW, founderH);
     y += founderH + cardGap;
 
-    // Features + Sync cards (side by side)
-    const float cardW = (contentW - cardGap) * 0.5f;
+    // Features + Sync cards. Side by side when there's room; on a narrow dialog the
+    // two-column feature chips clip badly, so give Features the full width and hide
+    // the secondary Sync & Session card instead of squeezing both. (Height is
+    // unchanged either way — the dialog can't scroll and has no vertical slack.)
+    const float sideCardW = (contentW - cardGap) * 0.5f;
     const float chipH = 30.0f;
     const float chipGap = 8.0f;
     const float chipRows = 4.0f;
     const float featuresCardH = 16.0f + 24.0f + (chipRows * chipH + (chipRows - 1.0f) * chipGap) + 10.0f + 14.0f + 16.0f;
     const float syncCardH = 16.0f + 28.0f + 4.0f * 36.0f + 16.0f;
-    const float cardH = std::max(featuresCardH, syncCardH);
-    m_featuresCardBounds = AestraUI::NUIRect(x, y, cardW, cardH);
-    m_syncCardBounds = AestraUI::NUIRect(x + cardW + cardGap, y, cardW, cardH);
-    y += cardH + cardGap;
+    const bool narrowCards = sideCardW < 300.0f;
+    float cardsBlockH;
+    if (narrowCards) {
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, contentW, featuresCardH);
+        m_syncCardBounds = AestraUI::NUIRect(0.0f, 0.0f, 0.0f, 0.0f); // hidden — see onRender guard
+        cardsBlockH = featuresCardH;
+    } else {
+        const float cardH = std::max(featuresCardH, syncCardH);
+        m_featuresCardBounds = AestraUI::NUIRect(x, y, sideCardW, cardH);
+        m_syncCardBounds = AestraUI::NUIRect(x + sideCardW + cardGap, y, sideCardW, cardH);
+        cardsBlockH = cardH;
+    }
+    y += cardsBlockH + cardGap;
 
     // Actions row
     const float actionH = 36.0f;
@@ -908,7 +940,7 @@ void MembershipSettingsPage::layoutComponents() {
         // the form takes the Actions row's slot instead of sitting a whole row
         // below the now-empty space — which left it hanging too low. The small
         // lift seats the "Sign in" heading just under the cards.
-        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap - 10.0f;
+        float signY = b.y + vPad + founderH + cardGap + cardsBlockH + cardGap - 10.0f;
         const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
         m_signInTitleLabel->setVisible(true);

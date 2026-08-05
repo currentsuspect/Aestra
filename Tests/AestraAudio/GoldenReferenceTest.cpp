@@ -86,7 +86,7 @@ AnalysisResult runSignalTest(const std::string& label, const std::vector<float>&
     // Create engine with a track that plays the reference signal
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
-    trackManager->addChannel("GoldenRef");
+    auto* channel = trackManager->addChannel("GoldenRef");
 
     auto buffer = std::make_shared<AudioBufferData>();
     buffer->sampleRate = kSampleRate;
@@ -104,7 +104,14 @@ AnalysisResult runSignalTest(const std::string& label, const std::vector<float>&
     PlaylistLaneID laneId = trackManager->getPlaylistModel().createLane("GoldenRef");
     PatternID patternId = trackManager->getPatternManager().createAudioPattern(
         "GoldenRef", payload.durationSeconds * 2.0, payload);
-    trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+    if (channel) {
+        trackManager->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    }
+    const ClipInstanceID clipId =
+        trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, payload.durationSeconds * 2.0);
+    if (!trackManager->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        return {label, false, 0.0, 0.0, 0.0};
+    }
 
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);

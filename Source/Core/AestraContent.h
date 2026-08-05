@@ -48,6 +48,7 @@ namespace AestraUI {
     class FileItem;
     class AudioVisualizer;
     class PluginUIController;
+    class NotificationToast;
 }
 
 // Forward declarations - Aestra::Audio (includes panel classes)
@@ -61,12 +62,14 @@ namespace Aestra::Audio {
     class PianoRollPanel;
     class ArsenalPanel;
     class SampleEditorPanel;
+    class AudioClipEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
     class AestraHistoryPanel;
     class TakesPanel;
     class AuditionEngine;  // For Audition Mode
     class PlaybackGraphController;
+    struct ClipInstanceID;
 }
 
 namespace Aestra {
@@ -158,6 +161,44 @@ public:
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
     /** @brief Toggle visibility for a specific workspace overlay. */
     void toggleView(Aestra::Audio::ViewType view);
+    /**
+     * @brief The two independent truths about a workspace overlay.
+     *
+     * These are genuinely different properties, and collapsing them into one
+     * boolean is what made the old single-value query misleading (see
+     * `docs/technical/settings_view_state_map.md`, B1).
+     *
+     * `requestedOpen` is the user's or agent's standing intent, and survives
+     * modes that hide panels temporarily. `visible` is what is on screen right
+     * now. They diverge in Audition mode, where setViewFocus() hides the mixer,
+     * piano roll and Arsenal panels WITHOUT clearing the intent — deliberately,
+     * because that intent is what restores them on the way out.
+     */
+    struct ViewOpenState {
+        /** @brief Standing intent: what the user asked to be open. */
+        bool requestedOpen = false;
+        /** @brief Ground truth: what is actually on screen right now. */
+        bool visible = false;
+    };
+
+    /**
+     * @brief Both truths about a workspace overlay.
+     *
+     * Every view answers from the same two sources. Previously the query read
+     * intent for four views and actual visibility for the other two, so its
+     * meaning depended on which view you asked about.
+     */
+    ViewOpenState getViewOpenState(Aestra::Audio::ViewType view) const;
+
+    /**
+     * @brief Whether a workspace overlay is currently on screen.
+     *
+     * Deliberately the VISIBLE half, not the intent: a caller asking a single
+     * yes/no question about a view almost always means "can the user see it".
+     * A caller that needs the standing intent — to restore it, or to report both
+     * — should use getViewOpenState().
+     */
+    bool isViewOpen(Aestra::Audio::ViewType view) const;
     /** @brief Toggle visibility of the left browser area. */
     void toggleFileBrowser();
     /** @brief Synchronize overlay state into owned child views. */
@@ -203,6 +244,35 @@ public:
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
     /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
     AestraUI::NUICursorStyle getPanelResizeCursorStyle(const AestraUI::NUIPoint& mouseScreen) const;
+
+    // Constructor decomposition — each sets up one workspace region, called
+    // once in sequence from the constructor (order matters: later sections
+    // reference members created by earlier ones).
+    /** @brief Create TrackManagerUI and wire its toggles, loop and audition callbacks. */
+    void setupTrackManagerUI();
+    /** @brief Create the transport bar and wire it to the audio engine. */
+    void setupTransportBar();
+    /** @brief Create the file/plugin/preview/pattern browser panels. */
+    void setupBrowserPanels();
+    /** @brief Create the mixer overlay and the routing-map full panel. */
+    void setupMixerPanels();
+    /** @brief Create the piano-roll overlay and musical-typing wiring. */
+    void setupPianoRollPanel();
+    /** @brief Create the Arsenal and sample-editor overlays. */
+    void setupArsenalPanels();
+    /** @brief Create the History and Takes overlays. */
+    void setupHistoryAndTakesPanels();
+
+    /**
+     * @brief Wire the floating-panel behaviors shared by every overlay panel.
+     *
+     * Covers maximize-refresh, the drag trio (begin/update/end), the clamped
+     * resize that persists into @p stateRect, and an optional minimum size.
+     * Panel-specific wiring (close action, visibility, z-order addChild)
+     * stays at the call site.
+     */
+    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view,
+                           AestraUI::NUIRect ViewState::* stateRect, float minWidth = 0.0f, float minHeight = 0.0f);
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
@@ -284,6 +354,9 @@ public:
     /** @brief Update the preview playhead visible in the UI. */
     void updatePreviewPlayhead();
 
+    /** @brief Show a transient status pill (bottom-center overlay). */
+    void showToast(const std::string& message, double seconds = 2.6);
+
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
     /** @brief Load an instrument plugin into Arsenal. */
@@ -333,6 +406,8 @@ private:
     
 
     
+    std::shared_ptr<AestraUI::NotificationToast> m_notificationToast;
+
     // Browser section
     std::shared_ptr<AestraUI::NUISegmentedControl> m_browserToggle;
     std::shared_ptr<AestraUI::FileBrowser> m_fileBrowser;
@@ -407,6 +482,7 @@ private:
     double m_pendingCountInTargetSeconds{0.0};
 
     std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
+    std::shared_ptr<Aestra::Audio::AudioClipEditorPanel> m_audioClipEditorPanel;
     AestraUI::NUIRect m_sampleEditorRect{0.0f, 0.0f, 640.0f, 430.0f};
 
     // Playback graph controller - single authoritative drain for graph rebuilds
@@ -420,6 +496,7 @@ private:
     AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
+    void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void enqueueMainThreadTask(std::function<void()> task);
     void drainMainThreadTasks();

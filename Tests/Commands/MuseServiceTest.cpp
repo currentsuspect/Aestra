@@ -131,8 +131,7 @@ int main() {
         return 1;
     }
 
-    CommandRegistry::initialize(trackManager.get());
-    CommandRegistry::setAudioEngine(&engine);
+    CommandRegistry::initialize();
     MuseService service(trackManager.get(), &engine);
 
     // --- Protocol: malformed input never crashes, always structured error ---
@@ -164,6 +163,66 @@ int main() {
         r = call(service, "{\"id\": 2, \"verb\": \"get_session_state\"}");
         check(status(r) == "ok", "get_session_state ok");
         check(r["result"]["transport"]["playing"].isBool(), "session state reports transport");
+
+        r = call(service, "{\"id\": 3, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok", "get_audio_health ok");
+        check(r["result"]["status"].asString() == "unobserved" &&
+                  !r["result"]["observed"].asBool(),
+              "audio health does not call an untouched engine healthy");
+        check(r["result"]["counterScope"].asString() == "engine_lifetime",
+              "audio health declares its counter scope");
+        check(r["result"]["timing"]["callbackBudgetMs"].isNumber() &&
+                  r["result"]["realtime"]["xruns"].isNumber() &&
+                  r["result"]["commandQueue"]["dropped"].isNumber() &&
+                  r["result"]["signal"]["nanSamplesSanitized"].isNumber(),
+              "audio health publishes timing, realtime, queue, and signal evidence");
+
+        auto& telemetry = engine.telemetry();
+        telemetry.incrementBlocksProcessed();
+        telemetry.incrementSrcActiveBlocks();
+        telemetry.recordCallbackDuration(2000000, 256, 48000);
+        telemetry.setThreadPriorityBit(Aestra::Audio::AudioTelemetry::kPriorityBits_PlatformSuccess);
+
+        r = call(service, "{\"id\": 4, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok" && r["result"]["status"].asString() == "healthy" &&
+                  r["result"]["issues"].size() == 0,
+              "audio health calls observed issue-free telemetry healthy");
+
+        telemetry.incrementXruns();
+        telemetry.incrementUnderruns();
+        telemetry.incrementRtAllocationViolations();
+        engine.commandQueue().push(Aestra::Audio::AudioQueueCommand{});
+
+        r = call(service, "{\"id\": 5, \"verb\": \"get_audio_health\"}");
+        check(status(r) == "ok" && r["result"]["status"].asString() == "degraded",
+              "audio health classifies observed failures as degraded");
+        check(r["result"]["observed"].asBool(), "audio health marks callback evidence observed");
+        check(r["result"]["timing"]["blocksProcessed"].asNumber() == 1.0 &&
+                  std::abs(r["result"]["timing"]["maxCallbackMs"].asNumber() - 2.0) < 1e-9 &&
+                  r["result"]["timing"]["callbackBudgetMs"].asNumber() > 5.3,
+              "audio health reports callback count, duration, and budget");
+        check(r["result"]["realtime"]["xruns"].asNumber() == 1.0 &&
+                  r["result"]["realtime"]["underruns"].asNumber() == 1.0 &&
+                  r["result"]["realtime"]["allocationViolations"].asNumber() == 1.0,
+              "audio health reports xrun, underrun, and RT violation counters");
+        check(r["result"]["commandQueue"]["maxDepth"].asNumber() == 1.0 &&
+                  r["result"]["commandQueue"]["capacity"].asNumber() > 1.0,
+              "audio health reports command-queue pressure");
+        check(std::abs(r["result"]["resampling"]["activePercent"].asNumber() - 100.0) < 1e-9,
+              "audio health reports resampling activity");
+
+        bool sawXrun = false;
+        bool sawRtAllocation = false;
+        for (size_t i = 0; i < r["result"]["issues"].size(); ++i) {
+            const std::string issue = r["result"]["issues"][i].asString();
+            sawXrun = sawXrun || issue == "xruns";
+            sawRtAllocation = sawRtAllocation || issue == "rt_allocation_violations";
+        }
+        check(sawXrun && sawRtAllocation, "audio health provides machine-readable issue codes");
+
+        r = call(service,
+                 "{\"id\": 6, \"verb\": \"get_audio_health\", \"args\": {\"reset\": true}}");
+        check(status(r) == "validation_error", "get_audio_health refuses ignored arguments");
     }
 
     // --- Hands: build a session through mutations ---
@@ -327,6 +386,17 @@ int main() {
         check(r["result"]["notes"][1]["velocity"].asNumber() > 0.59 &&
                   r["result"]["notes"][1]["velocity"].asNumber() < 0.61,
               "note expression round-trips");
+
+        Aestra::Audio::AudioSlicePayload audioPayload;
+        const auto audioPattern =
+            trackManager->getPatternManager().createAudioPattern("Audio query", 4.0, audioPayload);
+        trackManager->getPatternManager().setPatternMixerChannel(audioPattern, 73);
+        r = call(service, "{\"id\": 630, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " +
+                              std::to_string(audioPattern.value) + "}}");
+        check(status(r) == "ok" && r["result"]["type"].asString() == "audio",
+              "get_pattern identifies audio patterns");
+        check(r["result"]["mixerChannelId"].asNumber() == 73.0,
+              "get_pattern reports an audio pattern's mixer destination");
 
         // Revision loop: move the second hit, then soften it, then delete it.
         r = call(service, "{\"id\": 64, \"verb\": \"move_note\", \"args\": {\"pattern\": " + p +
@@ -574,6 +644,14 @@ int main() {
               "schema notes document the sampler root");
         check(manifest["commands"][0].has("description"),
               "mutation entries carry descriptions");
+        bool audioHealthDocumented = false;
+        for (size_t i = 0; i < manifest["queries"].size(); ++i) {
+            if (manifest["queries"][i]["verb"].asString() == "get_audio_health") {
+                audioHealthDocumented = manifest["queries"][i]["description"].asString().find(
+                                            "engine-lifetime") != std::string::npos;
+            }
+        }
+        check(audioHealthDocumented, "schema documents get_audio_health and counter lifetime");
     }
 
     // --- Pattern lifecycle: clone and length ---
@@ -992,8 +1070,9 @@ int main() {
               "clip sized from pattern length");
 
         r = call(service, "{\"id\": 113, \"verb\": \"list_units\"}");
-        check(r["result"]["units"][0]["timelineLane"].asNumber() == 0.0,
-              "pattern's unit routed to timeline lane 0");
+        const double mixerChannelBefore = r["result"]["units"][0]["mixerChannelId"].asNumber();
+        check(r["result"]["units"][0]["timelineLane"].asNumber() == -1.0,
+              "arrangement leaves legacy timeline ownership unchanged");
 
         r = call(service, "{\"id\": 114, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 0, \"start\": 8}}");
@@ -1003,21 +1082,24 @@ int main() {
         check(r["result"]["lanes"][0]["clips"][1]["startBeat"].asNumber() == 8.0,
               "second clip starts at the requested beat");
 
-        // Conflict: the pattern's unit is routed to lane 0; arranging it on
-        // another track would silently reroute the clips already placed.
+        // The same pattern may appear on another lane without silently changing
+        // the unit's stable mixer destination.
         r = call(service, "{\"id\": 130, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 1, \"start\": 0}}");
-        check(status(r) == "execution_error",
-              "arrange onto a conflicting track -> execution_error");
+        check(status(r) == "ok", "arrange the same pattern on another lane");
+        r = call(service, "{\"id\": 131, \"verb\": \"list_units\"}");
+        check(r["result"]["units"][0]["mixerChannelId"].asNumber() == mixerChannelBefore,
+              "cross-lane arrangement preserves the mixer destination");
 
-        // Undo unwinds the whole gesture: clip, unit routing, created lane.
+        // Undo unwinds the three arrangement gestures and their created lanes.
+        trackManager->getCommandHistory().undo();
         trackManager->getCommandHistory().undo();
         trackManager->getCommandHistory().undo();
         r = call(service, "{\"id\": 116, \"verb\": \"list_clips\"}");
         check(r["result"]["lanes"].size() == lanesBefore, "undo removes the created lane");
         r = call(service, "{\"id\": 117, \"verb\": \"list_units\"}");
-        check(r["result"]["units"][0]["timelineLane"].asNumber() == -1.0,
-              "undo restores the unit's preview routing");
+        check(r["result"]["units"][0]["mixerChannelId"].asNumber() == mixerChannelBefore,
+              "undo preserves the unit's mixer destination");
 
         // Contract: bad targets never build.
         r = call(service,
@@ -1026,7 +1108,7 @@ int main() {
         check(status(r) == "execution_error", "arrange unknown pattern -> execution_error");
         r = call(service, "{\"id\": 119, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 99, \"start\": 0}}");
-        check(status(r) == "execution_error", "arrange onto missing channel -> execution_error");
+        check(status(r) == "execution_error", "arrange beyond the next Playlist lane -> execution_error");
     }
 
     // --- Render the arrangement: the song comes back as audio ---
@@ -1093,6 +1175,156 @@ int main() {
                   std::to_string(r["result"]["peakDb"].asNumber()) + ")");
         check(!engine.isTransportPlaying(), "engine transport stopped after song render");
         std::filesystem::remove(outPath);
+    }
+
+    // --- Unit gain + meters: the last mixing dimensions ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string u = std::to_string(static_cast<long long>(kickUnit));
+        const std::string outPath =
+            (std::filesystem::temp_directory_path() / "muse_service_test_gain.wav").string();
+
+        // Baseline render at unity gain, then at half gain: the peak must
+        // drop by ~6 dB — proof the gain reaches the audio path.
+        JSON r = call(service, fileRequest(230, "render_pattern", "pattern", kickPattern, outPath,
+                                           0.1));
+        check(status(r) == "ok", "unity-gain render ok");
+        const double unityPeak = r["result"]["peakDb"].asNumber();
+
+        r = call(service, "{\"id\": 231, \"verb\": \"set_unit_gain\", \"args\": {\"unit\": " + u +
+                              ", \"value\": 0.5}}");
+        check(status(r) == "ok", "set_unit_gain ok");
+        r = call(service, "{\"id\": 232, \"verb\": \"list_units\"}");
+        check(std::abs(r["result"]["units"][0]["gain"].asNumber() - 0.5) < 1e-6,
+              "gain readback is 0.5");
+
+        r = call(service, fileRequest(233, "render_pattern", "pattern", kickPattern, outPath,
+                                      0.1));
+        const double halfPeak = r["result"]["peakDb"].asNumber();
+        check(std::abs((unityPeak - halfPeak) - 6.02) < 0.5,
+              "half gain drops the rendered peak by ~6 dB (was " + std::to_string(unityPeak) +
+                  ", now " + std::to_string(halfPeak) + ")");
+
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 234, \"verb\": \"list_units\"}");
+        check(std::abs(r["result"]["units"][0]["gain"].asNumber() - 1.0) < 1e-6,
+              "undo restores unity gain");
+
+        r = call(service,
+                 "{\"id\": 235, \"verb\": \"set_unit_gain\", \"args\": {\"unit\": 999, \"value\": 1}}");
+        check(status(r) == "execution_error" &&
+                  r["message"].asString().find("no such unit: 999") != std::string::npos,
+              "unknown unit refusal names it");
+
+        // Meters: after the renders above the buffer holds the last block.
+        r = call(service, "{\"id\": 236, \"verb\": \"get_meters\"}");
+        check(status(r) == "ok", "get_meters ok");
+        check(r["result"].has("master") && r["result"]["master"]["peakDbL"].isNumber(),
+              "master meter present with numeric peak");
+        check(r["result"]["tracks"].size() >= 2, "per-track meters present");
+        check(r["result"]["master"]["clip"].isBool(), "clip flag is boolean");
+
+        r = call(service, "{\"id\": 237, \"verb\": \"get_meters\", \"args\": {\"x\": 1}}");
+        check(status(r) == "validation_error", "get_meters takes no arguments");
+        std::filesystem::remove(outPath);
+    }
+
+    // --- undo / redo: the surface can walk the history it writes ------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        JSON r = call(service, "{\"id\": 240, \"verb\": \"add_track\", \"args\": {\"name\": \"Undoable\"}}");
+        check(status(r) == "ok", "add_track for the undo case");
+        check(trackManager->getChannelCount() == before + 1, "track was added");
+
+        r = call(service, "{\"id\": 241, \"verb\": \"undo\"}");
+        check(status(r) == "ok", "undo ok");
+        check(trackManager->getChannelCount() == before, "undo removed the track");
+        check(r["result"]["canRedo"].isBool() && r["result"]["canRedo"].asBool(),
+              "undo reports that a redo is now available");
+
+        r = call(service, "{\"id\": 242, \"verb\": \"redo\"}");
+        check(status(r) == "ok", "redo ok");
+        check(trackManager->getChannelCount() == before + 1, "redo restored the track");
+        check(r["result"]["canRedo"].isBool() && !r["result"]["canRedo"].asBool(),
+              "redo reports the stack is now at its top");
+
+        // Exhaustion is checked on a FRESH session, not by unwinding the long
+        // history this file has built up. That history contains a delete_track,
+        // and unwinding past one is currently unsafe for reasons that have
+        // nothing to do with undo/redo: DeleteTrackCommand::undo() calls
+        // addChannel(), which mints a NEW MixerChannel with a NEW id at the END
+        // of the vector, so every older command still holding `MixerChannel&`
+        // (SetVolume/SetPan/SetMute/SetSolo and the effect commands all do)
+        // is left dangling. ASan catches it as a heap-use-after-free the moment
+        // one of those older commands is undone.
+        //
+        // That bug predates this change and is reachable from the UI's Ctrl+Z;
+        // it is filed separately rather than smuggled in here. Scoping this
+        // assertion to a clean history tests what this change actually adds
+        // without also driving a broken path it does not own.
+        {
+            auto freshManager = std::make_shared<TrackManager>();
+            freshManager->getUnitManager().setPatternManager(&freshManager->getPatternManager());
+            MuseService fresh(freshManager.get(), &engine);
+
+            JSON f = call(fresh, "{\"id\": 243, \"verb\": \"undo\"}");
+            check(status(f) == "execution_error" && f["message"].asString() == "nothing to undo",
+                  "undo on an untouched session refuses by name");
+            f = call(fresh, "{\"id\": 244, \"verb\": \"redo\"}");
+            check(status(f) == "execution_error" && f["message"].asString() == "nothing to redo",
+                  "redo on an untouched session refuses by name");
+
+            f = call(fresh, "{\"id\": 245, \"verb\": \"add_track\", \"args\": {\"name\": \"Only\"}}");
+            check(status(f) == "ok", "fresh session takes one edit");
+            f = call(fresh, "{\"id\": 246, \"verb\": \"undo\"}");
+            check(status(f) == "ok" && f["result"]["canUndo"].isBool() &&
+                      !f["result"]["canUndo"].asBool(),
+                  "undoing the only edit empties the undo stack");
+            f = call(fresh, "{\"id\": 247, \"verb\": \"undo\"}");
+            check(status(f) == "execution_error",
+                  "a second undo at the end of the stack refuses rather than reporting a no-op");
+        }
+
+        r = call(service, "{\"id\": 248, \"verb\": \"undo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "undo takes no args");
+        r = call(service, "{\"id\": 249, \"verb\": \"redo\", \"args\": {\"steps\": 2}}");
+        check(status(r) == "validation_error", "redo takes no args");
+
+        // undo/redo act on history, so they are not batch members.
+        r = call(service,
+                 "{\"id\": 247, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": \"undo\"}]}}");
+        check(status(r) == "validation_error", "undo is rejected inside a batch");
+    }
+
+    // --- a batch member takes only verb and args ----------------------------
+    {
+        const size_t before = trackManager->getChannelCount();
+
+        // The real mistake this catches: "flags" instead of "args". It used to
+        // run with NO args and report ok, silently creating a default-named
+        // track instead of the one asked for.
+        JSON r = call(service,
+                      "{\"id\": 250, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                      "\"add_track\", \"flags\": {\"name\": \"Typo\"}}]}}");
+        check(status(r) == "validation_error", "batch member with 'flags' is refused");
+        check(r["message"].asString().find("unknown key: flags") != std::string::npos,
+              "the refusal names the offending key");
+        check(r["message"].asString().find("commands[0]") != std::string::npos,
+              "the refusal names the offending member");
+        check(trackManager->getChannelCount() == before,
+              "a refused batch member adds nothing");
+
+        // The correct spelling still works, and lands as one undo step.
+        r = call(service,
+                 "{\"id\": 251, \"verb\": \"batch\", \"args\": {\"commands\": [{\"verb\": "
+                 "\"add_track\", \"args\": {\"name\": \"Correct\"}}]}}");
+        check(status(r) == "ok", "batch member with 'args' is accepted");
+        check(trackManager->getChannelCount() == before + 1, "the batch added its track");
+
+        r = call(service, "{\"id\": 252, \"verb\": \"undo\"}");
+        check(status(r) == "ok" && trackManager->getChannelCount() == before,
+              "the whole batch undoes as a single step");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))

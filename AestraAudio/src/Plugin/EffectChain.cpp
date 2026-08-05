@@ -5,11 +5,55 @@
 #include "AestraLog.h"
 
 #include <algorithm>
+#include <atomic>
+#include <limits>
 #include <cmath>
 #include <cstring>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+// Process-wide plugin-instance id counter (#667). Atomic because chains on
+// different channels are mutated from the main/control thread but nothing
+// guarantees a single thread across a session; the RT thread never touches it.
+std::atomic<uint64_t> g_nextPluginInstanceId{1};
+}  // namespace
+
+uint64_t mintPluginInstanceId() {
+    uint64_t id = g_nextPluginInstanceId.fetch_add(1, std::memory_order_relaxed);
+    // Wrap guard, mirroring the unit-id counter (#528). Exhausting 2^64 ids is not
+    // reachable in practice, but returning 0 would silently mean "no instance" and
+    // un-address every curve pointing at this slot, so refuse to produce it.
+    if (id == 0) {
+        g_nextPluginInstanceId.store(1, std::memory_order_relaxed);
+        id = 1;
+    }
+    return id;
+}
+
+void reserveMintedPluginInstanceId(uint64_t seenId) {
+    if (seenId == 0) {
+        return;
+    }
+    // UINT64_MAX is never reserved, matching the house policy already stated for
+    // source ids (SourceManager.h) and pattern ids (PatternManager.h): advancing
+    // the counter past it wraps to zero, and the next mint then takes its wrap
+    // branch and hands out 1 — an id almost certainly already in use. Refusing
+    // here keeps the counter monotonic no matter what a caller passes, so the
+    // guarantee does not depend on every call site remembering the boundary.
+    if (seenId == std::numeric_limits<uint64_t>::max()) {
+        return;
+    }
+    uint64_t expected = g_nextPluginInstanceId.load(std::memory_order_relaxed);
+    while (expected <= seenId) {
+        if (g_nextPluginInstanceId.compare_exchange_weak(expected, seenId + 1,
+                                                         std::memory_order_relaxed)) {
+            return;
+        }
+        // expected is refreshed by compare_exchange_weak; loop re-tests it.
+    }
+}
 
 namespace {
 bool processPluginNoexcept(IPluginInstance& plugin, const float* const* inputs, float** outputs,
@@ -95,7 +139,7 @@ void EffectChain::publishSnapshot() {
 // Slot Management
 // ==============================
 
-bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
+bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint64_t preservedInstanceId) {
     if (reportRealtimeMisuse("EffectChain::insertPlugin")) {
         return false;
     }
@@ -120,7 +164,40 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
         (void)plugin->getInfo();
     }
 
+    // Whether the CALLER handed us a plugin — checked before the move, which
+    // leaves `plugin` null either way.
+    const bool receivedPlugin = plugin != nullptr;
     m_slots[slotIndex].plugin = std::move(plugin);
+    // The slot now genuinely holds what the caller put here, so any retained
+    // missing-plugin record for it is superseded (#647).
+    m_slots[slotIndex].clearMissingPlugin();
+    // A different plugin instance occupies this slot, so it is a different
+    // identity — mint a fresh one rather than inheriting whatever was here
+    // (#667). Inheriting would silently hand the previous plugin's automation to
+    // its replacement, which is the same class of defect as the positional
+    // addressing this id exists to remove.
+    //
+    // The exception is a caller re-seating an occupant that already HAD an
+    // identity and, to the user, never stopped being the same plugin. Undo of a
+    // removal is that case: minting there would mean Ctrl+Z silently orphaned
+    // every curve pointing at the plugin it just brought back. Reserve the id
+    // first so one restored from outside this process can never be minted again.
+    //
+    // A preserved id is honoured only if it can actually be held uniquely. Two
+    // cases fall back to a fresh mint, matching how SourceManager treats a
+    // requested source id: UINT64_MAX, which cannot be reserved without wrapping
+    // the counter to zero, and an id already live in this chain, which would put
+    // the same identity in two slots. Falling back is right rather than failing
+    // the insert — the plugin still belongs in the slot, it just cannot keep a
+    // name that is unusable or taken.
+    if (receivedPlugin && preservedInstanceId != 0
+        && preservedInstanceId != std::numeric_limits<uint64_t>::max()
+        && findSlotByInstanceId(preservedInstanceId) == MAX_SLOTS) {
+        reserveMintedPluginInstanceId(preservedInstanceId);
+        m_slots[slotIndex].instanceId = preservedInstanceId;
+    } else {
+        m_slots[slotIndex].instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
+    }
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
@@ -142,6 +219,12 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 
     auto plugin = std::move(m_slots[slotIndex].plugin);
     m_slots[slotIndex].plugin = nullptr;
+    // Removing a slot removes it, placeholder included (#647).
+    m_slots[slotIndex].clearMissingPlugin();
+    // The instance is gone, so its identity goes with it (#667). Anything still
+    // addressing this id now resolves to nothing, which is the honest outcome —
+    // far better than resolving to whatever occupies the index next.
+    m_slots[slotIndex].instanceId = 0;
     m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
@@ -163,12 +246,19 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
         return true;
     }
 
-    // Can only move to empty slot
-    if (!m_slots[toSlot].isEmpty()) {
+    // Can only move to a slot nothing else claims. A placeholder claims its slot
+    // (#647) — moving onto it would silently destroy a retained record.
+    if (m_slots[toSlot].isOccupied()) {
         return false;
     }
 
     m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
+    // The identity travels with the instance (#667). This is the whole point of
+    // the id: a move changes which index holds the plugin and nothing else, so
+    // automation addressed to it keeps resolving to the same plugin.
+    m_slots[toSlot].instanceId = m_slots[fromSlot].instanceId;
+    m_slots[toSlot].missingPluginId = std::move(m_slots[fromSlot].missingPluginId);
+    m_slots[toSlot].missingPluginState = std::move(m_slots[fromSlot].missingPluginState);
     m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
     m_slots[toSlot].dryWetMix.store(m_slots[fromSlot].dryWetMix.load());
     m_slots[toSlot].faultState = std::move(m_slots[fromSlot].faultState);
@@ -177,6 +267,8 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     }
 
     m_slots[fromSlot].plugin = nullptr;
+    m_slots[fromSlot].clearMissingPlugin();
+    m_slots[fromSlot].instanceId = 0;  // vacated — no instance lives here now (#667)
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
     m_slots[fromSlot].faultState = std::make_shared<EffectSlotFaultState>();
@@ -198,6 +290,10 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     }
 
     std::swap(m_slots[slot1].plugin, m_slots[slot2].plugin);
+    // Identities swap with their instances (#667) — see movePlugin.
+    std::swap(m_slots[slot1].instanceId, m_slots[slot2].instanceId);
+    std::swap(m_slots[slot1].missingPluginId, m_slots[slot2].missingPluginId);
+    std::swap(m_slots[slot1].missingPluginState, m_slots[slot2].missingPluginState);
     std::swap(m_slots[slot1].faultState, m_slots[slot2].faultState);
 
     bool bypass1 = m_slots[slot1].bypassed.load();
@@ -231,16 +327,56 @@ bool EffectChain::isSlotEmpty(size_t slotIndex) const {
     if (slotIndex >= MAX_SLOTS) {
         return true;
     }
-    return m_slots[slotIndex].isEmpty();
+    // "Free to use", not the RT predicate: a retained missing-plugin record
+    // claims its slot (#647).
+    return !m_slots[slotIndex].isOccupied();
 }
 
-size_t EffectChain::getFirstEmptySlot() const {
+uint64_t EffectChain::getSlotInstanceId(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS) {
+        return 0;
+    }
+    return m_slots[slotIndex].instanceId;
+}
+
+size_t EffectChain::findSlotByInstanceId(uint64_t instanceId) const {
+    // Id 0 means "no instance". Unoccupied slots carry 0, so matching on it would
+    // resolve every un-addressed curve to the first empty slot (#667).
+    if (instanceId == 0) {
+        return MAX_SLOTS;
+    }
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
-        if (m_slots[i].isEmpty()) {
+        if (m_slots[i].instanceId == instanceId) {
             return i;
         }
     }
     return MAX_SLOTS;
+}
+
+size_t EffectChain::getFirstEmptySlot() const {
+    for (size_t i = 0; i < MAX_SLOTS; ++i) {
+        if (!m_slots[i].isOccupied()) {
+            return i;
+        }
+    }
+    return MAX_SLOTS;
+}
+
+size_t EffectChain::getMissingPluginCount() const {
+    size_t count = 0;
+    for (const auto& slot : m_slots) {
+        if (slot.hasMissingPlugin()) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::string EffectChain::getMissingPluginId(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS) {
+        return {};
+    }
+    return m_slots[slotIndex].missingPluginId;
 }
 
 size_t EffectChain::getActiveSlotCount() const {
@@ -259,6 +395,8 @@ void EffectChain::clear() {
     }
     for (auto& slot : m_slots) {
         slot.plugin = nullptr;
+        slot.clearMissingPlugin();
+        slot.instanceId = 0;  // every instance is gone, so every identity is (#667)
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
         slot.faultState = std::make_shared<EffectSlotFaultState>();
@@ -585,8 +723,8 @@ std::vector<uint8_t> EffectChain::saveState() const {
     // Write header
     state.push_back('N');
     state.push_back('E');
-    state.push_back('C'); // Aestra Effect Chain
-    state.push_back(1);   // Version
+    state.push_back('C');                  // Aestra Effect Chain magic
+    state.push_back(kStateFormatVersion);  // Format version (see loadState dispatch)
 
     // Write slot count
     state.push_back(static_cast<uint8_t>(MAX_SLOTS));
@@ -594,6 +732,32 @@ std::vector<uint8_t> EffectChain::saveState() const {
     // Write each slot
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
         const auto& slot = m_slots[i];
+
+        // A slot holding a placeholder for a plugin that would not load is NOT
+        // empty (#647). Re-emit the retained record verbatim so a load/save on a
+        // machine missing the plugin preserves it rather than deleting it. The
+        // layout is identical to the live-plugin case below, so the file format
+        // is unchanged and a machine that has the plugin loads it normally.
+        if (slot.hasMissingPlugin()) {
+            state.push_back(1); // Has plugin flag
+
+            uint32_t idLen = static_cast<uint32_t>(slot.missingPluginId.size());
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&idLen),
+                         reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
+            state.insert(state.end(), slot.missingPluginId.begin(), slot.missingPluginId.end());
+
+            state.push_back(slot.bypassed.load() ? 1 : 0);
+
+            float dryWet = slot.dryWetMix.load();
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&dryWet),
+                         reinterpret_cast<const uint8_t*>(&dryWet) + sizeof(dryWet));
+
+            uint32_t stateLen = static_cast<uint32_t>(slot.missingPluginState.size());
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&stateLen),
+                         reinterpret_cast<const uint8_t*>(&stateLen) + sizeof(stateLen));
+            state.insert(state.end(), slot.missingPluginState.begin(), slot.missingPluginState.end());
+            continue;
+        }
 
         if (slot.isEmpty()) {
             state.push_back(0); // Empty flag
@@ -628,7 +792,8 @@ std::vector<uint8_t> EffectChain::saveState() const {
     return state;
 }
 
-bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager) {
+bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager,
+                            std::vector<std::string>* outMissingPluginIds) {
     if (reportRealtimeMisuse("EffectChain::loadState")) {
         return false;
     }
@@ -636,8 +801,21 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         return false;
     }
 
-    // Check header
-    if (state[0] != 'N' || state[1] != 'E' || state[2] != 'C' || state[3] != 1) {
+    // Check magic separately from version so a version mismatch is diagnosable
+    // and future formats have a migration point (rather than being rejected as
+    // if the data were not an effect chain at all).
+    if (state[0] != 'N' || state[1] != 'E' || state[2] != 'C') {
+        return false;
+    }
+
+    const uint8_t version = state[3];
+    if (version == 0 || version > kStateFormatVersion) {
+        // Unknown/future format: refuse rather than misparse. When a v2 layout is
+        // added, dispatch here (e.g. `if (version >= 2) return loadStateV2(...)`)
+        // while keeping the v1 path below so older chains still load.
+        Aestra::Log::warning("[EffectChain] Unsupported effect-chain state version " + std::to_string(version) +
+                             " (this build supports up to " + std::to_string(kStateFormatVersion) +
+                             "); skipping restore.");
         return false;
     }
 
@@ -653,6 +831,11 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
+            m_slots[i].clearMissingPlugin();
+            // Loading into a chain that was already populated must not leave the
+            // previous occupant's identity behind on a now-empty slot, or a
+            // lookup for that id would resolve to a slot holding nothing (#667).
+            m_slots[i].instanceId = 0;
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
             continue;
         }
@@ -680,10 +863,17 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         // Read bypass state
         bool bypassed = state[offset++] != 0;
 
-        // Read dry/wet
+        // Read dry/wet. Guard against a corrupted/NaN blob: a non-finite mix
+        // would multiply into the audio path. Fall back to fully-wet (the
+        // default) and clamp to the valid [0,1] range the setter enforces.
         float dryWet;
         std::memcpy(&dryWet, &state[offset], sizeof(dryWet));
         offset += sizeof(dryWet);
+        if (!std::isfinite(dryWet)) {
+            dryWet = 1.0f;
+        } else {
+            dryWet = std::clamp(dryWet, 0.0f, 1.0f);
+        }
 
         // Read plugin state length
         uint32_t stateLen;
@@ -708,9 +898,42 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             instance->activate();
 
             m_slots[i].plugin = std::move(instance);
+            m_slots[i].clearMissingPlugin();
+            // v1 chains predate identity, so there is nothing on the wire to
+            // restore — mint. Reserving would be wrong here for the same reason:
+            // there is no persisted id that a future mint could collide with.
+            // When v2 lands, this is the branch that reads the stored id and
+            // calls reserveMintedPluginInstanceId instead (#667).
+            m_slots[i].instanceId = mintPluginInstanceId();
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+        } else {
+            // The plugin is unavailable on this machine. Retain the record
+            // instead of dropping it (#647) — dropping it here is what made the
+            // next save erase the slot permanently and silently.
+            //
+            // The opaque state is stored exactly as it came off the wire; it is
+            // never interpreted or normalised, so repeated load/save cycles
+            // cannot progressively mutate it. bypass and dry/wet are stored
+            // post-sanitisation, which is what a live plugin round-trips to as
+            // well, so both paths converge after one cycle and stay fixed.
+            m_slots[i].plugin = nullptr;
+            m_slots[i].missingPluginId = pluginId;
+            m_slots[i].missingPluginState = std::move(pluginState);
+            // A placeholder is an occupant, so it gets an identity like any
+            // other (#647/#667). Automation addressed to a plugin that failed to
+            // load has to survive the round trip exactly as the placeholder does.
+            m_slots[i].instanceId = mintPluginInstanceId();
+            m_slots[i].bypassed.store(bypassed);
+            m_slots[i].dryWetMix.store(dryWet);
+            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+
+            if (outMissingPluginIds) {
+                outMissingPluginIds->push_back(pluginId);
+            }
+            Aestra::Log::warning("[EffectChain] Plugin unavailable for slot " + std::to_string(i) + ": " + pluginId +
+                                 " — slot state retained and will be preserved on save");
         }
     }
 

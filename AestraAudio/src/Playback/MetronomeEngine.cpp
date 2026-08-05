@@ -195,11 +195,20 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
     m_activeClickSamples = &m_clickSamplesDown;
 }
 
-void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate) {
+void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat) {
     if (sampleRate == 0)
         return;
 
     m_sampleRate.store(sampleRate, std::memory_order_relaxed);
+
+    // A loop wrap (skipCurrentBeat) keeps the ringing click: the ~100 ms tail
+    // is position-independent and cutting it audibly truncates the last click
+    // of every loop. Any other reset is a start/locate — a stale tail from the
+    // previous run must not resume there.
+    if (!skipCurrentBeat) {
+        m_clickPlaying = false;
+        m_clickPlayhead = 0;
+    }
 
     float bpm = m_bpm.load(std::memory_order_relaxed);
     int beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);
@@ -208,10 +217,17 @@ void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate) {
     uint64_t samplesPerBeatInt = static_cast<uint64_t>(samplesPerBeat);
 
     if (samplesPerBeatInt > 0) {
-        m_nextBeatSample = (globalSamplePos / samplesPerBeatInt) * samplesPerBeatInt;
-        m_currentBeat = static_cast<int>((globalSamplePos / samplesPerBeatInt) % beatsPerBar);
-        m_clickPlaying = false;
-        m_clickPlayhead = 0;
+        uint64_t beatIndex = globalSamplePos / samplesPerBeatInt;
+        uint64_t beatSample = beatIndex * samplesPerBeatInt;
+        // At a loop wrap the boundary beat already clicked in the pre-wrap
+        // timeline (loop end == loop start); re-scheduling it here would make
+        // it fire twice with a cut in between.
+        if (skipCurrentBeat && beatSample == globalSamplePos) {
+            ++beatIndex;
+            beatSample += samplesPerBeatInt;
+        }
+        m_nextBeatSample = beatSample;
+        m_currentBeat = static_cast<int>(beatIndex % beatsPerBar);
     }
 }
 
@@ -254,7 +270,12 @@ void MetronomeEngine::process(float* outputBuffer, uint32_t numFrames, uint32_t 
             triggerOffset = static_cast<uint32_t>(m_nextBeatSample - blockStart);
             break;
         }
+        // Skipping past an already-elapsed beat (after a reset/jump): advance
+        // the accent counter with it, or the next audible beat replays the
+        // skipped beat's sound — after a loop wrap that meant a second
+        // downbeat click right after the real one.
         m_nextBeatSample += samplesPerBeat;
+        m_currentBeat = (m_currentBeat + 1) % beatsPerBar;
     }
 
     // Mix TAIL

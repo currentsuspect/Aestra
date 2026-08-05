@@ -94,7 +94,20 @@ endif()
 
 set(VST3_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/vst3sdk)
 
-if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
+# Probe actual FILES, not directories. The VST3 SDK keeps base/, pluginterfaces/ and
+# public.sdk/ in nested submodules of its own, so a non-recursive
+# `git submodule update --init` leaves those directories present but EMPTY — and
+# `EXISTS <dir>` is satisfied by an empty directory. That combination announced
+# "VST3 SDK: Found", set AESTRA_HAS_VST3 ON, and then failed at add_library() with
+# "Cannot find source file", while any check that trusted the message was told the
+# SDK was usable. Tests/CMakeLists.txt already probes a real header for this reason;
+# this is the same test applied to the decision that actually gates the build.
+#
+# One file per nested submodule, each one the build genuinely compiles, so a
+# partially-initialised checkout cannot pass.
+if(EXISTS "${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp"
+   AND EXISTS "${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp"
+   AND EXISTS "${VST3_SDK_DIR}/base/source/fstring.cpp")
     set(AESTRA_HAS_VST3 ON)
     message(STATUS "VST3 SDK: Found at ${VST3_SDK_DIR}")
     
@@ -179,13 +192,13 @@ endif()
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
+    src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
     src/Core/ArsenalProcessingContext.cpp
     src/Core/LatencyTopology.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
-    src/Core/ProjectValidator.cpp
     src/Core/EngineSupervisor.cpp
     src/Core/AsyncCleanupManager.cpp
     src/Core/RTGuard.cpp
@@ -204,8 +217,8 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
+    src/Models/ClipRenderService.cpp
     src/Models/AudioClip.cpp
-    src/Models/PlaylistTrack.cpp
 
     # DSP
     src/DSP/AudioProcessor.cpp
@@ -239,6 +252,8 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandHistory.cpp
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
+    src/Commands/RenderAudioClipCommand.cpp
+    src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/CreateLaneCommand.cpp
     src/Commands/AddNoteCommand.cpp
@@ -252,7 +267,9 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandRegistry.cpp
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
+    src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -321,7 +338,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AestraAudio.h
     include/Core/AudioDeviceManager.h
     include/Core/AutosaveManager.h
-    include/Core/ProjectValidator.h
     include/Core/AudioEngineDiagnostics.h
     include/Core/EngineSupervisor.h
     include/Core/AsyncCleanupManager.h
@@ -348,7 +364,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/ClipInstance.h
     include/Models/PatternManager.h
     include/IO/MiniAudioDecoder.h
-    include/Models/PlaylistTrack.h
     # Multi-clip playlist system
     include/Models/TimeTypes.h
     include/Models/ClipSource.h
@@ -356,7 +371,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PlaylistRuntimeSnapshot.h
     include/Models/PlaylistMixer.h
     include/IO/WaveformCache.h
-    include/Models/PlaylistSerializer.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
 
@@ -501,7 +515,20 @@ endif()
 
 # CLAP SDK includes (if available)
 if(AESTRA_HAS_CLAP)
-    target_include_directories(AestraAudioCore PRIVATE
+    # SYSTEM, not plain PRIVATE. Five vendored CLAP headers declare file-scope
+    # constants with internal linkage (CLAP_INVALID_ID, CLAP_COLOR_TRANSPARENT,
+    # CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR, CLAP_TIMESTAMP_UNKNOWN,
+    # CLAP_CORE_EVENT_SPACE_ID). That is upstream's deliberate pattern and is valid
+    # C and C++ — each translation unit gets its own copy, so there is no ODR
+    # problem — but GCC and Clang can emit -Wunused-const-variable in any TU that
+    # includes a header without reading its constant, which a stricter warning
+    # profile would turn into a build failure.
+    #
+    # Fixed here rather than in the headers, because External/clap/VENDOR.md records
+    # a sha256 of the vendored tree: editing those files would break the provenance
+    # contract that proves they match upstream at the pinned commit. One build-side
+    # line keeps the tree a byte-identical copy and keeps SDK updates a clean drop.
+    target_include_directories(AestraAudioCore SYSTEM PRIVATE
         ${CLAP_INCLUDE_DIRS}
     )
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_HAS_CLAP)
@@ -513,6 +540,11 @@ target_link_libraries(AestraAudioCore
 
 if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
+endif()
+
+# MuseSocketServer uses winsock on Windows.
+if(WIN32)
+    target_link_libraries(AestraAudioCore PUBLIC ws2_32)
 endif()
 
 # AestraAudioCore stays license-free: no AestraAudio source references any
@@ -542,6 +574,11 @@ endif()
 add_executable(AestraPluginHost
     src/Plugin/AestraPluginHostMain.cpp
 )
+
+# The helper is otherwise self-contained (hand-mirrored plugin ABIs), but it now
+# includes the shared Plugin/ClapNoteConversion.h header, so it needs AestraAudio's
+# include root on every config — not only when VST3 links AestraAudioCore (#244).
+target_include_directories(AestraPluginHost PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set_target_properties(AestraPluginHost PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
@@ -668,9 +705,24 @@ elseif(UNIX)
         )
 
         add_library(AestraAudio INTERFACE)
-        target_link_libraries(AestraAudio INTERFACE
-            "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore>"
-        )
+        if(TARGET AestraRumble)
+            # Rumble's static plugin registration references InternalPluginRegistry
+            # symbols that live in AestraAudioCore. Appended whole-archive AFTER the
+            # closed rescan group (the old AestraPremiumPlugins wiring) it could not
+            # resolve those symbols backwards — GNU ld is single-pass — which broke
+            # every full-UI test binary that didn't coincidentally pull the registry
+            # first (issue #555: undefined refs on some, silent/empty plugin registry
+            # on others). Fold it INTO the rescan group, keeping WHOLE_ARCHIVE so the
+            # self-registration TU is always linked and always resolvable.
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore,$<LINK_LIBRARY:WHOLE_ARCHIVE,AestraRumble>>"
+            )
+            set(AESTRA_RUMBLE_IN_LINK_GROUP TRUE)
+        else()
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore>"
+            )
+        endif()
     else()
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
@@ -687,7 +739,10 @@ if(NOT TARGET AestraAudioWin AND NOT TARGET AestraAudioLinux)
     target_sources(AestraAudioCore PRIVATE src/IO/MidiInputService.cpp)
 endif()
 
-if(TARGET AestraAudio AND TARGET AestraPremiumPlugins)
+# On Linux+ALSA with Rumble present, Rumble is already whole-archived inside
+# the rescan group above; appending the premium interface (which wraps the same
+# archive in WHOLE_ARCHIVE) would double-link it into every consumer.
+if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND NOT AESTRA_RUMBLE_IN_LINK_GROUP)
     target_link_libraries(AestraAudio INTERFACE AestraPremiumPlugins)
 endif()
 

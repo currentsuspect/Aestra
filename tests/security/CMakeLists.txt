@@ -92,6 +92,10 @@ else()
 endif()
 add_test(NAME SecProjectLoadHardening COMMAND SecProjectLoadHardening)
 set_tests_properties(SecPluginScanIsolation PROPERTIES SKIP_RETURN_CODE 77)
+# Both of these spawn AestraPluginHost out of process; if that binary is absent
+# the run says nothing about the code under test, so they exit 77 and ctest
+# reports SKIP instead of a failure.
+set_tests_properties(SecOutOfProcessPluginHost PROPERTIES SKIP_RETURN_CODE 77)
 
 if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
@@ -187,6 +191,9 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraAudio/include/Plugin
         ${REPO_ROOT}/AestraCore/include
     )
+    # Enables the OutOfProcessPluginInstance TESTNOTES accessor used by the #244
+    # CLAP-note e2e checks (matches the AestraPluginHost test-hooks build).
+    target_compile_definitions(SecOutOfProcessPluginHost PRIVATE AESTRA_ENABLE_TEST_HOOKS)
     target_link_libraries(SecOutOfProcessPluginHost PRIVATE AestraAudio)
 
     target_include_directories(SecPluginScanIsolation PRIVATE
@@ -251,4 +258,21 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecMembershipViewModel PRIVATE AestraLicense)
+endif()
+
+# --- Contract labels --------------------------------------------------------
+#
+# Every test in this directory protects the same promise: that untrusted input,
+# privilege, licence integrity, process isolation or an injection boundary is
+# safe. So the contract is assigned from the directory property rather than
+# repeated 27 times.
+#
+# Reading the registered set back is deliberate, not clever. Nine of these tests
+# live inside `if(TARGET AestraLicense)`, so a flat literal list would name tests
+# that do not exist whenever AestraLicense is absent — and set_tests_properties
+# on an unregistered test is a hard configure error. This form is correct under
+# both conditions, and a new security test inherits the contract by construction.
+get_property(_aestra_security_tests DIRECTORY PROPERTY TESTS)
+if(_aestra_security_tests)
+    set_tests_properties(${_aestra_security_tests} PROPERTIES LABELS "contract:security")
 endif()

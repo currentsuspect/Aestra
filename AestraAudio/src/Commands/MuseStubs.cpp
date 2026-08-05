@@ -1,13 +1,13 @@
 #include "Commands/MuseStubs.h"
 
+#include <algorithm>
 #include <string>
 
 namespace Aestra {
 namespace Audio {
 
 // === SetBpmCommand ===
-SetBpmCommand::SetBpmCommand(AudioEngine& engine, float bpm)
-    : m_engine(engine), m_bpm(bpm) {}
+SetBpmCommand::SetBpmCommand(AudioEngine& engine, float bpm) : m_engine(engine), m_bpm(bpm) {}
 
 void SetBpmCommand::execute() {
     if (m_executed)
@@ -37,8 +37,7 @@ std::string SetBpmCommand::getName() const {
 }
 
 // === PlayCommand ===
-PlayCommand::PlayCommand(AudioEngine& engine)
-    : m_engine(engine) {}
+PlayCommand::PlayCommand(AudioEngine& engine) : m_engine(engine) {}
 
 void PlayCommand::execute() {
     if (m_executed)
@@ -67,8 +66,7 @@ std::string PlayCommand::getName() const {
 }
 
 // === StopCommand ===
-StopCommand::StopCommand(AudioEngine& engine)
-    : m_engine(engine) {}
+StopCommand::StopCommand(AudioEngine& engine) : m_engine(engine) {}
 
 void StopCommand::execute() {
     if (m_executed)
@@ -111,17 +109,64 @@ void DeleteTrackCommand::execute() {
     m_deletedName = ch->getName();
     m_deletedId = ch->getChannelId();
 
-    if (m_manager.removeChannelById(m_deletedId))
+    if (!m_routesCaptured) {
+        for (UnitID unitId : m_manager.getUnitManager().getAllUnitIDs()) {
+            if (m_manager.getUnitManager().getUnitMixerChannel(unitId) == m_deletedId) {
+                m_routedUnits.push_back(unitId);
+            }
+        }
+        for (const auto& pattern : m_manager.getPatternManager().getAllPatterns()) {
+            if (pattern && pattern->isAudio() && pattern->getMixerChannelId() == m_deletedId) {
+                m_routedAudioPatterns.push_back(pattern->id);
+            }
+        }
+        for (const auto& channel : m_manager.getChannelsSnapshot()) {
+            if (!channel || channel->getChannelId() == m_deletedId)
+                continue;
+            const auto sends = channel->getSends();
+            const bool routesToDeleted = channel->getMainOutputId() == m_deletedId ||
+                                         std::any_of(sends.begin(), sends.end(), [this](const AudioRoute& route) {
+                                             return route.targetChannelId == m_deletedId;
+                                         });
+            if (routesToDeleted) {
+                m_mixerRoutes.push_back({channel->getChannelId(), channel->getMainOutputId(), sends});
+            }
+        }
+        m_routesCaptured = true;
+    }
+
+    // Detach rather than destroy: this command owns the channel for as long as
+    // the delete stands, so undo can put back the same object at the same id
+    // and index. See the m_detached comment in the header for why an equivalent
+    // channel is not good enough.
+    m_detached = m_manager.detachChannelById(m_deletedId, m_detachedIndex);
+    if (m_detached) {
+        m_manager.getUnitManager().resetMixerChannel(m_deletedId);
+        m_manager.getPatternManager().resetMixerChannel(m_deletedId);
+        m_manager.resetMixerRoutingDestination(m_deletedId);
+        m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = true;
+    }
 }
 
 void DeleteTrackCommand::undo() {
-    if (!m_executed)
+    if (!m_executed || !m_detached)
         return;
 
-    MixerChannel* ch = m_manager.addChannel(m_deletedName);
-    if (ch) {
-        m_deletedId = ch->getChannelId();
+    if (m_manager.reinsertChannel(m_detached, m_detachedIndex)) {
+        for (UnitID unitId : m_routedUnits) {
+            m_manager.getUnitManager().setUnitMixerChannel(unitId, m_deletedId);
+        }
+        for (PatternID patternId : m_routedAudioPatterns) {
+            m_manager.getPatternManager().setPatternMixerChannel(patternId, m_deletedId);
+        }
+        for (const auto& routeSnapshot : m_mixerRoutes) {
+            if (auto* channel = m_manager.getChannelById(routeSnapshot.sourceChannelId)) {
+                channel->setMainOutputId(routeSnapshot.mainOutputId);
+                channel->replaceSends(routeSnapshot.sends);
+            }
+        }
+        m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = false;
     }
 }
@@ -130,8 +175,14 @@ void DeleteTrackCommand::redo() {
     if (m_executed)
         return;
 
-    if (m_manager.removeChannelById(m_deletedId))
+    m_detached = m_manager.detachChannelById(m_deletedId, m_detachedIndex);
+    if (m_detached) {
+        m_manager.getUnitManager().resetMixerChannel(m_deletedId);
+        m_manager.getPatternManager().resetMixerChannel(m_deletedId);
+        m_manager.resetMixerRoutingDestination(m_deletedId);
+        m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         m_executed = true;
+    }
 }
 
 std::string DeleteTrackCommand::getName() const {

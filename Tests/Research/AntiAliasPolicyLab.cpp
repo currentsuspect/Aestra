@@ -1,7 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // AntiAliasPolicyLab — Phase 3: downsampling anti-alias prototype comparison.
 //
-// Finding F1 (AestraDocs/audio-research-bench.md): no Aestra clip-resampling path
+// Finding F1 (Aestra-Internals: aestra-docs/audio-research-bench.md): no Aestra clip-resampling path
 // applies ratio-aware anti-aliasing when downsampling, so source content between the
 // destination and source Nyquist frequencies folds into the audible band at full
 // level (measured -1.1 dBc at 48->44.1, -0.0 dBc at 96->48, through real sessions).
@@ -31,7 +31,7 @@
 // this lab (calibrated from this lab's own first run, cited in comments). They make
 // no claim about production behavior — SessionResamplingTruthTest owns that.
 //
-// Doc: AestraDocs/audio-research-bench.md §9 quotes the [MEASURE] lines printed here.
+// Doc: Aestra-Internals: aestra-docs/audio-research-bench.md §9 quotes the [MEASURE] lines printed here.
 
 #include "AudioMeasure.h"
 #include "SignalLab.h"

@@ -2,13 +2,16 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIComponent.h"
+#include "NUIConfigLoader.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <system_error>
 
 using namespace AestraUI;
 
@@ -82,6 +85,9 @@ void testSemanticDefaults() {
           "compact controls meet the minimum hit area");
     check(theme.layout.transportButtonSize == theme.layout.standardControlHeight,
           "transport and standard controls share the 28 px metric");
+    check(theme.layout.titleBarHeight == 32.0f && theme.layout.viewToggleWidth == 310.0f &&
+              theme.layout.viewToggleHeight == theme.layout.compactControlHeight,
+          "application chrome defaults use the shared compact metric");
     check(theme.layout.standardMenuRowHeight == theme.layout.standardRowHeight,
           "ordinary menu and list rows share a metric");
 }
@@ -179,7 +185,12 @@ void testLiveJSONThemeRegistration() {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         out << R"({
             "colors": { "accent": "#2468ac", "focusRing": "#abcdef" },
-            "dimensions": { "standardControlHeight": 30.0 },
+            "dimensions": {
+                "standardControlHeight": 30.0,
+                "titleBarHeight": 34.0,
+                "viewToggleWidth": 300.0,
+                "viewToggleHeight": 26.0
+            },
             "fontSizes": { "normal": 13.0 }
         })";
     }
@@ -193,6 +204,10 @@ void testLiveJSONThemeRegistration() {
     check(colorsEqual(loaded.focusRing, NUIColor::fromHex(0xabcdef)), "semantic focus ring maps into live state");
     check(colorsEqual(loaded.backgroundPrimary, base.backgroundPrimary), "missing live token inherits the base preset");
     check(nearlyEqual(loaded.layout.standardControlHeight, 30.0f), "live control dimension is overridden");
+    check(nearlyEqual(manager.getLayoutDimension("titleBarHeight"), 34.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleWidth"), 300.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleHeight"), 26.0f),
+          "application chrome dimensions are overridden and exposed through the manager");
     check(nearlyEqual(loaded.fontSizeM, 13.0f), "legacy normal font size maps to live body text");
 
     int reloadCount = 0;
@@ -285,6 +300,134 @@ void testHighContrastPreset() {
           "high-contrast grid hierarchy is stronger without flattening major/minor distinction");
 }
 
+// #582 review: the chrome layout dimensions must flow through NUIConfigLoader's
+// config parse+apply path, and malformed values must not clobber the theme
+// defaults with zero (see the applyLayout validation guard).
+void testChromeDimensionConfigLoad() {
+    std::cout << "[Test] chrome dimensions load through NUIConfigLoader and reject invalid values\n";
+    auto& manager = NUIThemeManager::getInstance();
+    auto& configLoader = NUIConfigLoader::getInstance();
+
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.titleBarHeight = 30.0f;
+        theme.layout.viewToggleWidth = 300.0f;
+        theme.layout.viewToggleHeight = 24.0f;
+    }
+
+    // Valid values apply. loadConfigFromString parses the config document with
+    // the loader's own parser, exercising applyLayout for the new chrome keys.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 41.0\n"
+              "  viewToggleWidth: 321.0\n"
+              "  viewToggleHeight: 27.0\n"),
+          "config with chrome dimensions parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "titleBarHeight applied from config");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "viewToggleWidth applied from config");
+        check(nearlyEqual(t.layout.viewToggleHeight, 27.0f), "viewToggleHeight applied from config");
+    }
+
+    // Invalid (non-positive) values are rejected: the previously applied value
+    // is retained instead of being zeroed by parseDimension()'s 0.0f fallback.
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  titleBarHeight: 0\n"
+              "  viewToggleWidth: -5\n"),
+          "config with invalid chrome dimensions still parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "zero titleBarHeight is rejected, default retained");
+        check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "negative viewToggleWidth is rejected, default retained");
+    }
+
+    // Non-numeric input hits parseDimension()'s 0.0f fallback; an extent
+    // dimension must reject it and keep the current value (CR #582 follow-up).
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  viewToggleHeight: bad\n"),
+          "config with a non-numeric chrome dimension still parses");
+    check(nearlyEqual(manager.getCurrentTheme().layout.viewToggleHeight, 27.0f),
+          "non-numeric viewToggleHeight is rejected, default retained");
+
+    // Spacing tokens differ from extents: zero is a legitimate flush layout, so
+    // panelMargin/componentPadding accept 0 rather than being rejected.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.panelMargin = 12.0f;
+        theme.layout.componentPadding = 8.0f;
+    }
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  panelMargin: 0\n"
+              "  componentPadding: 0\n"),
+          "config with zero spacing parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.panelMargin, 0.0f), "zero panelMargin is accepted (flush layout)");
+        check(nearlyEqual(t.layout.componentPadding, 0.0f), "zero componentPadding is accepted (flush layout)");
+    }
+}
+
+// #585 regression: saveConfig() serializes the theme as JSON, so loadConfig()
+// must parse JSON. Before the format-detecting loader, loadConfig() ran the JSON
+// document through the YAML line-parser, returned true, and applied nothing — a
+// saved config silently failed to restore. This drives the real file round-trip
+// (saveConfig -> clobber -> loadConfig), which must fail without the fix.
+void testConfigSaveLoadRoundtrip() {
+    std::cout << "[Test] saveConfig -> loadConfig round-trips through JSON (#585)\n";
+    auto& manager = NUIThemeManager::getInstance();
+    auto& configLoader = NUIConfigLoader::getInstance();
+
+    // Known, distinct values to persist. The color uses fromHex so it survives
+    // the hex serialization exactly.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.trackHeight = 63.0f;
+        theme.layout.titleBarHeight = 37.0f;
+        theme.layout.viewToggleWidth = 311.0f;
+        theme.layout.viewToggleHeight = 29.0f;
+        theme.spacingM = 17.0f;
+        theme.spacingS = 9.0f;
+        theme.primary = NUIColor::fromHex(0xBB86FC);
+    }
+
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "aestra_nuiconfig_roundtrip_585.cfg";
+    std::error_code ec;
+    std::filesystem::remove(tmp, ec); // clear any stale leftover
+    configLoader.saveConfig(tmp.string());
+
+    // Clobber every persisted value in memory so a no-op load is detectable: if
+    // loadConfig applies nothing, these sentinels survive and the checks fail.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.trackHeight = 1.0f;
+        theme.layout.titleBarHeight = 1.0f;
+        theme.layout.viewToggleWidth = 1.0f;
+        theme.layout.viewToggleHeight = 1.0f;
+        theme.spacingM = 1.0f;
+        theme.spacingS = 1.0f;
+        theme.primary = NUIColor::fromHex(0x010203);
+    }
+
+    check(configLoader.loadConfig(tmp.string()), "saved config file loads");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.trackHeight, 63.0f), "trackHeight restored from saved config");
+        check(nearlyEqual(t.layout.titleBarHeight, 37.0f), "titleBarHeight restored from saved config");
+        check(nearlyEqual(t.layout.viewToggleWidth, 311.0f), "viewToggleWidth restored from saved config");
+        check(nearlyEqual(t.layout.viewToggleHeight, 29.0f), "viewToggleHeight restored from saved config");
+        check(nearlyEqual(t.spacingM, 17.0f), "panelMargin (spacingM) restored from saved config");
+        check(nearlyEqual(t.spacingS, 9.0f), "componentPadding (spacingS) restored from saved config");
+        check(colorsEqual(t.primary, NUIColor::fromHex(0xBB86FC)), "primary color restored from saved config");
+    }
+
+    std::filesystem::remove(tmp, ec);
+}
+
 } // namespace
 
 int main() {
@@ -294,6 +437,8 @@ int main() {
     testThemeChangeResolution();
     testIndependentSubscriptionsAndAtomicSwitching();
     testLiveJSONThemeRegistration();
+    testChromeDimensionConfigLoad();
+    testConfigSaveLoadRoundtrip();
     testHierarchyInvalidation();
     testCompatibilityAliases();
     testLightPresetCompleteness();

@@ -1,0 +1,93 @@
+{
+  "arsenal": {
+    "nextId": 1,
+    "units": []
+  },
+  "integrity": {
+    "algo": "fnv1a64",
+    "hash": "a4015f201bc25561"
+  },
+  "lanes": [
+    {
+      "armed": false,
+      "automation": [
+        {
+          "default": 0.375,
+          "param": 255,
+          "paramId": 17,
+          "points": [
+            {
+              "b": 0.5,
+              "c": 0.125,
+              "v": 0.25
+            }
+          ],
+          "slot": 3,
+          "targetEnum": 255
+        }
+      ],
+      "clips": [
+        {
+          "color": "4294967295",
+          "duration": 8,
+          "edits": {
+            "fadeIn": 0,
+            "fadeOut": 0,
+            "gain": 1,
+            "muted": false,
+            "pan": 0,
+            "playbackRate": 1,
+            "sourceStart": 0
+          },
+          "id": "0b06fc21b2f441840000000000000003",
+          "name": "",
+          "patternId": 1,
+          "sourceOffset": 0,
+          "start": 2.5
+        }
+      ],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": "0b06fc21b2f441840000000000000001",
+      "inputChannelIndex": -2,
+      "monitorInput": false,
+      "mute": false,
+      "name": "V2 Identity Lane",
+      "pan": 0,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": -1,
+      "volume": 1,
+      "width": 1
+    }
+  ],
+  "patterns": [
+    {
+      "id": 1,
+      "length": 8,
+      "name": "V2 Stable Pattern",
+      "notes": [
+        {
+          "durationBeats": 0.75,
+          "gate": 1,
+          "pan": 0,
+          "pitch": 67,
+          "pitchOffset": 0,
+          "slide": false,
+          "startBeat": 1.25,
+          "unitId": 0,
+          "velocity": 0.8125
+        }
+      ],
+      "type": "midi"
+    }
+  ],
+  "playhead": 3.25,
+  "sources": [],
+  "tempo": 137.5,
+  "version": 2
+}

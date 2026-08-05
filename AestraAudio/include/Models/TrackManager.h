@@ -2,6 +2,8 @@
 #include "../Core/GraphDirtyReason.h"
 #include "../Commands/AddClipCommand.h"
 #include "../Commands/CommandHistory.h"
+#include "../Commands/CommandTransaction.h"
+#include "../Commands/CreateLaneCommand.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
@@ -81,6 +83,13 @@ public:
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
+        // Dirty tracking is owned here, not by the application layer. This
+        // manager owns both the undo history and the modified flag, so anything
+        // that runs through the history is by definition a project change.
+        // Wiring it in the constructor means no edit path can forget to call
+        // markModified(), and dirty tracking cannot be lost when a subsystem
+        // that happens to own the wiring fails to initialise.
+        m_commandHistory.addOnStateChanged([this]() { markModified(); });
     }
 
     /**
@@ -108,14 +117,35 @@ public:
     /**
      * @brief Add a new channel
      */
-    MixerChannel* addChannel(const std::string& name = "") {
+    MixerChannel* addChannel(const std::string& name = "") { return addChannelWithId(name, 0); }
+
+    /**
+     * @brief Add a channel while restoring a persisted stable identity.
+     * @param name User-facing channel name.
+     * @param requestedId Persisted channel ID, or 0 to mint a new ID.
+     */
+    MixerChannel* addChannelWithId(const std::string& name, uint32_t requestedId) {
         if (reportRealtimeMisuse("TrackManager::addChannel")) {
             return nullptr;
         }
-        // IDs start at 1 to avoid collision with Master (ID 0).
-        const uint32_t channelId = m_nextChannelId++;
+        // IDs start at 1 to avoid collision with Master (ID 0). A duplicate or
+        // invalid persisted ID is replaced instead of aliasing two live routes.
+        constexpr uint32_t invalidChannelId = std::numeric_limits<uint32_t>::max();
+        uint32_t channelId = requestedId;
+        if (channelId == 0 || channelId == invalidChannelId || getChannelById(channelId) != nullptr) {
+            while (m_nextChannelId != invalidChannelId && getChannelById(m_nextChannelId) != nullptr) {
+                ++m_nextChannelId;
+            }
+            if (m_nextChannelId == invalidChannelId) {
+                return nullptr;
+            }
+            channelId = m_nextChannelId++;
+        } else {
+            m_nextChannelId = std::max(m_nextChannelId, channelId + 1);
+        }
         auto channel = std::make_unique<MixerChannel>(
-            name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name, channelId);
+            // "Insert" is reserved for effect slots — a mixer strip is a Channel.
+            name.empty() ? "Channel " + std::to_string(channelId) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {
@@ -148,7 +178,11 @@ public:
     bool removeLastChannel() {
         if (m_channels.empty())
             return false;
+        const uint32_t removedChannelId = m_channels.back()->getChannelId();
+        m_unitManager.resetMixerChannel(removedChannelId);
+        m_patternManager.resetMixerChannel(removedChannelId);
         m_channels.pop_back();
+        resetMixerRoutingDestination(removedChannelId);
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
@@ -166,12 +200,115 @@ public:
             return false;
         }
 
+        m_unitManager.resetMixerChannel(channelId);
+        m_patternManager.resetMixerChannel(channelId);
+        m_channels.erase(it);
+        resetMixerRoutingDestination(channelId);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (m_channelSlotMap) {
+            m_channelSlotMap->rebuild(m_channels);
+        }
+        publishInputMonitoringSnapshot();
+        return true;
+    }
+
+    /**
+     * Fail safe after a mixer insert disappears. Main paths fall back to
+     * Master; auxiliary/control routes to the missing destination are removed.
+     * Undoable deletion commands snapshot and restore these routes separately.
+     */
+    void resetMixerRoutingDestination(uint32_t removedChannelId) {
+        for (auto& channel : m_channels) {
+            if (!channel)
+                continue;
+            if (channel->getMainOutputId() == removedChannelId) {
+                channel->setMainOutputId(0xFFFFFFFFu);
+            }
+            auto sends = channel->getSends();
+            sends.erase(std::remove_if(sends.begin(), sends.end(),
+                                       [removedChannelId](const AudioRoute& route) {
+                                           return route.targetChannelId == removedChannelId;
+                                       }),
+                        sends.end());
+            channel->replaceSends(sends);
+        }
+    }
+
+    /**
+     * @brief Remove a channel without destroying it, handing back ownership.
+     *
+     * Undoing a track delete must restore the SAME object, not an equivalent
+     * one. Three things live in the object rather than in anything that could
+     * be reconstructed from a name:
+     *   - its channel id, which routing is keyed on (a unit or audio pattern
+     *     points at an id, never a lane index), so a re-created channel
+     *     silently orphans everything routed to the old one;
+     *   - its volume, pan, mute, solo and whole effect chain;
+     *   - its address — SetVolumeCommand, SetPanCommand, SetMuteCommand,
+     *     SetSoloCommand and the effect/plugin commands all store a
+     *     `MixerChannel&`, so destroying it leaves every one of them in the
+     *     undo history holding a dangling reference.
+     *
+     * Keeping the object alive in the command that removed it is what makes
+     * undo safe: the references stay valid for as long as anything can undo
+     * through them.
+     *
+     * @param outIndex receives the position it occupied, so it can go back there.
+     * @return the channel, or nullptr when no channel has that id.
+     */
+    std::unique_ptr<MixerChannel> detachChannelById(uint32_t channelId, size_t& outIndex) {
+        if (reportRealtimeMisuse("TrackManager::detachChannelById")) {
+            return nullptr;
+        }
+        auto it = std::find_if(m_channels.begin(), m_channels.end(), [channelId](const auto& channel) {
+            return channel && channel->getChannelId() == channelId;
+        });
+        if (it == m_channels.end()) {
+            return nullptr;
+        }
+        outIndex = static_cast<size_t>(std::distance(m_channels.begin(), it));
+        std::unique_ptr<MixerChannel> detached = std::move(*it);
         m_channels.erase(it);
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
             m_channelSlotMap->rebuild(m_channels);
         }
+        publishInputMonitoringSnapshot();
+        return detached;
+    }
+
+    /**
+     * @brief Put a detached channel back where it came from.
+     *
+     * An index past the end appends, so a restore still succeeds if tracks were
+     * added while this one was away — better than refusing and stranding the
+     * channel inside a command nobody can undo.
+     *
+     * @param channel taken by REFERENCE, and moved from only on success. A
+     *        by-value parameter would destroy the channel on every failure
+     *        path: the caller's unique_ptr is already moved-from at the call
+     *        site, so a refusal inside this function would lose the object for
+     *        good — the same "the channel is gone" defect this pair of
+     *        functions exists to prevent, merely relocated. On failure the
+     *        caller still holds it and can retry.
+     * @return false when the channel is null, or when called from the audio
+     *         thread, where mutating the channel list is not allowed.
+     */
+    bool reinsertChannel(std::unique_ptr<MixerChannel>& channel, size_t index) {
+        if (!channel || reportRealtimeMisuse("TrackManager::reinsertChannel")) {
+            return false;
+        }
+        const size_t clamped = std::min(index, m_channels.size());
+        m_channels.insert(m_channels.begin() + static_cast<std::ptrdiff_t>(clamped),
+                          std::move(channel));
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(m_channels);
         publishInputMonitoringSnapshot();
         return true;
     }
@@ -189,6 +326,35 @@ public:
      * @return Const track pointer or nullptr when out of range.
      */
     const MixerChannel* getTrack(size_t index) const { return getChannel(index); }
+
+    /** @brief Find a mixer channel by stable ID. */
+    MixerChannel* getChannelById(uint32_t channelId) {
+        const size_t index = findChannelIndexById(channelId);
+        return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /** @brief Find a mixer channel by stable ID. */
+    const MixerChannel* getChannelById(uint32_t channelId) const {
+        const size_t index = findChannelIndexById(channelId);
+        return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /** Route an audio source pattern independently from Playlist placement. */
+    bool setAudioPatternMixerChannel(PatternID patternId, int64_t channelId) {
+        uint32_t resolvedId = MASTER_MIXER_CHANNEL_ID;
+        if (channelId > 0 && channelId < static_cast<int64_t>(std::numeric_limits<uint32_t>::max())) {
+            const uint32_t candidate = static_cast<uint32_t>(channelId);
+            if (getChannelById(candidate)) {
+                resolvedId = candidate;
+            }
+        }
+        if (!m_patternManager.setPatternMixerChannel(patternId, resolvedId)) {
+            return false;
+        }
+        requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
+        m_modified.store(true, std::memory_order_relaxed);
+        return true;
+    }
 
     /**
      * @brief Get the playlist model
@@ -251,6 +417,29 @@ public:
         publishInputMonitoringSnapshot();
     }
     void setRecordingProjectPath(const std::string& projectPath) { m_recordingProjectPath = projectPath; }
+
+    /**
+     * @brief Directory for audio committed by destructive clip operations.
+     *
+     * Sits beside Recordings so a project folder stays self-describing: takes
+     * the user performed in one place, audio Aestra rendered for them in
+     * another. Falls back to the same user-documents root as recording when
+     * the project has never been saved.
+     */
+    std::string renderRootDirectory() const {
+        namespace fs = std::filesystem;
+        if (!m_recordingProjectPath.empty()) {
+            fs::path projectPath(m_recordingProjectPath);
+            if (projectPath.has_extension()) {
+                return (projectPath.parent_path() / "Renders").string();
+            }
+            return (projectPath / "Renders").string();
+        }
+        if (const char* home = std::getenv("HOME")) {
+            return (fs::path(home) / "Documents" / "Aestra" / "Renders").string();
+        }
+        return (fs::current_path() / "Renders").string();
+    }
 
     /**
      * @brief Get output sample rate
@@ -677,7 +866,10 @@ public:
     void pause() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(true, std::memory_order_relaxed);
-        pushTransportCommand(0.0f, m_position.load(std::memory_order_relaxed));
+        // Pause in place: preserve the audio thread's authoritative playhead rather
+        // than committing the UI-cached m_position, which lags playback by up to a
+        // few buffers and would rewind the transport under rapid toggles (#590).
+        pushTransportCommandSamples(0.0f, kTransportPreservePosition);
     }
 
     /**
@@ -697,6 +889,21 @@ public:
      */
     bool isPlaying() const { return m_isPlaying.load(std::memory_order_relaxed); }
     bool isPaused() const { return m_isPaused.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Schedule the committed timeline's MIDI clips into the pattern-playback
+     *        engine for an offline render, without touching live transport state.
+     *
+     * play() also schedules these instances, but as a side effect of starting the
+     * live transport (playing flag, position, transport command). An offline
+     * render (headless export) drives the engine's own transport instead, so it
+     * only needs the scheduling — this leaves isPlaying/isPaused/position
+     * untouched. Callers flush() the pattern engine before and after so the
+     * render's scheduled instances do not leak into the caller's session.
+     */
+    void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
+        scheduleTimelinePatternInstances(playStartPositionSeconds);
+    }
     bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
 
     /**
@@ -879,12 +1086,22 @@ public:
     /**
      * @brief Apply the transport state once it has been forwarded to the live engine.
      * @param playing True when the engine transport is now rolling.
-     * @param positionSeconds Transport position used for the command.
+     * @param samplePos Absolute sample position from the command, or the
+     *        kTransportPreservePosition sentinel for a pause-in-place (#590).
+     * @param sampleRate Engine sample rate used to convert samplePos to seconds.
      */
-    void onTransportStateApplied(bool playing, double positionSeconds) {
+    void onTransportStateApplied(bool playing, uint64_t samplePos, double sampleRate) {
         m_transportPlayingConfirmed.store(playing, std::memory_order_relaxed);
         if (!playing) {
-            m_position.store(positionSeconds, std::memory_order_relaxed);
+            // A pause requests kTransportPreservePosition so the audio thread keeps
+            // its authoritative playhead (#590). In that case leave the cached UI
+            // position untouched — syncPositionFromEngine refreshes it from the
+            // engine — instead of clobbering it with the sentinel. An explicit
+            // stop/seek carries a real sample position and updates the cache.
+            if (samplePos != kTransportPreservePosition) {
+                const double sr = std::max(1.0, sampleRate);
+                m_position.store(static_cast<double>(samplePos) / sr, std::memory_order_relaxed);
+            }
             clearDeferredRecordingStartBeat();
             if (m_isCapturing.load(std::memory_order_relaxed)) {
                 finalizeCaptureSession();
@@ -1070,16 +1287,14 @@ private:
                 const auto& midi = std::get<MidiPayload>(pattern->payload);
                 size_t noteCount = midi.notes.size();
                 UnitID firstUnitId = noteCount > 0 ? midi.notes.front().unitId : 0;
-                int firstRoute = -999;
+                uint32_t firstMixerChannelId = MASTER_MIXER_CHANNEL_ID;
                 if (firstUnitId != 0) {
                     if (auto* unit = m_unitManager.getUnit(firstUnitId)) {
-                        firstRoute = unit->targetMixerRoute;
-                    } else {
-                        firstRoute = -998;
+                        firstMixerChannelId = unit->targetMixerChannelId;
                     }
                 }
                 routeSummary = "notes=" + std::to_string(noteCount) + " firstUnit=" + std::to_string(firstUnitId) +
-                               " firstRoute=" + std::to_string(firstRoute);
+                               " firstMixerChannelId=" + std::to_string(firstMixerChannelId);
             }
 
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
@@ -1204,15 +1419,9 @@ private:
             return;
         }
 
-        const size_t channelIndex = findChannelIndexById(channelId);
-        if (channelIndex == static_cast<size_t>(-1)) {
-            Log::warning("[TrackManager] Could not resolve lane for recorded track " + std::to_string(channelId));
-            return;
-        }
-
-        PlaylistLaneID laneId = m_playlistModel.getLaneId(channelIndex);
-        if (!laneId.isValid()) {
-            Log::warning("[TrackManager] Invalid lane target for recorded track " + std::to_string(channelId));
+        if (!getChannelById(channelId)) {
+            Log::warning("[TrackManager] Could not resolve mixer insert for recorded take " +
+                         std::to_string(channelId));
             return;
         }
 
@@ -1273,6 +1482,7 @@ private:
             Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
             return;
         }
+        m_patternManager.setPatternMixerChannel(patternId, channelId);
 
         ClipInstance clip;
         clip.id = ClipInstanceID::generate();
@@ -1282,17 +1492,45 @@ private:
         clip.durationSeconds = durationSeconds;
         clip.patternId = patternId;
         clip.sourceId = patternId.value;
-        clip.edits.gain = playbackGain;
         clip.edits.gainLinear = playbackGain;
 
-        auto cmd = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
-        m_commandHistory.pushAndExecute(cmd);
+        // Recording destination and Playlist placement are separate. Create a
+        // lane for the take while the PatternSource retains the armed insert.
+        auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
+        createLane->execute();
+        const PlaylistLaneID laneId = createLane->getLaneId();
+        if (!laneId.isValid()) {
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to create a Playlist lane for recorded take.");
+            return;
+        }
+
+        auto addClip = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
+        addClip->execute();
+        if (!m_playlistModel.getClip(clip.id)) {
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to place recorded take on its Playlist lane.");
+            return;
+        }
+
+        auto transaction = std::make_shared<CommandTransaction>("Record Take");
+        transaction->add(createLane);
+        transaction->add(addClip);
+        transaction->markExecuted();
+        if (!m_commandHistory.pushExecuted(transaction)) {
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to add recorded take to command history.");
+            return;
+        }
         requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
         m_modified.store(true, std::memory_order_relaxed);
 
-        Log::info("[TrackManager] Recorded take committed: " + takePath + " on track " + std::to_string(channelId) +
-                  " at beat " + std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) +
-                  ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
+        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " +
+                  std::to_string(channelId) + " at beat " + std::to_string(startBeat) + " with raw peak " +
+                  std::to_string(rawPeak) + ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
                   std::to_string(playbackGain));
     }
 
@@ -1475,6 +1713,13 @@ private:
     }
 
     void pushTransportCommand(float playing, double positionSeconds) {
+        pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
+    }
+
+    // Lower-level transport push that carries an absolute sample position (or the
+    // kTransportPreservePosition sentinel) verbatim, without the seconds→samples
+    // conversion that would mangle the sentinel.
+    void pushTransportCommandSamples(float playing, uint64_t samplePos) {
         if (!m_commandSink) {
             return;
         }
@@ -1482,7 +1727,7 @@ private:
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing;
-        cmd.samplePos = static_cast<uint64_t>(positionSeconds * m_outputSampleRate);
+        cmd.samplePos = samplePos;
         m_commandSink(cmd);
     }
 
@@ -1545,7 +1790,7 @@ private:
     bool m_recordingNoArmLogged{false};
     std::string m_recordingProjectPath;
 
-    // Anti-aliased clip prefiltering (Phase 4, F1; AestraDocs/clip-prefilter-lifecycle.md).
+    // Anti-aliased clip prefiltering (Phase 4, F1; Aestra-Internals: aestra-docs/clip-prefilter-lifecycle.md).
     // Declared LAST so it is destroyed FIRST: the worker joins while every member its
     // completion callback touches (the graph-dirty atomics above) is still alive.
     std::unique_ptr<ClipPrefilterService> m_clipPrefilterService;

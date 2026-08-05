@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
 
+#include "ChannelDisplayName.h"
 #include "NUIThemeSystem.h"
 #include "../../AestraCore/include/AestraLog.h"
 #include "NUIRenderer.h"
@@ -241,7 +242,10 @@ void UIMixerInspector::layoutHitRects()
     }
 
     if (m_ioInputDropdown) {
-        const float dropdownY = contentY + 68.0f;
+        // Sits between the "Verify level…" caption (ends ~+53) and the
+        // Source/Mode meta row (render pass places it at +88). The old +68 sat
+        // on top of the meta row; +52 clipped the caption above — +58 clears both.
+        const float dropdownY = contentY + 58.0f;
         m_ioInputDropdown->setBounds(x + 12.0f, dropdownY, w - 24.0f, IO_DROPDOWN_H);
     }
     if (m_mainOutputDropdown) {
@@ -278,19 +282,6 @@ void UIMixerInspector::onResize(int width, int height)
     }
 }
 
-int UIMixerInspector::findTrackNumber(uint32_t channelId) const
-{
-    if (!m_viewModel || channelId == 0) return 0;
-    const size_t count = m_viewModel->getChannelCount();
-    for (size_t i = 0; i < count; ++i) {
-        const auto* ch = m_viewModel->getChannelByIndex(i);
-        if (ch && ch->id == channelId) {
-            return static_cast<int>(i + 1);
-        }
-    }
-    return 0;
-}
-
 void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel)
 {
     const uint32_t selectedId = channel ? channel->id : 0xFFFFFFFFu;
@@ -309,7 +300,6 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     m_cachedSelectedId = selectedId;
     m_cachedHeaderTitle.clear();
     m_cachedHeaderSubtitle.clear();
-    m_cachedTrackNumber = 0;
     m_cachedName = channel ? channel->name : std::string();
     m_cachedRoute = channel ? channel->routeName : std::string();
     m_cachedMainOutputId = channel ? channel->mainOutputId : 0xFFFFFFFFu;
@@ -329,10 +319,10 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
         return;
     }
 
-    m_cachedTrackNumber = findTrackNumber(channel->id);
-    const std::string trackLabel = (m_cachedTrackNumber > 0)
-        ? ("Track " + std::to_string(m_cachedTrackNumber))
-        : "Channel";
+    // Same stable-id numbering as the strip and the routing map. Numbering from
+    // the dense list position instead meant the inspector could call the
+    // selected channel "Channel 3" while its own strip said "Channel 7".
+    const std::string trackLabel = channelFallbackLabel(channel->id);
 
     m_cachedHeaderTitle = channel->name.empty()
         ? trackLabel
@@ -526,18 +516,14 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         };
         renderer.fillRoundedRect(emptyCard, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
         renderer.strokeRoundedRect(emptyCard, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.42f));
-        renderer.strokeRoundedRect({emptyCard.x + 1.0f, emptyCard.y + 1.0f, emptyCard.width - 2.0f, emptyCard.height - 2.0f},
-                                   std::max(0.0f, HEADER_RADIUS - 1.0f),
-                                   1.0f,
-                                   NUIColor::white().withAlpha(0.022f));
 
         const NUIRect stateChip{emptyCard.center().x - 34.0f, emptyCard.y + 18.0f, 68.0f, 18.0f};
         renderer.fillRoundedRect(stateChip, 9.0f, m_bg.withAlpha(0.34f));
         renderer.strokeRoundedRect(stateChip, 9.0f, 1.0f, accent.withAlpha(0.20f));
         renderer.drawTextCentered("INSPECTOR", stateChip, 9.0f, m_textSecondary.withAlpha(0.90f));
-        renderer.drawTextCentered("Select a Track", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
+        renderer.drawTextCentered("Select an Insert", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
                                   13.0f, m_text.withAlpha(0.95f));
-        renderer.drawTextCentered("Choose a mixer channel to inspect",
+        renderer.drawTextCentered("Choose a mixer insert to inspect",
                                   {emptyCard.x + 24.0f, stateChip.bottom() + 38.0f, emptyCard.width - 48.0f, 14.0f},
                                   10.0f, m_textSecondary.withAlpha(0.86f));
         renderer.drawTextCentered("Inserts, Sends, and I/O.",
@@ -548,10 +534,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
     renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.70f));
     renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.50f));
-    renderer.strokeRoundedRect({headerRect.x + 1.0f, headerRect.y + 1.0f, headerRect.width - 2.0f, headerRect.height - 2.0f},
-                               std::max(0.0f, HEADER_RADIUS - 1.0f),
-                               1.0f,
-                               NUIColor::white().withAlpha(0.022f));
 
     NUIColor titleAccent = accent;
     if (channel && channel->trackColorIndex >= 0) {
@@ -563,7 +545,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         titleAccent = NUIColor(r, g, b, a);
     }
     // Channel identity: a colour swatch beside the name. The old TRACK/BUS word
-    // pill was redundant with the "Track 1" title right below it — you're already
+    // pill was redundant with the numbered insert title right below it — you're already
     // in the mixer inspector, and the master reads as MASTER and is visually
     // distinct. The swatch gives this spot a real job: it ties the inspector to
     // the selected strip's colour.
@@ -733,24 +715,33 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         m_maxScrollOffset = std::max(0.0f, addButtonY + ROW_H - contentRect.bottom());
         clampScrollOffsets();
 
-        // "Add Send" button
-        m_addFxRect = NUIRect{contentRect.x, addButtonY, contentRect.width, ROW_H};
+        // Parallel audio sends start conservatively, while sidechains are
+        // control-only and start at unity detector level.
+        const float actionGap = 6.0f;
+        const float actionWidth = (contentRect.width - actionGap) * 0.5f;
+        m_addFxRect = NUIRect{contentRect.x, addButtonY, actionWidth, ROW_H};
+        m_addSidechainRect = NUIRect{contentRect.x + actionWidth + actionGap, addButtonY, actionWidth, ROW_H};
         
         NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
         renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
         renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
         renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
+        NUIColor sidechainBg = m_addSidechainPressed ? m_addHover : (m_addSidechainHovered ? m_addHover : m_addBg);
+        renderer.fillRoundedRect(m_addSidechainRect, ROW_RADIUS, sidechainBg);
+        renderer.strokeRoundedRect(m_addSidechainRect, ROW_RADIUS, 1.0f, m_border);
+        renderer.drawTextCentered("Add Sidechain", m_addSidechainRect, 11.0f, m_addText);
 
     } else {
         // I/O Tab or Inserts
         // Clear the add rect so it doesn't capture clicks in other tabs
         m_addFxRect = NUIRect{0,0,0,0};
+        m_addSidechainRect = NUIRect{0,0,0,0};
         
         bool isMaster = (channel && channel->id == 0);
         if (isMaster) {
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
-             const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 102.0f};
+             const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 110.0f};
              renderer.fillRoundedRect(sourceCard, 12.0f, m_tabBg.withAlpha(0.46f));
              renderer.strokeRoundedRect(sourceCard, 12.0f, 1.0f, accent.withAlpha(0.20f));
 
@@ -762,20 +753,28 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                {sourceCard.x + 12.0f, sourceCard.y + 42.0f}, 9.0f,
                                m_textSecondary.withAlpha(0.76f));
 
-             const float metaY = sourceCard.y + 77.0f;
-             renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, 8.5f,
+             // Meta row sits BELOW the input dropdown (layoutHitRects places it at
+             // contentY + 58, height 22 → bottom ~80). Anchoring the labels here
+             // keeps them clear of the dropdown instead of under it.
+             // Label and value share one size and baseline so they align. The
+             // value's prominence comes from a brighter colour, not a larger
+             // size — previously it was 9.5px vs the label's 8.5px (which the
+             // renderer floored differently by alpha), so they mismatched.
+             const float metaY = sourceCard.y + 88.0f;
+             constexpr float kMetaSize = 10.0f;
+             renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, kMetaSize,
                                m_textSecondary.withAlpha(0.70f));
-             renderer.drawText(fitText(renderer, channel->inputSourceName, 9.5f, 72.0f),
-                               {sourceCard.x + 58.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
+             renderer.drawText(fitText(renderer, channel->inputSourceName, kMetaSize, 60.0f),
+                               {sourceCard.x + 58.0f, metaY}, kMetaSize, m_text.withAlpha(0.92f));
 
              const std::string monitorMode = channel->monitored ? "Arm + Monitor" : "Arm Only";
-             renderer.drawText("Mode", {sourceCard.x + 122.0f, metaY}, 8.5f,
+             renderer.drawText("Mode", {sourceCard.x + 122.0f, metaY}, kMetaSize,
                                m_textSecondary.withAlpha(0.70f));
-             renderer.drawText(fitText(renderer, monitorMode, 9.5f, sourceCard.right() - sourceCard.x - 166.0f),
-                               {sourceCard.x + 158.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
+             renderer.drawText(fitText(renderer, monitorMode, kMetaSize, sourceCard.right() - sourceCard.x - 160.0f),
+                               {sourceCard.x + 158.0f, metaY}, kMetaSize, m_text.withAlpha(0.92f));
 
              const float signalTop = sourceCard.bottom() + 10.0f;
-             const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 74.0f};
+             const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 94.0f};
              renderer.fillRoundedRect(signalCard, 12.0f, m_tabBg.withAlpha(0.38f));
              renderer.strokeRoundedRect(signalCard, 12.0f, 1.0f, m_border.withAlpha(0.34f));
 
@@ -806,9 +805,26 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                  renderer.fillRoundedRect({meterRect.x, meterRect.y, fillWidth, meterRect.height}, 6.0f, meterColor.withAlpha(0.95f));
              }
 
-             renderer.drawText("Flat or clipped input usually means the selected source needs attention.",
-                               {signalCard.x + 12.0f, signalCard.y + 55.0f},
-                               8.5f, m_textSecondary.withAlpha(0.72f));
+             // Short hint, word-wrapped as a safety net. (The old long copy
+             // overflowed the card into the master strip — measured width also
+             // under-reads actual render at this size, so keep it concise.)
+             {
+                 const std::string hint = "Flat or clipped? Recheck the source.";
+                 const float hintMaxW = signalCard.width - 24.0f;
+                 std::string line1 = hint, line2;
+                 while (renderer.measureText(line1, 8.5f).width > hintMaxW) {
+                     const size_t sp = line1.find_last_of(' ');
+                     if (sp == std::string::npos) break;
+                     line2 = line1.substr(sp + 1) + (line2.empty() ? "" : " " + line2);
+                     line1 = line1.substr(0, sp);
+                 }
+                 const NUIColor hintColor = m_textSecondary.withAlpha(0.72f);
+                 renderer.drawText(line1, {signalCard.x + 12.0f, signalCard.y + 54.0f}, 8.5f, hintColor);
+                 if (!line2.empty()) {
+                     renderer.drawText(fitText(renderer, line2, 8.5f, hintMaxW),
+                                       {signalCard.x + 12.0f, signalCard.y + 68.0f}, 8.5f, hintColor);
+                 }
+             }
         }
     }
 
@@ -968,8 +984,14 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.button == NUIMouseButton::None) {
         const bool addHover = (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position);
+        const bool sidechainHover =
+            (m_viewModel && m_viewModel->getSelectedChannel()) && m_addSidechainRect.contains(event.position);
         if (addHover != m_addHovered) {
             m_addHovered = addHover;
+            repaint();
+        }
+        if (sidechainHover != m_addSidechainHovered) {
+            m_addSidechainHovered = sidechainHover;
             repaint();
         }
         // Consume hover if inside bounds to prevent hover-through to components behind
@@ -979,6 +1001,12 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position)) {
             m_addPressed = true;
+            repaint();
+            return true;
+        }
+        if (m_activeTab == Tab::Sends && (m_viewModel && m_viewModel->getSelectedChannel()) &&
+            m_addSidechainRect.contains(event.position)) {
+            m_addSidechainPressed = true;
             repaint();
             return true;
         }
@@ -1001,10 +1029,25 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
             }
             return true;
         }
+        if (m_addSidechainPressed) {
+            m_addSidechainPressed = false;
+            repaint();
+            if (m_activeTab == Tab::Sends && m_viewModel && m_viewModel->getSelectedChannel()) {
+                m_viewModel->addSidechain(m_viewModel->getSelectedChannel()->id);
+                rebuildSendWidgets(m_viewModel->getSelectedChannel());
+                repaint();
+            }
+            return true;
+        }
     }
 
     // Consume events within our visual bounds to prevent clickthrough
     return b.contains(event.position);
+}
+
+void UIMixerInspector::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    if (m_effectRack) m_effectRack->setPlatformBridge(bridge);
 }
 
 } // namespace AestraUI

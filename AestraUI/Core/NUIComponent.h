@@ -31,11 +31,12 @@ enum class NUILayer {
 struct TooltipState {
     std::string text;
     NUIPoint position;
-    NUIPoint hoverPos;  // Actual mouse position when tooltip was triggered
     const void* owner = nullptr;
     bool active = false;
+    bool immediate = false;
     float alpha = 0.0f;
     float delayTimer = 0.0f;
+    float dismissGraceTimer = 0.0f;
 };
 
 /**
@@ -112,9 +113,23 @@ public:
     void setFocused(bool focused);
     bool isFocused() const { return focused_; }
 
+    // Drag-and-drop target eligibility only — NOT mouse dispatch.
+    //
+    // isComponentEligibleForDragTarget() (NUIDragDrop.cpp) walks the ancestor
+    // chain and rejects a drop target if any node has this cleared. Mouse event
+    // routing never consults it: onMouseEvent() gates on visible_/enabled_, and
+    // the parent-side filter added in #674 gates on isVisible(). The name reads
+    // like a general hit-testing switch, which is misleading in both directions —
+    // clearing it does not make a component click-through, and setting it does not
+    // make one clickable. UIRoutingMap's constructor used to call the setter with
+    // `true`, its own default, evidently expecting some effect; that no-op is gone.
+    //
+    // Nothing in the tree currently clears it, so the drag-eligibility check above
+    // is inert today. Left in place because it is a functioning hook with a real
+    // consumer, not dead code (#672 checklist: decided keep, on that evidence).
     void setHitTestVisible(bool visible) { hitTestVisible_ = visible; }
     bool isHitTestVisible() const { return hitTestVisible_; }
-    
+
     static NUIComponent* getFocusedComponent();
     static void clearFocusedComponent();
     
@@ -186,9 +201,12 @@ public:
     // Global Tooltip Management
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
-    static void renderGlobalTooltip(NUIRenderer& renderer);
+    static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
     static void updateGlobalTooltip(double deltaTime);
-    static void setCursorCaptureActive(bool active) { s_cursorCaptureActive = active; }
+    static NUIRect calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
+                                          const NUIRect& viewport);
+    static const TooltipState& getGlobalTooltipState() { return s_tooltipState; }
+    static void setCursorCaptureActive(bool active);
     static bool isCursorCaptureActive() { return s_cursorCaptureActive; }
 
 };

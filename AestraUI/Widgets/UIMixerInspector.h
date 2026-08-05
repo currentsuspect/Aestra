@@ -24,8 +24,13 @@ class EffectChainRack;
  * Displays simple tabs (Inserts/Sends/IO). Inserts tab includes an "Add FX"
  * placeholder button.
  */
+class NUIPlatformBridge;
+
 class UIMixerInspector : public NUIComponent {
 public:
+    /** Forward the platform bridge to the insert rack (dry/wet knob capture). */
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
     enum class Tab { Inserts = 0, Sends = 1, IO = 2 };
 
     explicit UIMixerInspector(Aestra::MixerViewModel* viewModel);
@@ -62,10 +67,13 @@ private:
     // Hit rectangles
     NUIRect m_tabRects[3]{};
     NUIRect m_addFxRect{};
+    NUIRect m_addSidechainRect{};
 
     int m_hoveredTab{-1};
     bool m_addHovered{false};
     bool m_addPressed{false};
+    bool m_addSidechainHovered{false};
+    bool m_addSidechainPressed{false};
 
     // Inserts
     std::shared_ptr<EffectChainRack> m_effectRack;
@@ -93,7 +101,6 @@ private:
     std::string m_cachedRoute;
     std::string m_cachedHeaderTitle;
     std::string m_cachedHeaderSubtitle;
-    int m_cachedTrackNumber{0};
     uint32_t m_cachedMainOutputId{0xFFFFFFFFu};
     bool m_cachedMasterSendEnabled{true};
     size_t m_cachedSendsCount{0};
@@ -108,7 +115,6 @@ private:
     void cacheThemeColors();
     void layoutHitRects();
     int hitTestTab(const NUIPoint& p) const;
-    int findTrackNumber(uint32_t channelId) const;
     void updateHeaderCache(const Aestra::ChannelViewModel* channel);
     void clampScrollOffsets();
 };

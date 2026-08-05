@@ -119,7 +119,6 @@ Aestra
 ├── Tests             — Centralized test suite
 ├── aestra-core       — Public core-mode variant/stub layer
 ├── docs/             — Public documentation
-├── AestraDocs/       — Internal architecture/design notes
 └── scripts/          — Build, audit, utility, and maintenance scripts
 ```
 
@@ -457,8 +456,15 @@ Do not claim:
 Use:
 
 * `docs/` for public documentation.
-* `AestraDocs/` for internal design notes, architecture reports, implementation plans, and status documents.
 * `labs/` for experiments, generated evidence, quality reports, and benchmark artifacts.
+
+**Internal notes do not live in this repository.** Architecture reports, design
+notes, implementation plans, audits, status documents, product strategy, and
+roadmaps belong in the private **Aestra-Internals** vault, not here. This repo is
+public: anything committed to it is world-readable forever, including in history.
+
+If a change needs internal write-up, record it in Aestra-Internals and reference
+it by title from the PR description. Do not recreate `AestraDocs/`.
 
 ---
 
@@ -537,8 +543,29 @@ PRs should include:
 * Summary
 * Why
 * Testing performed
+* Producer note
 * Docs updated?
 * Risk/rollback notes
+
+### Producer note — required, defaults to `None`
+
+This field is consumed by a **different repository**. The public
+changelog on aestra.studio is built from it: `Aestra-website` runs
+`npm run changelog:draft`, which harvests every `## Producer note`
+block from PRs merged since the last release and prints a draft entry.
+
+Write one sentence a producer would understand, or `None`.
+
+* Test: finish **"now you can ..."** or **"X no longer ..."**.
+  If neither sentence works, it is internal — answer `None`.
+* `None` is the correct answer for refactors, test wiring, CI, dead
+  code removal and internal renames. Most PRs are `None`.
+* Rough wording is fine. It gets edited at release time.
+
+```text
+"Hitting pause no longer rewinds you."        <- ships
+"RMS detection with parameter smoothing"      <- fails the test, use None
+```
 
 ---
 

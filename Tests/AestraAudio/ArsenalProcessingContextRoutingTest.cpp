@@ -30,6 +30,7 @@ int main() {
 
     const UnitID timelineUnit = manager.createUnit("Timeline Unit", UnitType::Sampler);
     manager.assignUnitToTimelineLane(timelineUnit, 2);
+    manager.setUnitMixerChannel(timelineUnit, 42);
 
     const UnitID previewUnit = manager.createUnit("Preview Unit", UnitType::Sampler);
     manager.clearUnitTimelineLane(previewUnit);
@@ -58,6 +59,11 @@ int main() {
     require(!ctx.shouldRenderToMasterPreview(*timelineState),
             "Timeline-routed unit should not render to master preview");
 
+    require(ctx.shouldRenderToMixerChannel(*timelineState, 42), "Unit should render to its stable mixer destination");
+    require(!ctx.shouldRenderToMixerChannel(*timelineState, 2),
+            "Mixer routing must not treat a Timeline index as a channel ID");
+    require(!ctx.shouldRenderToMaster(*timelineState), "Mixer-routed unit should not render directly to Master");
+    require(ctx.shouldRenderToMaster(*previewState), "New unit should use the safe Master mixer destination");
     require(ctx.shouldRenderToMasterPreview(*previewState),
             "Preview unit should render to master preview");
     require(!ctx.shouldRenderToTimelineTrack(*previewState, 2),

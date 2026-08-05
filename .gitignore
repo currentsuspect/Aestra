@@ -210,3 +210,12 @@ autosave.*
 # Audit cache files (regenerated on each run)
 .aestra/audit/*.json
 !.aestra/audit/snapshots/
+
+# Reverb lab scratch: local listening/AB/prototype artefacts, not source
+labs/reverb/listening/
+labs/reverb/tremolo/ab/
+labs/reverb/tremolo/proto/
+
+# CTest scratch written into the SOURCE tree when ctest runs from the repo root
+# rather than from a build directory. Generated scheduling data, never source.
+/Testing/

@@ -1,4 +1,6 @@
 #include "Commands/CommandParser.h"
+
+#include "AestraUUID.h"
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Commands/CommandRegistry.h"
@@ -25,7 +27,8 @@ static std::vector<std::string> splitWhitespace(const std::string& input) {
     return tokens;
 }
 
-CommandResult CommandParser::parse(const std::string& input, CommandHistory& history) {
+CommandResult CommandParser::parse(const std::string& input, CommandHistory& history,
+                                   const CommandContext& context) {
     CommandResult result;
     result.commandId = 0;
 
@@ -55,7 +58,7 @@ CommandResult CommandParser::parse(const std::string& input, CommandHistory& his
     }
 
     // 3. Shared back half: schema lookup, validation, build, execute
-    CommandResult executed = execute(result.verb, parsedFlags, history);
+    CommandResult executed = execute(result.verb, parsedFlags, history, context);
     auto endTime = std::chrono::steady_clock::now();
     executed.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
     return executed;
@@ -65,7 +68,8 @@ std::unique_ptr<ICommand> CommandParser::buildValidated(
     const std::string& verb,
     const std::unordered_map<std::string, std::string>& flags,
     CommandStatus& outStatus,
-    std::string& outMessage) {
+    std::string& outMessage,
+    const CommandContext& context) {
     // Look up verb in MuseGrammar::allCommands()
     const auto& allCmds = MuseGrammar::allCommands();
     const CommandSchema* schema = nullptr;
@@ -108,7 +112,7 @@ std::unique_ptr<ICommand> CommandParser::buildValidated(
     }
 
     // Build ICommand via registry
-    auto cmd = CommandRegistry::instance().build(verb, flags);
+    auto cmd = CommandRegistry::instance().build(verb, flags, context);
     if (!cmd) {
         outStatus = CommandStatus::ExecutionError;
         const std::string reason = CommandRegistry::consumeLastBuildError();
@@ -123,7 +127,8 @@ std::unique_ptr<ICommand> CommandParser::buildValidated(
 
 CommandResult CommandParser::execute(const std::string& verb,
                                      const std::unordered_map<std::string, std::string>& flags,
-                                     CommandHistory& history) {
+                                     CommandHistory& history,
+                                     const CommandContext& context) {
     CommandResult result;
     result.commandId = 0;
     result.verb = verb;
@@ -137,7 +142,7 @@ CommandResult CommandParser::execute(const std::string& verb,
 
     CommandStatus buildStatus = CommandStatus::Success;
     std::string buildMessage;
-    auto cmd = buildValidated(verb, flags, buildStatus, buildMessage);
+    auto cmd = buildValidated(verb, flags, buildStatus, buildMessage, context);
     if (!cmd) {
         result.status = buildStatus;
         result.message = std::move(buildMessage);
@@ -272,6 +277,21 @@ bool CommandParser::convertAndValidateValue(
     switch (flag.type) {
     case FlagType::String:
         return true;
+
+    case FlagType::Id: {
+        // Exactly the form queries print, so a listed id round-trips verbatim.
+        AestraUUID parsed;
+        if (!AestraUUID::tryParse(rawValue, parsed)) {
+            outError = "flag --" + flag.name + " requires a 32-character hex id as returned by the list_* queries, got: " +
+                       rawValue;
+            return false;
+        }
+        if (parsed.low == 0 && parsed.high == 0) {
+            outError = "flag --" + flag.name + " is the null id, which addresses no object: " + rawValue;
+            return false;
+        }
+        return true;
+    }
 
     case FlagType::Int: {
         char* end = nullptr;

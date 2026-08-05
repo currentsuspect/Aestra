@@ -183,6 +183,10 @@ void RecoveryDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
 bool RecoveryDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_isVisible) return false;
+
+    // Input may arrive before the first rendered frame or immediately after a
+    // resize. Hit-test against current bounds rather than stale/default rects.
+    calculateLayout();
     
     float mx = event.position.x;
     float my = event.position.y;

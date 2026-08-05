@@ -211,30 +211,32 @@ bool GenericPluginEditor::onMouseEvent(const NUIMouseEvent& event) {
         repaint();
     }
 
-    // Handle slider dragging
+    // Handle slider dragging (relative horizontal → cursor capture)
     if (event.button == NUIMouseButton::Left) {
         if (event.pressed && paramIndex >= 0) {
-            // Start dragging
+            // Start dragging + capture: hide, confine, route here, recenter.
             m_parameters[paramIndex].isDragging = true;
-            m_parameters[paramIndex].dragStartX = event.position.x;
-            m_parameters[paramIndex].dragStartValue = m_parameters[paramIndex].normalizedValue;
+            beginKnobCapture(event.position, event.position); // restore at grab point
             return true;
         } else if (!event.pressed) {
             // Stop all dragging
+            bool wasDragging = false;
             for (auto& p : m_parameters) {
+                wasDragging = wasDragging || p.isDragging;
                 p.isDragging = false;
             }
+            if (wasDragging) endKnobCapture();
             return true;
         }
     }
 
-    // Update dragging parameters
+    // Update dragging parameters. Service-owned horizontal frame delta
+    // (right = increase), Shift = fine — matching knobDragStep's ratio.
     for (size_t i = 0; i < m_parameters.size(); ++i) {
         if (m_parameters[i].isDragging) {
-            float deltaX = event.position.x - m_parameters[i].dragStartX;
-            float deltaValue = deltaX / SLIDER_WIDTH;
-            float newValue = std::clamp(m_parameters[i].dragStartValue + deltaValue, 0.0f, 1.0f);
-
+            const float fine = (event.modifiers & NUIModifiers::Shift) ? 0.25f : 1.0f;
+            const float deltaValue = (event.delta.x / SLIDER_WIDTH) * fine;
+            const float newValue = std::clamp(m_parameters[i].normalizedValue + deltaValue, 0.0f, 1.0f);
             updateParameterValue(static_cast<int>(i), newValue);
             repaint();
             return true;

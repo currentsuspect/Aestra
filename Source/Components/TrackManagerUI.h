@@ -20,6 +20,8 @@
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
+#include "TimelineInteractionPolicy.h"
+#include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
 #include <functional>
@@ -82,7 +84,7 @@ public:
     void invalidateCache(); // Keep for compatibility
     void buildAllWaveformCaches();
 
-    // Solo coordination (exclusive solo behavior)
+    // Solo coordination (refreshes the additive Playlist solo set)
     void onTrackSoloToggled(TrackUIComponent* soloedTrack);
 
     void onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& rippleCenter);
@@ -131,12 +133,15 @@ public:
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
     void setOnOpenPatternInPianoRoll(std::function<void(PatternID)> cb) { m_onOpenPatternInPianoRoll = std::move(cb); }
+    void setOnOpenAudioClipEditor(std::function<void(ClipInstanceID)> cb) {
+        m_onOpenAudioClipEditor = std::move(cb);
+    }
     void setOnPreviewPatternClip(std::function<void(PatternID)> cb) { m_onPreviewPatternClip = std::move(cb); }
     void setOnStopPatternClipPreview(std::function<void()> cb) { m_onStopPatternClipPreview = std::move(cb); }
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
-    int getLoopPreset() const { return m_loopPreset; }
+    int getLoopPreset() const { return timelineLoopPresetId(m_loopPreset); }
 
     // Selection made callback - called when ruler selection is finalized (startBeat, endBeat)
     // This should jump playhead to start and set up the loop region
@@ -159,6 +164,7 @@ public:
 
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
+    void selectTrack(TrackUIComponent* track, TrackSelectionIntent intent);
     void deselectTrack(TrackUIComponent* track);
     void selectAllTracks();
     void clearSelection();
@@ -365,7 +371,7 @@ private:
     bool m_followPlayheadHovered = false;
 
     // Loop state
-    int m_loopPreset{0}; // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project
+    TimelineLoopPreset m_loopPreset{TimelineLoopPreset::Project};
     double m_lastProjectLoopExtentBeats{-1.0};
 
     // Current editing tool
@@ -374,6 +380,7 @@ private:
     std::function<void(bool)> m_onCursorVisibilityChanged;
 
     // Multi-selection
+    TimelineTrackSelection m_trackSelection;
     std::unordered_set<TrackUIComponent*> m_selectedTracks;
 
     // Instant clip dragging (no ghost)
@@ -412,8 +419,9 @@ private:
     bool m_hoveringLoopEnd = false;
     double m_loopDragStartBeat = 0.0; // Original beat position when drag started
 
-    // === SELECTION BOX (Right-click drag or MultiSelect tool) ===
+    // === SELECTION BOX (left- or right-drag with the Multi-Select tool) ===
     bool m_isDrawingSelectionBox = false;
+    ::AestraUI::NUIMouseButton m_selectionBoxButton = ::AestraUI::NUIMouseButton::None;
     ::AestraUI::NUIPoint m_selectionBoxStart;
     ::AestraUI::NUIPoint m_selectionBoxEnd;
 
@@ -501,6 +509,7 @@ private:
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
+    std::function<void(ClipInstanceID)> m_onOpenAudioClipEditor;
     std::function<void(PatternID)> m_onPreviewPatternClip;
     std::function<void()> m_onStopPatternClipPreview;
     std::function<void(int)> m_onLoopPresetChanged;        // Called when loop preset dropdown changes
@@ -519,6 +528,9 @@ private:
     void syncViewToggleButtons();
     void layoutTracks();
     void onAddTrackClicked();
+    void syncTrackSelectionView();
+    void selectClip(ClipInstanceID clipId);
+    void updateSelectionLoopRegion(double startBeat, double endBeat);
     void updateTrackPositions();
     void updateScrollbar();
     void onScroll(double position);
@@ -543,6 +555,31 @@ private:
     void renderTrackManagerStatic(::AestraUI::NUIRenderer& renderer);  // Static content (cached)
     void renderTrackManagerDynamic(::AestraUI::NUIRenderer& renderer); // Dynamic content (real-time)
 
+    // --- Timeline geometry: one conversion, many coordinate bases (#550) -----
+    //
+    // These take a distance FROM the grid's left edge, not an absolute x. That is
+    // deliberate. The grid's origin is expressed in at least three different
+    // bases across this component — component-relative, window-absolute
+    // (getBounds()), and ruler-relative — and which one a call site means is
+    // knowledge that belongs at the call site. What was duplicated, and what is
+    // worth centralising, is the conversion itself: the same
+    // `(x + scroll) / pixelsPerBeat` was written out inline in four places
+    // alongside getTimeAtPosition, which does the same arithmetic and then
+    // converts to seconds and clamps.
+    //
+    // Beat domain, unclamped: the zoom handler needs to keep negative beats to
+    // compute an anchor, and clamping there would pin the zoom to bar 1.
+
+    /** @brief Convert a pixel distance from the grid's left edge into beats. */
+    double gridOffsetToBeat(float offsetFromGridStart) const {
+        return timelineGridOffsetToBeat(offsetFromGridStart, m_timelineScrollOffset, m_pixelsPerBeat);
+    }
+
+    /** @brief Convert beats into a pixel distance from the grid's left edge. */
+    float beatToGridOffset(double beat) const {
+        return timelineBeatToGridOffset(beat, m_timelineScrollOffset, m_pixelsPerBeat);
+    }
+
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
     double getTimeAtPosition(float x) const;
@@ -556,6 +593,27 @@ private:
     void renderToolbar(::AestraUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
     void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+
+    // onMouseEvent decomposition — called by the dispatcher in this order;
+    // bool handlers return true when the event was consumed.
+    void updateToolbarHover(const ::AestraUI::NUIMouseEvent& event);
+    bool handleContextMenuMouse(const ::AestraUI::NUIMouseEvent& event);
+    bool handleSelectionBoxMouse(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleTimelineWheel(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                             bool isInRuler, bool isInTrackArea);
+    bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                          bool isInRuler);
+    bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleRulerSelectionMenu(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                                  bool isInRuler);
+    bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    // Rows render m_trackHeight tall on an m_trackHeight+m_trackSpacing stride,
+    // leaving an m_trackSpacing-px seam between them that lands inside no track's
+    // bounds. Map an otherwise-unhandled left press in that seam back to its row
+    // and select it, so clicks between rows are not silently swallowed.
+    bool handleTrackSeamSelect(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 
     // Split tool
@@ -566,6 +624,18 @@ private:
 
     // Async waveform builder
     ::Aestra::Audio::WaveformCacheBuilder m_waveformBuilder;
+
+    // Last SourceManager revision swept for missing waveform caches. Change-gate
+    // only; never a correctness authority, since buildAllWaveformCaches() checks
+    // each source itself.
+    uint64_t m_lastSourcesRevision{0};
+
+    // Waveform builds already dispatched, as source ID -> the content revision
+    // being built. A queued build installs its cache asynchronously, so this is
+    // what stops an import burst re-queueing the same source on every sweep.
+    // Main-thread only: written by buildAllWaveformCaches() and released from
+    // the drained pending task, never from the builder thread.
+    std::unordered_map<uint64_t, uint64_t> m_waveformBuildsInFlight;
 
     // Async Task Queue (for main thread callbacks)
     std::mutex m_pendingTasksMutex;

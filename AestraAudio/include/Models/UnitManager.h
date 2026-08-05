@@ -18,12 +18,13 @@ namespace Audio {
 // Forward declarations
 class PatternManager;
 using UnitID = uint64_t;
+constexpr uint32_t MASTER_MIXER_CHANNEL_ID = 0;
 
 /**
  * @brief Explicit interpretation of current Arsenal route semantics.
  *
- * This enum is scaffolding for context ownership cleanup. It maps to the
- * existing `routeId` / `targetMixerRoute` behavior and does not alter routing.
+ * This enum preserves older Arsenal-to-Timeline ownership metadata. Mixer
+ * output routing is stored independently as a stable channel ID.
  */
 enum class ArsenalRouteMode : uint8_t {
     PreviewToMaster = 0,
@@ -72,28 +73,27 @@ struct UnitInfo {
     /**
      * @brief Timeline lane assignment compatibility field.
      *
-     * Current behavior maps this integer directly to route mode:
-     * - < 0 routes unit output to master preview path.
-     * - >= 0 routes unit output to the Timeline track at that index.
-     *
-     * Arsenal currently participates in the main engine render path. Timeline
-     * remains arrangement/export authority, and export follows live processBlock
-     * routing behavior.
+     * Older projects used this integer as both placement metadata and audio
+     * routing. It is retained for compatibility, but mixer output now follows
+     * @ref targetMixerChannelId.
      */
     int targetMixerRoute{-1};
+    /** @brief Stable mixer destination ID (0 routes directly to Master). */
+    uint32_t targetMixerChannelId{MASTER_MIXER_CHANNEL_ID};
+    /** @brief True while an older lane-index route awaits project-load migration. */
+    bool legacyMixerRoutePending{false};
     /**
      * @brief Explicit route mode field (Phase 2A scaffolding).
      *
-     * Compatibility note: current rendering authority remains legacy
-     * @ref targetMixerRoute mapping. This field is kept aligned for explicitness
-     * and future migration, but does not change current behavior.
+     * Compatibility note: this remains aligned with the legacy lane value and
+     * does not select mixer output.
      */
     ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
-    /** @brief Effective route mode, preserving legacy route fields as authority until cleared. */
+    /** @brief Effective legacy Timeline ownership mode. */
     ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(targetMixerRoute); }
-    /** @brief True when this unit currently routes into the Timeline track path. */
+    /** @brief True when this unit carries a legacy Timeline assignment. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
-    /** @brief True when this unit currently routes to master preview path. */
+    /** @brief True when this unit has no legacy Timeline assignment. */
     bool routesToMasterPreview() const noexcept { return getRouteMode() == ArsenalRouteMode::PreviewToMaster; }
     /**
      * @brief Ownership metadata for Arsenal->Timeline bridge semantics.
@@ -115,6 +115,8 @@ struct UnitInfo {
     std::string name;
     /** @brief Accent color used by Arsenal and related UI. */
     uint32_t color{0x808080}; // Default grey
+    /** @brief Linear output gain applied at the unit's mix point (1 = unity). */
+    float gain{1.0f};
     /** @brief Whether the unit is muted. */
     bool isMuted{false};
     /** @brief Whether the unit is soloed. */
@@ -148,12 +150,14 @@ struct UnitState {
     /** @brief Plugin instance used for rendering. */
     std::shared_ptr<IPluginInstance> plugin;
     /**
-     * @brief Legacy route id consumed by current render path.
-     *
-     * - < 0 routes to master preview path
-     * - >= 0 routes to Timeline track path
+     * @brief Legacy Timeline ownership metadata retained for compatibility.
+     * Mixer rendering uses @ref mixerChannelId.
      */
     int routeId;
+    /** @brief Stable mixer destination ID (0 routes directly to Master). */
+    uint32_t mixerChannelId{MASTER_MIXER_CHANNEL_ID};
+    /** @brief Linear output gain applied at the unit's mix point. */
+    float gain{1.0f};
     /** @brief True when the unit is muted (audio thread visibility). */
     bool isMuted{false};
     /** @brief True when the unit is soloed (audio thread visibility). */
@@ -161,10 +165,10 @@ struct UnitState {
     /**
      * @brief Explicit route mode snapshot field (Phase 2A scaffolding).
      *
-     * Compatibility note: current rendering authority remains @ref routeId.
+     * Compatibility note: mixer rendering authority is @ref mixerChannelId.
      */
     ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
-    /** @brief Effective route mode, preserving legacy route fields as authority until cleared. */
+    /** @brief Effective legacy Timeline ownership mode. */
     ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(routeId); }
     /** @brief True when this unit currently routes into the Timeline track path. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
@@ -179,9 +183,7 @@ struct AudioArsenalSnapshot {
     /**
      * @brief Ordered list of unit states visible to the audio engine.
      *
-     * Snapshot data currently feeds Arsenal processing that runs inside the main
-     * engine render path. Export authority remains tied to Timeline/live
-     * processBlock behavior.
+     * Live and export rendering consume the same stable mixer destinations.
      */
     std::vector<UnitState> units;
 };
@@ -272,16 +274,24 @@ public:
     void setUnitArmed(UnitID id, bool armed);
     /** @brief Set enabled state for a unit. */
     void setUnitEnabled(UnitID id, bool enabled);
-    /** @brief Legacy alias for Timeline lane assignment. */
-    void setUnitMixerChannel(UnitID id, int channel);
-    /** @brief Assign a unit to a Timeline lane for arrangement playback. */
+    /** @brief Route a unit to a stable mixer channel ID (0 means Master). */
+    void setUnitMixerChannel(UnitID id, uint32_t channelId);
+    /** @brief Return the unit's stable mixer destination ID (0 means Master). */
+    uint32_t getUnitMixerChannel(UnitID id) const;
+    /** @brief Resolve lane-index routes from projects saved before stable mixer IDs existed. */
+    void migrateLegacyMixerRoutes(const std::vector<uint32_t>& mixerChannelIds);
+    /** @brief Reset units targeting a mixer channel that is being removed. */
+    bool resetMixerChannel(uint32_t channelId);
+    /** @brief Retain a legacy Timeline lane assignment for ownership compatibility. */
     void assignUnitToTimelineLane(UnitID id, int laneIndex);
-    /** @brief Clear any Timeline lane assignment so the unit previews to master. */
+    /** @brief Clear legacy Timeline ownership metadata without changing mixer output. */
     void clearUnitTimelineLane(UnitID id);
     /** @brief Get the current Timeline lane assignment, or -1 when none. */
     int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
+    /** @brief Set the unit's linear output gain (published to the audio snapshot). */
+    void setUnitGain(UnitID id, float gain);
     /** @brief Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. */
     bool setUnitAudioClipFromDecoded(UnitID id, const std::string& path, std::vector<float> decodedData,
                                      uint32_t sampleRate, uint32_t numChannels, std::vector<float> previewWaveform,
@@ -310,6 +320,8 @@ public:
     std::shared_ptr<IPluginInstance> getUnitPlugin(UnitID id) const;
     /** @brief Get the plugin identifier attached to a unit. */
     std::string getUnitPluginId(UnitID id) const;
+    /** @brief Get the MIDI note that plays a unit's sample untransposed (60 fallback). */
+    int getUnitRootMidiNote(UnitID id) const;
 
     /** @brief Serialize the manager to JSON. */
     JSON saveToJSON() const;

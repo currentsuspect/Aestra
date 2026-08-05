@@ -234,9 +234,13 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  // Stop drawing if out of bounds (culling)
                  if (currentY + trackH > barBottom) break; 
                  
-                 // Shared TRACK_PALETTE, same modulo as the track-color fallback
-                 const NUIColor lineTint =
-                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))).withAlpha(0.9f);
+                 // Shared TRACK_PALETTE, same modulo as the track-color fallback.
+                 // Restrained through the same helper the timeline's lane strips
+                 // use: raw palette hues here read as a second, louder colour
+                 // system sitting above a timeline that deliberately tones the
+                 // very same lane identity down.
+                 const NUIColor lineTint = restrainLaneIdentityColor(
+                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))), 0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);
                  renderer.fillRect(lineRect, lineTint);
@@ -268,6 +272,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     // Viewport outline stays above the content; fill was rendered beneath it.
     if (hasViewportRect) {
         renderer.strokeRoundedRect(viewportRect, 5.0f, 1.0f, colors.viewOutline);
+        const float handleH = std::min(10.0f, std::max(4.0f, viewportRect.height - 4.0f));
+        const float handleY = viewportRect.y + (viewportRect.height - handleH) * 0.5f;
+        renderer.fillRoundedRect(NUIRect(viewportRect.x + 2.0f, handleY, 2.0f, handleH), 1.0f,
+                                 colors.viewHandle);
+        renderer.fillRoundedRect(NUIRect(viewportRect.right() - 4.0f, handleY, 2.0f, handleH), 1.0f,
+                                 colors.viewHandle);
     }
 
     // Playhead: collision-free outline (dark underlay + bright center).

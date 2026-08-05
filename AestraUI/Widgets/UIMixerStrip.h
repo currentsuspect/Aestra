@@ -17,6 +17,7 @@
 
 namespace Aestra {
 class MixerViewModel;
+struct ChannelViewModel;
 namespace Audio {
 class MeterSnapshotBuffer;
 class ContinuousParamBuffer;
@@ -51,6 +52,9 @@ public:
     /// Bounds of the FX summary (Add Insert) button in strip-local space.
     NUIRect getFXSummaryBounds() const;
 
+    /// Close this strip's inline fader entry when a press lands outside it.
+    void dismissFaderEdit(const NUIPoint& position);
+
     // Request opening the inspector on the Inserts tab for this channel.
     std::function<void(uint32_t channelId)> onFXClicked;
 
@@ -82,7 +86,6 @@ private:
     // Cached theme colors
     NUIColor m_selectedTint;
     NUIColor m_selectedOutline;
-    NUIColor m_selectedGlow;
     NUIColor m_selectedTopHighlight;
     NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
@@ -112,10 +115,16 @@ private:
     int m_cachedFxCount{0};
     std::string m_cachedFxStatus;
 
+    /// Master-only readouts, computed in layoutChildren. Split so each number
+    /// sits under the column that owns it: observed signal vs applied gain.
+    NUIRect m_masterMeterReadoutRect{};
+    NUIRect m_masterGainReadoutRect{};
+
     void cacheThemeColors();
     void layoutChildren();
     void invalidateStaticCache();
     void renderStaticLayer(NUIRenderer& renderer);
+    void renderMasterReadout(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
 };
 
 } // namespace AestraUI

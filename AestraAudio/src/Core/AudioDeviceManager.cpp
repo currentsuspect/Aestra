@@ -8,6 +8,14 @@
 #include <iostream>
 #include <thread>
 
+// Synchronization policy for this file (#391):
+//   m_mutex guards all non-atomic manager state. Public methods lock and delegate
+//   to *Locked() helpers (which assume the lock is held and compose without
+//   re-locking). The health-monitor thread is only started/stopped (joined) at the
+//   public boundary, never under the lock. The driver-mode-change callback is
+//   captured under the lock and fired only after it is released. See the header
+//   for the full policy and the invariants it maintains.
+
 namespace Aestra {
 namespace Audio {
 
@@ -20,21 +28,34 @@ AudioDeviceManager::~AudioDeviceManager() {
 
 void AudioDeviceManager::addDriver(std::unique_ptr<IAudioDriver> driver) {
     if (driver) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         m_drivers.push_back(std::move(driver));
     }
 }
 
-bool AudioDeviceManager::initialize() {
-    if (m_initialized) {
-        return true;
+bool AudioDeviceManager::initialize(bool registerPlatformDrivers) {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_initialized) {
+            return true;
+        }
     }
 
     AESTRA_LOG_INFO("AestraAudio multi-tier driver system initializing...");
-    AESTRA_LOG_DEBUG("RegisterPlatformDrivers about to be called");
 
     try {
-        // Register platform-specific drivers (Dependency Injection Point)
-        RegisterPlatformDrivers(*this);
+        // Register platform-specific drivers (Dependency Injection Point).
+        // NOT under m_mutex: RegisterPlatformDrivers calls back into addDriver(),
+        // which locks per push. Startup is single-threaded, so no other thread is
+        // racing this; we then lock briefly to publish the initialized state.
+        // Tests pass registerPlatformDrivers=false to run against only the drivers
+        // they injected via addDriver() (no real hardware).
+        if (registerPlatformDrivers) {
+            AESTRA_LOG_DEBUG("RegisterPlatformDrivers about to be called");
+            RegisterPlatformDrivers(*this);
+        }
+
+        std::lock_guard<std::mutex> lock(m_mutex);
         AESTRA_LOG_DEBUG("RegisterPlatformDrivers returned, drivers count: " + std::to_string(m_drivers.size()));
 
         if (m_drivers.empty()) {
@@ -45,8 +66,6 @@ bool AudioDeviceManager::initialize() {
                                  (driver->isAvailable() ? " available" : " unavailable"));
             }
         }
-
-        // Removed explicit ASIO scanning (now handled by drivers themselves if registered)
 
         m_initialized = true;
         AESTRA_LOG_INFO("Audio system initialized and ready");
@@ -59,90 +78,83 @@ bool AudioDeviceManager::initialize() {
 }
 
 void AudioDeviceManager::shutdown() {
-    if (m_initialized) {
-        closeStream();
+    // Join the health monitor before taking the lock: the monitor thread acquires
+    // m_mutex in checkDriverHealth, so joining it under the lock would deadlock
+    // (#391 constraint 5). After this returns the monitor is not running.
+    stopHealthMonitor();
 
-        m_drivers.clear();
-
-        m_activeDriver = nullptr;
-        m_initialized = false;
-
-        AESTRA_LOG_DEBUG("Audio system shutdown complete");
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_initialized) {
+        return;
     }
+    closeStreamLocked();
+    m_drivers.clear();
+    m_activeDriver = nullptr;
+    m_initialized = false;
+    AESTRA_LOG_DEBUG("Audio system shutdown complete");
 }
 
-std::vector<AudioDeviceInfo> AudioDeviceManager::getDevices() const {
+// ---------------------------------------------------------------------------
+// Device enumeration
+// ---------------------------------------------------------------------------
+
+std::vector<AudioDeviceInfo> AudioDeviceManager::getDevicesLocked() const {
     if (!m_initialized) {
         return {};
     }
-
-    // Aggregated devices from all available drivers?
-    // Or just the active one?
-    // Original code: "active driver -> exclusive -> shared -> rtaudio"
-    // We should preserve this priority logic.
-    // Iterating drivers in order (assuming registration order implies priority).
-
-    // Use active driver if available
+    // Prefer the active driver; otherwise the first available one, matching the
+    // historical priority (active -> exclusive -> shared -> rtaudio by reg order).
     if (m_activeDriver) {
         return m_activeDriver->getDevices();
     }
-
     for (const auto& driver : m_drivers) {
         if (driver && driver->isAvailable()) {
             return driver->getDevices();
         }
     }
-
     return {};
 }
 
+std::vector<AudioDeviceInfo> AudioDeviceManager::getDevices() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return getDevicesLocked();
+}
+
 AudioDeviceInfo AudioDeviceManager::getDefaultOutputDevice() const {
-    if (!m_initialized) {
-        return {};
-    }
-
-    // Get all devices and find first output device
-    auto devices = getDevices();
-
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto devices = getDevicesLocked();
     for (const auto& device : devices) {
         if (device.maxOutputChannels > 0 && device.isDefaultOutput) {
             return device;
         }
     }
-
-    // If no default marked, return first output device
     for (const auto& device : devices) {
         if (device.maxOutputChannels > 0) {
             return device;
         }
     }
-
     return {};
 }
 
 AudioDeviceInfo AudioDeviceManager::getDefaultInputDevice() const {
-    if (!m_initialized) {
-        return {};
-    }
-
-    // Get all devices and find first input device
-    auto devices = getDevices();
-
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto devices = getDevicesLocked();
     for (const auto& device : devices) {
         if (device.maxInputChannels > 0 && device.isDefaultInput) {
             return device;
         }
     }
-
-    // If no default marked, return first input device
     for (const auto& device : devices) {
         if (device.maxInputChannels > 0) {
             return device;
         }
     }
-
     return {};
 }
+
+// ---------------------------------------------------------------------------
+// Stream open/close/start/stop
+// ---------------------------------------------------------------------------
 
 bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback,
                                    void* userData) {
@@ -164,17 +176,17 @@ bool AudioDeviceManager::tryDriver(IAudioDriver* driver, const AudioStreamConfig
     return false;
 }
 
-bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
+bool AudioDeviceManager::openStreamLocked(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
     AESTRA_LOG_DEBUG("[AudioDeviceManager] openStream called. Rate: " + std::to_string(config.sampleRate) +
-                      "Hz, Output Device: " + std::to_string(config.deviceId) +
-                      ", Input Device: " + std::to_string(config.inputDeviceId));
+                     "Hz, Output Device: " + std::to_string(config.deviceId) +
+                     ", Input Device: " + std::to_string(config.inputDeviceId));
 
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] openStream failed: Not initialized");
         return false;
     }
 
-    if (!validateStreamConfig(config)) {
+    if (!validateStreamConfigLocked(config)) {
         Aestra::Log::error("[AudioDeviceManager] openStream failed: Invalid stream configuration");
         return false;
     }
@@ -183,14 +195,11 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     m_currentCallback = callback;
     m_currentUserData = userData;
 
-    // Iterate through drivers to find one that works
-    // Track fallback reasons for the first failed driver
     std::string firstFailureReason;
     bool firstAttempt = true;
 
     for (auto& driver : m_drivers) {
         if (tryDriver(driver.get(), config, callback, userData)) {
-            // If we fell back to a different driver than preferred, record the reason
             if (m_activeDriver && m_activeDriver->getDriverType() != m_preferredDriverType) {
                 if (m_fallbackReason.empty()) {
                     m_fallbackReason = "Preferred driver (" + std::string(DriverTypeToString(m_preferredDriverType)) +
@@ -205,7 +214,6 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
         }
     }
 
-    // Record why the preferred driver failed
     if (!firstAttempt && !firstFailureReason.empty()) {
         m_fallbackReason = "All drivers failed. Preferred (" + std::string(DriverTypeToString(m_preferredDriverType)) +
                            ") error: " + firstFailureReason;
@@ -215,356 +223,349 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     return false;
 }
 
-void AudioDeviceManager::closeStream() {
-    stopHealthMonitor();
+bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return openStreamLocked(config, callback, userData);
+}
+
+void AudioDeviceManager::closeStreamLocked() {
     if (m_activeDriver) {
         m_activeDriver->closeStream();
         m_activeDriver = nullptr;
     }
-    // DON'T clear callback/userData here - they need to be preserved for stream reopening
-    // They will be updated when openStream() is called with new values
-    // m_currentCallback = nullptr;
-    // m_currentUserData = nullptr;
+    // Deliberately preserve m_currentCallback/m_currentUserData for reopening.
+}
+
+void AudioDeviceManager::closeStream() {
+    stopHealthMonitor(); // lock-free join before locking (#391 constraint 5)
+    std::lock_guard<std::mutex> lock(m_mutex);
+    closeStreamLocked();
+}
+
+bool AudioDeviceManager::startStreamLocked() {
+    if (!m_activeDriver) {
+        return false;
+    }
+    bool ok = m_activeDriver->startStream();
+    if (ok) {
+        uint32_t actualRate = m_activeDriver->getStreamSampleRate();
+        AESTRA_LOG_DEBUG(std::string("Active driver stream started: requested ") +
+                         std::to_string(m_currentConfig.sampleRate) + " Hz, actual " +
+                         std::to_string(actualRate) + " Hz, buffer " +
+                         std::to_string(m_currentConfig.bufferSize) + " frames");
+    }
+    return ok;
 }
 
 bool AudioDeviceManager::startStream() {
-    if (m_activeDriver) {
-        bool ok = m_activeDriver->startStream();
-        if (ok) {
-            uint32_t actualRate = m_activeDriver->getStreamSampleRate();
-            AESTRA_LOG_DEBUG(std::string("Active driver stream started: requested ") +
-                             std::to_string(m_currentConfig.sampleRate) + " Hz, actual " +
-                             std::to_string(actualRate) + " Hz, buffer " +
-                             std::to_string(m_currentConfig.bufferSize) + " frames");
-            startHealthMonitor();
-        }
-        return ok;
+    bool ok;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        ok = startStreamLocked();
     }
-    return false;
+    // Start the monitor outside the lock — it spawns a thread that will acquire
+    // m_mutex in checkDriverHealth; keeping the start off the lock avoids any
+    // ordering surprise and matches how it must be stopped (#391).
+    if (ok) {
+        startHealthMonitorIfStopped();
+    }
+    return ok;
 }
 
-void AudioDeviceManager::stopStream() {
-    stopHealthMonitor();
+void AudioDeviceManager::stopStreamLocked() {
     if (m_activeDriver) {
         m_activeDriver->stopStream();
     }
 }
 
+void AudioDeviceManager::stopStream() {
+    stopHealthMonitor(); // lock-free join before locking (#391 constraint 5)
+    std::lock_guard<std::mutex> lock(m_mutex);
+    stopStreamLocked();
+}
+
+bool AudioDeviceManager::isStreamRunningLocked() const {
+    return m_activeDriver ? m_activeDriver->isStreamRunning() : false;
+}
+
 bool AudioDeviceManager::isStreamRunning() const {
-    if (m_activeDriver) {
-        return m_activeDriver->isStreamRunning();
-    }
-    return false;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return isStreamRunningLocked();
 }
 
 double AudioDeviceManager::getStreamLatency() const {
-    if (m_activeDriver) {
-        return m_activeDriver->getStreamLatency();
-    }
-    return 0.0;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDriver ? m_activeDriver->getStreamLatency() : 0.0;
 }
 
 uint32_t AudioDeviceManager::getStreamSampleRate() const {
-    if (m_activeDriver) {
-        return m_activeDriver->getStreamSampleRate();
-    }
-    return 0;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDriver ? m_activeDriver->getStreamSampleRate() : 0;
 }
 
 uint32_t AudioDeviceManager::getStreamBufferSize() const {
-    if (m_activeDriver) {
-        return m_activeDriver->getStreamBufferSize();
-    }
-    return 0;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDriver ? m_activeDriver->getStreamBufferSize() : 0;
 }
 
 void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, double& outputLatencyMs) const {
-    // Get base latency from current stream
-    double baseLatencySeconds = getStreamLatency();
-    double baseLatencyMs = baseLatencySeconds * 1000.0;
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-    // For recording, we need to compensate for:
-    // 1. Input latency (time from mic to buffer)
-    // 2. Output latency (time from buffer to monitoring headphones)
+    const double baseLatencyMs = (m_activeDriver ? m_activeDriver->getStreamLatency() : 0.0) * 1000.0;
 
-    // If we have input channels, assume input latency equals output latency
+    // For recording we compensate for input latency (mic->buffer) and output
+    // latency (buffer->monitoring). Assume symmetric when an input is present.
     if (m_currentConfig.numInputChannels > 0) {
         inputLatencyMs = baseLatencyMs;
         outputLatencyMs = baseLatencyMs;
     } else {
-        // Output-only configuration
         inputLatencyMs = 0.0;
         outputLatencyMs = baseLatencyMs;
     }
-
-    // Store in config for reference
-    const_cast<AudioStreamConfig&>(m_currentConfig).inputLatencyMs = inputLatencyMs;
-    const_cast<AudioStreamConfig&>(m_currentConfig).outputLatencyMs = outputLatencyMs;
+    // Intentionally does NOT write back into m_currentConfig: a logically const
+    // getter must not mutate shared state (the previous const_cast was removed,
+    // #391). The values are returned purely through the out-parameters.
 }
 
+AudioStreamConfig AudioDeviceManager::getCurrentConfig() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_currentConfig; // value snapshot (#391 invariant 1)
+}
+
+// ---------------------------------------------------------------------------
+// Reconfiguration transactions
+//
+// Each of these is a single locked transaction: capture running state, stop and
+// close, apply the new config, and — on failure — roll back to the previous
+// working configuration before returning. The health monitor is joined up front
+// (outside the lock) and restarted afterward if a stream ends up running, so a
+// transition is never observable half-complete and never deadlocks on the join.
+// ---------------------------------------------------------------------------
+
 bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
-    if (!m_initialized) {
-        return false;
+    stopHealthMonitor();
+    bool result;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_initialized) {
+            result = false;
+        } else if (m_currentConfig.deviceId == deviceId) {
+            result = true;
+        } else if (!validateDeviceConfigLocked(deviceId, m_currentConfig.sampleRate)) {
+            result = false;
+        } else {
+            const uint32_t previousDevice = m_currentConfig.deviceId;
+            m_wasRunning = isStreamRunningLocked();
+            if (m_wasRunning) {
+                stopStreamLocked();
+            }
+            closeStreamLocked();
+
+            m_currentConfig.deviceId = deviceId;
+            if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                // Roll back to the previous device so we do not leave a dead stream.
+                m_currentConfig.deviceId = previousDevice;
+                if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
+            } else {
+                result = (!m_wasRunning) || startStreamLocked();
+            }
+        }
     }
-
-    // Skip if already set to this device
-    if (m_currentConfig.deviceId == deviceId) {
-        return true;
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
     }
-
-    // Validate the new device
-    if (!validateDeviceConfig(deviceId, m_currentConfig.sampleRate)) {
-        return false;
-    }
-
-    // Remember if stream was running
-    m_wasRunning = isStreamRunning();
-
-    // Stop and close current stream
-    if (m_wasRunning) {
-        stopStream();
-    }
-    closeStream();
-
-    // Update configuration with new device
-    m_currentConfig.deviceId = deviceId;
-
-    // Reopen stream with new device
-    if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        return false;
-    }
-
-    // Restart stream if it was running
-    if (m_wasRunning) {
-        return startStream();
-    }
-
-    return true;
+    return result;
 }
 
 bool AudioDeviceManager::switchInputDevice(uint32_t deviceId) {
-    if (!m_initialized) {
-        return false;
-    }
+    stopHealthMonitor();
+    bool result;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_initialized) {
+            result = false;
+        } else if (m_currentConfig.inputDeviceId == deviceId) {
+            result = true;
+        } else {
+            const auto devices = getDevicesLocked();
+            const auto it = std::find_if(devices.begin(), devices.end(), [deviceId](const AudioDeviceInfo& device) {
+                return device.id == deviceId;
+            });
+            if (it == devices.end() || it->maxInputChannels == 0) {
+                result = false;
+            } else {
+                const uint32_t previousInput = m_currentConfig.inputDeviceId;
+                const uint32_t previousInChans = m_currentConfig.numInputChannels;
+                m_wasRunning = isStreamRunningLocked();
+                if (m_wasRunning) {
+                    stopStreamLocked();
+                }
+                closeStreamLocked();
 
-    // Skip if already set
-    if (m_currentConfig.inputDeviceId == deviceId) {
-        return true;
-    }
+                m_currentConfig.inputDeviceId = deviceId;
+                if (m_currentConfig.numInputChannels > it->maxInputChannels) {
+                    m_currentConfig.numInputChannels = it->maxInputChannels;
+                }
 
-    auto devices = getDevices();
-    const auto it = std::find_if(devices.begin(), devices.end(), [deviceId](const AudioDeviceInfo& device) {
-        return device.id == deviceId;
-    });
-    if (it == devices.end() || it->maxInputChannels == 0) {
-        return false;
+                if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    m_currentConfig.inputDeviceId = previousInput;
+                    m_currentConfig.numInputChannels = previousInChans;
+                    if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && m_wasRunning) {
+                        startStreamLocked();
+                    }
+                    result = false;
+                } else {
+                    result = (!m_wasRunning) || startStreamLocked();
+                }
+            }
+        }
     }
-
-    m_wasRunning = isStreamRunning();
-    if (m_wasRunning) {
-        stopStream();
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
     }
-    closeStream();
-
-    m_currentConfig.inputDeviceId = deviceId;
-    if (m_currentConfig.numInputChannels > it->maxInputChannels) {
-        m_currentConfig.numInputChannels = it->maxInputChannels;
-    }
-
-    if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        return false;
-    }
-
-    if (m_wasRunning) {
-        return startStream();
-    }
-
-    return true;
+    return result;
 }
 
 bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
     AESTRA_LOG_DEBUG("Request to set sample rate to: " + std::to_string(sampleRate));
+    stopHealthMonitor();
+    bool result;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_initialized) {
+            AESTRA_LOG_ERROR("setSampleRate failed: Not initialized");
+            result = false;
+        } else if (m_currentConfig.sampleRate == sampleRate) {
+            AESTRA_LOG_DEBUG("Sample rate unchanged (" + std::to_string(sampleRate) + " Hz), skipping reopen");
+            result = true;
+        } else if (sampleRate != 44100 && sampleRate != 48000 && sampleRate != 88200 && sampleRate != 96000 &&
+                   sampleRate != 176400 && sampleRate != 192000) {
+            Aestra::Log::error("[AudioDeviceManager] setSampleRate failed: Invalid rate " + std::to_string(sampleRate));
+            result = false;
+        } else if (!validateDeviceConfigLocked(m_currentConfig.deviceId, sampleRate)) {
+            result = false;
+        } else {
+            const uint32_t previousSampleRate = m_currentConfig.sampleRate;
+            m_wasRunning = isStreamRunningLocked();
+            if (m_wasRunning) {
+                stopStreamLocked();
+            }
+            closeStreamLocked();
 
-    if (!m_initialized) {
-        AESTRA_LOG_ERROR("setSampleRate failed: Not initialized");
-        return false;
-    }
+            // Give the device time to fully release (avoids AUDCLNT_E_DEVICE_IN_USE).
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Skip if already set to this rate
-    if (m_currentConfig.sampleRate == sampleRate) {
-        AESTRA_LOG_DEBUG("Sample rate unchanged (" + std::to_string(sampleRate) + " Hz), skipping reopen");
-        return true;
-    }
-
-    // Validate sample rate (common rates)
-    // TODO: Add more robust validation or query device capabilities
-    if (sampleRate != 44100 && sampleRate != 48000 && sampleRate != 88200 && sampleRate != 96000 &&
-        sampleRate != 176400 && sampleRate != 192000) {
-        Aestra::Log::error("[AudioDeviceManager] setSampleRate failed: Invalid rate " + std::to_string(sampleRate));
-        return false;
-    }
-
-    // Validate the new sample rate
-    if (!validateDeviceConfig(m_currentConfig.deviceId, sampleRate)) {
-        return false;
-    }
-
-    // Save previous sample rate for rollback
-    uint32_t previousSampleRate = m_currentConfig.sampleRate;
-
-    // Remember if stream was running
-    m_wasRunning = isStreamRunning();
-
-    // Stop and close current stream
-    if (m_wasRunning) {
-        stopStream();
-    }
-    closeStream();
-
-    // Wait for device to fully release (helps avoid AUDCLNT_E_DEVICE_IN_USE race conditions)
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Update configuration with new sample rate
-    m_currentConfig.sampleRate = sampleRate;
-
-    // Reopen stream with new sample rate
-    if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        Aestra::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " +
-                           std::to_string(sampleRate) + ", rolling back to " + std::to_string(previousSampleRate));
-
-        // Rollback to previous sample rate
-        m_currentConfig.sampleRate = previousSampleRate;
-
-        // Try to restore previous working state
-        if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-            Aestra::Log::error("[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!");
-            return false;
+            m_currentConfig.sampleRate = sampleRate;
+            if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                Aestra::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " +
+                                   std::to_string(sampleRate) + ", rolling back to " +
+                                   std::to_string(previousSampleRate));
+                m_currentConfig.sampleRate = previousSampleRate;
+                if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    Aestra::Log::error("[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!");
+                } else if (m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
+            } else {
+                result = (!m_wasRunning) || startStreamLocked();
+            }
         }
-
-        // If we successfully rolled back, restart if needed
-        if (m_wasRunning) {
-            startStream();
-        }
-
-        return false; // Still return false because the requested change failed
     }
-
-    // Restart stream if it was running
-    if (m_wasRunning) {
-        return startStream();
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
     }
-
-    return true;
+    return result;
 }
 
 bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
-    if (!m_initialized) {
-        return false;
-    }
+    stopHealthMonitor();
+    bool result;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_initialized) {
+            result = false;
+        } else if (m_currentConfig.bufferSize == bufferSize) {
+            AESTRA_LOG_DEBUG("Buffer size unchanged (" + std::to_string(bufferSize) + "), skipping reopen");
+            result = true;
+        } else if (bufferSize < 64 || bufferSize > 8192) {
+            result = false;
+        } else {
+            const uint32_t previousBufferSize = m_currentConfig.bufferSize;
+            m_wasRunning = isStreamRunningLocked();
+            if (m_wasRunning) {
+                stopStreamLocked();
+            }
+            closeStreamLocked();
 
-    // Skip if already set
-    if (m_currentConfig.bufferSize == bufferSize) {
-        AESTRA_LOG_DEBUG("Buffer size unchanged (" + std::to_string(bufferSize) + "), skipping reopen");
-        return true;
-    }
-
-    // Validate buffer size (reasonable range: 64 to 8192 frames)
-    if (bufferSize < 64 || bufferSize > 8192) {
-        return false;
-    }
-
-    // Save previous buffer size for rollback
-    uint32_t previousBufferSize = m_currentConfig.bufferSize;
-
-    // Remember if stream was running
-    m_wasRunning = isStreamRunning();
-
-    // Stop and close current stream
-    if (m_wasRunning) {
-        stopStream();
-    }
-    closeStream();
-
-    // Update configuration with new buffer size
-    m_currentConfig.bufferSize = bufferSize;
-
-    // Reopen stream with new buffer size
-    if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        AESTRA_LOG_ERROR("[AudioDeviceManager] Failed to reopen stream with buffer size " + std::to_string(bufferSize) +
-                  ", rolling back to " + std::to_string(previousBufferSize));
-
-        // Rollback to previous buffer size
-        m_currentConfig.bufferSize = previousBufferSize;
-
-        // Try to restore previous working state
-        if (!openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-            AESTRA_LOG_ERROR("[AudioDeviceManager] CRITICAL: Failed to restore previous buffer size!");
-            return false;
+            m_currentConfig.bufferSize = bufferSize;
+            if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                AESTRA_LOG_ERROR("[AudioDeviceManager] Failed to reopen stream with buffer size " +
+                                 std::to_string(bufferSize) + ", rolling back to " +
+                                 std::to_string(previousBufferSize));
+                m_currentConfig.bufferSize = previousBufferSize;
+                if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    AESTRA_LOG_ERROR("[AudioDeviceManager] CRITICAL: Failed to restore previous buffer size!");
+                } else if (m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
+            } else {
+                result = (!m_wasRunning) || startStreamLocked();
+            }
         }
-
-        // If we successfully rolled back, restart if needed
-        if (m_wasRunning) {
-            startStream();
-        }
-
-        return false; // Still return false because the requested change failed
     }
-
-    // Restart stream if it was running
-    if (m_wasRunning) {
-        return startStream();
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
     }
-
-    return true;
+    return result;
 }
 
-bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sampleRate) const {
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
+bool AudioDeviceManager::validateDeviceConfigLocked(uint32_t deviceId, uint32_t sampleRate) const {
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Not initialized");
         return false;
     }
 
-    auto devices = getDevices();
-
-    // Find the device
+    const auto devices = getDevicesLocked();
     for (const auto& device : devices) {
         if (device.id == deviceId) {
-            // Check if device has output channels
             if (device.maxOutputChannels == 0) {
                 Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device has 0 output channels");
                 return false;
             }
-
-            // Check if sample rate is supported
-            bool sampleRateSupported = false;
-            std::string supportedRatesStr;
             for (uint32_t supportedRate : device.supportedSampleRates) {
-                supportedRatesStr += std::to_string(supportedRate) + " ";
                 if (supportedRate == sampleRate) {
-                    sampleRateSupported = true;
-                    break;
+                    return true;
                 }
             }
-
-            if (!sampleRateSupported) {
-                // Log as warning but ALLOW it.
-                // Some drivers (e.g. WASAPI Exclusive on certain virtual devices) report empty/incorrect supported
-                // lists during enumeration but work fine when actually opened. We let openStream() be the final judge.
-                Aestra::Log::warning("[AudioDeviceManager] Sample rate " + std::to_string(sampleRate) +
-                                     " not in supported list (Driver Issue?), attempting anyway...");
-                return true;
-            }
-            return sampleRateSupported;
+            // Some drivers report empty/incorrect supported lists during enumeration
+            // but work when actually opened. Warn but allow; openStream is final judge.
+            Aestra::Log::warning("[AudioDeviceManager] Sample rate " + std::to_string(sampleRate) +
+                                 " not in supported list (Driver Issue?), attempting anyway...");
+            return true;
         }
     }
 
     Aestra::Log::error("[AudioDeviceManager] validateDeviceConfig failed: Device ID " + std::to_string(deviceId) +
                        " not found");
-    return false; // Device not found
+    return false;
 }
 
-bool AudioDeviceManager::validateStreamConfig(const AudioStreamConfig& config) const {
-    if (!validateDeviceConfig(config.deviceId, config.sampleRate)) {
+bool AudioDeviceManager::validateDeviceConfig(uint32_t deviceId, uint32_t sampleRate) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return validateDeviceConfigLocked(deviceId, sampleRate);
+}
+
+bool AudioDeviceManager::validateStreamConfigLocked(const AudioStreamConfig& config) const {
+    if (!validateDeviceConfigLocked(config.deviceId, config.sampleRate)) {
         return false;
     }
 
@@ -572,103 +573,93 @@ bool AudioDeviceManager::validateStreamConfig(const AudioStreamConfig& config) c
         return true;
     }
 
-    auto devices = getDevices();
+    const auto devices = getDevicesLocked();
     const uint32_t inputDeviceId = (config.inputDeviceId != 0) ? config.inputDeviceId : config.deviceId;
     for (const auto& device : devices) {
         if (device.id != inputDeviceId) {
             continue;
         }
-
         if (device.maxInputChannels == 0) {
             Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Input device has 0 input channels");
             return false;
         }
-
         if (config.numInputChannels > device.maxInputChannels) {
-            Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Requested input channels exceed device capacity");
+            Aestra::Log::error(
+                "[AudioDeviceManager] validateStreamConfig failed: Requested input channels exceed device capacity");
             return false;
         }
-
         return true;
     }
 
-    Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Input device ID " + std::to_string(inputDeviceId) +
-                       " not found");
+    Aestra::Log::error("[AudioDeviceManager] validateStreamConfig failed: Input device ID " +
+                       std::to_string(inputDeviceId) + " not found");
     return false;
 }
 
+// ---------------------------------------------------------------------------
+// Driver type / statistics
+// ---------------------------------------------------------------------------
+
 AudioDriverType AudioDeviceManager::getActiveDriverType() const {
-    if (m_activeDriver) {
-        return m_activeDriver->getDriverType();
-    }
-    return AudioDriverType::UNKNOWN;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDriver ? m_activeDriver->getDriverType() : AudioDriverType::UNKNOWN;
 }
 
 DriverStatistics AudioDeviceManager::getDriverStatistics() const {
-    if (m_activeDriver) {
-        return m_activeDriver->getStatistics();
-    }
-    return DriverStatistics();
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDriver ? m_activeDriver->getStatistics() : DriverStatistics();
 }
 
 bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
-    if (!m_initialized) {
-        AESTRA_LOG_ERROR("Cannot set driver type: not initialized");
-        return false;
-    }
+    stopHealthMonitor();
+    bool result;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_initialized) {
+            AESTRA_LOG_ERROR("Cannot set driver type: not initialized");
+            result = false;
+        } else if (m_preferredDriverType == type) {
+            result = true; // no-op; avoids redundant reopen during UI population
+        } else {
+            AESTRA_LOG_DEBUG("Changing driver type");
+            m_preferredDriverType = type;
 
-    // Skip if already set — prevents redundant reopens during UI population
-    if (m_preferredDriverType == type) {
-        return true;
-    }
+            if (m_activeDriver && m_currentCallback) {
+                const bool wasRunning = isStreamRunningLocked();
+                auto savedCallback = m_currentCallback;
+                auto savedUserData = m_currentUserData;
+                auto savedConfig = m_currentConfig;
 
-    // Only support WASAPI types for now (conceptually)
-    // In our new generic model, we just store the preference.
-    // Real switching happens in openStream.
-    AESTRA_LOG_DEBUG("Changing driver type");
+                if (wasRunning) {
+                    stopStreamLocked();
+                }
+                closeStreamLocked();
 
-    m_preferredDriverType = type;
-
-    // If stream is open, reopen with new driver preference
-    if (m_activeDriver && m_currentCallback) {
-        bool wasRunning = isStreamRunning();
-
-        // Save callback and user data before closing (closeStream clears them!)
-        auto savedCallback = m_currentCallback;
-        auto savedUserData = m_currentUserData;
-        auto savedConfig = m_currentConfig;
-
-        if (wasRunning) {
-            stopStream();
-        }
-        closeStream();
-
-        // Reopen with preferred driver - this will try preferred first, then fallback
-        bool success = openStream(savedConfig, savedCallback, savedUserData);
-
-        if (!success) {
-            AESTRA_LOG_ERROR("Failed to reopen stream with any driver");
-            return false;
-        }
-
-        if (wasRunning) {
-            if (!startStream()) {
-                AESTRA_LOG_ERROR("Failed to restart stream");
-                return false;
+                if (!openStreamLocked(savedConfig, savedCallback, savedUserData)) {
+                    AESTRA_LOG_ERROR("Failed to reopen stream with any driver");
+                    result = false;
+                } else if (wasRunning && !startStreamLocked()) {
+                    AESTRA_LOG_ERROR("Failed to restart stream");
+                    result = false;
+                } else {
+                    result = true;
+                }
+            } else {
+                result = true;
             }
         }
-
-        return true;
     }
-
-    return true;
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
+    }
+    return result;
 }
 
 bool AudioDeviceManager::isDriverTypeAvailable(AudioDriverType type) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_initialized) {
         return false;
     }
-
     for (const auto& driver : m_drivers) {
         if (driver->getDriverType() == type) {
             return driver->isAvailable();
@@ -678,27 +669,30 @@ bool AudioDeviceManager::isDriverTypeAvailable(AudioDriverType type) const {
 }
 
 std::vector<AudioDriverType> AudioDeviceManager::getAvailableDriverTypes() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::vector<AudioDriverType> types;
-
     for (const auto& driver : m_drivers) {
         if (driver && driver->isAvailable()) {
             types.push_back(driver->getDriverType());
         }
     }
-
     return types;
 }
 
 bool AudioDeviceManager::isUsingFallbackDriver() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_activeDriver) {
         return false;
     }
-
-    AudioDriverType activeType = getActiveDriverType();
-    return activeType != m_preferredDriverType;
+    return m_activeDriver->getDriverType() != m_preferredDriverType;
 }
 
+// ---------------------------------------------------------------------------
+// Auto-buffer scaling + driver health
+// ---------------------------------------------------------------------------
+
 void AudioDeviceManager::setAutoBufferScaling(bool enable, uint32_t underrunsPerMinuteThreshold) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_autoBufferScalingEnabled = enable;
     m_underrunThreshold = underrunsPerMinuteThreshold;
     m_lastUnderrunCheck = std::chrono::steady_clock::now();
@@ -706,131 +700,82 @@ void AudioDeviceManager::setAutoBufferScaling(bool enable, uint32_t underrunsPer
 
     if (enable) {
         AESTRA_LOG_DEBUG("Auto-buffer scaling enabled, threshold: " + std::to_string(underrunsPerMinuteThreshold) +
-                  " underruns/minute");
+                         " underruns/minute");
     }
 }
 
 void AudioDeviceManager::checkAndAutoScaleBuffer() {
-    checkDriverHealth();
+    // Reconfigures the stream when underruns spike, so — like the other
+    // transactions — it must not run while the health monitor might be joining or
+    // reconfiguring. Callers must invoke this from the app/main loop, never from
+    // the health-monitor thread. Join the monitor up front, work under the lock,
+    // then fire any captured callback and restart the monitor outside the lock.
+    stopHealthMonitor();
 
-    if (!m_autoBufferScalingEnabled || !m_activeDriver || !isStreamRunning()) {
-        return;
-    }
+    PendingModeChange pending;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        checkDriverHealthLocked(pending);
 
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUnderrunCheck);
+        if (m_autoBufferScalingEnabled && m_activeDriver && isStreamRunningLocked()) {
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUnderrunCheck);
+            if (elapsed.count() >= 60) {
+                const DriverStatistics stats = m_activeDriver->getStatistics();
+                const uint64_t newUnderruns = stats.underrunCount - m_lastUnderrunCount;
 
-    // Check every 60 seconds
-    if (elapsed.count() < 60) {
-        return;
-    }
+                if (newUnderruns >= m_underrunThreshold) {
+                    const uint32_t currentBuffer = m_currentConfig.bufferSize;
+                    uint32_t newBuffer = currentBuffer;
+                    if (currentBuffer < 128) {
+                        newBuffer = 128;
+                    } else if (currentBuffer < 256) {
+                        newBuffer = 256;
+                    } else if (currentBuffer < 512) {
+                        newBuffer = 512;
+                    } else if (currentBuffer < 1024) {
+                        newBuffer = 1024;
+                    }
 
-    DriverStatistics stats = m_activeDriver->getStatistics();
-    uint64_t newUnderruns = stats.underrunCount - m_lastUnderrunCount;
+                    if (newBuffer != currentBuffer) {
+                        const bool wasRunning = isStreamRunningLocked();
+                        if (wasRunning) {
+                            stopStreamLocked();
+                        }
+                        closeStreamLocked();
+                        // Roll back like setBufferSize: on reopen failure, restore the
+                        // previous size so m_currentConfig never advertises a buffer
+                        // with no live stream behind it (CR review, #391 coherence).
+                        const uint32_t previousBuffer = m_currentConfig.bufferSize;
+                        m_currentConfig.bufferSize = newBuffer;
+                        if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                            if (wasRunning) {
+                                startStreamLocked();
+                            }
+                        } else {
+                            m_currentConfig.bufferSize = previousBuffer;
+                            if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) &&
+                                wasRunning) {
+                                startStreamLocked();
+                            }
+                        }
+                    }
+                }
 
-    // std::cout << "[Auto-Buffer Scaling] Check - Underruns in last minute: " << newUnderruns << std::endl;
-
-    if (newUnderruns >= m_underrunThreshold) {
-        // Need to scale up buffer
-        uint32_t currentBuffer = m_currentConfig.bufferSize;
-        uint32_t newBuffer = currentBuffer;
-
-        // Scale: 64->128->256->512->1024
-        if (currentBuffer < 128) {
-            newBuffer = 128;
-        } else if (currentBuffer < 256) {
-            newBuffer = 256;
-        } else if (currentBuffer < 512) {
-            newBuffer = 512;
-        } else if (currentBuffer < 1024) {
-            newBuffer = 1024;
-        } else {
-            // std::cerr << "[Auto-Buffer Scaling] Already at maximum buffer size (1024)" << std::endl;
-            m_lastUnderrunCheck = now;
-            m_lastUnderrunCount = stats.underrunCount;
-            return;
-        }
-
-        // std::cout << "[Auto-Buffer Scaling] Too many underruns (" << newUnderruns << "/" << m_underrunThreshold
-        //           << ") - increasing buffer: " << currentBuffer << " -> " << newBuffer << " frames" << std::endl;
-
-        // Update buffer size and restart stream
-        bool wasRunning = isStreamRunning();
-        if (wasRunning) {
-            stopStream();
-        }
-
-        closeStream();
-        m_currentConfig.bufferSize = newBuffer;
-
-        if (openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-            if (wasRunning) {
-                startStream();
+                m_lastUnderrunCheck = now;
+                m_lastUnderrunCount = stats.underrunCount;
             }
-            // std::cout << "[Auto-Buffer Scaling] Buffer increased successfully. New latency: "
-            //           << getStreamLatency() * 1000.0 << "ms" << std::endl;
-        } else {
-            // std::cerr << "[Auto-Buffer Scaling] Failed to reopen stream with new buffer size" << std::endl;
         }
     }
-
-    m_lastUnderrunCheck = now;
-    m_lastUnderrunCount = stats.underrunCount;
-}
-
-void AudioDeviceManager::checkDriverHealth() {
-    if (!m_activeDriver || !isStreamRunning() || m_activeDriver->getDriverType() == AudioDriverType::DUMMY) {
-        return;
-    }
-
-    DriverStatistics stats = m_activeDriver->getStatistics();
-    auto now = std::chrono::steady_clock::now();
-
-    static uint64_t lastCount = 0;
-    static auto lastUpdateTime = now;
-
-    if (stats.callbackCount != lastCount) {
-        lastCount = stats.callbackCount;
-        lastUpdateTime = now;
-    } else {
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdateTime).count();
-        if (elapsed > 2000) {
-            Aestra::Log::error("[AudioDeviceManager] DRIVER STALL DETECTED (" + m_activeDriver->getDisplayName() + "), switching to safety driver");
-            switchToSafetyDriver();
-            lastUpdateTime = now;
-        }
+    fireModeChange(pending);
+    if (isStreamRunning()) {
+        startHealthMonitorIfStopped();
     }
 }
 
-void AudioDeviceManager::healthMonitorLoop() {
-    while (m_healthMonitorRunning.load(std::memory_order_acquire)) {
-        checkDriverHealth();
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-}
-
-void AudioDeviceManager::startHealthMonitor() {
-    if (m_healthMonitorRunning.load(std::memory_order_acquire)) {
-        return;
-    }
-    m_healthMonitorRunning.store(true, std::memory_order_release);
-    m_healthMonitorThread = std::thread(&AudioDeviceManager::healthMonitorLoop, this);
-}
-
-void AudioDeviceManager::stopHealthMonitor() {
-    if (!m_healthMonitorRunning.load(std::memory_order_acquire)) {
-        return;
-    }
-    m_healthMonitorRunning.store(false, std::memory_order_release);
-    if (m_healthMonitorThread.joinable()) {
-        m_healthMonitorThread.join();
-    }
-}
-
-bool AudioDeviceManager::switchToSafetyDriver() {
+bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPending) {
     AESTRA_LOG_WARNING("Attempting emergency fallback to Dummy driver");
 
-    // 1. Find the dummy driver
     IAudioDriver* dummy = nullptr;
     for (auto& driver : m_drivers) {
         if (driver->getDriverType() == AudioDriverType::DUMMY) {
@@ -838,47 +783,161 @@ bool AudioDeviceManager::switchToSafetyDriver() {
             break;
         }
     }
-
     if (!dummy) {
         AESTRA_LOG_ERROR("[AudioDeviceManager] Critical failure: no dummy driver available for fallback");
         return false;
     }
 
-    // 2. Stop and close the current (likely broken) driver
     if (m_activeDriver) {
-        // Use a try-catch or just be very careful here as the driver might be in a bad state
         try {
             m_activeDriver->stopStream();
             m_activeDriver->closeStream();
         } catch (const std::exception& e) {
-            // Driver in bad state - log and continue cleanup
             AESTRA_LOG_WARNING("Error closing audio driver: " + std::string(e.what()));
         }
         m_activeDriver = nullptr;
     }
 
-    // 3. Open dummy with existing configuration
     if (dummy->openStream(m_currentConfig, m_currentCallback, m_currentUserData)) {
-        m_activeDriver = dummy;
         if (dummy->startStream()) {
+            m_activeDriver = dummy;
             AESTRA_LOG_WARNING("Safety fallback ACTIVE — audio engine still running");
-
-            if (m_driverModeChangeCallback) {
-                m_driverModeChangeCallback(m_preferredDriverType, AudioDriverType::DUMMY,
-                                           "Hardware stall/disconnect: fallback to safety driver");
-            }
+            // Capture the notification; the caller fires it after unlocking so the
+            // callback can safely re-enter a manager getter (#391 constraint 6).
+            outPending.valid = static_cast<bool>(m_driverModeChangeCallback);
+            outPending.preferred = m_preferredDriverType;
+            outPending.actual = AudioDriverType::DUMMY;
+            outPending.reason = "Hardware stall/disconnect: fallback to safety driver";
             return true;
         }
+        // Opened but could not start: close it and leave no active driver rather
+        // than a half-live dummy (CR review, #391 coherence). m_activeDriver stays
+        // null (cleared above), so no silent driver change is reported.
+        dummy->closeStream();
     }
-
+    m_activeDriver = nullptr;
     return false;
 }
 
+bool AudioDeviceManager::switchToSafetyDriver() {
+    PendingModeChange pending;
+    bool ok;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        ok = switchToSafetyDriverLocked(pending);
+    }
+    fireModeChange(pending);
+    return ok;
+}
+
+void AudioDeviceManager::checkDriverHealthLocked(PendingModeChange& outPending) {
+    if (!m_activeDriver || !isStreamRunningLocked() || m_activeDriver->getDriverType() == AudioDriverType::DUMMY) {
+        return;
+    }
+
+    const DriverStatistics stats = m_activeDriver->getStatistics();
+    const auto now = std::chrono::steady_clock::now();
+
+    if (!m_healthTrackingInitialized || stats.callbackCount != m_healthLastCallbackCount) {
+        m_healthLastCallbackCount = stats.callbackCount;
+        m_healthLastUpdateTime = now;
+        m_healthTrackingInitialized = true;
+        return;
+    }
+
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_healthLastUpdateTime).count();
+    if (elapsed > 2000) {
+        Aestra::Log::error("[AudioDeviceManager] DRIVER STALL DETECTED (" + m_activeDriver->getDisplayName() +
+                           "), switching to safety driver");
+        switchToSafetyDriverLocked(outPending);
+        m_healthLastUpdateTime = now;
+    }
+}
+
+void AudioDeviceManager::checkDriverHealth() {
+    PendingModeChange pending;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        checkDriverHealthLocked(pending);
+    }
+    fireModeChange(pending); // outside the lock (#391 constraint 6)
+}
+
+void AudioDeviceManager::fireModeChange(const PendingModeChange& pending) const {
+    if (!pending.valid) {
+        return;
+    }
+    // m_driverModeChangeCallback is read under the lock in the capturing path;
+    // here we only fire what was captured. A concurrent setDriverModeChangeCallback
+    // cannot tear this call because we invoke the local target snapshot.
+    DriverModeChangeCallback cb;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        cb = m_driverModeChangeCallback;
+    }
+    if (cb) {
+        cb(pending.preferred, pending.actual, pending.reason);
+    }
+}
+
+void AudioDeviceManager::healthMonitorLoop() {
+    while (m_healthMonitorRunning.load(std::memory_order_acquire)) {
+        checkDriverHealth(); // locks internally; fires callback outside the lock
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+}
+
+void AudioDeviceManager::startHealthMonitorIfStopped() {
+    // Guarded by m_healthMonitorMutex (the monitor lifecycle lock), NOT m_mutex:
+    // this serializes concurrent start/stop from different transaction threads and
+    // protects the thread handle. The spawned loop acquires m_mutex itself.
+    std::lock_guard<std::mutex> lock(m_healthMonitorMutex);
+    if (m_healthMonitorRunning.load(std::memory_order_acquire)) {
+        return;
+    }
+    if (m_healthMonitorThread.joinable()) {
+        m_healthMonitorThread.join(); // reap a previously-stopped run
+    }
+    m_healthMonitorRunning.store(true, std::memory_order_release);
+    m_healthMonitorThread = std::thread(&AudioDeviceManager::healthMonitorLoop, this);
+}
+
+void AudioDeviceManager::startHealthMonitor() {
+    startHealthMonitorIfStopped();
+}
+
+void AudioDeviceManager::stopHealthMonitor() {
+    // Lock-free w.r.t. m_mutex by contract (#391 constraint 5): never called while
+    // m_mutex is held. Uses only the lifecycle lock, so joining here cannot
+    // deadlock against the monitor thread (which only wants m_mutex).
+    std::lock_guard<std::mutex> lock(m_healthMonitorMutex);
+    m_healthMonitorRunning.store(false, std::memory_order_release);
+    if (m_healthMonitorThread.joinable()) {
+        m_healthMonitorThread.join();
+    }
+}
+
 void AudioDeviceManager::setDitheringEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_ditherEnabled = enabled;
     if (m_activeDriver) {
         m_activeDriver->setDitheringEnabled(enabled);
     }
+}
+
+bool AudioDeviceManager::isDitheringEnabled() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_ditherEnabled;
+}
+
+std::string AudioDeviceManager::getFallbackReason() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_fallbackReason;
+}
+
+void AudioDeviceManager::setDriverModeChangeCallback(DriverModeChangeCallback callback) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_driverModeChangeCallback = std::move(callback);
 }
 
 const char* getVersion() {

@@ -117,8 +117,14 @@ private:
     // Layout & Scrolling
     float m_scrollY = 0.0f;
     float m_targetScrollY = 0.0f;
+    float m_gridScrollX = 0.0f; // Shared horizontal step-grid scroll (header + all rows)
+    bool m_gridFollowSuspended = false; // User scrolled away while playing; stop chasing them
+    bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
+    void scrollGridBy(float deltaPx); // Clamp + broadcast the shared grid scroll
+    float computeGridMaxScrollX() const;
+    void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 52.0f;
@@ -127,6 +133,8 @@ private:
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
+    int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
+    int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
     void createUnitOfType(UnitType type);
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
@@ -171,8 +179,10 @@ private:
     bool m_dropTargetRegistered = false;
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
+    AestraUI::NUIRect m_fitToggleRect{};
     AestraUI::NUIRect m_commandHeaderRect{};
     AestraUI::NUIRect m_progressHeaderRect{};
+    AestraUI::NUIRect m_listViewportRect{}; // Visible area for unit rows (scroll clip + hit-test)
     AestraUI::NUIRect m_unitTypePickerRect{};
     AestraUI::NUIRect m_barsDecrementRect{};
     AestraUI::NUIRect m_barsValueRect{};

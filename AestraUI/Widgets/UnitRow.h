@@ -47,6 +47,8 @@ public:
      * @brief Refresh cached unit state from the backing managers.
      */
     void updateState();
+    /** @brief Route this unit to the first unused mixer insert, creating one when needed. */
+    bool routeToFirstFreeMixerChannel();
 
     /** @brief Callback fired when row dragging begins. */
     std::function<void(Aestra::Audio::UnitID)> m_onDragStart;
@@ -90,13 +92,48 @@ public:
      * @brief Set the visible step count for the sequencer section.
      * @param count Number of step pads to render.
      */
-    void setStepCount(int count) { m_stepCount = count; invalidateVisuals(); }
+    void setStepCount(int count);
+
+    /**
+     * @brief Choose whether the grid fits the whole loop to width or keeps a
+     *        readable minimum pad size and scrolls. Owned by the panel so all
+     *        rows + the header agree.
+     * @param fit True to fit the entire loop (pads shrink, no scroll).
+     */
+    void setFitToWidth(bool fit);
     /**
      * @brief Get the visible step count for the sequencer section.
      * @return Number of rendered steps.
      */
     int getStepCount() const { return m_stepCount; }
     
+    /**
+     * @brief Set the horizontal grid scroll offset (shared across rows by the panel).
+     * @param x Scroll offset in pixels (>= 0).
+     */
+    void setScrollX(float x) {
+        x = x < 0.0f ? 0.0f : x;
+        if (x != m_scrollX) { m_scrollX = x; invalidateVisuals(); }
+    }
+    /**
+     * @brief Get the horizontal grid scroll offset.
+     * @return Scroll offset in pixels.
+     */
+    float getScrollX() const { return m_scrollX; }
+    /**
+     * @brief Set the callback fired when the user wheel-scrolls the step grid.
+     * When set, the panel owns the scroll offset and pushes it back via setScrollX
+     * so every row (and the progress header) stays in lockstep.
+     * @param cb Callback receiving the requested scroll delta in pixels.
+     */
+    void setOnGridScroll(std::function<void(float)> cb) { m_onGridScroll = std::move(cb); }
+    /**
+     * @brief Restrict rendering and hit-testing to the panel's list viewport.
+     * Rows partially outside are clipped; rows fully outside skip rendering and
+     * ignore pointer events. An empty rect disables the restriction.
+     * @param viewport Viewport rect in window-absolute coordinates.
+     */
+    void setViewport(const NUIRect& viewport) { m_viewport = viewport; }
     /**
      * @brief Get the unit identifier represented by this row.
      * @return Backing unit identifier.
@@ -124,6 +161,7 @@ private:
     uint32_t m_color;
     Aestra::Audio::UnitGroup m_group;
     Aestra::Audio::UnitType m_type{Aestra::Audio::UnitType::Sampler};
+    int m_rootMidiNote = 60; // Pitch that plays the unit's sample untransposed
     bool m_isEnabled = true;
     bool m_isArmed = false;
     bool m_isMuted = false;
@@ -134,11 +172,14 @@ private:
     std::string m_groupLabel;
     double m_audioDurationSeconds = 0.0;
     std::vector<float> m_audioPreviewWaveform;
-    int m_mixerChannel = -1;
+    uint32_t m_mixerChannelId = Aestra::Audio::MASTER_MIXER_CHANNEL_ID;
+    std::string m_mixerRouteShortLabel{"M"};
 
     // === Internal State ===
     void layoutNameLabel();
     void showRowContextMenu(const NUIPoint& pos);
+    void showMixerRoutingMenu(const NUIPoint& pos);
+    void routeToMixerChannel(uint32_t channelId);
     void showDeleteConfirmation(const NUIPoint& pos);
 
     // === Layout Constants (Premium v2) ===
@@ -155,7 +196,17 @@ private:
     
     // Step sequencer
     int m_stepCount = 16;
+    bool m_fitToWidth = true; // Fit whole loop vs readable-min + scroll
     float m_scrollX = 0.0f;
+
+    // Pad width for the current fit mode: fit shrinks to show every step,
+    // scroll mode keeps a readable minimum and lets m_scrollX page the grid.
+    float gridStepWidth(float availWidth) const {
+        const float w = availWidth / static_cast<float>(std::max(1, m_stepCount));
+        return m_fitToWidth ? std::max(w, 4.0f) : std::max(w, PAD_MIN_SIZE);
+    }
+    std::function<void(float)> m_onGridScroll; // Panel-owned shared scroll (see setOnGridScroll)
+    NUIRect m_viewport{}; // Panel list viewport; empty = unrestricted
     int m_hoveredStep = -1;
     
     // Minimap pitch scroll
@@ -167,9 +218,17 @@ private:
     bool m_isSelected = false;
     bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
-    bool m_isStepEditing = false;
-    int m_stepEditStart = -1;
-    int m_stepEditEndExclusive = -1;
+
+    // Velocity-drag session (Sampler step grid). A press arms a step; a
+    // vertical drag sets its velocity, a click without vertical movement
+    // toggles the step (place empty / remove active) on release.
+    static constexpr float kDefaultStepVelocity = 100.0f / 127.0f;
+    static constexpr float kMinStepVelocity = 0.05f;
+    int m_velEditStep = -1;         // -1 = no session
+    float m_velEditStartY = 0.0f;   // pointer Y at press
+    float m_velEditBaseVelocity = kDefaultStepVelocity;
+    bool m_velEditMoved = false;    // crossed the drag threshold → velocity edit
+    bool m_velEditWasActive = false; // step already had a note at press
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
 
@@ -179,9 +238,21 @@ private:
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);
     void drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds);
     bool shouldUseNoteRoll() const;
+    // Current playhead position within the active pattern (looped), in beats.
+    // Returns -1 when the transport is not driving the Arsenal (not pattern
+    // mode) so callers can skip the live-step highlight. Mirrors the Arsenal
+    // progress-header playhead so the row highlight stays in sync with it.
+    double playheadBeatInPattern() const;
 
     void handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds);
     void handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds);
+
+    // Sampler step-grid note helpers (root pitch, single step). Each returns
+    // true if the pattern changed.
+    bool stepHasNote(int step, float& velocityOut) const; // true if a note exists at step
+    bool placeStepNote(int step);                          // place at root + default velocity
+    bool removeStepNote(int step);                         // remove note at step
+    void setStepNoteVelocity(int step, float velocity);    // set velocity of note at step
 
     // Icon drawing helpers
     void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
@@ -193,6 +264,7 @@ private:
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;
     std::shared_ptr<NUIContextMenu> m_rowContextMenu;
+    std::shared_ptr<NUIContextMenu> m_mixerRoutingMenu;
 
     // Cache management
     bool m_needsCacheUpdate = true;

@@ -153,7 +153,7 @@ struct NUIThemeProperties {
     float spacingXXL = 48.0f;
     
     // Border radius — "dense instrument" scale, recentered onto the 5-7px
-    // mass the UI actually uses (see AestraDocs/ui-type-space-grammar.md).
+    // mass the UI actually uses (see Aestra-Internals: aestra-docs/ui-type-space-grammar.md).
     float radiusXS = 3.0f;
     float radiusS = 5.0f;
     float radiusM = 7.0f;
@@ -238,6 +238,11 @@ struct NUIThemeProperties {
         float transportBarHeight = 56.0f;
         float transportButtonSize = 28.0f;
         float transportButtonSpacing = 8.0f;
+
+        // Application chrome dimensions
+        float titleBarHeight = 32.0f;
+        float viewToggleWidth = 310.0f;
+        float viewToggleHeight = 24.0f;
 
         // Control button dimensions
         float controlButtonWidth = 32.0f;

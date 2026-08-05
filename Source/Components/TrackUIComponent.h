@@ -4,6 +4,7 @@
 #include "MixerChannel.h"
 #include "ClipInstance.h"
 #include "PlaylistModel.h"
+#include "TimelineInteractionPolicy.h"
 #include "WaveformCache.h"
 
 #include "NUIComponent.h"
@@ -80,10 +81,15 @@ public:
     // Callback for clip selection
     void setOnClipSelected(std::function<void(TrackUIComponent*, ClipInstanceID)> callback) { m_onClipSelectedCallback = callback; }
     void setOnPatternClipOpenRequested(std::function<void(PatternID)> callback) { m_onPatternClipOpenRequested = std::move(callback); }
+    void setOnAudioClipOpenRequested(std::function<void(ClipInstanceID)> callback) {
+        m_onAudioClipOpenRequested = std::move(callback);
+    }
     void setOnPatternClipDragStarted(std::function<void(PatternID)> callback) { m_onPatternClipDragStarted = std::move(callback); }
 
     // Callback for track selection
-    void setOnTrackSelected(std::function<void(TrackUIComponent*, bool)> callback) { m_onTrackSelectedCallback = callback; }
+    void setOnTrackSelected(std::function<void(TrackUIComponent*, TrackSelectionIntent)> callback) {
+        m_onTrackSelectedCallback = std::move(callback);
+    }
 
     // Audition integration
     void setOnSendToAudition(std::function<void()> callback) { m_onSendToAuditionCallback = callback; }
@@ -95,6 +101,15 @@ public:
     // Selection state
     void setSelected(bool selected) { m_selected = selected; }
     bool isSelected() const { return m_selected; }
+    void setSelectedClipId(ClipInstanceID clipId) {
+        if (m_selectedClipId != clipId) {
+            m_selectedClipId = clipId;
+            setDirty(true);
+        }
+    }
+    ClipInstanceID getSelectedClipId() const { return m_selectedClipId; }
+    /** @brief Supply the parent-computed Playlist solo aggregate for this render pass. */
+    void setAnyPlaylistLaneSoloed(bool anySoloed) { m_anyPlaylistLaneSoloed = anySoloed; }
     
     // View mode support (v3.1)
     void setPlaylistMode(PlaylistMode mode) {
@@ -156,7 +171,9 @@ protected:
 private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
+    ClipInstanceID m_selectedClipId; // Persistent clip selection supplied by TrackManagerUI
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
+    bool m_anyPlaylistLaneSoloed = false;
     bool m_isLoading = false;
     float m_loadProgress = 0.0f;
 
@@ -170,8 +187,9 @@ private:
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
+    std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
     std::function<void(PatternID)> m_onPatternClipDragStarted;
-    std::function<void(TrackUIComponent*, bool)> m_onTrackSelectedCallback;
+    std::function<void(TrackUIComponent*, TrackSelectionIntent)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 
     
@@ -242,6 +260,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_soloButton;
     std::shared_ptr<AestraUI::NUIButton> m_recordButton;
     std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_clipRoutingMenu;
 
     // Volume Knob (replaces route button)
     float m_volumeKnobValue = 1.0f;
@@ -297,6 +316,9 @@ private:
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
     void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
                                 const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+    // Header scrim + label, drawn AFTER the waveform so it stays readable over it.
+    void drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                              const ClipInstance& clip);
 
     // Pattern clip rendering
     void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
@@ -316,6 +338,7 @@ private:
     // Playlist grid rendering
     void drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     
+    void showClipRoutingMenu(const ClipInstanceID& clipId, const AestraUI::NUIPoint& position);
     // Helper to draw a single clip (waveform + container) at calculated position
     void drawClipAtPosition(AestraUI::NUIRenderer& renderer, const ClipInstance& clip,
                            const AestraUI::NUIRect& bounds, float controlAreaWidth);

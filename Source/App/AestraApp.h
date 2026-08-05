@@ -7,16 +7,20 @@
 #include "AestraContent.h"
 #include "AestraWindowManager.h"
 #include "AutosaveManager.h"
+#include "Commands/MuseService.h"
+#include "Commands/MuseSocketServer.h"
+#include "ProjectDocumentState.h"
 #include "ProjectSerializer.h"
 
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 
 /**
  * @brief Main application class
- * 
+ *
  * Manages the lifecycle of all AESTRA subsystems and the main event loop.
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
@@ -45,31 +49,52 @@ public:
      * @brief Access content manager (needed for audio callbacks)
      */
     std::shared_ptr<AestraContent> getAestraContent() const { return m_content; }
-    Aestra::Audio::AudioEngine* getAudioEngine() const { return m_audioController ? m_audioController->getEngine() : nullptr; }
+    Aestra::Audio::AudioEngine* getAudioEngine() const {
+        return m_audioController ? m_audioController->getEngine() : nullptr;
+    }
 
-    // Helpers exposed for easier refactoring
-    static std::string getAppDataPath();
-    static std::string getAutosavePath();
-    static std::string getLegacyAutosavePath();
-    static std::string getCrashFlagPath();
+    // Helpers exposed for easier refactoring.
+    //
+    // These return std::nullopt rather than a substitute path when the app-data
+    // directory cannot be resolved. They used to fall back to the process
+    // working directory, which produced a different but equally valid-looking
+    // path that callers and the log could not distinguish from the real one —
+    // the mechanism behind both #675 defects. Callers must now decide what a
+    // missing app-data location means for them (#676).
+    static std::optional<std::string> getAppDataPath();
+    static std::optional<std::string> getAutosavePath();
+    static std::optional<std::string> getLegacyAutosavePath();
+    static std::optional<std::string> getCrashFlagPath();
     static void writeCrashFlag();
     static void clearCrashFlag();
     static bool isCrashedSession();
+    static std::optional<std::string> activeCrashFlagPath();
+
+    /// The autosave path, or an empty string when it cannot be resolved.
+    /// Empty disables autosave downstream (AutosaveManager treats an empty
+    /// override as "not set"), which is the correct degraded behaviour:
+    /// no autosave beats an autosave written somewhere unexpected.
+    static std::string autosavePathOrEmpty();
 
 private:
+    enum class ProjectLoadSource { Canonical, Recovery, Snapshot };
+
     // Initialization helpers (extracted from initialize() for readability)
     bool transitionToInitializing();
     bool initializePlatformAndWindow(const Aestra::UIState& uiState);
     bool initializeAudio();
     void initializeContent();
+    /// The one place the autosave interval is decided (#646). Both the initial
+    /// setup and reinitAutosaveManager() resolve through this.
+    std::chrono::seconds resolveAutosaveInterval();
     void initializeAutosave(bool enabled);
-    void buildRecoveryDialog();              // lightweight — needed during startup
+    void buildRecoveryDialog(); // lightweight — needed during startup
     // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
     bool shouldRenderThisFrame();
     std::chrono::steady_clock::time_point m_lastPresentedFrame{};
 
-    void buildSettingsAndDialogs();          // heavy — deferred until first open
-    void ensureSettingsAndDialogs();         // lazy guard
+    void buildSettingsAndDialogs();  // heavy — deferred until first open
+    void ensureSettingsAndDialogs(); // lazy guard
     void buildMenuBar();
     void initializePlugins();
     void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
@@ -80,16 +105,28 @@ private:
     void setupCallbacks();
     void connectAudioToUI();
     void finalizeAudioSetup(); // Deferred after window shown for instant startup
+    void applyPersistedEngineSettings(); // #649: startup owns DSP config, not the dialog
 
     // Project management
     void requestClose();
-    void saveCurrentProject();
-    ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride = "");
+    bool saveCurrentProject();
+    bool saveProjectAs();
+    ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path,
+                                                      ProjectLoadSource source = ProjectLoadSource::Canonical,
+                                                      const std::string& canonicalPath = "");
+    void beginProjectLoadAttempt();
+    void recordProjectLoadAttempt(const ProjectSerializer::LoadResult& result,
+                                  ProjectLoadSource source);
+    void clearProjectLoadReport();
+    ProjectSerializer::LoadResult applyLoadedProject(const std::string& path,
+                                                     ProjectLoadSource source,
+                                                     const std::string& canonicalPath,
+                                                     ProjectSerializer::LoadResult result);
     ProjectSerializer::LoadResult loadProject();
     bool saveProject();
-    bool saveProjectToPath(const std::string& path);
-    ProjectSerializer::SerializeResult serializeCurrentProject(int indentSpaces,
-                                                               const ProjectSerializer::UIState* uiState = nullptr) const;
+    bool saveProjectToPath(const std::string& path, bool establishCanonical = false);
+    ProjectSerializer::SerializeResult
+    serializeCurrentProject(int indentSpaces, const ProjectSerializer::UIState* uiState = nullptr) const;
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
     bool createTakeFromCurrentProject();
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
@@ -102,18 +139,28 @@ private:
     void startExport();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
-    void writeRecoveryMarkerForAutosave(const std::string& autosavePath) const;
+    static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,
+                                                       const std::string& expectedSessionToken);
+    void writeRecoveryMarkerForAutosave(const std::string& autosavePath, const std::string& canonicalProjectPath) const;
 
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
     std::unique_ptr<AestraAudioController> m_audioController;
+
+    // Muse socket entry (opt-in via AESTRA_MUSE_PORT): agents drive the live
+    // session through the same command system as the UI. Socket IO runs on
+    // its own thread; requests execute on the main thread once per frame.
+    std::unique_ptr<Aestra::Audio::MuseService> m_museService;
+    std::unique_ptr<Aestra::Audio::MuseSocketServer> m_museSocketServer;
+    std::optional<Aestra::JSON> m_projectLoadReport;
+    void startMuseSocketIfConfigured();
 
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;
 
     bool m_running;
     bool m_pendingClose{false};
-    std::string m_projectPath;
+    Aestra::ProjectDocumentState m_documentState;
 
     // Auto-save
     Aestra::Audio::AutosaveManager m_autoSaveManager;

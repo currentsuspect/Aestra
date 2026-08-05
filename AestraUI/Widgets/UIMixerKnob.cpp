@@ -6,6 +6,7 @@
 #include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 
@@ -34,6 +35,9 @@ void UIMixerKnob::cacheThemeColors()
     m_ring = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_ringHover = theme.getColor("border").withAlpha(0.85f);
     m_indicator = theme.getColor("accentPrimary");
+    // Resting arcs are neutral. When every knob carried a saturated accent the
+    // whole strip read as "everything is active"; colour now marks engagement.
+    m_arcResting = theme.getColor("textPrimary").withAlpha(0.42f);
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_tooltipBg = theme.getColor("backgroundSecondary").withAlpha(0.95f);
@@ -211,9 +215,8 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
          currentAng = ARC_START + t * (ARC_END - ARC_START);
     }
     
-    NUIColor activeColor = m_indicator;
-    if (hovered) activeColor = activeColor.withAlpha(1.0f);
-    else activeColor = activeColor.withAlpha(0.85f);
+    // `hovered` already folds in m_dragging above.
+    NUIColor activeColor = hovered ? m_indicator.withAlpha(1.0f) : m_arcResting;
     
     drawRoughArc(renderer, {cx, cy}, r, std::min(startAng, currentAng), std::max(startAng, currentAng), 3.0f, activeColor);
 
@@ -261,6 +264,14 @@ void UIMixerKnob::setPlatformBridge(NUIPlatformBridge* bridge)
     m_platformBridge = bridge;
 }
 
+UIMixerKnob::~UIMixerKnob() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
 bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
@@ -271,11 +282,15 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     }
     if (!b.contains(event.position) && !m_dragging) return false;
 
-    // Double-click reset
-    if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left) {
-        setValue(defaultValue());
-        updateGlobalTooltip();
-        return true;
+    // Double-click reset. The platform never populates event.doubleClick, so
+    // quick same-button presses are paired up here (house pattern) — relying on
+    // the flag alone left this reset unreachable.
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (m_clickTracker.registerPress() || event.doubleClick) {
+            setValue(defaultValue());
+            updateGlobalTooltip();
+            return true;
+        }
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -284,12 +299,13 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragStartValue = m_value;
         m_dragAxis = DragAxis::Undecided;
 
-        // Cursor-warp setup for infinite drag
+        // Cursor capture for infinite drag: service hides + confines and will
+        // restore at the knob center on release.
         if (m_platformBridge) {
-            // Initialize drag origin and tracking
-            m_warpOrigin = event.position;
             m_lastDragY = event.position.y;
-            m_platformBridge->setCursorStyle(NUICursorStyle::Hidden);
+            m_platformBridge->beginCursorCapture(
+                this, NUICursorRestorePolicy::KnobCenter,
+                static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 
         updateGlobalTooltip();
@@ -302,12 +318,14 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragAxis = DragAxis::Undecided;
 
         if (m_platformBridge) {
-            // Warp cursor to knob center (matches current value position)
+            // End capture: service warps to the VISUAL knob-cap center (the
+            // cap is centered in height - LABEL_H, shifted up to leave room for
+            // the micro-label), unhides, releases confinement — in that order.
             auto bounds = getBounds();
-            m_platformBridge->setCursorPosition(
+            const float knobAreaH = std::max(1.0f, bounds.height - LABEL_H);
+            m_platformBridge->endCursorCapture(
                 static_cast<int>(bounds.x + bounds.width * 0.5f),
-                static_cast<int>(bounds.y + bounds.height * 0.5f));
-            m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+                static_cast<int>(bounds.y + knobAreaH * 0.5f));
         }
 
         NUIComponent::hideRemoteTooltip(this);
@@ -319,9 +337,8 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     if (m_dragging && event.button == NUIMouseButton::None) {
         // Cursor-warp mode: use frame-to-frame delta
         if (m_platformBridge) {
-            // Compute frame-to-frame delta
-            float dy = event.position.y - m_lastDragY;
-            m_lastDragY = event.position.y;
+            // Service-owned delta (recentered; no absolute-coord read).
+            float dy = event.delta.y;
 
             // Reduced sensitivity for cursor-warp mode since every pixel counts
             float sensitivity = (event.modifiers & NUIModifiers::Shift) ? 0.11f : 0.5f;

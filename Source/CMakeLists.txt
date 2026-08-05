@@ -12,6 +12,9 @@ set(Aestra_SOURCES
 	App/Main.cpp
 	App/AestraApp.h
 	App/AestraApp.cpp
+    App/MuseHostVerbs.cpp
+    App/MuseProjectLoadReport.h
+    App/MuseProjectLoadReport.cpp
 	
 	# Core
 	Core/AestraAudioController.h
@@ -24,10 +27,12 @@ set(Aestra_SOURCES
 	Core/AestraContent.cpp
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp
+	Core/ProjectDocumentState.h
 	Core/ProjectSerializer.cpp
 	Core/TakeManager.h
 	Core/TakeManager.cpp
 	Core/Preferences.h
+	Core/AudioSettingsStore.cpp
 	Core/Preferences.cpp
 	Core/UIState.h
 	Core/UIState.cpp
@@ -54,6 +59,8 @@ set(Aestra_SOURCES
 	Panels/TakesPanel.cpp
 	Panels/SampleEditorPanel.h
 	Panels/SampleEditorPanel.cpp
+	Panels/AudioClipEditorPanel.h
+	Panels/AudioClipEditorPanel.cpp
 	
 	# Settings
 	Settings/ConfirmationDialog.h
@@ -87,6 +94,13 @@ set(Aestra_SOURCES
 	Components/TrackUIComponent.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp
+	Components/TrackManagerUIInternal.h
+	Components/TrackManagerUIToolbar.cpp
+	Components/TrackManagerUIClipOps.cpp
+	Components/TrackManagerUIRender.cpp
+	Components/TrackManagerUIEvents.cpp
+	Components/TrackManagerUIView.cpp
+	Components/TrackManagerUIDragDrop.cpp
 	Components/MixerView.h
 	Components/MixerView.cpp
 	Components/MixerMath.h
@@ -276,6 +290,36 @@ set_target_properties(Aestra PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
+# Deploy the tracked desktop font bundle beside the executable. Main.cpp
+# resolves AestraAssets/fonts relative to the executable, so this keeps the
+# intended Geist/Manrope rendering independent of the process working directory
+# and works for external build trees as well as packaged desktop layouts.
+set(AESTRA_DESKTOP_FONT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/AestraAssets/fonts")
+set(AESTRA_DESKTOP_FONT_FILES
+	Geist/Geist-Bold.ttf
+	Geist/Geist-Medium.ttf
+	Geist/Geist-Regular.ttf
+	Manrope/Manrope-Bold.ttf
+	Manrope/Manrope-Medium.ttf
+	Manrope/Manrope-Regular.ttf
+)
+
+foreach(font_relative_path IN LISTS AESTRA_DESKTOP_FONT_FILES)
+	set(font_source_path "${AESTRA_DESKTOP_FONT_SOURCE_DIR}/${font_relative_path}")
+	if(NOT EXISTS "${font_source_path}")
+		message(FATAL_ERROR "Required Aestra desktop font is missing: ${font_source_path}")
+	endif()
+
+	get_filename_component(font_subdirectory "${font_relative_path}" DIRECTORY)
+	add_custom_command(TARGET Aestra POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory
+			"$<TARGET_FILE_DIR:Aestra>/AestraAssets/fonts/${font_subdirectory}"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${font_source_path}"
+			"$<TARGET_FILE_DIR:Aestra>/AestraAssets/fonts/${font_relative_path}"
+	)
+endforeach()
+
 # Copy mock license file alongside binary for contributors
 add_custom_command(TARGET Aestra POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Aestra>/data"
@@ -283,5 +327,18 @@ add_custom_command(TARGET Aestra POST_BUILD
 		"${CMAKE_CURRENT_SOURCE_DIR}/license/user_info.json"
 		"$<TARGET_FILE_DIR:Aestra>/data/user_info.json"
 )
+
+if(BUILD_TESTING)
+	add_test(NAME AestraDesktopFontBundleTest
+		COMMAND ${CMAKE_COMMAND}
+			"-DSOURCE_FONT_ROOT=${AESTRA_DESKTOP_FONT_SOURCE_DIR}"
+			"-DBUNDLED_FONT_ROOT=$<TARGET_FILE_DIR:Aestra>/AestraAssets/fonts"
+			-P "${CMAKE_SOURCE_DIR}/Tests/Guards/verify_aestra_font_bundle.cmake"
+	)
+	set_tests_properties(AestraDesktopFontBundleTest PROPERTIES
+		LABELS "ui;assets;fonts;regression;contract:application"
+		TIMEOUT 30
+	)
+endif()
 
 message(STATUS "Aestra application configured")

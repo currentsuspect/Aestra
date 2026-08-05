@@ -68,6 +68,10 @@ private:
     std::atomic<uintptr_t> m_audioThreadToken{0};
     std::atomic<bool> m_rtPriorityWorkerStop{false};
     std::thread m_rtPriorityWorker;
+    // mlockall() locks every resident page + pre-faults future ones (0.3-4s on a
+    // large process). Run it off the UI thread that starts the stream; joined in
+    // closeStream() so it never outlives the driver.
+    std::thread m_memLockWorker;
 #endif
     DriverStatistics m_stats;
     std::string m_lastError;

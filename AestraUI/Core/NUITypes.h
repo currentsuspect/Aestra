@@ -445,6 +445,8 @@ struct NUIMouseEvent {
     bool released = false;
     bool doubleClick = false;
     bool cursorCaptured = false;  // True during hidden-cursor drag; components should skip hover/tooltip updates
+    bool synthetic = false;       // Bridge-generated (focus-loss release, post-capture style re-resolution) —
+                                  // controls with commit-on-release semantics should treat this as "stop", not "accept"
 };
 
 struct NUIKeyEvent {

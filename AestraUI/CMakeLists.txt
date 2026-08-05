@@ -88,11 +88,21 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/NUIArrangementWidgets.h
     Widgets/NUIArrangementWidgets.cpp
     Widgets/NUIPianoRollWidgets.h
-    Widgets/NUIPianoRollWidgets.cpp
+    Widgets/PianoRollWidgetShared.h
+    Widgets/PianoRollKeyLane.cpp
+    Widgets/PianoRollMinimap.cpp
+    Widgets/PianoRollRuler.cpp
+    Widgets/PianoRollToolbar.cpp
+    Widgets/PianoRollGrid.cpp
+    Widgets/PianoRollNoteLayer.cpp
+    Widgets/PianoRollControlPanel.cpp
+    Widgets/PianoRollView.cpp
     Widgets/NUIVisualWidgets.h
     Widgets/NUIVisualWidgets.cpp
     Widgets/NUIUtilityWidgets.h
     Widgets/NUIUtilityWidgets.cpp
+    Widgets/NotificationToast.h
+    Widgets/NotificationToast.cpp
     Widgets/NUIThematicWidgets.h
     Widgets/NUIThematicWidgets.cpp
     Widgets/NUIStepSequencer.h
@@ -119,6 +129,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UIMixerPluginDropdown.h
     Widgets/UIMixerPluginDropdown.cpp
+    Widgets/UIInsertRoutePicker.h
+    Widgets/UIInsertRoutePicker.cpp
     Widgets/UIRoutingMap.h
     Widgets/UIRoutingMap.cpp
     Widgets/UnitRow.h
@@ -291,8 +303,6 @@ if(AESTRAUI_BUILD_OPENGL)
     set(AESTRAUI_OPENGL_SOURCES
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
-        Graphics/OpenGL/NUIRenderBatch.h
-        Graphics/OpenGL/NUIRenderBatch.cpp
         Graphics/OpenGL/NUIDirtyRegion.h
         Graphics/OpenGL/NUIDirtyRegion.cpp
         Graphics/OpenGL/NUIRenderCache.h
@@ -343,6 +353,8 @@ endif()
 set(AESTRAUI_PLATFORM_SOURCES
     Platform/NUIPlatformBridge.h
     Platform/NUIPlatformBridge.cpp
+    Platform/NUICursorService.h
+    Platform/NUICursorService.cpp
 )
 
 # Platform name for logging

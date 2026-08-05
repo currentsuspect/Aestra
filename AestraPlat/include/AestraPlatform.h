@@ -193,6 +193,24 @@ public:
     virtual void restore() = 0;
     /** @brief Check whether the window is currently maximized. */
     virtual bool isMaximized() const = 0;
+
+    /**
+     * @brief The window's NON-maximized geometry (#655).
+     *
+     * getPosition/getSize report where the window is *now*, which while
+     * maximized is the maximized rectangle. Persisting that destroys the size
+     * the user actually chose, and there is no way to recover it: applyWindowState
+     * skips size entirely when the maximized flag is set, so the value is never
+     * even read back.
+     *
+     * Implementations must track this independently of the current rect —
+     * Win32 has it natively as WINDOWPLACEMENT::rcNormalPosition; other backends
+     * record the last geometry observed while not maximized.
+     *
+     * @return false if no restore geometry is known yet, leaving the outputs
+     *         untouched, so callers can fall back rather than persist zeroes.
+     */
+    virtual bool getRestoreBounds(int& x, int& y, int& width, int& height) const = 0;
     /** @brief Check whether the window is currently minimized. */
     virtual bool isMinimized() const = 0;
     /** @brief Ask the windowing backend to close the window gracefully. */
@@ -224,10 +242,19 @@ public:
     // Thread requirements: MUST be called from the same thread that created the window (window thread).
     virtual void setCursorVisible(bool visible) = 0;
 
-    /** @brief Warp the cursor to a screen-space position. */
+    /**
+     * @brief Warp the cursor to a WINDOW-RELATIVE position (client-area coords).
+     *
+     * Contract: callers (NUI widgets, window manager) pass UI/window
+     * coordinates. Backends convert to whatever the OS API expects (Win32
+     * SetCursorPos is screen-space -> ClientToScreen; SDL warp is already
+     * window-relative). This doc previously said "screen-space", which only
+     * the Win32 backend believed — that mismatch sent every drag-release
+     * warp-back on Windows to the wrong screen position.
+     */
     virtual void setCursorPosition(int x, int y) = 0;
 
-    /** @brief Query the current cursor position in screen-space coordinates. */
+    /** @brief Query the current cursor position in WINDOW-RELATIVE coordinates. */
     virtual void getCursorPosition(int& x, int& y) const = 0;
 
     /** @brief Capture or release the mouse for drag operations outside the window. */
@@ -235,6 +262,17 @@ public:
 
     /** @brief Clip cursor to window bounds (for hidden-cursor drag to prevent escape). */
     virtual void setCursorClip(bool clipped) {}
+
+    /**
+     * @brief Clip the cursor to a small WINDOW-RELATIVE rectangle.
+     *
+     * Confining to the whole window is insufficient for a borderless
+     * custom-titlebar app: the title bar and in-window panels are inside the
+     * window, so the hidden drag pointer can still roam over them. A tiny rect
+     * around the drag anchor hard-locks the pointer to the control. Coords are
+     * client-area (same space as setCursorPosition). Default no-op.
+     */
+    virtual void setCursorClipRect(int x, int y, int w, int h) {}
 
     /** @brief Query current modifier-key state for wheel and gesture events. */
     virtual KeyModifiers getCurrentModifiers() const = 0;

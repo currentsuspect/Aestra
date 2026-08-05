@@ -33,6 +33,9 @@ struct ClipRenderState {
     uint32_t channels{2};                      // Source channels (1=mono, 2=stereo)
     float gain{1.0f};
     float pan{0.0f};
+    float playbackRate{1.0f};
+    uint64_t fadeInSamples{0};
+    uint64_t fadeOutSamples{0};
 };
 
 /**
@@ -76,6 +79,8 @@ struct AudioGraph {
     static constexpr size_t kInvalidTrackIndex = std::numeric_limits<size_t>::max();
 
     std::vector<TrackRenderState> tracks;
+    /** Audio clips whose source routes directly to Master. */
+    std::vector<ClipRenderState> masterClips;
     bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.

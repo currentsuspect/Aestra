@@ -1,8 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "Commands/HostVerbRegistry.h"
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
 namespace Aestra {
 namespace Audio {
@@ -50,9 +53,46 @@ public:
     static void wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackManager,
                                    AudioEngine& engine);
 
+    /**
+     * @brief The seam the application registers its capabilities into.
+     *
+     * MuseService cannot reach the UI layer — the dependency runs the other
+     * way. The host calls this during startup to register `settings.*`,
+     * `view.*`, `browser.*`, `dialog.*` and `project.*` verbs; MuseService
+     * only ever sees a name, an argument schema and a callable. See
+     * HostVerbRegistry.h for why this is a typed registry rather than a
+     * generic (name, function) escape hatch.
+     */
+    HostVerbRegistry& hostVerbs() { return m_hostVerbs; }
+    const HostVerbRegistry& hostVerbs() const { return m_hostVerbs; }
+
+    /**
+     * @brief Declare that requests run where the host's UI thread lives.
+     *
+     * Default false, so a headless process refuses UI-affine host verbs with
+     * a reason instead of running host code on a thread that does not own the
+     * state it touches. The in-app socket server executes requests from the
+     * main-thread pump, so AestraApp sets this true.
+     */
+    void setHostUiThreadAvailable(bool available) { m_hostUiThreadAvailable = available; }
+    bool hostUiThreadAvailable() const { return m_hostUiThreadAvailable; }
+
+    /**
+     * @brief Publish the application-owned result of the latest project load attempt.
+     *
+     * The application maps ProjectSerializer::LoadResult into this protocol
+     * payload because AestraAudio must not depend on Source/. A new/blank
+     * project clears it; beginning or completing another load replaces it.
+     */
+    void setProjectLoadReport(JSON report) { m_projectLoadReport = std::move(report); }
+    void clearProjectLoadReport() { m_projectLoadReport.reset(); }
+
 private:
     TrackManager* m_trackManager = nullptr;
     AudioEngine* m_engine = nullptr;
+    HostVerbRegistry m_hostVerbs;
+    bool m_hostUiThreadAvailable = false;
+    std::optional<JSON> m_projectLoadReport;
 };
 
 } // namespace Audio

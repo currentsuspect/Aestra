@@ -114,7 +114,7 @@ void runCrossRateCase() {
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
     {
-        tm->addChannel("Cross48in96");
+        auto* channel = tm->addChannel("Cross48in96");
         auto buffer = std::make_shared<AudioBufferData>();
         buffer->sampleRate = clipRate;
         buffer->numChannels = 2;
@@ -128,7 +128,14 @@ void runCrossRateCase() {
         payload.slices.push_back({0.0, 1.0, 0.0, static_cast<double>(clipFrames)});
         PlaylistLaneID laneId = tm->getPlaylistModel().createLane("Cross48");
         PatternID patternId = tm->getPatternManager().createAudioPattern("Cross48", 2.0, payload);
-        tm->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, 2.0);
+        if (channel) {
+            tm->getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+        }
+        const ClipInstanceID clipId = tm->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, 2.0);
+        if (!tm->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+            verdict(false, "Cross-rate fixture uses unity clip gain");
+            return;
+        }
     }
 
     AudioEngine engine;

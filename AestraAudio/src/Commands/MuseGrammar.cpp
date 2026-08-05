@@ -59,35 +59,48 @@ static const std::vector<CommandSchema> s_schemas = {
     },
      "Set track pan (-1 left .. 1 right)."},
 
-    // === Clip (5) ===
+    // === Clip (8) ===
+    // Every "id" here is FlagType::Id: the same 32-hex-char string list_clips
+    // prints. These used to be Int, which no listed id could satisfy.
+    {"add_lane", CommandCategory::Clip, {
+        {"name", FlagType::String, false}
+    },
+     "Create a playlist lane. Clips live on lanes, so a blank project needs one before add_clip."},
     {"add_clip", CommandCategory::Clip, {
         {"track", FlagType::Int, true},
         {"file", FlagType::String, true},
-        {"bar", FlagType::Int, true}
+        {"bar", FlagType::Int, true, 1.0}
     },
-     "Add a file-based clip on a track at a bar position."},
+     "Import an audio file and place it as a playable clip on a lane at a bar position. Decodes the file, registers it as a source and creates its audio pattern; on any failure nothing is added."},
     {"delete_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true}
+        {"id", FlagType::Id, true}
     },
      "Delete a clip by id."},
     {"move_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
+        {"id", FlagType::Id, true},
         {"track", FlagType::Int, true},
         {"start", FlagType::Float, true}
     },
      "Move a clip to a track and start beat."},
     {"duplicate_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
-        {"bar", FlagType::Int, true}
+        {"id", FlagType::Id, true},
+        {"bar", FlagType::Int, true, 1.0}
     },
      "Duplicate a clip to a bar position."},
     {"trim_clip", CommandCategory::Clip, {
-        {"id", FlagType::Int, true},
+        {"id", FlagType::Id, true},
         {"start", FlagType::Float, true},
         {"end", FlagType::Float, true}
     },
      "Trim a clip to a start/end beat range."},
-
+    {"reverse_clip", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Replace an audio clip's source with a reversed render of itself. Writes a new file; undo restores the original."},
+    {"commit_clip_edits", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Bake an audio clip's own gain and fades into a new source file and reset those edits to unity. Clip-local only: this does not render the track's plugins, automation, sends or routing."},
     // === Unit (2) ===
     // "type" accepts: sampler (default), 808. The schema format cannot
     // express enums yet; the factory rejects anything else.
@@ -101,6 +114,11 @@ static const std::vector<CommandSchema> s_schemas = {
         {"file", FlagType::String, true}
     },
      "Load an audio file into a unit sampler. MIDI pitch 60 plays it unshifted."},
+    {"set_unit_gain", CommandCategory::Unit, {
+        {"unit", FlagType::Int, true, 1.0},
+        {"value", FlagType::Float, true, 0.0, 2.0}
+    },
+     "Set a unit's linear output gain (1 = unity, applied at its mix point). The per-drum balance knob for multi-unit tracks."},
 
     // === Pattern (4) ===
     // Notes are identified by (pattern, unit, pitch, start) — the same key
@@ -136,7 +154,7 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, 0.0},
         {"start", FlagType::Float, true, 0.0}
     },
-     "Place a pattern on the timeline as a clip, routing its units to that track. A unit routes to at most one track; conflicts are rejected."},
+     "Place a pattern on the timeline as a clip. Arrangement does not change the pattern units' mixer destinations."},
     // steps: one char per step — 'x' hit, 'X' accented hit, '-' or '.' rest.
     // The string defines the ENTIRE row for that (unit, pitch): re-issuing
     // the verb rewrites the groove, an all-rest string clears it.
@@ -243,6 +261,7 @@ std::string schemaToJsonString() {
             case FlagType::Int: typeStr = "int"; break;
             case FlagType::Float: typeStr = "float"; break;
             case FlagType::Bool: typeStr = "bool"; break;
+            case FlagType::Id: typeStr = "id"; break;
             }
             out << "      {\n";
             out << "        \"name\": \"" << flag.name << "\",\n";
@@ -270,26 +289,34 @@ std::string schemaToJsonString() {
     // sync with its isQueryVerb()/isActionVerb().
     out << R"("queries": [
   {"verb": "get_transport", "args": "none", "description": "bpm, playing, positionSeconds."},
-  {"verb": "list_tracks", "args": "none", "description": "index, stable id, name, volume, pan, muted, soloed per track."},
-  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, timelineLane (-1 = preview), samplePath per unit."},
+  {"verb": "list_tracks", "args": "none", "description": "mixer inserts: index, stable id, name, volume, pan, muted, soloed. These are independent from Playlist lanes."},
+  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, mixerChannelId (0 = Master), legacy timelineLane, samplePath per unit."},
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
-  {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount, type per pattern."},
+  {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
   {"verb": "get_effects", "args": "{\"track\": <index>}", "description": "a track's effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
+  {"verb": "get_meters", "args": "none", "description": "master + per-track meters from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
+  {"verb": "get_audio_health", "args": "none", "description": "A read-only snapshot of published engine telemetry: callback timing and budget, xruns/underruns, RT violations, recovery, command-queue drops, scheduling status, signal sanitization and resampling. Counters have engine-lifetime scope."},
+  {"verb": "get_project_load_report", "args": "none", "description": "The currently loaded project's or latest load attempt's format, migration/recovery state, missing plugins/assets, unrestored state, and structured warnings/errors. A blank project or no observed load returns status unobserved."},
+  {"verb": "get_routing_graph", "args": "none", "description": "Read-only audio topology: stable Arsenal-unit and audio-pattern sources, Master/mixer destinations, main paths, sends/sidechains, unresolved destinations, and explicit positional identity for insert slots and sends."},
+  {"verb": "get_latency_report", "args": "none", "description": "The latest published PDC solve: per-node intrinsic/downstream/path latency, node and edge compensation, graph maximum, uncompensated sidechain paths, solver warnings, pending recalculation, and solved-vs-applied mismatches."},
   {"verb": "list_samples", "args": "{\"dir\": <path>}", "description": "audio files under a directory (recursive, depth 3, max 500): path, name, sizeBytes. Feed paths to load_sample."},
   {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, unit)."},
-  {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."}
+  {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."},
+  {"verb": "get_schema", "args": "none", "description": "this manifest, over the wire — socket clients bootstrap without the --schema flag."}
 ],
 "actions": [
   {"verb": "render_pattern", "args": "{\"pattern\": <id>, \"file\": <path>, \"tail\": <seconds 0..30>}", "description": "Bounce one pattern (Arsenal preview routing) to a float32 WAV. Result carries durationSeconds, frames, sampleRate, peakDb."},
   {"verb": "render_song", "args": "{\"file\": <path>, \"tail\": <seconds 0..30>}", "description": "Bounce the arranged timeline to a float32 WAV. Errors on an empty timeline. Result carries durationSeconds, frames, sampleRate, peakDb."},
-  {"verb": "batch", "args": "{\"commands\": [{\"verb\": ..., \"args\": ...}, ...]}", "description": "Run 1..64 mutation verbs all-or-nothing as a single undo step. Members execute against the state their predecessors produced."}
+  {"verb": "batch", "args": "{\"commands\": [{\"verb\": ..., \"args\": ...}, ...]}", "description": "Run 1..64 mutation verbs all-or-nothing as a single undo step. Members execute against the state their predecessors produced. A member takes only \"verb\" and \"args\"; any other key is refused."},
+  {"verb": "undo", "args": "none", "description": "Step back one entry in the shared undo history (a batch is one entry). Refuses with 'nothing to undo' at the end of the stack rather than reporting a no-op as success. Result carries canUndo, canRedo."},
+  {"verb": "redo", "args": "none", "description": "Step forward one entry. Refuses with 'nothing to redo' at the end of the stack. Result carries canUndo, canRedo."}
 ],
 "notes": {
   "samplerPitch": "The sampler root is MIDI pitch 60: notes at 60 play the loaded sample unshifted, other pitches resample relative to 60. Put drum hits at pitch 60; write melodies around 60.",
   "unitTypes": "sampler = polyphonic sampler; 808 = mono pitched sampler with glide.",
   "patterns": "Every non-audio unit gets a default MIDI pattern at creation (list_units.defaultPatternId). A pattern is just a container: notes carry their unit, so one pattern can hold a whole multi-unit groove.",
-  "routing": "A unit routes to at most one timeline track. arrange_pattern routes the pattern's units to its track and rejects conflicting arrangements.",
+  "routing": "Each unit has one stable mixer destination (mixerChannelId; 0 = Master). Timeline arrangement is independent, so the same pattern may be placed on multiple lanes without changing its audio destination.",
   "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",

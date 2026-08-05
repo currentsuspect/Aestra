@@ -87,6 +87,21 @@ if(AESTRA_BUILD_TESTS)
     add_test(NAME ConfigAssertTests COMMAND ConfigAssertTests)
     add_test(NAME MemoryProfilingTest COMMAND MemoryProfilingTest)
     add_test(NAME MemoryAllocatorTest COMMAND MemoryAllocatorTest)
+
+    # Contract labels. Foundational utilities: a failure here means configuration,
+    # files, logging, threading or allocators may be broken. Exactly one
+    # contract:* label per case — descriptive labels are added separately and
+    # never satisfy coverage.
+    set_tests_properties(
+        MathTests
+        ThreadingTests
+        FileTests
+        LogTests
+        ConfigAssertTests
+        MemoryProfilingTest
+        MemoryAllocatorTest
+        PROPERTIES LABELS "contract:core"
+    )
 endif()
 
 message(STATUS "AestraCore configured")

@@ -948,12 +948,51 @@ void PlatformWindowWin32::getPosition(int& x, int& y) const {
 }
 
 void PlatformWindowWin32::setCursorPosition(int x, int y) {
-    SetCursorPos(x, y);
+    // Interface contract is WINDOW-RELATIVE client coords (see AestraPlatform.h).
+    // SetCursorPos wants screen coords; convert. Client coords are physical
+    // pixels for a per-monitor-DPI-aware process, so ClientToScreen is the
+    // complete, DPI-correct conversion (mouse events arrive in the same space).
+    POINT pt{x, y};
+    if (m_hwnd) {
+        ClientToScreen(m_hwnd, &pt);
+    }
+    SetCursorPos(pt.x, pt.y);
+}
+
+void PlatformWindowWin32::setCursorClipRect(int x, int y, int w, int h) {
+    if (!m_hwnd) return;
+    // Client-relative rect -> screen rect for ClipCursor.
+    POINT tl{x, y};
+    POINT br{x + w, y + h};
+    ClientToScreen(m_hwnd, &tl);
+    ClientToScreen(m_hwnd, &br);
+    RECT clip{tl.x, tl.y, br.x, br.y};
+    ClipCursor(&clip);
+}
+
+void PlatformWindowWin32::setCursorClip(bool clipped) {
+    if (clipped) {
+        RECT rc;
+        if (m_hwnd && GetClientRect(m_hwnd, &rc)) {
+            POINT tl{rc.left, rc.top};
+            POINT br{rc.right, rc.bottom};
+            ClientToScreen(m_hwnd, &tl);
+            ClientToScreen(m_hwnd, &br);
+            RECT clip{tl.x, tl.y, br.x, br.y};
+            ClipCursor(&clip);
+        }
+    } else {
+        ClipCursor(nullptr);
+    }
 }
 
 void PlatformWindowWin32::getCursorPosition(int& x, int& y) const {
-    POINT pt;
+    // Symmetric with setCursorPosition: report window-relative client coords.
+    POINT pt{}; // zero-init: a failed GetCursorPos (secure desktop switch) must not return garbage
     GetCursorPos(&pt);
+    if (m_hwnd) {
+        ScreenToClient(m_hwnd, &pt);
+    }
     x = pt.x;
     y = pt.y;
 }
@@ -995,6 +1034,25 @@ bool PlatformWindowWin32::isMaximized() const {
     wp.length = sizeof(WINDOWPLACEMENT);
     GetWindowPlacement(m_hwnd, &wp);
     return wp.showCmd == SW_MAXIMIZE;
+}
+
+bool PlatformWindowWin32::getRestoreBounds(int& x, int& y, int& width, int& height) const {
+    // Win32 maintains this natively: rcNormalPosition IS the restore rectangle,
+    // updated by the OS as the user moves and resizes the un-maximized window.
+    // isMaximized() above already fetches the same structure and discards it (#655).
+    WINDOWPLACEMENT wp = {};
+    wp.length = sizeof(WINDOWPLACEMENT);
+    if (!GetWindowPlacement(m_hwnd, &wp))
+        return false;
+    const LONG w = wp.rcNormalPosition.right - wp.rcNormalPosition.left;
+    const LONG h = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top;
+    if (w <= 0 || h <= 0)
+        return false;
+    x = static_cast<int>(wp.rcNormalPosition.left);
+    y = static_cast<int>(wp.rcNormalPosition.top);
+    width = static_cast<int>(w);
+    height = static_cast<int>(h);
+    return true;
 }
 
 bool PlatformWindowWin32::isMinimized() const {

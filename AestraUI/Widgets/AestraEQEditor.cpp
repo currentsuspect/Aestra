@@ -190,12 +190,15 @@ std::shared_ptr<NUIIcon> polarityIcon() {
 }
 
 std::shared_ptr<NUIIcon> compareSlotIcon() {
+    // This one draws at 11px — the smallest icon in the editor. A 2px-stroked
+    // outline with two more strokes inside it resolves to a featureless blob at
+    // that size, so the slot is a solid card with its two lines cut out of it
+    // instead. Everything else here draws at 13-16px, where strokes still hold.
     static auto icon = makeSvgIcon(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="5" width="14" height="14" rx="4"/>
-            <path d="M8 13h8"/>
-            <path d="M9 9h6"/>
+        <svg viewBox="0 0 24 24">
+            <path fill="currentColor" fill-rule="evenodd"
+                  d="M7 4H17A3 3 0 0 1 20 7V17A3 3 0 0 1 17 20H7A3 3 0 0 1 4 17V7A3 3 0 0 1 7 4Z
+                     M7.6 8.4H16.4V10.6H7.6Z M7.6 13.4H16.4V15.6H7.6Z"/>
         </svg>
     )svg");
     return icon;
@@ -4531,6 +4534,33 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (handleSelectedNodeQuickActionClick(event))
         return true;
 
+    if (handleRightClickActions(event)) {
+        return true;
+    }
+    if (handleOpenMenusClick(event)) {
+        return true;
+    }
+    if (handleHeaderButtonsClick(event)) {
+        return true;
+    }
+    if (handleAnalyzerPanelClick(event)) {
+        return true;
+    }
+    if (handleWheel(event)) {
+        return true;
+    }
+    if (handlePress(event)) {
+        return true;
+    }
+    if (handleDragUpdate(event)) {
+        return true;
+    }
+    handleHoverUpdate(event);
+
+    return contains;
+}
+
+bool AestraEQEditor::handleRightClickActions(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Right) {
         using EQ = Aestra::Audio::Plugins::AestraEQ;
         closeBandContextMenu();
@@ -4583,7 +4613,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
 
+bool AestraEQEditor::handleOpenMenusClick(const NUIMouseEvent& event) {
     if (m_bandContextMenuBand >= 0 && event.pressed && event.button == NUIMouseButton::Left) {
         static constexpr BandMenuAction kActions[] = {BandMenuAction::Reset,         BandMenuAction::InvertGain,
                                                       BandMenuAction::ToggleDynamic, BandMenuAction::SplitLR,
@@ -4630,7 +4663,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             setDirty(true);
         }
     }
+    return false;
+}
 
+bool AestraEQEditor::handleHeaderButtonsClick(const NUIMouseEvent& event) {
     // Bypass click
     if (event.pressed && event.button == NUIMouseButton::Left && m_bypassRect.contains(event.position)) {
         setBypassed(!isBypassed());
@@ -4667,7 +4703,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         setDirty(true);
         return true;
     }
+    return false;
+}
 
+bool AestraEQEditor::handleAnalyzerPanelClick(const NUIMouseEvent& event) {
     if (m_analyzerPanelOpen && event.pressed && event.button == NUIMouseButton::Left &&
         m_analyzerSourceRect.contains(event.position)) {
         cycleAnalyzerSource();
@@ -4715,7 +4754,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         m_analyzerPanelOpen = false;
         setDirty(true);
     }
+    return false;
+}
 
+bool AestraEQEditor::handleWheel(const NUIMouseEvent& event) {
     if (event.wheelDelta != 0.0f && m_outputGainRect.contains(event.position)) {
         const float stepDb = (event.modifiers & NUIModifiers::Shift) ? 0.1f : 1.0f;
         setOutputGain(outputGain() + (event.wheelDelta > 0 ? stepDb : -stepDb) / 36.0f);
@@ -4744,7 +4786,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
 
+bool AestraEQEditor::handlePress(const NUIMouseEvent& event) {
     // Press
     if (event.pressed && event.button == NUIMouseButton::Left) {
         const int selectedIdx =
@@ -4842,8 +4887,9 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (m_outputGainRect.contains(event.position)) {
             m_draggingOutputGain = true;
-            m_dragStartY = event.position.y;
-            m_dragStartValue = outputGain();
+            // Relative vertical drag → cursor capture (the graph nodes and card
+            // lanes are absolute-position and stay on the visible cursor).
+            beginKnobCapture(m_outputGainRect.center(), event.position);
             return true;
         }
         Knob knob = Knob::None;
@@ -4899,7 +4945,10 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
 
+bool AestraEQEditor::handleDragUpdate(const NUIMouseEvent& event) {
     // Drag
     if (m_draggingGraphBand >= 0) {
         updateBandFromGraphPosition(m_draggingGraphBand, event.position, event.modifiers);
@@ -4914,9 +4963,12 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     if (m_draggingOutputGain) {
-        setOutputGain(m_dragStartValue + (m_dragStartY - event.position.y) / 180.0f);
-        if (!event.pressed && event.button == NUIMouseButton::Left)
+        // Service-owned frame delta (up = increase), accumulated into value.
+        setOutputGain(outputGain() + knobDragStep(event, 180.0f));
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            endKnobCapture();
             m_draggingOutputGain = false;
+        }
         return true;
     }
     if (m_draggingCardBand >= 0) {
@@ -4928,7 +4980,11 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         return true;
     }
+    return false;
+}
 
+void AestraEQEditor::handleHoverUpdate(const NUIMouseEvent& event) {
+    const bool contains = getBounds().contains(event.position);
     // Hover
     if (!event.pressed && !event.released) {
         Knob k = Knob::None;
@@ -5152,8 +5208,6 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             setDirty(true);
         }
     }
-
-    return contains;
 }
 
 bool AestraEQEditor::onKeyEvent(const NUIKeyEvent& event) {

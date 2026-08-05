@@ -8,7 +8,7 @@
 // outputCompensation. P4b.2 will wire the edge compensation values produced
 // here into per-send ring buffers in processBlock.
 //
-// See AestraDocs/PDC-v2-Design.md §12 P4b.1.
+// See Aestra-Internals: aestra-docs/PDC-v2-Design.md §12 P4b.1.
 
 #include "Core/AudioEngine.h"
 #include "Core/LatencyTopology.h"

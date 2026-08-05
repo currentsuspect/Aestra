@@ -81,6 +81,22 @@ public:
      */
     void setIntegratedLufs(float lufs);
 
+    /**
+     * @brief Master mode: label the bars L/R and suppress the in-meter numbers.
+     *
+     * The master strip renders an explicitly labelled Peak/LUFS/Gain block
+     * instead — at 36 px the stacked readouts here clipped their own text
+     * (notably the minus sign on a negative LUFS value, which inverts the
+     * meaning of the number).
+     */
+    void setMasterMode(bool master);
+
+    /// Highest peak currently shown, in dBFS (peak-hold when one is latched).
+    float getDisplayPeakDb() const;
+
+    /// True when either channel has a latched clip.
+    bool isClipped() const { return m_clipL || m_clipR; }
+
     /// Callback when clip indicator is clicked (to clear clip latch)
     std::function<void()> onClipCleared;
 
@@ -100,6 +116,7 @@ private:
     bool m_clipR{false};
     bool m_dimmed{false};
     bool m_showCorrelation{false};
+    bool m_masterMode{false};
 
     // Cached theme colors (avoid per-frame lookups)
     NUIColor m_colorGreen;
@@ -109,6 +126,7 @@ private:
     NUIColor m_colorYellowDim;
     NUIColor m_colorRedDim;
     NUIColor m_colorBackground;
+    NUIColor m_colorRailEdge;   // faint resting outline so the rail reads at silence
     NUIColor m_colorPeakHold;
     NUIColor m_colorPeakOverlay;
     NUIColor m_colorPeakOverlayDim;

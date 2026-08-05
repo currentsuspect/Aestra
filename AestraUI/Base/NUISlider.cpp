@@ -33,6 +33,15 @@ NUISlider::NUISlider(const std::string& name)
     setSize(100, 6); // Modern 6px height for horizontal slider
 }
 
+NUISlider::~NUISlider()
+{
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (platformBridge_ && platformBridge_->isCursorCaptureOwner(this)) {
+        platformBridge_->cancelCursorCapture();
+    }
+}
+
 void NUISlider::onRender(NUIRenderer& renderer)
 {
     if (!isVisible()) return;
@@ -97,13 +106,17 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             if (platformBridge_)
             {
                 if (isRotary) {
-                    // Knob: warp to center — cursor appears where the knob is
+                    // Knob: end capture via the cursor service — warps to the
+                    // knob center (cursor reappears where the knob is), then
+                    // unhides, then releases confinement, in that order.
                     auto bounds = getBounds();
-                    platformBridge_->setCursorPosition(
+                    platformBridge_->endCursorCapture(
                         static_cast<int>(bounds.x + bounds.width * 0.5f),
                         static_cast<int>(bounds.y + bounds.height * 0.5f));
                 } else {
-                    // Linear: warp to thumb position (matches current value)
+                    // Linear: warp to thumb position (matches current value).
+                    // Linear drags never hide the cursor today; adoption of the
+                    // capture service here is a later migration phase.
                     auto b = getBounds();
                     if (orientation_ == Orientation::Horizontal) {
                         float inset = std::min(sliderRadius_, b.width * 0.5f);
@@ -118,8 +131,8 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                             static_cast<int>(b.x + b.width * 0.5f),
                             static_cast<int>(b.y + inset + usableHeight * (1.0f - valueToProportionOfLength(value_))));
                     }
+                    platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
                 }
-                platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             }
 
             isDragging_ = false;
@@ -135,11 +148,10 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                 if (isRotary && platformBridge_)
                 {
                     // Check modifier state for fine-tuning (can change mid-drag)
-                    isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
+                    isFineDrag_ = (event.modifiers & NUIModifiers::Shift) != 0;  // Shift = fine (unified across all knobs/sliders)
 
-                    // Compute frame-to-frame delta
-                    float dy = event.position.y - m_lastDragY;
-                    m_lastDragY = event.position.y;
+                    // Service-owned delta (recentered; no absolute-coord read).
+                    float dy = event.delta.y;
 
                     float sensitivity = isFineDrag_ ? FINE_DRAG_SENSITIVITY : COARSE_DRAG_SENSITIVITY;
                     float delta = -dy * sensitivity * (maxValue_ - minValue_);
@@ -175,10 +187,15 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             m_lastDragY = event.position.y;
 
             // Check for fine-tuning modifier at drag start
-            isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
+            isFineDrag_ = (event.modifiers & NUIModifiers::Shift) != 0;  // Shift = fine (unified across all knobs/sliders)
 
-            // Hide cursor (this gives the "infinite travel" feel)
-            platformBridge_->setCursorStyle(NUICursorStyle::Hidden);
+            // Begin cursor capture (this gives the "infinite travel" feel):
+            // hides the cursor and confines the pointer to the window so the
+            // release-warp is always valid (native Wayland warps silently
+            // no-op once the hidden pointer drifts out and loses focus).
+            platformBridge_->beginCursorCapture(
+                this, NUICursorRestorePolicy::KnobCenter,
+                static_cast<int>(event.position.x), static_cast<int>(event.position.y));
         }
 
         // Click mode updates only on click, drag mode updates only while dragging.

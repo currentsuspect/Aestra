@@ -1,0 +1,122 @@
+{
+  "arsenal": {
+    "nextId": 1,
+    "units": []
+  },
+  "integrity": {
+    "algo": "fnv1a64",
+    "hash": "696777a023a2efea"
+  },
+  "lanes": [
+    {
+      "armed": false,
+      "automation": [],
+      "clips": [
+        {
+          "color": "4294967295",
+          "duration": 4,
+          "edits": {
+            "fadeIn": 0,
+            "fadeOut": 0,
+            "gain": 1,
+            "muted": false,
+            "pan": 0,
+            "playbackRate": 1,
+            "sourceStart": 0
+          },
+          "id": "07b07c19ab9747a40000000000000004",
+          "name": "",
+          "patternId": 1,
+          "sourceOffset": 0,
+          "start": 1
+        }
+      ],
+      "color": "4294967295",
+      "effectChainStateHex": "4e4543010a0000000121000000636f6d2e6165737472612e666978747572652e6d697373696e672d656666656374010000c03e060000001020304000ff000000000000",
+      "id": "07b07c19ab9747a40000000000000001",
+      "inputChannelIndex": -2,
+      "mixerChannelId": 41,
+      "monitorInput": false,
+      "mute": false,
+      "name": "V3 Arrangement Lane",
+      "pan": 0,
+      "routing": {
+        "mainOutputId": 77,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": -1,
+      "volume": 1,
+      "width": 1
+    }
+  ],
+  "mixerChannels": [
+    {
+      "armed": false,
+      "color": "0",
+      "effectChainStateHex": "4e4543010a0000000121000000636f6d2e6165737472612e666978747572652e6d697373696e672d656666656374010000c03e060000001020304000ff000000000000",
+      "id": 41,
+      "inputChannelIndex": -2,
+      "monitorInput": false,
+      "mute": false,
+      "name": "V3 Effects",
+      "pan": 0,
+      "routing": {
+        "mainOutputId": 77,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": -1,
+      "volume": 1,
+      "width": 1
+    },
+    {
+      "armed": false,
+      "color": "0",
+      "effectChainStateHex": "4e4543010a00000000000000000000",
+      "id": 77,
+      "inputChannelIndex": -2,
+      "monitorInput": false,
+      "mute": false,
+      "name": "V3 Instrument",
+      "pan": 0,
+      "routing": {
+        "mainOutputId": 0,
+        "sends": []
+      },
+      "solo": false,
+      "soloSafe": false,
+      "trackColorIndex": -1,
+      "volume": 1,
+      "width": 1
+    }
+  ],
+  "patterns": [
+    {
+      "id": 1,
+      "length": 4,
+      "mixerChannelId": 0,
+      "name": "V3 Pattern",
+      "notes": [
+        {
+          "durationBeats": 1.5,
+          "gate": 1,
+          "pan": 0,
+          "pitch": 72,
+          "pitchOffset": 0,
+          "slide": false,
+          "startBeat": 0.5,
+          "unitId": 0,
+          "velocity": 0.875
+        }
+      ],
+      "type": "midi"
+    }
+  ],
+  "playhead": 5.5,
+  "sources": [],
+  "tempo": 146,
+  "version": 3
+}

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TrackUIComponent.h"
 #include "TrackManagerUI.h"
+#include "TrackManagerUIMath.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "MixerChannel.h"
 #include "TrackManager.h"
@@ -18,6 +19,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Graphics/NUISVGParser.h"
+#include "../AestraUI/Widgets/TrackControlIcons.h"
 #include "../AestraUI/Helpers/TimelineGridRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
@@ -70,14 +72,10 @@ const AestraUI::NUISVGDocument* trackControlIcon(const char* svg) {
     return doc.get();
 }
 
-constexpr const char* kMuteIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 4.5v-15L8 9H4z" fill="#fff"/><path d="M16 9.5 21 14.5 M21 9.5 16 14.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/></svg>)";
-constexpr const char* kSoloIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 0 0-7.5 7.5v5.2a1.8 1.8 0 0 0 1.8 1.8h1.2a1 1 0 0 0 1-1v-4.2a1 1 0 0 0-1-1H6.5V12a5.5 5.5 0 0 1 11 0v.8h-1a1 1 0 0 0-1 1V18a1 1 0 0 0 1 1h1.2a1.8 1.8 0 0 0 1.8-1.8V12A7.5 7.5 0 0 0 12 4.5z" fill="#fff"/></svg>)";
-constexpr const char* kRecordIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg>)";
-constexpr const char* kMonitorIconSvg =
-    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3.2l2.2-5.5 3.4 11 2.2-5.5H21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
+using AestraUI::kMonitorIconSvg;
+using AestraUI::kMuteIconSvg;
+using AestraUI::kRecordIconSvg;
+using AestraUI::kSoloIconSvg;
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -101,16 +99,31 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
     return text.substr(0, maxChars - 2) + "..";
 }
 
-AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,
-                                    float alpha) {
-    const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
-    const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
-    const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
-    return AestraUI::NUIColor(std::clamp(tonedR, 0.0f, 1.0f),
-                              std::clamp(tonedG, 0.0f, 1.0f),
-                              std::clamp(tonedB, 0.0f, 1.0f),
-                              alpha >= 0.0f ? alpha : color.a);
+TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
+    const bool toggleModifier =
+        (event.modifiers & AestraUI::NUIModifiers::Ctrl) || (event.modifiers & AestraUI::NUIModifiers::Super);
+    return trackSelectionIntentForModifierState(toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
+}
+
+// Clip and lane tones all come from AestraUI/Widgets/TrackColorPalette.h now
+// (clipBodyTone / waveformTintTone / restrainLaneIdentityColor), so nothing here
+// open-codes a restraint the minimap cannot see.
+
+// Keep Playlist clip selection in the same visual language as Piano Roll
+// notes: a lifted secondary accent, crisp white edge, grounded shadow, and
+// subtle edit handles. Clip identity colour remains visible underneath.
+void drawPianoRollStyleSelection(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float radius) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const auto selectedColor = themeManager.getColor("accentSecondary").lightened(0.12f);
+    renderer.drawShadow({bounds.x, bounds.y + 1.0f, bounds.width, bounds.height},
+                        0.0f, 2.0f, 5.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.22f));
+    renderer.fillRoundedRect(bounds, radius, selectedColor.withAlpha(0.12f));
+    renderer.strokeRoundedRect(bounds, radius, 1.5f, AestraUI::NUIColor::white().withAlpha(0.78f));
+    const float handleHeight = std::max(2.0f, bounds.height - 6.0f);
+    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 3.0f, 2.0f, handleHeight},
+                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
+    renderer.fillRoundedRect({bounds.right() - 3.0f, bounds.y + 3.0f, 2.0f, handleHeight},
+                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
 }
 
 // Waveform ink derived from the clip color so the waveform reads as part of
@@ -124,22 +137,17 @@ struct WaveformInk {
 };
 
 WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
-    const float luma = (0.2126f * base.r) + (0.7152f * base.g) + (0.0722f * base.b);
+    // Bold, near-solid waveform so it reads as a clear waveform shape (not faint
+    // texture) against the clip fill: a bright lift of the clip hue at high alpha,
+    // with the min/max envelope nearly as opaque as the RMS body. The lift amount
+    // is shared with clipBodyTone()'s counterpart so the contrast contract has one
+    // authority (see TrackColorPalette.h).
+    const AestraUI::NUIColor bright = AestraUI::liftWaveformInk(base);
     WaveformInk ink;
-    // 0.40 keeps every TRACK_PALETTE color (restrained, selected or not) in
-    // the dark-ink branch; the light-ink branch is for genuinely dark custom
-    // channel colors
-    if (luma >= 0.40f) {
-        ink.rms = base.darkened(0.60f).withAlpha(0.82f);
-        ink.envTop = base.darkened(0.46f).withAlpha(0.48f);
-        ink.envBottom = base.darkened(0.46f).withAlpha(0.34f);
-        ink.centerLine = base.darkened(0.70f).withAlpha(0.18f);
-    } else {
-        ink.rms = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.72f).withAlpha(0.86f);
-        ink.envTop = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.45f).withAlpha(0.46f);
-        ink.envBottom = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.45f).withAlpha(0.32f);
-        ink.centerLine = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
-    }
+    ink.rms = bright.withAlpha(0.97f);
+    ink.envTop = bright.withAlpha(0.90f);
+    ink.envBottom = bright.withAlpha(0.90f);
+    ink.centerLine = bright.withAlpha(0.22f);
     return ink;
 }
 
@@ -155,21 +163,16 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     , m_trackManager(trackManager)
 {
     // Log::info("TrackUIComponent ctor: " + m_laneId.toString());
-    if (!m_channel) {
-        Log::error("TrackUIComponent created with null channel");
-        return;
-    }
-
     // Create track name label
     m_nameLabel = std::make_shared<AestraUI::NUILabel>();
     
-    std::string name = "Lane";
+    std::string name = "Track";
     if (m_trackManager) {
         if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             name = lane->name;
         }
     }
-    m_nameLabel->setText(name.empty() ? m_channel->getName() : name);
+    m_nameLabel->setText(name.empty() ? "Track" : name);
 
     {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -213,21 +216,103 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_soloButton->setTooltip("Solo Track (S)");
     addChild(m_soloButton);
 
-    // Create record button
-    m_recordButton = std::make_shared<AestraUI::NUIButton>();
-    m_recordButton->setText("");
-    configureFlatTrackButton(m_recordButton);
-    m_recordButton->setToggleable(true);
-    m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
-    addChild(m_recordButton);
+    // Recording is armed from mixer inserts. A Playlist lane only receives a
+    // record control when an explicit mixer association is supplied.
+    if (m_channel) {
+        m_recordButton = std::make_shared<AestraUI::NUIButton>();
+        m_recordButton->setText("");
+        configureFlatTrackButton(m_recordButton);
+        m_recordButton->setToggleable(true);
+        m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
+        addChild(m_recordButton);
+    }
 
     updateUI();
 }
 
 
 TrackUIComponent::~TrackUIComponent() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
     detachContextMenu(m_recordModeMenu);
+    detachContextMenu(m_clipRoutingMenu);
     Log::debug("TrackUIComponent destroyed for lane: " + m_laneId.toString());
+}
+
+void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const AestraUI::NUIPoint& position) {
+    detachContextMenu(m_clipRoutingMenu);
+    if (!m_trackManager) {
+        return;
+    }
+
+    const auto* clip = m_trackManager->getPlaylistModel().getClip(clipId);
+    auto* pattern = clip ? m_trackManager->getPatternManager().getPattern(clip->patternId) : nullptr;
+    m_clipRoutingMenu = std::make_shared<AestraUI::NUIContextMenu>();
+    m_clipRoutingMenu->setOnHide([this]() { detachContextMenu(m_clipRoutingMenu); });
+
+    auto addAction = [this](const std::string& label, const std::string& shortcut, std::function<void()> action) {
+        auto item = std::make_shared<AestraUI::NUIContextMenuItem>(label);
+        item->setShortcut(shortcut);
+        item->setOnClick(std::move(action));
+        m_clipRoutingMenu->addItem(item);
+    };
+
+    if (pattern && pattern->isMidi() && m_onPatternClipOpenRequested) {
+        addAction("Open in Piano Roll", "Enter", [this, patternId = pattern->id]() {
+            m_onPatternClipOpenRequested(patternId);
+        });
+    } else if (pattern && pattern->isAudio() && m_onAudioClipOpenRequested) {
+        addAction("Open in Audio Editor", "Enter", [this, clipId]() { m_onAudioClipOpenRequested(clipId); });
+    }
+
+    if (auto* parentManager = dynamic_cast<TrackManagerUI*>(getParent())) {
+        if (m_clipRoutingMenu->getItemCount() > 0) {
+            m_clipRoutingMenu->addSeparator();
+        }
+        addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
+        addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
+        addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+    }
+
+    if (pattern && pattern->isAudio()) {
+        const uint32_t selectedId = pattern->getMixerChannelId();
+        auto routingMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        const auto addDestination = [this, routingMenu, patternId = pattern->id, selectedId](uint32_t channelId,
+                                                                                            const std::string& label) {
+            routingMenu->addRadioItem(label, "ClipSourceRouting", selectedId == channelId,
+                                      [this, patternId, channelId]() {
+                if (m_trackManager->setAudioPatternMixerChannel(patternId, channelId)) {
+                    repaint();
+                    if (m_onCacheInvalidationCallback) {
+                        m_onCacheInvalidationCallback();
+                    }
+                }
+            });
+        };
+
+        m_clipRoutingMenu->addSeparator();
+        addDestination(0, "Master");
+        for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+            if (const auto* channel = m_trackManager->getChannel(i)) {
+                addDestination(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
+            }
+        }
+        m_clipRoutingMenu->addSubmenu("Route Linked Clips", routingMenu);
+    }
+
+    m_clipRoutingMenu->addSeparator();
+    auto deleteItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Clip");
+    deleteItem->setShortcut("Delete");
+    deleteItem->setOnClick([this, clipId, position]() {
+        if (m_onClipDeletedCallback) {
+            m_onClipDeletedCallback(this, clipId, position);
+        }
+    });
+    m_clipRoutingMenu->addItem(deleteItem);
+    attachAndShowContextMenu(this, m_clipRoutingMenu, position);
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -263,17 +348,12 @@ void TrackUIComponent::onPanChanged(float pan) {
 
 
 void TrackUIComponent::onMuteToggled() {
-    if (m_channel && m_trackManager) {
+    if (m_trackManager) {
         bool isMuted = m_muteButton->isToggled();
-        m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetMuteCommand>(*m_channel, isMuted));
-
-        // Mutual Exclusivity: If Muting, turn off Solo
-        if (isMuted && m_channel->isSoloed()) {
-             Log::info("Mutual Exclusivity: Turning OFF Solo because Mute activated.");
-             m_trackManager->getCommandHistory().pushAndExecute(
-                 std::make_shared<SetSoloCommand>(*m_channel, false));
-             if (m_soloButton) m_soloButton->setToggled(false);
+        if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+            lane->muted = isMuted;
+            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            m_trackManager->markModified();
         }
 
         Log::info("Lane " + m_laneId.toString() + " muted: " + (isMuted ? "ON" : "OFF"));
@@ -285,20 +365,15 @@ void TrackUIComponent::onMuteToggled() {
 
 
 void TrackUIComponent::onSoloToggled() {
-    if (m_channel && m_trackManager) {
+    if (m_trackManager) {
         bool newSolo = m_soloButton->isToggled(); // Use button state
-        m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetSoloCommand>(*m_channel, newSolo));
-
-        // Mutual Exclusivity: If Soloing, turn off Mute
-        if (newSolo && m_channel->isMuted()) {
-            Log::info("Mutual Exclusivity: Turning OFF Mute because Solo activated.");
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetMuteCommand>(*m_channel, false));
-            if (m_muteButton) m_muteButton->setToggled(false);
+        if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+            lane->solo = newSolo;
+            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            m_trackManager->markModified();
         }
 
-        if (newSolo && m_onSoloToggledCallback) {
+        if (m_onSoloToggledCallback) {
             m_onSoloToggledCallback(this);
         }
 
@@ -364,8 +439,6 @@ void TrackUIComponent::updateRecordTooltip() {
 
 
 void TrackUIComponent::updateUI() {
-    if (!m_channel) return;
-
     // Invalidate parent cache since button colors are changing
     if (m_onCacheInvalidationCallback) {
         m_onCacheInvalidationCallback();
@@ -392,9 +465,10 @@ void TrackUIComponent::updateUI() {
         if (active) button->setBorderColor(statusColor.withAlpha(0.48f));
     };
 
-    configureStatusButton(m_muteButton, m_channel->isMuted(), themeManager.getColor("muted"));
-    configureStatusButton(m_soloButton, m_channel->isSoloed(), themeManager.getColor("soloed"));
-    configureStatusButton(m_recordButton, m_channel->isArmed(), themeManager.getColor("armed"));
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+    configureStatusButton(m_muteButton, lane && lane->muted, themeManager.getColor("muted"));
+    configureStatusButton(m_soloButton, lane && lane->solo, themeManager.getColor("soloed"));
+    configureStatusButton(m_recordButton, m_channel && m_channel->isArmed(), themeManager.getColor("armed"));
 
     if (m_recordButton) {
         updateRecordTooltip();
@@ -409,22 +483,18 @@ void TrackUIComponent::updateUI() {
         m_volumeFader->setFillColor(themeManager.getColor("accentPrimary").withAlpha(0.72f));
         m_volumeFader->setThumbColor(themeManager.getColor("textPrimary").withAlpha(0.92f));
         m_volumeFader->setThumbHoverColor(themeManager.getColor("textPrimary"));
-        m_volumeFader->setValue(m_channel->getVolume());
+        m_volumeFader->setValue(m_channel ? m_channel->getVolume() : 1.0f);
     }
 }
 
 
 void TrackUIComponent::updateTrackNameColors() {
-    if (!m_nameLabel || !m_channel) return;
-
-    int colorIndex = m_channel->getTrackColorIndex();
-    if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-        // trackId is unsigned; guard id 0 or the subtraction wraps to UINT32_MAX.
-        uint32_t trackId = m_channel->getChannelId();
-        colorIndex = static_cast<int>((trackId > 0 ? trackId - 1 : 0) % AestraUI::PALETTE_SIZE);
+    if (!m_nameLabel || !m_trackManager) return;
+    if (const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+        (void)lane;
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        m_nameLabel->setTextColor(theme.getColor("textPrimary").withAlpha(m_selected ? 0.92f : 0.72f));
     }
-    m_nameLabel->setTextColor(
-        AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex)).withAlpha(0.82f));
 }
 
 void TrackUIComponent::generateWaveformCache(int, int) {
@@ -494,16 +564,10 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     size_t visibleFrames = endFrame - startFrame;
     if (visibleFrames == 0) return;
 
-    // Waveform ink follows the clip's display color (same restrain as the
-    // clip fill so the hue matches exactly); selection lifts it slightly so
-    // the state reads on the waveform as well as the border
-    const bool clipSelected = (clip.id == m_activeClipId);
-    AestraUI::NUIColor clipTint = restrainDawColor(resolveClipDisplayColor(clip),
-                                                   clipSelected ? 0.95f : 0.90f,
-                                                   clipSelected ? 0.71f : 0.66f, 1.0f);
-    if (clipSelected) {
-        clipTint = clipTint.lightened(0.10f);
-    }
+    // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
+    // lifts it bright + near-opaque so the wave reads boldly over the fill.
+    const bool clipSelected = (clip.id == m_selectedClipId);
+    const AestraUI::NUIColor clipTint = AestraUI::waveformTintTone(resolveClipDisplayColor(clip), clipSelected);
 
     const double samplesPerPixel = static_cast<double>(visibleFrames) / static_cast<double>(width);
 
@@ -554,20 +618,11 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         }
     }
 
-    // Stereo split-lane if height allows
-    constexpr float kMinSplitHeight = 32.0f;
-    bool useStereoSplit = (numChannels >= 2) && (height >= kMinSplitHeight);
-
-    if (useStereoSplit) {
-        float halfH = height * 0.5f;
-        // Left channel in top half
-        drawChannelWaveform(renderer, bounds.x, bounds.y, width, halfH, m_waveformPeaksL, clipTint);
-        // Right channel in bottom half
-        drawChannelWaveform(renderer, bounds.x, bounds.y + halfH, width, halfH, m_waveformPeaksR, clipTint);
-    } else {
-        // Combined: aggregate channels per bar
-        drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
-    }
+    // Always one combined waveform. Split L/R lanes read as a thin "doubled"
+    // texture at clip heights; a single filled waveform is clearer. The
+    // deep-zoom path above combines too, so layout never jumps across the LOD
+    // threshold.
+    drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
 }
 
 void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
@@ -608,10 +663,13 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     m_waveformTopPts.reserve(static_cast<size_t>(numPoints));
     m_waveformBottomPts.reserve(static_cast<size_t>(numPoints));
 
+    // Display gain so moderate-level audio fills the clip height rather than a
+    // thin band; clamped so it never overshoots the lane.
+    constexpr float kWaveDisplayGain = 1.45f;
     for (int i = 0; i < numPoints; ++i) {
         const auto& peak = peaks[i];
-        float normMin = std::max(-1.0f, std::min(1.0f, peak.min));
-        float normMax = std::max(-1.0f, std::min(1.0f, peak.max));
+        float normMin = std::max(-1.0f, std::min(1.0f, peak.min * kWaveDisplayGain));
+        float normMax = std::max(-1.0f, std::min(1.0f, peak.max * kWaveDisplayGain));
 
         float topY = centerY - normMax * halfDrawH;
         float bottomY = centerY - normMin * halfDrawH;
@@ -636,7 +694,7 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     // have symmetric ±rms poke past the true min/max edge). Reuses the same
     // point buffers in place: envelope Y is read before being overwritten.
     for (int i = 0; i < numPoints; ++i) {
-        float rms = std::max(0.0f, std::min(1.0f, peaks[i].rms));
+        float rms = std::max(0.0f, std::min(1.0f, peaks[i].rms * kWaveDisplayGain));
         float rmsTopY = std::max(m_waveformTopPts[i].y, centerY - rms * halfDrawH);
         float rmsBottomY = std::min(m_waveformBottomPts[i].y, centerY + rms * halfDrawH);
         if (rmsBottomY < rmsTopY) rmsBottomY = rmsTopY;
@@ -769,14 +827,9 @@ void TrackUIComponent::drawSampleWaveform(AestraUI::NUIRenderer& renderer, const
                           1.0f, centerLineColor);
     };
 
-    constexpr float kMinSplitHeight = 32.0f;
-    if (numChannels >= 2 && bounds.height >= kMinSplitHeight) {
-        const float halfH = bounds.height * 0.5f;
-        drawLane(bounds.y, halfH, 0);
-        drawLane(bounds.y + halfH, halfH, 1);
-    } else {
-        drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
-    }
+    // One combined lane, matching the peak-envelope path. Splitting L/R here
+    // would make the waveform layout jump as zoom crosses the LOD threshold.
+    drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
 }
 
 AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance& clip) const {
@@ -787,12 +840,13 @@ AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance&
     auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
     if (!pattern) return clipColor;
 
-    // Same TRACK_PALETTE lookup as updateTrackNameColors, so clips, track
-    // names, and mixer strips all share one curated color per track
-    if (m_channel) {
-        int colorIndex = m_channel->getTrackColorIndex();
+    // Audio-source color follows its mixer destination without coupling the
+    // Playlist lane itself to that insert.
+    auto routeChannel = pattern->isAudio() ? m_trackManager->getChannelById(pattern->getMixerChannelId()) : nullptr;
+    if (routeChannel) {
+        int colorIndex = routeChannel->getTrackColorIndex();
         if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-            uint32_t trackId = m_channel->getChannelId();
+            uint32_t trackId = routeChannel->getChannelId();
             colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
         }
         clipColor = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex));
@@ -838,15 +892,18 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
         }
     }
     
-    bool clipSelected = (clip.id == m_activeClipId);
+    bool clipSelected = (clip.id == m_selectedClipId);
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
-    const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
-                                                         clipSelected ? 0.95f : 0.90f,
-                                                         clipSelected ? 0.71f : 0.66f,
-                                                         1.0f);
-    AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.70f : 0.64f);
-    renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary").withAlpha(0.22f));
+    // Deeper, less-saturated base so the clip reads rich rather than neon.
+    // Body sits lower than the waveform on purpose. Both tones are derived
+    // together in TrackColorPalette.h so the gap between them cannot drift: the
+    // clip stops reading as a bright slab and starts reading as a surface with
+    // audio drawn on it.
+    const AestraUI::NUIColor clipBase = AestraUI::clipBodyTone(clipColor, clipSelected);
+    AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.88f : 0.80f);
+    // Opaque deep base so the timeline grid doesn't bleed through the clip body.
+    renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary"));
     renderer.fillRoundedRect(clipBounds, clipRadius, tintFill);
 
     AestraUI::NUIColor borderColor = clipBase.lightened(0.10f).withAlpha(clipSelected ? 0.94f : 0.58f);
@@ -873,39 +930,50 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     // Selection reads through the brighter border, fill, and waveform ink —
     // no shadow or ring around the clip
 
-    // 14px clip header bar with filename in clip color
-    constexpr float kClipHeaderHeight = 14.0f;
-    if (clipBounds.height > kClipHeaderHeight + 4.0f && clipBounds.width > 28.0f) {
-        const AestraUI::NUIRect headerRect(
-            clipBounds.x + 1.0f,
-            clipBounds.y + 1.0f,
-            std::max(0.0f, clipBounds.width - 2.0f),
-            kClipHeaderHeight
-        );
-        renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, clipBase.withAlpha(clipSelected ? 0.52f : 0.46f));
-        // Header bottom edge highlight
-        renderer.drawLine(
-            AestraUI::NUIPoint(clipBounds.x + 4.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
-            AestraUI::NUIPoint(clipBounds.right() - 4.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
-            1.0f,
-            themeManager.getCurrentTheme().textPrimary.withAlpha(0.09f)
-        );
+    // Label + header band are drawn by drawSampleClipHeader() AFTER the waveform,
+    // so the waveform can fill the full clip height without hiding the filename.
+    (void)sampleName;
+}
 
-        const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
-        if (!displayName.empty()) {
-            // Vertically center the label in the header using real font
-            // metrics — drawText's y is the top of the line, not the baseline
-            const float kClipLabelFontSize = themeManager.getFontSize("micro");
-            const auto metrics = renderer.getFontMetrics(kClipLabelFontSize);
-            const float textBoxH = (metrics.ascent > 0.0f && metrics.descent > 0.0f)
-                                       ? (metrics.ascent + metrics.descent)
-                                       : kClipLabelFontSize;
-            const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
-            renderer.drawText(displayName,
-                              AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
-                              kClipLabelFontSize,
-                              themeManager.getCurrentTheme().textPrimary.withAlpha(clipSelected ? 0.92f : 0.78f));
+// Distinct dark header scrim + filename, drawn on top of the full-height waveform.
+void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                            const ClipInstance& clip) {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const float clipRadius = themeManager.getRadius("s");
+    constexpr float kClipHeaderHeight = 15.0f;
+    if (clipBounds.height <= kClipHeaderHeight + 4.0f || clipBounds.width <= 28.0f) return;
+
+    std::string sampleName = "Clip";
+    if (m_trackManager) {
+        if (auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId)) {
+            sampleName = pattern->name;
         }
+    }
+    const bool clipSelected = (clip.id == m_selectedClipId);
+
+    const AestraUI::NUIRect headerRect(clipBounds.x + 1.0f, clipBounds.y + 1.0f,
+                                       std::max(0.0f, clipBounds.width - 2.0f), kClipHeaderHeight);
+    // Own opaque title strip (the waveform lives below it, not behind it), with a
+    // divider so the label band reads as its own section.
+    renderer.fillRoundedRect(headerRect, clipRadius - 1.0f,
+                             themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.98f : 0.94f));
+    renderer.drawLine(
+        AestraUI::NUIPoint(clipBounds.x + 2.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
+        AestraUI::NUIPoint(clipBounds.right() - 2.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
+        1.0f, themeManager.getCurrentTheme().textPrimary.withAlpha(0.16f));
+
+    const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
+    if (!displayName.empty()) {
+        const float kClipLabelFontSize = themeManager.getFontSize("micro");
+        const auto metrics = renderer.getFontMetrics(kClipLabelFontSize);
+        const float textBoxH = (metrics.ascent > 0.0f && metrics.descent > 0.0f)
+                                   ? (metrics.ascent + metrics.descent)
+                                   : kClipLabelFontSize;
+        const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
+        renderer.drawText(displayName,
+                          AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
+                          kClipLabelFontSize,
+                          themeManager.getCurrentTheme().textPrimary.withAlpha(clipSelected ? 0.95f : 0.85f));
     }
 }
 
@@ -924,11 +992,11 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
     
     // Calculate waveform dimensions in pixel space
     double relStartX = (startBeat * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset);
-    float waveformStartX = bounds.x + controlAreaWidth + 5 + static_cast<float>(relStartX);
+    float waveformStartX = timelineGridStartX(bounds.x, controlAreaWidth) + static_cast<float>(relStartX);
     float waveformWidthInPixels = static_cast<float>(durationBeats * m_pixelsPerBeat);
     
     // Only draw if waveform is visible in the current viewport
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     float gridWidth = bounds.width - controlAreaWidth - 10;
     float gridEndX = gridStartX + gridWidth;
     
@@ -997,17 +1065,24 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawPatternClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
                 } else {
                     drawSampleClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
-                    constexpr float kClipLabelBarHeight = 14.0f;
-                    const float waveformPadX = 3.0f;
-                    const float waveformPadBottom = 3.0f;
-                    const float waveformTopY = insetClippedClipBounds.y + std::min(kClipLabelBarHeight, std::max(0.0f, insetClippedClipBounds.height));
+                    // The label gets its own reserved strip at the top; the waveform
+                    // fills the whole area BELOW it (bold + gained, so it's full, not
+                    // squashed under the label).
+                    constexpr float kHeaderStripH = 16.0f;
+                    const float waveformPad = 3.0f;
+                    const float waveTop = insetClippedClipBounds.y + kHeaderStripH;
                     const AestraUI::NUIRect waveformInsideClip(
-                        insetClippedClipBounds.x + waveformPadX,
-                        waveformTopY,
-                        std::max(1.0f, insetClippedClipBounds.width - waveformPadX * 2.0f),
-                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) - waveformTopY)
+                        insetClippedClipBounds.x + waveformPad,
+                        waveTop + 1.0f,
+                        std::max(1.0f, insetClippedClipBounds.width - waveformPad * 2.0f),
+                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPad) - (waveTop + 1.0f))
                     );
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
+                    drawSampleClipHeader(renderer, insetClippedClipBounds, clip);
+                }
+                if (clip.id == m_selectedClipId) {
+                    drawPianoRollStyleSelection(renderer, insetClippedClipBounds,
+                                                AestraUI::NUIThemeManager::getInstance().getRadius("s"));
                 }
             }
         }
@@ -1019,7 +1094,16 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     AestraUI::NUIColor baseColor = AestraUI::NUIColor::fromHex(clip.colorRGBA);
-    bool isSelected = (clip.id == m_activeClipId);
+    // Unset patterns default to a flat grey RGBA, which reads as an unfinished
+    // placeholder. Fall back to the theme accent so pattern clips carry colour.
+    {
+        const float mx = std::max({baseColor.r, baseColor.g, baseColor.b});
+        const float mn = std::min({baseColor.r, baseColor.g, baseColor.b});
+        if (mx - mn < 0.06f) {
+            baseColor = themeManager.getColor("accentPrimary");
+        }
+    }
+    bool isSelected = (clip.id == m_selectedClipId);
 
     if (clip.edits.muted) {
         baseColor = baseColor.withAlpha(0.4f);
@@ -1064,8 +1148,14 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
 
     const std::string displayName = truncateClipLabel(clipName, clipBounds.width - 46.0f, 5.9f);
     if (!displayName.empty()) {
-        renderer.drawText(displayName, AestraUI::NUIPoint(clipBounds.x + 10.0f, clipBounds.y + 4.0f),
-                          9.5f, themeManager.getCurrentTheme().textPrimary);
+        // Centred in the header band rather than offset from the clip's top edge:
+        // headerHeight is clamped, so a fixed offset drifts as the band resizes and
+        // left the label flush against the band's lower edge at short clip heights.
+        constexpr float kClipLabelFontSize = 9.5f;
+        renderer.drawText(displayName,
+                          AestraUI::NUIPoint(clipBounds.x + 10.0f,
+                                             renderer.calculateTextY(headerRect, kClipLabelFontSize)),
+                          kClipLabelFontSize, themeManager.getCurrentTheme().textPrimary);
     }
 
     if (m_trackManager && clip.patternId.isValid()) {
@@ -1175,14 +1265,19 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
 
     // Selection Highlight (Static base)
     if (isSelected()) {
-         AestraUI::NUIColor selectedColor = themeManager.getColor("accentPrimary").withAlpha(0.075f);
-         trackBgColor = selectedColor; 
+         trackBgColor = themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f);
     } else if (isHovered()) {
          trackBgColor = themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f);
     }
     
     // Apply background
     renderer.fillRect(bounds, trackBgColor);
+    if (isSelected()) {
+        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
+        renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f, selectionEdge);
+        renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f},
+                          1.0f, selectionEdge.withAlpha(0.12f));
+    }
 
     // Row separation is the light gap strip drawn by TrackManagerUI between
     // lanes — no per-row line here, so separators never stack.
@@ -1197,13 +1292,13 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         // direction — surfaceTertiary read bluish-grey), clean surface on light.
         AestraUI::NUIColor baseControlColor = themeManager.getColor("trackChrome");
 
-        // Static Control Area State
-        if (m_channel) {
+        // Static Playlist-lane state is independent from mixer insert state.
+        if (lane) {
             if (m_selected) {
-                 baseControlColor = themeManager.getColor("primary").withAlpha(0.022f);
-             } else if (m_channel->isSoloed()) {
+                 baseControlColor = themeManager.getColor("accentSecondary").withAlpha(0.035f);
+            } else if (lane->solo) {
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
-             } else if (m_channel->isMuted()) {
+            } else if (lane->muted) {
                  baseControlColor = themeManager.getColor("backgroundSecondary");
              } else if (isHovered()) {
                  baseControlColor = themeManager.getColor("surfaceRaised").withAlpha(0.70f);
@@ -1239,8 +1334,8 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
             
             const float stripWidth = 3.0f;
-            const float stripAlpha = (m_selected || (m_channel && (m_channel->isArmed() || m_channel->isSoloed()))) ? 0.86f : 0.52f;
-            const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
+            const float stripAlpha = (m_selected || lane->solo) ? 0.82f : 0.40f;
+            const auto stripBright = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
 
@@ -1278,19 +1373,8 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
 
     // Apply overlay for muted/solo state (Grid Area Only)
     if (m_isPrimaryForLane) {
-        bool anySoloed = false;
-        if (m_trackManager) {
-            // Optimization: TrackManager should pass this state down? 
-            // For now, iterating 50 tracks is cheap.
-            for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
-                if (m_trackManager->getChannel(i)->isSoloed()) {
-                    anySoloed = true;
-                    break;
-                }
-            }
-        }
-
-        const bool soloSuppressed = anySoloed && m_channel && !m_channel->isSoloed();
+        const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+        const bool soloSuppressed = m_anyPlaylistLaneSoloed && lane && !lane->solo;
 
         AestraUI::NUIRect gridArea(
             bounds.x + controlAreaWidth,
@@ -1299,13 +1383,13 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
             bounds.height
         );
         
-        if (m_channel && m_channel->isSoloed()) {
+        if (lane && lane->solo) {
             renderer.fillRect(gridArea, themeManager.getColor("accentCyan").withAlpha(0.06f));
         }
 
         float dimAlpha = 0.0f;
         if (soloSuppressed) dimAlpha = std::max(dimAlpha, 0.28f);
-        if (m_channel && m_channel->isMuted()) dimAlpha = std::max(dimAlpha, 0.40f);
+        if (lane && lane->muted) dimAlpha = std::max(dimAlpha, 0.40f);
 
         if (dimAlpha > 0.0f) {
             renderer.fillRect(gridArea, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, dimAlpha));
@@ -1333,15 +1417,15 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
     // Layered control slab with cool depth.
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.30f : 0.18f));
+    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.22f : 0.12f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
-    renderer.fillRect(highlightRect, themeManager.getColor("primary").withAlpha(0.20f));
+    renderer.fillRect(highlightRect, themeManager.getColor("textPrimary").withAlpha(0.035f));
     
     // Right Border (Separator)
     AestraUI::NUIRect borderRect(controlAreaBounds.right() - 1.0f, controlAreaBounds.y, 1.0f, controlAreaBounds.height);
-    renderer.fillRect(borderRect, themeManager.getColor("borderSubtle").withAlpha(0.92f));
+    renderer.fillRect(borderRect, themeManager.getColor("borderSubtle").withAlpha(0.44f));
 
     // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
     if (m_channel && !m_channel->isMuted() && m_trackManager) {
@@ -1410,41 +1494,31 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                          fontSize, cyan.withAlpha(0.8f));
     }
 
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+
     // Apply highlight overlay (Selection / Solo / Mute)
-    if (m_channel) {
-        bool anySoloed = false;
-        if (m_trackManager) {
-            const size_t channelCount = m_trackManager->getChannelCount();
-            for (size_t i = 0; i < channelCount; ++i) {
-                if (auto ch = m_trackManager->getChannel(i)) {
-                    if (ch->isSoloed()) {
-                        anySoloed = true;
-                        break;
-                    }
-                }
-            }
-        }
+    if (lane) {
+        const bool soloSuppressed = m_anyPlaylistLaneSoloed && !lane->solo;
 
-        const bool soloSuppressed = anySoloed && !m_channel->isSoloed();
-
-        if (m_channel->isSoloed()) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
-        } else if (m_channel->isMuted()) {
+        if (lane->muted) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.62f));
+        } else if (lane->solo) {
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
         } else if (soloSuppressed) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.44f));
         }
 
         // SELECTION OVERLAY
         if (m_selected) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("primary").withAlpha(0.022f));
+            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentSecondary").withAlpha(0.035f));
             AestraUI::NUIRect selectionBar(controlAreaBounds.x, controlAreaBounds.y, 3.0f, controlAreaBounds.height);
-            renderer.fillRect(selectionBar, themeManager.getColor("primary").withAlpha(0.18f));
+            renderer.fillRect(selectionBar,
+                              themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.82f));
         }
     }
 
     // Track color strip (identity)
-    if (m_channel) {
+    if (lane) {
         AestraUI::NUIColor stripColor;
         
         if (m_isLoading) {
@@ -1453,12 +1527,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             float pulse = (std::sin(static_cast<float>(Aestra::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f);
             stripColor = stripColor.withAlpha(0.6f + pulse * 0.4f);
         } else {
-            int colorIndex = m_channel->getTrackColorIndex();
-            if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-                uint32_t trackId = m_channel->getChannelId();
-                colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
-            }
-            uint32_t argb = AestraUI::paletteIndexToARGB(colorIndex);
+            uint32_t argb = lane->colorRGBA;
             float a = ((argb >> 24) & 0xFF) / 255.0f;
             float r = ((argb >> 16) & 0xFF) / 255.0f;
             float g = ((argb >> 8) & 0xFF) / 255.0f;
@@ -1467,8 +1536,11 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
         
         const float stripWidth = 3.0f;
-        const float stripAlpha = (m_selected || m_channel->isArmed() || m_channel->isSoloed()) ? 0.90f : 0.64f;
-        stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
+        const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.42f;
+        // Was 0.86f here against 0.84f in the static pass, so one lane strip had
+        // two brightnesses depending on which pass drew it. Both now go through
+        // the shared lane-identity restraint the minimap uses.
+        stripColor = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
         
         // Draw strip
         renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
@@ -1481,28 +1553,20 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // Selection Highlight Line (Inner Glow)
         if (m_selected) {
-            auto glowColor = themeManager.getColor("highlightGlow");
+            auto glowColor = AestraUI::NUIColor::white().withAlpha(0.20f);
             // Top highlight line inside control area (skipping strip)
             renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
             // Bottom highlight
-            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.5f));
+            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.12f));
         }
     }
 
-    // Explicit Separators for Control Area (ensures they are on top of background)
-    // Top
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.y),
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-        1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.84f)
-    );
-    // Bottom
+    // A single quiet bottom rule separates rows without boxing every header.
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1),
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
         1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.84f)
+        themeManager.getColor("borderSubtle").withAlpha(0.10f)
     );
 
 
@@ -1511,16 +1575,19 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
         AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
         1.0f,
-        themeManager.getColor("glassBorder")
+        themeManager.getColor("glassBorder").withAlpha(0.46f)
     );
 
     // Render the track name directly; track control widgets remain hit targets only.
     // Drawing the button widgets here reintroduces bordered/pill artifacts in cached rows.
     if (m_nameLabel) {
+        m_nameLabel->setTextColor(themeManager.getColor("textPrimary").withAlpha(m_selected ? 0.92f
+                                                                                         : isHovered() ? 0.82f
+                                                                                                       : 0.70f));
         m_nameLabel->onRender(renderer);
     }
 
-    if (m_channel) {
+    if (lane) {
         const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 0.74f : 0.60f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
@@ -1534,15 +1601,17 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
             const auto rect = button->getBounds();
             const bool hovered = button->isHovered() && button->isEnabled();
-            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.070f : 0.035f);
-            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.35f : 0.18f);
+            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.070f : 0.0f);
+            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.30f : 0.0f);
             if (active) {
                 bg = activeColor.withAlpha(0.18f);
                 border = activeColor.withAlpha(0.55f);
             }
             const float pillRadius = rect.height * 0.5f;
-            renderer.fillRoundedRect(rect, pillRadius, bg);
-            renderer.strokeRoundedRect(rect, pillRadius, 1.0f, border);
+            if (hovered || active) {
+                renderer.fillRoundedRect(rect, pillRadius, bg);
+                renderer.strokeRoundedRect(rect, pillRadius, 1.0f, border);
+            }
             if (active) {
                 renderer.strokeRoundedRect(rect, pillRadius, 1.0f, activeColor.withAlpha(0.45f));
             }
@@ -1562,15 +1631,16 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                 return;
             }
             const auto rect = button->getBounds();
-            const float iconSize = std::round(std::min(rect.width, rect.height) - 6.0f);
+            const float iconSize = 11.0f;
             const AestraUI::NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
                                              std::round(rect.y + (rect.height - iconSize) * 0.5f),
                                              iconSize, iconSize);
             AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect, color);
         };
 
-        // Draw volume knob (replaces route button)
-        {
+        // A Playlist lane has no gain stage of its own. Only draw the knob
+        // when an explicit mixer association was supplied by another view.
+        if (m_channel) {
             const auto& knobBounds = m_volumeKnobBounds;
             if (!knobBounds.isEmpty()) {
                 const float cx = knobBounds.x + knobBounds.width * 0.5f;
@@ -1616,20 +1686,20 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
         }
 
-        drawControlIcon(m_muteButton, kMuteIconSvg, m_channel->isMuted() ? muteActive : textIdle,
-                        m_channel->isMuted(), muteActive);
-        drawControlIcon(m_soloButton, kSoloIconSvg, m_channel->isSoloed() ? soloActive : textIdle,
-                        m_channel->isSoloed(), soloActive);
-        drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
-                        m_channel->isArmed() ? recordActive : textIdle,
-                        m_channel->isArmed(), recordActive);
+        drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
+        drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
+        if (m_channel) {
+            drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
+                            m_channel->isArmed() ? recordActive : textIdle,
+                            m_channel->isArmed(), recordActive);
+        }
     }
 
     // Track number marker (left of name): fixed white — no dynamic dimming
     // (professional, defined feel per owner direction).
-    if (m_nameLabel && m_channel) {
+    if (m_nameLabel && lane) {
         constexpr float stripWidth = 3.0f;
-        uint32_t trackNumber = m_channel->getChannelId();
+        uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
         const auto laneName = m_nameLabel->getText();
         uint32_t parsedNumber = 0;
         if (parseTrailingTrackNumber(laneName, parsedNumber)) {
@@ -1638,7 +1708,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         const auto nameBounds = m_nameLabel->getBounds();
         renderer.drawText(std::to_string(trackNumber),
                           AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-                          themeManager.getFontSize("xs"), AestraUI::NUIColor::white());
+                          themeManager.getFontSize("xs"),
+                          themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.90f : 0.70f));
     }
 }
 
@@ -1653,9 +1724,18 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const float gridStartX = bounds.x + controlAreaWidth + gridGap;
     const float gridEndX = bounds.right();
 
+    // The arrangement is a large empty canvas much more often than the Piano
+    // Roll, so its infrastructure recedes further while retaining the same
+    // bar > beat > subdivision grammar.
+    const AestraUI::TimelineGridStyle timelineStyle{
+        0.026f, // bars
+        0.006f, // beats
+        0.002f, // subdivisions
+        0.0f    // no empty-canvas zebra
+    };
     AestraUI::renderTimelineGrid(
         renderer, bounds, gridStartX, gridEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar,
-        themeManager.getCurrentTheme().textPrimary);
+        themeManager.getCurrentTheme().textPrimary, timelineStyle);
 }
 
 void TrackUIComponent::onMouseEnter() {
@@ -1685,9 +1765,9 @@ void TrackUIComponent::onUpdate(double deltaTime) {
     // This prevents overriding hover colors unnecessarily
 
     // Update children state
-    if (m_channel) {
-        bool currentMuted = m_channel->isMuted();
-        bool currentSoloed = m_channel->isSoloed();
+    if (const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr) {
+        bool currentMuted = lane->muted;
+        bool currentSoloed = lane->solo;
 
         // Check if buttons match channel state
         if (m_muteButton && m_muteButton->isToggled() != currentMuted) {
@@ -1711,10 +1791,12 @@ void TrackUIComponent::onResize(int width, int height) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
 
     // Buttons cluster (horizontal, right-aligned within the control area)
-    const float buttonW = 16.0f;
-    const float buttonH = 18.0f;
-    const float spacing = 6.0f;
-    const int numButtons = 4; // M, S, R, Volume knob
+    // Keep the glyphs visually quiet while meeting a standard 24px pointer
+    // target. The hover shell reveals the full interactive area.
+    const float buttonW = 24.0f;
+    const float buttonH = 24.0f;
+    const float spacing = 2.0f;
+    const int numButtons = m_channel ? 4 : 2; // Playlist lanes only own M/S.
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     const float leftPad = 14.0f;
@@ -1755,8 +1837,10 @@ void TrackUIComponent::onResize(int width, int height) {
         m_recordButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
         xCursor += buttonW + spacing;
     }
-    // Volume knob in the slot where route button was
-    m_volumeKnobBounds = AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW + 2.0f, buttonH);
+    // Volume belongs to the mixer, never to a normal Playlist lane.
+    m_volumeKnobBounds = m_channel
+                             ? AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW + 2.0f, buttonH)
+                             : AestraUI::NUIRect();
 
     AestraUI::NUIComponent::onResize(width, height);
 }
@@ -1806,7 +1890,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5;
+    float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     float gridEndX = bounds.x + bounds.width - 5;
     
     // === HOVER EDGE DETECTION (for resize cursor) ===
@@ -1874,11 +1958,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_volumeKnobDragStartPos = event.position;
                 m_volumeKnobDragStartValue = m_volumeKnobValue;
 
-                // Cursor capture: hide system cursor for infinite drag
+                // Cursor capture via the unified service: hides + confines to
+                // a small anchor rect + routes motion here only + recenters, so
+                // the hidden pointer can't roam other panels (foreign hover /
+                // escape). Restores at the knob center on release.
                 if (m_platformBridge) {
-                    m_volumeWarpOrigin = event.position;
-                    m_volumeLastDragY = event.position.y;
-                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hidden);
+                    m_platformBridge->beginCursorCapture(
+                        this, AestraUI::NUICursorRestorePolicy::KnobCenter,
+                        static_cast<int>(event.position.x), static_cast<int>(event.position.y));
                 }
 
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
@@ -1887,20 +1974,20 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_isDraggingVolumeKnob = false;
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
 
-                // Restore cursor to knob center (matches current value position)
+                // End capture: service warps to knob center, unhides, releases
+                // confinement — in that order.
                 if (m_platformBridge) {
-                    m_platformBridge->setCursorPosition(
+                    m_platformBridge->endCursorCapture(
                         static_cast<int>(m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f),
                         static_cast<int>(m_volumeKnobBounds.y + m_volumeKnobBounds.height * 0.5f));
-                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
                 }
 
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
                 handledByControls = true;
             } else if (m_isDraggingVolumeKnob && event.button == AestraUI::NUIMouseButton::None) {
-                // Dragging: frame-to-frame delta (up = louder)
-                float dy = m_volumeLastDragY - event.position.y;
-                m_volumeLastDragY = event.position.y;
+                // Dragging: service-owned delta (up = louder). event.delta.y is
+                // down-positive, so negate to keep up = louder.
+                float dy = -event.delta.y;
                 float delta = dy * 0.008f;
                 if (event.modifiers & AestraUI::NUIModifiers::Shift) {
                     delta *= 0.25f;
@@ -1939,11 +2026,17 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
                 AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
             } else if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Mute Track (M)", event.position, this);
+                const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+                const std::string tooltip =
+                    lane && lane->muted && lane->solo ? "Muted • Solo is held (M)" : "Mute Track (M)";
+                AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_soloButton && m_soloButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Solo Track (S)", event.position, this);
+                const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+                const std::string tooltip =
+                    lane && lane->muted && lane->solo ? "Solo held • Track is muted (S)" : "Solo Track (S)";
+                AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Arm for Recording (O)", event.position, this);
+                AestraUI::NUIComponent::showRemoteTooltip("Arm Track for Recording (O)", event.position, this);
             } else if (m_volumeKnobHovered) {
                 int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
                 AestraUI::NUIPoint tipPos(
@@ -1958,8 +2051,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&
             m_recordButton && m_recordButton->getBounds().contains(event.position)) {
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             showRecordModeMenu(event.position);
             return true;
         }
@@ -1967,9 +2061,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (handledByControls) {
             // Clicking controls should also select the track (v3.1)
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
+                if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             return true;
         }
@@ -1978,8 +2071,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && event.position.x <= controlAreaEndX) {
             // Select track on right-click too
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
 
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
@@ -2009,7 +2103,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     if (m_playlistMode == PlaylistMode::Automation && (isInsideBounds || m_isDraggingPoint)) {
         if (event.position.x >= gridStartX || m_isDraggingPoint) {
-            double beat = (event.position.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
+            double beat =
+                timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
             double value = 1.0 - std::clamp((static_cast<double>(event.position.y) - bounds.y) / bounds.height, 0.0, 1.0);
             
             auto& playlist = m_trackManager->getPlaylistModel();
@@ -2125,10 +2220,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             // Allow selecting track in automation mode if not interacting with points
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                 if (m_onTrackSelectedCallback) {
-                    const bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                       (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                    m_onTrackSelectedCallback(this, shift);
+                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
                 }
+                if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             
             if (isInsideBounds) return true;
@@ -2231,10 +2325,31 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         
         const float DRAG_THRESHOLD = 5.0f;
         if (distance >= DRAG_THRESHOLD && m_activeClipId.isValid()) {
-            m_isDraggingClip = true;
             m_clipDragPotential = false;
-            
-            // Replaced DragManager with Instant Drag
+
+            // Alt-drag routes the referenced audio source. Normal drag remains
+            // arrangement-only, so moving a clip can never change its signal path.
+            if ((event.modifiers & AestraUI::NUIModifiers::Alt) && m_trackManager) {
+                const auto* clip = m_trackManager->getPlaylistModel().getClip(m_activeClipId);
+                const auto* pattern = clip ? m_trackManager->getPatternManager().getPattern(clip->patternId) : nullptr;
+                if (clip && pattern && pattern->isAudio()) {
+                    AestraUI::DragData routeDrag;
+                    routeDrag.type = AestraUI::DragDataType::AudioSourceRoute;
+                    routeDrag.displayName = clip->name.empty() ? pattern->name : clip->name;
+                    routeDrag.customData = pattern->id.value;
+                    const auto boundsIt = m_allClipBounds.find(m_activeClipId);
+                    if (boundsIt != m_allClipBounds.end()) {
+                        routeDrag.previewWidth = std::max(100.0f, boundsIt->second.width);
+                        routeDrag.previewHeight = std::max(24.0f, boundsIt->second.height);
+                    }
+                    dragManager.beginDrag(routeDrag, m_clipDragStartPos, this);
+                    return true;
+                }
+            }
+
+            m_isDraggingClip = true;
+
+            // Normal clip movement uses the low-latency arrangement drag path.
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (m_trackManager) {
                     auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
@@ -2291,9 +2406,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (isSplitToolActive && clickedClipId.isValid()) {
                 // Calculate beat position using same math as the visual cursor in TrackManagerUI
                 // This ensures the split occurs exactly where the preview line shows
-                float mouseRelX = event.position.x - gridStartX + m_timelineScrollOffset;
-                double mouseBeat = mouseRelX / static_cast<double>(m_pixelsPerBeat);
-                
+                double mouseBeat =
+                    timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
+
                 Log::info("Split requested at " + std::to_string(mouseBeat) + " beats");
                 
                 if (m_onSplitRequestedCallback) {
@@ -2306,9 +2421,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             // Handle PAINT TOOL - Click on empty space
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (parentMgr->getCurrentTool() == PlaylistTool::Paint && !clickedClipId.isValid()) {
-                     double beat = (event.position.x - gridStartX + m_timelineScrollOffset) / m_pixelsPerBeat;
-                     parentMgr->onPaintClip(this, beat);
-                     return true;
+                    double beat = timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset,
+                                                           m_pixelsPerBeat);
+                    parentMgr->onPaintClip(this, beat);
+                    return true;
                 }
             }
             
@@ -2330,6 +2446,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 auto* pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
                                 if (pattern && pattern->isMidi() && m_onPatternClipOpenRequested) {
                                     m_onPatternClipOpenRequested(clip.patternId);
+                                    return true;
+                                }
+                                if (pattern && pattern->isAudio() && m_onAudioClipOpenRequested) {
+                                    m_onAudioClipOpenRequested(clip.id);
                                     return true;
                                 }
                                 break;
@@ -2365,9 +2485,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                     (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                        m_onTrackSelectedCallback(this, shift);
+                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
                     } else {
                         m_selected = true;
                     }
@@ -2400,9 +2518,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                     
                     if (m_onTrackSelectedCallback) {
-                        bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                     (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                        m_onTrackSelectedCallback(this, shift);
+                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
                     } else {
                         m_selected = true;
                     }
@@ -2414,9 +2530,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_clipDragStartPos = event.position;
                 m_activeClipId = clickedClipId;
                 if (m_onTrackSelectedCallback) {
-                    bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                                 (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                    m_onTrackSelectedCallback(this, shift);
+                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
                 } else {
                     m_selected = true;
                 }
@@ -2433,24 +2547,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Grid area click (not on any clip) - select track
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
             } else {
                 m_selected = true;
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
         
         // Click in control area (but not on a button) - just select the track
         if (event.position.x < controlAreaEndX) {
             if (m_onTrackSelectedCallback) {
-                bool shift = (event.modifiers & AestraUI::NUIModifiers::Shift) ||
-                             (event.modifiers & AestraUI::NUIModifiers::CapsLock);
-                m_onTrackSelectedCallback(this, shift);
+                m_onTrackSelectedCallback(this, selectionIntentFor(event));
             } else {
                 m_selected = true;
             }
+            if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
     }
@@ -2469,7 +2581,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_activeClipId = clickedClipId;
 
             if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, false);
+                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
             } else {
                 m_selected = true;
             }
@@ -2478,12 +2590,21 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
 
-            if (m_onClipDeletedCallback) {
-                m_onClipDeletedCallback(this, clickedClipId, event.position);
-            }
-
+            showClipRoutingMenu(clickedClipId, event.position);
             return true;
         }
+
+        // Empty timeline space still belongs to its track. Right-click opens
+        // the same track menu as the header; marquee selection is an explicit
+        // tool gesture, not a hidden alternate meaning for the context button.
+        if (m_onTrackSelectedCallback) {
+            m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
+        }
+        if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
+        if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+            parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
+        }
+        return true;
     }
 
     // Pass through to parent if not handled
@@ -2598,6 +2719,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
 
 
 void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth) {
+    if (!m_trackManager || !m_channel) return;
     if (!m_trackManager->isRecording()) return;
     if (!m_channel->isArmed()) return;
 
@@ -2608,7 +2730,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (!gotSnapshot || recordingData.empty()) return;
 
     // Layout parameters
-    const float gridStartX = bounds.x + controlAreaWidth + 5.0f; // + gap
+    const float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
     const float centerY = bounds.y + bounds.height * 0.5f;
     const float halfHeight = bounds.height * 0.5f; // Use full height for live wave
     

@@ -22,14 +22,14 @@
 using namespace Aestra::Audio;
 
 namespace {
-double quantizePatternLengthBeats(double contentEndBeat) {
-    constexpr double kBeatsPerBar = 4.0;
-    constexpr double kBarsPerPatternBlock = 2.0;
-    constexpr double kPatternBlockBeats = kBeatsPerBar * kBarsPerPatternBlock; // 8 beats = 2 bars
-
+// Round pattern length up to whole bars of the CURRENT time signature,
+// minimum one bar. (Was hardcoded 2 bars of 4/4 = 8 beats, which both locked
+// non-4/4 signatures out and forced a 2-bar minimum.)
+double quantizePatternLengthBeats(double contentEndBeat, int beatsPerBar) {
+    const double barBeats = static_cast<double>(std::max(1, beatsPerBar));
     const double safeContentEnd = std::max(0.0, contentEndBeat);
-    const double blocksNeeded = std::max(1.0, std::ceil(safeContentEnd / kPatternBlockBeats));
-    return blocksNeeded * kPatternBlockBeats;
+    const double barsNeeded = std::max(1.0, std::ceil(safeContentEnd / barBeats));
+    return barsNeeded * barBeats;
 }
 } // namespace
 
@@ -85,6 +85,25 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
             setEditingUnit(resolvedUnitId);
         }
         loadPattern(patternId);
+    });
+
+    m_pianoRoll->setOnUnitChoiceSelected([this](int unitValue) {
+        if (unitValue <= 0 || !m_trackManager) {
+            return;
+        }
+        const UnitID unitId = static_cast<UnitID>(unitValue);
+        if (unitId == m_editingUnitId) {
+            return;
+        }
+        if (!m_trackManager->getUnitManager().getUnit(unitId)) {
+            return;
+        }
+        setEditingUnit(unitId);
+        // Let the rest of the app follow the switch (Arsenal selection, hardware
+        // MIDI + musical-typing target) via the same choke point Arsenal uses.
+        if (m_onEditingUnitChanged) {
+            m_onEditingUnitChanged(unitId);
+        }
     });
 
     // Setup playback state check and note preview
@@ -157,6 +176,10 @@ void PianoRollPanel::setPixelsPerBeat(float ppb) {
     }
 }
 
+int PianoRollPanel::beatsPerBar() const {
+    return m_trackManager ? m_trackManager->getTimelineClock().getBeatsPerBar() : 4;
+}
+
 void PianoRollPanel::setBeatsPerBar(int bpb) {
     if (m_pianoRoll) {
         m_pianoRoll->setBeatsPerBar(bpb);
@@ -186,11 +209,20 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             m_pianoRoll->setSnapToScale(false);
         }
 
-        // Convert backend notes to UI notes
+        // Convert backend notes to UI notes. Only the editing unit's notes are
+        // editable in the roll; other units' notes are stashed and rendered as
+        // colored unit ghosts (and merged back untouched on save), so switching
+        // the unit dropdown visibly switches what you're editing.
         const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
         std::vector<AestraUI::MidiNote> uiNotes;
-        
+        m_otherUnitNotes.clear();
+        const bool filterByUnit = m_editingUnitId != 0;
+
         for (const auto& vn : midiPayload.notes) {
+            if (filterByUnit && vn.unitId != 0 && vn.unitId != m_editingUnitId) {
+                m_otherUnitNotes.push_back(vn);
+                continue;
+            }
             AestraUI::MidiNote uiNote;
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
@@ -218,8 +250,9 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
-        const double quantizedLengthBeats = quantizePatternLengthBeats(longestBeat);
-        const double resolvedLengthBeats = std::max(8.0, std::max(pattern->lengthBeats, quantizedLengthBeats));
+        const double barBeats = static_cast<double>(beatsPerBar());
+        const double quantizedLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+        const double resolvedLengthBeats = std::max(barBeats, std::max(pattern->lengthBeats, quantizedLengthBeats));
         if (std::abs(resolvedLengthBeats - pattern->lengthBeats) > 0.001) {
             pm.applyPatch(patternId, [resolvedLengthBeats](PatternSource& p) {
                 p.lengthBeats = resolvedLengthBeats;
@@ -265,6 +298,10 @@ void PianoRollPanel::savePattern() {
         backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
         currentNotes.push_back(backendNote);
     }
+
+    // Other units' notes are hidden from the editor but still belong to the
+    // pattern — merge them back so the diff/revert below can't drop them.
+    currentNotes.insert(currentNotes.end(), m_otherUnitNotes.begin(), m_otherUnitNotes.end());
 
     // Diff the before/after states using the dedicated diff function.
     // diffNotes handles same-position/different-duration disambiguation via
@@ -325,10 +362,14 @@ void PianoRollPanel::savePattern() {
         m_applyingUndoRedo = false;
     }
 
-    // Update captured state for next edit
+    // Update captured state for next edit — BEFORE notifying listeners, so a
+    // reentrant savePattern (Arsenal refresh echo) diffs as empty and stops.
     m_notesBeforeEdit = currentNotes;
 
-    if (m_onPatternEdited) {
+    // Only notify when something actually changed: unconditional notification
+    // caused an Arsenal-refresh/refreshTracks storm on every no-op save and
+    // fed the setEditingUnit recursion.
+    if (!diff.empty() && m_onPatternEdited) {
         m_onPatternEdited(m_currentPatternId);
     }
 
@@ -336,9 +377,9 @@ void PianoRollPanel::savePattern() {
     for (const auto& note : currentNotes) {
         longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
     }
-    // Keep patterns musical in 4-bar blocks and let note content drive the
+    // Keep patterns musical in whole bars and let note content drive the
     // default loop size on add/delete.
-    const double newLengthBeats = quantizePatternLengthBeats(longestBeat);
+    const double newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
     m_patternDurationBeats = newLengthBeats;
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
@@ -368,9 +409,10 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
         contentEndBeat = std::max(contentEndBeat, note.startBeat + note.durationBeats);
     }
 
-    const double minLengthBeats = quantizePatternLengthBeats(contentEndBeat);
-    const double requestedLengthBeats = m_patternDurationBeats + (static_cast<double>(barsDelta) * 4.0);
-    const double newLengthBeats = std::max(8.0, std::max(minLengthBeats, requestedLengthBeats));
+    const double barBeats = static_cast<double>(beatsPerBar());
+    const double minLengthBeats = quantizePatternLengthBeats(contentEndBeat, beatsPerBar());
+    const double requestedLengthBeats = m_patternDurationBeats + (static_cast<double>(barsDelta) * barBeats);
+    const double newLengthBeats = std::max(barBeats, std::max(minLengthBeats, requestedLengthBeats));
 
     if (std::abs(newLengthBeats - m_patternDurationBeats) <= 0.001) {
         m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
@@ -396,16 +438,63 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
 }
 
 void PianoRollPanel::setEditingUnit(UnitID unitId) {
+    // Hard reentrancy guard: savePattern() below fires onPatternEdited, which
+    // walks through Arsenal refreshUnits -> onSelectedUnitChanged and back
+    // into setEditingUnit while m_editingUnitId is still the old id — without
+    // this flag that echo recurses until the stack blows (SIGSEGV in the wild).
+    if (m_switchingUnit) {
+        return;
+    }
+    const bool changed = unitId != m_editingUnitId;
+    if (changed && m_currentPatternId.isValid()) {
+        m_switchingUnit = true;
+        savePattern(); // Commit pending edits under the old unit before re-filtering
+        m_switchingUnit = false;
+    }
     m_editingUnitId = unitId;
     if (m_pianoRoll) {
         m_pianoRoll->setDefaultUnitId(unitId);
     }
+    if (changed && m_currentPatternId.isValid()) {
+        // Re-split foreground notes vs unit ghosts for the new editing unit.
+        loadPattern(m_currentPatternId);
+        updateGhostChannels();
+    }
+    // Keep the toolbar's unit + pattern switchers reflecting the active unit.
+    rebuildUnitSwitcher();
+    rebuildPatternSwitcher();
+}
+
+void PianoRollPanel::rebuildUnitSwitcher() {
+    if (!m_trackManager || !m_pianoRoll) {
+        return;
+    }
+
+    std::vector<AestraUI::PianoRollToolbar::PatternChoice> choices;
+    const auto unitIds = m_trackManager->getUnitManager().getAllUnitIDs();
+    choices.reserve(unitIds.size());
+    for (const auto unitId : unitIds) {
+        if (unitId == 0 || unitId > static_cast<UnitID>(std::numeric_limits<int>::max())) {
+            continue;
+        }
+        const auto* unit = m_trackManager->getUnitManager().getUnit(unitId);
+        std::string label = (unit && !unit->name.empty()) ? unit->name
+                                                          : ("Unit " + std::to_string(unitId));
+        choices.push_back({static_cast<int>(unitId), std::move(label)});
+    }
+
+    const int selectedValue = (m_editingUnitId != 0 &&
+                               m_editingUnitId <= static_cast<UnitID>(std::numeric_limits<int>::max()))
+                                  ? static_cast<int>(m_editingUnitId)
+                                  : -1;
+    m_pianoRoll->setUnitChoices(choices, selectedValue);
 }
 
 void PianoRollPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
     if (isVisible() && !m_wasVisible) {
         rebuildPatternSwitcher();
+        rebuildUnitSwitcher();
     }
     m_wasVisible = isVisible();
     if (isVisible()) {
@@ -433,8 +522,15 @@ void PianoRollPanel::onUpdate(double deltaTime) {
             }
 
             m_pianoRoll->setPlayheadBeat(playheadBeat, follow);
-            m_pianoRoll->repaint();
-
+            // Only force a redraw when the playhead is actually moving. Editing
+            // gestures (placing/dragging notes, hover) trigger their own
+            // repaints, so an unconditional per-frame repaint just pins a core
+            // at 100% while the panel sits idle. This was the Piano Roll heat.
+            const bool playheadMoved = std::abs(playheadBeat - m_lastPlayheadBeat) > 1e-6;
+            if (follow || playheadMoved) {
+                m_pianoRoll->repaint();
+            }
+            m_lastPlayheadBeat = playheadBeat;
         }
     }
 }
@@ -531,6 +627,40 @@ void PianoRollPanel::updateGhostChannels() {
         }
         ghosts.push_back(gp);
     }
-    
+
+    // Same-pattern notes belonging to other units: draw them in their unit's
+    // Arsenal color, stronger than cross-pattern ghosts, so switching the unit
+    // dropdown reads instantly (foreground = editing unit, tinted = the rest).
+    if (!m_otherUnitNotes.empty()) {
+        auto& unitMgr = m_trackManager->getUnitManager();
+        std::unordered_map<UnitID, AestraUI::PianoRollNoteLayer::GhostPattern> unitGhosts;
+        for (const auto& vn : m_otherUnitNotes) {
+            auto& gp = unitGhosts[vn.unitId];
+            if (gp.notes.empty()) {
+                uint32_t colorValue = 0x8892a6; // fallback slate
+                if (const auto* unit = unitMgr.getUnit(vn.unitId)) {
+                    colorValue = unit->color;
+                }
+                const float scale = 1.0f / 255.0f;
+                gp.color = AestraUI::NUIColor(((colorValue >> 16) & 0xff) * scale,
+                                              ((colorValue >> 8) & 0xff) * scale,
+                                              (colorValue & 0xff) * scale, 1.0f);
+                gp.fillAlpha = 0.30f;
+                gp.strokeAlpha = 0.55f;
+            }
+            AestraUI::MidiNote uiNote;
+            uiNote.pitch = vn.pitch;
+            uiNote.startBeat = vn.startBeat;
+            uiNote.durationBeats = vn.durationBeats;
+            uiNote.velocity = vn.velocity;
+            uiNote.selected = false;
+            uiNote.isDeleted = false;
+            gp.notes.push_back(uiNote);
+        }
+        for (auto& [unitId, gp] : unitGhosts) {
+            ghosts.push_back(std::move(gp));
+        }
+    }
+
     m_pianoRoll->setGhostPatterns(ghosts);
 }

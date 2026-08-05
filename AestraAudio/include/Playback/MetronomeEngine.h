@@ -46,7 +46,10 @@ public:
     void loadClickSounds(const std::string& downbeatPath, const std::string& upbeatPath);
 
     // Reset internal state (e.g. on seek/loop)
-    void reset(uint64_t globalSamplePos, uint32_t sampleRate);
+    // Re-align beat scheduling to a new transport position. Pass
+    // skipCurrentBeat=true when the beat exactly at globalSamplePos already
+    // clicked in the pre-jump timeline (loop wrap) so it doesn't fire twice.
+    void reset(uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat = false);
 
     /** @brief Set the project sample rate and regenerate click sounds. */
     void setSampleRate(uint32_t rate);

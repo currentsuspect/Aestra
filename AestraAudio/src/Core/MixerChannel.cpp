@@ -40,7 +40,7 @@ void MixerChannel::setVolume(float volume) {
     if (m_commandSink && m_channelId > 0 && std::abs(previous - volume) > 0.0001f) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTrackVolume;
-        cmd.trackIndex = m_channelId - 1;
+        cmd.channelId = m_channelId;
         cmd.value1 = volume;
         m_commandSink(cmd);
     }
@@ -53,7 +53,7 @@ void MixerChannel::setPan(float pan) {
     if (m_commandSink && m_channelId > 0 && std::abs(previous - pan) > 0.0001f) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTrackPan;
-        cmd.trackIndex = m_channelId - 1;
+        cmd.channelId = m_channelId;
         cmd.value1 = pan;
         m_commandSink(cmd);
     }
@@ -72,7 +72,7 @@ void MixerChannel::setMute(bool mute) {
     if (m_commandSink && m_channelId > 0 && previous != mute) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTrackMute;
-        cmd.trackIndex = m_channelId - 1;
+        cmd.channelId = m_channelId;
         cmd.value1 = mute ? 1.0f : 0.0f;
         m_commandSink(cmd);
     }
@@ -85,7 +85,7 @@ void MixerChannel::setSolo(bool solo) {
     if (m_commandSink && m_channelId > 0 && previous != solo) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTrackSolo;
-        cmd.trackIndex = m_channelId - 1;
+        cmd.channelId = m_channelId;
         cmd.value1 = solo ? 1.0f : 0.0f;
         m_commandSink(cmd);
     }
@@ -171,7 +171,22 @@ std::vector<AudioRoute> MixerChannel::getSends() const {
 
 void MixerChannel::addSend(const AudioRoute& route) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
-    m_sends.push_back(route);
+    AudioRoute sanitized = route;
+    sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
+    sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+    m_sends.push_back(sanitized);
+}
+
+void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    m_sends.clear();
+    m_sends.reserve(routes.size());
+    for (const auto& route : routes) {
+        AudioRoute sanitized = route;
+        sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
+        sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+        m_sends.push_back(sanitized);
+    }
 }
 
 void MixerChannel::removeSend(int index) {
@@ -184,14 +199,14 @@ void MixerChannel::removeSend(int index) {
 void MixerChannel::setSendLevel(int index, float level) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].gain = level;
+        m_sends[index].gain = std::isfinite(level) ? std::clamp(level, 0.0f, 4.0f) : 0.0f;
     }
 }
 
 void MixerChannel::setSendPan(int index, float pan) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].pan = pan;
+        m_sends[index].pan = std::isfinite(pan) ? std::clamp(pan, -1.0f, 1.0f) : 0.0f;
     }
 }
 

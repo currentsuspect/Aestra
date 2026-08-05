@@ -342,6 +342,7 @@ void PluginUIController::openPluginEditor(
     } else if (pluginId == "com.Aestrastudios.rumble") {
         auto ed = std::make_shared<RumblePluginEditor>(instance);
         wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
 #endif
     } else if (pluginId == "com.Aestrastudios.eq") {
@@ -397,6 +398,7 @@ void PluginUIController::openPluginEditor(
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
         wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     }
     

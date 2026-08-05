@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ISettingsPage.h"
+#include "SettingsPersistencePolicy.h"
 #include "AudioDeviceManager.h"
 #include "TrackManager.h"
 #include "NUIButton.h"
@@ -92,8 +93,15 @@ private:
     void loadCurrentSettings();
     
     // Persistence
-    void saveSettings();
+    /// @return true only when the configuration was actually written. A failed
+    /// save must not clear the dirty flag (#648 review).
+    bool saveSettings();
     void loadSettings();
+
+    // Apply the current control values to the engine WITHOUT persisting (#648).
+    // applyChanges() is this plus saveSettings(); the load path uses this alone,
+    // so hydrating the page can never write to disk.
+    void applyEngineSettings();
 
     Audio::AudioDeviceManager* m_audioManager;
     Audio::AudioEngine* m_audioEngine;
@@ -173,6 +181,14 @@ private:
     // When true, dropdown callbacks must NOT call setPreferredDriverType, switchDevice, etc.
     // to prevent the async device-load completion path from mutating active audio state.
     bool m_isPopulatingDeviceUI = false;
+
+    // Last values read from (or written to) audio_settings.conf for the three
+    // asynchronously-populated controls (#648). An unpopulated dropdown reports
+    // 0, which is a legal device id — writing it would destroy the user's stored
+    // selection, so these are persisted instead until the lists have loaded.
+    int m_savedDriverType = Aestra::Settings::kNoPersistedValue;
+    int m_savedDeviceId = Aestra::Settings::kNoPersistedValue;
+    int m_savedInputDeviceId = Aestra::Settings::kNoPersistedValue;
     
     // Async Loading Infrastructure
     std::atomic<bool> m_isLoadingDevices{false};

@@ -5,7 +5,6 @@
 #include "../NUITextRendererSDF.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include "NUIRenderBatch.h"
 #include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
 #include "../GlassmorphismPass.h" // Added GlassmorphismPass
@@ -140,7 +139,6 @@ public:
     // Performance Optimizations
     // ========================================================================
     
-    void setBatchingEnabled(bool enabled) override;
     void setDirtyRegionTrackingEnabled(bool enabled) override;
     void setCachingEnabled(bool enabled) override;
     void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
@@ -358,10 +356,10 @@ private:
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     
     // Optimization systems
-    NUIBatchManager batchManager_;
     NUIDirtyRegionManager dirtyRegionManager_;
     NUIRenderCache renderCache_;
     uint64_t frameCounter_ = 0;
+    size_t submittedQuadCount_ = 0;
     
     // Text rendering support
     std::string defaultFontPath_;

@@ -37,9 +37,16 @@ namespace {
     // - Increment CURRENT when making breaking changes
     // - MIN_SUPPORTED is the oldest version we can still load
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
-    constexpr int PROJECT_VERSION_CURRENT = 2;
-    constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
-    constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
+    constexpr size_t PROJECT_HISTORY_DEFAULT_MAX_ENTRIES = 50;
+    // Total on-disk cap for a project's .history directory. A large project can
+    // produce multi-MB snapshots, so a count-only limit (50) let history grow to
+    // GBs (issue #274). Newest snapshots are always kept; older ones are pruned
+    // once either the count or this byte budget is exceeded. Both limits are
+    // runtime-configurable via ProjectSerializer::setHistoryLimits().
+    constexpr uintmax_t PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES = 512ull * 1024ull * 1024ull; // 512 MB
+
+    std::atomic<size_t> g_historyMaxEntries{PROJECT_HISTORY_DEFAULT_MAX_ENTRIES};
+    std::atomic<uintmax_t> g_historyMaxTotalBytes{PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES};
     constexpr uintmax_t PROJECT_MAX_FILE_BYTES = 64ull * 1024ull * 1024ull;
     constexpr size_t PROJECT_MAX_SOURCES = 10000;
     constexpr size_t PROJECT_MAX_PATTERNS = 100000;
@@ -378,6 +385,7 @@ namespace {
         if (!validArraySection(root, "sources", PROJECT_MAX_SOURCES, error)) return false;
         if (!validArraySection(root, "patterns", PROJECT_MAX_PATTERNS, error)) return false;
         if (!validArraySection(root, "lanes", PROJECT_MAX_LANES, error, true)) return false;
+        if (!validArraySection(root, "mixerChannels", PROJECT_MAX_LANES, error)) return false;
 
         if (root.has("sources")) {
             const JSON& sources = root["sources"];
@@ -445,6 +453,36 @@ namespace {
                 }
             }
         }
+
+    if (root.has("mixerChannels")) {
+        const JSON& channels = root["mixerChannels"];
+        for (size_t i = 0; i < channels.size(); ++i) {
+            if (!channels[i].isObject()) {
+                error = "Invalid project file: mixer channel entry must be an object";
+                return false;
+            }
+            if (!validFiniteNumber(channels[i], "id", error, true))
+                return false;
+            if (!validStringField(channels[i], "name", PROJECT_MAX_STRING_BYTES, error))
+                return false;
+            if (!validColorField(channels[i], "color", error))
+                return false;
+            if (channels[i].has("effectChainStateHex") &&
+                (!channels[i]["effectChainStateHex"].isString() ||
+                 channels[i]["effectChainStateHex"].asString().size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES)) {
+                error = "Invalid project file: mixer effect chain state is too large";
+                return false;
+            }
+            if (channels[i].has("routing") && channels[i]["routing"].isObject() &&
+                channels[i]["routing"].has("sends")) {
+                const JSON& sends = channels[i]["routing"]["sends"];
+                if (!sends.isArray() || sends.size() > PROJECT_MAX_SENDS_PER_LANE) {
+                    error = "Invalid project file: mixer sends must be a bounded array";
+                    return false;
+                }
+            }
+        }
+    }
 
         const JSON& lanes = root["lanes"];
         for (size_t i = 0; i < lanes.size(); ++i) {
@@ -624,27 +662,58 @@ static void pruneHistorySnapshots(const std::filesystem::path& historyDir) {
     }
 
     std::vector<fs::directory_entry> entries;
+    uintmax_t totalBytes = 0;
     for (const auto& entry : fs::directory_iterator(historyDir, ec)) {
         if (ec) {
             return;
         }
         if (entry.is_regular_file(ec) && entry.path().extension() == ".aes") {
             entries.push_back(entry);
+            std::error_code sizeEc;
+            totalBytes += fs::file_size(entry.path(), sizeEc);
         }
     }
 
-    if (entries.size() <= PROJECT_HISTORY_MAX_ENTRIES) {
+    const size_t maxEntries = g_historyMaxEntries.load(std::memory_order_relaxed);
+    const uintmax_t maxTotalBytes = g_historyMaxTotalBytes.load(std::memory_order_relaxed);
+    if (entries.size() <= maxEntries && totalBytes <= maxTotalBytes) {
         return;
     }
 
+    // Newest first, so the retained prefix is always the most recent snapshots.
     std::sort(entries.begin(), entries.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
         std::error_code aec;
         std::error_code bec;
         return fs::last_write_time(a.path(), aec) > fs::last_write_time(b.path(), bec);
     });
 
-    for (size_t i = PROJECT_HISTORY_MAX_ENTRIES; i < entries.size(); ++i) {
+    // Keep snapshots while they fit both the count cap and the cumulative byte
+    // budget; remove everything past the first cap hit. The newest snapshot is
+    // always retained even if it alone exceeds the budget — losing it would
+    // defeat the point of writing history at all.
+    uintmax_t keptBytes = 0;
+    size_t kept = 0;
+    bool prunedForSize = false;
+    for (size_t i = 0; i < entries.size(); ++i) {
+        std::error_code sizeEc;
+        const uintmax_t entryBytes = fs::file_size(entries[i].path(), sizeEc);
+        const bool withinCount = kept < maxEntries;
+        const bool withinBytes = kept == 0 || keptBytes + entryBytes <= maxTotalBytes;
+        if (withinCount && withinBytes) {
+            keptBytes += entryBytes;
+            ++kept;
+            continue;
+        }
+        if (!withinBytes) {
+            prunedForSize = true;
+        }
         fs::remove(entries[i].path(), ec);
+    }
+
+    if (prunedForSize) {
+        Log::warning("Project history exceeded its " +
+                     std::to_string(maxTotalBytes / (1024ull * 1024ull)) +
+                     " MB budget; pruned oldest snapshots in " + historyDir.string());
     }
 }
 
@@ -686,7 +755,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     if (!trackManager) return result;
 
     JSON root = JSON::object();
-    root.set("version", JSON(static_cast<double>(PROJECT_VERSION_CURRENT)));
+    root.set("version", JSON(static_cast<double>(ProjectSerializer::PROJECT_VERSION_CURRENT)));
     root.set("tempo", JSON(tempo));
     root.set("playhead", JSON(playheadSeconds));
 
@@ -726,6 +795,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         pjs.set("id", JSON(static_cast<double>(p->id.value)));
         pjs.set("name", JSON(p->name));
         pjs.set("length", JSON(p->lengthBeats));
+        pjs.set("mixerChannelId", JSON(static_cast<double>(p->getMixerChannelId())));
         
         if (p->isAudio()) {
             pjs.set("type", JSON("audio"));
@@ -776,6 +846,56 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     }
     root.set("patterns", patternsJson);
 
+    // Mixer channels are persisted independently from Playlist lanes. The
+    // lane-local copies below remain temporarily for backward readers, but this
+    // top-level section is authoritative for current projects.
+    JSON mixerChannelsJson = JSON::array();
+    for (size_t channelIndex = 0; channelIndex < trackManager->getChannelCount(); ++channelIndex) {
+        const auto* channel = trackManager->getChannel(channelIndex);
+        if (!channel) {
+            continue;
+        }
+        JSON mjs = JSON::object();
+        mjs.set("id", JSON(static_cast<double>(channel->getChannelId())));
+        mjs.set("name", JSON(channel->getName()));
+        mjs.set("color", JSON(std::to_string(channel->getColor())));
+        mjs.set("volume", JSON(static_cast<double>(channel->getVolume())));
+        mjs.set("pan", JSON(static_cast<double>(channel->getPan())));
+        mjs.set("mute", JSON(channel->isMuted()));
+        mjs.set("solo", JSON(channel->isSoloed()));
+        mjs.set("soloSafe", JSON(channel->isSoloSafe()));
+        mjs.set("armed", JSON(channel->isArmed()));
+        mjs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
+        mjs.set("inputChannelIndex", JSON(static_cast<double>(channel->getInputChannelIndex())));
+        mjs.set("width", JSON(static_cast<double>(channel->getWidth())));
+        mjs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
+
+        JSON routingJson = JSON::object();
+        const uint32_t mainOutputId = channel->getMainOutputId();
+        routingJson.set("mainOutputId", JSON(static_cast<double>(mainOutputId == 0xFFFFFFFFu ? 0u : mainOutputId)));
+        JSON sendsJson = JSON::array();
+        for (const auto& send : channel->getSends()) {
+            JSON sjs = JSON::object();
+            sjs.set("targetId",
+                    JSON(static_cast<double>(send.targetChannelId == 0xFFFFFFFFu ? 0u : send.targetChannelId)));
+            sjs.set("gain", JSON(static_cast<double>(send.gain)));
+            sjs.set("pan", JSON(static_cast<double>(send.pan)));
+            sjs.set("postFader", JSON(send.postFader));
+            sjs.set("mute", JSON(send.mute));
+            sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+            sendsJson.push(sjs);
+        }
+        routingJson.set("sends", sendsJson);
+        mjs.set("routing", routingJson);
+
+        const auto effectChainState = channel->getEffectChain().saveState();
+        if (!effectChainState.empty()) {
+            mjs.set("effectChainStateHex", JSON(bytesToHex(effectChainState)));
+        }
+        mixerChannelsJson.push(mjs);
+    }
+    root.set("mixerChannels", mixerChannelsJson);
+
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
     size_t laneIndex = 0;
@@ -792,6 +912,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("solo", JSON(lane->solo));
             if (const auto* channel = trackManager->getChannel(laneIndex)) {
                 // MixerChannel state not covered by PlaylistLane
+                ljs.set("mixerChannelId", JSON(static_cast<double>(channel->getChannelId())));
                 ljs.set("soloSafe", JSON(channel->isSoloSafe()));
                 ljs.set("armed", JSON(channel->isArmed()));
                 ljs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
@@ -829,6 +950,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 JSON cj = JSON::object();
                 cj.set("param", JSON(curve.getTarget()));
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
+                cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                     // Plugin-parameter address (older builds ignore unknown keys;
@@ -981,6 +1103,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     return load(path, trackManager, path);
 }
 
+ProjectSerializer::CandidateLoadResult
+ProjectSerializer::loadFirstValid(const std::vector<std::string>& candidatePaths,
+                                  const std::shared_ptr<TrackManager>& trackManager,
+                                  const std::string& assetBasePath) {
+    CandidateLoadResult selected;
+    for (const auto& candidate : candidatePaths) {
+        selected.result = load(candidate, trackManager, assetBasePath.empty() ? candidate : assetBasePath);
+        if (selected.result.ok) {
+            selected.loadedPath = candidate;
+            return selected;
+        }
+        Log::warning("[ProjectLoad] Recovery candidate rejected: " + candidate + " (" +
+                     selected.result.errorMessage + ")");
+    }
+    return selected;
+}
+
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager,
                                                       const std::string& assetBasePath) {
@@ -1035,9 +1174,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
 
-    JSON root = JSON::parse(contents);
-    if (!root.isObject()) {
-        result.errorMessage = "Invalid project file: not a valid JSON object";
+    bool consumedAllInput = false;
+    JSON root = JSON::parseStrict(contents, consumedAllInput);
+    if (!root.isObject() || !consumedAllInput) {
+        result.errorMessage = "Invalid project file: not exactly one valid JSON object";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
@@ -1080,18 +1220,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     if (root.has("version") && root["version"].isNumber() && std::isfinite(root["version"].asNumber())) {
         fileVersion = static_cast<int>(root["version"].asNumber());
     }
-    
-    if (fileVersion < PROJECT_VERSION_MIN_SUPPORTED) {
-        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
-                   " is too old. Minimum supported: " + std::to_string(PROJECT_VERSION_MIN_SUPPORTED);
+
+    result.sourceSchemaVersion = fileVersion;
+    result.resultingSchemaVersion = fileVersion;
+
+    if (fileVersion < ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED) {
+        result.errorMessage =
+            "Project file version " + std::to_string(fileVersion) +
+            " is too old. Minimum supported: " + std::to_string(ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED);
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
-    
-    if (fileVersion > PROJECT_VERSION_CURRENT) {
-        result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
-                   " is newer than this version of AESTRA (" + std::to_string(PROJECT_VERSION_CURRENT) + 
-                   "). Please update AESTRA to open this project.";
+
+    if (fileVersion > ProjectSerializer::PROJECT_VERSION_CURRENT) {
+        result.errorMessage = "Project file version " + std::to_string(fileVersion) +
+                              " is newer than this version of AESTRA (" +
+                              std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT) +
+                              "). Please update AESTRA to open this project.";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
@@ -1100,22 +1245,27 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
-    
-    Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) + " (current: " + 
-              std::to_string(PROJECT_VERSION_CURRENT) + ")");
+
+    Log::info("[ProjectLoad] Version " + std::to_string(fileVersion) +
+              " (current: " + std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT) + ")");
 
     // Run migrations if needed
-    if (fileVersion < PROJECT_VERSION_CURRENT) {
-        Log::info("[ProjectLoad] Migrating from v" + std::to_string(fileVersion) + 
-                  " to v" + std::to_string(PROJECT_VERSION_CURRENT));
-        if (!ProjectMigrations::runMigrations(root, fileVersion, PROJECT_VERSION_CURRENT)) {
-            result.errorMessage = "Failed to migrate project from version " + 
-                                  std::to_string(fileVersion) + " to " + 
-                                  std::to_string(PROJECT_VERSION_CURRENT);
+    if (fileVersion < ProjectSerializer::PROJECT_VERSION_CURRENT) {
+        Log::info("[ProjectLoad] Migrating from v" + std::to_string(fileVersion) + " to v" +
+                  std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT));
+        const auto migration =
+            ProjectMigrations::runMigrations(root, fileVersion, ProjectSerializer::PROJECT_VERSION_CURRENT);
+        result.migrationOutcome = migration.outcome;
+        result.resultingSchemaVersion = migration.resultingVersion;
+        if (!migration.ok()) {
+            result.errorMessage = "Failed to migrate project from version " + std::to_string(fileVersion) + " to " +
+                                  std::to_string(ProjectSerializer::PROJECT_VERSION_CURRENT);
             Log::error("[ProjectLoad] " + result.errorMessage);
             return result;
         }
         Log::info("[ProjectLoad] Migration complete");
+    } else {
+        result.resultingSchemaVersion = ProjectSerializer::PROJECT_VERSION_CURRENT;
     }
 
     // ========================================================================
@@ -1126,7 +1276,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_set<uint64_t> allUnitIds;
     std::unordered_set<uint32_t> allSourceIds;
     std::unordered_map<uint64_t, std::string> patternNames;
-    std::unordered_set<uint64_t> orphanClipPatternIds;
+    std::unordered_set<uint64_t> unloadablePatternIds;
+    std::unordered_set<uint64_t> recoverableClipPatternIds;
     std::unordered_set<uint64_t> orphanNoteUnitIds;
     ProjectLoadWarningLimiter warningLimiter;
 
@@ -1145,6 +1296,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             if (id != 0) {
                 allPatternIds.insert(id);
                 patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
+                const std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
+                if (type == "audio") {
+                    const uint32_t sourceId = static_cast<uint32_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    if (sourceId == 0 || !allSourceIds.count(sourceId)) {
+                        unloadablePatternIds.insert(id);
+                    }
+                }
             }
         }
     }
@@ -1170,13 +1329,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (!cj[c].isObject()) continue;
                 uint64_t patternId = static_cast<uint64_t>(
                     finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
-                if (patternId != 0 && !allPatternIds.count(patternId)) {
-                    orphanClipPatternIds.insert(patternId);
+                if (patternId != 0 &&
+                    (!allPatternIds.count(patternId) || unloadablePatternIds.count(patternId))) {
+                    recoverableClipPatternIds.insert(patternId);
                     warningLimiter.warning(
                         ProjectLoadWarningCategory::ReferenceClip,
-                        "[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
+                        "[ProjectLoad] Clip references missing or unresolved pattern " + std::to_string(patternId) +
                             " - clip will be preserved with placeholder",
-                        "[ProjectLoad] Additional missing-pattern clip reference warnings suppressed.");
+                        "[ProjectLoad] Additional recoverable clip-pattern warnings suppressed.");
                 }
             }
         }
@@ -1206,7 +1366,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     }
 
     // Build structured report for reference validation issues
-    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
+    if (!recoverableClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
         result.integrity == LoadIntegrity::Mismatch) {
         auto report = std::make_unique<ProjectLoadReport>();
         if (result.integrity == LoadIntegrity::Mismatch) {
@@ -1220,11 +1380,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 ""
             });
         }
-        for (const auto& pid : orphanClipPatternIds) {
+        for (const auto& pid : recoverableClipPatternIds) {
             report->issues.push_back({
                 LoadIssueSeverity::Warning,
                 "clip",
-                "Clip references missing pattern - clip will be preserved with placeholder",
+                "Clip references missing or unresolved pattern - clip will be preserved with placeholder",
                 pid,
                 std::to_string(pid),
                 ""
@@ -1439,6 +1599,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
         // 3. Load Patterns
         std::unordered_map<uint64_t, PatternID> patternMap;
+        std::unordered_set<uint64_t> legacyAudioPatternIds;
+        std::unordered_map<uint64_t, std::unordered_map<uint32_t, PatternID>> legacyAudioRouteVariants;
         if (root.has("patterns")) {
             const JSON& pj = root["patterns"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1477,6 +1639,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         // Restore serialized pattern identity (#446); the map
                         // still covers collision/mint fallbacks.
                         PatternID newId = patternManager.createAudioPatternWithId(PatternID{oldId}, name, length, payload);
+                        if (auto* pattern = patternManager.getPattern(newId)) {
+                            if (pj[i].has("mixerChannelId") && pj[i]["mixerChannelId"].isNumber()) {
+                                const double rawMixerChannelId = pj[i]["mixerChannelId"].asNumber();
+                                if (std::isfinite(rawMixerChannelId) && rawMixerChannelId >= 0.0 &&
+                                    rawMixerChannelId < static_cast<double>(UINT32_MAX)) {
+                                    pattern->setMixerChannelId(static_cast<uint32_t>(rawMixerChannelId));
+                                }
+                            } else {
+                                pattern->legacyMixerRoutePending = true;
+                                legacyAudioPatternIds.insert(newId.value);
+                            }
+                        }
                         patternMap[oldId] = newId;
                     }
                 } else {
@@ -1529,6 +1703,22 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
 
+        // Preserve clip placement when a project references a pattern record
+        // that is missing from the file. The empty MIDI placeholder keeps the
+        // serialized pattern identity recoverable and deliberately renders
+        // silence until the user replaces or repairs the missing pattern.
+        for (uint64_t oldId : recoverableClipPatternIds) {
+            MidiPayload placeholderPayload;
+            std::string placeholderName = "[Missing Pattern " + std::to_string(oldId) + "]";
+            const auto originalName = patternNames.find(oldId);
+            if (originalName != patternNames.end() && !originalName->second.empty()) {
+                placeholderName += " " + originalName->second;
+            }
+            const PatternID placeholderId = patternManager.createMidiPatternWithId(
+                PatternID{oldId}, placeholderName, 4.0, placeholderPayload);
+            patternMap[oldId] = placeholderId;
+        }
+
         // Arsenal unit default patterns are serialized with project-file IDs.
         // Patterns are recreated during load, so rebind units to the new runtime IDs
         // after both unit and pattern stores have been restored.
@@ -1552,7 +1742,97 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
-        // 4. Load Lanes and Clips
+        // 4. Load mixer channels independently from Playlist lanes (v3+).
+        const bool hasIndependentMixerChannels = root.has("mixerChannels") && root["mixerChannels"].isArray();
+        if (hasIndependentMixerChannels) {
+            const JSON& channels = root["mixerChannels"];
+            for (size_t i = 0; i < channels.size(); ++i) {
+                if (!channels[i].isObject()) {
+                    continue;
+                }
+                const std::string channelName =
+                    boundedStringOr(channels[i], "name", "Insert", PROJECT_MAX_STRING_BYTES);
+                const uint32_t storedId = static_cast<uint32_t>(
+                    finiteNumberOr(channels[i], "id", 0.0, 1.0, static_cast<double>(UINT32_MAX - 1)));
+                MixerChannel* channel = trackManager->addChannelWithId(channelName, storedId);
+                if (!channel) {
+                    warningLimiter.warning(ProjectLoadWarningCategory::LaneCreateChannel,
+                                           "[ProjectLoad] Failed to restore mixer channel '" + channelName + "'",
+                                           "[ProjectLoad] Additional mixer channel creation failures suppressed.");
+                    continue;
+                }
+
+                if (channels[i].has("color") && channels[i]["color"].isString()) {
+                    try {
+                        channel->setColor(
+                            static_cast<uint32_t>(std::stoull(channels[i]["color"].asString()) & 0xFFFFFFFFu));
+                    } catch (const std::exception&) {
+                        channel->setColor(0xFFFFFFFFu);
+                    }
+                }
+                channel->setVolume(static_cast<float>(finiteNumberOr(channels[i], "volume", 1.0, 0.0, 4.0)));
+                channel->setPan(static_cast<float>(finiteNumberOr(channels[i], "pan", 0.0, -1.0, 1.0)));
+                channel->setMute(channels[i].has("mute") && channels[i]["mute"].isBool() &&
+                                 channels[i]["mute"].asBool());
+                channel->setSolo(channels[i].has("solo") && channels[i]["solo"].isBool() &&
+                                 channels[i]["solo"].asBool());
+                if (channels[i].has("soloSafe") && channels[i]["soloSafe"].isBool())
+                    channel->setSoloSafe(channels[i]["soloSafe"].asBool());
+                if (channels[i].has("armed") && channels[i]["armed"].isBool())
+                    channel->setArmed(channels[i]["armed"].asBool());
+                if (channels[i].has("monitorInput") && channels[i]["monitorInput"].isBool())
+                    channel->setMonitoringEnabled(channels[i]["monitorInput"].asBool());
+                channel->setInputChannelIndex(
+                    static_cast<int>(finiteNumberOr(channels[i], "inputChannelIndex", -1.0, -2.0, 1024.0)));
+                channel->setWidth(static_cast<float>(finiteNumberOr(channels[i], "width", 1.0, 0.0, 4.0)));
+                channel->setTrackColorIndex(
+                    static_cast<int>(finiteNumberOr(channels[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
+
+                if (channels[i].has("routing") && channels[i]["routing"].isObject()) {
+                    const JSON& routing = channels[i]["routing"];
+                    const uint32_t mainOutputId = static_cast<uint32_t>(
+                        finiteNumberOr(routing, "mainOutputId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
+                    if (routing.has("sends") && routing["sends"].isArray()) {
+                        const JSON& sends = routing["sends"];
+                        for (size_t s = 0; s < sends.size(); ++s) {
+                            if (!sends[s].isObject())
+                                continue;
+                            AudioRoute route;
+                            const uint32_t targetId = static_cast<uint32_t>(
+                                finiteNumberOr(sends[s], "targetId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                            route.targetChannelId = targetId == 0 ? 0xFFFFFFFFu : targetId;
+                            route.gain = static_cast<float>(finiteNumberOr(sends[s], "gain", 1.0, 0.0, 16.0));
+                            route.pan = static_cast<float>(finiteNumberOr(sends[s], "pan", 0.0, -1.0, 1.0));
+                            route.postFader = !sends[s].has("postFader") || !sends[s]["postFader"].isBool() ||
+                                              sends[s]["postFader"].asBool();
+                            route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
+                            route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
+                                                  sends[s]["sidechainOnly"].asBool();
+                            channel->addSend(route);
+                        }
+                    }
+                }
+
+                auto& pluginManager = PluginManager::getInstance();
+                auto& chain = channel->getEffectChain();
+                chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+                if (channels[i].has("effectChainStateHex") && channels[i]["effectChainStateHex"].isString()) {
+                    const auto effectState = hexToBytes(channels[i]["effectChainStateHex"].asString());
+                    std::vector<std::string> missingIds;
+                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &missingIds)) {
+                        warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
+                                               "[ProjectLoad] Failed to restore mixer effect chain on: " + channelName,
+                                               "[ProjectLoad] Additional mixer effect-chain warnings suppressed.");
+                    }
+                    for (auto& id : missingIds) {
+                        result.missingPlugins.push_back({std::move(id), channelName});
+                    }
+                }
+            }
+        }
+
+        // 5. Load Playlist lanes and clips.
         // Clip ids restored from the file must stay unique — a hand-edited or
         // corrupted file with duplicates would silently break id lookups.
         std::unordered_set<AestraUUID> seenClipIds;
@@ -1584,14 +1864,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         "[ProjectLoad] Additional lane creation failure warnings suppressed.");
                     continue;
                 }
-                MixerChannel* channel = trackManager->addChannel(laneName);
-                if (!channel) {
-                    warningLimiter.warning(
-                        ProjectLoadWarningCategory::LaneCreateChannel,
-                        "[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane",
-                        "[ProjectLoad] Additional lane channel creation failure warnings suppressed.");
-                    playlist.removeLane(laneId);
-                    continue;
+                MixerChannel* channel = nullptr;
+                if (!hasIndependentMixerChannels) {
+                    uint32_t storedMixerChannelId = 0;
+                    if (lj[i].has("mixerChannelId") && lj[i]["mixerChannelId"].isNumber()) {
+                        const double rawId = lj[i]["mixerChannelId"].asNumber();
+                        if (std::isfinite(rawId) && rawId > 0.0 && rawId < static_cast<double>(UINT32_MAX)) {
+                            storedMixerChannelId = static_cast<uint32_t>(rawId);
+                        }
+                    }
+                    channel = trackManager->addChannelWithId(laneName, storedMixerChannelId);
+                    if (!channel) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::LaneCreateChannel,
+                            "[ProjectLoad] Failed to create channel for legacy lane '" + laneName + "' — removing lane",
+                            "[ProjectLoad] Additional legacy lane channel creation failures suppressed.");
+                        playlist.removeLane(laneId);
+                        continue;
+                    }
                 }
                 if (auto* lane = playlist.getLane(laneId)) {
                     if (lj[i].has("color") && lj[i]["color"].isString()) {
@@ -1678,11 +1968,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
-                                    if (!chain.loadState(effectState, pluginManager)) {
+                                    std::vector<std::string> missingIds;
+                                    if (!chain.loadState(effectState, pluginManager, &missingIds)) {
                                         warningLimiter.warning(
                                             ProjectLoadWarningCategory::EffectChain,
                                             "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
                                             "[ProjectLoad] Additional effect chain restore warnings suppressed.");
+                                    }
+                                    for (auto& id : missingIds) {
+                                        result.missingPlugins.push_back({std::move(id), lane->name});
                                     }
                                 }
                             }
@@ -1718,6 +2012,16 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             }
                             
                             AutomationCurve curve(param, target);
+                            if (aj[a].has("mixerChannelId") && aj[a]["mixerChannelId"].isNumber()) {
+                                const double rawMixerId = aj[a]["mixerChannelId"].asNumber();
+                                if (std::isfinite(rawMixerId) && rawMixerId > 0.0 &&
+                                    rawMixerId < static_cast<double>(UINT32_MAX)) {
+                                    curve.mixerChannelId = static_cast<uint32_t>(rawMixerId);
+                                }
+                            } else if (channel) {
+                                // Pre-v3 curves inherited their lane's paired insert.
+                                curve.mixerChannelId = channel->getChannelId();
+                            }
                             curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
                             // Plugin-parameter address (Custom target). Bounded:
                             // slot to the effect-chain size, paramId defensively.
@@ -1753,6 +2057,38 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     clip.id = ClipInstanceID(); // duplicate in file — mint below
                                 }
                                 clip.patternId = patternMap[oldPatId];
+                                if (channel && legacyAudioPatternIds.count(clip.patternId.value) != 0) {
+                                    const uint32_t legacyDestination = channel->getChannelId();
+                                    auto& variants = legacyAudioRouteVariants[clip.patternId.value];
+                                    auto variant = variants.find(legacyDestination);
+                                    if (variant == variants.end()) {
+                                        PatternID routedPattern = clip.patternId;
+                                        if (!variants.empty()) {
+                                            // A pre-v3 pattern carries no mixerChannelId, so one old
+                                            // pattern used on several lanes has to become one pattern
+                                            // per destination channel. This MANUFACTURES a pattern the
+                                            // file does not contain and repoints the clip at it.
+                                            //
+                                            // That is a loader-side transformation under the contract
+                                            // in ProjectMigrations.h: re-serializing now emits more
+                                            // patterns than were read, so the document must be saved.
+                                            // Flagged here rather than at the `else` branch below,
+                                            // because that branch can only reach a manufactured
+                                            // variant after this clone has already run.
+                                            routedPattern = patternManager.clonePattern(clip.patternId);
+                                        }
+                                        if (routedPattern.isValid()) {
+                                            if (routedPattern != clip.patternId) {
+                                                ++result.legacyAudioPatternsSplit;
+                                            }
+                                            patternManager.setPatternMixerChannel(routedPattern, legacyDestination);
+                                            variants.emplace(legacyDestination, routedPattern);
+                                            clip.patternId = routedPattern;
+                                        }
+                                    } else {
+                                        clip.patternId = variant->second;
+                                    }
+                                }
                                 clip.sourceId = clip.patternId.value;
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
                                 const auto* loadedPattern = patternManager.getPattern(clip.patternId);
@@ -1817,6 +2153,19 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
+        // Resolve pre-stable-ID unit routes after all mixer channels exist.
+        {
+            std::vector<uint32_t> mixerChannelIds;
+            mixerChannelIds.reserve(trackManager->getChannelCount());
+            for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                if (const auto* channel = trackManager->getChannel(ci)) {
+                    mixerChannelIds.push_back(channel->getChannelId());
+                }
+            }
+            trackManager->getUnitManager().migrateLegacyMixerRoutes(mixerChannelIds);
+            trackManager->getPatternManager().validateMixerChannels(mixerChannelIds);
+        }
+
         // PHASE 7: Validate send routing targets.
         // Unresolved sends are non-fatal — the audio runtime silently ignores them
         // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
@@ -1906,9 +2255,33 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         fs::remove(rollbackPath, rmEc);
     }
 
+    // A load has two independent sources of transformation: the migration
+    // registry, and version-conditional interpretation inside this loader. The
+    // reported outcome must be their combination — reporting only the registry's
+    // verdict is exactly how a loader-side upgrade goes silent and the user is
+    // never prompted to save the upgraded representation.
+    //
+    // Note this cannot be folded into the migration block above: the legacy
+    // audio split happens in Phase 4, long after migrations run.
+    if (result.legacyAudioPatternsSplit > 0) {
+        result.migrationOutcome =
+            combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+        Log::info("[ProjectLoad] Split " + std::to_string(result.legacyAudioPatternsSplit) +
+                  " legacy audio pattern(s) across mixer channels — project must be saved to keep the split");
+    }
+
     result.ok = true;
     Log::info("Project loaded: " + path);
     return result;
+}
+
+void ProjectSerializer::setHistoryLimits(size_t maxEntries, uintmax_t maxTotalBytes) {
+    // A zero cap would delete all history (or all-but-newest); guard against it
+    // so a misconfiguration can't silently disable history entirely.
+    g_historyMaxEntries.store(maxEntries == 0 ? PROJECT_HISTORY_DEFAULT_MAX_ENTRIES : maxEntries,
+                              std::memory_order_relaxed);
+    g_historyMaxTotalBytes.store(maxTotalBytes == 0 ? PROJECT_HISTORY_DEFAULT_MAX_TOTAL_BYTES : maxTotalBytes,
+                                 std::memory_order_relaxed);
 }
 
 std::string ProjectSerializer::getHistoryDirectory(const std::string& projectPath) {

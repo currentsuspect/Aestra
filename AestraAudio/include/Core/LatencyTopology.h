@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // LatencyTopology — PDC v2 data model and pure solver.
 //
-// Architectural contract (see AestraDocs/PDC-v2-Design.md §4.0):
+// Architectural contract (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §4.0):
 //   * `LatencyGraph` is an immutable input artifact, built off-RT from routing state.
 //   * `solveLatency(LatencyGraph) -> SolvedLatencyTopology` is a pure function.
 //     No engine references, no globals, no I/O, fully deterministic.
@@ -59,6 +59,29 @@ struct LatencyGraph {
 };
 
 /**
+ * @brief Machine-readable classification for a solver warning.
+ *
+ * Consumers must switch on this instead of matching `SolverWarning::message`
+ * text. The prose is a human-facing description and may be reworded freely;
+ * the code is the contract that diagnostic surfaces (e.g. the Muse latency
+ * report) map to their own stable issue codes.
+ */
+enum class SolverWarningCode : uint8_t {
+    /// A routing cycle was found; back edges contribute zero compensation.
+    RoutingCycle,
+    /// Edge(s) referenced out-of-range node indices; their compensation is zero.
+    InvalidEdgeIndices,
+};
+
+/**
+ * @brief One diagnostic raised during solve, classified and described.
+ */
+struct SolverWarning {
+    SolverWarningCode code{SolverWarningCode::RoutingCycle};
+    std::string message;
+};
+
+/**
  * @brief Immutable output artifact produced by the PDC solver.
  *
  * Consumed read-only by the RT engine. Per-edge / per-node ring-buffer state
@@ -106,7 +129,7 @@ struct SolvedLatencyTopology {
      * Consumed off-RT (e.g. logged once per generation). Never read from the
      * audio thread.
      */
-    std::vector<std::string> warnings;
+    std::vector<SolverWarning> warnings;
 
     uint64_t generation{0}; ///< Mirrors LatencyGraph::generation.
 };

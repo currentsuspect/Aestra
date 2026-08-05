@@ -1,13 +1,15 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "TrackManager.h"
 #include "../AestraCore/include/AestraJSON.h"
-#include <string>
+#include "ProjectMigrations.h"
+#include "TrackManager.h"
+
+#include <chrono>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
-#include <chrono>
 
 namespace Aestra {
 
@@ -45,6 +47,9 @@ struct ProjectLoadReport {
 
 class ProjectSerializer {
 public:
+    static constexpr int PROJECT_VERSION_CURRENT = 3;
+    static constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
+
     struct PanelState {
         std::string title;
         double x{0.0};
@@ -77,21 +82,62 @@ public:
      */
     enum class LoadIntegrity { Unchecked, Verified, Mismatch };
 
+    /**
+     * @brief A plugin referenced by the project that could not be instantiated (#647).
+     *
+     * Deliberately NOT folded into `missingAssets`, which carries filesystem
+     * paths for samples. A plugin id is not a path, cannot be relinked by
+     * browsing for a file, and its slot state is retained in the project rather
+     * than dropped — so giving both the same collection would make the API lie
+     * about what a caller can do with the entry.
+     */
+    struct MissingPlugin {
+        std::string pluginId; ///< The id as stored in the project file.
+        std::string location; ///< Human-readable owner: mixer channel or lane name.
+    };
+
     struct LoadResult {
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
+        int sourceSchemaVersion{0};
+        int resultingSchemaVersion{0};
+        /// Combined verdict: migration functions AND loader-side interpretation.
+        /// See Aestra::combineMigrationOutcome.
+        Aestra::MigrationOutcome migrationOutcome{Aestra::MigrationOutcome::None};
+
+        /// Pre-v3 audio patterns the loader had to split into one pattern per
+        /// destination channel. Non-zero means patterns exist in memory that are
+        /// not in the file, which is why such a load reports `Transformed`.
+        size_t legacyAudioPatternsSplit{0};
+
         std::string errorMessage;
         std::vector<std::string> missingAssets;
+        std::vector<MissingPlugin> missingPlugins;
         LoadIntegrity integrity{LoadIntegrity::Unchecked};
 
         std::optional<UIState> ui;
         std::unique_ptr<::Aestra::ProjectLoadReport> report;
+
+        bool schemaVersionAdvanced() const noexcept {
+            return sourceSchemaVersion > 0 && resultingSchemaVersion > sourceSchemaVersion;
+        }
+
+        /// True only when an actual transformation occurred. A schema version
+        /// bump alone must never make this true — see schemaVersionAdvanced().
+        bool requiresSaveAfterLoad() const noexcept {
+            return migrationOutcome == Aestra::MigrationOutcome::Transformed;
+        }
     };
 
     struct SerializeResult {
         bool ok{false};
         std::string contents;
+    };
+
+    struct CandidateLoadResult {
+        LoadResult result;
+        std::string loadedPath;
     };
 
     struct HistoryEntry {
@@ -127,6 +173,23 @@ public:
                            const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
                            const std::string& assetBasePath);
 
+    // Recovery files are ordered newest-first. Try them without requiring the
+    // application layer to replicate serializer failure handling.
+    static CandidateLoadResult
+    loadFirstValid(const std::vector<std::string>& candidatePaths,
+                   const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
+                   const std::string& assetBasePath);
+
     static std::string getHistoryDirectory(const std::string& projectPath);
     static std::vector<HistoryEntry> listHistory(const std::string& projectPath);
+
+    /**
+     * @brief Configure the .history directory caps (issue #274).
+     *
+     * History snapshots are pruned so the directory keeps at most @p maxEntries
+     * snapshots AND stays within @p maxTotalBytes on disk, whichever is hit
+     * first; the newest snapshot is always retained. Defaults are 50 entries /
+     * 512 MB. Applies to subsequent saves. Thread-safe.
+     */
+    static void setHistoryLimits(size_t maxEntries, uintmax_t maxTotalBytes);
 };

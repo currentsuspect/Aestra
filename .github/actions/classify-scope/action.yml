@@ -1,0 +1,99 @@
+# © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#
+# Decide whether one CI lane must do real work for the change under test (#620).
+#
+# WHY A COMPOSITE ACTION AND NOT A REUSABLE WORKFLOW
+#
+# Four of the lanes that consult this are REQUIRED status checks on develop, and the
+# check name is the contract. A reusable workflow (`workflow_call`) reports as
+# "parent / child", which renames every context it runs and hangs every open PR on
+# "Expected — Waiting for status to be reported" forever. A composite action runs
+# inside the calling job, so the job name — and therefore the check name — is
+# untouched. That property is the whole reason for this file's shape.
+#
+# The caller must have checked the repository out first; this shells into scripts/ci.
+
+name: Classify change scope
+description: Decide whether this lane must run for the current change.
+
+inputs:
+  lane:
+    description: >
+      Lane identifier: linux-gcc, windows-msvc, macos-clang, ui-app, asan, tsan,
+      lsan, tidy or plugin-host. An unrecognised value runs the lane (see
+      lane-runs.sh).
+    required: true
+  github-token:
+    description: Token used to read the pull request's changed files.
+    required: true
+
+outputs:
+  run:
+    description: '"true" when this lane must do its real work.'
+    value: ${{ steps.decide.outputs.run }}
+
+runs:
+  using: composite
+  steps:
+    - id: decide
+      # Windows runners default `run:` to PowerShell, which parses this bash as
+      # PowerShell and dies with a ParserError. Git Bash ships on every GitHub
+      # runner, so pinning the shell keeps one implementation across all three
+      # platforms rather than maintaining a pwsh twin of the same logic.
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        LANE: ${{ inputs.lane }}
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        set -uo pipefail
+
+        # Push builds establish repository truth. They always run everything.
+        if [ "${EVENT_NAME}" != "pull_request" ]; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "push build: running everything"; exit 0
+        fi
+        # main may only receive changes the full suite has seen.
+        if [ "${BASE_REF}" = "main" ]; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "targets main: running everything"; exit 0
+        fi
+
+        # The REST files endpoint with --paginate, not `gh pr view --json files`:
+        # the latter goes through GraphQL and can return a short list without
+        # saying so. A silently truncated list is SHORT, so it sails under the
+        # size guard and would classify narrow on a change it never saw.
+        # NOTE the field is `filename`. The REST files endpoint returns filename;
+        # `path` is the GraphQL spelling. Asking for .path yields a blank line per
+        # file, exit status 0, and no error — an empty list that looks like a
+        # successful fetch, which then falls back to broad forever and makes this
+        # whole step inert while every check stays green.
+        gh api --paginate \
+          "repos/${REPO}/pulls/${PR_NUMBER}/files" \
+          --jq '.[].filename' > /tmp/changed-files.txt || : > /tmp/changed-files.txt
+
+        # The PR's own changedFiles total, passed to the classifier so it can
+        # refuse to answer when the list it was handed is not the whole change.
+        expected=$(gh pr view "${PR_NUMBER}" --repo "${REPO}" \
+          --json changedFiles --jq '.changedFiles' 2>/dev/null || echo "")
+        fetched=$(grep -c . /tmp/changed-files.txt) || fetched=0
+        echo "changed files: fetched ${fetched}, PR reports ${expected:-unknown}"
+        # A mismatch is safe — the classifier falls back to broad — but it must not
+        # be silent, or a broken fetch degrades into "always broad" with every check
+        # green and nobody any the wiser.
+        if [ -n "${expected}" ] && [ "${fetched}" != "${expected}" ]; then
+          echo "::warning::changed-file fetch returned ${fetched} of ${expected} files; falling back to a full build"
+        fi
+
+        # Invoked through bash explicitly rather than relying on the exec bit
+        # surviving a Windows checkout and on shebang resolution under Git Bash.
+        verdict=$(bash scripts/ci/classify-changes.sh /tmp/changed-files.txt "${expected}")
+        run=$(bash scripts/ci/lane-runs.sh "${verdict}" "${LANE}")
+        echo "classifier verdict: ${verdict} -> lane ${LANE}: ${run}"
+        echo "run=${run}" >> "$GITHUB_OUTPUT"
+        if [ "${run}" != "true" ]; then
+          echo "nothing in this change can affect the ${LANE} lane; skipping its work"
+        fi

@@ -174,6 +174,7 @@ add_subdirectory(AestraAudio)
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   add_executable(AestraHeadless
     Source/App/HeadlessMain.cpp
+    Source/Core/AudioSettingsStore.cpp
     Source/Core/ProjectSerializer.cpp
   )
 
@@ -251,6 +252,81 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/MuseReplMain.cpp")
   message(STATUS "MuseRepl configured")
 endif()
 
+# =============================================================================
+# muse — one-shot CLI for the Muse socket. Built unconditionally: unlike
+# muse-agent it needs no libcurl and no provider adapters, only the socket
+# client and JSON, so a terminal session is always available.
+# =============================================================================
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/MuseAgent/MuseCliMain.cpp")
+  add_executable(muse
+    Source/MuseAgent/MuseCliMain.cpp
+    Source/MuseAgent/MuseSocketClient.cpp
+  )
+  if(MSVC)
+    target_compile_options(muse PRIVATE /utf-8)
+    target_compile_definitions(muse PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+  endif()
+  set_target_properties(muse PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+  target_include_directories(muse PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+  )
+  target_link_libraries(muse PRIVATE AestraCore)
+  if(WIN32)
+    target_link_libraries(muse PRIVATE ws2_32)
+  endif()
+  message(STATUS "muse CLI configured")
+endif()
+
+# =============================================================================
+# muse-agent — the standalone Muse driver (interchangeable intelligence).
+# Deliberately OUTSIDE the Aestra binary: HTTP, TLS, and provider adapters
+# never enter the DAW. Only built where libcurl is available.
+# =============================================================================
+
+find_package(CURL QUIET)
+if(CURL_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/Source/MuseAgent/MuseAgentMain.cpp")
+  add_library(MuseAgentCore STATIC
+    Source/MuseAgent/AgentLoop.cpp
+    Source/MuseAgent/AnthropicProvider.cpp
+    Source/MuseAgent/HttpClient.cpp
+    Source/MuseAgent/MuseSocketClient.cpp
+    Source/MuseAgent/OpenAICompatProvider.cpp
+  )
+  set_target_properties(MuseAgentCore PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+  )
+  target_include_directories(MuseAgentCore PUBLIC
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+  )
+  target_link_libraries(MuseAgentCore PUBLIC AestraCore CURL::libcurl)
+  if(WIN32)
+    target_link_libraries(MuseAgentCore PUBLIC ws2_32)
+    target_compile_definitions(MuseAgentCore PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+  endif()
+
+  add_executable(muse-agent Source/MuseAgent/MuseAgentMain.cpp)
+  if(MSVC)
+    target_compile_options(muse-agent PRIVATE /utf-8)
+  endif()
+  set_target_properties(muse-agent PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+  target_link_libraries(muse-agent PRIVATE MuseAgentCore)
+  message(STATUS "muse-agent configured (libcurl ${CURL_VERSION_STRING})")
+elseif(NOT CURL_FOUND)
+  message(STATUS "muse-agent skipped: libcurl not found")
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
   add_executable(AestraHeadlessExport
     Source/App/HeadlessExportMain.cpp
@@ -290,7 +366,22 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
       COMMAND AestraHeadlessExport --duration nope)
     set_tests_properties(AestraHeadlessExportRejectsBadArgs PROPERTIES
       WILL_FAIL TRUE
-      LABELS "cli;headless")
+      LABELS "cli;headless;contract:application")
+
+    # Real end-to-end export invocation: arg parse -> template project -> export
+    # attempt. Regression guard for the getInstance() abort (SIGABRT on develop;
+    # passes once the export path owns its engine). Exit 0 must come with a real
+    # non-empty WAV; exit 1 (graceful diagnosed failure) is tolerated only until
+    # the HeadlessMusicGenerator commit layer is implemented — see the driver
+    # script for the full contract.
+    add_test(NAME AestraHeadlessExportEndToEnd
+      COMMAND ${CMAKE_COMMAND}
+        -DEXPORT_BIN=$<TARGET_FILE:AestraHeadlessExport>
+        -DOUT_FILE=${CMAKE_BINARY_DIR}/headless_export_e2e.wav
+        -P ${CMAKE_SOURCE_DIR}/Tests/Headless/run_headless_export_e2e.cmake)
+    set_tests_properties(AestraHeadlessExportEndToEnd PROPERTIES
+      LABELS "cli;headless;export;integrity;contract:audio"
+      TIMEOUT 120)
   endif()
 
   message(STATUS "AestraHeadlessExport configured")

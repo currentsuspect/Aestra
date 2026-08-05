@@ -20,7 +20,7 @@ add_test(NAME HeadlessOfflineRenderer
             "${CMAKE_CURRENT_BINARY_DIR}/dummy_out.wav"
 )
 set_tests_properties(HeadlessOfflineRenderer PROPERTIES
-    LABELS "headless;offline;rendering"
+    LABELS "headless;offline;rendering;contract:audio"
     ENVIRONMENT "AESTRA_HEADLESS=1"
 )
 
@@ -39,7 +39,47 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
         COMMAND OfflineRenderRegressionTest
     )
     set_tests_properties(OfflineRenderRegressionTest PROPERTIES
-        LABELS "headless;regression;offline"
+        LABELS "headless;regression;offline;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Engine Output Stage Characterization (pins processBlock behavior pre-refactor)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/EngineOutputStageCharacterizationTest.cpp")
+    add_executable(EngineOutputStageCharacterizationTest
+        EngineOutputStageCharacterizationTest.cpp
+    )
+    target_link_libraries(EngineOutputStageCharacterizationTest PRIVATE AestraAudio)
+    target_include_directories(EngineOutputStageCharacterizationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME EngineOutputStageCharacterizationTest
+        COMMAND EngineOutputStageCharacterizationTest
+    )
+    set_tests_properties(EngineOutputStageCharacterizationTest PROPERTIES
+        LABELS "headless;characterization;engine;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Headless export session invariance (exportTo must not mutate live transport)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HeadlessExportSessionInvarianceTest.cpp")
+    add_executable(HeadlessExportSessionInvarianceTest
+        HeadlessExportSessionInvarianceTest.cpp
+    )
+    target_link_libraries(HeadlessExportSessionInvarianceTest PRIVATE AestraAudio)
+    target_include_directories(HeadlessExportSessionInvarianceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME HeadlessExportSessionInvarianceTest
+        COMMAND HeadlessExportSessionInvarianceTest
+    )
+    set_tests_properties(HeadlessExportSessionInvarianceTest PROPERTIES
+        LABELS "headless;export;engine;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -158,7 +198,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LiveMidiInputT
     )
     add_test(NAME LiveMidiInputTest COMMAND LiveMidiInputTest)
     set_tests_properties(LiveMidiInputTest PROPERTIES
-        LABELS "headless;arsenal;audio;midi"
+        LABELS "headless;arsenal;audio;midi;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -180,7 +220,7 @@ if(TARGET AestraAudioCore)
     )
     add_test(NAME HardwareMidiInputTest COMMAND HardwareMidiInputTest)
     set_tests_properties(HardwareMidiInputTest PROPERTIES
-        LABELS "headless;arsenal;audio;midi"
+        LABELS "headless;arsenal;audio;midi;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -200,7 +240,7 @@ if(TARGET AestraAudioCore)
     )
     add_test(NAME SamplerOneShotEnvelopeTest COMMAND SamplerOneShotEnvelopeTest)
     set_tests_properties(SamplerOneShotEnvelopeTest PROPERTIES
-        LABELS "headless;sampler;audio;dsp;regression"
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -220,12 +260,12 @@ if(TARGET AestraAudioCore)
     )
     add_test(NAME AutomationPlaybackTest COMMAND AutomationPlaybackTest)
     set_tests_properties(AutomationPlaybackTest PROPERTIES
-        LABELS "headless;automation;audio;engine;regression"
+        LABELS "headless;automation;audio;engine;regression;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
 
-# PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
+# PDC v2 P1 — scaffolding tests (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
     target_link_libraries(PDCFlatChainTest PRIVATE AestraAudio)
@@ -236,7 +276,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     )
     add_test(NAME PDCFlatChainTest COMMAND PDCFlatChainTest)
     set_tests_properties(PDCFlatChainTest PROPERTIES
-        LABELS "headless;pdc;regression"
+        LABELS "headless;pdc;regression;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -253,7 +293,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PluginLifecycleSmokeTest.cpp")
     )
     add_test(NAME PluginLifecycleSmokeTest COMMAND PluginLifecycleSmokeTest)
     set_tests_properties(PluginLifecycleSmokeTest PROPERTIES
-        LABELS "headless;plugins;lifecycle"
+        LABELS "headless;plugins;lifecycle;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -268,7 +308,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCSolverPurityTest.cpp")
     )
     add_test(NAME PDCSolverPurityTest COMMAND PDCSolverPurityTest)
     set_tests_properties(PDCSolverPurityTest PROPERTIES
-        LABELS "headless;pdc;solver"
+        LABELS "headless;pdc;solver;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -284,7 +324,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBusChainTest.cpp")
     )
     add_test(NAME PDCBusChainTest COMMAND PDCBusChainTest)
     set_tests_properties(PDCBusChainTest PROPERTIES
-        LABELS "headless;pdc;solver"
+        LABELS "headless;pdc;solver;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -299,7 +339,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBranchingConvergenceTest.cpp")
     )
     add_test(NAME PDCBranchingConvergenceTest COMMAND PDCBranchingConvergenceTest)
     set_tests_properties(PDCBranchingConvergenceTest PROPERTIES
-        LABELS "headless;pdc;solver;regression"
+        LABELS "headless;pdc;solver;regression;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -315,7 +355,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
     )
     add_test(NAME PDCRTConsumptionTest COMMAND PDCRTConsumptionTest)
     set_tests_properties(PDCRTConsumptionTest PROPERTIES
-        LABELS "headless;pdc;engine;rt"
+        LABELS "headless;pdc;engine;rt;contract:core"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -331,7 +371,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     )
     add_test(NAME PDCEngineEdgeConstructionTest COMMAND PDCEngineEdgeConstructionTest)
     set_tests_properties(PDCEngineEdgeConstructionTest PROPERTIES
-        LABELS "headless;pdc;engine"
+        LABELS "headless;pdc;engine;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -347,7 +387,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
     )
     add_test(NAME RoutingSendPanParityTest COMMAND RoutingSendPanParityTest)
     set_tests_properties(RoutingSendPanParityTest PROPERTIES
-        LABELS "headless;routing;dsp;regression"
+        LABELS "headless;routing;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# PDC disable-clears-compensation regression (#684)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
+    add_executable(PDCDisableClearsCompensationTest PDCDisableClearsCompensationTest.cpp)
+    target_link_libraries(PDCDisableClearsCompensationTest PRIVATE AestraAudio)
+    target_include_directories(PDCDisableClearsCompensationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCDisableClearsCompensationTest COMMAND PDCDisableClearsCompensationTest)
+    set_tests_properties(PDCDisableClearsCompensationTest PROPERTIES
+        LABELS "headless;pdc;engine;regression;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()

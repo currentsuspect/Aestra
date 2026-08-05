@@ -14,6 +14,7 @@
 #include "TrackManager.h"
 #include "PluginManager.h"
 #include "Commands/PluginCommands.h"
+#include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/AestraDelay.h"
 #include <algorithm>
@@ -149,10 +150,9 @@ void UIMixerPanel::refreshChannels()
 
         // Wire fader to CommandHistory for undo/redo
         uint32_t chId = channel->id;
-        int slotIdx = channel->slotIndex;
-        strip->onFaderChanged = [this, chId, slotIdx](float newDb) {
+        strip->onFaderChanged = [this, chId](float newDb) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             // Convert dB to linear gain
@@ -167,9 +167,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire mute to CommandHistory for undo/redo
-        strip->onMuteChanged = [this, slotIdx](bool muted) {
+        strip->onMuteChanged = [this, chId](bool muted) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -177,9 +177,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire solo to CommandHistory for undo/redo
-        strip->onSoloChanged = [this, slotIdx](bool soloed) {
+        strip->onSoloChanged = [this, chId](bool soloed) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -187,9 +187,9 @@ void UIMixerPanel::refreshChannels()
         };
 
         // Wire pan to CommandHistory for undo/redo
-        strip->onPanChanged = [this, slotIdx](float pan) {
+        strip->onPanChanged = [this, chId](float pan) {
             if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
@@ -219,10 +219,14 @@ void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
         if (strip) strip->setPlatformBridge(bridge);
     }
     if (m_masterStrip) m_masterStrip->setPlatformBridge(bridge);
+    if (m_inspector) m_inspector->setPlatformBridge(bridge);
 }
 
 void UIMixerPanel::layoutMeters()
 {
+    // Derived state first: the rest of the layout reads inspectorWidth().
+    updateInspectorWidthConstraint();
+
     auto bounds = getBounds();
     const NUIRect minimapRect = getMinimapRect();
     const float stripY = minimapRect.bottom() + MINIMAP_GAP;
@@ -236,11 +240,15 @@ void UIMixerPanel::layoutMeters()
     }
 
     // Layout inspector just to the left of master.
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     if (m_inspector) {
+        // Collapsed, the inspector yields its width to the channel strips and
+        // leaves only the re-open rail drawn by the panel.
         m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
-        m_inspector->setVisible(true);
-        m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+        m_inspector->setVisible(!isInspectorCollapsed());
+        if (!isInspectorCollapsed()) {
+            m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
+        }
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
@@ -261,6 +269,72 @@ void UIMixerPanel::layoutMeters()
         m_strips[i]->setVisible(visible);
         m_strips[i]->setBounds(stripX, stripY, STRIP_WIDTH, stripHeight);
     }
+}
+
+NUIRect UIMixerPanel::getInspectorToggleRect() const
+{
+    const auto bounds = getBounds();
+    const NUIRect minimapRect = getMinimapRect();
+    const float stripY = minimapRect.bottom() + MINIMAP_GAP;
+    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
+    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
+
+    // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
+    // the inspector's leading edge.
+    const float railW = isInspectorCollapsed() ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
+    return NUIRect{inspectorX, stripY, railW, stripHeight};
+}
+
+void UIMixerPanel::updateInspectorWidthConstraint()
+{
+    const float available = getBounds().width;
+    if (available <= 0.0f) {
+        return; // Pre-layout; leave the constraint alone rather than guessing.
+    }
+
+    // The inspector only earns its width if the strips it sits beside are still
+    // usable. Below that, collapse is imposed regardless of preference.
+    const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
+                       + MIN_STRIPS_BESIDE_INSPECTOR * (STRIP_WIDTH + STRIP_SPACING);
+
+    const bool wasForced = m_inspectorCollapse.forcedCollapsed;
+    m_inspectorCollapse.setForcedCollapsed(available < needed);
+
+    // The "window too narrow" tooltip is raised and cleared from onMouseEvent,
+    // and only when the pointer crosses the rail boundary. Widening the window
+    // lifts the constraint without moving the pointer, so a tooltip shown while
+    // narrow would keep asserting a reason that no longer holds until the user
+    // happened to move off the rail. Clear it as the constraint lifts.
+    if (wasForced && !m_inspectorCollapse.forcedCollapsed && m_inspectorToggleHovered) {
+        NUIComponent::hideRemoteTooltip(this);
+    }
+}
+
+void UIMixerPanel::setInspectorExpandedPreference(bool expanded)
+{
+    if (m_inspectorCollapse.expandedPreference == expanded) {
+        return;
+    }
+    m_inspectorCollapse.expandedPreference = expanded;
+    if (onInspectorPreferenceChanged) {
+        onInspectorPreferenceChanged(expanded);
+    }
+    layoutMeters();
+    repaint();
+}
+
+void UIMixerPanel::toggleInspectorCollapsed()
+{
+    const bool before = m_inspectorCollapse.expandedPreference;
+    m_inspectorCollapse.onRailClicked();
+    if (m_inspectorCollapse.expandedPreference != before) {
+        if (onInspectorPreferenceChanged) {
+            onInspectorPreferenceChanged(m_inspectorCollapse.expandedPreference);
+        }
+        layoutMeters();
+    }
+    repaint();
 }
 
 void UIMixerPanel::onResize(int width, int height)
@@ -345,7 +419,7 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
     float y2 = bounds.y + bounds.height;
 
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float left = bounds.x;
     const float right = inspectorX - STRIP_SPACING;
 
@@ -438,7 +512,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
     const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
@@ -475,6 +549,38 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         m_inspector->onRender(renderer);
     }
 
+    // Inspector collapse rail. Collapsed it is the only thing left of the
+    // inspector; expanded it is a slim grip on the panel's leading edge.
+    {
+        auto& theme = NUIThemeManager::getInstance();
+        const NUIRect rail = getInspectorToggleRect();
+        const bool collapsed = isInspectorCollapsed();
+        const bool forced = isInspectorForcedCollapsed();
+
+        // A width-imposed collapse reads as unavailable rather than chosen: the
+        // rail still accepts the click (it records intent) but must not look
+        // like it will open the panel right now, or it feels broken.
+        const NUIColor railColor = m_inspectorToggleHovered
+            ? theme.getColor("accentPrimary").withAlpha(forced ? 0.18f : 0.34f)
+            : theme.getColor("surfaceTertiary").withAlpha(collapsed ? 0.72f : 0.34f);
+        renderer.fillRoundedRect(rail, 3.0f, railColor);
+
+        // Chevron points the way the panel will move.
+        float glyphAlpha = m_inspectorToggleHovered ? 0.95f : 0.6f;
+        if (forced) {
+            glyphAlpha *= 0.45f;
+        }
+        const NUIColor glyph = theme.getColor("textSecondary").withAlpha(glyphAlpha);
+        const float cx = rail.x + rail.width * 0.5f;
+        const float cy = rail.y + rail.height * 0.5f;
+        const float dir = collapsed ? -1.0f : 1.0f;
+        for (int i = 0; i < 5; ++i) {
+            const float dy = static_cast<float>(i) - 2.0f;
+            const float dx = dir * (2.0f - std::abs(dy));
+            renderer.fillRect(NUIRect{cx + dx - 0.5f, cy + dy * 2.0f, 1.5f, 2.0f}, glyph);
+        }
+    }
+
     // Master strip renders on top / outside the clip.
     if (m_masterStrip && m_masterStrip->isVisible()) {
         m_masterStrip->onRender(renderer);
@@ -499,6 +605,39 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     const float contentW = getChannelContentWidth();
     const float visibleW = getChannelViewportWidth();
     const float maxScroll = getChannelMaxScroll();
+
+    // One dismissal path for inline fader entry. A press on another strip is
+    // never routed to the editing fader, so without this the editor stays open.
+    if (event.pressed) {
+        for (const auto& strip : m_strips) {
+            if (strip) strip->dismissFaderEdit(event.position);
+        }
+        if (m_masterStrip) m_masterStrip->dismissFaderEdit(event.position);
+    }
+
+    // Inspector collapse rail claims the pointer before anything underneath it.
+    {
+        const NUIRect rail = getInspectorToggleRect();
+        const bool overRail = rail.contains(event.position);
+        if (m_inspectorToggleHovered != overRail) {
+            m_inspectorToggleHovered = overRail;
+            if (overRail && isInspectorForcedCollapsed()) {
+                // Say why it will not open, so a recorded-but-not-applied click
+                // reads as "waiting for room" instead of "ignored".
+                NUIComponent::showRemoteTooltip(
+                    "Inspector hidden - window too narrow",
+                    NUIPoint{rail.x + rail.width + 8.0f, rail.y + rail.height * 0.5f},
+                    this);
+            } else if (!overRail) {
+                NUIComponent::hideRemoteTooltip(this);
+            }
+            repaint();
+        }
+        if (overRail && event.pressed && event.button == NUIMouseButton::Left) {
+            toggleInspectorCollapsed();
+            return true;
+        }
+    }
 
     if (m_isDraggingMinimap) {
         if (event.released && event.button == NUIMouseButton::Left) {
@@ -531,7 +670,7 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
         const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-        const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+        const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
         const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
         const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
         const float maxScroll = std::max(0.0f, contentW - visibleW);
@@ -552,7 +691,7 @@ NUIRect UIMixerPanel::getMinimapRect() const
 {
     auto bounds = getBounds();
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     const float width = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
     return NUIRect(bounds.x, bounds.y + 2.0f, width, MINIMAP_HEIGHT);
 }
@@ -561,7 +700,7 @@ float UIMixerPanel::getChannelViewportWidth() const
 {
     auto bounds = getBounds();
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     return std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
 }
 
@@ -621,7 +760,7 @@ void UIMixerPanel::showPluginDropdown(uint32_t channelId)
 
     auto panelBounds = getBounds();
     const float masterX  = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorLeft = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float inspectorLeft = masterX - STRIP_SPACING - inspectorWidth();
     const float viewportRight = inspectorLeft - STRIP_SPACING;
 
     constexpr float DROP_W = 240.0f;
@@ -704,7 +843,7 @@ UIMixerStrip* UIMixerPanel::stripAt(const NUIPoint& position) const {
     // Channel strips are clipped to the viewport left of the inspector.
     auto panelBounds = getBounds();
     const float masterX = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float viewportRight = masterX - STRIP_SPACING - INSPECTOR_WIDTH - STRIP_SPACING;
+    const float viewportRight = masterX - STRIP_SPACING - inspectorWidth() - STRIP_SPACING;
     if (position.x > viewportRight) {
         return nullptr;
     }
@@ -732,7 +871,7 @@ DropFeedback UIMixerPanel::onDragEnter(const DragData& data, const NUIPoint& pos
 
 DropFeedback UIMixerPanel::onDragOver(const DragData& data, const NUIPoint& position) {
     m_dropHoverChannelId = -1;
-    if (data.type != DragDataType::Plugin) {
+    if (data.type != DragDataType::Plugin && data.type != DragDataType::AudioSourceRoute) {
         return DropFeedback::Invalid;
     }
     auto* strip = stripAt(position);
@@ -740,7 +879,7 @@ DropFeedback UIMixerPanel::onDragOver(const DragData& data, const NUIPoint& posi
         return DropFeedback::Invalid;
     }
     m_dropHoverChannelId = static_cast<int64_t>(strip->getChannelId());
-    return DropFeedback::Copy;
+    return data.type == DragDataType::AudioSourceRoute ? DropFeedback::Move : DropFeedback::Copy;
 }
 
 void UIMixerPanel::onDragLeave() {
@@ -754,9 +893,9 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
     // The mixer claims every drop over its bounds, including ones it rejects:
     // letting a rejected drop fall through to the timeline behind the mixer is
     // exactly the misrouting this target exists to prevent (#395).
-    if (data.type != DragDataType::Plugin) {
+    if (data.type != DragDataType::Plugin && data.type != DragDataType::AudioSourceRoute) {
         result.accepted = false;
-        result.message = "Only plugins can be dropped on the mixer";
+        result.message = "Only plugins and audio-source routes can be dropped on the mixer";
         return result;
     }
 
@@ -765,6 +904,41 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
     if (!strip || !vmChannel) {
         result.accepted = false;
         result.message = "No mixer strip under drop";
+        return result;
+    }
+
+    if (data.type == DragDataType::AudioSourceRoute) {
+        const auto* patternValue = std::any_cast<uint64_t>(&data.customData);
+        if (!patternValue || *patternValue == 0 || !m_trackManager) {
+            result.accepted = false;
+            result.message = "Drag data missing audio source";
+            return result;
+        }
+
+        const Aestra::Audio::PatternID patternId(*patternValue);
+        const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isAudio()) {
+            result.accepted = false;
+            result.message = "Audio source is no longer available";
+            return result;
+        }
+
+        const uint32_t destinationId =
+            vmChannel->id == 0 ? Aestra::Audio::MASTER_MIXER_CHANNEL_ID : vmChannel->id;
+        if (pattern->getMixerChannelId() != destinationId) {
+            auto command = std::make_shared<Aestra::Audio::SetAudioPatternMixerChannelCommand>(
+                *m_trackManager, patternId, destinationId);
+            m_trackManager->getCommandHistory().pushAndExecute(command);
+        }
+        if (m_viewModel) {
+            m_viewModel->setSelectedChannelId(static_cast<int32_t>(vmChannel->id));
+        }
+
+        result.accepted = true;
+        result.targetTrackIndex = static_cast<int>(vmChannel->id);
+        result.message = "Routed " + (data.displayName.empty() ? pattern->name : data.displayName) + " to " +
+                         (vmChannel->id == 0 ? "Master" : vmChannel->name);
+        Aestra::Log::info("[UIMixerPanel] Audio source drop: " + result.message);
         return result;
     }
 

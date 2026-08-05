@@ -14,7 +14,17 @@ void CreateLaneCommand::execute() {
     if (m_executed)
         return;
 
-    m_laneId = m_model.createLane(m_name);
+    // Re-executing after an undo must restore the lane's ORIGINAL identity, not mint
+    // a fresh one. Anything grouped with this command in the same undo step still
+    // refers to the old ID — an AddClipCommand batched with it holds the lane it was
+    // told to add to — so a new ID silently drops those members onto a lane that no
+    // longer exists. CommandTransaction replays its members through execute() rather
+    // than redo(), so the restore has to live here and not only in redo().
+    //
+    // On the first execute m_laneId is invalid and createLaneWithId generates one;
+    // it also falls back to a generated ID if the requested one has been taken in
+    // the meantime (#446).
+    m_laneId = m_model.createLaneWithId(m_laneId, m_name);
     m_executed = true;
 }
 
@@ -30,9 +40,8 @@ void CreateLaneCommand::redo() {
     if (m_executed)
         return;
 
-    // Re-create the lane with the same name
-    // The ID will be different on redo since we can't reuse the old ID
-    m_laneId = m_model.createLane(m_name);
+    // Same identity restore as execute(); see the note there.
+    m_laneId = m_model.createLaneWithId(m_laneId, m_name);
     m_executed = true;
 }
 

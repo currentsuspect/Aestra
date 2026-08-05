@@ -1,0 +1,236 @@
+# © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#
+# FD-12 — every pull request cites the strategic decision it serves, by SHA.
+#
+# WHY THIS EXISTS
+#
+# Written plans enforced only through review are advisory. Engineering invariants
+# hold more reliably because automated checks enforce them at a checkpoint where the
+# author cannot negotiate with the result.
+#
+# This lane gives strategic decisions the same kind of checkpoint. A citation field
+# completed and reviewed by the same author is a log; validating it automatically
+# makes it a gate. That is the whole design, and it is why this must fail the build
+# rather than post a comment.
+#
+# TWO HALVES
+#
+#   structural   scripts/ci/check-decision-citation.sh — offline, unit-tested,
+#                29 cases in check-decision-citation.test.sh.
+#   referential  this file — does the cited SHA exist in Aestra-Internals, does the
+#                cited entry exist AT that SHA, and is it still current.
+#
+# The second half needs a token for a private repository, so it cannot live in the
+# script and cannot be unit-tested. Keeping the split is what lets the parser have
+# tests at all.
+
+name: Decision Citation (FD-12)
+
+on:
+  pull_request:
+    # `edited` is not optional. Without it, a PR opened with a bad citation stays
+    # red after the author fixes the body, because editing a description fires no
+    # other event. The check would be unfixable without pushing a commit, and a
+    # gate people cannot satisfy is a gate people route around.
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: decision-citation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # The job name is the contract — it becomes the status check name on develop.
+  # Renaming it silently detaches the branch protection rule and every PR goes
+  # green on a gate that is no longer running. Do not rename without updating
+  # branch protection in the same change.
+  citation:
+    name: Decision citation
+    runs-on: ubuntu-latest
+    # Bots cannot reason about strategic scope, and requiring a citation from one
+    # produces a mechanical answer that satisfies the check while meaning nothing.
+    # A dependency bump is not strategy.
+    if: >
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      # The pull request body is untrusted input written by whoever opened the PR.
+      # It reaches the shell through an environment variable and never through
+      # ${{ }} interpolation: expanding it inline splices author-controlled text
+      # into the script GitHub generates, which is remote code execution on the
+      # runner via a markdown field. This is the single most important line here.
+      - name: Capture pull request body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "${PR_BODY}" > /tmp/pr-body.md
+
+      - name: Check citation structure
+        id: structure
+        run: bash scripts/ci/check-decision-citation.sh /tmp/pr-body.md
+
+      # ---------------------------------------------------------------------
+      # Referential half. Everything below resolves the citation against the
+      # strategic record itself.
+      # ---------------------------------------------------------------------
+
+      # Degrades to a warning rather than a pass or a hard failure. Without the
+      # token the structural gate above still binds — which is most of the value —
+      # but the claim "this SHA exists" becomes unverified, and an unverified claim
+      # must be visible rather than assumed.
+      #
+      # A missing token means two different things depending on where the pull
+      # request came from, and they cannot share a disposition:
+      #
+      #   fork        Secrets are withheld by design. The author cannot fix this and
+      #               never could, so failing would make every fork pull request
+      #               permanently unmergeable for a reason outside its control.
+      #               Warn, run the structural half, and let review carry the rest.
+      #
+      #   same-repo   The token is missing because the repository is misconfigured.
+      #               Passing here would let branch protection accept "referential
+      #               validation was never attempted" as though it were "referential
+      #               validation passed" — a green tick over a gate that is not
+      #               running, which is the one outcome this lane must never produce.
+      #               Deleting the secret would silently disarm the check.
+      - name: Check for the vault token
+        id: token
+        env:
+          INTERNALS_TOKEN: ${{ secrets.INTERNALS_RO_TOKEN }}
+          # Renders as the literal string "true" or "false". A head repo that no
+          # longer exists compares unequal and is treated as a fork, which is the
+          # safe direction: such a pull request could not have had the secret anyway.
+          IS_FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          set -uo pipefail
+          if [ -n "${INTERNALS_TOKEN}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "available=false" >> "$GITHUB_OUTPUT"
+
+          if [ "${IS_FORK}" = "true" ]; then
+            echo "::warning::Fork pull request: INTERNALS_RO_TOKEN is withheld by design, so the cited SHA was not resolved against the record. Structural checks still ran; confirm the citation manually before merging."
+            exit 0
+          fi
+
+          echo "::error::INTERNALS_RO_TOKEN is not configured on this repository."
+          echo "This is a same-repository pull request, so the secret should be available."
+          echo "Passing here would report a referential check that never ran."
+          echo "Configure the secret with read-only Contents access to the record repository."
+          exit 1
+
+      - name: Resolve the cited decision against the record
+        if: steps.token.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.INTERNALS_RO_TOKEN }}
+          VAULT: currentsuspect/Aestra-Internals
+          DECISION_ID: ${{ steps.structure.outputs.decision-id }}
+          DECISION_SHA: ${{ steps.structure.outputs.decision-sha }}
+          RECORD_DIR: 11 Decisions and Tradeoffs
+        run: |
+          set -uo pipefail
+
+          # --- does the commit exist -------------------------------------
+          # Short SHAs are what people paste, so the citation carries whatever the
+          # author had. This endpoint expands them, and returns the full SHA, which
+          # is what the staleness comparison below needs. An ambiguous short SHA
+          # fails here with GitHub's own message, which is clearer than anything a
+          # regex could have said upstream.
+          if ! full_sha=$(gh api "repos/${VAULT}/commits/${DECISION_SHA}" --jq '.sha' 2>/tmp/api-err); then
+            echo "::error::${DECISION_SHA} does not resolve to a commit in ${VAULT}."
+            echo "A citation must point at a commit that exists in the strategic record."
+            sed 's/^/  /' /tmp/api-err
+            exit 1
+          fi
+          echo "Cited commit resolves: ${full_sha}"
+
+          # --- does the entry exist AT that commit ------------------------
+          # The stronger of the two checks, and the reason this is not just an
+          # existence test. Citing a SHA that predates the decision is the natural
+          # mistake — you paste the SHA you have rather than the one that contains
+          # the entry — and it produces a citation that is wrong in the one way
+          # that matters: it points at a state where the decision had not been made.
+          #
+          # Every markdown file in the record directory is a candidate, rather than
+          # one hard-coded filename. New decisions arrive as new files, so a fixed
+          # path would need editing whenever a decision is recorded and would fail
+          # closed on a pull request that did nothing wrong. Binding to the FD-NN
+          # heading schema instead survives any renaming.
+          #
+          # The tree is asked for blob SHAs alongside paths, and the content is then
+          # read through git/blobs rather than /contents. This is not a stylistic
+          # choice. /contents addresses a file by PATH, and these paths contain
+          # spaces and an em dash, so every request needs URL encoding whose failure
+          # mode is a 404 that reads exactly like "this file does not exist" — a
+          # transport problem wearing the costume of a content problem. Blob SHAs
+          # come free from the tree call already being made, need no encoding at
+          # all, and keep the whole lookup inside the git/* namespace.
+          entries=$(gh api "repos/${VAULT}/git/trees/${full_sha}?recursive=1" \
+                      --jq '.tree[] | select(.type=="blob") | "\(.sha) \(.path)"' 2>/dev/null)
+          records=$(printf '%s\n' "${entries}" | grep -E " ${RECORD_DIR}/.*\.md$" || true)
+
+          if [ -z "${records}" ]; then
+            echo "::error::No decision record found under '${RECORD_DIR}/' at ${full_sha}."
+            echo "The cited commit predates the strategic record, so it cannot contain ${DECISION_ID}."
+            exit 1
+          fi
+
+          # unreadable counts records this step could not fetch or decode. It exists
+          # so the verdict below can distinguish "every record was read and the entry
+          # is absent" from "some record could not be read". Reporting the first when
+          # only the second is known is how a check ends up asserting a conclusion it
+          # never established — the exact failure this lane exists to prevent, and
+          # one it committed itself on its first live run.
+          found=""
+          unreadable=0
+          while IFS= read -r entry; do
+            [ -z "${entry}" ] && continue
+            blob="${entry%% *}"
+            path="${entry#* }"
+            if ! gh api "repos/${VAULT}/git/blobs/${blob}" --jq '.content' 2>/tmp/blob-err \
+                 | base64 -d > /tmp/record.md 2>/dev/null; then
+              unreadable=$((unreadable + 1))
+              echo "::warning::could not read ${path} (blob ${blob:0:7})"
+              sed 's/^/  /' /tmp/blob-err
+              continue
+            fi
+            if grep -qE "^#{2,3} ${DECISION_ID} " /tmp/record.md; then
+              found="${path}"
+              break
+            fi
+          done <<< "${records}"
+
+          if [ -n "${found}" ]; then
+            echo "${DECISION_ID} found in: ${found}"
+          elif [ "${unreadable}" -gt 0 ]; then
+            echo "::error::${unreadable} record(s) could not be read, so whether ${DECISION_ID} exists at ${full_sha} is unknown."
+            echo "This is a lookup failure, not a citation failure. Check the token's Contents permission on ${VAULT}."
+            exit 1
+          else
+            echo "::error::${DECISION_ID} is not an entry in the strategic record at ${full_sha}."
+            echo "All records at that commit were read successfully. Searched:"
+            printf '%s\n' "${records}" | sed -E 's/^[0-9a-f]+ /  /'
+            echo ""
+            echo "Either the entry id is wrong, or the SHA predates the decision."
+            exit 1
+          fi
+
+          # --- is it current ---------------------------------------------
+          # A warning, never a failure. FD-12 requires that a mismatch between
+          # implementation SHAs and the governing strategic state be VISIBLE during
+          # review — not that it be forbidden. Work legitimately outlives the SHA it
+          # started against, and failing here would force a body edit on every open
+          # pull request whenever a decision is recorded, which teaches everyone to
+          # paste the tip SHA without reading it. That is worse than stale.
+          tip=$(gh api "repos/${VAULT}/commits/HEAD" --jq '.sha' 2>/dev/null || echo "")
+          if [ -n "${tip}" ] && [ "${tip}" != "${full_sha}" ]; then
+            echo "::warning::The strategic record has moved since ${full_sha:0:7} (now ${tip:0:7}). ${DECISION_ID} still exists at the cited commit, so this is not a failure — but confirm the decision has not been superseded before merging."
+          else
+            echo "Citation is against the current strategic state."
+          fi

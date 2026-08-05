@@ -22,6 +22,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -122,7 +123,7 @@ inline Aestra::Audio::ClipSourceID addAudioTrack(Aestra::Audio::TrackManager& tm
                                                  const std::vector<float>& interleaved, uint32_t frames,
                                                  const SessionConfig& cfg) {
     using namespace Aestra::Audio;
-    tm.addChannel(label);
+    auto* channel = tm.addChannel(label);
 
     auto buffer = std::make_shared<AudioBufferData>();
     buffer->sampleRate = cfg.sampleRate;
@@ -144,7 +145,13 @@ inline Aestra::Audio::ClipSourceID addAudioTrack(Aestra::Audio::TrackManager& tm
         payload.durationSeconds * (static_cast<double>(cfg.bpm) / 60.0);
     PatternID patternId =
         tm.getPatternManager().createAudioPattern(label, durationBeats, payload);
-    tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    if (channel) {
+        tm.getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    }
+    const ClipInstanceID clipId = tm.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+    if (!tm.getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        throw std::runtime_error("Failed to configure unity-gain golden-audio clip");
+    }
     return sourceId;
 }
 

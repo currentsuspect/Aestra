@@ -99,6 +99,11 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
+    /** Width at the bar's right edge occupied by overlay siblings (the
+        master meter / waveform visualizers laid out by AestraContent).
+        The KEYS status pill hides instead of rendering underneath them. */
+    void setRightReservedWidth(float width);
+
 private:
     // UI Components
     std::shared_ptr<AestraUI::NUIButton> m_playButton;
@@ -117,7 +122,6 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_mixerButton;
     std::shared_ptr<AestraUI::NUIButton> m_sequencerButton;
     std::shared_ptr<AestraUI::NUIButton> m_pianoRollButton;
-    std::shared_ptr<AestraUI::NUIButton> m_playlistButton;
 
     std::shared_ptr<TransportInfoContainer> m_infoContainer;  // Modular info container
     std::shared_ptr<AestraUI::NUILabel> m_musicalTypingLabel;
@@ -140,7 +144,6 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_mixerIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_sequencerIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_pianoRollIcon;
-    std::shared_ptr<AestraUI::NUIIcon> m_playlistIcon;
     
     std::function<void()> m_onPlay;
     std::function<void(bool)> m_onRecord;
@@ -166,12 +169,12 @@ private:
     TransportState m_state;
     float m_tempo;
     double m_position;
+    float m_rightReservedWidth = 0.0f;
 
     // View Toggles state
     bool m_mixerActive{false};
     bool m_sequencerActive{false};
     bool m_pianoRollActive{false};
-    bool m_playlistActive{true}; // Always on by default
     bool m_metronomeActive{false};
     
     // Transport Extras

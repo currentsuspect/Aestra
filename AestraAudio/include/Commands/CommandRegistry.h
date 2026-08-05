@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Commands/CommandContext.h"
 #include "Commands/ICommand.h"
 #include "Commands/MuseGrammar.h"
 
@@ -11,20 +12,21 @@
 namespace Aestra {
 namespace Audio {
 
-class AudioEngine;
-class TrackManager;
-
 class CommandRegistry {
 public:
+    // Factories are registered once and are stateless: every runtime dependency
+    // (the engine, the track model) arrives per build through CommandContext,
+    // never captured or reached ambiently.
     using Factory = std::function<std::unique_ptr<ICommand>(
-        const std::unordered_map<std::string, std::string>&)>;
+        const std::unordered_map<std::string, std::string>&, const CommandContext&)>;
 
     static CommandRegistry& instance();
 
     void registerCommand(const std::string& verb, Factory factory);
     std::unique_ptr<ICommand> build(
         const std::string& verb,
-        const std::unordered_map<std::string, std::string>& flags);
+        const std::unordered_map<std::string, std::string>& flags,
+        const CommandContext& context);
 
     /**
      * @brief Record why a factory refused to build, then return nullptr.
@@ -43,11 +45,14 @@ public:
      */
     static std::string consumeLastBuildError();
 
-    static void initialize(TrackManager* trackManager);
-
-    /** Set the AudioEngine for transport commands (play/stop/set_bpm). */
-    static void setAudioEngine(AudioEngine* engine);
-    static AudioEngine* getAudioEngine();
+    /**
+     * @brief Register every Muse command factory once.
+     *
+     * Factories are stateless; they take no dependencies here. The engine and
+     * track model are supplied per build via CommandContext, so a single
+     * registration serves every session in the process.
+     */
+    static void initialize();
 
 private:
     CommandRegistry() = default;
