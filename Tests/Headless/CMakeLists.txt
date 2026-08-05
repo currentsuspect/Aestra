@@ -355,7 +355,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
     )
     add_test(NAME PDCRTConsumptionTest COMMAND PDCRTConsumptionTest)
     set_tests_properties(PDCRTConsumptionTest PROPERTIES
-        LABELS "headless;pdc;engine;rt"
+        LABELS "headless;pdc;engine;rt;contract:core"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()

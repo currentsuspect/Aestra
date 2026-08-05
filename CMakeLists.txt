@@ -366,7 +366,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
       COMMAND AestraHeadlessExport --duration nope)
     set_tests_properties(AestraHeadlessExportRejectsBadArgs PROPERTIES
       WILL_FAIL TRUE
-      LABELS "cli;headless")
+      LABELS "cli;headless;contract:application")
 
     # Real end-to-end export invocation: arg parse -> template project -> export
     # attempt. Regression guard for the getInstance() abort (SIGABRT on develop;
@@ -380,7 +380,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
         -DOUT_FILE=${CMAKE_BINARY_DIR}/headless_export_e2e.wav
         -P ${CMAKE_SOURCE_DIR}/Tests/Headless/run_headless_export_e2e.cmake)
     set_tests_properties(AestraHeadlessExportEndToEnd PROPERTIES
-      LABELS "cli;headless;export;integrity"
+      LABELS "cli;headless;export;integrity;contract:audio"
       TIMEOUT 120)
   endif()
 

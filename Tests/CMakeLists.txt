@@ -71,7 +71,7 @@ add_executable(TestTempDirectoryStressTest Support/TestTempDirectoryStressTest.c
 find_package(Threads REQUIRED)
 target_link_libraries(TestTempDirectoryStressTest PRIVATE Threads::Threads)
 add_test(NAME TestTempDirectoryStressTest COMMAND TestTempDirectoryStressTest)
-set_tests_properties(TestTempDirectoryStressTest PROPERTIES LABELS "support;infrastructure")
+set_tests_properties(TestTempDirectoryStressTest PROPERTIES LABELS "support;infrastructure;contract:core")
 
 # Project RoundTrip Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
@@ -699,7 +699,7 @@ add_executable(AestraWaveformLockTest
 target_link_libraries(AestraWaveformLockTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraWaveformLockTest COMMAND AestraWaveformLockTest)
-    set_tests_properties(AestraWaveformLockTest PROPERTIES LABELS "experimental;unstable")
+    set_tests_properties(AestraWaveformLockTest PROPERTIES LABELS "experimental;unstable;contract:application")
 else()
     message(STATUS "AestraWaveformLockTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
@@ -712,7 +712,7 @@ add_executable(AestraWaveformCacheTest
 target_link_libraries(AestraWaveformCacheTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraWaveformCacheTest COMMAND AestraWaveformCacheTest)
-    set_tests_properties(AestraWaveformCacheTest PROPERTIES LABELS "experimental;unstable")
+    set_tests_properties(AestraWaveformCacheTest PROPERTIES LABELS "experimental;unstable;contract:audio")
 else()
     message(STATUS "AestraWaveformCacheTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
@@ -942,7 +942,7 @@ add_executable(AestraAudioCallbackTest AestraAudio/AudioCallbackTest.cpp)
 target_link_libraries(AestraAudioCallbackTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraAudioCallbackTest COMMAND AestraAudioCallbackTest)
-    set_tests_properties(AestraAudioCallbackTest PROPERTIES LABELS "experimental;unstable")
+    set_tests_properties(AestraAudioCallbackTest PROPERTIES LABELS "experimental;unstable;contract:core")
 else()
     message(STATUS "AestraAudioCallbackTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
@@ -952,7 +952,7 @@ add_executable(AestraFilterTest AestraAudio/FilterTest.cpp)
 target_link_libraries(AestraFilterTest PRIVATE AestraAudio)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraFilterTest COMMAND AestraFilterTest)
-    set_tests_properties(AestraFilterTest PROPERTIES LABELS "experimental;unstable")
+    set_tests_properties(AestraFilterTest PROPERTIES LABELS "experimental;unstable;contract:audio")
 else()
     message(STATUS "AestraFilterTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
@@ -1011,7 +1011,7 @@ target_include_directories(AestraUUIDTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraUUIDTest COMMAND AestraUUIDTest)
-set_tests_properties(AestraUUIDTest PROPERTIES LABELS "audio;uuid")
+set_tests_properties(AestraUUIDTest PROPERTIES LABELS "audio;uuid;contract:core")
 
 # Arsenal route-mode compatibility test
 add_executable(ArsenalRouteModeCompatibilityTest AestraAudio/ArsenalRouteModeCompatibilityTest.cpp)
@@ -1074,7 +1074,7 @@ target_include_directories(ArsenalRouteModePolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalRouteModePolicyTest COMMAND ArsenalRouteModePolicyTest)
-set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal;policy")
+set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal;policy;contract:application")
 
 if(NOT WIN32)
     add_executable(PluginScannerSigpipeTest AestraAudio/PluginScannerSigpipeTest.cpp)
@@ -1098,7 +1098,7 @@ target_include_directories(ArsenalBridgeContractTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalBridgeContractTest COMMAND ArsenalBridgeContractTest)
-set_tests_properties(ArsenalBridgeContractTest PROPERTIES LABELS "arsenal;policy")
+set_tests_properties(ArsenalBridgeContractTest PROPERTIES LABELS "arsenal;policy;contract:application")
 
 # Arsenal export current-policy parity guard (Phase 2C)
 add_executable(ArsenalExportCurrentPolicyTest AestraAudio/ArsenalExportCurrentPolicyTest.cpp)
@@ -1146,7 +1146,7 @@ target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)
 target_compile_definitions(AestraSampleRateConverterTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraSampleRateConverterTest COMMAND AestraSampleRateConverterTest)
-    set_tests_properties(AestraSampleRateConverterTest PROPERTIES LABELS "experimental;unstable")
+    set_tests_properties(AestraSampleRateConverterTest PROPERTIES LABELS "experimental;unstable;contract:audio")
 else()
     message(STATUS "AestraSampleRateConverterTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
@@ -1172,7 +1172,7 @@ target_include_directories(RecordingPathTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME RecordingPathTest COMMAND RecordingPathTest)
-set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless")
+set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless;contract:application")
 
 
 # =============================================================================
@@ -1288,7 +1288,7 @@ target_include_directories(AudioEngineOwnershipTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AudioEngineOwnershipTest COMMAND AudioEngineOwnershipTest)
-set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity" TIMEOUT 120)
+set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity;contract:core" TIMEOUT 120)
 
 # Zero-tolerance source guard (R2): fails if any AudioEngine global-instance
 # mechanism (accessor, registration pointer) reappears anywhere in the tree.
@@ -1296,7 +1296,7 @@ add_test(NAME NoAudioEngineSingletonGuard
     COMMAND ${CMAKE_COMMAND}
         -DREPO_ROOT=${CMAKE_SOURCE_DIR}
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake)
-set_tests_properties(NoAudioEngineSingletonGuard PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
+set_tests_properties(NoAudioEngineSingletonGuard PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
 # Self-test: runs the guard against fixture trees — every forbidden shape
 # (including renamed static/global mechanisms) must fail, benign ownership
@@ -1306,7 +1306,7 @@ add_test(NAME NoAudioEngineSingletonGuardSelfTest
         -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake
         -DWORK_DIR=${CMAKE_BINARY_DIR}/guard_selftest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
-set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
+set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
@@ -1509,7 +1509,7 @@ target_link_libraries(PlatformWindowTest PRIVATE AestraPlat)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     add_executable(TextRendererSTBSpaceTest AestraUI/TextRendererSTBSpaceTest.cpp)
     add_test(NAME TextRendererSTBSpaceTest COMMAND TextRendererSTBSpaceTest)
-    set_tests_properties(TextRendererSTBSpaceTest PROPERTIES LABELS "ui;regression")
+    set_tests_properties(TextRendererSTBSpaceTest PROPERTIES LABELS "ui;regression;contract:application")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
@@ -1520,7 +1520,7 @@ add_executable(CursorServiceTest
     ${CMAKE_SOURCE_DIR}/AestraUI/Platform/NUICursorService.cpp
 )
 add_test(NAME CursorServiceTest COMMAND CursorServiceTest)
-set_tests_properties(CursorServiceTest PROPERTIES LABELS "ui;cursor;regression" TIMEOUT 60)
+set_tests_properties(CursorServiceTest PROPERTIES LABELS "ui;cursor;regression;contract:application" TIMEOUT 60)
 
 # NUITheme JSON loading test (Issue #259)
 # Compiles NUITheme.cpp directly (its only deps are header-only: NUITypes.h,
@@ -1536,7 +1536,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME NUIThemeJSONTest COMMAND NUIThemeJSONTest)
-    set_tests_properties(NUIThemeJSONTest PROPERTIES LABELS "ui;theme")
+    set_tests_properties(NUIThemeJSONTest PROPERTIES LABELS "ui;theme;contract:application")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
@@ -1548,14 +1548,14 @@ target_include_directories(SafeClampFloatTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components
 )
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
-set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression")
+set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
 
 add_executable(TimelineGeometryTest AestraUI/TimelineGeometryTest.cpp)
 target_include_directories(TimelineGeometryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components
 )
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
-set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression")
+set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
 add_executable(TimelineInteractionPolicyTest AestraUI/TimelineInteractionPolicyTest.cpp)
 target_include_directories(TimelineInteractionPolicyTest PRIVATE
@@ -1564,7 +1564,7 @@ target_include_directories(TimelineInteractionPolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
 )
 add_test(NAME TimelineInteractionPolicyTest COMMAND TimelineInteractionPolicyTest)
-set_tests_properties(TimelineInteractionPolicyTest PROPERTIES LABELS "ui;timeline;selection;regression")
+set_tests_properties(TimelineInteractionPolicyTest PROPERTIES LABELS "ui;timeline;selection;regression;contract:application")
 
 # Clip contrast contract: waveform ink must stay brighter than the clip body it
 # is drawn on, for every lane identity and both selection states.
@@ -1574,7 +1574,7 @@ target_include_directories(TimelineClipContrastTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraUI/Core
 )
 add_test(NAME TimelineClipContrastTest COMMAND TimelineClipContrastTest)
-set_tests_properties(TimelineClipContrastTest PROPERTIES LABELS "ui;timeline;color;regression")
+set_tests_properties(TimelineClipContrastTest PROPERTIES LABELS "ui;timeline;color;regression;contract:application")
 
 # Settings persistence policy (#648). Same shape as SafeClampFloatTest above:
 # header-only and widget-free so the decision that was destroying saved device
@@ -1584,13 +1584,13 @@ target_include_directories(SettingsPersistencePolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Settings
 )
 add_test(NAME SettingsPersistencePolicyTest COMMAND SettingsPersistencePolicyTest)
-set_tests_properties(SettingsPersistencePolicyTest PROPERTIES LABELS "ui;settings;regression")
+set_tests_properties(SettingsPersistencePolicyTest PROPERTIES LABELS "ui;settings;regression;contract:application")
 
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
     add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
     target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
     add_test(NAME NUIThemeConsistencyTest COMMAND NUIThemeConsistencyTest)
-    set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency")
+    set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency;contract:application")
 else()
     message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1604,7 +1604,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Base
     )
     add_test(NAME NUIContextMenuInteractionTest COMMAND NUIContextMenuInteractionTest)
-    set_tests_properties(NUIContextMenuInteractionTest PROPERTIES LABELS "ui;menu;input;regression")
+    set_tests_properties(NUIContextMenuInteractionTest PROPERTIES LABELS "ui;menu;input;regression;contract:application")
 
     add_executable(ModalDialogInteractionTest
         AestraUI/ModalDialogInteractionTest.cpp
@@ -1620,7 +1620,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME ModalDialogInteractionTest COMMAND ModalDialogInteractionTest)
-    set_tests_properties(ModalDialogInteractionTest PROPERTIES LABELS "ui;modal;input;regression")
+    set_tests_properties(ModalDialogInteractionTest PROPERTIES LABELS "ui;modal;input;regression;contract:application")
 else()
     message(STATUS "NUIContextMenuInteractionTest and ModalDialogInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1634,7 +1634,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
         ${CMAKE_SOURCE_DIR}/Source/Core
     )
     add_test(NAME KeyboardNoteInputTest COMMAND KeyboardNoteInputTest)
-    set_tests_properties(KeyboardNoteInputTest PROPERTIES LABELS "ui;input;midi")
+    set_tests_properties(KeyboardNoteInputTest PROPERTIES LABELS "ui;input;midi;contract:application")
 endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
@@ -1647,7 +1647,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
     )
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
-    set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction")
+    set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
 else()
     message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1662,7 +1662,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
     )
     add_test(NAME EditorCloseDeferredTest COMMAND EditorCloseDeferredTest)
-    set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression")
+    set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression;contract:application")
 else()
     message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1679,7 +1679,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )
     add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
-    set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression")
+    set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression;contract:application")
 else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1718,7 +1718,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/Source/Panels
     )
     add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
-    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression")
+    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression;contract:application")
 else()
     message(STATUS "TakesHistoryPanelTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1734,7 +1734,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )
     add_test(NAME PluginBrowserSelectionTest COMMAND PluginBrowserSelectionTest)
-    set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression")
+    set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression;contract:application")
 else()
     message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1748,7 +1748,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )
     add_test(NAME UIInsertRoutePickerTest COMMAND UIInsertRoutePickerTest)
-    set_tests_properties(UIInsertRoutePickerTest PROPERTIES LABELS "ui;routing;regression")
+    set_tests_properties(UIInsertRoutePickerTest PROPERTIES LABELS "ui;routing;regression;contract:application")
 else()
     message(STATUS "UIInsertRoutePickerTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1764,7 +1764,7 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIText
         ${CMAKE_SOURCE_DIR}/AestraPlat/include
     )
     add_test(NAME NUITextInputLayoutTest COMMAND NUITextInputLayoutTest)
-    set_tests_properties(NUITextInputLayoutTest PROPERTIES LABELS "ui;textinput;regression")
+    set_tests_properties(NUITextInputLayoutTest PROPERTIES LABELS "ui;textinput;regression;contract:application")
     message(STATUS "NUITextInputLayoutTest added - multiline layout/caret regression tests")
 else()
     message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
@@ -1782,7 +1782,7 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIText
         ${CMAKE_SOURCE_DIR}/AestraPlat/include
     )
     add_test(NAME NUITextInputEditingTest COMMAND NUITextInputEditingTest)
-    set_tests_properties(NUITextInputEditingTest PROPERTIES LABELS "ui;textinput;regression")
+    set_tests_properties(NUITextInputEditingTest PROPERTIES LABELS "ui;textinput;regression;contract:application")
     message(STATUS "NUITextInputEditingTest added - selection-replace editing regression tests")
 else()
     message(STATUS "NUITextInputEditingTest skipped (AestraUI_Core target unavailable in this build mode)")
@@ -1798,7 +1798,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InspectorCollapseStateTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME InspectorCollapseStateTest COMMAND InspectorCollapseStateTest)
-    set_tests_properties(InspectorCollapseStateTest PROPERTIES LABELS "ui;mixer;regression")
+    set_tests_properties(InspectorCollapseStateTest PROPERTIES LABELS "ui;mixer;regression;contract:application")
     message(STATUS "InspectorCollapseStateTest added - inspector collapse preference/constraint tests")
 endif()
 
@@ -1810,7 +1810,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
     )
     add_test(NAME NUIDropdownInteractionTest COMMAND NUIDropdownInteractionTest)
-    set_tests_properties(NUIDropdownInteractionTest PROPERTIES LABELS "ui;dropdown;regression")
+    set_tests_properties(NUIDropdownInteractionTest PROPERTIES LABELS "ui;dropdown;regression;contract:application")
 
     add_executable(NUIComponentTooltipTest AestraUI/NUIComponentTooltipTest.cpp)
     target_link_libraries(NUIComponentTooltipTest PRIVATE AestraUI_Core)
@@ -1818,7 +1818,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
     )
     add_test(NAME NUIComponentTooltipTest COMMAND NUIComponentTooltipTest)
-    set_tests_properties(NUIComponentTooltipTest PROPERTIES LABELS "ui;tooltip;regression")
+    set_tests_properties(NUIComponentTooltipTest PROPERTIES LABELS "ui;tooltip;regression;contract:application")
 
     # #672: an inactive workspace must never intercept the active one's input.
     add_executable(NUIHiddenChildDispatchTest AestraUI/NUIHiddenChildDispatchTest.cpp)
@@ -1827,7 +1827,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
     )
     add_test(NAME NUIHiddenChildDispatchTest COMMAND NUIHiddenChildDispatchTest)
-    set_tests_properties(NUIHiddenChildDispatchTest PROPERTIES LABELS "ui;dispatch;regression")
+    set_tests_properties(NUIHiddenChildDispatchTest PROPERTIES LABELS "ui;dispatch;regression;contract:application")
 
     # #672 leaf side: a widget handed an event directly (bypassing the parent-side
     # filter added in #674) must still refuse it while hidden.
@@ -1838,7 +1838,7 @@ if(TARGET AestraUI_Core)
         ${CMAKE_SOURCE_DIR}/AestraUI/Base
     )
     add_test(NAME NUIWidgetHiddenInputTest COMMAND NUIWidgetHiddenInputTest)
-    set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression")
+    set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression;contract:application")
 else()
     message(STATUS "Dropdown/tooltip interaction tests skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
@@ -1854,7 +1854,7 @@ target_include_directories(MusicalTypingControllerTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraUI/Core
 )
 add_test(NAME MusicalTypingControllerTest COMMAND MusicalTypingControllerTest)
-set_tests_properties(MusicalTypingControllerTest PROPERTIES LABELS "ui;midi;regression")
+set_tests_properties(MusicalTypingControllerTest PROPERTIES LABELS "ui;midi;regression;contract:application")
 
 # =============================================================================
 # Per-domain test fragments
@@ -1979,7 +1979,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PianoRollEdgeCaseStressTest.c
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME PianoRollEdgeCaseStressTest COMMAND PianoRollEdgeCaseStressTest)
-    set_tests_properties(PianoRollEdgeCaseStressTest PROPERTIES LABELS "audio;pianoroll;stress")
+    set_tests_properties(PianoRollEdgeCaseStressTest PROPERTIES LABELS "audio;pianoroll;stress;contract:application")
 endif()
 
 # Plugin Host Stress Test
@@ -2003,7 +2003,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportStressTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME TransportStressTest COMMAND TransportStressTest)
-    set_tests_properties(TransportStressTest PROPERTIES LABELS "audio;transport;stress")
+    set_tests_properties(TransportStressTest PROPERTIES LABELS "audio;transport;stress;contract:application")
 endif()
 
 # Pathological Chaos Stress Test
@@ -2039,7 +2039,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TrackManagerStressTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME TrackManagerStressTest COMMAND TrackManagerStressTest)
-    set_tests_properties(TrackManagerStressTest PROPERTIES LABELS "audio;trackmanager;stress")
+    set_tests_properties(TrackManagerStressTest PROPERTIES LABELS "audio;trackmanager;stress;contract:application")
 endif()
 
 # File Browser Stress Test
@@ -2051,7 +2051,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/FileBrowserStressTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME FileBrowserStressTest COMMAND FileBrowserStressTest)
-    set_tests_properties(FileBrowserStressTest PROPERTIES LABELS "audio;filebrowser;stress")
+    set_tests_properties(FileBrowserStressTest PROPERTIES LABELS "audio;filebrowser;stress;contract:application")
 endif()
 
 # Realtime Scheduling Test (Linux-only: uses sched_getscheduler, RLIMIT_RTPRIO, /proc/self/status)
@@ -2077,7 +2077,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/LatencyCompensationTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME LatencyCompensationTest COMMAND LatencyCompensationTest)
-    set_tests_properties(LatencyCompensationTest PROPERTIES LABELS "audio;latency;pdc")
+    set_tests_properties(LatencyCompensationTest PROPERTIES LABELS "audio;latency;pdc;contract:plugins")
 endif()
 
 # One parser for audio_settings.conf (#649). parse/serialize are stream-based
@@ -2092,7 +2092,7 @@ target_include_directories(AudioSettingsStoreTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AudioSettingsStoreTest COMMAND AudioSettingsStoreTest)
-set_tests_properties(AudioSettingsStoreTest PROPERTIES LABELS "audio;settings;regression")
+set_tests_properties(AudioSettingsStoreTest PROPERTIES LABELS "audio;settings;regression;contract:core")
 
 # Sliding-indicator first-sync semantics (segmented control, #653 follow-up).
 # Header-only and widget-free by design so the animation contract is reachable
@@ -2102,7 +2102,7 @@ target_include_directories(SlidingIndicatorTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraUI/Base
 )
 add_test(NAME SlidingIndicatorTest COMMAND SlidingIndicatorTest)
-set_tests_properties(SlidingIndicatorTest PROPERTIES LABELS "ui;regression")
+set_tests_properties(SlidingIndicatorTest PROPERTIES LABELS "ui;regression;contract:application")
 
 # AestraJSON must round-trip doubles independently of LC_NUMERIC. AestraJSON.h
 # is header-only, so this needs no library — but it backs ProjectSerializer,
@@ -2113,6 +2113,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME JSONLocaleIndependenceTest COMMAND JSONLocaleIndependenceTest)
-    set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression")
+    set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression;contract:core")
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()

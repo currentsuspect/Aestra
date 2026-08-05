@@ -26,7 +26,7 @@ target_include_directories(CommandHistoryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME CommandHistoryTest COMMAND CommandHistoryTest)
-set_tests_properties(CommandHistoryTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(CommandHistoryTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # MoveClipCommand Test
 add_executable(MoveClipCommandTest Commands/MoveClipCommandTest.cpp)
@@ -36,7 +36,7 @@ target_include_directories(MoveClipCommandTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MoveClipCommandTest COMMAND MoveClipCommandTest)
-set_tests_properties(MoveClipCommandTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(MoveClipCommandTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # MacroCommand Test
 add_executable(MacroCommandTest Commands/MacroCommandTest.cpp)
@@ -46,7 +46,7 @@ target_include_directories(MacroCommandTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
-set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # Note Commands Test (AddNote, RemoveNote, MoveNote, ResizeNote)
 add_executable(NoteCommandsTest Commands/NoteCommandsTest.cpp)
@@ -56,7 +56,7 @@ target_include_directories(NoteCommandsTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME NoteCommandsTest COMMAND NoteCommandsTest)
-set_tests_properties(NoteCommandsTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(NoteCommandsTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # NoteDiff Test (headless diffing logic for piano roll save path)
 add_executable(NoteDiffTest Commands/NoteDiffTest.cpp)
@@ -66,7 +66,7 @@ target_include_directories(NoteDiffTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME NoteDiffTest COMMAND NoteDiffTest)
-set_tests_properties(NoteDiffTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(NoteDiffTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # ScaleContext Test (scale context default values and helpers)
 add_executable(ScaleContextTest AestraAudio/ScaleContextTest.cpp)
@@ -76,7 +76,7 @@ target_include_directories(ScaleContextTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ScaleContextTest COMMAND ScaleContextTest)
-set_tests_properties(ScaleContextTest PROPERTIES LABELS "audio;scale;music")
+set_tests_properties(ScaleContextTest PROPERTIES LABELS "audio;scale;music;contract:application")
 
 # Mixer Commands Test (Volume, Pan, Mute, Solo)
 add_executable(MixerCommandsTest Commands/MixerCommandsTest.cpp)
@@ -86,7 +86,7 @@ target_include_directories(MixerCommandsTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MixerCommandsTest COMMAND MixerCommandsTest)
-set_tests_properties(MixerCommandsTest PROPERTIES LABELS "commands;phase2;mixer")
+set_tests_properties(MixerCommandsTest PROPERTIES LABELS "commands;phase2;mixer;contract:application")
 
 # Clip Commands Test (Trim, Duplicate)
 add_executable(ClipCommandsTest Commands/ClipCommandsTest.cpp)
@@ -96,7 +96,7 @@ target_include_directories(ClipCommandsTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ClipCommandsTest COMMAND ClipCommandsTest)
-set_tests_properties(ClipCommandsTest PROPERTIES LABELS "commands;phase2;clip")
+set_tests_properties(ClipCommandsTest PROPERTIES LABELS "commands;phase2;clip;contract:application")
 
 # CommandTransaction Test
 add_executable(CommandTransactionTest Commands/CommandTransactionTest.cpp)
@@ -106,7 +106,7 @@ target_include_directories(CommandTransactionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME CommandTransactionTest COMMAND CommandTransactionTest)
-set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2")
+set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2;contract:application")
 
 # CommandRegistry Parse Safety Test (regression for #197)
 add_executable(CommandRegistryParseSafetyTest Commands/CommandRegistryParseSafetyTest.cpp)
@@ -115,7 +115,7 @@ target_include_directories(CommandRegistryParseSafetyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
-set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
+set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression;contract:application")
 
 # MuseService — the structured JSON surface agents drive Aestra through.
 add_executable(DeleteTrackUndoTest Commands/DeleteTrackUndoTest.cpp)
@@ -125,7 +125,7 @@ target_include_directories(DeleteTrackUndoTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME DeleteTrackUndoTest COMMAND DeleteTrackUndoTest)
-set_tests_properties(DeleteTrackUndoTest PROPERTIES LABELS "commands;regression")
+set_tests_properties(DeleteTrackUndoTest PROPERTIES LABELS "commands;regression;contract:application")
 
 # --- Muse surface ------------------------------------------------------------
 # The JSON verb surface agents drive Aestra through, and its clients.
@@ -138,7 +138,7 @@ target_include_directories(MuseServiceTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MuseServiceTest COMMAND MuseServiceTest)
-set_tests_properties(MuseServiceTest PROPERTIES LABELS "commands;muse")
+set_tests_properties(MuseServiceTest PROPERTIES LABELS "commands;muse;contract:application")
 
 add_executable(MuseCliRequestTest Commands/MuseCliRequestTest.cpp)
 target_include_directories(MuseCliRequestTest PRIVATE
@@ -146,7 +146,7 @@ target_include_directories(MuseCliRequestTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
-set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse")
+set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse;contract:application")
 
 add_executable(ProjectLoadReportTest
     Commands/ProjectLoadReportTest.cpp
@@ -173,7 +173,7 @@ target_compile_definitions(ProjectLoadReportTest PRIVATE
     AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
 )
 add_test(NAME ProjectLoadReportTest COMMAND ProjectLoadReportTest)
-set_tests_properties(ProjectLoadReportTest PROPERTIES LABELS "commands;muse;project;serialization")
+set_tests_properties(ProjectLoadReportTest PROPERTIES LABELS "commands;muse;project;serialization;contract:application")
 
 add_executable(RoutingGraphTest Commands/RoutingGraphTest.cpp)
 target_link_libraries(RoutingGraphTest PRIVATE AestraAudioCore)
@@ -182,7 +182,7 @@ target_include_directories(RoutingGraphTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME RoutingGraphTest COMMAND RoutingGraphTest)
-set_tests_properties(RoutingGraphTest PROPERTIES LABELS "commands;muse;routing")
+set_tests_properties(RoutingGraphTest PROPERTIES LABELS "commands;muse;routing;contract:application")
 
 add_executable(LatencyReportTest Commands/LatencyReportTest.cpp)
 target_link_libraries(LatencyReportTest PRIVATE AestraAudioCore)
@@ -192,7 +192,7 @@ target_include_directories(LatencyReportTest PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Headless
 )
 add_test(NAME LatencyReportTest COMMAND LatencyReportTest)
-set_tests_properties(LatencyReportTest PROPERTIES LABELS "commands;muse;latency;pdc")
+set_tests_properties(LatencyReportTest PROPERTIES LABELS "commands;muse;latency;pdc;contract:application")
 
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
@@ -205,7 +205,7 @@ target_include_directories(HostVerbRegistryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME HostVerbRegistryTest COMMAND HostVerbRegistryTest)
-set_tests_properties(HostVerbRegistryTest PROPERTIES LABELS "commands;muse")
+set_tests_properties(HostVerbRegistryTest PROPERTIES LABELS "commands;muse;contract:application")
 
 add_executable(MuseSocketServerTest Commands/MuseSocketServerTest.cpp)
 target_link_libraries(MuseSocketServerTest PRIVATE AestraAudioCore)
@@ -215,7 +215,7 @@ target_include_directories(MuseSocketServerTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME MuseSocketServerTest COMMAND MuseSocketServerTest)
-set_tests_properties(MuseSocketServerTest PROPERTIES LABELS "commands;muse")
+set_tests_properties(MuseSocketServerTest PROPERTIES LABELS "commands;muse;contract:application")
 
 if(TARGET MuseAgentCore)
     add_executable(MuseAgentLoopTest Commands/MuseAgentLoopTest.cpp)
@@ -226,7 +226,7 @@ if(TARGET MuseAgentCore)
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME MuseAgentLoopTest COMMAND MuseAgentLoopTest)
-    set_tests_properties(MuseAgentLoopTest PROPERTIES LABELS "commands;muse")
+    set_tests_properties(MuseAgentLoopTest PROPERTIES LABELS "commands;muse;contract:application")
 endif()
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
@@ -308,7 +308,7 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseC
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME MuseClipRoundTripTest COMMAND MuseClipRoundTripTest)
-    set_tests_properties(MuseClipRoundTripTest PROPERTIES LABELS "commands;muse;clip;roundtrip")
+    set_tests_properties(MuseClipRoundTripTest PROPERTIES LABELS "commands;muse;clip;roundtrip;contract:application")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClipRenderCharacterizationTest.cpp")
