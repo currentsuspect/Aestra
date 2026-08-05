@@ -34,4 +34,12 @@ add_executable(FolioValidateFixture
 target_link_libraries(FolioValidateFixture PRIVATE AestraAudio)
 target_include_directories(FolioValidateFixture PRIVATE ${AESTRA_PERF_TOOL_INCLUDES})
 
-message(STATUS "Folio perf apparatus enabled (FolioBuildFixture, FolioValidateFixture)")
+# Proves the fixture renders the behaviour CAPABILITIES.json declares.
+add_executable(FolioProbeFixture
+    tools/probe-fixture.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(FolioProbeFixture PRIVATE AestraAudio)
+target_include_directories(FolioProbeFixture PRIVATE ${AESTRA_PERF_TOOL_INCLUDES})
+
+message(STATUS "Folio perf apparatus enabled (FolioBuildFixture, FolioValidateFixture, FolioProbeFixture)")

@@ -165,7 +165,20 @@
       "zeroing the send changes the render",
       "removing the chord effect chain changes the render",
       "early and late automation windows differ in the expected gain direction",
-      "intended audio lanes produce nonzero signal"
+      "intended audio lanes produce nonzero signal",
+      "MIDI lanes are silent in song mode (pinned; see midiPlayback)"
     ]
+  },
+  "midiPlayback": {
+    "structurallyPresent": true,
+    "audibleInSongModeRender": false,
+    "lanes": [
+      "Lead",
+      "Pad"
+    ],
+    "engineSha": "e81fd95a",
+    "reason": "AudioEngine::processArsenalUnits early-returns unless m_patternPlaybackMode is set, and m_unitMidiBuffers \u2014 the only route from the pattern-playback engine into a unit's plugin \u2014 is populated inside that same early-returning function. Timeline MIDI clips therefore never reach their instruments through processBlock outside Arsenal/pattern mode.",
+    "consequence": "The measured audio workload is 6 audio lanes plus inert MIDI data, not 8 sounding lanes. Any CPU/RSS baseline must be read that way.",
+    "probeContract": "The probe ASSERTS these lanes are silent. That pins current behaviour as a tripwire: if timeline MIDI becomes audible, the probe fails and the baseline must be re-cut rather than silently changing meaning."
   }
 }
