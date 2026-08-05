@@ -157,11 +157,35 @@ struct TrackRTState {
     // and reaches the RT path by zeroing this value.
     uint32_t compensationDelaySamples{0};
 
-    // Fixed-size compensation buffer (stereo interleaved)
-    // 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz
-    std::array<float, 32768> compensationBuffer{}; // 16384 frames * 2 channels
+    // Compensation ring (stereo interleaved), allocated ONLY for tracks that
+    // actually carry a nonzero delay.
+    //
+    // This was a std::array<float, 32768> — 128 KiB embedded BY VALUE in every
+    // TrackRTState. m_trackState.reserve(kMaxTracks) therefore asked for a
+    // single 512.8 MiB allocation up front (131,281 B * 4096), which was ~98%
+    // untouched under demand paging until the audio stream's
+    // mlockall(MCL_CURRENT|MCL_FUTURE) faulted every page in and pinned it —
+    // 520 MiB resident and unswappable on a 3.68 GiB machine (#727). Physical
+    // cost is now proportional to the tracks that need compensation and to the
+    // delay they actually require; the 4096 logical track ceiling is unchanged.
+    //
+    // Keeping this struct small also matters for iteration: it dropped from
+    // ~128 KiB to ~200 B.
+    //
+    // RT reads compensationBuffer/compensationCapacityFrames. Both are prepared
+    // on the control thread; the audio callback never allocates or resizes.
+    float* compensationBuffer{nullptr};
+    uint32_t compensationCapacityFrames{0};
     uint32_t compensationWritePos{0};
     uint32_t compensationReadPos{0};
+
+    // Off-RT storage backing compensationBuffer. RT never touches these
+    // directly — it goes through the raw pointer above.
+    std::unique_ptr<float[]> compensationOwned;
+    // Previous allocation kept alive one generation so an in-flight RT block
+    // that already captured the old pointer cannot touch freed memory. Same
+    // single-deep retirement discipline as EdgeDelayState below.
+    std::unique_ptr<float[]> compensationRetired;
 
     // PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated
     // off-RT by AudioEngine::calculateLatencyCompensation() from

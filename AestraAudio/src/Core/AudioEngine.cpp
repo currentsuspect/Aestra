@@ -2365,20 +2365,26 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     // === Apply Plugin Delay Compensation ===
     // Compensation must apply to dry tracks too; those are often the tracks
     // delayed to align with a parallel latent path elsewhere in the graph.
-    if (state.compensationDelaySamples > 0) {
+    // The ring is prepared off-RT and only for tracks with a nonzero delay, so a
+    // null pointer here means "nothing to compensate" rather than an error. The
+    // delay < capacity guard is retained verbatim: it is what previously caused
+    // delays at or beyond the old fixed 16384-frame ring to pass through
+    // uncompensated, and changing that would silently alter mix alignment.
+    if (state.compensationDelaySamples > 0 && state.compensationBuffer != nullptr) {
         const uint32_t delay = state.compensationDelaySamples;
-        const uint32_t capacity = static_cast<uint32_t>(state.compensationBuffer.size() / 2);
-        if (delay < capacity) {
+        const uint32_t capacity = state.compensationCapacityFrames;
+        if (capacity > 0 && delay < capacity) {
+            float* const ring = state.compensationBuffer;
             double* dOut = buffer.data();
             for (uint32_t k = 0; k < numFrames; ++k) {
                 const uint32_t writePos = state.compensationWritePos;
                 const uint32_t readPos = (writePos + capacity - delay) % capacity;
 
-                state.compensationBuffer[writePos * 2] = static_cast<float>(dOut[k * 2]);
-                state.compensationBuffer[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
+                ring[writePos * 2] = static_cast<float>(dOut[k * 2]);
+                ring[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
 
-                dOut[k * 2] = static_cast<double>(state.compensationBuffer[readPos * 2]);
-                dOut[k * 2 + 1] = static_cast<double>(state.compensationBuffer[readPos * 2 + 1]);
+                dOut[k * 2] = static_cast<double>(ring[readPos * 2]);
+                dOut[k * 2 + 1] = static_cast<double>(ring[readPos * 2 + 1]);
 
                 state.compensationWritePos = (writePos + 1) % capacity;
             }
@@ -2776,6 +2782,69 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
     // see mixAndMeterTrack() directly above.
     mixAndMeterTrack(track, trackIdx, slot, state, buffer, ctx, volTarget, panTarget, trackSidechainPeak, muted,
                      audibleEligible);
+}
+
+void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples) {
+    // Control thread only. Never called from the audio callback.
+    //
+    // Capacity is the smallest power of two strictly greater than the delay, so
+    // the ring arithmetic in mixAndMeterTrack is unchanged and a modest delay
+    // costs kilobytes instead of the old flat 128 KiB.
+    //
+    // The 16384-frame ceiling is deliberate v1 parity: the previous fixed ring
+    // held 16384 frames and the RT guard was `delay < capacity`, so delays at or
+    // beyond that were passed through uncompensated. Returning no buffer here
+    // reproduces exactly that behaviour rather than quietly starting to
+    // compensate delays that never were.
+    constexpr uint32_t kMaxCompensationFrames = 16384;
+
+    uint32_t required = 0;
+    if (delaySamples < kMaxCompensationFrames) {
+        required = 1;
+        while (required <= delaySamples) {
+            required <<= 1;
+        }
+        if (required > kMaxCompensationFrames) {
+            required = kMaxCompensationFrames;
+        }
+    }
+
+    if (required == 0) {
+        // Too long to compensate. Stop pointing at a ring; the RT guard then
+        // passes the track through untouched.
+        state.compensationBuffer = nullptr;
+        state.compensationCapacityFrames = 0;
+        state.compensationWritePos = 0;
+        state.compensationReadPos = 0;
+        return;
+    }
+
+    if (state.compensationOwned && state.compensationCapacityFrames >= required) {
+        // Existing ring is large enough — reuse it and just clear, which is the
+        // v1 reset behaviour on a delay change.
+        std::fill_n(state.compensationBuffer, static_cast<size_t>(state.compensationCapacityFrames) * 2, 0.0f);
+        state.compensationWritePos = 0;
+        state.compensationReadPos = 0;
+        return;
+    }
+
+    const size_t samples = static_cast<size_t>(required) * 2;
+    auto fresh = std::make_unique<float[]>(samples);
+    std::fill_n(fresh.get(), samples, 0.0f);
+
+    // Single-deep retirement: the previous allocation outlives one generation so
+    // an in-flight RT block holding the old pointer cannot touch freed memory.
+    state.compensationRetired = std::move(state.compensationOwned);
+    state.compensationOwned = std::move(fresh);
+
+    // Publish pointer BEFORE capacity. Capacity only ever grows, so a torn read
+    // that sees the new (larger) buffer with the old (smaller) capacity stays in
+    // bounds; the reverse order would let RT index a larger capacity into the
+    // smaller buffer.
+    state.compensationBuffer = state.compensationOwned.get();
+    state.compensationCapacityFrames = required;
+    state.compensationWritePos = 0;
+    state.compensationReadPos = 0;
 }
 
 TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
@@ -3617,10 +3686,16 @@ void AudioEngine::calculateLatencyCompensation() {
 
         // v1 parity: reset the ring buffer when the delay changes. P6 (G3 smooth
         // recompute) will replace this with a sample-hold / crossfade migration.
+        //
+        // The ring is also PREPARED here, on the control thread — this is the
+        // only place a compensation buffer is ever allocated. Both copies are
+        // prepared because renderGraph() reads through ensureTrackState() ->
+        // m_trackState while the per-edge pass operates on rtStates.
         if (sol.outputCompensationSamples != prevDelay && sol.outputCompensationSamples > 0) {
-            rtState.compensationBuffer.fill(0.0f);
-            rtState.compensationWritePos = 0;
-            rtState.compensationReadPos = 0;
+            prepareCompensationRing(rtState, sol.outputCompensationSamples);
+            if (trackIdx < m_trackState.size()) {
+                prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples);
+            }
         }
     }
 
