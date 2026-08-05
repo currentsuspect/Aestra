@@ -695,15 +695,15 @@ private:
     /**
      * @brief Prepare a track's PDC ring off the audio thread (#727).
      *
-     * The only place a compensation buffer is allocated. Sizes the ring to the
-     * smallest power of two greater than @p delaySamples, retires the previous
-     * allocation one generation, and clears the ring (v1 reset-on-change
-     * behaviour). Delays at or beyond 16384 frames leave the track without a
-     * ring, reproducing the old fixed-buffer pass-through.
+     * The only place a compensation buffer is allocated. Allocates 16384 frames
+     * once on first use and never reallocates, so the RT-visible pointer is
+     * published exactly once per track; subsequent calls just clear the ring (v1
+     * reset-on-delay-change behaviour). Must be called BEFORE publishing a
+     * nonzero compensationDelaySamples, which is what gates the RT read.
      *
      * Control thread only — never call from processBlock.
      */
-    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples);
+    void prepareCompensationRing(TrackRTState& state);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one

@@ -179,13 +179,15 @@ struct TrackRTState {
     uint32_t compensationWritePos{0};
     uint32_t compensationReadPos{0};
 
-    // Off-RT storage backing compensationBuffer. RT never touches these
-    // directly — it goes through the raw pointer above.
+    // Off-RT storage backing compensationBuffer. RT never touches this directly
+    // — it goes through the raw pointer above.
+    //
+    // Allocated once, at final size, and never reallocated, so compensationBuffer
+    // is published exactly once per track. There is deliberately no retirement
+    // slot here: with no republication there is nothing for an in-flight RT block
+    // to race against, which is a stronger guarantee than retiring a generation
+    // and hoping one is deep enough.
     std::unique_ptr<float[]> compensationOwned;
-    // Previous allocation kept alive one generation so an in-flight RT block
-    // that already captured the old pointer cannot touch freed memory. Same
-    // single-deep retirement discipline as EdgeDelayState below.
-    std::unique_ptr<float[]> compensationRetired;
 
     // PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated
     // off-RT by AudioEngine::calculateLatencyCompensation() from
