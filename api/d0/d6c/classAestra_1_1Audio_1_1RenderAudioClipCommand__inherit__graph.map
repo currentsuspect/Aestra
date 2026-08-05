@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::RenderAudioClipCommand" name="Aestra::Audio::RenderAudioClipCommand">
+<area shape="rect" id="Node000001" title="Base for destructive clip operations that commit a new audio file." alt="" coords="123,79,323,119"/>
+<area shape="rect" id="Node000003" href="$dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html" title="Bake a clip&#39;s own gain and fades into a new flat source." alt="" coords="5,167,212,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="189,129,136,169,132,164,185,125"/>
+<area shape="rect" id="Node000004" href="$d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html" title="Replace a clip&#39;s audio with a reversed copy of itself." alt="" coords="236,167,443,207"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="262,125,315,164,312,169,258,129"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="129,5,317,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="226,44,226,79,221,79,221,44"/>
+</map>

@@ -1,7 +1,5 @@
 <map id="Aestra::Audio::AudioDeviceManager::shutdown" name="Aestra::Audio::AudioDeviceManager::shutdown">
 <area shape="rect" id="Node000001" title="Shutdown audio system." alt="" coords="5,5,204,45"/>
-<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a59ff87f6eacda2f6d4a2ef7f3851a7ac" title="Close current audio stream." alt="" coords="252,5,451,45"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb6da257a490a04dfba8d46618b44a90" title="Stop the automatic driver health monitoring thread." alt="" coords="252,5,460,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
-<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb6da257a490a04dfba8d46618b44a90" title="Stop the automatic driver health monitoring thread." alt="" coords="499,5,707,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="451,23,485,23,485,28,451,28"/>
 </map>

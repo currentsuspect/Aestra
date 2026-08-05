@@ -86,13 +86,19 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:ae0ebfdecae526fa8a56a8120babf4efd" id="r_ae0ebfdecae526fa8a56a8120babf4efd"><td class="memItemLeft" align="right" valign="top">static const std::vector&lt; <a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d25/classAestra_1_1ProjectMigrations.html#ae0ebfdecae526fa8a56a8120babf4efd">getMigrations</a> ()</td></tr>
 <tr class="memdesc:ae0ebfdecae526fa8a56a8120babf4efd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get all registered migrations.  <br /></td></tr>
 <tr class="separator:ae0ebfdecae526fa8a56a8120babf4efd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a591a387d5849ef6f4c1cfcf9a04ecf1c" id="r_a591a387d5849ef6f4c1cfcf9a04ecf1c"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d25/classAestra_1_1ProjectMigrations.html#a591a387d5849ef6f4c1cfcf9a04ecf1c">runMigrations</a> (<a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;root, int fromVersion, int toVersion)</td></tr>
-<tr class="memdesc:a591a387d5849ef6f4c1cfcf9a04ecf1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run all migrations to bring a project to current version.  <br /></td></tr>
-<tr class="separator:a591a387d5849ef6f4c1cfcf9a04ecf1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9617005c61361011083974723fa3642a" id="r_a9617005c61361011083974723fa3642a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d9/dbe/structAestra_1_1MigrationResult.html">MigrationResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d25/classAestra_1_1ProjectMigrations.html#a9617005c61361011083974723fa3642a">runMigrations</a> (<a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;root, int fromVersion, int toVersion)</td></tr>
+<tr class="memdesc:a9617005c61361011083974723fa3642a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run all migrations to bring a project to current version.  <br /></td></tr>
+<tr class="separator:a9617005c61361011083974723fa3642a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37848d12e5fa2c5d5af5e80b80949584" id="r_a37848d12e5fa2c5d5af5e80b80949584"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d25/classAestra_1_1ProjectMigrations.html#a37848d12e5fa2c5d5af5e80b80949584">validateRegistry</a> (const std::vector&lt; <a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> &gt; &amp;migrations, int minSupportedVersion, int currentVersion, std::string *error=nullptr)</td></tr>
+<tr class="memdesc:a37848d12e5fa2c5d5af5e80b80949584"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate that a registry has exactly one adjacent edge per supported version.  <br /></td></tr>
+<tr class="separator:a37848d12e5fa2c5d5af5e80b80949584"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afeb012d86e20b1d59d152b5ff91a5d45" id="r_afeb012d86e20b1d59d152b5ff91a5d45"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d9/dbe/structAestra_1_1MigrationResult.html">MigrationResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d25/classAestra_1_1ProjectMigrations.html#afeb012d86e20b1d59d152b5ff91a5d45">runMigrationsWith</a> (<a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;root, int fromVersion, int toVersion, const std::vector&lt; <a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> &gt; &amp;migrations)</td></tr>
+<tr class="memdesc:afeb012d86e20b1d59d152b5ff91a5d45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run a supplied registry through the production migration runner.  <br /></td></tr>
+<tr class="separator:afeb012d86e20b1d59d152b5ff91a5d45"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00034">34</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00103">103</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ae0ebfdecae526fa8a56a8120babf4efd" name="ae0ebfdecae526fa8a56a8120babf4efd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae0ebfdecae526fa8a56a8120babf4efd">&#9670;&#160;</a></span>getMigrations()</h2>
@@ -119,9 +125,9 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Get all registered migrations. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00039">39</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00108">108</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00057">runMigrations()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00123">runMigrations()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -132,8 +138,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a591a387d5849ef6f4c1cfcf9a04ecf1c" name="a591a387d5849ef6f4c1cfcf9a04ecf1c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a591a387d5849ef6f4c1cfcf9a04ecf1c">&#9670;&#160;</a></span>runMigrations()</h2>
+<a id="a9617005c61361011083974723fa3642a" name="a9617005c61361011083974723fa3642a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9617005c61361011083974723fa3642a">&#9670;&#160;</a></span>runMigrations()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -142,7 +148,7 @@ Static Public Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static bool Aestra::ProjectMigrations::runMigrations </td>
+          <td class="memname">static <a class="el" href="../../d9/dbe/structAestra_1_1MigrationResult.html">MigrationResult</a> Aestra::ProjectMigrations::runMigrations </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;&#160;</td>
           <td class="paramname"><em>root</em>, </td>
@@ -181,18 +187,132 @@ Static Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>True if all migrations succeeded </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> result, including whether any edge transformed data </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00057">57</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00123">123</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00039">getMigrations()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00108">getMigrations()</a>, and <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00170">runMigrationsWith()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../dc/d25/classAestra_1_1ProjectMigrations_a591a387d5849ef6f4c1cfcf9a04ecf1c_cgraph.svg" width="432" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dc/d25/classAestra_1_1ProjectMigrations_a9617005c61361011083974723fa3642a_cgraph.svg" width="432" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="afeb012d86e20b1d59d152b5ff91a5d45" name="afeb012d86e20b1d59d152b5ff91a5d45"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afeb012d86e20b1d59d152b5ff91a5d45">&#9670;&#160;</a></span>runMigrationsWith()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="../../d9/dbe/structAestra_1_1MigrationResult.html">MigrationResult</a> Aestra::ProjectMigrations::runMigrationsWith </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;&#160;</td>
+          <td class="paramname"><em>root</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>fromVersion</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>toVersion</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>migrations</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Run a supplied registry through the production migration runner. </p>
+<p>This overload keeps completeness and transformation behavior executable without inventing a production schema bump solely for a regression test. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00170">170</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00123">runMigrations()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dc/d25/classAestra_1_1ProjectMigrations_afeb012d86e20b1d59d152b5ff91a5d45_icgraph.svg" width="432" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a37848d12e5fa2c5d5af5e80b80949584" name="a37848d12e5fa2c5d5af5e80b80949584"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37848d12e5fa2c5d5af5e80b80949584">&#9670;&#160;</a></span>validateRegistry()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static bool Aestra::ProjectMigrations::validateRegistry </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d4/da3/structAestra_1_1Migration.html">Migration</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>migrations</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>minSupportedVersion</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>currentVersion</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string *&#160;</td>
+          <td class="paramname"><em>error</em> = <code>nullptr</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Validate that a registry has exactly one adjacent edge per supported version. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html#l00130">130</a> of file <a class="el" href="../../d6/d8f/ProjectMigrations_8h_source.html">ProjectMigrations.h</a>.</p>
 
 </div>
 </div>

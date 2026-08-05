@@ -1,23 +1,25 @@
 <map id="Source/Panels/TransportBar.h" name="Source/Panels/TransportBar.h">
-<area shape="rect" id="Node000001" title="Transport bar component for Aestra." alt="" coords="409,5,619,31"/>
+<area shape="rect" id="Node000001" title="Transport bar component for Aestra." alt="" coords="511,5,720,31"/>
 <area shape="rect" id="Node000002" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="5,240,199,265"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="416,35,311,54,198,80,146,96,101,113,65,133,41,154,36,164,36,175,46,199,66,220,87,238,84,242,62,224,42,202,31,176,31,163,37,150,62,128,99,108,145,91,197,75,310,49,415,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="497,32,370,48,233,73,169,89,114,108,70,129,41,154,36,164,36,175,46,198,66,220,87,238,84,242,62,224,42,201,30,176,31,163,37,150,67,125,112,103,168,84,232,68,369,43,496,27"/>
 <area shape="rect" id="Node000003" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="51,159,275,185"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="476,39,191,162,189,157,474,34"/>
-<area shape="rect" id="Node000004" href="$dc/dd6/AestraContent_8h.html" title="Main content area for Aestra." alt="" coords="409,79,619,104"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="517,44,517,79,511,79,511,44"/>
-<area shape="rect" id="Node000009" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="1103,152,1301,192"/>
-<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="550,34,683,102,743,118,795,127,885,135,976,138,1092,149,1103,151,1102,156,1091,155,975,144,884,141,794,133,742,123,681,106,548,39"/>
-<area shape="rect" id="Node000010" href="$d5/d27/TransportBar_8cpp.html" title="Transport bar implementation." alt="" coords="694,79,918,104"/>
-<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="575,31,759,76,758,81,573,36"/>
-<area shape="poly" id="edge8_Node000004_Node000003" title=" " alt="" coords="451,110,215,162,214,157,449,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="569,38,199,162,197,157,567,33"/>
+<area shape="rect" id="Node000004" href="$dc/dd6/AestraContent_8h.html" title="Main content area for Aestra." alt="" coords="511,79,720,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="618,44,618,79,613,79,613,44"/>
+<area shape="rect" id="Node000010" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="1353,152,1552,192"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="651,34,784,101,867,122,937,133,1000,138,1060,139,1184,138,1257,141,1342,149,1354,151,1353,156,1342,155,1257,146,1184,143,1060,144,1000,143,937,138,866,127,782,107,649,39"/>
+<area shape="rect" id="Node000011" href="$d5/d27/TransportBar_8cpp.html" title="Transport bar implementation." alt="" coords="795,79,1019,104"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="676,31,861,76,859,81,675,36"/>
+<area shape="poly" id="edge9_Node000004_Node000003" title=" " alt="" coords="537,109,230,162,229,157,536,104"/>
 <area shape="rect" id="Node000005" href="$d8/d97/AestraApp_8h_source.html" title=" " alt="" coords="299,159,478,185"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="485,114,409,161,406,157,483,109"/>
-<area shape="rect" id="Node000007" href="$dc/d21/AestraAudioController_8cpp_source.html" title=" " alt="" coords="503,159,776,185"/>
-<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="545,109,622,157,619,161,543,114"/>
-<area shape="rect" id="Node000008" href="$df/d3b/AestraRootComponent_8cpp_source.html" title=" " alt="" coords="800,159,1079,185"/>
-<area shape="poly" id="edge9_Node000004_Node000008" title=" " alt="" coords="590,104,878,157,877,162,589,109"/>
-<area shape="poly" id="edge10_Node000004_Node000009" title=" " alt="" coords="633,101,1092,149,1103,151,1102,156,1091,155,632,107"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="570,111,423,162,421,157,569,106"/>
+<area shape="rect" id="Node000007" href="$d8/d83/MuseHostVerbs_8cpp_source.html" title=" " alt="" coords="502,159,729,185"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="618,118,618,159,613,159,613,118"/>
+<area shape="rect" id="Node000008" href="$dc/d21/AestraAudioController_8cpp_source.html" title=" " alt="" coords="753,159,1027,185"/>
+<area shape="poly" id="edge8_Node000004_Node000008" title=" " alt="" coords="669,105,851,157,849,162,667,110"/>
+<area shape="rect" id="Node000009" href="$df/d3b/AestraRootComponent_8cpp_source.html" title=" " alt="" coords="1051,159,1329,185"/>
+<area shape="poly" id="edge10_Node000004_Node000009" title=" " alt="" coords="713,103,1107,157,1106,162,712,108"/>
+<area shape="poly" id="edge11_Node000004_Node000010" title=" " alt="" coords="734,101,740,101,1041,122,1173,131,1342,149,1354,151,1353,156,1342,155,1173,136,1041,127,739,107,734,106"/>
 <area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="335,191,144,243,143,237,333,186"/>
 <area shape="rect" id="Node000006" href="$d5/de0/Main_8cpp.html" title="Aestra &#45; Main Application Entry Point." alt="" coords="309,240,468,265"/>
 <area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="391,198,391,240,386,240,386,198"/>

@@ -1,9 +1,25 @@
 <map id="Aestra::Audio::DeleteTrackCommand::undo" name="Aestra::Audio::DeleteTrackCommand::undo">
-<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,37,200,77"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="248,5,456,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,42,234,38,235,43,200,48"/>
-<area shape="rect" id="Node000004" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#aa8dcc69c79ea17dbdda639e14771608c" title="Get the dense numeric channel identifier." alt="" coords="249,69,455,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="200,67,235,72,234,77,200,72"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="504,5,712,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="456,23,490,23,490,28,456,28"/>
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,197,200,237"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="254,5,462,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,195,167,127,204,88,247,55,258,49,260,54,249,60,207,92,171,130,119,198"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="254,69,462,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="128,195,181,157,247,119,264,112,266,117,249,124,184,161,131,199"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="254,133,462,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="183,195,264,174,265,179,184,200"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a991e5f90ac0f474f692c92bf9447aa91" title="Put a detached channel back where it came from." alt="" coords="254,197,462,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="200,215,241,215,241,220,200,220"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="522,223,730,263"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="180,235,248,247,383,253,508,250,508,255,383,259,248,252,179,240"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="248,312,468,352"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="140,235,249,291,284,305,282,310,247,296,138,240"/>
+<area shape="rect" id="Node000009" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a7ca795d93502b59255fb5579578c58bf" title="Route a unit to a stable mixer channel ID (0 means Master)." alt="" coords="257,376,459,416"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="120,236,173,298,209,332,249,362,261,368,259,373,247,366,206,336,169,302,116,239"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="463,225,509,229,508,234,462,230"/>
+<area shape="rect" id="Node000008" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="516,312,736,352"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="468,329,502,329,502,335,468,335"/>
+<area shape="rect" id="Node000010" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="784,401,985,441"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="459,398,771,413,770,419,459,403"/>
+<area shape="rect" id="Node000011" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="525,429,727,469"/>
+<area shape="poly" id="edge11_Node000009_Node000011" title=" " alt="" coords="459,413,512,424,511,429,458,419"/>
+<area shape="poly" id="edge12_Node000011_Node000010" title=" " alt="" coords="726,436,770,431,771,436,727,441"/>
 </map>

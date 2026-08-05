@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::HostVerbRegistry::invoke" name="Aestra::Audio::HostVerbRegistry::invoke">
+<area shape="rect" id="Node000001" title="Validate arguments, check thread affinity, then invoke." alt="" coords="5,5,236,45"/>
+<area shape="rect" id="Node000002" href="$d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a07de65d00320b0cc95ca1a259d40bc1e" title="Wire name for an argument type." alt="" coords="284,5,515,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="236,23,270,23,270,28,236,28"/>
+</map>

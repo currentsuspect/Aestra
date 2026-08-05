@@ -1,7 +1,11 @@
 <map id="Aestra::Audio::AddPluginCommand::execute" name="Aestra::Audio::AddPluginCommand::execute">
-<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,37,188,77"/>
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,69,188,109"/>
 <area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="236,5,443,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,43,222,38,223,43,188,48"/>
-<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaff8505a90c35c0272cddbc5b378045e" title="Insert plugin into slot." alt="" coords="244,69,435,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="188,67,231,72,230,78,188,72"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,67,249,46,251,51,174,72"/>
+<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a86c3dbaad785b1f341561936dec18fc4" title="The permanent identity of whatever occupies slotIndex (#667)." alt="" coords="244,69,435,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="188,87,230,87,230,92,188,92"/>
+<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a00a6a69855aeed72bf72a3cd390a75dd" title="Insert plugin into slot." alt="" coords="244,133,435,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="174,107,251,127,249,132,173,112"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a38d290063ec53ffaff3f54a2c2ac25d6" title="Find the slot currently holding plugin instance instanceId (#667)." alt="" coords="491,133,681,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="435,151,477,151,477,156,435,156"/>
 </map>

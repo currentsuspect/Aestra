@@ -1,0 +1,5 @@
+<map id="AestraUI::UIMixerPanel::isInspectorCollapsed" name="AestraUI::UIMixerPanel::isInspectorCollapsed">
+<area shape="rect" id="Node000001" title="What the panel actually draws right now." alt="" coords="5,5,176,45"/>
+<area shape="rect" id="Node000002" href="$d3/d73/structAestraUI_1_1InspectorCollapseState.html#a50ccc8eba7c70fe28176ea5ececacfae" title="What the panel should actually draw." alt="" coords="224,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,23,210,23,210,28,176,28"/>
+</map>

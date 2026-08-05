@@ -1,0 +1,7 @@
+<map id="AestraUI::NUICursorService::cancelDragCapture" name="AestraUI::NUICursorService::cancelDragCapture">
+<area shape="rect" id="Node000001" title="Abort without warping (focus lost, window deactivated, client destroyed mid&#45;drag)." alt="" coords="5,37,205,77"/>
+<area shape="rect" id="Node000002" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#afdd1d8197af7db7b5ab1874a27bfe8da" title="Confine pointer to window." alt="" coords="253,5,436,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,41,239,37,240,42,206,47"/>
+<area shape="rect" id="Node000003" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#a0c0997a0e0cc4ab316155b8d501479f7" title="Style&#45;channel restore (Arrow)." alt="" coords="253,69,436,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,68,240,73,239,78,205,73"/>
+</map>

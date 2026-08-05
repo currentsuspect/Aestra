@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MakeAudioClipUniqueCommand::execute" name="Aestra::Audio::MakeAudioClipUniqueCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="251,5,469,45"/>
+<area shape="rect" id="Node000002" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#aeaa21058704fb2d2b27bf3763bb05982" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,203,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,28,203,28,203,23,237,23"/>
+</map>

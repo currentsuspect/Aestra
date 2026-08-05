@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::UnitManager::migrateLegacyMixerRoutes" name="Aestra::Audio::UnitManager::migrateLegacyMixerRoutes">
+<area shape="rect" id="Node000001" title="Resolve lane&#45;index routes from projects saved before stable mixer IDs existed." alt="" coords="5,5,213,45"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="511,5,712,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,20,261,19,463,19,497,19,497,25,463,24,261,24,214,25"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="261,33,463,73"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,34,248,38,247,43,213,39"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="463,39,497,35,497,41,463,45"/>
+</map>

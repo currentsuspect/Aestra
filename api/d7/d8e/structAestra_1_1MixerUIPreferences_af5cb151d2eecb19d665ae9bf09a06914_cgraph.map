@@ -1,0 +1,5 @@
+<map id="Aestra::MixerUIPreferences::settingsPath" name="Aestra::MixerUIPreferences::settingsPath">
+<area shape="rect" id="Node000001" title="Full path to mixer_settings.json, or empty when there is nowhere to put it." alt="" coords="5,5,204,45"/>
+<area shape="rect" id="Node000002" href="$d7/d8e/structAestra_1_1MixerUIPreferences.html#a43888112d6f012a00d1a753ca29f5ee0" title="Directory holding Aestra&#39;s per&#45;user config, or empty if it cannot be found." alt="" coords="252,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

@@ -67,7 +67,7 @@ var sectionId = 'dynsection-1';
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d1/d32/classAestraUI_1_1NUIConfigLoader.html#a1641a18fe59d8768a512e57e6a3379c5" target="_top" xlink:title="Load configuration from YAML string.">
+<g id="a_Node000002"><a xlink:href="../../d1/d32/classAestraUI_1_1NUIConfigLoader.html#a18fbfe0ea9d1b82047010d91d82bb885" target="_top" xlink:title="Load configuration from a config string.">
 <polygon fill="white" stroke="#666666" points="328,-30 182,-30 182,0 328,0 328,-30"/>
 <text text-anchor="start" x="190" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::NUIConfigLoader</text>
 <text text-anchor="middle" x="255" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::loadConfigFromString</text>

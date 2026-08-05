@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['created_0',['Created',['../d8/d61/AppLifecycle_8h.html#a5a342fa78d46408488b9ee6a276710fca0eceeb45861f9585dd7a97a3e36f85c6',1,'Aestra']]]
+  ['browser_0',['Browser',['../d3/d7a/HostVerbRegistry_8h.html#ae4fe5c25565ab3714b60306ec5d3bb7eaef15fd2f45e6bb5ce57587895ba64f93',1,'Aestra::Audio']]]
 ];

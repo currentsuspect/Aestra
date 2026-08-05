@@ -1,0 +1,13 @@
+<map id="Aestra::MuseAgent::CliInvocation" name="Aestra::MuseAgent::CliInvocation">
+<area shape="rect" id="Node000001" title=" " alt="" coords="159,256,313,296"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="84,132,105,181,121,207,140,230,177,254,175,258,137,234,117,210,100,184,79,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" href="$df/dee/classAestra_1_1JSON.html" title=" " alt="" coords="143,95,247,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="199,133,205,179,217,231,227,255,222,257,212,233,200,180,194,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="271,95,321,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="286,133,281,145,244,257,239,255,276,143,281,131"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="386,95,425,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="409,134,403,184,394,210,378,234,348,256,314,269,312,264,346,251,374,230,389,208,398,183,404,133"/>
+</map>

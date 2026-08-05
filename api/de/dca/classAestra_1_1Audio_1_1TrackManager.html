@@ -120,6 +120,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac8c006cf1d67aea3a2fdb1ca5e309f0c" id="r_ac8c006cf1d67aea3a2fdb1ca5e309f0c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c">addChannel</a> (const std::string &amp;name=&quot;&quot;)</td></tr>
 <tr class="memdesc:ac8c006cf1d67aea3a2fdb1ca5e309f0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new channel.  <br /></td></tr>
 <tr class="separator:ac8c006cf1d67aea3a2fdb1ca5e309f0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08ac8fbac914dbab6fc60ca7c8fc58a7" id="r_a08ac8fbac914dbab6fc60ca7c8fc58a7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a08ac8fbac914dbab6fc60ca7c8fc58a7">addChannelWithId</a> (const std::string &amp;name, uint32_t requestedId)</td></tr>
+<tr class="memdesc:a08ac8fbac914dbab6fc60ca7c8fc58a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a channel while restoring a persisted stable identity.  <br /></td></tr>
+<tr class="separator:a08ac8fbac914dbab6fc60ca7c8fc58a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acfcaf56482d1a932da4cdfb8ddeec696" id="r_acfcaf56482d1a932da4cdfb8ddeec696"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#acfcaf56482d1a932da4cdfb8ddeec696">setChannelPrepareCallback</a> (std::function&lt; void(<a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> &amp;)&gt; callback)</td></tr>
 <tr class="memdesc:acfcaf56482d1a932da4cdfb8ddeec696"><td class="mdescLeft">&#160;</td><td class="mdescRight">Install the non-RT hook used to prepare newly created channels for live processing.  <br /></td></tr>
 <tr class="separator:acfcaf56482d1a932da4cdfb8ddeec696"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -128,6 +131,15 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a9a8256dec957cc8340b4318255479f91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ed3a14c0de94fc9c2342f2094b9de81" id="r_a1ed3a14c0de94fc9c2342f2094b9de81"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1ed3a14c0de94fc9c2342f2094b9de81">removeChannelById</a> (uint32_t channelId)</td></tr>
 <tr class="separator:a1ed3a14c0de94fc9c2342f2094b9de81"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ed4fb8254028711e2b6adb961dd42ee" id="r_a8ed4fb8254028711e2b6adb961dd42ee"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8ed4fb8254028711e2b6adb961dd42ee">resetMixerRoutingDestination</a> (uint32_t removedChannelId)</td></tr>
+<tr class="memdesc:a8ed4fb8254028711e2b6adb961dd42ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fail safe after a mixer insert disappears.  <br /></td></tr>
+<tr class="separator:a8ed4fb8254028711e2b6adb961dd42ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aebb19e7ac738361bcb91630e344609d1" id="r_aebb19e7ac738361bcb91630e344609d1"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aebb19e7ac738361bcb91630e344609d1">detachChannelById</a> (uint32_t channelId, size_t &amp;outIndex)</td></tr>
+<tr class="memdesc:aebb19e7ac738361bcb91630e344609d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a channel without destroying it, handing back ownership.  <br /></td></tr>
+<tr class="separator:aebb19e7ac738361bcb91630e344609d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a991e5f90ac0f474f692c92bf9447aa91" id="r_a991e5f90ac0f474f692c92bf9447aa91"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a991e5f90ac0f474f692c92bf9447aa91">reinsertChannel</a> (std::unique_ptr&lt; <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> &gt; &amp;channel, size_t index)</td></tr>
+<tr class="memdesc:a991e5f90ac0f474f692c92bf9447aa91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Put a detached channel back where it came from.  <br /></td></tr>
+<tr class="separator:a991e5f90ac0f474f692c92bf9447aa91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a18e7992d6a278af189dba76e49d1663f" id="r_a18e7992d6a278af189dba76e49d1663f"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a18e7992d6a278af189dba76e49d1663f">getTrackCount</a> () const</td></tr>
 <tr class="separator:a18e7992d6a278af189dba76e49d1663f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1eb296424f204b13f43040d5b0f84694" id="r_a1eb296424f204b13f43040d5b0f84694"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1eb296424f204b13f43040d5b0f84694">getTrack</a> (size_t index)</td></tr>
@@ -136,6 +148,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7a07994039cc1a7eabcc8880e3e2736e" id="r_a7a07994039cc1a7eabcc8880e3e2736e"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a7a07994039cc1a7eabcc8880e3e2736e">getTrack</a> (size_t index) const</td></tr>
 <tr class="memdesc:a7a07994039cc1a7eabcc8880e3e2736e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a track by zero-based index.  <br /></td></tr>
 <tr class="separator:a7a07994039cc1a7eabcc8880e3e2736e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53fe3e0e1b269690efd09c6a74f467c0" id="r_a53fe3e0e1b269690efd09c6a74f467c0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0">getChannelById</a> (uint32_t channelId)</td></tr>
+<tr class="memdesc:a53fe3e0e1b269690efd09c6a74f467c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find a mixer channel by stable ID.  <br /></td></tr>
+<tr class="separator:a53fe3e0e1b269690efd09c6a74f467c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a68e5821fb6f04c96787306886753e0b0" id="r_a68e5821fb6f04c96787306886753e0b0"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a68e5821fb6f04c96787306886753e0b0">getChannelById</a> (uint32_t channelId) const</td></tr>
+<tr class="memdesc:a68e5821fb6f04c96787306886753e0b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find a mixer channel by stable ID.  <br /></td></tr>
+<tr class="separator:a68e5821fb6f04c96787306886753e0b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d54a269442ca4263c5bed22e8d0ef64" id="r_a4d54a269442ca4263c5bed22e8d0ef64"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4d54a269442ca4263c5bed22e8d0ef64">setAudioPatternMixerChannel</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> patternId, int64_t channelId)</td></tr>
+<tr class="memdesc:a4d54a269442ca4263c5bed22e8d0ef64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Route an audio source pattern independently from Playlist placement.  <br /></td></tr>
+<tr class="separator:a4d54a269442ca4263c5bed22e8d0ef64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aacc633d4302bc413e6aead5df052520b" id="r_aacc633d4302bc413e6aead5df052520b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html">PlaylistModel</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b">getPlaylistModel</a> ()</td></tr>
 <tr class="memdesc:aacc633d4302bc413e6aead5df052520b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the playlist model.  <br /></td></tr>
 <tr class="separator:aacc633d4302bc413e6aead5df052520b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -169,6 +190,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a89056a6d41ccd2e92b3cd376aa66c65b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a21b9620d5fc4911c8b1c91257bcb22a3" id="r_a21b9620d5fc4911c8b1c91257bcb22a3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a21b9620d5fc4911c8b1c91257bcb22a3">setRecordingProjectPath</a> (const std::string &amp;projectPath)</td></tr>
 <tr class="separator:a21b9620d5fc4911c8b1c91257bcb22a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6936846e98e161e82c7c084974cdeae6" id="r_a6936846e98e161e82c7c084974cdeae6"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6936846e98e161e82c7c084974cdeae6">renderRootDirectory</a> () const</td></tr>
+<tr class="memdesc:a6936846e98e161e82c7c084974cdeae6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Directory for audio committed by destructive clip operations.  <br /></td></tr>
+<tr class="separator:a6936846e98e161e82c7c084974cdeae6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0bfd273574d11fdab6484d5ca242ffa" id="r_aa0bfd273574d11fdab6484d5ca242ffa"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aa0bfd273574d11fdab6484d5ca242ffa">getOutputSampleRate</a> () const</td></tr>
 <tr class="memdesc:aa0bfd273574d11fdab6484d5ca242ffa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get output sample rate.  <br /></td></tr>
 <tr class="separator:aa0bfd273574d11fdab6484d5ca242ffa"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -263,6 +287,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ae2870cfd7029834a595de2b2a48cef87"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa45cfaf086abc6fba3ea9a6dacd00677" id="r_aa45cfaf086abc6fba3ea9a6dacd00677"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aa45cfaf086abc6fba3ea9a6dacd00677">isPaused</a> () const</td></tr>
 <tr class="separator:aa45cfaf086abc6fba3ea9a6dacd00677"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d69cd46b833997891af00547b0b9f65" id="r_a8d69cd46b833997891af00547b0b9f65"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8d69cd46b833997891af00547b0b9f65">scheduleTimelineForOfflineRender</a> (double playStartPositionSeconds=0.0)</td></tr>
+<tr class="memdesc:a8d69cd46b833997891af00547b0b9f65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule the committed timeline's MIDI clips into the pattern-playback engine for an offline render, without touching live transport state.  <br /></td></tr>
+<tr class="separator:a8d69cd46b833997891af00547b0b9f65"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5d0635921a3eeff166b83ae8572ad29b" id="r_a5d0635921a3eeff166b83ae8572ad29b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a5d0635921a3eeff166b83ae8572ad29b">hasArmedTracks</a> () const</td></tr>
 <tr class="separator:a5d0635921a3eeff166b83ae8572ad29b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac07698510fdbdf1a91de536b1b847450" id="r_ac07698510fdbdf1a91de536b1b847450"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac07698510fdbdf1a91de536b1b847450">record</a> ()</td></tr>
@@ -333,9 +360,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af6f39df0cfe73d2385cf37cddaf5d223" id="r_af6f39df0cfe73d2385cf37cddaf5d223"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#af6f39df0cfe73d2385cf37cddaf5d223">setStopPreviewCallback</a> (std::function&lt; void()&gt; callback)</td></tr>
 <tr class="memdesc:af6f39df0cfe73d2385cf37cddaf5d223"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback used to stop file-preview playback when transport starts.  <br /></td></tr>
 <tr class="separator:af6f39df0cfe73d2385cf37cddaf5d223"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a407cdbff9e4bc3352095cf73bb8da314" id="r_a407cdbff9e4bc3352095cf73bb8da314"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a407cdbff9e4bc3352095cf73bb8da314">onTransportStateApplied</a> (bool playing, double positionSeconds)</td></tr>
-<tr class="memdesc:a407cdbff9e4bc3352095cf73bb8da314"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the transport state once it has been forwarded to the live engine.  <br /></td></tr>
-<tr class="separator:a407cdbff9e4bc3352095cf73bb8da314"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7569edc48ac8a68d5ac3da691527a215" id="r_a7569edc48ac8a68d5ac3da691527a215"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a7569edc48ac8a68d5ac3da691527a215">onTransportStateApplied</a> (bool playing, uint64_t samplePos, double sampleRate)</td></tr>
+<tr class="memdesc:a7569edc48ac8a68d5ac3da691527a215"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the transport state once it has been forwarded to the live engine.  <br /></td></tr>
+<tr class="separator:a7569edc48ac8a68d5ac3da691527a215"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2bec9f23172fbfd65d68fb62a9cb8370" id="r_a2bec9f23172fbfd65d68fb62a9cb8370"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a2bec9f23172fbfd65d68fb62a9cb8370">pushAudioCommand</a> (const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;cmd)</td></tr>
 <tr class="memdesc:a2bec9f23172fbfd65d68fb62a9cb8370"><td class="mdescLeft">&#160;</td><td class="mdescRight">Push a raw audio command to the live engine.  <br /></td></tr>
 <tr class="separator:a2bec9f23172fbfd65d68fb62a9cb8370"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -376,7 +403,7 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Track/Channel manager for the audio engine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00050">50</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00052">52</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="afa515cef7fa6b13c2501a08bda45e711" name="afa515cef7fa6b13c2501a08bda45e711"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afa515cef7fa6b13c2501a08bda45e711">&#9670;&#160;</a></span>GraphDirtyReason</h2>
@@ -390,7 +417,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00811">811</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01018">1018</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -420,15 +447,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Construct a track manager and wire its internal playback helpers. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00077">77</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00079">79</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00560">Aestra::Audio::PlaylistModel::setPatternManager()</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00014">Aestra::Audio::CommandHistory::addOnStateChanged()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00998">markModified()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00647">Aestra::Audio::PlaylistModel::setPatternManager()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_acb294c03eb11bcff3fb70166a307b235_cgraph.svg" width="475" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_acb294c03eb11bcff3fb70166a307b235_cgraph.svg" width="498" height="243"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -460,24 +487,89 @@ Public Member Functions</h2></td></tr>
 
 <p>Add a new channel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00111">111</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00120">120</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00127">addChannelWithId()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00028">Aestra::Audio::AddChannelCommand::execute()</a>, <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00049">Aestra::Audio::AddChannelCommand::redo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00118">Aestra::Audio::DeleteTrackCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00029">Aestra::Audio::AddChannelCommand::execute()</a>, and <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00059">Aestra::Audio::AddChannelCommand::redo()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ac8c006cf1d67aea3a2fdb1ca5e309f0c_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ac8c006cf1d67aea3a2fdb1ca5e309f0c_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ac8c006cf1d67aea3a2fdb1ca5e309f0c_icgraph.svg" width="462" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ac8c006cf1d67aea3a2fdb1ca5e309f0c_icgraph.svg" width="462" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a08ac8fbac914dbab6fc60ca7c8fc58a7" name="a08ac8fbac914dbab6fc60ca7c8fc58a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08ac8fbac914dbab6fc60ca7c8fc58a7">&#9670;&#160;</a></span>addChannelWithId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> * Aestra::Audio::TrackManager::addChannelWithId </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>requestedId</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add a channel while restoring a persisted stable identity. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>User-facing channel name. </td></tr>
+    <tr><td class="paramname">requestedId</td><td>Persisted channel ID, or 0 to mint a new ID. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00127">127</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00331">getChannelById()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00120">addChannel()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a08ac8fbac914dbab6fc60ca7c8fc58a7_cgraph.svg" width="475" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a08ac8fbac914dbab6fc60ca7c8fc58a7_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -508,14 +600,14 @@ Public Member Functions</h2></td></tr>
 <p>Build a channel slot map from the current channel list and share it. </p>
 <p>Rebuilds the published <a class="el" href="../../de/d7e/classAestra_1_1Audio_1_1ChannelSlotMap.html" title="Maps channel IDs to dense slot indices for lock-free buffer access.">ChannelSlotMap</a> in place so existing audio-engine consumers keep observing the current routing map. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00330">330</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00519">519</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00028">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_acbc584900d275217aaa337bace034e8b_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -546,14 +638,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Remove every track and reset the slot map. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00913">913</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01130">1130</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a90c9949239b50570e2bec600ec086550_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -584,7 +676,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Clear solo state across all mixer channels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00992">992</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01209">1209</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -611,7 +703,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00739">739</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00946">946</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -638,7 +730,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00369">369</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00558">558</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -665,7 +757,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00376">376</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00565">565</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -695,15 +787,86 @@ Public Member Functions</h2></td></tr>
 <p>Consume and clear pending rebuild request. </p>
 <p>ONLY <a class="el" href="../../d3/d16/classAestra_1_1Audio_1_1PlaybackGraphController.html" title="Canonical controller for playback graph rebuild draining.">PlaybackGraphController</a> should call this. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00848">848</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01055">1055</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00042">Aestra::Audio::PlaybackGraphController::drainIfDirty()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ac928fa1cefd62af7132188f106b975e1_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="aebb19e7ac738361bcb91630e344609d1" name="aebb19e7ac738361bcb91630e344609d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aebb19e7ac738361bcb91630e344609d1">&#9670;&#160;</a></span>detachChannelById()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt; <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> &gt; Aestra::Audio::TrackManager::detachChannelById </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>channelId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t &amp;&#160;</td>
+          <td class="paramname"><em>outIndex</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Remove a channel without destroying it, handing back ownership. </p>
+<p>Undoing a track delete must restore the SAME object, not an equivalent one. Three things live in the object rather than in anything that could be reconstructed from a name:</p><ul>
+<li>its channel id, which routing is keyed on (a unit or audio pattern points at an id, never a lane index), so a re-created channel silently orphans everything routed to the old one;</li>
+<li>its volume, pan, mute, solo and whole effect chain;</li>
+<li>its address — <a class="el" href="../../d0/d26/classAestra_1_1Audio_1_1SetVolumeCommand.html" title="Command to change a channel&#39;s volume.">SetVolumeCommand</a>, <a class="el" href="../../d9/d7b/classAestra_1_1Audio_1_1SetPanCommand.html" title="Command to change a channel&#39;s pan position.">SetPanCommand</a>, <a class="el" href="../../d8/dbb/classAestra_1_1Audio_1_1SetMuteCommand.html" title="Command to toggle a channel&#39;s mute state.">SetMuteCommand</a>, <a class="el" href="../../d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html" title="Command to toggle a channel&#39;s solo state.">SetSoloCommand</a> and the effect/plugin commands all store a <code><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html" title="Mixer Channel - Dedicated routing and DSP entity (v3.0)">MixerChannel</a>&amp;</code>, so destroying it leaves every one of them in the undo history holding a dangling reference.</li>
+</ul>
+<p>Keeping the object alive in the command that removed it is what makes undo safe: the references stay valid for as long as anything can undo through them.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">outIndex</td><td>receives the position it occupied, so it can go back there. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the channel, or nullptr when no channel has that id. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00260">260</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00046">Aestra::Audio::AddChannelCommand::undo()</a>, and <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00054">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::undo()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aebb19e7ac738361bcb91630e344609d1_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aebb19e7ac738361bcb91630e344609d1_icgraph.svg" width="503" height="243"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -732,7 +895,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00744">744</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00951">951</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -756,22 +919,22 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">21</a> of file <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html">TrackManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00129">Aestra::Audio::SourceManager::getAllSourceIDs()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00104">Aestra::Audio::ClipSource::getFilteredBufferFor()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00480">Aestra::Audio::PlaylistModel::getProjectSampleRate()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00110">Aestra::Audio::SourceManager::getSource()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00135">Aestra::Audio::SourceManager::getAllSourceIDs()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00104">Aestra::Audio::ClipSource::getFilteredBufferFor()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00567">Aestra::Audio::PlaylistModel::getProjectSampleRate()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">Aestra::Audio::SourceManager::getSource()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00089">waitForClipPrefilters()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00089">waitForClipPrefilters()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a93242cb25f3e5b28316741a5efac881f_cgraph.svg" width="486" height="307"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a93242cb25f3e5b28316741a5efac881f_icgraph.svg" width="499" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a93242cb25f3e5b28316741a5efac881f_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -802,15 +965,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get a channel by index. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00094">94</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00103">103</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00103">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00145">Aestra::Audio::RenameTrackCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00185">getTrack()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00191">getTrack()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00170">Aestra::Audio::RenameTrackCommand::redo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00158">Aestra::Audio::RenameTrackCommand::undo()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00196">Aestra::Audio::RenameTrackCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00322">getTrack()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00328">getTrack()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00221">Aestra::Audio::RenameTrackCommand::redo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00209">Aestra::Audio::RenameTrackCommand::undo()</a>.</p>
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aef9478cbb19fa91eb0bcc60d51b77b77_icgraph.svg" width="499" height="435"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aef9478cbb19fa91eb0bcc60d51b77b77_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -839,7 +1002,76 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00101">101</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00110">110</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+</div>
+</div>
+<a id="a53fe3e0e1b269690efd09c6a74f467c0" name="a53fe3e0e1b269690efd09c6a74f467c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53fe3e0e1b269690efd09c6a74f467c0">&#9670;&#160;</a></span>getChannelById() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> * Aestra::Audio::TrackManager::getChannelById </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>channelId</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Find a mixer channel by stable ID. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00331">331</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00127">addChannelWithId()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00343">setAudioPatternMixerChannel()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>.</p>
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a53fe3e0e1b269690efd09c6a74f467c0_icgraph.svg" width="100%" height="506"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a68e5821fb6f04c96787306886753e0b0" name="a68e5821fb6f04c96787306886753e0b0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a68e5821fb6f04c96787306886753e0b0">&#9670;&#160;</a></span>getChannelById() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> * Aestra::Audio::TrackManager::getChannelById </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>channelId</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Find a mixer channel by stable ID. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00337">337</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -868,15 +1100,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the number of channels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00089">89</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00098">98</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a099a5c98a6cc1822fd44c1ca47dfb073_icgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a099a5c98a6cc1822fd44c1ca47dfb073_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -907,7 +1139,7 @@ Public Member Functions</h2></td></tr>
 <p>Get a raw pointer to the current channel slot map. </p>
 <dl class="section return"><dt>Returns</dt><dd>Slot-map pointer or nullptr when no routing map exists yet. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00312">312</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00501">501</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -937,14 +1169,14 @@ Public Member Functions</h2></td></tr>
 <p>Get channel slot map. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared slot-map instance describing mixer routing. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00307">307</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00496">496</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00028">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a23a0eb3b273a702625ae054b5b28c264_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -976,7 +1208,7 @@ Public Member Functions</h2></td></tr>
 <p>Copy the current channel slot map. </p>
 <dl class="section return"><dt>Returns</dt><dd>Snapshot of the slot map, or an empty map when none exists. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00317">317</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00506">506</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1006,15 +1238,15 @@ Public Member Functions</h2></td></tr>
 <p>Get raw pointers to the current channel list. </p>
 <dl class="section return"><dt>Returns</dt><dd>Snapshot vector of channel pointers in track order. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01002">1002</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01219">1219</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d10/MixerViewModel_8cpp_source.html#l00106">Aestra::MixerViewModel::syncFromEngine()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../d5/d10/MixerViewModel_8cpp_source.html#l00106">Aestra::MixerViewModel::syncFromEngine()</a>.</p>
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a96908a79f54bca9aedd97ca1ecf8612c_icgraph.svg" width="447" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a96908a79f54bca9aedd97ca1ecf8612c_icgraph.svg" width="462" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -1045,7 +1277,7 @@ Public Member Functions</h2></td></tr>
 <p>Access the undo/redo command history. </p>
 <dl class="section return"><dt>Returns</dt><dd>Mutable command history instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00780">780</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00987">987</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1075,7 +1307,7 @@ Public Member Functions</h2></td></tr>
 <p>Access the undo/redo command history. </p>
 <dl class="section return"><dt>Returns</dt><dd>Const command history instance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00785">785</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00992">992</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1105,14 +1337,14 @@ Public Member Functions</h2></td></tr>
 <p>Get the continuous automation parameter buffer. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared buffer used for automation in later phases. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00301">301</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00490">490</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d5/d10/MixerViewModel_8cpp_source.html#l00106">Aestra::MixerViewModel::syncFromEngine()</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae6d91195c6e4c4b347dda8fe52b52a76_icgraph.svg" width="447" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1143,7 +1375,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the number of currently configured hardware input channels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00599">599</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00788">788</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1179,7 +1411,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00589">589</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00778">778</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1206,7 +1438,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00260">260</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00449">449</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1236,7 +1468,7 @@ Public Member Functions</h2></td></tr>
 <p>Get meter snapshots. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared pointer to the current meter snapshot buffer. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00295">295</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00484">484</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1266,7 +1498,7 @@ Public Member Functions</h2></td></tr>
 <p>Get output sample rate. </p>
 <dl class="section return"><dt>Returns</dt><dd>Output sample rate in Hz. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00259">259</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00448">448</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1295,15 +1527,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the pattern manager. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00203">203</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00369">369</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, and <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00037">Aestra::Audio::ArrangePatternCommand::execute()</a>.</p>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00032">Aestra::Audio::ArrangePatternCommand::execute()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetAudioPatternMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00046">Aestra::Audio::MakeAudioClipUniqueCommand::undo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>.</p>
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_af01fa49b38f12155c47b1917bad27ea4_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_af01fa49b38f12155c47b1917bad27ea4_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1331,7 +1563,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00205">205</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00371">371</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1361,7 +1593,16 @@ Public Member Functions</h2></td></tr>
 <p>Access the pattern playback scheduler. </p>
 <dl class="section return"><dt>Returns</dt><dd>Mutable pattern playback engine. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00937">937</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01154">1154</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/d01/HeadlessMusicGenerator_8cpp_source.html#l00349">Aestra::Audio::HeadlessMusicGenerator::exportTo()</a>.</p>
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae1787526bbeadb05d56fe71e0334a723_icgraph.svg" width="482" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1391,7 +1632,7 @@ Public Member Functions</h2></td></tr>
 <p>Access the pattern playback scheduler. </p>
 <dl class="section return"><dt>Returns</dt><dd>Const pattern playback engine. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00942">942</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01159">1159</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1420,15 +1661,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the playlist model. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00196">196</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00362">362</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00037">Aestra::Audio::ArrangePatternCommand::execute()</a>, and <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00102">Aestra::Audio::ArrangePatternCommand::undo()</a>.</p>
-<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00032">Aestra::Audio::ArrangePatternCommand::execute()</a>, <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00020">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00079">Aestra::Audio::ArrangePatternCommand::undo()</a>, <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00054">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::undo()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00046">Aestra::Audio::MakeAudioClipUniqueCommand::undo()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>.</p>
+<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-14-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aacc633d4302bc413e6aead5df052520b_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-20-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aacc633d4302bc413e6aead5df052520b_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1456,7 +1697,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00198">198</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00364">364</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1486,7 +1727,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the transport start position used when stopping playback. </p>
 <dl class="section return"><dt>Returns</dt><dd>Stored play-start position in seconds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00390">390</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00579">579</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1516,7 +1757,7 @@ Public Member Functions</h2></td></tr>
 <p>Get playhead position. </p>
 <dl class="section return"><dt>Returns</dt><dd>Current transport position in seconds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00352">352</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00541">541</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1571,7 +1812,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True when captured waveform data exists for the target track. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00269">269</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00458">458</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1600,15 +1841,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the source manager. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00210">210</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00376">376</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
-<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
+<div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-21-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-21-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-15-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae2a894b9df65e65c63cc1b05f4b2e2d1_icgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-21-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae2a894b9df65e65c63cc1b05f4b2e2d1_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1636,7 +1877,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00212">212</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00378">378</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1666,7 +1907,7 @@ Public Member Functions</h2></td></tr>
 <p>Access the transport clock used by timeline and pattern playback. </p>
 <dl class="section return"><dt>Returns</dt><dd>Mutable timeline clock. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00926">926</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01143">1143</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1696,7 +1937,7 @@ Public Member Functions</h2></td></tr>
 <p>Access the transport clock used by timeline and pattern playback. </p>
 <dl class="section return"><dt>Returns</dt><dd>Const timeline clock. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00931">931</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01148">1148</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1733,14 +1974,14 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Mutable track pointer or nullptr when out of range. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00185">185</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00322">322</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00094">getChannel()</a>.</p>
-<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00103">getChannel()</a>.</p>
+<div id="dynsection-22" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-22-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-22-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div id="dynsection-22-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a1eb296424f204b13f43040d5b0f84694_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1779,14 +2020,14 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Const track pointer or nullptr when out of range. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00191">191</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00328">328</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00094">getChannel()</a>.</p>
-<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00103">getChannel()</a>.</p>
+<div id="dynsection-23" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-23-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-23-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div id="dynsection-23-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a7a07994039cc1a7eabcc8880e3e2736e_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1815,7 +2056,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00179">179</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00316">316</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1845,7 +2086,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the playhead position used by UI views. </p>
 <dl class="section return"><dt>Returns</dt><dd>Current UI transport position in seconds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00357">357</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00546">546</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1874,15 +2115,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unit manager (Arsenal) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00217">217</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00383">383</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00037">Aestra::Audio::ArrangePatternCommand::execute()</a>, and <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00102">Aestra::Audio::ArrangePatternCommand::undo()</a>.</p>
-<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00020">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00054">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::undo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00027">Aestra::Audio::SetUnitMixerChannelCommand::undo()</a>.</p>
+<div id="dynsection-24" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-24-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-24-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-18-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae644fa1ba9f25586fd7d597ed08d651f_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-24-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae644fa1ba9f25586fd7d597ed08d651f_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1910,7 +2151,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00219">219</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00385">385</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -1939,14 +2180,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the request generation counter (non-consuming). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00833">833</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01040">1040</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00015">Aestra::Audio::PlaybackGraphController::requestGeneration()</a>.</p>
-<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-25" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-25-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-25-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-19-content" class="dyncontent" style="display:none;">
+<div id="dynsection-25-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a7c3b9e17d1e79ce4f736a4e5f46e2ab4_icgraph.svg" width="515" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1975,7 +2216,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00700">700</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00907">907</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2004,14 +2245,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Check if a rebuild has been requested (non-consuming). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00826">826</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01033">1033</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00011">Aestra::Audio::PlaybackGraphController::isDirty()</a>.</p>
-<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-26" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-26-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-26-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-20-content" class="dyncontent" style="display:none;">
+<div id="dynsection-26-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_af1c7df9c8959e3434dfc0b9730d4673f_icgraph.svg" width="482" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -2043,7 +2284,7 @@ Public Member Functions</h2></td></tr>
 <p>Check whether the project contains unsaved changes. </p>
 <dl class="section return"><dt>Returns</dt><dd>True when the project has been modified. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00804">804</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01011">1011</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2073,7 +2314,7 @@ Public Member Functions</h2></td></tr>
 <p>Check whether pattern mode is active. </p>
 <dl class="section return"><dt>Returns</dt><dd>True when Arsenal pattern transport owns playback. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00763">763</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00970">970</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2100,7 +2341,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00699">699</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00891">891</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2130,7 +2371,7 @@ Public Member Functions</h2></td></tr>
 <p>Check whether timeline playback is active. </p>
 <dl class="section return"><dt>Returns</dt><dd>True while transport playback is running. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00698">698</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00890">890</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2157,7 +2398,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00728">728</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00935">935</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2187,7 +2428,7 @@ Public Member Functions</h2></td></tr>
 <p>Check whether recording is armed. </p>
 <dl class="section return"><dt>Returns</dt><dd>True while recording is active. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00727">727</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00934">934</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2217,7 +2458,7 @@ Public Member Functions</h2></td></tr>
 <p>Check whether the UI is currently scrubbing the playhead. </p>
 <dl class="section return"><dt>Returns</dt><dd>True while user scrubbing is active. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00401">401</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00590">590</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2246,14 +2487,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the last reason for a rebuild request (non-consuming). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00840">840</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01047">1047</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00023">Aestra::Audio::PlaybackGraphController::lastReason()</a>.</p>
-<div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-21-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-21-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-27" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-27-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-27-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-21-content" class="dyncontent" style="display:none;">
+<div id="dynsection-27-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ae374c427a06e702f4bd567319701032f_icgraph.svg" width="482" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -2284,14 +2525,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Mark the live audio graph as requiring a rebuild. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00860">860</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01067">1067</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>.</p>
-<div id="dynsection-22" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-22-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-22-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
+<div id="dynsection-28" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-28-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-28-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-22-content" class="dyncontent" style="display:none;">
+<div id="dynsection-28-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aaf3ab32d42b520f16e02bfa469503fbe_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -2323,7 +2564,16 @@ Public Member Functions</h2></td></tr>
 <p>Mark the project as modified. </p>
 <p>Fires the optional on-modified callback for downstream dirty tracking. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00791">791</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00998">998</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00020">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00079">TrackManager()</a>, <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00054">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::undo()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00046">Aestra::Audio::MakeAudioClipUniqueCommand::undo()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00027">Aestra::Audio::SetUnitMixerChannelCommand::undo()</a>.</p>
+<div id="dynsection-29" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-29-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-29-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-29-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a10f853c9ec1cd607bc408aa5d988942f_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
@@ -2384,12 +2634,12 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00608">608</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00797">797</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
-<a id="a407cdbff9e4bc3352095cf73bb8da314" name="a407cdbff9e4bc3352095cf73bb8da314"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a407cdbff9e4bc3352095cf73bb8da314">&#9670;&#160;</a></span>onTransportStateApplied()</h2>
+<a id="a7569edc48ac8a68d5ac3da691527a215" name="a7569edc48ac8a68d5ac3da691527a215"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7569edc48ac8a68d5ac3da691527a215">&#9670;&#160;</a></span>onTransportStateApplied()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2406,8 +2656,14 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>samplePos</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>positionSeconds</em>&#160;</td>
+          <td class="paramname"><em>sampleRate</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -2426,12 +2682,13 @@ Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">playing</td><td>True when the engine transport is now rolling. </td></tr>
-    <tr><td class="paramname">positionSeconds</td><td>Transport position used for the command. </td></tr>
+    <tr><td class="paramname">samplePos</td><td>Absolute sample position from the command, or the kTransportPreservePosition sentinel for a pause-in-place (#590). </td></tr>
+    <tr><td class="paramname">sampleRate</td><td>Engine sample rate used to convert samplePos to seconds. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00884">884</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01093">1093</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2460,7 +2717,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Pause transport playback without rewinding. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00677">677</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00866">866</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2489,14 +2746,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Start transport playback from the current UI position. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00657">657</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00846">846</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00358">Aestra::Audio::PatternPlaybackEngine::flush()</a>.</p>
-<div id="dynsection-23" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-23-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-23-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00378">Aestra::Audio::PatternPlaybackEngine::flush()</a>.</p>
+<div id="dynsection-30" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-30-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-30-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-23-content" class="dyncontent" style="display:none;">
+<div id="dynsection-30-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a8e30da675f03638f3700e7ad4719bb96_cgraph.svg" width="490" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -2545,14 +2802,14 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00954">954</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01171">1171</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00179">Aestra::Audio::PatternManager::applyPatch()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00358">Aestra::Audio::PatternPlaybackEngine::flush()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00025">Aestra::Audio::PatternManager::getPattern()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00085">Aestra::Audio::PatternPlaybackEngine::schedulePatternInstance()</a>.</p>
-<div id="dynsection-24" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-24-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-24-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00252">Aestra::Audio::PatternManager::applyPatch()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00378">Aestra::Audio::PatternPlaybackEngine::flush()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00085">Aestra::Audio::PatternPlaybackEngine::schedulePatternInstance()</a>.</p>
+<div id="dynsection-31" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-31-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-31-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-24-content" class="dyncontent" style="display:none;">
+<div id="dynsection-31-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_aeccd21184c921cc6ed16d473d86f0b5a_cgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -2590,14 +2847,14 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00984">984</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01201">1201</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00358">Aestra::Audio::PatternPlaybackEngine::flush()</a>.</p>
-<div id="dynsection-25" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-25-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-25-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00378">Aestra::Audio::PatternPlaybackEngine::flush()</a>.</p>
+<div id="dynsection-32" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-32-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-32-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-25-content" class="dyncontent" style="display:none;">
+<div id="dynsection-32-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a6fb4ec85fe6d89ceb031d1add145dbe6_cgraph.svg" width="490" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -2643,7 +2900,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00403">403</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00592">592</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2670,7 +2927,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00534">534</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00723">723</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2706,7 +2963,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00904">904</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01121">1121</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2756,7 +3013,73 @@ Public Member Functions</h2></td></tr>
 
 <p>Toggle record-arm state and manage capture session lifetime. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00705">705</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00912">912</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+</div>
+</div>
+<a id="a991e5f90ac0f474f692c92bf9447aa91" name="a991e5f90ac0f474f692c92bf9447aa91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a991e5f90ac0f474f692c92bf9447aa91">&#9670;&#160;</a></span>reinsertChannel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::TrackManager::reinsertChannel </td>
+          <td>(</td>
+          <td class="paramtype">std::unique_ptr&lt; <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">MixerChannel</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>channel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>index</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Put a detached channel back where it came from. </p>
+<p>An index past the end appends, so a restore still succeeds if tracks were added while this one was away — better than refusing and stranding the channel inside a command nobody can undo.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">channel</td><td>taken by REFERENCE, and moved from only on success. A by-value parameter would destroy the channel on every failure path: the caller's unique_ptr is already moved-from at the call site, so a refusal inside this function would lose the object for good — the same "the channel is gone" defect this pair of functions exists to prevent, merely relocated. On failure the caller still holds it and can retry. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>false when the channel is null, or when called from the audio thread, where mutating the channel list is not allowed. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00299">299</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00020">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute()</a>, <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00059">Aestra::Audio::AddChannelCommand::redo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>.</p>
+<div id="dynsection-33" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-33-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-33-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-33-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a991e5f90ac0f474f692c92bf9447aa91_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-34" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-34-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-34-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-34-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a991e5f90ac0f474f692c92bf9447aa91_icgraph.svg" width="100%" height="446"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
@@ -2784,7 +3107,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00161">161</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00195">195</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2814,15 +3137,54 @@ Public Member Functions</h2></td></tr>
 <p>Remove the last added channel (for undo of addChannel) </p>
 <dl class="section return"><dt>Returns</dt><dd>true if a channel was removed </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00148">148</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00178">178</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">requestAudioGraphRebuild()</a>.</p>
-<div id="dynsection-26" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-26-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-26-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00150">Aestra::Audio::PatternManager::resetMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00498">Aestra::Audio::UnitManager::resetMixerChannel()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00221">resetMixerRoutingDestination()</a>.</p>
+<div id="dynsection-35" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-35-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-35-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-26-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a9a8256dec957cc8340b4318255479f91_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-35-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a9a8256dec957cc8340b4318255479f91_cgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a6936846e98e161e82c7c084974cdeae6" name="a6936846e98e161e82c7c084974cdeae6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6936846e98e161e82c7c084974cdeae6">&#9670;&#160;</a></span>renderRootDirectory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string Aestra::Audio::TrackManager::renderRootDirectory </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Directory for audio committed by destructive clip operations. </p>
+<p>Sits beside Recordings so a project folder stays self-describing: takes the user performed in one place, audio Aestra rendered for them in another. Falls back to the same user-documents root as recording when the project has never been saved. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00429">429</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>.</p>
+<div id="dynsection-36" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-36-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-36-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-36-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a6936846e98e161e82c7c084974cdeae6_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -2854,15 +3216,144 @@ Public Member Functions</h2></td></tr>
 <p>Request a non-real-time rebuild of the live playback graph. </p>
 <p>All state mutations should call this method. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00817">817</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">1024</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00111">addChannel()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00913">clearAllChannels()</a>, <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">ensureClipPrefilters()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00029">Aestra::Audio::AddEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00073">Aestra::Audio::RemoveEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00154">Aestra::Audio::SetEffectBypassCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00860">markGraphDirty()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00148">removeLastChannel()</a>, <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00036">Aestra::Audio::PlaybackGraphController::requestRebuild()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00077">TrackManager()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00036">Aestra::Audio::AddEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00080">Aestra::Audio::RemoveEffectCommand::undo()</a>, and <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00162">Aestra::Audio::SetEffectBypassCommand::undo()</a>.</p>
-<div id="dynsection-27" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-27-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-27-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00127">addChannelWithId()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01130">clearAllChannels()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00260">detachChannelById()</a>, <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">ensureClipPrefilters()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00029">Aestra::Audio::AddEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00078">Aestra::Audio::RemoveEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00163">Aestra::Audio::SetEffectBypassCommand::execute()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01067">markGraphDirty()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00299">reinsertChannel()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00178">removeLastChannel()</a>, <a class="el" href="../../de/de9/PlaybackGraphController_8cpp_source.html#l00036">Aestra::Audio::PlaybackGraphController::requestRebuild()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00343">setAudioPatternMixerChannel()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00079">TrackManager()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00040">Aestra::Audio::AddEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00088">Aestra::Audio::RemoveEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00171">Aestra::Audio::SetEffectBypassCommand::undo()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>.</p>
+<div id="dynsection-37" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-37-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-37-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-27-content" class="dyncontent" style="display:none;">
+<div id="dynsection-37-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a46d9c986c264576c28e32e061b81d877_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a8ed4fb8254028711e2b6adb961dd42ee" name="a8ed4fb8254028711e2b6adb961dd42ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ed4fb8254028711e2b6adb961dd42ee">&#9670;&#160;</a></span>resetMixerRoutingDestination()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackManager::resetMixerRoutingDestination </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>removedChannelId</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Fail safe after a mixer insert disappears. </p>
+<p>Main paths fall back to Master; auxiliary/control routes to the missing destination are removed. Undoable deletion commands snapshot and restore these routes separately. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00221">221</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00178">removeLastChannel()</a>.</p>
+<div id="dynsection-38" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-38-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-38-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-38-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a8ed4fb8254028711e2b6adb961dd42ee_icgraph.svg" width="491" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a8d69cd46b833997891af00547b0b9f65" name="a8d69cd46b833997891af00547b0b9f65"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d69cd46b833997891af00547b0b9f65">&#9670;&#160;</a></span>scheduleTimelineForOfflineRender()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackManager::scheduleTimelineForOfflineRender </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>playStartPositionSeconds</em> = <code>0.0</code></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Schedule the committed timeline's MIDI clips into the pattern-playback engine for an offline render, without touching live transport state. </p>
+<p><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position.">play()</a> also schedules these instances, but as a side effect of starting the live transport (playing flag, position, transport command). An offline render (headless export) drives the engine's own transport instead, so it only needs the scheduling — this leaves isPlaying/isPaused/position untouched. Callers flush() the pattern engine before and after so the render's scheduled instances do not leak into the caller's session. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00904">904</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+</div>
+</div>
+<a id="a4d54a269442ca4263c5bed22e8d0ef64" name="a4d54a269442ca4263c5bed22e8d0ef64"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d54a269442ca4263c5bed22e8d0ef64">&#9670;&#160;</a></span>setAudioPatternMixerChannel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::TrackManager::setAudioPatternMixerChannel </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>&#160;</td>
+          <td class="paramname"><em>patternId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int64_t&#160;</td>
+          <td class="paramname"><em>channelId</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Route an audio source pattern independently from Playlist placement. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00343">343</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00331">getChannelById()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01024">requestAudioGraphRebuild()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00139">Aestra::Audio::PatternManager::setPatternMixerChannel()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetAudioPatternMixerChannelCommand::execute()</a>, <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00034">Aestra::Audio::SetAudioPatternMixerChannelCommand::redo()</a>, and <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00026">Aestra::Audio::SetAudioPatternMixerChannelCommand::undo()</a>.</p>
+<div id="dynsection-39" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-39-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-39-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-39-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a4d54a269442ca4263c5bed22e8d0ef64_cgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-40" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-40-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-40-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-40-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a4d54a269442ca4263c5bed22e8d0ef64_icgraph.svg" width="519" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -2893,7 +3384,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Install the non-RT hook used to prepare newly created channels for live processing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00140">140</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00170">170</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2929,7 +3420,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00323">323</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00512">512</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -2965,14 +3456,14 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00866">866</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01073">1073</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00088">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
-<div id="dynsection-28" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-28-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-28-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00091">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
+<div id="dynsection-41" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-41-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-41-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-28-content" class="dyncontent" style="display:none;">
+<div id="dynsection-41-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a0943c742e0076a3d4087ec29a33ab8c9_icgraph.svg" width="467" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3002,7 +3493,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00730">730</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00937">937</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3030,7 +3521,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00364">364</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00553">553</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3066,7 +3557,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00249">249</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00415">415</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3102,7 +3593,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00242">242</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00408">408</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3130,7 +3621,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00243">243</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00409">409</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3166,7 +3657,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00289">289</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00478">478</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3202,7 +3693,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00799">799</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01006">1006</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3230,7 +3721,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00371">371</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00560">560</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3261,7 +3752,7 @@ Public Member Functions</h2></td></tr>
 <p>Register a callback invoked every time <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a10f853c9ec1cd607bc408aa5d988942f" title="Mark the project as modified.">markModified()</a> is called. </p>
 <p>Used by the application layer to forward dirty state to <a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html" title="Manages automatic project saving and crash recovery (v1.0)">AutosaveManager</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00809">809</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01016">1016</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3298,23 +3789,23 @@ Public Member Functions</h2></td></tr>
 </dl>
 <p>Also forwards to the playlist's project sample rate: that value is the timeline unit buildRuntimeSnapshot() uses to convert beats to engine samples, so it must track the engine output rate. When they diverge, clip positions and durations are wrong by the ratio on non-48 kHz devices (measured: a clip in a 96 kHz engine truncated to half its duration — SampleRateBufferTruthTest). Not persisted; beats remain the project's source of truth. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00233">233</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00399">399</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00487">Aestra::Audio::PlaylistModel::setProjectSampleRate()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00574">Aestra::Audio::PlaylistModel::setProjectSampleRate()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00083">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-29" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-29-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-29-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-42" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-42-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-42-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-29-content" class="dyncontent" style="display:none;">
+<div id="dynsection-42-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a25e4926d1ef33812f8a0000174f5c2c1_cgraph.svg" width="472" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-30" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-30-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-30-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-43" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-43-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-43-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-30-content" class="dyncontent" style="display:none;">
+<div id="dynsection-43-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a25e4926d1ef33812f8a0000174f5c2c1_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3352,7 +3843,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00758">758</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00965">965</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3388,7 +3879,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00385">385</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00574">574</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3424,7 +3915,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00341">341</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00530">530</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3452,7 +3943,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00253">253</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00419">419</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3488,7 +3979,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00877">877</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01084">1084</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3524,7 +4015,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00396">396</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00585">585</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3553,14 +4044,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Stop transport playback and return to the stored cue/start position. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00686">686</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00878">878</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00768">stopArsenalPlayback()</a>.</p>
-<div id="dynsection-31" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-31-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-31-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00975">stopArsenalPlayback()</a>.</p>
+<div id="dynsection-44" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-44-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-44-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-31-content" class="dyncontent" style="display:none;">
+<div id="dynsection-44-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a2206c36c5c97de4986bd6c081226acb4_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3598,24 +4089,24 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00768">768</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00975">975</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00358">Aestra::Audio::PatternPlaybackEngine::flush()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00686">stop()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00378">Aestra::Audio::PatternPlaybackEngine::flush()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00878">stop()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>.</p>
-<div id="dynsection-32" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-32-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-32-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+<div id="dynsection-45" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-45-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-45-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-32-content" class="dyncontent" style="display:none;">
+<div id="dynsection-45-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ab6b68f372de3313993120fd3de47e016_cgraph.svg" width="490" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-33" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-33-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-33-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-46" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-46-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-46-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-33-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ab6b68f372de3313993120fd3de47e016_icgraph.svg" width="467" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-46-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_ab6b68f372de3313993120fd3de47e016_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -3652,7 +4143,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00346">346</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00535">535</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3699,7 +4190,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00562">562</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00751">751</a> of file <a class="el" href="../../d4/dfc/TrackManager_8h_source.html">TrackManager.h</a>.</p>
 
 </div>
 </div>
@@ -3724,11 +4215,11 @@ Public Member Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00089">89</a> of file <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html">TrackManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">ensureClipPrefilters()</a>.</p>
-<div id="dynsection-34" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-34-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-34-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-47" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-47-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-47-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-34-content" class="dyncontent" style="display:none;">
+<div id="dynsection-47-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dca/classAestra_1_1Audio_1_1TrackManager_a053a4811d93fb0e055bb0e745126e404_cgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 

@@ -1,9 +1,11 @@
 <map id="Aestra::Audio::AudioEngine::calculateLatencyCompensation" name="Aestra::Audio::AudioEngine::calculateLatencyCompensation">
-<area shape="rect" id="Node000001" title="Calculate and apply plugin delay compensation across all tracks." alt="" coords="548,37,783,77"/>
-<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#adbf11d4ab019a47f947182cdd23ba4cc" title="Enable/disable global latency compensation." alt="" coords="253,5,500,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="534,45,500,42,501,36,535,40"/>
-<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a59f895f9a59c21c8fa19bf150a8c9cb3" title="Set the TrackManager for playlist rendering." alt="" coords="277,69,476,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="535,74,477,81,476,76,534,69"/>
-<area shape="rect" id="Node000004" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="5,69,205,109"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="263,92,205,92,205,87,263,87"/>
+<area shape="rect" id="Node000001" title="Calculate and apply plugin delay compensation across all tracks." alt="" coords="563,37,797,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#adbf11d4ab019a47f947182cdd23ba4cc" title="Enable/disable global latency compensation." alt="" coords="268,5,515,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="549,45,515,42,515,36,549,40"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a59f895f9a59c21c8fa19bf150a8c9cb3" title="Set the TrackManager for playlist rendering." alt="" coords="292,69,491,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="549,74,491,81,491,76,549,69"/>
+<area shape="rect" id="Node000004" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="5,37,220,77"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="278,79,220,72,221,67,278,74"/>
+<area shape="rect" id="Node000005" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="13,101,213,141"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="279,105,213,113,212,107,278,100"/>
 </map>

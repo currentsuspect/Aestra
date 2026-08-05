@@ -1,5 +1,5 @@
 <map id="Aestra::Audio::UnitInfo::routesToTimelineTrack" name="Aestra::Audio::UnitInfo::routesToTimelineTrack">
-<area shape="rect" id="Node000001" title="True when this unit currently routes into the Timeline track path." alt="" coords="5,5,181,45"/>
-<area shape="rect" id="Node000002" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab463abb07c8a3c9fea46007a1b6d999b" title="Effective route mode, preserving legacy route fields as authority until cleared." alt="" coords="229,5,399,45"/>
+<area shape="rect" id="Node000001" title="True when this unit carries a legacy Timeline assignment." alt="" coords="5,5,181,45"/>
+<area shape="rect" id="Node000002" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab463abb07c8a3c9fea46007a1b6d999b" title="Effective legacy Timeline ownership mode." alt="" coords="229,5,399,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="181,23,215,23,215,28,181,28"/>
 </map>

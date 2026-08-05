@@ -1,0 +1,5 @@
+<map id="Aestra::MixerUIPreferences::settingsPath" name="Aestra::MixerUIPreferences::settingsPath">
+<area shape="rect" id="Node000001" title="Full path to mixer_settings.json, or empty when there is nowhere to put it." alt="" coords="241,5,440,45"/>
+<area shape="rect" id="Node000002" href="$d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html#a8ce18e05d3b89e39f86586d021618c31" title="Mixer layout preferences live in ~/.config/aestra/mixer_settings.json — application state,..." alt="" coords="5,5,193,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,28,193,28,193,23,228,23"/>
+</map>

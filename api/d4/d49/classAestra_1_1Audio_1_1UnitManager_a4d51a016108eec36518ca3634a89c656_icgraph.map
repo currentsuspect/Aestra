@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::UnitManager::setUnitGain" name="Aestra::Audio::UnitManager::setUnitGain">
+<area shape="rect" id="Node000001" title="Set the unit&#39;s linear output gain (published to the audio snapshot)." alt="" coords="491,37,692,77"/>
+<area shape="rect" id="Node000002" href="$d3/dcd/classAestra_1_1Audio_1_1SetUnitGainCommand.html#a9f7d67e8af3e87a1b9a0a8527c4a6890" title="Execute the command (first time)" alt="" coords="248,5,443,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="477,45,443,41,443,35,477,40"/>
+<area shape="rect" id="Node000004" href="$d3/dcd/classAestra_1_1Audio_1_1SetUnitGainCommand.html#ae7c8d9836205dd217a2a1a14d1f262fb" title="Undo the command." alt="" coords="248,69,443,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="477,75,443,79,443,74,477,70"/>
+<area shape="rect" id="Node000003" href="$d3/dcd/classAestra_1_1Audio_1_1SetUnitGainCommand.html#a91a437922af6f653d58bd9b7e4521104" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="234,28,200,28,200,23,234,23"/>
+</map>

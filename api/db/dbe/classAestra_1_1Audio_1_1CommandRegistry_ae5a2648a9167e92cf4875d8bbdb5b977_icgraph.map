@@ -1,0 +1,6 @@
+<map id="Aestra::Audio::CommandRegistry::fail" name="Aestra::Audio::CommandRegistry::fail">
+<area shape="rect" id="Node000001" title="Record why a factory refused to build, then return nullptr." alt="" coords="292,29,531,69"/>
+<area shape="rect" id="Node000002" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="5,29,244,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="278,52,244,52,244,47,278,47"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="174,18,156,11,125,8,97,10,80,15,74,21,77,28,72,30,69,20,77,10,96,5,125,3,158,5,176,13"/>
+</map>

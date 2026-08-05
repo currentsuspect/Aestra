@@ -1,15 +1,9 @@
 <map id="Aestra::Audio::OfflineRenderHarness::processBlocks" name="Aestra::Audio::OfflineRenderHarness::processBlocks">
-<area shape="rect" id="Node000001" title="Process N blocks offline." alt="" coords="5,133,212,173"/>
-<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="260,133,459,173"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,151,246,151,246,156,212,156"/>
+<area shape="rect" id="Node000001" title="Process N blocks offline." alt="" coords="5,37,212,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="260,37,459,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,55,246,55,246,60,212,60"/>
 <area shape="rect" id="Node000003" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="519,5,713,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="385,131,439,93,505,55,523,47,525,52,508,60,441,97,388,135"/>
-<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afd0c6b2868cc4899df9f93a76b86e0ed" title="Check whether preview ducking is enabled." alt="" coords="517,69,715,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="440,131,522,110,523,115,441,136"/>
-<area shape="rect" id="Node000005" href="$db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f" title="Mixes metronome click into the output buffer if enabled and playing." alt="" coords="520,133,712,173"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="459,151,506,151,506,156,459,156"/>
-<area shape="rect" id="Node000006" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a3e1fb8d09426fbc16b9fb246851d0ba2" title="Process an interleaved stereo block and update peaks." alt="" coords="509,197,723,237"/>
-<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="441,171,523,191,522,197,440,176"/>
-<area shape="rect" id="Node000007" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="507,261,725,301"/>
-<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="388,171,441,209,508,247,525,254,523,259,505,252,439,214,385,176"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,42,505,37,505,42,459,48"/>
+<area shape="rect" id="Node000004" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="507,69,725,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="459,67,493,71,493,77,459,72"/>
 </map>

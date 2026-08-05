@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::TrackManager::setAudioPatternMixerChannel" name="Aestra::Audio::TrackManager::setAudioPatternMixerChannel">
+<area shape="rect" id="Node000001" title="Route an audio source pattern independently from Playlist placement." alt="" coords="5,69,228,109"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="282,5,490,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="201,67,287,46,289,51,202,72"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="282,69,490,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,87,268,87,268,92,228,92"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="276,133,496,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="202,107,289,128,287,133,201,112"/>
+<area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="544,133,764,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="496,151,530,151,530,156,496,156"/>
+</map>

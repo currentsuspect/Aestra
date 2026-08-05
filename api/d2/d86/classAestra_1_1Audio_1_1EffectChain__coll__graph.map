@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::EffectChain" name="Aestra::Audio::EffectChain">
 <area shape="rect" id="Node000001" title="Effect chain for insert effects on a mixer channel." alt="" coords="5,93,196,119"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="71,5,131,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="103,45,103,93,98,93,98,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="15,5,75,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="43,44,48,68,59,81,74,91,71,95,56,85,44,71,38,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="125,5,191,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,44,131,71,113,95,108,92,126,68,143,41"/>
 </map>

@@ -210,75 +210,80 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span> </div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <span class="comment">// === Plugin Delay Compensation ===</span></div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    uint32_t pluginLatencySamples{0};        <span class="comment">// Total latency from effect chain</span></div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    uint32_t compensationDelaySamples{0};    <span class="comment">// Delay to apply for alignment</span></div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <span class="keywordtype">bool</span> compensationEnabled{<span class="keyword">true</span>};          <span class="comment">// Can be disabled per-track</span></div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    </div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="comment">// Fixed-size compensation buffer (stereo interleaved)</span></div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="comment">// 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz</span></div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    std::array&lt;float, 32768&gt; compensationBuffer{}; <span class="comment">// 16384 frames * 2 channels</span></div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    uint32_t compensationWritePos{0};</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    uint32_t compensationReadPos{0};</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <span class="comment">// PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated</span></div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="comment">// off-RT by AudioEngine::calculateLatencyCompensation() from</span></div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    <span class="comment">// SolvedLatencyTopology::edges; consumed RT-side in processBlock.</span></div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    <span class="comment">//</span></div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    <span class="comment">// Stored by unique_ptr because EdgeDelayState contains std::atomic members</span></div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <span class="comment">// (non-movable). Lazily allocated by the apply pass when an edge actually</span></div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    <span class="comment">// needs compensation. A nullptr means &quot;no compensation for this edge&quot;.</span></div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    std::unique_ptr&lt;EdgeDelayState&gt; mainOutEdgeDelay;</div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    std::vector&lt;std::unique_ptr&lt;EdgeDelayState&gt;&gt; sendEdgeDelays;</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>};</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    <span class="comment">// Delay to apply for alignment. Zero means &quot;do not delay this track&quot; —</span></div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <span class="comment">// this is the single gate the RT path consults. There is deliberately no</span></div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="comment">// per-track enable flag: one existed, nothing ever wrote it, and being</span></div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="comment">// pinned true is what let a disabled engine keep compensating (#684).</span></div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="comment">// Engine-wide enablement lives in AudioEngine::m_latencyCompensationEnabled</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    <span class="comment">// and reaches the RT path by zeroing this value.</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    uint32_t compensationDelaySamples{0};</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="comment">// Fixed-size compensation buffer (stereo interleaved)</span></div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <span class="comment">// 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz</span></div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    std::array&lt;float, 32768&gt; compensationBuffer{}; <span class="comment">// 16384 frames * 2 channels</span></div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    uint32_t compensationWritePos{0};</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    uint32_t compensationReadPos{0};</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <span class="comment">// PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated</span></div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    <span class="comment">// off-RT by AudioEngine::calculateLatencyCompensation() from</span></div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="comment">// SolvedLatencyTopology::edges; consumed RT-side in processBlock.</span></div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="comment">//</span></div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="comment">// Stored by unique_ptr because EdgeDelayState contains std::atomic members</span></div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <span class="comment">// (non-movable). Lazily allocated by the apply pass when an edge actually</span></div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="comment">// needs compensation. A nullptr means &quot;no compensation for this edge&quot;.</span></div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    std::unique_ptr&lt;EdgeDelayState&gt; mainOutEdgeDelay;</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    std::vector&lt;std::unique_ptr&lt;EdgeDelayState&gt;&gt; sendEdgeDelays;</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>};</div>
 </div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span> </div>
-<div class="foldopen" id="foldopen00172" data-start="{" data-end="};">
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno"><a class="line" href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">  172</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">RuntimeConnection</a> {</div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keywordtype">double</span>* destinationBufferL{<span class="keyword">nullptr</span>}; <span class="comment">// Raw pointer to Target Left Buffer</span></div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    <span class="keywordtype">double</span>* destinationBufferR{<span class="keyword">nullptr</span>}; <span class="comment">// Raw pointer to Target Right Buffer</span></div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    <span class="keywordtype">size_t</span> stride{2};                    <span class="comment">// Interleaved stride (2 for stereo)</span></div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    <span class="keywordtype">double</span> gainL{1.0};                   <span class="comment">// Left Channel Gain (Linear)</span></div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    <span class="keywordtype">double</span> gainR{1.0};                   <span class="comment">// Right Channel Gain (Linear)</span></div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>};</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span> </div>
+<div class="foldopen" id="foldopen00177" data-start="{" data-end="};">
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno"><a class="line" href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">  177</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">RuntimeConnection</a> {</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    <span class="keywordtype">double</span>* destinationBufferL{<span class="keyword">nullptr</span>}; <span class="comment">// Raw pointer to Target Left Buffer</span></div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    <span class="keywordtype">double</span>* destinationBufferR{<span class="keyword">nullptr</span>}; <span class="comment">// Raw pointer to Target Right Buffer</span></div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    <span class="keywordtype">size_t</span> stride{2};                    <span class="comment">// Interleaved stride (2 for stereo)</span></div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <span class="keywordtype">double</span> gainL{1.0};                   <span class="comment">// Left Channel Gain (Linear)</span></div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keywordtype">double</span> gainR{1.0};                   <span class="comment">// Right Channel Gain (Linear)</span></div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>};</div>
 </div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
-<div class="foldopen" id="foldopen00180" data-start="{" data-end="};">
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno"><a class="line" href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">  180</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">RenderTrack</a> {</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    uint32_t trackIndex{0};</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="keywordtype">double</span>* selfBuffer{<span class="keyword">nullptr</span>};                      <span class="comment">// Pointer to this track&#39;s output buffer (interleaved)</span></div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    std::vector&lt;RuntimeConnection&gt; activeConnections; <span class="comment">// Pre-resolved targets</span></div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>};</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
+<div class="foldopen" id="foldopen00185" data-start="{" data-end="};">
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno"><a class="line" href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">  185</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">RenderTrack</a> {</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    uint32_t trackIndex{0};</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordtype">double</span>* selfBuffer{<span class="keyword">nullptr</span>};                      <span class="comment">// Pointer to this track&#39;s output buffer (interleaved)</span></div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    std::vector&lt;RuntimeConnection&gt; activeConnections; <span class="comment">// Pre-resolved targets</span></div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>};</div>
 </div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
-<div class="foldopen" id="foldopen00190" data-start="{" data-end="};">
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno"><a class="line" href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">  190</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">AudioGraphState</a> {</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="comment">// The ordered list of tracks to render (Topology)</span></div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    std::vector&lt;RenderTrack&gt; renderTracks;</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span> </div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    <span class="comment">// The runtime state of each track (Volume, Pan, Mute)</span></div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="comment">// Indexed by trackIndex</span></div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    std::vector&lt;TrackRTState&gt; trackStates;</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="comment">// === Plugin Delay Compensation State ===</span></div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    uint32_t maxProjectLatencySamples{0};    <span class="comment">// Slowest track latency</span></div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="keywordtype">bool</span> latencyCompensationEnabled{<span class="keyword">true</span>};   <span class="comment">// Global enable/disable</span></div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    <span class="comment">// Note: Plugin state will be added here later (v4.0 Hybrid Engine)</span></div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="comment">// For now, plugins are still referenced via pointers in the AudioGraph or global lookups.</span></div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">// In the true Hybrid engine, we will need to clone plugin instances or parameters here.</span></div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>};</div>
-</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span> </div>
+<div class="foldopen" id="foldopen00195" data-start="{" data-end="};">
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno"><a class="line" href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">  195</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">AudioGraphState</a> {</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="comment">// The ordered list of tracks to render (Topology)</span></div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    std::vector&lt;RenderTrack&gt; renderTracks;</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span> </div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    <span class="comment">// The runtime state of each track (Volume, Pan, Mute)</span></div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="comment">// Indexed by trackIndex</span></div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    std::vector&lt;TrackRTState&gt; trackStates;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="comment">// === Plugin Delay Compensation State ===</span></div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    uint32_t maxProjectLatencySamples{0};    <span class="comment">// Slowest track latency</span></div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordtype">bool</span> latencyCompensationEnabled{<span class="keyword">true</span>};   <span class="comment">// Global enable/disable</span></div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioGraphState_html"><div class="ttname"><a href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">Aestra::Audio::AudioGraphState</a></div><div class="ttdoc">Encapsulates the complete state required to render audio for a moment in time.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00190">AudioGraphState.h:190</a></div></div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="comment">// Note: Plugin state will be added here later (v4.0 Hybrid Engine)</span></div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    <span class="comment">// For now, plugins are still referenced via pointers in the AudioGraph or global lookups.</span></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="comment">// In the true Hybrid engine, we will need to clone plugin instances or parameters here.</span></div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>};</div>
+</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span> </div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioGraphState_html"><div class="ttname"><a href="../../da/d08/structAestra_1_1Audio_1_1AudioGraphState.html">Aestra::Audio::AudioGraphState</a></div><div class="ttdoc">Encapsulates the complete state required to render audio for a moment in time.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00195">AudioGraphState.h:195</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html">Aestra::Audio::EdgeDelayState</a></div><div class="ttdoc">Per-outgoing-edge compensation state for graph-aware PDC (v2 P4b.2+).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00107">AudioGraphState.h:107</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html_a1f32446efdafd77b406d076371f97dfe"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a1f32446efdafd77b406d076371f97dfe">Aestra::Audio::EdgeDelayState::compensationSamples</a></div><div class="ttdeci">std::atomic&lt; uint32_t &gt; compensationSamples</div><div class="ttdoc">Samples of delay to apply (0 = no compensation).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00115">AudioGraphState.h:115</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html_a46faab24bf370e13cff329dfcf49a7b1"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a46faab24bf370e13cff329dfcf49a7b1">Aestra::Audio::EdgeDelayState::bufferPtr</a></div><div class="ttdeci">std::atomic&lt; float * &gt; bufferPtr</div><div class="ttdoc">Stereo-interleaved buffer pointer (capacityMask+1 frames).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00119">AudioGraphState.h:119</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html_a4d2b14baf443d71bda8bc5c911b79de4"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a4d2b14baf443d71bda8bc5c911b79de4">Aestra::Audio::EdgeDelayState::writePos</a></div><div class="ttdeci">std::atomic&lt; uint32_t &gt; writePos</div><div class="ttdoc">RT-side write cursor (frame count); RT updates each block; off-RT zeroes on growth.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00121">AudioGraphState.h:121</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html_a7da974b83c501c354c2c24df1eeeaf4f"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a7da974b83c501c354c2c24df1eeeaf4f">Aestra::Audio::EdgeDelayState::capacityMask</a></div><div class="ttdeci">std::atomic&lt; uint32_t &gt; capacityMask</div><div class="ttdoc">Ring-buffer capacity minus one (power of two semantics).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00117">AudioGraphState.h:117</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1EdgeDelayState_html_af69a748c8cd43ec9d8697c8c06a4330f"><div class="ttname"><a href="../../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#af69a748c8cd43ec9d8697c8c06a4330f">Aestra::Audio::EdgeDelayState::retiredBuffer</a></div><div class="ttdeci">std::unique_ptr&lt; float[]&gt; retiredBuffer</div><div class="ttdoc">Previous allocation kept alive one generation to outlive in-flight RT blocks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00127">AudioGraphState.h:127</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1RenderTrack_html"><div class="ttname"><a href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">Aestra::Audio::RenderTrack</a></div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00180">AudioGraphState.h:180</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1RuntimeConnection_html"><div class="ttname"><a href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">Aestra::Audio::RuntimeConnection</a></div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00172">AudioGraphState.h:172</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1RenderTrack_html"><div class="ttname"><a href="../../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html">Aestra::Audio::RenderTrack</a></div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00185">AudioGraphState.h:185</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1RuntimeConnection_html"><div class="ttname"><a href="../../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html">Aestra::Audio::RuntimeConnection</a></div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00177">AudioGraphState.h:177</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1SmoothedParamD_html"><div class="ttname"><a href="../../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html">Aestra::Audio::SmoothedParamD</a></div><div class="ttdoc">Double-precision linear-ramp parameter smoother for zipper-free automation.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00022">AudioGraphState.h:22</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1SmoothedParamD_html_a24ba5b669f1712c9f26eed1f747a4551"><div class="ttname"><a href="../../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a24ba5b669f1712c9f26eed1f747a4551">Aestra::Audio::SmoothedParamD::target</a></div><div class="ttdeci">double target</div><div class="ttdoc">Target value the ramp is heading toward.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00024">AudioGraphState.h:24</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1SmoothedParamD_html_a2a39843b33b1968bb781e406060f7365"><div class="ttname"><a href="../../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365">Aestra::Audio::SmoothedParamD::current</a></div><div class="ttdeci">double current</div><div class="ttdoc">Current output value.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d85/AudioGraphState_8h_source.html#l00023">AudioGraphState.h:23</a></div></div>

@@ -91,18 +91,27 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/d7c/structAestra_1_1Audio_1_1EffectSlot__coll__graph.svg" width="100%" height="568"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/d7c/structAestra_1_1Audio_1_1EffectSlot__coll__graph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a0ee83ff072ad2b90792ddd34d49fe04c" id="r_a0ee83ff072ad2b90792ddd34d49fe04c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a0ee83ff072ad2b90792ddd34d49fe04c">isEmpty</a> () const</td></tr>
+<tr class="memdesc:a0ee83ff072ad2b90792ddd34d49fe04c"><td class="mdescLeft">&#160;</td><td class="mdescRight">RT predicate: is there a plugin to process here? Placeholders answer true.  <br /></td></tr>
 <tr class="separator:a0ee83ff072ad2b90792ddd34d49fe04c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d5cb3898f8e033183a653e4038b5a28" id="r_a1d5cb3898f8e033183a653e4038b5a28"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a1d5cb3898f8e033183a653e4038b5a28">hasMissingPlugin</a> () const</td></tr>
+<tr class="memdesc:a1d5cb3898f8e033183a653e4038b5a28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this slot hold a retained record for a plugin that would not load?  <br /></td></tr>
+<tr class="separator:a1d5cb3898f8e033183a653e4038b5a28"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86d67eb195e76d0ad01e81d2ca8df8d9" id="r_a86d67eb195e76d0ad01e81d2ca8df8d9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a86d67eb195e76d0ad01e81d2ca8df8d9">isOccupied</a> () const</td></tr>
+<tr class="memdesc:a86d67eb195e76d0ad01e81d2ca8df8d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Is this slot spoken for — by a live plugin or by a retained placeholder? This, not <a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a0ee83ff072ad2b90792ddd34d49fe04c" title="RT predicate: is there a plugin to process here? Placeholders answer true.">isEmpty()</a>, is what "can I put a plugin here" should ask.  <br /></td></tr>
+<tr class="separator:a86d67eb195e76d0ad01e81d2ca8df8d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a16b36faa7e8f063126315b2f08bd0010" id="r_a16b36faa7e8f063126315b2f08bd0010"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a16b36faa7e8f063126315b2f08bd0010">clearMissingPlugin</a> ()</td></tr>
+<tr class="separator:a16b36faa7e8f063126315b2f08bd0010"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a3b002b0b2dd76ab7264d292000422fbb" id="r_a3b002b0b2dd76ab7264d292000422fbb"><td class="memItemLeft" align="right" valign="top">PluginInstancePtr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a3b002b0b2dd76ab7264d292000422fbb">plugin</a></td></tr>
-<tr class="memdesc:a3b002b0b2dd76ab7264d292000422fbb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plugin instance (nullptr = empty)  <br /></td></tr>
+<tr class="memdesc:a3b002b0b2dd76ab7264d292000422fbb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Plugin instance (nullptr = empty or missing)  <br /></td></tr>
 <tr class="separator:a3b002b0b2dd76ab7264d292000422fbb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9313272b0930d99482e6f768800ec51" id="r_ac9313272b0930d99482e6f768800ec51"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#ac9313272b0930d99482e6f768800ec51">bypassed</a> {false}</td></tr>
 <tr class="memdesc:ac9313272b0930d99482e6f768800ec51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bypass this slot.  <br /></td></tr>
@@ -112,12 +121,76 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a26e6c7db69bc2379befb79f073dd407f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac54a1ab4d2ce40db1ef7293cb0855de5" id="r_ac54a1ab4d2ce40db1ef7293cb0855de5"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../d1/dc3/structAestra_1_1Audio_1_1EffectSlotFaultState.html">EffectSlotFaultState</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#ac54a1ab4d2ce40db1ef7293cb0855de5">faultState</a> {std::make_shared&lt;<a class="el" href="../../d1/dc3/structAestra_1_1Audio_1_1EffectSlotFaultState.html">EffectSlotFaultState</a>&gt;()}</td></tr>
 <tr class="separator:ac54a1ab4d2ce40db1ef7293cb0855de5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac3a32d36e455745e8bc354dfdca0e3bb" id="r_ac3a32d36e455745e8bc354dfdca0e3bb"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#ac3a32d36e455745e8bc354dfdca0e3bb">missingPluginId</a></td></tr>
+<tr class="separator:ac3a32d36e455745e8bc354dfdca0e3bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d7f900a2ff015e0614a3b3190bd3fbd" id="r_a3d7f900a2ff015e0614a3b3190bd3fbd"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a3d7f900a2ff015e0614a3b3190bd3fbd">missingPluginState</a></td></tr>
+<tr class="separator:a3d7f900a2ff015e0614a3b3190bd3fbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9457f13913977f910693f0647223dfac" id="r_a9457f13913977f910693f0647223dfac"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a9457f13913977f910693f0647223dfac">instanceId</a> {0}</td></tr>
+<tr class="separator:a9457f13913977f910693f0647223dfac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Single slot in an effect chain. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00031">31</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00032">32</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a16b36faa7e8f063126315b2f08bd0010" name="a16b36faa7e8f063126315b2f08bd0010"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a16b36faa7e8f063126315b2f08bd0010">&#9670;&#160;</a></span>clearMissingPlugin()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::EffectSlot::clearMissingPlugin </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00082">82</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+</div>
+</div>
+<a id="a1d5cb3898f8e033183a653e4038b5a28" name="a1d5cb3898f8e033183a653e4038b5a28"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d5cb3898f8e033183a653e4038b5a28">&#9670;&#160;</a></span>hasMissingPlugin()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::EffectSlot::hasMissingPlugin </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Does this slot hold a retained record for a plugin that would not load? </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00056">56</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00033">plugin</a>.</p>
+
+</div>
+</div>
 <a id="a0ee83ff072ad2b90792ddd34d49fe04c" name="a0ee83ff072ad2b90792ddd34d49fe04c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0ee83ff072ad2b90792ddd34d49fe04c">&#9670;&#160;</a></span>isEmpty()</h2>
 
@@ -141,7 +214,42 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00037">37</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p>RT predicate: is there a plugin to process here? Placeholders answer true. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00053">53</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00033">plugin</a>.</p>
+
+</div>
+</div>
+<a id="a86d67eb195e76d0ad01e81d2ca8df8d9" name="a86d67eb195e76d0ad01e81d2ca8df8d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a86d67eb195e76d0ad01e81d2ca8df8d9">&#9670;&#160;</a></span>isOccupied()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::EffectSlot::isOccupied </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Is this slot spoken for — by a live plugin or by a retained placeholder? This, not <a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a0ee83ff072ad2b90792ddd34d49fe04c" title="RT predicate: is there a plugin to process here? Placeholders answer true.">isEmpty()</a>, is what "can I put a plugin here" should ask. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00060">60</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00033">plugin</a>.</p>
 
 </div>
 </div>
@@ -160,7 +268,7 @@ Public Attributes</h2></td></tr>
 
 <p>Bypass this slot. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00033">33</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00034">34</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -178,7 +286,7 @@ Public Attributes</h2></td></tr>
 
 <p>0.0 = dry only, 1.0 = wet only </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00034">34</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00035">35</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -194,7 +302,55 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00035">35</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00036">36</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+</div>
+</div>
+<a id="a9457f13913977f910693f0647223dfac" name="a9457f13913977f910693f0647223dfac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9457f13913977f910693f0647223dfac">&#9670;&#160;</a></span>instanceId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::EffectSlot::instanceId {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00080">80</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+</div>
+</div>
+<a id="ac3a32d36e455745e8bc354dfdca0e3bb" name="ac3a32d36e455745e8bc354dfdca0e3bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac3a32d36e455745e8bc354dfdca0e3bb">&#9670;&#160;</a></span>missingPluginId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string Aestra::Audio::EffectSlot::missingPluginId</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00049">49</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+</div>
+</div>
+<a id="a3d7f900a2ff015e0614a3b3190bd3fbd" name="a3d7f900a2ff015e0614a3b3190bd3fbd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d7f900a2ff015e0614a3b3190bd3fbd">&#9670;&#160;</a></span>missingPluginState</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;uint8_t&gt; Aestra::Audio::EffectSlot::missingPluginState</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00050">50</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -210,9 +366,11 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Plugin instance (nullptr = empty) </p>
+<p>Plugin instance (nullptr = empty or missing) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00032">32</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00033">33</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00056">hasMissingPlugin()</a>, <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00053">isEmpty()</a>, and <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00060">isOccupied()</a>.</p>
 
 </div>
 </div>

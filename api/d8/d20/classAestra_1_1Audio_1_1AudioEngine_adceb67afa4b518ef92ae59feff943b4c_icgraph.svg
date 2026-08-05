@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 771;
 var viewHeight = 134;
-var sectionId = 'dynsection-29';
+var sectionId = 'dynsection-28';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -83,79 +83,60 @@ var sectionId = 'dynsection-29';
 </a>
 </g>
 </g>
-<!-- Node3 -->
-<g id="Node000003" class="node">
-<title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" target="_top" xlink:title="Render the project to an audio file using the full live engine path (processBlock).">
+<!-- Node4 -->
+<g id="Node000004" class="node">
+<title>Node4</title>
+<g id="a_Node000004"><a xlink:href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" target="_top" xlink:title="Render the project to an audio file using the full live engine path (processBlock).">
 <polygon fill="white" stroke="#666666" points="539,-80 382,-80 382,-50 539,-50 539,-80"/>
 <text text-anchor="start" x="390" y="-68" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
 <text text-anchor="middle" x="460.5" y="-57" font-family="Helvetica,sans-Serif" font-size="10.00">::render</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node3 -->
-<g id="edge2_Node000001_Node000003" class="edge">
-<title>Node1&#45;&gt;Node3</title>
-<g id="a_edge2_Node000001_Node000003"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node4 -->
+<g id="edge3_Node000001_Node000004" class="edge">
+<title>Node1&#45;&gt;Node4</title>
+<g id="a_edge3_Node000001_Node000004"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M564.68,-75.49C556.12,-74.62 547.56,-73.75 539.23,-72.9"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="564.42,-78.98 574.72,-76.51 565.12,-72.02 564.42,-78.98"/>
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node2 -->
-<g id="edge7_Node000003_Node000002" class="edge">
-<title>Node3&#45;&gt;Node2</title>
-<g id="a_edge7_Node000003_Node000002"><a xlink:title=" ">
+<!-- Node3 -->
+<g id="Node000003" class="node">
+<title>Node3</title>
+<g id="a_Node000003"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute every fully received request line on the caller&#39;s thread.">
+<polygon fill="white" stroke="#666666" points="147.5,-126 1.5,-126 1.5,-96 147.5,-96 147.5,-126"/>
+<text text-anchor="start" x="9.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseSocket</text>
+<text text-anchor="middle" x="74.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Server::processPending</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node3 -->
+<g id="edge2_Node000002_Node000003" class="edge">
+<title>Node2&#45;&gt;Node3</title>
+<g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M180.03,-111C169.2,-111 158.19,-111 147.58,-111"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="180.34,-114.5 190.34,-111 180.34,-107.5 180.34,-114.5"/>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node2 -->
+<g id="edge8_Node000004_Node000002" class="edge">
+<title>Node4&#45;&gt;Node2</title>
+<g id="a_edge8_Node000004_Node000002"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M386.35,-82.43C367.63,-86.9 347.67,-91.65 329.51,-95.98"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="387.39,-85.79 396.3,-80.06 385.77,-78.98 387.39,-85.79"/>
-</a>
-</g>
-</g>
-<!-- Node4 -->
-<g id="Node000004" class="node">
-<title>Node4</title>
-<g id="a_Node000004"><a xlink:href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" target="_top" xlink:title="Convenience helper matching AudioEngine::bounceRangeToWav signature.">
-<polygon fill="white" stroke="#666666" points="344,-78 187,-78 187,-48 344,-48 344,-78"/>
-<text text-anchor="start" x="195" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
-<text text-anchor="middle" x="265.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::bounceToWav</text>
-</a>
-</g>
-</g>
-<!-- Node3&#45;&gt;Node4 -->
-<g id="edge3_Node000003_Node000004" class="edge">
-<title>Node3&#45;&gt;Node4</title>
-<g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M371.83,-64.09C362.55,-64 353.16,-63.9 344.01,-63.8"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="371.8,-67.59 381.83,-64.2 371.87,-60.59 371.8,-67.59"/>
-</a>
-</g>
-</g>
-<!-- Node6 -->
-<g id="Node000006" class="node">
-<title>Node6</title>
-<g id="a_Node000006"><a xlink:href="../../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" target="_top" xlink:title="Export with progress callback.">
-<polygon fill="white" stroke="#666666" points="346,-30 185,-30 185,0 346,0 346,-30"/>
-<text text-anchor="start" x="193" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::HeadlessMusic</text>
-<text text-anchor="middle" x="265.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Generator::exportTo</text>
-</a>
-</g>
-</g>
-<!-- Node3&#45;&gt;Node6 -->
-<g id="edge6_Node000003_Node000006" class="edge">
-<title>Node3&#45;&gt;Node6</title>
-<g id="a_edge6_Node000003_Node000006"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M391.72,-47.44C369.85,-41.77 345.81,-35.55 324.7,-30.08"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="391.04,-50.88 401.59,-50 392.79,-44.1 391.04,-50.88"/>
 </a>
 </g>
 </g>
 <!-- Node5 -->
 <g id="Node000005" class="node">
 <title>Node5</title>
-<g id="a_Node000005"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" target="_top" xlink:title="Render a range of the timeline (or a specific track) to a WAV file.">
-<polygon fill="white" stroke="#666666" points="149,-78 0,-78 0,-48 149,-48 149,-78"/>
-<text text-anchor="start" x="8" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="74.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::bounceRangeToWav</text>
+<g id="a_Node000005"><a xlink:href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" target="_top" xlink:title="Convenience helper matching AudioEngine::bounceRangeToWav signature.">
+<polygon fill="white" stroke="#666666" points="344,-78 187,-78 187,-48 344,-48 344,-78"/>
+<text text-anchor="start" x="195" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
+<text text-anchor="middle" x="265.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::bounceToWav</text>
 </a>
 </g>
 </g>
@@ -163,15 +144,53 @@ var sectionId = 'dynsection-29';
 <g id="edge4_Node000004_Node000005" class="edge">
 <title>Node4&#45;&gt;Node5</title>
 <g id="a_edge4_Node000004_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M371.83,-64.09C362.55,-64 353.16,-63.9 344.01,-63.8"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="371.8,-67.59 381.83,-64.2 371.87,-60.59 371.8,-67.59"/>
+</a>
+</g>
+</g>
+<!-- Node7 -->
+<g id="Node000007" class="node">
+<title>Node7</title>
+<g id="a_Node000007"><a xlink:href="../../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" target="_top" xlink:title="Export with progress callback.">
+<polygon fill="white" stroke="#666666" points="346,-30 185,-30 185,0 346,0 346,-30"/>
+<text text-anchor="start" x="193" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::HeadlessMusic</text>
+<text text-anchor="middle" x="265.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Generator::exportTo</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node7 -->
+<g id="edge7_Node000004_Node000007" class="edge">
+<title>Node4&#45;&gt;Node7</title>
+<g id="a_edge7_Node000004_Node000007"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M391.72,-47.44C369.85,-41.77 345.81,-35.55 324.7,-30.08"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="391.04,-50.88 401.59,-50 392.79,-44.1 391.04,-50.88"/>
+</a>
+</g>
+</g>
+<!-- Node6 -->
+<g id="Node000006" class="node">
+<title>Node6</title>
+<g id="a_Node000006"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" target="_top" xlink:title="Render a range of the timeline (or a specific track) to a WAV file.">
+<polygon fill="white" stroke="#666666" points="149,-78 0,-78 0,-48 149,-48 149,-78"/>
+<text text-anchor="start" x="8" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="74.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::bounceRangeToWav</text>
+</a>
+</g>
+</g>
+<!-- Node5&#45;&gt;Node6 -->
+<g id="edge5_Node000005_Node000006" class="edge">
+<title>Node5&#45;&gt;Node6</title>
+<g id="a_edge5_Node000005_Node000006"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M176.55,-56.26C167.41,-56.22 158.19,-56.27 149.24,-56.4"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="176.78,-59.77 186.81,-56.35 176.84,-52.77 176.78,-59.77"/>
 </a>
 </g>
 </g>
-<!-- Node5&#45;&gt;Node4 -->
-<g id="edge5_Node000005_Node000004" class="edge">
-<title>Node5&#45;&gt;Node4</title>
-<g id="a_edge5_Node000005_Node000004"><a xlink:title=" ">
+<!-- Node6&#45;&gt;Node5 -->
+<g id="edge6_Node000006_Node000005" class="edge">
+<title>Node6&#45;&gt;Node5</title>
+<g id="a_edge6_Node000006_Node000005"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M159.44,-69.71C168.55,-69.78 177.78,-69.76 186.81,-69.65"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="159.28,-66.21 149.24,-69.6 159.2,-73.21 159.28,-66.21"/>
 </a>

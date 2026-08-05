@@ -57,7 +57,7 @@ var sectionId = 'dynsection-1';
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Right&#45;side inspector panel for the selected mixer channel.">
+<g id="a_Node000001"><a xlink:title=" ">
 <polygon fill="#999999" stroke="#666666" points="600,-72.5 453,-72.5 453,-53.5 600,-53.5 600,-72.5"/>
 <text text-anchor="middle" x="526.5" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIMixerInspector</text>
 </a>

@@ -1,0 +1,9 @@
+<map id="Aestra::MuseAgent::ToolCall" name="Aestra::MuseAgent::ToolCall">
+<area shape="rect" id="Node000001" title=" " alt="" coords="58,197,211,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="90,131,126,196,122,198,85,133"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" href="$df/dee/classAestra_1_1JSON.html" title=" " alt="" coords="143,95,247,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="184,133,148,198,143,196,179,131"/>
+</map>

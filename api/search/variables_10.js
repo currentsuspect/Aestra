@@ -23,15 +23,16 @@ var searchData=
   ['soloed_20',['soloed',['../d4/d81/structAestra_1_1ChannelViewModel.html#ae56679348f674073bb59236b0d476eb3',1,'Aestra::ChannelViewModel']]],
   ['startbeat_21',['startBeat',['../d2/d05/structAestra_1_1Audio_1_1AudioExporter_1_1Config.html#aeaa2e177f808de98145660ed840eb109',1,'Aestra::Audio::AudioExporter::Config']]],
   ['startfullscreen_22',['startFullscreen',['../d6/d3b/structAestra_1_1WindowDesc.html#abec53f030e1d727809abe48c59057af4',1,'Aestra::WindowDesc']]],
-  ['startmaximized_23',['startMaximized',['../d6/d3b/structAestra_1_1WindowDesc.html#a5a51ce1256d9f9d9d8275a873470ec25',1,'Aestra::WindowDesc']]],
+  ['startmaximized_23',['startmaximized',['../d6/d3b/structAestra_1_1WindowDesc.html#a5a51ce1256d9f9d9d8275a873470ec25',1,'Aestra::WindowDesc::startMaximized'],['../d7/da3/structAestraWindowManager_1_1WindowConfig.html#ab82445526fcec3f61032017e71057945',1,'AestraWindowManager::WindowConfig::startMaximized']]],
   ['starttimeseconds_24',['startTimeSeconds',['../d2/d05/structAestra_1_1Audio_1_1AudioExporter_1_1Config.html#a3e5e8db781ef839c29119a00ac713894',1,'Aestra::Audio::AudioExporter::Config']]],
   ['status_25',['status',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html#a3eaa2030b61f142c1f331f4f3ffaec50',1,'Aestra::Audio::LiveMidiQueue::Event']]],
   ['statusbyte_26',['statusByte',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a3cf6f113208273a52e72d212ab3db1ed',1,'Aestra::Audio::ScheduledEvent']]],
   ['step_27',['step',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2f746ee28f76f4808655d53340594344',1,'Aestra::Audio::SmoothedParamD']]],
   ['stepcount_28',['stepCount',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#a0a84aff9dcb8afcdf8753558c25c8727',1,'Aestra::Audio::PluginParameter']]],
-  ['success_29',['success',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html#a01b325ab409d0e9a362eddcd8fb75016',1,'Aestra::Audio::AudioExporter::Result::success'],['../d2/d13/structExportDialog_1_1ExportJobResult.html#aaf39ca1d7627dc61b0761520feb4b7c3',1,'ExportDialog::ExportJobResult::success']]],
-  ['super_30',['super',['../de/d1d/structAestra_1_1KeyModifiers.html#a8bf078c3bca6acfde9b5326b821f4bc0',1,'Aestra::KeyModifiers']]],
-  ['supportedsamplerates_31',['supportedSampleRates',['../db/d6e/structAestra_1_1Audio_1_1AudioDeviceInfo.html#a43800a263aa7166c31006caeefec5535',1,'Aestra::Audio::AudioDeviceInfo']]],
-  ['suppresscliprelatchl_32',['suppressClipRelatchL',['../d4/d81/structAestra_1_1ChannelViewModel.html#a308f4dfb386b3604d8fa0f7ccd8bc6fe',1,'Aestra::ChannelViewModel']]],
-  ['suppresscliprelatchr_33',['suppressClipRelatchR',['../d4/d81/structAestra_1_1ChannelViewModel.html#a415049b65a636bc4e95885b34ac8f46d',1,'Aestra::ChannelViewModel']]]
+  ['strokealpha_29',['strokeAlpha',['../d1/dc8/structAestraUI_1_1PianoRollNoteLayer_1_1GhostPattern.html#a454fa7dbe605fcf6cf4b595f2eed04fc',1,'AestraUI::PianoRollNoteLayer::GhostPattern']]],
+  ['success_30',['success',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html#a01b325ab409d0e9a362eddcd8fb75016',1,'Aestra::Audio::AudioExporter::Result::success'],['../d2/d13/structExportDialog_1_1ExportJobResult.html#aaf39ca1d7627dc61b0761520feb4b7c3',1,'ExportDialog::ExportJobResult::success']]],
+  ['super_31',['super',['../de/d1d/structAestra_1_1KeyModifiers.html#a8bf078c3bca6acfde9b5326b821f4bc0',1,'Aestra::KeyModifiers']]],
+  ['supportedsamplerates_32',['supportedSampleRates',['../db/d6e/structAestra_1_1Audio_1_1AudioDeviceInfo.html#a43800a263aa7166c31006caeefec5535',1,'Aestra::Audio::AudioDeviceInfo']]],
+  ['suppresscliprelatchl_33',['suppressClipRelatchL',['../d4/d81/structAestra_1_1ChannelViewModel.html#a308f4dfb386b3604d8fa0f7ccd8bc6fe',1,'Aestra::ChannelViewModel']]],
+  ['suppresscliprelatchr_34',['suppressClipRelatchR',['../d4/d81/structAestra_1_1ChannelViewModel.html#a415049b65a636bc4e95885b34ac8f46d',1,'Aestra::ChannelViewModel']]]
 ];

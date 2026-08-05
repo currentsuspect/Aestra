@@ -1,0 +1,13 @@
+<map id="AestraContent::toggleView" name="AestraContent::toggleView">
+<area shape="rect" id="Node000001" title="Toggle visibility for a specific workspace overlay." alt="" coords="295,127,491,152"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="26,5,226,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="364,120,311,82,246,46,207,33,208,28,248,41,314,77,367,116"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="29,55,223,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="325,126,210,98,211,93,326,121"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="29,119,223,159"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="281,142,224,142,224,137,281,137"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#adde34f69a39cdca3682dc5fbcb183c98" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="29,183,223,223"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="326,158,211,186,210,181,325,153"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,248,247,273"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="367,163,314,201,248,238,208,251,207,245,246,233,311,197,364,159"/>
+</map>

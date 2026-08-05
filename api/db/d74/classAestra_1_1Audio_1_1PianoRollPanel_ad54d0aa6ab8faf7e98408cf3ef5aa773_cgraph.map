@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PianoRollPanel::setEditingUnit" name="Aestra::Audio::PianoRollPanel::setEditingUnit">
+<area shape="rect" id="Node000001" title="Set the default unit assigned to newly created notes." alt="" coords="5,37,184,77"/>
+<area shape="rect" id="Node000002" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#a4a7cd23bfd85b3c2cafcd34e8a90691b" title="Load a pattern into the piano&#45;roll editor." alt="" coords="232,5,411,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,42,218,37,219,42,185,47"/>
+<area shape="rect" id="Node000003" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae5851e1275e34b693d6bc2aa8efb9ba7" title="Persist the currently edited notes back to the pattern manager." alt="" coords="232,69,411,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,67,219,72,218,77,184,73"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode." alt="" coords="459,69,657,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="411,87,445,87,445,92,411,92"/>
+</map>

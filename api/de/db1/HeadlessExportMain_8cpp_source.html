@@ -237,72 +237,73 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    Log::info(<span class="stringliteral">&quot;========================================&quot;</span>);</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    </div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="keywordflow">try</span> {</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        <span class="comment">// Initialize audio engine</span></div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        Log::info(<span class="stringliteral">&quot;Initializing audio engine...&quot;</span>);</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        <a class="code hl_class" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a>&amp; engine = <a class="code hl_function" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ae62f1ec4643a11b144daf646fb3bd427">AudioEngine::getInstance</a>();</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        engine.<a class="code hl_function" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3">setSampleRate</a>(args.sampleRate);</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        engine.<a class="code hl_function" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a34d9746cbf415b530045c2d895843e76">setBPM</a>(<span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(args.tempo));</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>        </div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        <span class="comment">// Create track manager</span></div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        Log::info(<span class="stringliteral">&quot;Creating track manager...&quot;</span>);</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <a class="code hl_class" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a> trackManager;</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        </div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        <span class="comment">// Create generator</span></div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        Log::info(<span class="stringliteral">&quot;Generating music from template: &quot;</span> + args.templateName);</div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        <a class="code hl_class" href="../../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html">HeadlessMusicGenerator</a> generator(engine, trackManager);</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        </div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        generator.createProject(<span class="stringliteral">&quot;HeadlessExport&quot;</span>)</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>               .setTempo(args.tempo)</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>               .setSampleRate(args.sampleRate)</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>               .generateFromTemplate(args.templateName, args.durationBars);</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        </div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>        <span class="keywordflow">if</span> (args.verbose) {</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            generator.printInfo();</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        }</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        </div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        <span class="comment">// Export</span></div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        Log::info(<span class="stringliteral">&quot;Exporting to: &quot;</span> + args.outputPath);</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        </div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        <span class="keyword">auto</span> progressCallback = [](<span class="keywordtype">float</span> percent) {</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>            <span class="keywordtype">int</span> barWidth = 50;</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            <span class="keywordtype">int</span> pos = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(percent * barWidth);</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>            </div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;\r[&quot;</span>;</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; barWidth; ++i) {</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                <span class="keywordflow">if</span> (i &lt; pos) std::cout &lt;&lt; <span class="stringliteral">&quot;=&quot;</span>;</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                <span class="keywordflow">else</span> <span class="keywordflow">if</span> (i == pos) std::cout &lt;&lt; <span class="stringliteral">&quot;&gt;&quot;</span>;</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>                <span class="keywordflow">else</span> std::cout &lt;&lt; <span class="stringliteral">&quot; &quot;</span>;</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            }</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;] &quot;</span> &lt;&lt; <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(percent * 100) &lt;&lt; <span class="stringliteral">&quot;%&quot;</span> &lt;&lt; std::flush;</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        };</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>        </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        <span class="keywordtype">bool</span> success = generator.exportTo(args.outputPath, </div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>                                           progressCallback,</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>                                           args.sampleRate,</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>                                           parseBitDepth(args.bitDepth));</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        </div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        std::cout &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        <span class="comment">// Initialize audio engine. This tool owns its engine for the lifetime of</span></div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        <span class="comment">// the export (mirroring HeadlessMain / MuseReplMain) rather than reaching</span></div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        <span class="comment">// for a process-wide singleton — nothing else constructs one here.</span></div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        Log::info(<span class="stringliteral">&quot;Initializing audio engine...&quot;</span>);</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        <a class="code hl_class" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a> engine;</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>        engine.<a class="code hl_function" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3">setSampleRate</a>(args.sampleRate);</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        engine.<a class="code hl_function" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a34d9746cbf415b530045c2d895843e76">setBPM</a>(<span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(args.tempo));</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        </div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <span class="comment">// Create track manager</span></div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        Log::info(<span class="stringliteral">&quot;Creating track manager...&quot;</span>);</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        <a class="code hl_class" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a> trackManager;</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        </div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        <span class="comment">// Create generator</span></div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        Log::info(<span class="stringliteral">&quot;Generating music from template: &quot;</span> + args.templateName);</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        <a class="code hl_class" href="../../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html">HeadlessMusicGenerator</a> generator(engine, trackManager);</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        </div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        generator.createProject(<span class="stringliteral">&quot;HeadlessExport&quot;</span>)</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>               .setTempo(args.tempo)</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>               .setSampleRate(args.sampleRate)</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>               .generateFromTemplate(args.templateName, args.durationBars);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>        </div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        <span class="keywordflow">if</span> (args.verbose) {</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>            generator.printInfo();</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        }</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        </div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        <span class="comment">// Export</span></div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        Log::info(<span class="stringliteral">&quot;Exporting to: &quot;</span> + args.outputPath);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        </div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        <span class="keyword">auto</span> progressCallback = [](<span class="keywordtype">float</span> percent) {</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>            <span class="keywordtype">int</span> barWidth = 50;</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>            <span class="keywordtype">int</span> pos = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(percent * barWidth);</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>            </div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;\r[&quot;</span>;</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; barWidth; ++i) {</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>                <span class="keywordflow">if</span> (i &lt; pos) std::cout &lt;&lt; <span class="stringliteral">&quot;=&quot;</span>;</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>                <span class="keywordflow">else</span> <span class="keywordflow">if</span> (i == pos) std::cout &lt;&lt; <span class="stringliteral">&quot;&gt;&quot;</span>;</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>                <span class="keywordflow">else</span> std::cout &lt;&lt; <span class="stringliteral">&quot; &quot;</span>;</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            }</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;] &quot;</span> &lt;&lt; <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(percent * 100) &lt;&lt; <span class="stringliteral">&quot;%&quot;</span> &lt;&lt; std::flush;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        };</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        </div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        <span class="keywordtype">bool</span> success = generator.exportTo(args.outputPath, </div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>                                           progressCallback,</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>                                           args.sampleRate,</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>                                           parseBitDepth(args.bitDepth));</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>        </div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        <span class="keywordflow">if</span> (success) {</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            Log::info(<span class="stringliteral">&quot;Export complete!&quot;</span>);</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>            Log::info(<span class="stringliteral">&quot;Output: &quot;</span> + args.outputPath);</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>            <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            Log::error(<span class="stringliteral">&quot;Export failed!&quot;</span>);</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>            <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        }</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        </div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        Log::error(<span class="stringliteral">&quot;Fatal error: &quot;</span> + std::string(e.what()));</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    }</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>}</div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">Aestra::Audio::AudioEngine</a></div><div class="ttdoc">Real-time audio engine with 144dB dynamic range.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00057">AudioEngine.h:57</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html_a34d9746cbf415b530045c2d895843e76"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a34d9746cbf415b530045c2d895843e76">Aestra::Audio::AudioEngine::setBPM</a></div><div class="ttdeci">void setBPM(float bpm)</div><div class="ttdoc">Set transport tempo in beats per minute.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00324">AudioEngine.h:324</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html_ad7a24d4a309f1f855dc35d9fee11a2a3"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3">Aestra::Audio::AudioEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t sampleRate)</div><div class="ttdoc">Set the active sample rate used by the engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00137">AudioEngine.h:137</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html_ae62f1ec4643a11b144daf646fb3bd427"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ae62f1ec4643a11b144daf646fb3bd427">Aestra::Audio::AudioEngine::getInstance</a></div><div class="ttdeci">static AudioEngine &amp; getInstance()</div><div class="ttdoc">Singleton Accessor (v3.1)</div><div class="ttdef"><b>Definition</b> <a href="../../df/dc3/AudioEngine_8cpp_source.html#l00149">AudioEngine.cpp:149</a></div></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        std::cout &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        </div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keywordflow">if</span> (success) {</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>            Log::info(<span class="stringliteral">&quot;Export complete!&quot;</span>);</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            Log::info(<span class="stringliteral">&quot;Output: &quot;</span> + args.outputPath);</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>            Log::error(<span class="stringliteral">&quot;Export failed!&quot;</span>);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>            <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        }</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        </div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        Log::error(<span class="stringliteral">&quot;Fatal error: &quot;</span> + std::string(e.what()));</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    }</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>}</div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">Aestra::Audio::AudioEngine</a></div><div class="ttdoc">Real-time audio engine with 144dB dynamic range.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00058">AudioEngine.h:58</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html_a34d9746cbf415b530045c2d895843e76"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a34d9746cbf415b530045c2d895843e76">Aestra::Audio::AudioEngine::setBPM</a></div><div class="ttdeci">void setBPM(float bpm)</div><div class="ttdoc">Set transport tempo in beats per minute.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00339">AudioEngine.h:339</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html_ad7a24d4a309f1f855dc35d9fee11a2a3"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3">Aestra::Audio::AudioEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t sampleRate)</div><div class="ttdoc">Set the active sample rate used by the engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00136">AudioEngine.h:136</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1HeadlessMusicGenerator_html"><div class="ttname"><a href="../../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html">Aestra::Audio::HeadlessMusicGenerator</a></div><div class="ttdoc">Programmatic music generation API for headless/batch processing (v1.0)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d48/HeadlessMusicGenerator_8h_source.html#l00044">HeadlessMusicGenerator.h:44</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00050">TrackManager.h:50</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00052">TrackManager.h:52</a></div></div>
 <div class="ttc" id="astructCommandLineArgs_html"><div class="ttname"><a href="../../de/d26/structCommandLineArgs.html">CommandLineArgs</a></div><div class="ttdef"><b>Definition</b> <a href="../../de/db1/HeadlessExportMain_8cpp_source.html#l00027">HeadlessExportMain.cpp:27</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

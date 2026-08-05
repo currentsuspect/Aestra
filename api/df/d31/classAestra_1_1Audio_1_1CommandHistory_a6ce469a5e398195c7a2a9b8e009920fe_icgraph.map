@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::CommandHistory::addOnStateChanged" name="Aestra::Audio::CommandHistory::addOnStateChanged">
+<area shape="rect" id="Node000001" title="Register a state&#45;changed listener." alt="" coords="261,5,492,45"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#acb294c03eb11bcff3fb70166a307b235" title="Construct a track manager and wire its internal playback helpers." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,214,28,214,23,248,23"/>
+</map>

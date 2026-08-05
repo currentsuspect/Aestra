@@ -1,0 +1,5 @@
+<map id="Aestra::ProjectMigrations::runMigrationsWith" name="Aestra::ProjectMigrations::runMigrationsWith">
+<area shape="rect" id="Node000001" title="Run a supplied registry through the production migration runner." alt="" coords="240,5,427,45"/>
+<area shape="rect" id="Node000002" href="$dc/d25/classAestra_1_1ProjectMigrations.html#a9617005c61361011083974723fa3642a" title="Run all migrations to bring a project to current version." alt="" coords="5,5,192,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="227,28,192,28,192,23,227,23"/>
+</map>

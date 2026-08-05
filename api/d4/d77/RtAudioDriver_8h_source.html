@@ -153,15 +153,19 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::atomic&lt;uintptr_t&gt; m_audioThreadToken{0};</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::atomic&lt;bool&gt; m_rtPriorityWorkerStop{<span class="keyword">false</span>};</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    std::thread m_rtPriorityWorker;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    DriverStatistics m_stats;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    std::string m_lastError;</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keyword">struct </span>AudioTelemetry* m_telemetry = <span class="keyword">nullptr</span>; <span class="comment">// RT-thread telemetry (atomic, lock-free)</span></div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>};</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="comment">// mlockall() locks every resident page + pre-faults future ones (0.3-4s on a</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="comment">// large process). Run it off the UI thread that starts the stream; joined in</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="comment">// closeStream() so it never outlives the driver.</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    std::thread m_memLockWorker;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    DriverStatistics m_stats;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    std::string m_lastError;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keyword">struct </span>AudioTelemetry* m_telemetry = <span class="keyword">nullptr</span>; <span class="comment">// RT-thread telemetry (atomic, lock-free)</span></div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>};</div>
 </div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span> </div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1IAudioDriver_html"><div class="ttname"><a href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d4b/IAudioDriver_8h_source.html#l00018">IAudioDriver.h:18</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1RtAudioDriver_html"><div class="ttname"><a href="../../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html">Aestra::Audio::RtAudioDriver</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/d77/RtAudioDriver_8h_source.html#l00020">RtAudioDriver.h:20</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1RtAudioDriver_html_a7070dc17368fec822aad2794ff89b126"><div class="ttname"><a href="../../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html#a7070dc17368fec822aad2794ff89b126">Aestra::Audio::RtAudioDriver::isDitheringEnabled</a></div><div class="ttdeci">bool isDitheringEnabled() const override</div><div class="ttdoc">Check if dithering is enabled.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d77/RtAudioDriver_8h_source.html#l00044">RtAudioDriver.h:44</a></div></div>

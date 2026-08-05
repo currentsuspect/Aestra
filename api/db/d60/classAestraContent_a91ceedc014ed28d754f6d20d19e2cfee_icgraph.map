@@ -1,0 +1,5 @@
+<map id="AestraContent::toggleFileBrowser" name="AestraContent::toggleFileBrowser">
+<area shape="rect" id="Node000001" title="Toggle visibility of the left browser area." alt="" coords="253,5,440,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="5,13,205,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="239,28,205,28,205,23,239,23"/>
+</map>

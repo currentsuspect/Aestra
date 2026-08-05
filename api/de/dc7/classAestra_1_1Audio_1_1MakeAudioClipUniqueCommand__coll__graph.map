@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MakeAudioClipUniqueCommand" name="Aestra::Audio::MakeAudioClipUniqueCommand">
+<area shape="rect" id="Node000001" title="Give one Playlist audio clip its own pattern identity while retaining the same underlying audio buffe..." alt="" coords="5,79,195,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="6,5,194,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="103,44,103,79,97,79,97,44"/>
+</map>

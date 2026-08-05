@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::ClipRenderService::CommitResult" name="Aestra::Audio::ClipRenderService::CommitResult">
+<area shape="rect" id="Node000001" title="Frames rendered plus the file they were committed to." alt="" coords="213,196,401,236"/>
+<area shape="rect" id="Node000002" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="5,108,183,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="134,136,265,194,263,198,131,141"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="146,13,221,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="165,50,107,110,103,106,161,46"/>
+<area shape="rect" id="Node000004" href="$d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html" title="Type&#45;safe identifier for clip sources." alt="" coords="207,108,407,133"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="211,44,294,106,290,110,208,48"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="310,147,310,196,305,196,305,147"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="431,108,517,133"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="443,142,343,198,340,193,440,138"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="405,5,543,45"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="477,59,477,108,471,108,471,59"/>
+</map>

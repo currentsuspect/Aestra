@@ -1,0 +1,7 @@
+<map id="Aestra::MixerUIPreferences::configDirectory" name="Aestra::MixerUIPreferences::configDirectory">
+<area shape="rect" id="Node000001" title="Directory holding Aestra&#39;s per&#45;user config, or empty if it cannot be found." alt="" coords="488,5,687,45"/>
+<area shape="rect" id="Node000002" href="$d7/d8e/structAestra_1_1MixerUIPreferences.html#af5cb151d2eecb19d665ae9bf09a06914" title="Full path to mixer_settings.json, or empty when there is nowhere to put it." alt="" coords="241,5,440,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="474,28,440,28,440,23,474,23"/>
+<area shape="rect" id="Node000003" href="$d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html#a8ce18e05d3b89e39f86586d021618c31" title="Mixer layout preferences live in ~/.config/aestra/mixer_settings.json — application state,..." alt="" coords="5,5,193,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="228,28,193,28,193,23,228,23"/>
+</map>

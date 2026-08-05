@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::AudioEngine::setTrackManager" name="Aestra::Audio::AudioEngine::setTrackManager">
-<area shape="rect" id="Node000001" title="Set the TrackManager for playlist rendering." alt="" coords="253,5,452,45"/>
-<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="5,5,205,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,28,206,28,206,23,240,23"/>
+<area shape="rect" id="Node000001" title="Set the TrackManager for playlist rendering." alt="" coords="268,37,467,77"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="254,46,220,41,221,36,255,41"/>
+<area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="13,69,213,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="255,74,213,79,212,74,254,69"/>
 </map>

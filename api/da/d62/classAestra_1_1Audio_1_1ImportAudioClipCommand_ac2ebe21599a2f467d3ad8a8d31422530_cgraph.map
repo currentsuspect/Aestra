@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::ImportAudioClipCommand::redo" name="Aestra::Audio::ImportAudioClipCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,165,203,205"/>
+<area shape="rect" id="Node000002" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#a44e6b2875e6ff530970e26582b7d3351" title="Execute the command (first time)" alt="" coords="251,165,448,205"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,183,237,183,237,188,203,188"/>
+<area shape="rect" id="Node000003" href="$d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a75714600a82dab3bed3d9d497cc6ec89" title="Defaults for a newly created audio clip." alt="" coords="513,5,687,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="367,163,420,110,456,80,495,55,508,48,510,53,497,60,459,85,424,114,370,167"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="496,69,704,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="392,163,495,119,516,111,518,116,497,124,394,168"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="496,133,704,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="448,170,482,166,483,171,449,175"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="496,197,704,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="449,195,483,200,482,205,448,201"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a10f853c9ec1cd607bc408aa5d988942f" title="Mark the project as modified." alt="" coords="496,261,704,301"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="394,203,497,247,518,254,516,259,495,252,392,208"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="496,325,704,365"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="370,204,424,257,459,286,497,311,510,317,508,322,495,316,456,290,420,261,367,207"/>
+</map>

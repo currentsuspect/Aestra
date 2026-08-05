@@ -265,7 +265,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    <span class="comment">// Wet makeup gain. With kWetCompGain this can push the full-wet output above</span></div>
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    <span class="comment">// unity on hot input (measured wet peaks up to ~1.56). That is intentional</span></div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    <span class="comment">// float headroom, not clipping — the path never clamps at +/-1. See</span></div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="comment">// AestraDocs/design/aestra-verb-gain-staging.md (N4).</span></div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="comment">// Aestra-Internals: aestra-docs/design/aestra-verb-gain-staging.md (N4).</span></div>
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kWetMakeupGain = 4.2f;</div>
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="comment">// Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).</span></div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="comment">// Index: 0=Room, 1=Hall, 2=Plate, 3=Cathedral, 4=Chamber, 5=BrightHall, 6=Ambience, 7=Scoring, 8=SmoothPlate.</span></div>

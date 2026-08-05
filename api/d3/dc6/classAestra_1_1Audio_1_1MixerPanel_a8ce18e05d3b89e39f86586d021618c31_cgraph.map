@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MixerPanel::loadUIPreferences" name="Aestra::Audio::MixerPanel::loadUIPreferences">
+<area shape="rect" id="Node000001" title="Mixer layout preferences live in ~/.config/aestra/mixer_settings.json — application state,..." alt="" coords="5,37,193,77"/>
+<area shape="rect" id="Node000002" href="$d7/d8e/structAestra_1_1MixerUIPreferences.html#a40c44dd805cc04f3d99c04cfb6897857" title="Read preferences from path." alt="" coords="241,5,440,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="193,42,227,38,228,43,194,48"/>
+<area shape="rect" id="Node000003" href="$d7/d8e/structAestra_1_1MixerUIPreferences.html#af5cb151d2eecb19d665ae9bf09a06914" title="Full path to mixer_settings.json, or empty when there is nowhere to put it." alt="" coords="241,69,440,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="194,67,228,72,227,77,193,72"/>
+<area shape="rect" id="Node000004" href="$d7/d8e/structAestra_1_1MixerUIPreferences.html#a43888112d6f012a00d1a753ca29f5ee0" title="Directory holding Aestra&#39;s per&#45;user config, or empty if it cannot be found." alt="" coords="488,69,687,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="440,87,474,87,474,92,440,92"/>
+</map>

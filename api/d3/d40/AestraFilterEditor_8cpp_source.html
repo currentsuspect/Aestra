@@ -432,93 +432,97 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span> </div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x;</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y;</div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="comment">// Bypass pill</span></div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>    <span class="keywordflow">if</span> (m_bypassRect.contains(event.position) &amp;&amp; event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> cur = m_instance-&gt;getParameter(AestraFilter::kBypass);</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        m_instance-&gt;setParameter(AestraFilter::kBypass, cur &gt; 0.5f ? 0.0f : 1.0f);</div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        setDirty();</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    }</div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>    m_bypassHovered = m_bypassRect.contains(event.position);</div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span> </div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    <span class="comment">// Type segments</span></div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_typeRects.size(); ++i) {</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>            <span class="keywordflow">if</span> (m_typeRects[i].contains(event.position)) {</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>                m_instance-&gt;setParameter(AestraFilter::kType,</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>                                         AestraFilter::normFromType(<span class="keyword">static_cast&lt;</span>AestraFilter::Type<span class="keyword">&gt;</span>(i)));</div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>                setDirty();</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>            }</div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>        }</div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    }</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span> </div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="comment">// Knob vertical drag</span></div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>    <span class="keywordflow">if</span> (m_draggingParam &gt;= 0) {</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        <span class="keywordflow">if</span> (event.released) {</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span> </div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="comment">// Bypass pill</span></div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordflow">if</span> (m_bypassRect.contains(event.position) &amp;&amp; event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> cur = m_instance-&gt;getParameter(AestraFilter::kBypass);</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        m_instance-&gt;setParameter(AestraFilter::kBypass, cur &gt; 0.5f ? 0.0f : 1.0f);</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        setDirty();</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    }</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    m_bypassHovered = m_bypassRect.contains(event.position);</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="comment">// Type segments</span></div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_typeRects.size(); ++i) {</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>            <span class="keywordflow">if</span> (m_typeRects[i].contains(event.position)) {</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>                m_instance-&gt;setParameter(AestraFilter::kType,</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>                                         AestraFilter::normFromType(<span class="keyword">static_cast&lt;</span>AestraFilter::Type<span class="keyword">&gt;</span>(i)));</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>                setDirty();</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>            }</div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>        }</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    }</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span> </div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="comment">// Knob vertical drag (rotary → cursor capture)</span></div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keywordflow">if</span> (m_draggingParam &gt;= 0) {</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        <span class="keywordflow">if</span> (event.released) {</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>            endKnobCapture();</div>
 <div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>            m_draggingParam = -1;</div>
 <div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>        }</div>
 <div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>        <span class="keywordflow">if</span> (event.button == NUIMouseButton::None) {</div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> delta = (m_dragStartY - my) / kDragRangePx;</div>
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>            m_instance-&gt;setParameter(<span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_draggingParam),</div>
-<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>                                     std::clamp(m_dragStartValue + delta, 0.0f, 1.0f));</div>
-<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>            setDirty();</div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>        }</div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    }</div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        <span class="keyword">const</span> <span class="keyword">struct </span>{</div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>            NUIRect rect;</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>            uint32_t param;</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>        } knobs[] = {</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>            {m_cutoffRect, AestraFilter::kCutoff},    {m_resoRect, AestraFilter::kReso},</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>            {m_driveRect, AestraFilter::kDrive},      {m_envRect, AestraFilter::kEnvAmount},</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>            {m_attackRect, AestraFilter::kEnvAttack}, {m_releaseRect, AestraFilter::kEnvRelease},</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>        };</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; k : knobs) {</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>            <span class="keywordflow">if</span> (k.rect.contains(event.position)) {</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>                m_draggingParam = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(k.param);</div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>                m_dragStartY = my;</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>                m_dragStartValue = m_instance-&gt;getParameter(k.param);</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>            }</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>        }</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    }</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span> </div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    <span class="comment">// Mix slider drag</span></div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    <span class="keyword">const</span> NUIRect mixTrack = mixTrackRect();</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    <span class="keywordflow">if</span> (m_draggingMix) {</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>        <span class="keywordflow">if</span> (event.released) {</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>            m_draggingMix = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        }</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        <span class="keywordflow">if</span> (event.button == NUIMouseButton::None) {</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>            m_instance-&gt;setParameter(AestraFilter::kMix, t);</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>            setDirty();</div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>        }</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    }</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left &amp;&amp; mixTrack.contains(event.position)) {</div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>        m_draggingMix = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>        m_instance-&gt;setParameter(AestraFilter::kMix, t);</div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>        setDirty();</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    }</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span> </div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>    <span class="keywordflow">return</span> consumeInsideBounds(event);</div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>}</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span> </div>
-<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span><span class="keywordtype">void</span> AestraFilterEditor::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
-<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    AestraPanelWindow::onResize(width, height);</div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    layoutControls();</div>
-<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>}</div>
-<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span> </div>
-<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>            <span class="comment">// Service-owned frame delta (up = increase); accumulates into the</span></div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>            <span class="comment">// current value, so total travel matches the old absolute mapping.</span></div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> step = knobDragStep(event, kDragRangePx);</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> cur = m_instance-&gt;getParameter(<span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_draggingParam));</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            m_instance-&gt;setParameter(<span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_draggingParam),</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>                                     std::clamp(cur + step, 0.0f, 1.0f));</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>            setDirty();</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        }</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    }</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>        <span class="keyword">const</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>            NUIRect rect;</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>            uint32_t param;</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>        } knobs[] = {</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>            {m_cutoffRect, AestraFilter::kCutoff},    {m_resoRect, AestraFilter::kReso},</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>            {m_driveRect, AestraFilter::kDrive},      {m_envRect, AestraFilter::kEnvAmount},</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>            {m_attackRect, AestraFilter::kEnvAttack}, {m_releaseRect, AestraFilter::kEnvRelease},</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>        };</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; k : knobs) {</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>            <span class="keywordflow">if</span> (k.rect.contains(event.position)) {</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>                m_draggingParam = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(k.param);</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>                m_dragStartValue = m_instance-&gt;getParameter(k.param);</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>                beginKnobCapture({k.rect.x + k.rect.width * 0.5f, k.rect.y + k.rect.height * 0.5f},</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>                                 <span class="keyword">event</span>.position);</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>            }</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>        }</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    }</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span> </div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    <span class="comment">// Mix slider drag</span></div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    <span class="keyword">const</span> NUIRect mixTrack = mixTrackRect();</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>    <span class="keywordflow">if</span> (m_draggingMix) {</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        <span class="keywordflow">if</span> (event.released) {</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>            m_draggingMix = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>        }</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>        <span class="keywordflow">if</span> (event.button == NUIMouseButton::None) {</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>            m_instance-&gt;setParameter(AestraFilter::kMix, t);</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>            setDirty();</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>        }</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>    }</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left &amp;&amp; mixTrack.contains(event.position)) {</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>        m_draggingMix = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>        m_instance-&gt;setParameter(AestraFilter::kMix, t);</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>        setDirty();</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    }</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span> </div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    <span class="keywordflow">return</span> consumeInsideBounds(event);</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>}</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span> </div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span><span class="keywordtype">void</span> AestraFilterEditor::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    AestraPanelWindow::onResize(width, height);</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    layoutControls();</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>}</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span> </div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1AestraFilter_html"><div class="ttname"><a href="../../d1/d96/classAestra_1_1Audio_1_1Plugins_1_1AestraFilter.html">Aestra::Audio::Plugins::AestraFilter</a></div><div class="ttdef"><b>Definition</b> <a href="../../d7/d8b/AestraFilter_8h_source.html#l00040">AestraFilter.h:40</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 </div><!-- fragment --></div><!-- contents -->

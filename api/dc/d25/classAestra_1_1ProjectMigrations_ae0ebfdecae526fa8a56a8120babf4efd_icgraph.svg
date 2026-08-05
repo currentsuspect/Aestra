@@ -31,7 +31,7 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../dc/d25/classAestra_1_1ProjectMigrations.html#a591a387d5849ef6f4c1cfcf9a04ecf1c" target="_top" xlink:title="Run all migrations to bring a project to current version.">
+<g id="a_Node000002"><a xlink:href="../../dc/d25/classAestra_1_1ProjectMigrations.html#a9617005c61361011083974723fa3642a" target="_top" xlink:title="Run all migrations to bring a project to current version.">
 <polygon fill="white" stroke="#666666" points="140,-30 0,-30 0,0 140,0 140,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::ProjectMigrations</text>
 <text text-anchor="middle" x="70" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::runMigrations</text>

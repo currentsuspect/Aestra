@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['lanemode_0',['LaneMode',['../d3/df4/classAestraUI_1_1PianoRollControlPanel.html#a3f8ed4f8fa14561a792f60e6256e221d',1,'AestraUI::PianoRollControlPanel']]],
-  ['loadintegrity_1',['LoadIntegrity',['../d0/d4b/classProjectSerializer.html#a2efc2e03f6c36944463cea9acaae84bb',1,'ProjectSerializer']]]
+  ['hostthreadaffinity_0',['HostThreadAffinity',['../d3/d7a/HostVerbRegistry_8h.html#a811b9605980bc3ec78624aa89a9e4d83',1,'Aestra::Audio']]],
+  ['hostverbdomain_1',['HostVerbDomain',['../d3/d7a/HostVerbRegistry_8h.html#ae4fe5c25565ab3714b60306ec5d3bb7e',1,'Aestra::Audio']]]
 ];

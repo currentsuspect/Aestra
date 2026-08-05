@@ -1,5 +1,5 @@
 <map id="AestraUI::EffectChainRack" name="AestraUI::EffectChainRack">
-<area shape="rect" id="Node000001" title="Effect chain rack UI for mixer channel inserts." alt="" coords="19,167,211,192"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="19,167,211,192"/>
 <area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="23,93,208,119"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,132,118,167,113,167,113,132"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>

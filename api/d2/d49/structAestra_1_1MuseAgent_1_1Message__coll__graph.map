@@ -1,0 +1,20 @@
+<map id="Aestra::MuseAgent::Message" name="Aestra::MuseAgent::Message">
+<area shape="rect" id="Node000001" title="One conversation turn in provider&#45;neutral form." alt="" coords="287,447,440,487"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="299,95,385,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="347,134,347,144,365,446,360,447,342,144,341,134"/>
+<area shape="rect" id="Node000005" href="$df/dc5/structAestra_1_1MuseAgent_1_1ToolCall.html" title=" " alt="" coords="167,197,320,237"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="323,132,309,146,262,199,258,195,305,142,319,128"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="273,5,411,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="345,59,345,94,339,94,339,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="148,344,325,384"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="259,393,285,421,322,444,319,449,282,425,255,397"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="244,251,240,344,235,344,239,251"/>
+<area shape="rect" id="Node000006" href="$df/dee/classAestra_1_1JSON.html" title=" " alt="" coords="149,95,253,120"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="200,134,200,153,204,172,221,196,217,199,200,174,195,154,194,134"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="5,205,135,230"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="71,244,75,282,82,302,93,318,119,338,149,350,147,355,116,342,89,322,77,304,70,284,66,245"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="51,95,89,120"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="73,134,73,204,67,204,67,134"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="401,351,451,377"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="414,390,377,448,373,445,409,387"/>
+</map>

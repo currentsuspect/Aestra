@@ -104,8 +104,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a877517700963964061c606a06455f9a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0b0e8b77bb020ab04a56e84dbe030d6c" id="r_a0b0e8b77bb020ab04a56e84dbe030d6c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/db9/classAestra_1_1Audio_1_1CommandManager.html#a0b0e8b77bb020ab04a56e84dbe030d6c">getRedoName</a> () const</td></tr>
 <tr class="separator:a0b0e8b77bb020ab04a56e84dbe030d6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51854ef14ad11e493158fe4acc13bde9" id="r_a51854ef14ad11e493158fe4acc13bde9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/db9/classAestra_1_1Audio_1_1CommandManager.html#a51854ef14ad11e493158fe4acc13bde9">setOnStateChanged</a> (CommandHistory::StateChangedCallback cb)</td></tr>
-<tr class="separator:a51854ef14ad11e493158fe4acc13bde9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a369001a131285cd9666fe6ab2fe614e9" id="r_a369001a131285cd9666fe6ab2fe614e9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/db9/classAestra_1_1Audio_1_1CommandManager.html#a369001a131285cd9666fe6ab2fe614e9">addOnStateChanged</a> (CommandHistory::StateChangedCallback cb)</td></tr>
+<tr class="separator:a369001a131285cd9666fe6ab2fe614e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Canonical Command Model for Aestra. </p>
@@ -149,6 +149,34 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a369001a131285cd9666fe6ab2fe614e9" name="a369001a131285cd9666fe6ab2fe614e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a369001a131285cd9666fe6ab2fe614e9">&#9670;&#160;</a></span>addOnStateChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::CommandManager::addOnStateChanged </td>
+          <td>(</td>
+          <td class="paramtype">CommandHistory::StateChangedCallback&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/CommandManager_8h_source.html#l00081">81</a> of file <a class="el" href="../../d0/d91/CommandManager_8h_source.html">CommandManager.h</a>.</p>
+
+</div>
+</div>
 <a id="a6153dc761b38aff3d7dceb8e57add431" name="a6153dc761b38aff3d7dceb8e57add431"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6153dc761b38aff3d7dceb8e57add431">&#9670;&#160;</a></span>canRedo()</h2>
 
@@ -327,34 +355,6 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d4/dea/CommandManager_8cpp_source.html#l00014">14</a> of file <a class="el" href="../../d4/dea/CommandManager_8cpp_source.html">CommandManager.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a51854ef14ad11e493158fe4acc13bde9" name="a51854ef14ad11e493158fe4acc13bde9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a51854ef14ad11e493158fe4acc13bde9">&#9670;&#160;</a></span>setOnStateChanged()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Aestra::Audio::CommandManager::setOnStateChanged </td>
-          <td>(</td>
-          <td class="paramtype">CommandHistory::StateChangedCallback&#160;</td>
-          <td class="paramname"><em>cb</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/CommandManager_8h_source.html#l00081">81</a> of file <a class="el" href="../../d0/d91/CommandManager_8h_source.html">CommandManager.h</a>.</p>
 
 </div>
 </div>

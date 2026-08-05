@@ -1,7 +1,7 @@
 <map id="Aestra::Audio::UnitInfo::getRouteMode" name="Aestra::Audio::UnitInfo::getRouteMode">
-<area shape="rect" id="Node000001" title="Effective route mode, preserving legacy route fields as authority until cleared." alt="" coords="236,37,405,77"/>
-<area shape="rect" id="Node000002" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab435733f2cc4ca63ba5f3bf144eeb661" title="True when this unit currently routes to master preview path." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000001" title="Effective legacy Timeline ownership mode." alt="" coords="236,37,405,77"/>
+<area shape="rect" id="Node000002" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab435733f2cc4ca63ba5f3bf144eeb661" title="True when this unit has no legacy Timeline assignment." alt="" coords="5,5,188,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,46,188,41,188,36,223,41"/>
-<area shape="rect" id="Node000003" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad87a5e883a573636844c93e55a8082ba" title="True when this unit currently routes into the Timeline track path." alt="" coords="9,69,185,109"/>
+<area shape="rect" id="Node000003" href="$d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad87a5e883a573636844c93e55a8082ba" title="True when this unit carries a legacy Timeline assignment." alt="" coords="9,69,185,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="223,74,185,79,184,74,222,69"/>
 </map>

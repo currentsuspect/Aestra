@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::RenderAudioClipCommand" name="Aestra::Audio::RenderAudioClipCommand">
+<area shape="rect" id="Node000001" title="Base for destructive clip operations that commit a new audio file." alt="" coords="222,271,422,311"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="5,183,193,208"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="140,211,278,268,276,273,138,216"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html" title="Track/Channel manager for the audio engine." alt="" coords="218,183,426,208"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="325,222,325,270,319,270,319,222"/>
+<area shape="rect" id="Node000004" href="$dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html" title="Unique identifier for a clip instance." alt="" coords="450,183,661,208"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="515,216,370,273,368,268,513,211"/>
+<area shape="rect" id="Node000005" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html" title=" " alt="" coords="459,108,652,133"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="558,148,558,182,553,182,553,148"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="518,5,593,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="558,45,558,108,553,108,553,45"/>
+</map>

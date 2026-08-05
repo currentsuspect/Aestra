@@ -1,0 +1,26 @@
+<map id="Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute" name="Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,206,201,261"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a336f4425c8210367a25c7b3659202ffb" title="Create a lane restoring a serialized identity (#446)." alt="" coords="251,5,456,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,204,169,130,206,90,248,55,258,49,261,54,251,60,209,94,173,134,122,207"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="249,69,457,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="135,204,187,165,248,126,277,112,279,117,251,130,190,169,138,208"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="761,305,963,345"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="154,204,199,184,249,169,307,160,353,158,458,169,532,178,589,187,645,203,714,230,774,261,825,295,822,299,772,265,712,234,643,208,588,193,531,183,457,175,353,164,307,165,250,175,201,189,156,208"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="249,184,457,224"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="201,219,235,215,236,220,202,225"/>
+<area shape="rect" id="Node000006" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#abbf7878d2749f8c4a89c65c5ccae9caa" title="Return the unit&#39;s stable mixer destination ID (0 means Master)." alt="" coords="509,244,710,284"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="202,237,495,254,495,260,202,242"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a10f853c9ec1cd607bc408aa5d988942f" title="Mark the project as modified." alt="" coords="249,299,457,339"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="185,258,282,292,280,297,183,263"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a991e5f90ac0f474f692c92bf9447aa91" title="Put a detached channel back where it came from." alt="" coords="249,363,457,403"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="134,259,186,305,251,348,265,355,262,360,248,353,183,309,130,263"/>
+<area shape="rect" id="Node000010" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a7ca795d93502b59255fb5579578c58bf" title="Route a unit to a stable mixer channel ID (0 means Master)." alt="" coords="253,427,454,467"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="122,260,143,295,173,336,209,377,251,413,260,418,257,423,248,417,205,381,168,339,139,297,117,262"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="693,281,766,299,765,305,692,287"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="505,312,713,352"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="454,360,494,352,495,357,455,365"/>
+<area shape="poly" id="edge11_Node000010_Node000004" title=" " alt="" coords="445,424,713,361,772,346,774,351,714,367,446,429"/>
+<area shape="rect" id="Node000011" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="509,427,710,467"/>
+<area shape="poly" id="edge12_Node000010_Node000011" title=" " alt="" coords="454,444,495,444,495,449,454,449"/>
+<area shape="poly" id="edge13_Node000011_Node000004" title=" " alt="" coords="668,424,712,406,815,350,818,355,714,410,670,429"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraContent::playSoundPreview" name="AestraContent::playSoundPreview">
+<area shape="rect" id="Node000001" title="Start preview playback for a file&#45;browser item." alt="" coords="265,5,456,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,5,217,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="251,28,218,28,218,23,251,23"/>
+</map>

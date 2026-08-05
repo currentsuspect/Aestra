@@ -1,9 +1,7 @@
 <map id="Aestra::Audio::TrackManager::addChannel" name="Aestra::Audio::TrackManager::addChannel">
-<area shape="rect" id="Node000001" title="Add a new channel." alt="" coords="248,69,456,109"/>
+<area shape="rect" id="Node000001" title="Add a new channel." alt="" coords="248,37,456,77"/>
 <area shape="rect" id="Node000002" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4439b06fc72f0560a8277aed0e34eda9" title="Add the channel if the command has not been executed yet." alt="" coords="5,5,200,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="260,68,180,48,182,43,261,63"/>
-<area shape="rect" id="Node000003" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Recreate the channel after an undo operation." alt="" coords="5,69,200,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="234,92,200,92,200,87,234,87"/>
-<area shape="rect" id="Node000004" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="5,133,200,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="261,115,182,136,180,131,260,110"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,45,200,40,201,35,235,40"/>
+<area shape="rect" id="Node000003" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo." alt="" coords="5,69,200,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,75,201,79,200,74,234,70"/>
 </map>

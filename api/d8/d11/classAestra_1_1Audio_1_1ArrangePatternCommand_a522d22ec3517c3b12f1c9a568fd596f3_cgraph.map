@@ -1,14 +1,7 @@
 <map id="Aestra::Audio::ArrangePatternCommand::undo" name="Aestra::Audio::ArrangePatternCommand::undo">
-<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,69,220,109"/>
-<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a736081f5fcc291f3a3a355315f487abd" title="Assign a unit to a Timeline lane for arrangement playback." alt="" coords="271,5,473,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="194,67,277,46,278,51,195,72"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="268,69,476,109"/>
-<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="220,87,254,87,254,92,220,92"/>
-<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="268,133,476,173"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="195,107,278,127,277,133,194,112"/>
-<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="773,7,975,47"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="473,21,524,20,725,20,760,21,760,26,725,25,524,25,473,26"/>
-<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="524,35,725,75"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="473,34,511,39,510,44,473,40"/>
-<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="725,41,759,37,760,42,726,46"/>
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,37,220,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="268,5,476,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,41,254,37,255,42,221,47"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#af44a50346cebfd76b853283bacc24818" title="Remove a clip by ID." alt="" coords="269,69,475,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="221,68,256,72,255,78,220,73"/>
 </map>

@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::HostVerbResult" name="Aestra::Audio::HostVerbResult">
+<area shape="rect" id="Node000001" title="What a host verb returns." alt="" coords="15,197,233,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,56,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="53,129,115,196,111,199,49,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="81,95,167,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="127,134,127,197,121,197,121,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="55,5,193,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="127,59,127,94,121,94,121,59"/>
+<area shape="rect" id="Node000005" href="$df/dee/classAestra_1_1JSON.html" title=" " alt="" coords="192,95,296,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="234,133,219,155,200,175,180,189,159,200,156,195,177,185,197,171,215,152,230,130"/>
+</map>

@@ -91,7 +91,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1e/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot__coll__graph.svg" width="100%" height="460"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1e/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot__coll__graph.svg" width="100%" height="504"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
@@ -101,6 +101,13 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a2d4b370a63ff5388f4a1403e741c97c0" id="r_a2d4b370a63ff5388f4a1403e741c97c0"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a2d4b370a63ff5388f4a1403e741c97c0">pluginLatencySamples</a> {0}</td></tr>
+<tr class="separator:a2d4b370a63ff5388f4a1403e741c97c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45909d700552ce401ac13dd5c751c558" id="r_a45909d700552ce401ac13dd5c751c558"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a45909d700552ce401ac13dd5c751c558">outputCompensationSamples</a> {0}</td></tr>
+<tr class="separator:a45909d700552ce401ac13dd5c751c558"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6cf5a1afada206a6a8507a2d6db39bc9" id="r_a6cf5a1afada206a6a8507a2d6db39bc9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a6cf5a1afada206a6a8507a2d6db39bc9">compensationEnabled</a> {false}</td></tr>
+<tr class="memdesc:a6cf5a1afada206a6a8507a2d6db39bc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Engine-wide latency compensation toggle.  <br /></td></tr>
+<tr class="separator:a6cf5a1afada206a6a8507a2d6db39bc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad329c7dc3824e8e610c096368cf7d665" id="r_ad329c7dc3824e8e610c096368cf7d665"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html">EdgeSlotSnapshot</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#ad329c7dc3824e8e610c096368cf7d665">mainOutEdgeDelay</a></td></tr>
 <tr class="separator:ad329c7dc3824e8e610c096368cf7d665"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e4ec9021aea3dbe27cace61fac3bf26" id="r_a3e4ec9021aea3dbe27cace61fac3bf26"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html">EdgeSlotSnapshot</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a3e4ec9021aea3dbe27cace61fac3bf26">sendEdgeDelays</a></td></tr>
@@ -111,10 +118,29 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>PDC v2 (P4b.2): per-track per-edge compensation snapshot for tests and tooling. </p>
 <p>NOT RT-SAFE: read from main / control thread only.</p>
-<p>Returns the compensation sample counts and buffer-capacity-mask values that the off-RT apply pass wrote into <a class="el" href="../../d3/ded/structAestra_1_1Audio_1_1TrackRTState.html">TrackRTState</a> for the given track index. The buffer contents themselves are not exposed; only the values the RT-side P4b.3 consumer will read. </p>
+<p>Returns the node latency/compensation values and per-edge delay state that the off-RT apply pass wrote into <a class="el" href="../../d3/ded/structAestra_1_1Audio_1_1TrackRTState.html">TrackRTState</a> for the given track index. The buffer contents themselves are not exposed; only the values the RT-side P4b.3 consumer will read. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00282">282</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00281">281</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a6cf5a1afada206a6a8507a2d6db39bc9" name="a6cf5a1afada206a6a8507a2d6db39bc9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6cf5a1afada206a6a8507a2d6db39bc9">&#9670;&#160;</a></span>compensationEnabled</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::compensationEnabled {false}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Engine-wide latency compensation toggle. </p>
+<p>Per-track enablement is not implemented, so this is the same value for every track index. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00294">294</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
 <a id="ad329c7dc3824e8e610c096368cf7d665" name="ad329c7dc3824e8e610c096368cf7d665"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad329c7dc3824e8e610c096368cf7d665">&#9670;&#160;</a></span>mainOutEdgeDelay</h2>
 
@@ -127,7 +153,39 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00295">295</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a45909d700552ce401ac13dd5c751c558" name="a45909d700552ce401ac13dd5c751c558"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a45909d700552ce401ac13dd5c751c558">&#9670;&#160;</a></span>outputCompensationSamples</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::outputCompensationSamples {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
 <p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00291">291</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a2d4b370a63ff5388f4a1403e741c97c0" name="a2d4b370a63ff5388f4a1403e741c97c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d4b370a63ff5388f4a1403e741c97c0">&#9670;&#160;</a></span>pluginLatencySamples</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::pluginLatencySamples {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00290">290</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -143,7 +201,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00292">292</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00296">296</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -159,7 +217,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00293">293</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00297">297</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>

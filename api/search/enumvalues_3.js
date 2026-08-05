@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['locked30_0',['Locked30',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html#a6e29841c9e42922b6a81671a5fc59638a28c769caadd560d9681174621f2fa841',1,'AestraUI::NUIAdaptiveFPS']]],
-  ['locked60_1',['Locked60',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html#a6e29841c9e42922b6a81671a5fc59638a9e6f19da7c8a22046b81e1cb142ad239',1,'AestraUI::NUIAdaptiveFPS']]]
+  ['dialog_0',['Dialog',['../d3/d7a/HostVerbRegistry_8h.html#ae4fe5c25565ab3714b60306ec5d3bb7ead2ab42830caa7a02b36d96a46dd44b8d',1,'Aestra::Audio']]],
+  ['disconnected_1',['Disconnected',['../d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html#a75e925977614e2f4df0010efef14ed8faef70e46fd3bbc21e3e1f0b6815e750c0',1,'Aestra::MuseAgent::MuseSocketClient']]],
+  ['domainmismatch_2',['DomainMismatch',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41a5cf6bf737da62e3603f5ce446cd105e1',1,'Aestra::Audio::HostVerbRegistry']]],
+  ['duplicate_3',['Duplicate',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41aed75712b0eb1913c28a3872731ffd48d',1,'Aestra::Audio::HostVerbRegistry']]]
 ];

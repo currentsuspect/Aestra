@@ -126,6 +126,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac75a7e34edc6bca4dd6c9351ae8b0d46" id="r_ac75a7e34edc6bca4dd6c9351ae8b0d46"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ac75a7e34edc6bca4dd6c9351ae8b0d46">setOnPatternEdited</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>)&gt; callback)</td></tr>
 <tr class="memdesc:ac75a7e34edc6bca4dd6c9351ae8b0d46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired after the current pattern is edited.  <br /></td></tr>
 <tr class="separator:ac75a7e34edc6bca4dd6c9351ae8b0d46"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac884ee62b1530638cdac562292313778" id="r_ac884ee62b1530638cdac562292313778"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ac884ee62b1530638cdac562292313778">setOnEditingUnitChanged</a> (std::function&lt; void(UnitID)&gt; callback)</td></tr>
+<tr class="memdesc:ac884ee62b1530638cdac562292313778"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired when the editing unit is switched from the Piano Roll's own unit dropdown (so the rest of the app can follow).  <br /></td></tr>
+<tr class="separator:ac884ee62b1530638cdac562292313778"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1cadd1b25fa40fa6a262807c30f38960" id="r_a1cadd1b25fa40fa6a262807c30f38960"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#a1cadd1b25fa40fa6a262807c30f38960">getCurrentPatternId</a> () const</td></tr>
 <tr class="memdesc:a1cadd1b25fa40fa6a262807c30f38960"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the currently loaded pattern.  <br /></td></tr>
 <tr class="separator:a1cadd1b25fa40fa6a262807c30f38960"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -325,12 +328,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
 <tr class="separator:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aaf6ad4f424ae5a7e61ea7f0cbb0af4c1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aaf6ad4f424ae5a7e61ea7f0cbb0af4c1">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
-<tr class="separator:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ac48c836258df2124192f9587f13c136a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ac48c836258df2124192f9587f13c136a">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport={})</td></tr>
+<tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3544f64233bc0ff1cab9f0fdd71131eb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3544f64233bc0ff1cab9f0fdd71131eb">setCursorCaptureActive</a> (bool active)</td></tr>
-<tr class="separator:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
+<tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
+<tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
@@ -387,13 +394,13 @@ Additional Inherited Members</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">36</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00128">Aestra::Audio::AudioEngine::commandQueue()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00158">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00170">loadPattern()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">savePattern()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00398">setEditingUnit()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00202">Aestra::Audio::AudioEngine::setGlobalSamplePos()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00127">Aestra::Audio::AudioEngine::commandQueue()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00157">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00193">loadPattern()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00278">savePattern()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00440">setEditingUnit()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00201">Aestra::Audio::AudioEngine::setGlobalSamplePos()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ae66c8a1f925037421cdb8bd97449bc7c_cgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ae66c8a1f925037421cdb8bd97449bc7c_cgraph.svg" width="100%" height="558"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -425,7 +432,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Get the currently loaded pattern. </p>
 <dl class="section return"><dt>Returns</dt><dd>Active pattern identifier. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html#l00069">69</a> of file <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html">PianoRollPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html#l00074">74</a> of file <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html">PianoRollPanel.h</a>.</p>
 
 </div>
 </div>
@@ -474,7 +481,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00148">148</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00167">167</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -502,15 +509,15 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00170">170</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00193">193</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">PianoRollPanel()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">PianoRollPanel()</a>, and <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00440">setEditingUnit()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_a4a7cd23bfd85b3c2cafcd34e8a90691b_icgraph.svg" width="416" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_a4a7cd23bfd85b3c2cafcd34e8a90691b_icgraph.svg" width="643" height="79"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -560,7 +567,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00166">166</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00189">189</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -598,9 +605,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00405">405</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00493">493</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00204">Aestra::Audio::AudioEngine::getPositionSeconds()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00203">Aestra::Audio::AudioEngine::getPositionSeconds()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -628,11 +635,11 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Persist the currently edited notes back to the pattern manager. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">245</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00278">278</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00020">Aestra::Audio::NoteDiffResult::added</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00028">Aestra::Audio::NoteDiffResult::modified</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00024">Aestra::Audio::NoteDiffResult::moved</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00022">Aestra::Audio::NoteDiffResult::removed</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00026">Aestra::Audio::NoteDiffResult::resized</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00381">Aestra::Audio::AudioEngine::setPatternPlaybackMode()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00020">Aestra::Audio::NoteDiffResult::added</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00028">Aestra::Audio::NoteDiffResult::modified</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00024">Aestra::Audio::NoteDiffResult::moved</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00022">Aestra::Audio::NoteDiffResult::removed</a>, <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00026">Aestra::Audio::NoteDiffResult::resized</a>, and <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00575">Aestra::Audio::AudioEngine::setPatternPlaybackMode()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">PianoRollPanel()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">PianoRollPanel()</a>, and <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00440">setEditingUnit()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -645,7 +652,7 @@ Additional Inherited Members</h2></td></tr>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ae5851e1275e34b693d6bc2aa8efb9ba7_icgraph.svg" width="416" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ae5851e1275e34b693d6bc2aa8efb9ba7_icgraph.svg" width="643" height="79"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -682,7 +689,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html#l00085">85</a> of file <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html">PianoRollPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html#l00090">90</a> of file <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html">PianoRollPanel.h</a>.</p>
 
 </div>
 </div>
@@ -710,7 +717,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00160">160</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00183">183</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -738,16 +745,55 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00398">398</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00440">440</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00193">loadPattern()</a>, and <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00278">savePattern()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00036">PianoRollPanel()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ad54d0aa6ab8faf7e98408cf3ef5aa773_cgraph.svg" width="663" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d74/classAestra_1_1Audio_1_1PianoRollPanel_ad54d0aa6ab8faf7e98408cf3ef5aa773_icgraph.svg" width="416" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="ac884ee62b1530638cdac562292313778" name="ac884ee62b1530638cdac562292313778"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac884ee62b1530638cdac562292313778">&#9670;&#160;</a></span>setOnEditingUnitChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::PianoRollPanel::setOnEditingUnitChanged </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(UnitID)&gt;&#160;</td>
+          <td class="paramname"><em>callback</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set the callback fired when the editing unit is switched from the Piano Roll's own unit dropdown (so the rest of the app can follow). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html#l00069">69</a> of file <a class="el" href="../../d1/dcd/PianoRollPanel_8h_source.html">PianoRollPanel.h</a>.</p>
 
 </div>
 </div>
@@ -811,7 +857,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00154">154</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00173">173</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -831,7 +877,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00144">144</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00163">163</a> of file <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html">PianoRollPanel.cpp</a>.</p>
 
 </div>
 </div>

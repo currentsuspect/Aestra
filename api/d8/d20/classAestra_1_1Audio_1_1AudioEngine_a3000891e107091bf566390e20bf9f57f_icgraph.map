@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::setLoopEnabled" name="Aestra::Audio::AudioEngine::setLoopEnabled">
+<area shape="rect" id="Node000001" title="Enable or disable transport looping." alt="" coords="247,5,445,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#adde34f69a39cdca3682dc5fbcb183c98" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="5,5,199,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="233,28,199,28,199,23,233,23"/>
+</map>

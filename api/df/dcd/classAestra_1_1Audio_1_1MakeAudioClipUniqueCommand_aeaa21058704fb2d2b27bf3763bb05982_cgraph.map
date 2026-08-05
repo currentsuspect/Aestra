@@ -1,0 +1,25 @@
+<map id="Aestra::Audio::MakeAudioClipUniqueCommand::redo" name="Aestra::Audio::MakeAudioClipUniqueCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,248,203,288"/>
+<area shape="rect" id="Node000002" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#a1d1e3d589894c6d11eb2352055c9421e" title="Execute the command (first time)" alt="" coords="251,248,469,288"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,265,237,265,237,271,203,271"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="517,5,737,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="369,246,391,207,424,158,466,107,516,62,538,49,540,53,519,66,470,110,428,161,396,210,374,249"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="785,63,1005,103"/>
+<area shape="poly" id="edge6_Node000002_Node000004" title=" " alt="" coords="372,246,394,214,427,174,468,136,516,106,579,84,645,71,711,66,772,67,772,72,711,71,646,76,580,89,518,110,472,140,431,178,399,217,376,249"/>
+<area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a672117a00d363d60ddee6c70af61c431" title="Detach a pattern while preserving its identity and state for undo." alt="" coords="517,120,737,160"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="387,246,445,208,516,170,535,162,537,167,518,174,448,212,390,250"/>
+<area shape="rect" id="Node000006" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="525,184,730,224"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="444,245,530,225,531,230,445,251"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="523,248,731,288"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="469,265,509,265,509,271,469,271"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="523,312,731,352"/>
+<area shape="poly" id="edge8_Node000002_Node000008" title=" " alt="" coords="445,285,531,306,530,311,444,291"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a10f853c9ec1cd607bc408aa5d988942f" title="Mark the project as modified." alt="" coords="523,376,731,416"/>
+<area shape="poly" id="edge9_Node000002_Node000009" title=" " alt="" coords="390,286,448,324,518,362,537,369,535,374,516,366,445,328,387,290"/>
+<area shape="rect" id="Node000010" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a72a2dd4a0e71f33f0303d44664ccbf14" title="Reinsert a detached pattern with the same stable identity." alt="" coords="517,440,737,480"/>
+<area shape="poly" id="edge10_Node000002_Node000010" title=" " alt="" coords="378,287,434,355,474,393,519,426,530,432,528,437,516,430,471,397,431,359,374,290"/>
+<area shape="rect" id="Node000011" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#afef7f68c8b1a5e22fb9b0ddfb21731ed" title="Replace the source pattern referenced by one clip instance." alt="" coords="525,504,730,544"/>
+<area shape="poly" id="edge12_Node000002_Node000011" title=" " alt="" coords="372,287,393,330,424,384,467,441,492,467,519,490,528,495,525,500,516,494,488,471,463,445,420,387,388,332,367,289"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="722,43,788,57,787,62,721,48"/>
+<area shape="poly" id="edge11_Node000010_Node000004" title=" " alt="" coords="719,438,736,426,769,391,798,352,822,309,842,265,870,181,886,116,891,117,875,183,847,267,827,311,802,355,773,395,739,430,722,442"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIDoubleClickTracker" name="AestraUI::NUIDoubleClickTracker">
+<area shape="rect" id="Node000001" title="Double&#45;click detection for platforms that never populate the event flag." alt="" coords="5,93,193,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="74,5,125,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="102,44,102,93,97,93,97,44"/>
+</map>

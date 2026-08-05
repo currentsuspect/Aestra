@@ -1,27 +1,29 @@
 <map id="Aestra::Audio::AudioEngine::setTransportPlaying" name="Aestra::Audio::AudioEngine::setTransportPlaying">
-<area shape="rect" id="Node000001" title="Set transport running state and mirror it onto the audio command queue." alt="" coords="529,229,728,269"/>
-<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="275,5,474,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="609,218,587,181,558,139,522,96,480,60,459,48,461,43,483,55,526,92,562,135,592,178,613,216"/>
-<area shape="rect" id="Node000004" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#a510fd7a6a2f7d268b16903198320080c" title="Execute the command (first time)" alt="" coords="269,69,481,109"/>
-<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="598,221,546,171,514,146,480,124,454,112,456,107,483,119,517,141,550,167,602,217"/>
-<area shape="rect" id="Node000005" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#ae157d35a9cb8c9febd3c9f4c1abdb8b5" title="Execute the command (first time)" alt="" coords="268,133,481,173"/>
-<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="572,226,480,188,445,176,447,171,482,183,574,221"/>
-<area shape="rect" id="Node000006" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#a0adebc1dd5eefa2426618771ba329f09" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="269,197,481,237"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="515,238,480,233,481,228,516,232"/>
-<area shape="rect" id="Node000007" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a7dd0884589871e5b875c380104197b44" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="268,261,481,301"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="516,266,482,271,481,265,516,261"/>
-<area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="270,325,479,365"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="574,278,482,316,447,328,445,323,480,311,572,273"/>
-<area shape="rect" id="Node000011" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#af1559aa07f6d72026e9dd75207d24f82" title="Undo the command." alt="" coords="269,389,481,429"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="602,282,550,332,517,357,483,380,456,392,454,387,480,375,514,353,546,328,598,278"/>
-<area shape="rect" id="Node000012" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a42babea4b3e8d540d6f64abe0fceafa8" title="Undo the command." alt="" coords="268,453,481,493"/>
-<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="613,283,592,320,562,363,526,407,483,444,461,456,459,451,480,439,522,403,558,360,587,317,609,280"/>
-<area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="8,5,217,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="262,37,217,37,217,32,262,32"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="231,14,275,14,275,19,231,19"/>
-<area shape="poly" id="edge9_Node000008_Node000003" title=" " alt="" coords="273,320,266,315,234,284,206,249,183,211,162,172,133,100,116,46,122,45,138,98,167,170,187,209,211,246,238,281,270,311,276,316"/>
-<area shape="rect" id="Node000009" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="5,293,220,333"/>
-<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="256,334,220,329,221,324,257,328"/>
-<area shape="rect" id="Node000010" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="13,357,213,397"/>
-<area shape="poly" id="edge11_Node000008_Node000010" title=" " alt="" coords="257,362,213,368,212,362,256,357"/>
+<area shape="rect" id="Node000001" title="Set transport running state and mirror it onto the audio command queue." alt="" coords="772,229,971,269"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="518,5,717,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="851,218,830,181,801,139,765,96,722,60,701,48,704,43,726,55,768,92,805,135,835,178,856,216"/>
+<area shape="rect" id="Node000004" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#a510fd7a6a2f7d268b16903198320080c" title="Execute the command (first time)" alt="" coords="511,69,723,109"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="841,221,789,171,757,146,723,124,697,112,699,107,725,119,760,141,792,167,845,217"/>
+<area shape="rect" id="Node000005" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#ae157d35a9cb8c9febd3c9f4c1abdb8b5" title="Execute the command (first time)" alt="" coords="511,133,724,173"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="814,226,723,188,688,176,690,171,725,183,816,221"/>
+<area shape="rect" id="Node000006" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#a0adebc1dd5eefa2426618771ba329f09" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="511,197,723,237"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="758,238,723,233,724,228,759,232"/>
+<area shape="rect" id="Node000007" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a7dd0884589871e5b875c380104197b44" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="511,261,724,301"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="759,266,725,271,724,265,758,261"/>
+<area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="513,325,722,365"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="816,278,725,316,690,328,688,323,723,311,814,273"/>
+<area shape="rect" id="Node000012" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#af1559aa07f6d72026e9dd75207d24f82" title="Undo the command." alt="" coords="511,389,723,429"/>
+<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="845,282,792,332,760,357,725,380,699,392,697,387,723,375,757,353,789,328,841,278"/>
+<area shape="rect" id="Node000013" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a42babea4b3e8d540d6f64abe0fceafa8" title="Undo the command." alt="" coords="511,453,724,493"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="856,283,835,320,805,363,768,407,726,444,704,456,701,451,722,439,765,403,801,360,830,317,851,280"/>
+<area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="251,5,460,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="505,37,460,37,460,32,505,32"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="474,14,518,14,518,19,474,19"/>
+<area shape="poly" id="edge9_Node000008_Node000003" title=" " alt="" coords="516,320,509,315,477,284,449,249,425,211,405,172,376,100,359,46,364,45,381,98,410,170,430,209,453,246,481,281,512,311,519,316"/>
+<area shape="rect" id="Node000009" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="248,293,463,333"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="499,334,463,329,463,324,499,328"/>
+<area shape="rect" id="Node000010" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="255,357,455,397"/>
+<area shape="poly" id="edge11_Node000008_Node000010" title=" " alt="" coords="499,362,456,368,455,362,499,357"/>
+<area shape="rect" id="Node000011" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,357,200,397"/>
+<area shape="poly" id="edge12_Node000010_Node000011" title=" " alt="" coords="241,380,200,380,200,375,241,375"/>
 </map>

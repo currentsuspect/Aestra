@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::DeleteTrackCommand::redo" name="Aestra::Audio::DeleteTrackCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,184,200,224"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aebb19e7ac738361bcb91630e344609d1" title="Remove a channel without destroying it, handing back ownership." alt="" coords="256,5,464,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,182,171,123,207,90,247,62,273,48,275,53,249,66,210,95,175,127,122,185"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="520,35,728,75"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="126,182,179,142,212,122,247,106,312,85,379,70,506,55,507,61,380,76,313,90,249,110,214,127,182,146,129,186"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="256,120,464,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="183,181,265,161,267,166,185,187"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="256,184,464,224"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="200,201,242,201,242,207,200,207"/>
+<area shape="rect" id="Node000006" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a23822b02fba150635b0753a21e27491b" title="Reset audio patterns that target a mixer channel being removed." alt="" coords="250,248,470,288"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="185,221,267,242,265,247,183,227"/>
+<area shape="rect" id="Node000007" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a7288d3e0ebca31c8e0fd3926bec63933" title="Reset units targeting a mixer channel that is being removed." alt="" coords="259,312,461,352"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="131,222,184,260,249,298,267,305,265,310,247,302,181,265,128,226"/>
+<area shape="rect" id="Node000010" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8ed4fb8254028711e2b6adb961dd42ee" title="Fail safe after a mixer insert disappears." alt="" coords="248,376,472,416"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="119,223,171,291,207,329,249,362,260,368,258,373,247,366,204,333,167,295,115,226"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="465,34,507,39,506,44,464,40"/>
+<area shape="rect" id="Node000008" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="776,312,977,352"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="461,326,520,325,728,325,762,326,762,331,728,331,520,331,461,332"/>
+<area shape="rect" id="Node000009" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="523,340,725,380"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="461,340,510,345,509,351,461,345"/>
+<area shape="poly" id="edge10_Node000009_Node000008" title=" " alt="" coords="725,346,762,342,763,347,725,352"/>
+</map>

@@ -1,5 +1,9 @@
 <map id="AestraContent::setViewFocus" name="AestraContent::setViewFocus">
-<area shape="rect" id="Node000001" title="Set the active workspace mode." alt="" coords="253,5,465,31"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="5,5,205,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,21,206,21,206,15,240,15"/>
+<area shape="rect" id="Node000001" title="Set the active workspace mode." alt="" coords="261,63,473,88"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="9,5,209,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="295,62,167,33,168,28,297,57"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,55,213,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,78,214,78,214,73,247,73"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="12,119,207,159"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="303,94,191,122,190,117,301,89"/>
 </map>

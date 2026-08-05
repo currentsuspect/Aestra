@@ -117,6 +117,12 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a158136f3a755ef41f77dba4aa9e7c074"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a30d1ae43f29ed9886f1d5410a71b8783" id="r_a30d1ae43f29ed9886f1d5410a71b8783"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html#a30d1ae43f29ed9886f1d5410a71b8783">pan</a> {0.0f}</td></tr>
 <tr class="separator:a30d1ae43f29ed9886f1d5410a71b8783"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5103d3a407c6dc25470ca0e1500439eb" id="r_a5103d3a407c6dc25470ca0e1500439eb"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html#a5103d3a407c6dc25470ca0e1500439eb">playbackRate</a> {1.0f}</td></tr>
+<tr class="separator:a5103d3a407c6dc25470ca0e1500439eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acce2fee078e4e38a2f6e07209b78d441" id="r_acce2fee078e4e38a2f6e07209b78d441"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html#acce2fee078e4e38a2f6e07209b78d441">fadeInSamples</a> {0}</td></tr>
+<tr class="separator:acce2fee078e4e38a2f6e07209b78d441"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d434d8189245ef45a18e1a98e2f6e78" id="r_a2d434d8189245ef45a18e1a98e2f6e78"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html#a2d434d8189245ef45a18e1a98e2f6e78">fadeOutSamples</a> {0}</td></tr>
+<tr class="separator:a2d434d8189245ef45a18e1a98e2f6e78"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Render-time clip state used by the audio thread. </p>
@@ -204,6 +210,38 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="acce2fee078e4e38a2f6e07209b78d441" name="acce2fee078e4e38a2f6e07209b78d441"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acce2fee078e4e38a2f6e07209b78d441">&#9670;&#160;</a></span>fadeInSamples</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::ClipRenderState::fadeInSamples {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00037">37</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a2d434d8189245ef45a18e1a98e2f6e78" name="a2d434d8189245ef45a18e1a98e2f6e78"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d434d8189245ef45a18e1a98e2f6e78">&#9670;&#160;</a></span>fadeOutSamples</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::ClipRenderState::fadeOutSamples {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00038">38</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
 <a id="a158136f3a755ef41f77dba4aa9e7c074" name="a158136f3a755ef41f77dba4aa9e7c074"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a158136f3a755ef41f77dba4aa9e7c074">&#9670;&#160;</a></span>gain</h2>
 
@@ -233,6 +271,22 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00035">35</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a5103d3a407c6dc25470ca0e1500439eb" name="a5103d3a407c6dc25470ca0e1500439eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5103d3a407c6dc25470ca0e1500439eb">&#9670;&#160;</a></span>playbackRate</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::ClipRenderState::playbackRate {1.0f}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00036">36</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>

@@ -80,6 +80,11 @@ $(function() {
   <div class="headertitle"><div class="title">AestraUI::NotificationToast Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Transient status pill (toast).  
+ <a href="../../d3/d02/classAestraUI_1_1NotificationToast.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../dc/d74/NotificationToast_8h_source.html">NotificationToast.h</a>&gt;</code></p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Inheritance diagram for AestraUI::NotificationToast:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -101,17 +106,19 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ac76b310aaa039ac2b1b9eb27c5598389"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ace93ddf8f0e682e00f300533e04e3743" id="r_ace93ddf8f0e682e00f300533e04e3743"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d02/classAestraUI_1_1NotificationToast.html#ace93ddf8f0e682e00f300533e04e3743">onUpdate</a> (double deltaTime) override</td></tr>
 <tr class="separator:ace93ddf8f0e682e00f300533e04e3743"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d6b366b1ccce899bfdb90eea71fc167" id="r_a5d6b366b1ccce899bfdb90eea71fc167"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d02/classAestraUI_1_1NotificationToast.html#a5d6b366b1ccce899bfdb90eea71fc167">onMouseEvent</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event) override</td></tr>
+<tr class="memdesc:a5d6b366b1ccce899bfdb90eea71fc167"><td class="mdescLeft">&#160;</td><td class="mdescRight">Always mouse-transparent: the toast is a passive overlay and must never consume clicks from the panels beneath it, even while it owns the top-most z-order.  <br /></td></tr>
+<tr class="separator:a5d6b366b1ccce899bfdb90eea71fc167"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97c3ea63c070d08b8d06ac0a8b97afe0" id="r_a97c3ea63c070d08b8d06ac0a8b97afe0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d02/classAestraUI_1_1NotificationToast.html#a97c3ea63c070d08b8d06ac0a8b97afe0">setText</a> (const std::string &amp;text)</td></tr>
 <tr class="separator:a97c3ea63c070d08b8d06ac0a8b97afe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3da489f38a2e32a5a59c18a68d1db890" id="r_a3da489f38a2e32a5a59c18a68d1db890"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d02/classAestraUI_1_1NotificationToast.html#a3da489f38a2e32a5a59c18a68d1db890">getText</a> () const</td></tr>
 <tr class="separator:a3da489f38a2e32a5a59c18a68d1db890"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a913f91b040e9dae0ea86016d513ad057" id="r_a913f91b040e9dae0ea86016d513ad057"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d02/classAestraUI_1_1NotificationToast.html#a913f91b040e9dae0ea86016d513ad057">setDuration</a> (double duration)</td></tr>
+<tr class="memdesc:a913f91b040e9dae0ea86016d513ad057"><td class="mdescLeft">&#160;</td><td class="mdescRight">Restarts the visible window; the toast hides itself when it elapses.  <br /></td></tr>
 <tr class="separator:a913f91b040e9dae0ea86016d513ad057"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a0cca0425330ecebd0006284b4ca10bdc inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a0cca0425330ecebd0006284b4ca10bdc"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a0cca0425330ecebd0006284b4ca10bdc">onResize</a> (int width, int height)</td></tr>
 <tr class="separator:a0cca0425330ecebd0006284b4ca10bdc inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a513423dc7e47fc8d27607cc0093ef3a7 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a513423dc7e47fc8d27607cc0093ef3a7"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a513423dc7e47fc8d27607cc0093ef3a7">onMouseEvent</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
-<tr class="separator:a513423dc7e47fc8d27607cc0093ef3a7 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab1679d242ff73c319b4a70c549974b92 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_ab1679d242ff73c319b4a70c549974b92"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ab1679d242ff73c319b4a70c549974b92">onKeyEvent</a> (const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a> &amp;event)</td></tr>
 <tr class="separator:ab1679d242ff73c319b4a70c549974b92 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e07dceb5b1f716b527711a6e2d030e6 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a0e07dceb5b1f716b527711a6e2d030e6"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a0e07dceb5b1f716b527711a6e2d030e6">onFocusGained</a> ()</td></tr>
@@ -230,12 +237,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
 <tr class="separator:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aaf6ad4f424ae5a7e61ea7f0cbb0af4c1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aaf6ad4f424ae5a7e61ea7f0cbb0af4c1">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
-<tr class="separator:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ac48c836258df2124192f9587f13c136a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ac48c836258df2124192f9587f13c136a">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport={})</td></tr>
+<tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3544f64233bc0ff1cab9f0fdd71131eb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3544f64233bc0ff1cab9f0fdd71131eb">setCursorCaptureActive</a> (bool active)</td></tr>
-<tr class="separator:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
+<tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
+<tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
@@ -262,8 +273,10 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:abf059afa666d75cf18a368f713fea011 inherit pro_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../dc/d1b/NUIUtilityWidgets_8h_source.html#l00080">80</a> of file <a class="el" href="../../dc/d1b/NUIUtilityWidgets_8h_source.html">NUIUtilityWidgets.h</a>.</p>
+<div class="textblock"><p>Transient status pill (toast). </p>
+<p>The owner sets an anchor strip via setBounds; the toast draws a centered pill sized to its text and hides itself after the configured duration (with a short fade). It installs no mouse handlers, so it never steals clicks from components beneath it. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d74/NotificationToast_8h_source.html#l00015">15</a> of file <a class="el" href="../../dc/d74/NotificationToast_8h_source.html">NotificationToast.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a362536a657d1dc6cb9b2d703752c5e2f" name="a362536a657d1dc6cb9b2d703752c5e2f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a362536a657d1dc6cb9b2d703752c5e2f">&#9670;&#160;</a></span>NotificationToast()</h2>
@@ -280,7 +293,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html#l00080">80</a> of file <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00010">10</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
@@ -308,7 +321,39 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d1b/NUIUtilityWidgets_8h_source.html#l00088">88</a> of file <a class="el" href="../../dc/d1b/NUIUtilityWidgets_8h_source.html">NUIUtilityWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d74/NotificationToast_8h_source.html#l00027">27</a> of file <a class="el" href="../../dc/d74/NotificationToast_8h_source.html">NotificationToast.h</a>.</p>
+
+</div>
+</div>
+<a id="a5d6b366b1ccce899bfdb90eea71fc167" name="a5d6b366b1ccce899bfdb90eea71fc167"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d6b366b1ccce899bfdb90eea71fc167">&#9670;&#160;</a></span>onMouseEvent()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::NotificationToast::onMouseEvent </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;&#160;</td>
+          <td class="paramname"><em>event</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Always mouse-transparent: the toast is a passive overlay and must never consume clicks from the panels beneath it, even while it owns the top-most z-order. </p>
+
+<p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00050">50</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
@@ -338,7 +383,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html#l00085">85</a> of file <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00015">15</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
@@ -368,7 +413,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html#l00090">90</a> of file <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00040">40</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
@@ -388,7 +433,9 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html#l00105">105</a> of file <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a>.</p>
+<p>Restarts the visible window; the toast hides itself when it elapses. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00061">61</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
@@ -408,13 +455,13 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html#l00099">99</a> of file <a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html#l00055">55</a> of file <a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>AestraUI/Widgets/<a class="el" href="../../dc/d1b/NUIUtilityWidgets_8h_source.html">NUIUtilityWidgets.h</a></li>
-<li>AestraUI/Widgets/<a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../dc/d74/NotificationToast_8h_source.html">NotificationToast.h</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../df/dda/NotificationToast_8cpp_source.html">NotificationToast.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

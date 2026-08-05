@@ -1059,323 +1059,387 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span> </div>
 <div class="foldopen" id="foldopen00950" data-start="{" data-end="}">
 <div class="line"><a id="l00950" name="l00950"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a3c094e1eee4631c0064154ece4eaea1b">  950</a></span><span class="keywordtype">void</span> PlatformWindowWin32::setCursorPosition(<span class="keywordtype">int</span> x, <span class="keywordtype">int</span> y) {</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    SetCursorPos(x, y);</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>}</div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <span class="comment">// Interface contract is WINDOW-RELATIVE client coords (see AestraPlatform.h).</span></div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    <span class="comment">// SetCursorPos wants screen coords; convert. Client coords are physical</span></div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    <span class="comment">// pixels for a per-monitor-DPI-aware process, so ClientToScreen is the</span></div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>    <span class="comment">// complete, DPI-correct conversion (mouse events arrive in the same space).</span></div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>    POINT pt{x, y};</div>
+<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>        ClientToScreen(m_hwnd, &amp;pt);</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    }</div>
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>    SetCursorPos(pt.x, pt.y);</div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>}</div>
 </div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span> </div>
-<div class="foldopen" id="foldopen00954" data-start="{" data-end="}">
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a309dff27bdb6308f21d429d5475afba7">  954</a></span><span class="keywordtype">void</span> PlatformWindowWin32::getCursorPosition(<span class="keywordtype">int</span>&amp; x, <span class="keywordtype">int</span>&amp; y)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>    POINT pt;</div>
-<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    GetCursorPos(&amp;pt);</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>    x = pt.x;</div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    y = pt.y;</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>}</div>
-</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span> </div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span><span class="comment">// Window State</span></div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span> </div>
-<div class="foldopen" id="foldopen00965" data-start="{" data-end="}">
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#ab174f95fb75dd84772721fa839f0fd29">  965</a></span><span class="keywordtype">void</span> PlatformWindowWin32::show() {</div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    ShowWindow(m_hwnd, SW_SHOW);</div>
-<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>}</div>
-</div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span> </div>
-<div class="foldopen" id="foldopen00969" data-start="{" data-end="}">
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#aeecea7e740e088aa136853eabaddf3e5">  969</a></span><span class="keywordtype">void</span> PlatformWindowWin32::hide() {</div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    ShowWindow(m_hwnd, SW_HIDE);</div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span> </div>
+<div class="foldopen" id="foldopen00962" data-start="{" data-end="}">
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#ae2fee9aa3a8314fc5dbfd9f19de5fe1b">  962</a></span><span class="keywordtype">void</span> PlatformWindowWin32::setCursorClipRect(<span class="keywordtype">int</span> x, <span class="keywordtype">int</span> y, <span class="keywordtype">int</span> w, <span class="keywordtype">int</span> h) {</div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    <span class="keywordflow">if</span> (!m_hwnd) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    <span class="comment">// Client-relative rect -&gt; screen rect for ClipCursor.</span></div>
+<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>    POINT tl{x, y};</div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    POINT br{x + w, y + h};</div>
+<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    ClientToScreen(m_hwnd, &amp;tl);</div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    ClientToScreen(m_hwnd, &amp;br);</div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    RECT clip{tl.x, tl.y, br.x, br.y};</div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    ClipCursor(&amp;clip);</div>
 <div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>}</div>
 </div>
 <div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span> </div>
 <div class="foldopen" id="foldopen00973" data-start="{" data-end="}">
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a49815d610156cac208fbcdfe1a7484b8">  973</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isVisible()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    <span class="keywordflow">return</span> m_hwnd &amp;&amp; (IsWindowVisible(m_hwnd) == TRUE);</div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>}</div>
-</div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span> </div>
-<div class="foldopen" id="foldopen00977" data-start="{" data-end="}">
-<div class="line"><a id="l00977" name="l00977"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a1f2990152a878e0dab2aa553e925ccd8">  977</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMapped()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>    <span class="keywordflow">return</span> isVisible() &amp;&amp; !isMinimized();</div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>}</div>
-</div>
-<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span> </div>
-<div class="foldopen" id="foldopen00981" data-start="{" data-end="}">
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a9f56a86121ee75077aefc07a1e7c7ad8">  981</a></span><span class="keywordtype">void</span> PlatformWindowWin32::minimize() {</div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    ShowWindow(m_hwnd, SW_MINIMIZE);</div>
-<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>}</div>
-</div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span> </div>
-<div class="foldopen" id="foldopen00985" data-start="{" data-end="}">
-<div class="line"><a id="l00985" name="l00985"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a3e7f1539be6f6f6e38a845468bc7392e">  985</a></span><span class="keywordtype">void</span> PlatformWindowWin32::maximize() {</div>
-<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    ShowWindow(m_hwnd, SW_MAXIMIZE);</div>
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a273ed08d55ed216e066351cd7ac3e708">  973</a></span><span class="keywordtype">void</span> PlatformWindowWin32::setCursorClip(<span class="keywordtype">bool</span> clipped) {</div>
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    <span class="keywordflow">if</span> (clipped) {</div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>        RECT rc;</div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        <span class="keywordflow">if</span> (m_hwnd &amp;&amp; GetClientRect(m_hwnd, &amp;rc)) {</div>
+<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>            POINT tl{rc.left, rc.top};</div>
+<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>            POINT br{rc.right, rc.bottom};</div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>            ClientToScreen(m_hwnd, &amp;tl);</div>
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>            ClientToScreen(m_hwnd, &amp;br);</div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>            RECT clip{tl.x, tl.y, br.x, br.y};</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>            ClipCursor(&amp;clip);</div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>        }</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        ClipCursor(<span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    }</div>
 <div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>}</div>
 </div>
 <div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span> </div>
 <div class="foldopen" id="foldopen00989" data-start="{" data-end="}">
-<div class="line"><a id="l00989" name="l00989"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a75a085836dabe047a834183c4aef76e6">  989</a></span><span class="keywordtype">void</span> PlatformWindowWin32::restore() {</div>
-<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    ShowWindow(m_hwnd, SW_RESTORE);</div>
-<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span>}</div>
-</div>
-<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span> </div>
-<div class="foldopen" id="foldopen00993" data-start="{" data-end="}">
-<div class="line"><a id="l00993" name="l00993"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a8f130ee6e14f7236910dc18492afc302">  993</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMaximized()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    WINDOWPLACEMENT wp = {};</div>
-<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>    wp.length = <span class="keyword">sizeof</span>(WINDOWPLACEMENT);</div>
-<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    GetWindowPlacement(m_hwnd, &amp;wp);</div>
-<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>    <span class="keywordflow">return</span> wp.showCmd == SW_MAXIMIZE;</div>
+<div class="line"><a id="l00989" name="l00989"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a309dff27bdb6308f21d429d5475afba7">  989</a></span><span class="keywordtype">void</span> PlatformWindowWin32::getCursorPosition(<span class="keywordtype">int</span>&amp; x, <span class="keywordtype">int</span>&amp; y)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    <span class="comment">// Symmetric with setCursorPosition: report window-relative client coords.</span></div>
+<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span>    POINT pt{}; <span class="comment">// zero-init: a failed GetCursorPos (secure desktop switch) must not return garbage</span></div>
+<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>    GetCursorPos(&amp;pt);</div>
+<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
+<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>        ScreenToClient(m_hwnd, &amp;pt);</div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>    }</div>
+<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    x = pt.x;</div>
+<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>    y = pt.y;</div>
 <div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>}</div>
 </div>
 <div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span> </div>
-<div class="foldopen" id="foldopen01000" data-start="{" data-end="}">
-<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#af0b4337ef9706663e07c2fcc1fdd2d2b"> 1000</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMinimized()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    <span class="keywordflow">return</span> IsIconic(m_hwnd) == TRUE;</div>
-<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>}</div>
-</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span><span class="comment">// Window State</span></div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span><span class="comment">// =============================================================================</span></div>
 <div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span> </div>
-<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span><span class="comment">// Fullscreen</span></div>
-<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span><span class="comment">// =============================================================================</span></div>
+<div class="foldopen" id="foldopen01004" data-start="{" data-end="}">
+<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#ab174f95fb75dd84772721fa839f0fd29"> 1004</a></span><span class="keywordtype">void</span> PlatformWindowWin32::show() {</div>
+<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>    ShowWindow(m_hwnd, SW_SHOW);</div>
+<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>}</div>
+</div>
 <div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span> </div>
 <div class="foldopen" id="foldopen01008" data-start="{" data-end="}">
-<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a4f608aace807ccff496922cefb04e715"> 1008</a></span><span class="keywordtype">void</span> PlatformWindowWin32::setFullscreen(<span class="keywordtype">bool</span> fullscreen) {</div>
-<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>    <span class="keywordflow">if</span> (fullscreen == m_isFullscreen) {</div>
-<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>    }</div>
-<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span> </div>
-<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>    <span class="keywordflow">if</span> (fullscreen) {</div>
-<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>        <span class="comment">// Save current window placement</span></div>
-<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        m_wpPrev.length = <span class="keyword">sizeof</span>(WINDOWPLACEMENT);</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        GetWindowPlacement(m_hwnd, &amp;m_wpPrev);</div>
-<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span> </div>
-<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>        <span class="comment">// Save current style</span></div>
-<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>        m_styleBackup = GetWindowLong(m_hwnd, GWL_STYLE);</div>
-<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span> </div>
-<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>        <span class="comment">// Set borderless fullscreen</span></div>
-<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>        DWORD style = m_styleBackup &amp; ~(WS_CAPTION | WS_THICKFRAME | WS_BORDER);</div>
-<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>        SetWindowLong(m_hwnd, GWL_STYLE, style);</div>
-<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span> </div>
-<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>        <span class="comment">// Get monitor info</span></div>
-<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>        HMONITOR hMonitor = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST);</div>
-<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>        MONITORINFO mi = {};</div>
-<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>        mi.cbSize = <span class="keyword">sizeof</span>(MONITORINFO);</div>
-<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>        GetMonitorInfo(hMonitor, &amp;mi);</div>
-<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
-<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>        <span class="comment">// Set window to cover entire monitor</span></div>
-<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>        SetWindowPos(m_hwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left,</div>
-<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>                     mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW);</div>
-<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span> </div>
-<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>        m_isFullscreen = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>        <span class="comment">// Restore style</span></div>
-<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>        SetWindowLong(m_hwnd, GWL_STYLE, m_styleBackup);</div>
-<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span> </div>
-<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>        <span class="comment">// Restore window placement</span></div>
-<div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>        SetWindowPlacement(m_hwnd, &amp;m_wpPrev);</div>
-<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        SetWindowPos(m_hwnd, <span class="keyword">nullptr</span>, 0, 0, 0, 0,</div>
-<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);</div>
-<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span> </div>
-<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>        m_isFullscreen = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    }</div>
-<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>}</div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#aeecea7e740e088aa136853eabaddf3e5"> 1008</a></span><span class="keywordtype">void</span> PlatformWindowWin32::hide() {</div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>    ShowWindow(m_hwnd, SW_HIDE);</div>
+<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>}</div>
 </div>
-<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span> </div>
-<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span><span class="comment">// Key Translation</span></div>
-<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span> </div>
-<div class="foldopen" id="foldopen01053" data-start="{" data-end="}">
-<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a02aa8e9acfb7614b6b19518a41d56272"> 1053</a></span><span class="keywordtype">void</span> PlatformWindowWin32::requestClose() {</div>
-<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
-<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>        PostMessageW(m_hwnd, WM_CLOSE, 0, 0);</div>
-<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>    }</div>
-<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>}</div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span> </div>
+<div class="foldopen" id="foldopen01012" data-start="{" data-end="}">
+<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a49815d610156cac208fbcdfe1a7484b8"> 1012</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isVisible()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>    <span class="keywordflow">return</span> m_hwnd &amp;&amp; (IsWindowVisible(m_hwnd) == TRUE);</div>
+<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>}</div>
 </div>
-<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span> </div>
-<div class="foldopen" id="foldopen01059" data-start="{" data-end="}">
-<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a7d6a1c534bf2e21a3574171bdde253ff"> 1059</a></span><span class="keywordtype">void</span> PlatformWindowWin32::requestFocus() {</div>
-<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
-<div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span>        SetForegroundWindow(m_hwnd);</div>
-<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>        SetFocus(m_hwnd);</div>
-<div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span>    }</div>
-<div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span>}</div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span> </div>
+<div class="foldopen" id="foldopen01016" data-start="{" data-end="}">
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a1f2990152a878e0dab2aa553e925ccd8"> 1016</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMapped()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    <span class="keywordflow">return</span> isVisible() &amp;&amp; !isMinimized();</div>
+<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>}</div>
 </div>
+<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span> </div>
+<div class="foldopen" id="foldopen01020" data-start="{" data-end="}">
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a9f56a86121ee75077aefc07a1e7c7ad8"> 1020</a></span><span class="keywordtype">void</span> PlatformWindowWin32::minimize() {</div>
+<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>    ShowWindow(m_hwnd, SW_MINIMIZE);</div>
+<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>}</div>
+</div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span> </div>
+<div class="foldopen" id="foldopen01024" data-start="{" data-end="}">
+<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a3e7f1539be6f6f6e38a845468bc7392e"> 1024</a></span><span class="keywordtype">void</span> PlatformWindowWin32::maximize() {</div>
+<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>    ShowWindow(m_hwnd, SW_MAXIMIZE);</div>
+<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>}</div>
+</div>
+<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span> </div>
+<div class="foldopen" id="foldopen01028" data-start="{" data-end="}">
+<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a75a085836dabe047a834183c4aef76e6"> 1028</a></span><span class="keywordtype">void</span> PlatformWindowWin32::restore() {</div>
+<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>    ShowWindow(m_hwnd, SW_RESTORE);</div>
+<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span>}</div>
+</div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span> </div>
+<div class="foldopen" id="foldopen01032" data-start="{" data-end="}">
+<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a8f130ee6e14f7236910dc18492afc302"> 1032</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMaximized()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    WINDOWPLACEMENT wp = {};</div>
+<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span>    wp.length = <span class="keyword">sizeof</span>(WINDOWPLACEMENT);</div>
+<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>    GetWindowPlacement(m_hwnd, &amp;wp);</div>
+<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>    <span class="keywordflow">return</span> wp.showCmd == SW_MAXIMIZE;</div>
+<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>}</div>
+</div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span> </div>
+<div class="foldopen" id="foldopen01039" data-start="{" data-end="}">
+<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a2ce6f04e52b219c84622b5d3319ea5e6"> 1039</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::getRestoreBounds(<span class="keywordtype">int</span>&amp; x, <span class="keywordtype">int</span>&amp; y, <span class="keywordtype">int</span>&amp; width, <span class="keywordtype">int</span>&amp; height)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>    <span class="comment">// Win32 maintains this natively: rcNormalPosition IS the restore rectangle,</span></div>
+<div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>    <span class="comment">// updated by the OS as the user moves and resizes the un-maximized window.</span></div>
+<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>    <span class="comment">// isMaximized() above already fetches the same structure and discards it (#655).</span></div>
+<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>    WINDOWPLACEMENT wp = {};</div>
+<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>    wp.length = <span class="keyword">sizeof</span>(WINDOWPLACEMENT);</div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>    <span class="keywordflow">if</span> (!GetWindowPlacement(m_hwnd, &amp;wp))</div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>    <span class="keyword">const</span> LONG w = wp.rcNormalPosition.right - wp.rcNormalPosition.left;</div>
+<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>    <span class="keyword">const</span> LONG h = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top;</div>
+<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>    <span class="keywordflow">if</span> (w &lt;= 0 || h &lt;= 0)</div>
+<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>    x = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(wp.rcNormalPosition.left);</div>
+<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>    y = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(wp.rcNormalPosition.top);</div>
+<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>    width = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(w);</div>
+<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>    height = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(h);</div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>}</div>
+</div>
+<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span> </div>
+<div class="foldopen" id="foldopen01058" data-start="{" data-end="}">
+<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#af0b4337ef9706663e07c2fcc1fdd2d2b"> 1058</a></span><span class="keywordtype">bool</span> PlatformWindowWin32::isMinimized()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>    <span class="keywordflow">return</span> IsIconic(m_hwnd) == TRUE;</div>
+<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>}</div>
+</div>
+<div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span> </div>
+<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span><span class="comment">// Fullscreen</span></div>
+<div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span><span class="comment">// =============================================================================</span></div>
 <div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span> </div>
-<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span>KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {</div>
-<div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>    <span class="comment">// Handle extended keys</span></div>
-<div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span>    <span class="keywordtype">bool</span> extended = (lParam &amp; (1 &lt;&lt; 24)) != 0;</div>
-<div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span> </div>
-<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span>    <span class="keywordflow">switch</span> (wParam) {</div>
-<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span>    <span class="comment">// Letters</span></div>
-<div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;A&#39;</span>:</div>
-<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>        <span class="keywordflow">return</span> KeyCode::A;</div>
-<div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;B&#39;</span>:</div>
-<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span>        <span class="keywordflow">return</span> KeyCode::B;</div>
-<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;C&#39;</span>:</div>
-<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>        <span class="keywordflow">return</span> KeyCode::C;</div>
-<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;D&#39;</span>:</div>
-<div class="line"><a id="l01079" name="l01079"></a><span class="lineno"> 1079</span>        <span class="keywordflow">return</span> KeyCode::D;</div>
-<div class="line"><a id="l01080" name="l01080"></a><span class="lineno"> 1080</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;E&#39;</span>:</div>
-<div class="line"><a id="l01081" name="l01081"></a><span class="lineno"> 1081</span>        <span class="keywordflow">return</span> KeyCode::E;</div>
-<div class="line"><a id="l01082" name="l01082"></a><span class="lineno"> 1082</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;F&#39;</span>:</div>
-<div class="line"><a id="l01083" name="l01083"></a><span class="lineno"> 1083</span>        <span class="keywordflow">return</span> KeyCode::F;</div>
-<div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;G&#39;</span>:</div>
-<div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>        <span class="keywordflow">return</span> KeyCode::G;</div>
-<div class="line"><a id="l01086" name="l01086"></a><span class="lineno"> 1086</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;H&#39;</span>:</div>
-<div class="line"><a id="l01087" name="l01087"></a><span class="lineno"> 1087</span>        <span class="keywordflow">return</span> KeyCode::H;</div>
-<div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;I&#39;</span>:</div>
-<div class="line"><a id="l01089" name="l01089"></a><span class="lineno"> 1089</span>        <span class="keywordflow">return</span> KeyCode::I;</div>
-<div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;J&#39;</span>:</div>
-<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>        <span class="keywordflow">return</span> KeyCode::J;</div>
-<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;K&#39;</span>:</div>
-<div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>        <span class="keywordflow">return</span> KeyCode::K;</div>
-<div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;L&#39;</span>:</div>
-<div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>        <span class="keywordflow">return</span> KeyCode::L;</div>
-<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;M&#39;</span>:</div>
-<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>        <span class="keywordflow">return</span> KeyCode::M;</div>
-<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;N&#39;</span>:</div>
-<div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span>        <span class="keywordflow">return</span> KeyCode::N;</div>
-<div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;O&#39;</span>:</div>
-<div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>        <span class="keywordflow">return</span> KeyCode::O;</div>
-<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;P&#39;</span>:</div>
-<div class="line"><a id="l01103" name="l01103"></a><span class="lineno"> 1103</span>        <span class="keywordflow">return</span> KeyCode::P;</div>
-<div class="line"><a id="l01104" name="l01104"></a><span class="lineno"> 1104</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Q&#39;</span>:</div>
-<div class="line"><a id="l01105" name="l01105"></a><span class="lineno"> 1105</span>        <span class="keywordflow">return</span> KeyCode::Q;</div>
-<div class="line"><a id="l01106" name="l01106"></a><span class="lineno"> 1106</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;R&#39;</span>:</div>
-<div class="line"><a id="l01107" name="l01107"></a><span class="lineno"> 1107</span>        <span class="keywordflow">return</span> KeyCode::R;</div>
-<div class="line"><a id="l01108" name="l01108"></a><span class="lineno"> 1108</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;S&#39;</span>:</div>
-<div class="line"><a id="l01109" name="l01109"></a><span class="lineno"> 1109</span>        <span class="keywordflow">return</span> KeyCode::S;</div>
-<div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;T&#39;</span>:</div>
-<div class="line"><a id="l01111" name="l01111"></a><span class="lineno"> 1111</span>        <span class="keywordflow">return</span> KeyCode::T;</div>
-<div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;U&#39;</span>:</div>
-<div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>        <span class="keywordflow">return</span> KeyCode::U;</div>
-<div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;V&#39;</span>:</div>
-<div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span>        <span class="keywordflow">return</span> KeyCode::V;</div>
-<div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;W&#39;</span>:</div>
-<div class="line"><a id="l01117" name="l01117"></a><span class="lineno"> 1117</span>        <span class="keywordflow">return</span> KeyCode::W;</div>
-<div class="line"><a id="l01118" name="l01118"></a><span class="lineno"> 1118</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;X&#39;</span>:</div>
-<div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>        <span class="keywordflow">return</span> KeyCode::X;</div>
-<div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Y&#39;</span>:</div>
-<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>        <span class="keywordflow">return</span> KeyCode::Y;</div>
-<div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Z&#39;</span>:</div>
-<div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span>        <span class="keywordflow">return</span> KeyCode::Z;</div>
-<div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span> </div>
-<div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span>    <span class="comment">// Numbers</span></div>
-<div class="line"><a id="l01126" name="l01126"></a><span class="lineno"> 1126</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;0&#39;</span>:</div>
-<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span>        <span class="keywordflow">return</span> KeyCode::Num0;</div>
-<div class="line"><a id="l01128" name="l01128"></a><span class="lineno"> 1128</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;1&#39;</span>:</div>
-<div class="line"><a id="l01129" name="l01129"></a><span class="lineno"> 1129</span>        <span class="keywordflow">return</span> KeyCode::Num1;</div>
-<div class="line"><a id="l01130" name="l01130"></a><span class="lineno"> 1130</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;2&#39;</span>:</div>
-<div class="line"><a id="l01131" name="l01131"></a><span class="lineno"> 1131</span>        <span class="keywordflow">return</span> KeyCode::Num2;</div>
-<div class="line"><a id="l01132" name="l01132"></a><span class="lineno"> 1132</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;3&#39;</span>:</div>
-<div class="line"><a id="l01133" name="l01133"></a><span class="lineno"> 1133</span>        <span class="keywordflow">return</span> KeyCode::Num3;</div>
-<div class="line"><a id="l01134" name="l01134"></a><span class="lineno"> 1134</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;4&#39;</span>:</div>
-<div class="line"><a id="l01135" name="l01135"></a><span class="lineno"> 1135</span>        <span class="keywordflow">return</span> KeyCode::Num4;</div>
-<div class="line"><a id="l01136" name="l01136"></a><span class="lineno"> 1136</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;5&#39;</span>:</div>
-<div class="line"><a id="l01137" name="l01137"></a><span class="lineno"> 1137</span>        <span class="keywordflow">return</span> KeyCode::Num5;</div>
-<div class="line"><a id="l01138" name="l01138"></a><span class="lineno"> 1138</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;6&#39;</span>:</div>
-<div class="line"><a id="l01139" name="l01139"></a><span class="lineno"> 1139</span>        <span class="keywordflow">return</span> KeyCode::Num6;</div>
-<div class="line"><a id="l01140" name="l01140"></a><span class="lineno"> 1140</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;7&#39;</span>:</div>
-<div class="line"><a id="l01141" name="l01141"></a><span class="lineno"> 1141</span>        <span class="keywordflow">return</span> KeyCode::Num7;</div>
-<div class="line"><a id="l01142" name="l01142"></a><span class="lineno"> 1142</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;8&#39;</span>:</div>
-<div class="line"><a id="l01143" name="l01143"></a><span class="lineno"> 1143</span>        <span class="keywordflow">return</span> KeyCode::Num8;</div>
-<div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;9&#39;</span>:</div>
-<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>        <span class="keywordflow">return</span> KeyCode::Num9;</div>
-<div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span> </div>
-<div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>    <span class="comment">// Function keys</span></div>
-<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>    <span class="keywordflow">case</span> VK_F1:</div>
-<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>        <span class="keywordflow">return</span> KeyCode::F1;</div>
-<div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>    <span class="keywordflow">case</span> VK_F2:</div>
-<div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>        <span class="keywordflow">return</span> KeyCode::F2;</div>
-<div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>    <span class="keywordflow">case</span> VK_F3:</div>
-<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>        <span class="keywordflow">return</span> KeyCode::F3;</div>
-<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>    <span class="keywordflow">case</span> VK_F4:</div>
-<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>        <span class="keywordflow">return</span> KeyCode::F4;</div>
-<div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>    <span class="keywordflow">case</span> VK_F5:</div>
-<div class="line"><a id="l01157" name="l01157"></a><span class="lineno"> 1157</span>        <span class="keywordflow">return</span> KeyCode::F5;</div>
-<div class="line"><a id="l01158" name="l01158"></a><span class="lineno"> 1158</span>    <span class="keywordflow">case</span> VK_F6:</div>
-<div class="line"><a id="l01159" name="l01159"></a><span class="lineno"> 1159</span>        <span class="keywordflow">return</span> KeyCode::F6;</div>
-<div class="line"><a id="l01160" name="l01160"></a><span class="lineno"> 1160</span>    <span class="keywordflow">case</span> VK_F7:</div>
-<div class="line"><a id="l01161" name="l01161"></a><span class="lineno"> 1161</span>        <span class="keywordflow">return</span> KeyCode::F7;</div>
-<div class="line"><a id="l01162" name="l01162"></a><span class="lineno"> 1162</span>    <span class="keywordflow">case</span> VK_F8:</div>
-<div class="line"><a id="l01163" name="l01163"></a><span class="lineno"> 1163</span>        <span class="keywordflow">return</span> KeyCode::F8;</div>
-<div class="line"><a id="l01164" name="l01164"></a><span class="lineno"> 1164</span>    <span class="keywordflow">case</span> VK_F9:</div>
-<div class="line"><a id="l01165" name="l01165"></a><span class="lineno"> 1165</span>        <span class="keywordflow">return</span> KeyCode::F9;</div>
-<div class="line"><a id="l01166" name="l01166"></a><span class="lineno"> 1166</span>    <span class="keywordflow">case</span> VK_F10:</div>
-<div class="line"><a id="l01167" name="l01167"></a><span class="lineno"> 1167</span>        <span class="keywordflow">return</span> KeyCode::F10;</div>
-<div class="line"><a id="l01168" name="l01168"></a><span class="lineno"> 1168</span>    <span class="keywordflow">case</span> VK_F11:</div>
-<div class="line"><a id="l01169" name="l01169"></a><span class="lineno"> 1169</span>        <span class="keywordflow">return</span> KeyCode::F11;</div>
-<div class="line"><a id="l01170" name="l01170"></a><span class="lineno"> 1170</span>    <span class="keywordflow">case</span> VK_F12:</div>
-<div class="line"><a id="l01171" name="l01171"></a><span class="lineno"> 1171</span>        <span class="keywordflow">return</span> KeyCode::F12;</div>
-<div class="line"><a id="l01172" name="l01172"></a><span class="lineno"> 1172</span> </div>
-<div class="line"><a id="l01173" name="l01173"></a><span class="lineno"> 1173</span>    <span class="comment">// Special keys</span></div>
-<div class="line"><a id="l01174" name="l01174"></a><span class="lineno"> 1174</span>    <span class="keywordflow">case</span> VK_ESCAPE:</div>
-<div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span>        <span class="keywordflow">return</span> KeyCode::Escape;</div>
-<div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span>    <span class="keywordflow">case</span> VK_TAB:</div>
-<div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span>        <span class="keywordflow">return</span> KeyCode::Tab;</div>
-<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>    <span class="keywordflow">case</span> VK_CAPITAL:</div>
-<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>        <span class="keywordflow">return</span> KeyCode::CapsLock;</div>
-<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>    <span class="keywordflow">case</span> VK_SHIFT:</div>
-<div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span>        <span class="keywordflow">return</span> KeyCode::Shift;</div>
-<div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span>    <span class="keywordflow">case</span> VK_CONTROL:</div>
-<div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span>        <span class="keywordflow">return</span> KeyCode::Control;</div>
-<div class="line"><a id="l01184" name="l01184"></a><span class="lineno"> 1184</span>    <span class="keywordflow">case</span> VK_MENU:</div>
-<div class="line"><a id="l01185" name="l01185"></a><span class="lineno"> 1185</span>        <span class="keywordflow">return</span> KeyCode::Alt;</div>
-<div class="line"><a id="l01186" name="l01186"></a><span class="lineno"> 1186</span>    <span class="keywordflow">case</span> VK_SPACE:</div>
-<div class="line"><a id="l01187" name="l01187"></a><span class="lineno"> 1187</span>        <span class="keywordflow">return</span> KeyCode::Space;</div>
-<div class="line"><a id="l01188" name="l01188"></a><span class="lineno"> 1188</span>    <span class="keywordflow">case</span> VK_RETURN:</div>
-<div class="line"><a id="l01189" name="l01189"></a><span class="lineno"> 1189</span>        <span class="keywordflow">return</span> KeyCode::Enter;</div>
-<div class="line"><a id="l01190" name="l01190"></a><span class="lineno"> 1190</span>    <span class="keywordflow">case</span> VK_BACK:</div>
-<div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span>        <span class="keywordflow">return</span> KeyCode::Backspace;</div>
-<div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>    <span class="keywordflow">case</span> VK_DELETE:</div>
-<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>        <span class="keywordflow">return</span> KeyCode::Delete;</div>
-<div class="line"><a id="l01194" name="l01194"></a><span class="lineno"> 1194</span>    <span class="keywordflow">case</span> VK_INSERT:</div>
-<div class="line"><a id="l01195" name="l01195"></a><span class="lineno"> 1195</span>        <span class="keywordflow">return</span> KeyCode::Insert;</div>
-<div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>    <span class="keywordflow">case</span> VK_HOME:</div>
-<div class="line"><a id="l01197" name="l01197"></a><span class="lineno"> 1197</span>        <span class="keywordflow">return</span> KeyCode::Home;</div>
-<div class="line"><a id="l01198" name="l01198"></a><span class="lineno"> 1198</span>    <span class="keywordflow">case</span> VK_END:</div>
-<div class="line"><a id="l01199" name="l01199"></a><span class="lineno"> 1199</span>        <span class="keywordflow">return</span> KeyCode::End;</div>
-<div class="line"><a id="l01200" name="l01200"></a><span class="lineno"> 1200</span>    <span class="keywordflow">case</span> VK_PRIOR:</div>
-<div class="line"><a id="l01201" name="l01201"></a><span class="lineno"> 1201</span>        <span class="keywordflow">return</span> KeyCode::PageUp;</div>
-<div class="line"><a id="l01202" name="l01202"></a><span class="lineno"> 1202</span>    <span class="keywordflow">case</span> VK_NEXT:</div>
-<div class="line"><a id="l01203" name="l01203"></a><span class="lineno"> 1203</span>        <span class="keywordflow">return</span> KeyCode::PageDown;</div>
-<div class="line"><a id="l01204" name="l01204"></a><span class="lineno"> 1204</span>    <span class="keywordflow">case</span> VK_LEFT:</div>
-<div class="line"><a id="l01205" name="l01205"></a><span class="lineno"> 1205</span>        <span class="keywordflow">return</span> KeyCode::Left;</div>
-<div class="line"><a id="l01206" name="l01206"></a><span class="lineno"> 1206</span>    <span class="keywordflow">case</span> VK_UP:</div>
-<div class="line"><a id="l01207" name="l01207"></a><span class="lineno"> 1207</span>        <span class="keywordflow">return</span> KeyCode::Up;</div>
-<div class="line"><a id="l01208" name="l01208"></a><span class="lineno"> 1208</span>    <span class="keywordflow">case</span> VK_RIGHT:</div>
-<div class="line"><a id="l01209" name="l01209"></a><span class="lineno"> 1209</span>        <span class="keywordflow">return</span> KeyCode::Right;</div>
-<div class="line"><a id="l01210" name="l01210"></a><span class="lineno"> 1210</span>    <span class="keywordflow">case</span> VK_DOWN:</div>
-<div class="line"><a id="l01211" name="l01211"></a><span class="lineno"> 1211</span>        <span class="keywordflow">return</span> KeyCode::Down;</div>
-<div class="line"><a id="l01212" name="l01212"></a><span class="lineno"> 1212</span> </div>
-<div class="line"><a id="l01213" name="l01213"></a><span class="lineno"> 1213</span>    <span class="keywordflow">default</span>:</div>
-<div class="line"><a id="l01214" name="l01214"></a><span class="lineno"> 1214</span>        <span class="keywordflow">return</span> KeyCode::Unknown;</div>
-<div class="line"><a id="l01215" name="l01215"></a><span class="lineno"> 1215</span>    }</div>
-<div class="line"><a id="l01216" name="l01216"></a><span class="lineno"> 1216</span>}</div>
-<div class="line"><a id="l01217" name="l01217"></a><span class="lineno"> 1217</span> </div>
-<div class="line"><a id="l01218" name="l01218"></a><span class="lineno"> 1218</span>KeyModifiers PlatformWindowWin32::getKeyModifiers()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l01219" name="l01219"></a><span class="lineno"> 1219</span>    assertWindowThread();</div>
-<div class="line"><a id="l01220" name="l01220"></a><span class="lineno"> 1220</span>    KeyModifiers mods;</div>
-<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>    mods.shift = (GetKeyState(VK_SHIFT) &amp; 0x8000) != 0;</div>
-<div class="line"><a id="l01222" name="l01222"></a><span class="lineno"> 1222</span>    mods.control = (GetKeyState(VK_CONTROL) &amp; 0x8000) != 0;</div>
-<div class="line"><a id="l01223" name="l01223"></a><span class="lineno"> 1223</span>    mods.alt = (GetKeyState(VK_MENU) &amp; 0x8000) != 0;</div>
-<div class="line"><a id="l01224" name="l01224"></a><span class="lineno"> 1224</span>    mods.super = (GetKeyState(VK_LWIN) &amp; 0x8000) != 0 || (GetKeyState(VK_RWIN) &amp; 0x8000) != 0;</div>
-<div class="line"><a id="l01225" name="l01225"></a><span class="lineno"> 1225</span>    mods.capsLock = (GetKeyState(VK_CAPITAL) &amp; 0x0001) != 0;</div>
-<div class="line"><a id="l01226" name="l01226"></a><span class="lineno"> 1226</span>    <span class="keywordflow">return</span> mods;</div>
-<div class="line"><a id="l01227" name="l01227"></a><span class="lineno"> 1227</span>}</div>
-<div class="line"><a id="l01228" name="l01228"></a><span class="lineno"> 1228</span> </div>
-<div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span><span class="comment">// Thread Safety</span></div>
-<div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span> </div>
-<div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span><span class="keywordtype">void</span> PlatformWindowWin32::assertWindowThread()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l01234" name="l01234"></a><span class="lineno"> 1234</span>    AESTRA_ASSERT_MSG(GetCurrentThreadId() == m_creatingThreadId,</div>
-<div class="line"><a id="l01235" name="l01235"></a><span class="lineno"> 1235</span>                      <span class="stringliteral">&quot;PlatformWindowWin32 methods must be called from the same thread that created the window. &quot;</span></div>
-<div class="line"><a id="l01236" name="l01236"></a><span class="lineno"> 1236</span>                      <span class="stringliteral">&quot;Cross-thread calls to setCursorVisible() and getCurrentModifiers() will cause &quot;</span></div>
-<div class="line"><a id="l01237" name="l01237"></a><span class="lineno"> 1237</span>                      <span class="stringliteral">&quot;cursor display count desynchronization due to ShowCursor()&#39;s per-thread behavior.&quot;</span>);</div>
-<div class="line"><a id="l01238" name="l01238"></a><span class="lineno"> 1238</span>}</div>
-<div class="line"><a id="l01239" name="l01239"></a><span class="lineno"> 1239</span> </div>
-<div class="line"><a id="l01240" name="l01240"></a><span class="lineno"> 1240</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="foldopen" id="foldopen01066" data-start="{" data-end="}">
+<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a4f608aace807ccff496922cefb04e715"> 1066</a></span><span class="keywordtype">void</span> PlatformWindowWin32::setFullscreen(<span class="keywordtype">bool</span> fullscreen) {</div>
+<div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>    <span class="keywordflow">if</span> (fullscreen == m_isFullscreen) {</div>
+<div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>    }</div>
+<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span> </div>
+<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span>    <span class="keywordflow">if</span> (fullscreen) {</div>
+<div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span>        <span class="comment">// Save current window placement</span></div>
+<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>        m_wpPrev.length = <span class="keyword">sizeof</span>(WINDOWPLACEMENT);</div>
+<div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>        GetWindowPlacement(m_hwnd, &amp;m_wpPrev);</div>
+<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span> </div>
+<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>        <span class="comment">// Save current style</span></div>
+<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>        m_styleBackup = GetWindowLong(m_hwnd, GWL_STYLE);</div>
+<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span> </div>
+<div class="line"><a id="l01079" name="l01079"></a><span class="lineno"> 1079</span>        <span class="comment">// Set borderless fullscreen</span></div>
+<div class="line"><a id="l01080" name="l01080"></a><span class="lineno"> 1080</span>        DWORD style = m_styleBackup &amp; ~(WS_CAPTION | WS_THICKFRAME | WS_BORDER);</div>
+<div class="line"><a id="l01081" name="l01081"></a><span class="lineno"> 1081</span>        SetWindowLong(m_hwnd, GWL_STYLE, style);</div>
+<div class="line"><a id="l01082" name="l01082"></a><span class="lineno"> 1082</span> </div>
+<div class="line"><a id="l01083" name="l01083"></a><span class="lineno"> 1083</span>        <span class="comment">// Get monitor info</span></div>
+<div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span>        HMONITOR hMonitor = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST);</div>
+<div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>        MONITORINFO mi = {};</div>
+<div class="line"><a id="l01086" name="l01086"></a><span class="lineno"> 1086</span>        mi.cbSize = <span class="keyword">sizeof</span>(MONITORINFO);</div>
+<div class="line"><a id="l01087" name="l01087"></a><span class="lineno"> 1087</span>        GetMonitorInfo(hMonitor, &amp;mi);</div>
+<div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span> </div>
+<div class="line"><a id="l01089" name="l01089"></a><span class="lineno"> 1089</span>        <span class="comment">// Set window to cover entire monitor</span></div>
+<div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span>        SetWindowPos(m_hwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left,</div>
+<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>                     mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW);</div>
+<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span> </div>
+<div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>        m_isFullscreen = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>        <span class="comment">// Restore style</span></div>
+<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>        SetWindowLong(m_hwnd, GWL_STYLE, m_styleBackup);</div>
+<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span> </div>
+<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>        <span class="comment">// Restore window placement</span></div>
+<div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span>        SetWindowPlacement(m_hwnd, &amp;m_wpPrev);</div>
+<div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span>        SetWindowPos(m_hwnd, <span class="keyword">nullptr</span>, 0, 0, 0, 0,</div>
+<div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);</div>
+<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span> </div>
+<div class="line"><a id="l01103" name="l01103"></a><span class="lineno"> 1103</span>        m_isFullscreen = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01104" name="l01104"></a><span class="lineno"> 1104</span>    }</div>
+<div class="line"><a id="l01105" name="l01105"></a><span class="lineno"> 1105</span>}</div>
+</div>
+<div class="line"><a id="l01106" name="l01106"></a><span class="lineno"> 1106</span> </div>
+<div class="line"><a id="l01107" name="l01107"></a><span class="lineno"> 1107</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01108" name="l01108"></a><span class="lineno"> 1108</span><span class="comment">// Key Translation</span></div>
+<div class="line"><a id="l01109" name="l01109"></a><span class="lineno"> 1109</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span> </div>
+<div class="foldopen" id="foldopen01111" data-start="{" data-end="}">
+<div class="line"><a id="l01111" name="l01111"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a02aa8e9acfb7614b6b19518a41d56272"> 1111</a></span><span class="keywordtype">void</span> PlatformWindowWin32::requestClose() {</div>
+<div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
+<div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>        PostMessageW(m_hwnd, WM_CLOSE, 0, 0);</div>
+<div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>    }</div>
+<div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span>}</div>
+</div>
+<div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span> </div>
+<div class="foldopen" id="foldopen01117" data-start="{" data-end="}">
+<div class="line"><a id="l01117" name="l01117"></a><span class="lineno"><a class="line" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a7d6a1c534bf2e21a3574171bdde253ff"> 1117</a></span><span class="keywordtype">void</span> PlatformWindowWin32::requestFocus() {</div>
+<div class="line"><a id="l01118" name="l01118"></a><span class="lineno"> 1118</span>    <span class="keywordflow">if</span> (m_hwnd) {</div>
+<div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>        SetForegroundWindow(m_hwnd);</div>
+<div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>        SetFocus(m_hwnd);</div>
+<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>    }</div>
+<div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>}</div>
+</div>
+<div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span> </div>
+<div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span>KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {</div>
+<div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span>    <span class="comment">// Handle extended keys</span></div>
+<div class="line"><a id="l01126" name="l01126"></a><span class="lineno"> 1126</span>    <span class="keywordtype">bool</span> extended = (lParam &amp; (1 &lt;&lt; 24)) != 0;</div>
+<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span> </div>
+<div class="line"><a id="l01128" name="l01128"></a><span class="lineno"> 1128</span>    <span class="keywordflow">switch</span> (wParam) {</div>
+<div class="line"><a id="l01129" name="l01129"></a><span class="lineno"> 1129</span>    <span class="comment">// Letters</span></div>
+<div class="line"><a id="l01130" name="l01130"></a><span class="lineno"> 1130</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;A&#39;</span>:</div>
+<div class="line"><a id="l01131" name="l01131"></a><span class="lineno"> 1131</span>        <span class="keywordflow">return</span> KeyCode::A;</div>
+<div class="line"><a id="l01132" name="l01132"></a><span class="lineno"> 1132</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;B&#39;</span>:</div>
+<div class="line"><a id="l01133" name="l01133"></a><span class="lineno"> 1133</span>        <span class="keywordflow">return</span> KeyCode::B;</div>
+<div class="line"><a id="l01134" name="l01134"></a><span class="lineno"> 1134</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;C&#39;</span>:</div>
+<div class="line"><a id="l01135" name="l01135"></a><span class="lineno"> 1135</span>        <span class="keywordflow">return</span> KeyCode::C;</div>
+<div class="line"><a id="l01136" name="l01136"></a><span class="lineno"> 1136</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;D&#39;</span>:</div>
+<div class="line"><a id="l01137" name="l01137"></a><span class="lineno"> 1137</span>        <span class="keywordflow">return</span> KeyCode::D;</div>
+<div class="line"><a id="l01138" name="l01138"></a><span class="lineno"> 1138</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;E&#39;</span>:</div>
+<div class="line"><a id="l01139" name="l01139"></a><span class="lineno"> 1139</span>        <span class="keywordflow">return</span> KeyCode::E;</div>
+<div class="line"><a id="l01140" name="l01140"></a><span class="lineno"> 1140</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;F&#39;</span>:</div>
+<div class="line"><a id="l01141" name="l01141"></a><span class="lineno"> 1141</span>        <span class="keywordflow">return</span> KeyCode::F;</div>
+<div class="line"><a id="l01142" name="l01142"></a><span class="lineno"> 1142</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;G&#39;</span>:</div>
+<div class="line"><a id="l01143" name="l01143"></a><span class="lineno"> 1143</span>        <span class="keywordflow">return</span> KeyCode::G;</div>
+<div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;H&#39;</span>:</div>
+<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>        <span class="keywordflow">return</span> KeyCode::H;</div>
+<div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;I&#39;</span>:</div>
+<div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>        <span class="keywordflow">return</span> KeyCode::I;</div>
+<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;J&#39;</span>:</div>
+<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>        <span class="keywordflow">return</span> KeyCode::J;</div>
+<div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;K&#39;</span>:</div>
+<div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>        <span class="keywordflow">return</span> KeyCode::K;</div>
+<div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;L&#39;</span>:</div>
+<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>        <span class="keywordflow">return</span> KeyCode::L;</div>
+<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;M&#39;</span>:</div>
+<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>        <span class="keywordflow">return</span> KeyCode::M;</div>
+<div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;N&#39;</span>:</div>
+<div class="line"><a id="l01157" name="l01157"></a><span class="lineno"> 1157</span>        <span class="keywordflow">return</span> KeyCode::N;</div>
+<div class="line"><a id="l01158" name="l01158"></a><span class="lineno"> 1158</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;O&#39;</span>:</div>
+<div class="line"><a id="l01159" name="l01159"></a><span class="lineno"> 1159</span>        <span class="keywordflow">return</span> KeyCode::O;</div>
+<div class="line"><a id="l01160" name="l01160"></a><span class="lineno"> 1160</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;P&#39;</span>:</div>
+<div class="line"><a id="l01161" name="l01161"></a><span class="lineno"> 1161</span>        <span class="keywordflow">return</span> KeyCode::P;</div>
+<div class="line"><a id="l01162" name="l01162"></a><span class="lineno"> 1162</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Q&#39;</span>:</div>
+<div class="line"><a id="l01163" name="l01163"></a><span class="lineno"> 1163</span>        <span class="keywordflow">return</span> KeyCode::Q;</div>
+<div class="line"><a id="l01164" name="l01164"></a><span class="lineno"> 1164</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;R&#39;</span>:</div>
+<div class="line"><a id="l01165" name="l01165"></a><span class="lineno"> 1165</span>        <span class="keywordflow">return</span> KeyCode::R;</div>
+<div class="line"><a id="l01166" name="l01166"></a><span class="lineno"> 1166</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;S&#39;</span>:</div>
+<div class="line"><a id="l01167" name="l01167"></a><span class="lineno"> 1167</span>        <span class="keywordflow">return</span> KeyCode::S;</div>
+<div class="line"><a id="l01168" name="l01168"></a><span class="lineno"> 1168</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;T&#39;</span>:</div>
+<div class="line"><a id="l01169" name="l01169"></a><span class="lineno"> 1169</span>        <span class="keywordflow">return</span> KeyCode::T;</div>
+<div class="line"><a id="l01170" name="l01170"></a><span class="lineno"> 1170</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;U&#39;</span>:</div>
+<div class="line"><a id="l01171" name="l01171"></a><span class="lineno"> 1171</span>        <span class="keywordflow">return</span> KeyCode::U;</div>
+<div class="line"><a id="l01172" name="l01172"></a><span class="lineno"> 1172</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;V&#39;</span>:</div>
+<div class="line"><a id="l01173" name="l01173"></a><span class="lineno"> 1173</span>        <span class="keywordflow">return</span> KeyCode::V;</div>
+<div class="line"><a id="l01174" name="l01174"></a><span class="lineno"> 1174</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;W&#39;</span>:</div>
+<div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span>        <span class="keywordflow">return</span> KeyCode::W;</div>
+<div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;X&#39;</span>:</div>
+<div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span>        <span class="keywordflow">return</span> KeyCode::X;</div>
+<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Y&#39;</span>:</div>
+<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>        <span class="keywordflow">return</span> KeyCode::Y;</div>
+<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;Z&#39;</span>:</div>
+<div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span>        <span class="keywordflow">return</span> KeyCode::Z;</div>
+<div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span> </div>
+<div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span>    <span class="comment">// Numbers</span></div>
+<div class="line"><a id="l01184" name="l01184"></a><span class="lineno"> 1184</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;0&#39;</span>:</div>
+<div class="line"><a id="l01185" name="l01185"></a><span class="lineno"> 1185</span>        <span class="keywordflow">return</span> KeyCode::Num0;</div>
+<div class="line"><a id="l01186" name="l01186"></a><span class="lineno"> 1186</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;1&#39;</span>:</div>
+<div class="line"><a id="l01187" name="l01187"></a><span class="lineno"> 1187</span>        <span class="keywordflow">return</span> KeyCode::Num1;</div>
+<div class="line"><a id="l01188" name="l01188"></a><span class="lineno"> 1188</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;2&#39;</span>:</div>
+<div class="line"><a id="l01189" name="l01189"></a><span class="lineno"> 1189</span>        <span class="keywordflow">return</span> KeyCode::Num2;</div>
+<div class="line"><a id="l01190" name="l01190"></a><span class="lineno"> 1190</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;3&#39;</span>:</div>
+<div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span>        <span class="keywordflow">return</span> KeyCode::Num3;</div>
+<div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;4&#39;</span>:</div>
+<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>        <span class="keywordflow">return</span> KeyCode::Num4;</div>
+<div class="line"><a id="l01194" name="l01194"></a><span class="lineno"> 1194</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;5&#39;</span>:</div>
+<div class="line"><a id="l01195" name="l01195"></a><span class="lineno"> 1195</span>        <span class="keywordflow">return</span> KeyCode::Num5;</div>
+<div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;6&#39;</span>:</div>
+<div class="line"><a id="l01197" name="l01197"></a><span class="lineno"> 1197</span>        <span class="keywordflow">return</span> KeyCode::Num6;</div>
+<div class="line"><a id="l01198" name="l01198"></a><span class="lineno"> 1198</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;7&#39;</span>:</div>
+<div class="line"><a id="l01199" name="l01199"></a><span class="lineno"> 1199</span>        <span class="keywordflow">return</span> KeyCode::Num7;</div>
+<div class="line"><a id="l01200" name="l01200"></a><span class="lineno"> 1200</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;8&#39;</span>:</div>
+<div class="line"><a id="l01201" name="l01201"></a><span class="lineno"> 1201</span>        <span class="keywordflow">return</span> KeyCode::Num8;</div>
+<div class="line"><a id="l01202" name="l01202"></a><span class="lineno"> 1202</span>    <span class="keywordflow">case</span> <span class="charliteral">&#39;9&#39;</span>:</div>
+<div class="line"><a id="l01203" name="l01203"></a><span class="lineno"> 1203</span>        <span class="keywordflow">return</span> KeyCode::Num9;</div>
+<div class="line"><a id="l01204" name="l01204"></a><span class="lineno"> 1204</span> </div>
+<div class="line"><a id="l01205" name="l01205"></a><span class="lineno"> 1205</span>    <span class="comment">// Function keys</span></div>
+<div class="line"><a id="l01206" name="l01206"></a><span class="lineno"> 1206</span>    <span class="keywordflow">case</span> VK_F1:</div>
+<div class="line"><a id="l01207" name="l01207"></a><span class="lineno"> 1207</span>        <span class="keywordflow">return</span> KeyCode::F1;</div>
+<div class="line"><a id="l01208" name="l01208"></a><span class="lineno"> 1208</span>    <span class="keywordflow">case</span> VK_F2:</div>
+<div class="line"><a id="l01209" name="l01209"></a><span class="lineno"> 1209</span>        <span class="keywordflow">return</span> KeyCode::F2;</div>
+<div class="line"><a id="l01210" name="l01210"></a><span class="lineno"> 1210</span>    <span class="keywordflow">case</span> VK_F3:</div>
+<div class="line"><a id="l01211" name="l01211"></a><span class="lineno"> 1211</span>        <span class="keywordflow">return</span> KeyCode::F3;</div>
+<div class="line"><a id="l01212" name="l01212"></a><span class="lineno"> 1212</span>    <span class="keywordflow">case</span> VK_F4:</div>
+<div class="line"><a id="l01213" name="l01213"></a><span class="lineno"> 1213</span>        <span class="keywordflow">return</span> KeyCode::F4;</div>
+<div class="line"><a id="l01214" name="l01214"></a><span class="lineno"> 1214</span>    <span class="keywordflow">case</span> VK_F5:</div>
+<div class="line"><a id="l01215" name="l01215"></a><span class="lineno"> 1215</span>        <span class="keywordflow">return</span> KeyCode::F5;</div>
+<div class="line"><a id="l01216" name="l01216"></a><span class="lineno"> 1216</span>    <span class="keywordflow">case</span> VK_F6:</div>
+<div class="line"><a id="l01217" name="l01217"></a><span class="lineno"> 1217</span>        <span class="keywordflow">return</span> KeyCode::F6;</div>
+<div class="line"><a id="l01218" name="l01218"></a><span class="lineno"> 1218</span>    <span class="keywordflow">case</span> VK_F7:</div>
+<div class="line"><a id="l01219" name="l01219"></a><span class="lineno"> 1219</span>        <span class="keywordflow">return</span> KeyCode::F7;</div>
+<div class="line"><a id="l01220" name="l01220"></a><span class="lineno"> 1220</span>    <span class="keywordflow">case</span> VK_F8:</div>
+<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>        <span class="keywordflow">return</span> KeyCode::F8;</div>
+<div class="line"><a id="l01222" name="l01222"></a><span class="lineno"> 1222</span>    <span class="keywordflow">case</span> VK_F9:</div>
+<div class="line"><a id="l01223" name="l01223"></a><span class="lineno"> 1223</span>        <span class="keywordflow">return</span> KeyCode::F9;</div>
+<div class="line"><a id="l01224" name="l01224"></a><span class="lineno"> 1224</span>    <span class="keywordflow">case</span> VK_F10:</div>
+<div class="line"><a id="l01225" name="l01225"></a><span class="lineno"> 1225</span>        <span class="keywordflow">return</span> KeyCode::F10;</div>
+<div class="line"><a id="l01226" name="l01226"></a><span class="lineno"> 1226</span>    <span class="keywordflow">case</span> VK_F11:</div>
+<div class="line"><a id="l01227" name="l01227"></a><span class="lineno"> 1227</span>        <span class="keywordflow">return</span> KeyCode::F11;</div>
+<div class="line"><a id="l01228" name="l01228"></a><span class="lineno"> 1228</span>    <span class="keywordflow">case</span> VK_F12:</div>
+<div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span>        <span class="keywordflow">return</span> KeyCode::F12;</div>
+<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span> </div>
+<div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span>    <span class="comment">// Special keys</span></div>
+<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>    <span class="keywordflow">case</span> VK_ESCAPE:</div>
+<div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span>        <span class="keywordflow">return</span> KeyCode::Escape;</div>
+<div class="line"><a id="l01234" name="l01234"></a><span class="lineno"> 1234</span>    <span class="keywordflow">case</span> VK_TAB:</div>
+<div class="line"><a id="l01235" name="l01235"></a><span class="lineno"> 1235</span>        <span class="keywordflow">return</span> KeyCode::Tab;</div>
+<div class="line"><a id="l01236" name="l01236"></a><span class="lineno"> 1236</span>    <span class="keywordflow">case</span> VK_CAPITAL:</div>
+<div class="line"><a id="l01237" name="l01237"></a><span class="lineno"> 1237</span>        <span class="keywordflow">return</span> KeyCode::CapsLock;</div>
+<div class="line"><a id="l01238" name="l01238"></a><span class="lineno"> 1238</span>    <span class="keywordflow">case</span> VK_SHIFT:</div>
+<div class="line"><a id="l01239" name="l01239"></a><span class="lineno"> 1239</span>        <span class="keywordflow">return</span> KeyCode::Shift;</div>
+<div class="line"><a id="l01240" name="l01240"></a><span class="lineno"> 1240</span>    <span class="keywordflow">case</span> VK_CONTROL:</div>
+<div class="line"><a id="l01241" name="l01241"></a><span class="lineno"> 1241</span>        <span class="keywordflow">return</span> KeyCode::Control;</div>
+<div class="line"><a id="l01242" name="l01242"></a><span class="lineno"> 1242</span>    <span class="keywordflow">case</span> VK_MENU:</div>
+<div class="line"><a id="l01243" name="l01243"></a><span class="lineno"> 1243</span>        <span class="keywordflow">return</span> KeyCode::Alt;</div>
+<div class="line"><a id="l01244" name="l01244"></a><span class="lineno"> 1244</span>    <span class="keywordflow">case</span> VK_SPACE:</div>
+<div class="line"><a id="l01245" name="l01245"></a><span class="lineno"> 1245</span>        <span class="keywordflow">return</span> KeyCode::Space;</div>
+<div class="line"><a id="l01246" name="l01246"></a><span class="lineno"> 1246</span>    <span class="keywordflow">case</span> VK_RETURN:</div>
+<div class="line"><a id="l01247" name="l01247"></a><span class="lineno"> 1247</span>        <span class="keywordflow">return</span> KeyCode::Enter;</div>
+<div class="line"><a id="l01248" name="l01248"></a><span class="lineno"> 1248</span>    <span class="keywordflow">case</span> VK_BACK:</div>
+<div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span>        <span class="keywordflow">return</span> KeyCode::Backspace;</div>
+<div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span>    <span class="keywordflow">case</span> VK_DELETE:</div>
+<div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>        <span class="keywordflow">return</span> KeyCode::Delete;</div>
+<div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span>    <span class="keywordflow">case</span> VK_INSERT:</div>
+<div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span>        <span class="keywordflow">return</span> KeyCode::Insert;</div>
+<div class="line"><a id="l01254" name="l01254"></a><span class="lineno"> 1254</span>    <span class="keywordflow">case</span> VK_HOME:</div>
+<div class="line"><a id="l01255" name="l01255"></a><span class="lineno"> 1255</span>        <span class="keywordflow">return</span> KeyCode::Home;</div>
+<div class="line"><a id="l01256" name="l01256"></a><span class="lineno"> 1256</span>    <span class="keywordflow">case</span> VK_END:</div>
+<div class="line"><a id="l01257" name="l01257"></a><span class="lineno"> 1257</span>        <span class="keywordflow">return</span> KeyCode::End;</div>
+<div class="line"><a id="l01258" name="l01258"></a><span class="lineno"> 1258</span>    <span class="keywordflow">case</span> VK_PRIOR:</div>
+<div class="line"><a id="l01259" name="l01259"></a><span class="lineno"> 1259</span>        <span class="keywordflow">return</span> KeyCode::PageUp;</div>
+<div class="line"><a id="l01260" name="l01260"></a><span class="lineno"> 1260</span>    <span class="keywordflow">case</span> VK_NEXT:</div>
+<div class="line"><a id="l01261" name="l01261"></a><span class="lineno"> 1261</span>        <span class="keywordflow">return</span> KeyCode::PageDown;</div>
+<div class="line"><a id="l01262" name="l01262"></a><span class="lineno"> 1262</span>    <span class="keywordflow">case</span> VK_LEFT:</div>
+<div class="line"><a id="l01263" name="l01263"></a><span class="lineno"> 1263</span>        <span class="keywordflow">return</span> KeyCode::Left;</div>
+<div class="line"><a id="l01264" name="l01264"></a><span class="lineno"> 1264</span>    <span class="keywordflow">case</span> VK_UP:</div>
+<div class="line"><a id="l01265" name="l01265"></a><span class="lineno"> 1265</span>        <span class="keywordflow">return</span> KeyCode::Up;</div>
+<div class="line"><a id="l01266" name="l01266"></a><span class="lineno"> 1266</span>    <span class="keywordflow">case</span> VK_RIGHT:</div>
+<div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span>        <span class="keywordflow">return</span> KeyCode::Right;</div>
+<div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>    <span class="keywordflow">case</span> VK_DOWN:</div>
+<div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>        <span class="keywordflow">return</span> KeyCode::Down;</div>
+<div class="line"><a id="l01270" name="l01270"></a><span class="lineno"> 1270</span> </div>
+<div class="line"><a id="l01271" name="l01271"></a><span class="lineno"> 1271</span>    <span class="keywordflow">default</span>:</div>
+<div class="line"><a id="l01272" name="l01272"></a><span class="lineno"> 1272</span>        <span class="keywordflow">return</span> KeyCode::Unknown;</div>
+<div class="line"><a id="l01273" name="l01273"></a><span class="lineno"> 1273</span>    }</div>
+<div class="line"><a id="l01274" name="l01274"></a><span class="lineno"> 1274</span>}</div>
+<div class="line"><a id="l01275" name="l01275"></a><span class="lineno"> 1275</span> </div>
+<div class="line"><a id="l01276" name="l01276"></a><span class="lineno"> 1276</span>KeyModifiers PlatformWindowWin32::getKeyModifiers()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01277" name="l01277"></a><span class="lineno"> 1277</span>    assertWindowThread();</div>
+<div class="line"><a id="l01278" name="l01278"></a><span class="lineno"> 1278</span>    KeyModifiers mods;</div>
+<div class="line"><a id="l01279" name="l01279"></a><span class="lineno"> 1279</span>    mods.shift = (GetKeyState(VK_SHIFT) &amp; 0x8000) != 0;</div>
+<div class="line"><a id="l01280" name="l01280"></a><span class="lineno"> 1280</span>    mods.control = (GetKeyState(VK_CONTROL) &amp; 0x8000) != 0;</div>
+<div class="line"><a id="l01281" name="l01281"></a><span class="lineno"> 1281</span>    mods.alt = (GetKeyState(VK_MENU) &amp; 0x8000) != 0;</div>
+<div class="line"><a id="l01282" name="l01282"></a><span class="lineno"> 1282</span>    mods.super = (GetKeyState(VK_LWIN) &amp; 0x8000) != 0 || (GetKeyState(VK_RWIN) &amp; 0x8000) != 0;</div>
+<div class="line"><a id="l01283" name="l01283"></a><span class="lineno"> 1283</span>    mods.capsLock = (GetKeyState(VK_CAPITAL) &amp; 0x0001) != 0;</div>
+<div class="line"><a id="l01284" name="l01284"></a><span class="lineno"> 1284</span>    <span class="keywordflow">return</span> mods;</div>
+<div class="line"><a id="l01285" name="l01285"></a><span class="lineno"> 1285</span>}</div>
+<div class="line"><a id="l01286" name="l01286"></a><span class="lineno"> 1286</span> </div>
+<div class="line"><a id="l01287" name="l01287"></a><span class="lineno"> 1287</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01288" name="l01288"></a><span class="lineno"> 1288</span><span class="comment">// Thread Safety</span></div>
+<div class="line"><a id="l01289" name="l01289"></a><span class="lineno"> 1289</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l01290" name="l01290"></a><span class="lineno"> 1290</span> </div>
+<div class="line"><a id="l01291" name="l01291"></a><span class="lineno"> 1291</span><span class="keywordtype">void</span> PlatformWindowWin32::assertWindowThread()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01292" name="l01292"></a><span class="lineno"> 1292</span>    AESTRA_ASSERT_MSG(GetCurrentThreadId() == m_creatingThreadId,</div>
+<div class="line"><a id="l01293" name="l01293"></a><span class="lineno"> 1293</span>                      <span class="stringliteral">&quot;PlatformWindowWin32 methods must be called from the same thread that created the window. &quot;</span></div>
+<div class="line"><a id="l01294" name="l01294"></a><span class="lineno"> 1294</span>                      <span class="stringliteral">&quot;Cross-thread calls to setCursorVisible() and getCurrentModifiers() will cause &quot;</span></div>
+<div class="line"><a id="l01295" name="l01295"></a><span class="lineno"> 1295</span>                      <span class="stringliteral">&quot;cursor display count desynchronization due to ShowCursor()&#39;s per-thread behavior.&quot;</span>);</div>
+<div class="line"><a id="l01296" name="l01296"></a><span class="lineno"> 1296</span>}</div>
+<div class="line"><a id="l01297" name="l01297"></a><span class="lineno"> 1297</span> </div>
+<div class="line"><a id="l01298" name="l01298"></a><span class="lineno"> 1298</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1PlatformWindowWin32_html"><div class="ttname"><a href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html">Aestra::PlatformWindowWin32</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00009">PlatformWindowWin32.h:9</a></div></div>
 <div class="ttc" id="astructAestra_1_1WindowDesc_html"><div class="ttname"><a href="../../d6/d3b/structAestra_1_1WindowDesc.html">Aestra::WindowDesc</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00015">AestraPlatform.h:15</a></div></div>
 <div class="ttc" id="astructAestra_1_1WindowDesc_html_a36deb4282569afb40b071f3b504d41f0"><div class="ttname"><a href="../../d6/d3b/structAestra_1_1WindowDesc.html#a36deb4282569afb40b071f3b504d41f0">Aestra::WindowDesc::decorated</a></div><div class="ttdeci">bool decorated</div><div class="ttdoc">Whether the native window frame and controls are shown.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00029">AestraPlatform.h:29</a></div></div>

@@ -1,0 +1,26 @@
+<map id="AestraContent::wireFloatingPanel" name="AestraContent::wireFloatingPanel">
+<area shape="rect" id="Node000001" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="5,125,209,165"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a598c0defae0aa0673fde38922b7b0d17" title="Begin dragging an overlay panel." alt="" coords="262,5,487,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="134,122,189,85,256,48,300,32,301,37,258,52,191,89,137,126"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="585,85,777,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="154,122,203,105,257,91,339,82,422,80,571,88,571,93,422,85,339,88,258,97,204,110,155,127"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#ab127c5e597ccf0ba3ec1f5b63e113b15" title="Compute the rectangle panels are allowed to occupy." alt="" coords="565,149,797,189"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="157,162,205,179,258,191,334,199,411,200,486,195,554,188,554,193,486,201,411,205,333,204,257,197,204,184,156,167"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#ae6603efddfdccbb0c37e2fc74daff3ea" title="End the active overlay&#45;panel drag." alt="" coords="268,257,481,283"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="137,163,191,199,258,236,302,251,301,256,256,240,189,204,134,167"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="283,156,466,181"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="210,151,270,157,269,162,209,156"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#abf75859f00b70e490c26fdad50391fc0" title="Update the active overlay&#45;panel drag." alt="" coords="257,107,492,132"/>
+<area shape="poly" id="edge12_Node000001_Node000010" title=" " alt="" coords="209,132,244,129,244,134,210,138"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="869,156,1108,181"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="797,166,855,166,855,171,797,171"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="895,206,1083,246"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="789,186,881,203,880,209,788,191"/>
+<area shape="poly" id="edge8_Node000008_Node000003" title=" " alt="" coords="437,153,491,142,572,125,573,130,493,147,439,159"/>
+<area shape="poly" id="edge9_Node000008_Node000004" title=" " alt="" coords="466,166,551,166,551,171,466,171"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#ace0d73e7c0b8d912331716f8ff4eb1ee" title="Compute the maximized overlay rectangle." alt="" coords="540,213,821,239"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="441,179,540,198,595,208,594,213,540,203,440,184"/>
+<area shape="poly" id="edge11_Node000009_Node000006" title=" " alt="" coords="822,223,881,223,881,229,822,229"/>
+<area shape="poly" id="edge13_Node000010_Node000003" title=" " alt="" coords="492,111,571,107,571,113,493,116"/>
+<area shape="poly" id="edge14_Node000010_Node000004" title=" " alt="" coords="455,129,551,145,550,150,454,135"/>
+</map>

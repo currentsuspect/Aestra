@@ -1,7 +1,9 @@
 <map id="Aestra::Audio::AudioEngine::setPatternPlaybackEngine" name="Aestra::Audio::AudioEngine::setPatternPlaybackEngine">
-<area shape="rect" id="Node000001" title="Bind the pattern playback engine used for scheduled MIDI." alt="" coords="277,27,476,67"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="5,5,229,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,37,229,33,230,28,264,32"/>
-<area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="17,55,217,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,62,218,67,217,62,264,57"/>
+<area shape="rect" id="Node000001" title="Bind the pattern playback engine used for scheduled MIDI." alt="" coords="277,63,476,103"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="10,5,225,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="272,62,208,48,209,43,273,57"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="5,70,229,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,85,230,85,230,80,264,80"/>
+<area shape="rect" id="Node000004" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="17,120,217,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="273,108,209,123,208,117,272,103"/>
 </map>

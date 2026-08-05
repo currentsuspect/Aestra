@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PlaylistModel::removeLane" name="Aestra::Audio::PlaylistModel::removeLane">
+<area shape="rect" id="Node000001" title="Remove a lane by ID." alt="" coords="289,5,495,45"/>
+<area shape="rect" id="Node000002" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#aef7774fe56b406d46842a05ed55aab60" title="Undo the command." alt="" coords="5,5,241,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="275,28,241,28,241,23,275,23"/>
+</map>

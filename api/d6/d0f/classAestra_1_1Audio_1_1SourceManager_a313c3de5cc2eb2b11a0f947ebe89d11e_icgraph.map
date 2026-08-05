@@ -1,5 +1,11 @@
 <map id="Aestra::Audio::SourceManager::getOrCreateSource" name="Aestra::Audio::SourceManager::getOrCreateSource">
-<area shape="rect" id="Node000001" title="Get or create a source for a file path." alt="" coords="272,5,491,45"/>
-<area shape="rect" id="Node000002" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="5,5,224,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,28,224,28,224,23,258,23"/>
+<area shape="rect" id="Node000001" title="Get or create a source for a file path." alt="" coords="1004,5,1223,45"/>
+<area shape="rect" id="Node000002" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="737,5,956,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="990,28,956,28,956,23,990,23"/>
+<area shape="rect" id="Node000003" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#a4f02b217619f2c540dfc913686497f77" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="501,5,689,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="724,28,689,28,689,23,724,23"/>
+<area shape="rect" id="Node000004" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="253,5,453,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="487,28,453,28,453,23,487,23"/>
+<area shape="rect" id="Node000005" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,205,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="240,28,206,28,206,23,240,23"/>
 </map>

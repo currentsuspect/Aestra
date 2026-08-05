@@ -1,9 +1,24 @@
 <map id="Aestra::Audio::TrackManager::getUnitManager" name="Aestra::Audio::TrackManager::getUnitManager">
-<area shape="rect" id="Node000001" title="Get the unit manager (Arsenal)" alt="" coords="531,37,739,77"/>
-<area shape="rect" id="Node000002" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#ad4b9c78f82e9865b469af4bd109f6643" title="Execute the command (first time)" alt="" coords="268,5,483,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="517,45,483,41,483,36,517,40"/>
-<area shape="rect" id="Node000004" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a522d22ec3517c3b12f1c9a568fd596f3" title="Undo the command." alt="" coords="268,69,483,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="517,74,483,79,483,73,517,69"/>
-<area shape="rect" id="Node000003" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#abcba5124b6452cf16b69e9aae6098252" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,220,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="255,28,220,28,220,23,255,23"/>
+<area shape="rect" id="Node000001" title="Get the unit manager (Arsenal)" alt="" coords="573,269,781,309"/>
+<area shape="rect" id="Node000002" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a807cae773d69b41d42093fd6a040a6e5" title="Execute the command (first time)" alt="" coords="308,5,504,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="659,257,638,216,607,167,569,117,524,75,503,62,505,57,527,71,573,114,612,164,642,213,664,255"/>
+<area shape="rect" id="Node000004" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="309,85,503,125"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="652,259,598,198,563,166,524,139,499,127,501,122,527,134,566,162,601,194,656,256"/>
+<area shape="rect" id="Node000005" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a619d59586f8cb342ded7bb6e0078ebf0" title="Execute the command (first time)" alt="" coords="305,149,507,189"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="634,263,583,232,524,203,491,191,493,186,526,198,585,227,637,259"/>
+<area shape="rect" id="Node000007" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="287,237,525,277"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="560,278,525,273,526,268,560,272"/>
+<area shape="rect" id="Node000008" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a6ccce311e075d31c9fb8326ae97fca2d" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="309,301,503,341"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="560,305,504,312,503,307,559,300"/>
+<area shape="rect" id="Node000009" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#aef7774fe56b406d46842a05ed55aab60" title="Undo the command." alt="" coords="288,365,524,405"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="622,317,526,355,488,367,486,362,524,350,620,312"/>
+<area shape="rect" id="Node000010" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="309,429,503,469"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="650,321,596,371,563,397,527,419,499,431,497,426,524,414,560,393,593,367,647,317"/>
+<area shape="rect" id="Node000011" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a06d659cbbb775984a31d25b2aa39a291" title="Undo the command." alt="" coords="305,493,507,533"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="661,323,639,360,609,403,571,446,527,483,504,495,502,490,524,478,567,443,604,400,635,357,657,320"/>
+<area shape="rect" id="Node000003" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,13,239,53"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="294,35,239,35,239,30,294,30"/>
+<area shape="rect" id="Node000006" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a608dc40a7dbc4550f6652ab0fcf5a8ce" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="21,149,223,189"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="291,171,223,171,223,166,291,166"/>
+<area shape="poly" id="edge7_Node000007_Node000007" title=" " alt="" coords="452,225,436,218,406,215,380,217,364,222,358,228,361,235,356,237,353,227,361,218,379,212,406,210,437,213,454,220"/>
 </map>

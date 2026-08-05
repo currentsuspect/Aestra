@@ -426,119 +426,123 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>                           m_mixBounds.height - 14.0f);</div>
 <div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordflow">if</span> (event.released) {</div>
 <div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> wasDragging = m_draggingPitch || m_draggingMix || m_draggingKnob &gt;= 0;</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        m_draggingPitch = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        m_draggingMix = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>        m_draggingKnob = -1;</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        <span class="keywordflow">if</span> (wasDragging)</div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    }</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span> </div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::DoubleClick || event.doubleClick) {</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>            setParameter(Drift::kPitch, 0.5f);</div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        }</div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>            setParameter(m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].parameterId,</div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>                         m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].defaultValue);</div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        }</div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    }</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span> </div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>        <span class="keywordflow">if</span> (m_bypassBounds.contains(event.position)) {</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>            setParameter(Drift::kBypass, m_instance-&gt;getParameter(Drift::kBypass) &gt; 0.5f ? 0.0f : 1.0f);</div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>        }</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_intervalBounds.size(); ++i) {</div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>            <span class="keywordflow">if</span> (m_intervalBounds[i].contains(event.position)) {</div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                setParameter(Drift::kPitch, (<span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(kIntervals[i]) + 12.0f) / 24.0f);</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>            }</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        }</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>            m_draggingPitch = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>            m_dragStartY = <span class="keyword">event</span>.position.y;</div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>            m_dragStartValue = m_instance-&gt;getParameter(Drift::kPitch);</div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>        }</div>
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>        <span class="keywordflow">if</span> (mixTrack.contains(event.position)) {</div>
-<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>            m_draggingMix = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>            setParameter(Drift::kMix, (event.position.x - mixTrack.x) / mixTrack.width);</div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>        }</div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>            m_draggingKnob = knob;</div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>            m_dragStartY = <span class="keyword">event</span>.position.y;</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>            m_dragStartValue = m_instance-&gt;getParameter(m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].parameterId);</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        }</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    }</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span> </div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::Move || event.button == NUIMouseButton::None) {</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        <span class="keywordflow">if</span> (m_draggingPitch) {</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>            setParameter(Drift::kPitch, m_dragStartValue + (m_dragStartY - event.position.y) / kDragRangePixels);</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>        }</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>        <span class="keywordflow">if</span> (m_draggingMix) {</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>            setParameter(Drift::kMix, (event.position.x - mixTrack.x) / mixTrack.width);</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>        }</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>        <span class="keywordflow">if</span> (m_draggingKnob &gt;= 0) {</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; knob = m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(m_draggingKnob)];</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>            setParameter(knob.parameterId, m_dragStartValue + (m_dragStartY - event.position.y) / kDragRangePixels);</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>        }</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>        m_pitchHovered = m_pitchWheelBounds.contains(event.position);</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>        m_bypassHovered = m_bypassBounds.contains(event.position);</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>        m_hoveredKnob = hitTestKnob(event.position);</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        m_hoveredInterval = -1;</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_intervalBounds.size(); ++i) {</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>            <span class="keywordflow">if</span> (m_intervalBounds[i].contains(event.position)) {</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>                m_hoveredInterval = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>            }</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>        }</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>        setDirty();</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>    }</div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span> </div>
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::Scroll) {</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>            setParameter(Drift::kPitch, m_instance-&gt;getParameter(Drift::kPitch) + event.wheelDelta * 0.01f);</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>        }</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>        <span class="keywordflow">if</span> (mixTrack.contains(event.position)) {</div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>            setParameter(Drift::kMix, m_instance-&gt;getParameter(Drift::kMix) + event.wheelDelta * 0.01f);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        <span class="comment">// Pitch wheel + knobs capture the cursor; the mix track does not.</span></div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        <span class="keywordflow">if</span> (m_draggingPitch || m_draggingKnob &gt;= 0)</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>            endKnobCapture();</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        m_draggingPitch = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        m_draggingMix = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>        m_draggingKnob = -1;</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>        <span class="keywordflow">if</span> (wasDragging)</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    }</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::DoubleClick || event.doubleClick) {</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>            setParameter(Drift::kPitch, 0.5f);</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>        }</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>            setParameter(m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].parameterId,</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>                         m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].defaultValue);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>        }</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    }</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>        <span class="keywordflow">if</span> (m_bypassBounds.contains(event.position)) {</div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>            setParameter(Drift::kBypass, m_instance-&gt;getParameter(Drift::kBypass) &gt; 0.5f ? 0.0f : 1.0f);</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>        }</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_intervalBounds.size(); ++i) {</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>            <span class="keywordflow">if</span> (m_intervalBounds[i].contains(event.position)) {</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>                setParameter(Drift::kPitch, (<span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(kIntervals[i]) + 12.0f) / 24.0f);</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>            }</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>        }</div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>            m_draggingPitch = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>            beginKnobCapture(m_pitchWheelBounds.center(), event.position);</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>        }</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>        <span class="keywordflow">if</span> (mixTrack.contains(event.position)) {</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            m_draggingMix = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>            setParameter(Drift::kMix, (event.position.x - mixTrack.x) / mixTrack.width);</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>        }</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>            m_draggingKnob = knob;</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>            beginKnobCapture(m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].bounds.center(), event.position);</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>        }</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    }</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span> </div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::Move || event.button == NUIMouseButton::None) {</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        <span class="keywordflow">if</span> (m_draggingPitch) {</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>            <span class="comment">// Service-owned frame delta (up = increase), accumulated into value.</span></div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>            setParameter(Drift::kPitch,</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>                         m_instance-&gt;getParameter(Drift::kPitch) + knobDragStep(event, kDragRangePixels));</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>        }</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>        <span class="keywordflow">if</span> (m_draggingMix) {</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>            setParameter(Drift::kMix, (event.position.x - mixTrack.x) / mixTrack.width);</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>        }</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>        <span class="keywordflow">if</span> (m_draggingKnob &gt;= 0) {</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; knob = m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(m_draggingKnob)];</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>            setParameter(knob.parameterId,</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>                         m_instance-&gt;getParameter(knob.parameterId) + knobDragStep(event, kDragRangePixels));</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        }</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        m_pitchHovered = m_pitchWheelBounds.contains(event.position);</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>        m_bypassHovered = m_bypassBounds.contains(event.position);</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>        m_hoveredKnob = hitTestKnob(event.position);</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>        m_hoveredInterval = -1;</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_intervalBounds.size(); ++i) {</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>            <span class="keywordflow">if</span> (m_intervalBounds[i].contains(event.position)) {</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                m_hoveredInterval = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>            }</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>        }</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>        setDirty();</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    }</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span> </div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    <span class="keywordflow">if</span> (event.type == NUIMouseEventType::Scroll) {</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>        <span class="keywordflow">if</span> (m_pitchWheelBounds.contains(event.position)) {</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>            setParameter(Drift::kPitch, m_instance-&gt;getParameter(Drift::kPitch) + event.wheelDelta * 0.01f);</div>
 <div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>        }</div>
-<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
-<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>            <span class="keyword">const</span> uint32_t <span class="keywordtype">id</span> = m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].parameterId;</div>
-<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>            setParameter(<span class="keywordtype">id</span>, m_instance-&gt;getParameter(<span class="keywordtype">id</span>) + event.wheelDelta * 0.01f);</div>
-<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>        }</div>
-<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    }</div>
-<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span> </div>
-<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    <span class="keywordflow">return</span> consumeInsideBounds(event);</div>
-<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>}</div>
-<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span> </div>
-<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span><span class="keywordtype">void</span> AestraDriftEditor::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
-<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>    AestraPanelWindow::onResize(width, height);</div>
-<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>    layoutControls();</div>
-<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>}</div>
-<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span> </div>
-<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>std::string AestraDriftEditor::pitchValueString()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    <span class="keywordflow">if</span> (!m_instance)</div>
-<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>        <span class="keywordflow">return</span> <span class="stringliteral">&quot;0&quot;</span>;</div>
-<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> semitones = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(-12.0f + m_instance-&gt;getParameter(Drift::kPitch) * 24.0f));</div>
-<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>    <span class="keywordflow">if</span> (semitones &gt; 0)</div>
-<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>        <span class="keywordflow">return</span> <span class="stringliteral">&quot;+&quot;</span> + std::to_string(semitones);</div>
-<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>    <span class="keywordflow">return</span> std::to_string(semitones);</div>
-<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>}</div>
-<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span> </div>
-<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>        <span class="keywordflow">if</span> (mixTrack.contains(event.position)) {</div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>            setParameter(Drift::kMix, m_instance-&gt;getParameter(Drift::kMix) + event.wheelDelta * 0.01f);</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>        }</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> knob = hitTestKnob(event.position);</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>        <span class="keywordflow">if</span> (knob &gt;= 0) {</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>            <span class="keyword">const</span> uint32_t <span class="keywordtype">id</span> = m_knobs[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(knob)].parameterId;</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>            setParameter(<span class="keywordtype">id</span>, m_instance-&gt;getParameter(<span class="keywordtype">id</span>) + event.wheelDelta * 0.01f);</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>        }</div>
+<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    }</div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span> </div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>    <span class="keywordflow">return</span> consumeInsideBounds(event);</div>
+<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>}</div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span> </div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span><span class="keywordtype">void</span> AestraDriftEditor::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
+<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>    AestraPanelWindow::onResize(width, height);</div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    layoutControls();</div>
+<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>}</div>
+<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span> </div>
+<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>std::string AestraDriftEditor::pitchValueString()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>    <span class="keywordflow">if</span> (!m_instance)</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>        <span class="keywordflow">return</span> <span class="stringliteral">&quot;0&quot;</span>;</div>
+<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> semitones = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(-12.0f + m_instance-&gt;getParameter(Drift::kPitch) * 24.0f));</div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span>    <span class="keywordflow">if</span> (semitones &gt; 0)</div>
+<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>        <span class="keywordflow">return</span> <span class="stringliteral">&quot;+&quot;</span> + std::to_string(semitones);</div>
+<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>    <span class="keywordflow">return</span> std::to_string(semitones);</div>
+<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>}</div>
+<div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span> </div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1AestraDrift_html"><div class="ttname"><a href="../../d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html">Aestra::Audio::Plugins::AestraDrift</a></div><div class="ttdef"><b>Definition</b> <a href="../../d6/d25/AestraDrift_8h_source.html#l00021">AestraDrift.h:21</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 </div><!-- fragment --></div><!-- contents -->

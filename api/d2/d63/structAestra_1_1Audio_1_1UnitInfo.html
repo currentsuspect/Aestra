@@ -97,13 +97,13 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ab463abb07c8a3c9fea46007a1b6d999b" id="r_ab463abb07c8a3c9fea46007a1b6d999b"><td class="memItemLeft" align="right" valign="top">ArsenalRouteMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab463abb07c8a3c9fea46007a1b6d999b">getRouteMode</a> () const noexcept</td></tr>
-<tr class="memdesc:ab463abb07c8a3c9fea46007a1b6d999b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Effective route mode, preserving legacy route fields as authority until cleared.  <br /></td></tr>
+<tr class="memdesc:ab463abb07c8a3c9fea46007a1b6d999b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Effective legacy Timeline ownership mode.  <br /></td></tr>
 <tr class="separator:ab463abb07c8a3c9fea46007a1b6d999b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad87a5e883a573636844c93e55a8082ba" id="r_ad87a5e883a573636844c93e55a8082ba"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad87a5e883a573636844c93e55a8082ba">routesToTimelineTrack</a> () const noexcept</td></tr>
-<tr class="memdesc:ad87a5e883a573636844c93e55a8082ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when this unit currently routes into the Timeline track path.  <br /></td></tr>
+<tr class="memdesc:ad87a5e883a573636844c93e55a8082ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when this unit carries a legacy Timeline assignment.  <br /></td></tr>
 <tr class="separator:ad87a5e883a573636844c93e55a8082ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab435733f2cc4ca63ba5f3bf144eeb661" id="r_ab435733f2cc4ca63ba5f3bf144eeb661"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab435733f2cc4ca63ba5f3bf144eeb661">routesToMasterPreview</a> () const noexcept</td></tr>
-<tr class="memdesc:ab435733f2cc4ca63ba5f3bf144eeb661"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when this unit currently routes to master preview path.  <br /></td></tr>
+<tr class="memdesc:ab435733f2cc4ca63ba5f3bf144eeb661"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when this unit has no legacy Timeline assignment.  <br /></td></tr>
 <tr class="separator:ab435733f2cc4ca63ba5f3bf144eeb661"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a82c839b070526fd23af1ade26d59573c" id="r_a82c839b070526fd23af1ade26d59573c"><td class="memItemLeft" align="right" valign="top">ArsenalBridgeMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a82c839b070526fd23af1ade26d59573c">getBridgeMode</a> () const noexcept</td></tr>
 <tr class="memdesc:a82c839b070526fd23af1ade26d59573c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Explicit in-memory bridge ownership mode value.  <br /></td></tr>
@@ -120,6 +120,12 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a1df38aa30156b3a9a2eb7225f8d41fa2" id="r_a1df38aa30156b3a9a2eb7225f8d41fa2"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a1df38aa30156b3a9a2eb7225f8d41fa2">targetMixerRoute</a> {-1}</td></tr>
 <tr class="memdesc:a1df38aa30156b3a9a2eb7225f8d41fa2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Timeline lane assignment compatibility field.  <br /></td></tr>
 <tr class="separator:a1df38aa30156b3a9a2eb7225f8d41fa2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1192fc616caec3cf4b9e41d6b3f1f07" id="r_ae1192fc616caec3cf4b9e41d6b3f1f07"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ae1192fc616caec3cf4b9e41d6b3f1f07">targetMixerChannelId</a> {MASTER_MIXER_CHANNEL_ID}</td></tr>
+<tr class="memdesc:ae1192fc616caec3cf4b9e41d6b3f1f07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stable mixer destination ID (0 routes directly to Master).  <br /></td></tr>
+<tr class="separator:ae1192fc616caec3cf4b9e41d6b3f1f07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d78f11169814543c8c4fa3d7b9c843c" id="r_a6d78f11169814543c8c4fa3d7b9c843c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a6d78f11169814543c8c4fa3d7b9c843c">legacyMixerRoutePending</a> {false}</td></tr>
+<tr class="memdesc:a6d78f11169814543c8c4fa3d7b9c843c"><td class="mdescLeft">&#160;</td><td class="mdescRight">True while an older lane-index route awaits project-load migration.  <br /></td></tr>
+<tr class="separator:a6d78f11169814543c8c4fa3d7b9c843c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ab1517bc6e757a9ffa6a1545825e9f2" id="r_a3ab1517bc6e757a9ffa6a1545825e9f2"><td class="memItemLeft" align="right" valign="top">ArsenalRouteMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a3ab1517bc6e757a9ffa6a1545825e9f2">routeMode</a> {ArsenalRouteMode::PreviewToMaster}</td></tr>
 <tr class="memdesc:a3ab1517bc6e757a9ffa6a1545825e9f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Explicit route mode field (Phase 2A scaffolding).  <br /></td></tr>
 <tr class="separator:a3ab1517bc6e757a9ffa6a1545825e9f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -141,6 +147,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ad681cd279871f5ad0e788650355332a1" id="r_ad681cd279871f5ad0e788650355332a1"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad681cd279871f5ad0e788650355332a1">color</a> {0x808080}</td></tr>
 <tr class="memdesc:ad681cd279871f5ad0e788650355332a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accent color used by Arsenal and related UI.  <br /></td></tr>
 <tr class="separator:ad681cd279871f5ad0e788650355332a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12f6aa5b117e5617c243f6566436f10c" id="r_a12f6aa5b117e5617c243f6566436f10c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a12f6aa5b117e5617c243f6566436f10c">gain</a> {1.0f}</td></tr>
+<tr class="memdesc:a12f6aa5b117e5617c243f6566436f10c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Linear output gain applied at the unit's mix point (1 = unity).  <br /></td></tr>
+<tr class="separator:a12f6aa5b117e5617c243f6566436f10c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aee0fb18f88f8d758ecf9db057288e64a" id="r_aee0fb18f88f8d758ecf9db057288e64a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#aee0fb18f88f8d758ecf9db057288e64a">isMuted</a> {false}</td></tr>
 <tr class="memdesc:aee0fb18f88f8d758ecf9db057288e64a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the unit is muted.  <br /></td></tr>
 <tr class="separator:aee0fb18f88f8d758ecf9db057288e64a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -175,7 +184,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Unit information for audio engine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00067">67</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00068">68</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a82c839b070526fd23af1ade26d59573c" name="a82c839b070526fd23af1ade26d59573c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a82c839b070526fd23af1ade26d59573c">&#9670;&#160;</a></span>getBridgeMode()</h2>
@@ -231,11 +240,11 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Effective route mode, preserving legacy route fields as authority until cleared. </p>
+<p>Effective legacy Timeline ownership mode. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00093">93</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00083">targetMixerRoute</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00080">targetMixerRoute</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00097">routesToMasterPreview()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00095">routesToTimelineTrack()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -271,7 +280,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>True when this unit currently routes to master preview path. </p>
+<p>True when this unit has no legacy Timeline assignment. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00097">97</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
@@ -309,7 +318,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>True when this unit currently routes into the Timeline track path. </p>
+<p>True when this unit carries a legacy Timeline assignment. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00095">95</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
@@ -339,9 +348,9 @@ Public Attributes</h2></td></tr>
 
 <p>Associated audio clip path for clip-based units. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00127">127</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00129">129</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00024">Aestra::Audio::LoadSampleCommand::execute()</a>, <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00024">Aestra::Audio::LoadSampleCommand::execute()</a>, <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -359,9 +368,9 @@ Public Attributes</h2></td></tr>
 
 <p>Cached clip duration for audio-style units. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00129">129</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00131">131</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -379,7 +388,7 @@ Public Attributes</h2></td></tr>
 
 <p>Lightweight preview waveform bins for Arsenal rendering. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00131">131</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00133">133</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +409,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00104">104</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00106">getBridgeMode()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00106">getBridgeMode()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -420,7 +429,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00117">117</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -438,9 +447,9 @@ Public Attributes</h2></td></tr>
 
 <p>Default pattern associated with this unit for Piano Roll editing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00137">137</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00139">139</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -458,9 +467,29 @@ Public Attributes</h2></td></tr>
 
 <p>Whether the unit is enabled in the realtime engine snapshot. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00071">71</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00072">72</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+
+</div>
+</div>
+<a id="a12f6aa5b117e5617c243f6566436f10c" name="a12f6aa5b117e5617c243f6566436f10c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12f6aa5b117e5617c243f6566436f10c">&#9670;&#160;</a></span>gain</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::UnitInfo::gain {1.0f}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Linear output gain applied at the unit's mix point (1 = unity). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00119">119</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/de9/SetUnitGainCommand_8h_source.html#l00020">Aestra::Audio::SetUnitGainCommand::execute()</a>, <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -478,9 +507,9 @@ Public Attributes</h2></td></tr>
 
 <p>High-level group classification used by the Arsenal UI. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00133">133</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00135">135</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -498,9 +527,9 @@ Public Attributes</h2></td></tr>
 
 <p>Stable unit identifier. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00069">69</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00070">70</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -518,9 +547,9 @@ Public Attributes</h2></td></tr>
 
 <p>Whether the unit is armed for editing or recording. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00123">123</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00125">125</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -538,9 +567,9 @@ Public Attributes</h2></td></tr>
 
 <p>Whether the unit is enabled in the UI layer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00125">125</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00127">127</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -558,9 +587,9 @@ Public Attributes</h2></td></tr>
 
 <p>Whether the unit is muted. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00119">119</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00121">121</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -578,9 +607,29 @@ Public Attributes</h2></td></tr>
 
 <p>Whether the unit is soloed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00121">121</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00123">123</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+
+</div>
+</div>
+<a id="a6d78f11169814543c8c4fa3d7b9c843c" name="a6d78f11169814543c8c4fa3d7b9c843c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d78f11169814543c8c4fa3d7b9c843c">&#9670;&#160;</a></span>legacyMixerRoutePending</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::UnitInfo::legacyMixerRoutePending {false}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True while an older lane-index route awaits project-load migration. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00084">84</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -600,7 +649,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00115">115</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -620,7 +669,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00108">108</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00640">Aestra::Audio::UnitManager::captureUnitPluginState()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00708">Aestra::Audio::UnitManager::captureUnitPluginState()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -640,7 +689,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00110">110</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -660,7 +709,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00112">112</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -677,11 +726,31 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Explicit route mode field (Phase 2A scaffolding). </p>
-<p>Compatibility note: current rendering authority remains legacy <a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a1df38aa30156b3a9a2eb7225f8d41fa2">targetMixerRoute</a> mapping. This field is kept aligned for explicitness and future migration, but does not change current behavior. </p>
+<p>Compatibility note: this remains aligned with the legacy lane value and does not select mixer output. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00091">91</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+
+</div>
+</div>
+<a id="ae1192fc616caec3cf4b9e41d6b3f1f07" name="ae1192fc616caec3cf4b9e41d6b3f1f07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae1192fc616caec3cf4b9e41d6b3f1f07">&#9670;&#160;</a></span>targetMixerChannelId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::UnitInfo::targetMixerChannelId {MASTER_MIXER_CHANNEL_ID}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Stable mixer destination ID (0 routes directly to Master). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00082">82</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00498">Aestra::Audio::UnitManager::resetMixerChannel()</a>.</p>
 
 </div>
 </div>
@@ -698,15 +767,11 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Timeline lane assignment compatibility field. </p>
-<p>Current behavior maps this integer directly to route mode:</p><ul>
-<li>&lt; 0 routes unit output to master preview path.</li>
-<li>&gt;= 0 routes unit output to the Timeline track at that index.</li>
-</ul>
-<p>Arsenal currently participates in the main engine render path. Timeline remains arrangement/export authority, and export follows live processBlock routing behavior. </p>
+<p>Older projects used this integer as both placement metadata and audio routing. It is retained for compatibility, but mixer output now follows <a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ae1192fc616caec3cf4b9e41d6b3f1f07">targetMixerChannelId</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00083">83</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00080">80</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00093">getRouteMode()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00093">getRouteMode()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>.</p>
 
 </div>
 </div>
@@ -724,9 +789,9 @@ Public Attributes</h2></td></tr>
 
 <p>Unit content type used to select sequencing and editing behavior. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00135">135</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00137">137</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">Aestra::Audio::UnitManager::loadFromJSON()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00141">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00793">Aestra::Audio::UnitManager::loadFromJSON()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00141">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>.</p>
 
 </div>
 </div>

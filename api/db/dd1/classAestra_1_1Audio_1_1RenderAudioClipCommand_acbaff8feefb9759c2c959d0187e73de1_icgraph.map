@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::RenderAudioClipCommand::renderBuffer" name="Aestra::Audio::RenderAudioClipCommand::renderBuffer">
+<area shape="rect" id="Node000001" title="Produce the replacement audio for this clip." alt="" coords="501,5,704,45"/>
+<area shape="rect" id="Node000002" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="253,5,453,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="487,28,454,28,454,23,487,23"/>
+<area shape="rect" id="Node000003" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,205,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,28,206,28,206,23,240,23"/>
+</map>

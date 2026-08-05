@@ -1,0 +1,5 @@
+<map id="AestraContent::pauseFromCurrentFocus" name="AestraContent::pauseFromCurrentFocus">
+<area shape="rect" id="Node000001" title="Pause playback based on the current focus mode." alt="" coords="295,5,489,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,13,247,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="281,28,247,28,247,23,281,23"/>
+</map>

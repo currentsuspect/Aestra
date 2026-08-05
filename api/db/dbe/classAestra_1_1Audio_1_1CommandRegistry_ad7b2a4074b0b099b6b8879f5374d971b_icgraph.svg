@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 781;
+var viewWidth = 963;
 var viewHeight = 60;
 var sectionId = 'dynsection-0';
 </script>
@@ -58,19 +58,19 @@ var sectionId = 'dynsection-0';
 <g id="Node000001" class="node">
 <title>Node1</title>
 <g id="a_Node000001"><a xlink:title="Take the reason recorded by the most recent failed build.">
-<polygon fill="#999999" stroke="#666666" points="773,-30 594,-30 594,0 773,0 773,-30"/>
-<text text-anchor="start" x="602" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandRegistry</text>
-<text text-anchor="middle" x="683.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::consumeLastBuildError</text>
+<polygon fill="#999999" stroke="#666666" points="955,-30 776,-30 776,0 955,0 955,-30"/>
+<text text-anchor="start" x="784" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandRegistry</text>
+<text text-anchor="middle" x="865.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::consumeLastBuildError</text>
 </a>
 </g>
 </g>
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a20bf36e749c84e2cc982268d324faabb" target="_top" xlink:title="Validate and build a command without executing it.">
-<polygon fill="white" stroke="#666666" points="558,-30 390,-30 390,0 558,0 558,-30"/>
-<text text-anchor="start" x="398" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandParser</text>
-<text text-anchor="middle" x="474" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::buildValidated</text>
+<g id="a_Node000002"><a xlink:href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a867df74f8159bfbf8ef7db8366f59012" target="_top" xlink:title="Validate and build a command without executing it.">
+<polygon fill="white" stroke="#666666" points="740,-30 572,-30 572,0 740,0 740,-30"/>
+<text text-anchor="start" x="580" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandParser</text>
+<text text-anchor="middle" x="656" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::buildValidated</text>
 </a>
 </g>
 </g>
@@ -78,18 +78,18 @@ var sectionId = 'dynsection-0';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node1&#45;&gt;Node2</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M583.81,-15C575.19,-15 566.52,-15 558.04,-15"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="583.9,-18.5 593.9,-15 583.9,-11.5 583.9,-18.5"/>
+<path fill="none" stroke="#63b8ff" d="M765.81,-15C757.19,-15 748.52,-15 740.04,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="765.9,-18.5 775.9,-15 765.9,-11.5 765.9,-18.5"/>
 </a>
 </g>
 </g>
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#ae6d70fc94a0653054be42b7da9a11a8e" target="_top" xlink:title="Execute a verb from an already&#45;tokenised flag map.">
-<polygon fill="white" stroke="#666666" points="354,-52 186,-52 186,-22 354,-22 354,-52"/>
-<text text-anchor="start" x="194" y="-40" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandParser</text>
-<text text-anchor="middle" x="270" y="-29" font-family="Helvetica,sans-Serif" font-size="10.00">::execute</text>
+<g id="a_Node000003"><a xlink:href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" target="_top" xlink:title="Execute a verb from an already&#45;tokenised flag map.">
+<polygon fill="white" stroke="#666666" points="536,-52 368,-52 368,-22 536,-22 536,-52"/>
+<text text-anchor="start" x="376" y="-40" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandParser</text>
+<text text-anchor="middle" x="452" y="-29" font-family="Helvetica,sans-Serif" font-size="10.00">::execute</text>
 </a>
 </g>
 </g>
@@ -97,8 +97,8 @@ var sectionId = 'dynsection-0';
 <g id="edge2_Node000002_Node000003" class="edge">
 <title>Node2&#45;&gt;Node3</title>
 <g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M379.89,-25.14C371.27,-26.08 362.56,-27.03 354.04,-27.96"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="380.4,-28.61 389.96,-24.04 379.64,-21.65 380.4,-28.61"/>
+<path fill="none" stroke="#63b8ff" d="M561.89,-25.14C553.27,-26.08 544.56,-27.03 536.04,-27.96"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="562.4,-28.61 571.96,-24.04 561.64,-21.65 562.4,-28.61"/>
 </a>
 </g>
 </g>
@@ -106,18 +106,18 @@ var sectionId = 'dynsection-0';
 <g id="Node000004" class="node">
 <title>Node4</title>
 <g id="a_Node000004"><a xlink:href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" target="_top" xlink:title="Process one JSON request line and return the JSON response.">
-<polygon fill="white" stroke="#666666" points="150,-30 0,-30 0,0 150,0 150,-30"/>
-<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseService</text>
-<text text-anchor="middle" x="75" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::handleRequest</text>
+<polygon fill="white" stroke="#666666" points="332,-30 182,-30 182,0 332,0 332,-30"/>
+<text text-anchor="start" x="190" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseService</text>
+<text text-anchor="middle" x="257" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::handleRequest</text>
 </a>
 </g>
 </g>
 <!-- Node2&#45;&gt;Node4 -->
-<g id="edge4_Node000002_Node000004" class="edge">
+<g id="edge5_Node000002_Node000004" class="edge">
 <title>Node2&#45;&gt;Node4</title>
-<g id="a_edge4_Node000002_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M379.62,-13.28C370.96,-13.17 362.32,-13.07 354,-13 279.34,-12.37 260.66,-12.32 186,-13 174.44,-13.11 162.21,-13.27 150.26,-13.47"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="379.73,-16.78 389.78,-13.42 379.83,-9.78 379.73,-16.78"/>
+<g id="a_edge5_Node000002_Node000004"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M561.62,-13.28C552.96,-13.17 544.32,-13.07 536,-13 461.34,-12.37 442.66,-12.32 368,-13 356.44,-13.11 344.21,-13.27 332.26,-13.47"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="561.73,-16.78 571.78,-13.42 561.83,-9.78 561.73,-16.78"/>
 </a>
 </g>
 </g>
@@ -125,8 +125,27 @@ var sectionId = 'dynsection-0';
 <g id="edge3_Node000003_Node000004" class="edge">
 <title>Node3&#45;&gt;Node4</title>
 <g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M175.72,-26.37C167.14,-25.39 158.53,-24.41 150.16,-23.45"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="175.42,-29.86 185.75,-27.51 176.21,-22.9 175.42,-29.86"/>
+<path fill="none" stroke="#63b8ff" d="M357.72,-26.37C349.14,-25.39 340.53,-24.41 332.16,-23.45"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="357.42,-29.86 367.75,-27.51 358.21,-22.9 357.42,-29.86"/>
+</a>
+</g>
+</g>
+<!-- Node5 -->
+<g id="Node000005" class="node">
+<title>Node5</title>
+<g id="a_Node000005"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute every fully received request line on the caller&#39;s thread.">
+<polygon fill="white" stroke="#666666" points="146,-30 0,-30 0,0 146,0 146,-30"/>
+<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseSocket</text>
+<text text-anchor="middle" x="73" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Server::processPending</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node5 -->
+<g id="edge4_Node000004_Node000005" class="edge">
+<title>Node4&#45;&gt;Node5</title>
+<g id="a_edge4_Node000004_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M171.93,-15C163.33,-15 154.65,-15 146.19,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="171.97,-18.5 181.97,-15 171.97,-11.5 171.97,-18.5"/>
 </a>
 </g>
 </g>

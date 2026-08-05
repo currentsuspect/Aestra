@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::UnitManager::getUnitRootMidiNote" name="Aestra::Audio::UnitManager::getUnitRootMidiNote">
+<area shape="rect" id="Node000001" title="Get the MIDI note that plays a unit&#39;s sample untransposed (60 fallback)." alt="" coords="464,69,665,109"/>
+<area shape="rect" id="Node000002" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="268,69,416,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="450,92,416,92,416,87,450,87"/>
+<area shape="rect" id="Node000003" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="39,5,187,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="256,68,184,48,186,43,257,63"/>
+<area shape="rect" id="Node000004" href="$da/d6f/classAestraUI_1_1UnitRow.html#a834aa18ceb45757fa37756c95a995406" title="Route this unit to the first unused mixer insert, creating one when needed." alt="" coords="5,69,220,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="254,92,220,92,220,87,254,87"/>
+<area shape="rect" id="Node000005" href="$da/d6f/classAestraUI_1_1UnitRow.html#a3fd8f3f2017082c5b9a30bc2b1301d44" title="Create a sequencer row for an Arsenal unit." alt="" coords="39,133,187,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="257,116,186,136,184,131,256,110"/>
+</map>

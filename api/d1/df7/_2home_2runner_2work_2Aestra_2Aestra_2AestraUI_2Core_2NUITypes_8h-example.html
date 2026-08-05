@@ -530,6 +530,8 @@ $(function() {
 <div class="line">    <span class="keywordtype">bool</span> released = <span class="keyword">false</span>;</div>
 <div class="line">    <span class="keywordtype">bool</span> doubleClick = <span class="keyword">false</span>;</div>
 <div class="line">    <span class="keywordtype">bool</span> cursorCaptured = <span class="keyword">false</span>;  <span class="comment">// True during hidden-cursor drag; components should skip hover/tooltip updates</span></div>
+<div class="line">    <span class="keywordtype">bool</span> synthetic = <span class="keyword">false</span>;       <span class="comment">// Bridge-generated (focus-loss release, post-capture style re-resolution) —</span></div>
+<div class="line">                                  <span class="comment">// controls with commit-on-release semantics should treat this as &quot;stop&quot;, not &quot;accept&quot;</span></div>
 <div class="line">};</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">struct </span>NUIKeyEvent {</div>

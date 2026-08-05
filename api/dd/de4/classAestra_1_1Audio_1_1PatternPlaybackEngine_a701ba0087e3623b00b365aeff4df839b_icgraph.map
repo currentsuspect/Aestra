@@ -1,13 +1,17 @@
 <map id="Aestra::Audio::PatternPlaybackEngine::flush" name="Aestra::Audio::PatternPlaybackEngine::flush">
-<area shape="rect" id="Node000001" title="Flush queued events and rewind active instances." alt="" coords="509,101,732,141"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="253,5,461,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="559,98,460,60,425,48,427,43,462,55,561,94"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="253,69,461,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="495,109,461,105,462,99,496,104"/>
-<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6fb4ec85fe6d89ceb031d1add145dbe6" title="Flush the Arsenal scheduler before arming a pattern for playback." alt="" coords="253,133,461,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="496,139,462,143,461,138,495,134"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="253,197,461,237"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="561,149,462,188,427,200,425,195,460,183,559,144"/>
-<area shape="rect" id="Node000006" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="5,197,205,237"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="239,220,206,220,206,215,239,215"/>
+<area shape="rect" id="Node000001" title="Flush queued events and rewind active instances." alt="" coords="759,133,981,173"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="496,5,711,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="828,128,773,93,710,60,679,48,681,43,712,55,775,88,830,123"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="499,69,707,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="772,133,687,112,688,107,773,127"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="499,133,707,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="745,156,707,156,707,151,745,151"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6fb4ec85fe6d89ceb031d1add145dbe6" title="Flush the Arsenal scheduler before arming a pattern for playback." alt="" coords="499,197,707,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="773,179,688,200,687,195,772,174"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="499,261,707,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="830,184,775,218,712,252,681,264,679,259,710,247,773,214,828,179"/>
+<area shape="rect" id="Node000007" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,261,448,301"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="486,284,448,284,448,279,486,279"/>
+<area shape="rect" id="Node000008" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,261,200,301"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="235,284,200,284,200,279,235,279"/>
 </map>

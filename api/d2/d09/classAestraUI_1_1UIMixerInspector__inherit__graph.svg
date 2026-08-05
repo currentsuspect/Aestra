@@ -21,7 +21,7 @@
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Right&#45;side inspector panel for the selected mixer channel.">
+<g id="a_Node000001"><a xlink:title=" ">
 <polygon fill="#999999" stroke="#666666" points="156,-19 9,-19 9,0 156,0 156,-19"/>
 <text text-anchor="middle" x="82.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIMixerInspector</text>
 </a>

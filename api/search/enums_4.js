@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['transportstate_0',['TransportState',['../d3/df6/TransportBar_8h.html#a12df7c150b09f8ba4a3ddcba78d9064c',1,'Aestra']]]
+  ['nuicursorrestorepolicy_0',['NUICursorRestorePolicy',['../dc/d15/NUICursorService_8h.html#a5a4a7cc03777f041adeac66d57a47fcf',1,'AestraUI']]]
 ];

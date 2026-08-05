@@ -1,0 +1,5 @@
+<map id="AestraContent::toggleTakesPanel" name="AestraContent::toggleTakesPanel">
+<area shape="rect" id="Node000001" title="Toggle the Takes panel visibility." alt="" coords="260,5,460,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a82a35ff5bbf8d6f1445e1016d19679c6" title="Create the History and Takes overlays." alt="" coords="5,5,212,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="246,28,212,28,212,23,246,23"/>
+</map>

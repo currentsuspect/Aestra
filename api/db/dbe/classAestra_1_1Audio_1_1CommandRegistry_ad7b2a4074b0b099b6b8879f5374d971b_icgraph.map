@@ -1,10 +1,12 @@
 <map id="Aestra::Audio::CommandRegistry::consumeLastBuildError" name="Aestra::Audio::CommandRegistry::consumeLastBuildError">
-<area shape="rect" id="Node000001" title="Take the reason recorded by the most recent failed build." alt="" coords="797,35,1036,75"/>
-<area shape="rect" id="Node000002" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a20bf36e749c84e2cc982268d324faabb" title="Validate and build a command without executing it." alt="" coords="525,35,749,75"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="784,57,749,57,749,52,784,52"/>
-<area shape="rect" id="Node000003" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#ae6d70fc94a0653054be42b7da9a11a8e" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="253,5,477,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="512,44,477,40,478,35,512,38"/>
-<area shape="rect" id="Node000004" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="5,35,205,75"/>
-<area shape="poly" id="edge4_Node000002_Node000004" title=" " alt="" coords="512,60,477,60,253,60,206,59,206,54,253,55,477,55,511,54"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="240,42,206,46,205,41,239,37"/>
+<area shape="rect" id="Node000001" title="Take the reason recorded by the most recent failed build." alt="" coords="1040,35,1279,75"/>
+<area shape="rect" id="Node000002" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a867df74f8159bfbf8ef7db8366f59012" title="Validate and build a command without executing it." alt="" coords="768,35,992,75"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1026,57,992,57,992,52,1026,52"/>
+<area shape="rect" id="Node000003" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="496,5,720,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="754,44,720,40,720,35,755,38"/>
+<area shape="rect" id="Node000004" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,35,448,75"/>
+<area shape="poly" id="edge5_Node000002_Node000004" title=" " alt="" coords="754,60,720,60,496,60,448,59,448,54,496,55,720,55,754,54"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="483,42,449,46,448,41,482,37"/>
+<area shape="rect" id="Node000005" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,35,200,75"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="235,57,200,57,200,52,235,52"/>
 </map>

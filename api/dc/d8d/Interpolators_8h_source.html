@@ -591,7 +591,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span><span class="comment">// 2048 phases, 144dB stopband design target, AVX2 Accelerated.</span></div>
 <div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span><span class="comment">// Measured delivered SINAD (1 kHz tone): ~88 dB at fractional rate ratios</span></div>
 <div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span><span class="comment">// (phase-LUT quantization bound), ~154 dB at exact 2:1.</span></div>
-<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span><span class="comment">// See AestraDocs/audio-research-bench.md.</span></div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span><span class="comment">// See Aestra-Internals: aestra-docs/audio-research-bench.md.</span></div>
 <div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span><span class="comment">// =============================================================================</span></div>
 <div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span> </div>
 <div class="foldopen" id="foldopen00528" data-start="{" data-end="};">
@@ -952,7 +952,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span><span class="comment">// =============================================================================</span></div>
 <div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span> </div>
 <div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span><span class="comment">// SNR figures below are kernel design targets; measured delivered behavior is</span></div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span><span class="comment">// documented in AestraDocs/audio-research-bench.md and is path-specific:</span></div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span><span class="comment">// documented in Aestra-Internals: aestra-docs/audio-research-bench.md and is path-specific:</span></div>
 <div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span><span class="comment">// quality Sinc64 measures ~146-154 dB SINAD through mainline playback and both</span></div>
 <div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span><span class="comment">// export flavors (renderGraph/AudioRenderer -&gt; legacy exact-sinc</span></div>
 <div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span><span class="comment">// Sinc64Interpolator, unified in Phase 2E) but ~88 dB at fractional ratios</span></div>

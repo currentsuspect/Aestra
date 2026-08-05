@@ -115,6 +115,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a8074fe30ace22a54f8c1fc40a018d703"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6db928dcbfef321b9795fb4ad3bb061b" id="r_a6db928dcbfef321b9795fb4ad3bb061b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#a6db928dcbfef321b9795fb4ad3bb061b">setPatternChoices</a> (const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PianoRollToolbar::PatternChoice</a> &gt; &amp;choices, int selectedValue)</td></tr>
 <tr class="separator:a6db928dcbfef321b9795fb4ad3bb061b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2ddf8df9a3a6f63d4cc05e1e82ffb6b" id="r_ae2ddf8df9a3a6f63d4cc05e1e82ffb6b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#ae2ddf8df9a3a6f63d4cc05e1e82ffb6b">setUnitChoices</a> (const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PianoRollToolbar::PatternChoice</a> &gt; &amp;choices, int selectedValue)</td></tr>
+<tr class="separator:ae2ddf8df9a3a6f63d4cc05e1e82ffb6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8ef0b94926d66d12231af5301069036" id="r_ae8ef0b94926d66d12231af5301069036"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#ae8ef0b94926d66d12231af5301069036">setPatternLengthBeats</a> (double beats)</td></tr>
 <tr class="separator:ae8ef0b94926d66d12231af5301069036"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2b74000d4731010cacb6b577452c8ab3" id="r_a2b74000d4731010cacb6b577452c8ab3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#a2b74000d4731010cacb6b577452c8ab3">setPlayheadBeat</a> (double beat, bool follow=false)</td></tr>
@@ -147,6 +149,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a92874cb20f4ea2062db8e6e18a4a24c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b14ddfb0db4982719dee1f119889be1" id="r_a8b14ddfb0db4982719dee1f119889be1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#a8b14ddfb0db4982719dee1f119889be1">setOnPatternChoiceSelected</a> (std::function&lt; void(int patternValue)&gt; cb)</td></tr>
 <tr class="separator:a8b14ddfb0db4982719dee1f119889be1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f738e179dc516809fff6a885d1fc052" id="r_a4f738e179dc516809fff6a885d1fc052"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#a4f738e179dc516809fff6a885d1fc052">setOnUnitChoiceSelected</a> (std::function&lt; void(int unitValue)&gt; cb)</td></tr>
+<tr class="separator:a4f738e179dc516809fff6a885d1fc052"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac23cfeb97fd1cca8b67fb9ada8b463cc" id="r_ac23cfeb97fd1cca8b67fb9ada8b463cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#ac23cfeb97fd1cca8b67fb9ada8b463cc">setOnPlayheadScrubbed</a> (std::function&lt; void(double beat, bool active)&gt; cb)</td></tr>
 <tr class="separator:ac23cfeb97fd1cca8b67fb9ada8b463cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afaeecdda052ee31b88dfd3a638a4ab71" id="r_afaeecdda052ee31b88dfd3a638a4ab71"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html#afaeecdda052ee31b88dfd3a638a4ab71">setPixelsPerBeat</a> (float ppb)</td></tr>
@@ -279,12 +283,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
 <tr class="separator:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aaf6ad4f424ae5a7e61ea7f0cbb0af4c1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aaf6ad4f424ae5a7e61ea7f0cbb0af4c1">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
-<tr class="separator:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ac48c836258df2124192f9587f13c136a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ac48c836258df2124192f9587f13c136a">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport={})</td></tr>
+<tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3544f64233bc0ff1cab9f0fdd71131eb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3544f64233bc0ff1cab9f0fdd71131eb">setCursorCaptureActive</a> (bool active)</td></tr>
-<tr class="separator:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
+<tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
+<tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
@@ -312,7 +320,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00604">604</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00619">619</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="af20d22bda322d6c28200debfaa759f0f" name="af20d22bda322d6c28200debfaa759f0f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af20d22bda322d6c28200debfaa759f0f">&#9670;&#160;</a></span>PianoRollView()</h2>
@@ -329,7 +337,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03231">3231</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00015">15</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -360,7 +368,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03951">3951</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00747">747</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +387,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03802">3802</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00586">586</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -398,7 +406,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03972">3972</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00768">768</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -417,7 +425,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03968">3968</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00764">764</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -447,7 +455,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03774">3774</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00558">558</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,7 +485,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03678">3678</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00462">462</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -507,7 +515,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03346">3346</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00130">130</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -547,7 +555,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03531">3531</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00315">315</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -577,7 +585,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03536">3536</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00320">320</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -597,7 +605,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03842">3842</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00626">626</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -617,7 +625,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03832">3832</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00616">616</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -637,7 +645,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03798">3798</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00582">582</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -659,7 +667,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback to check transport playback state (suppress preview when playing). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03815">3815</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00599">599</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -679,7 +687,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03945">3945</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00741">741</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -699,7 +707,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03791">3791</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00575">575</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -719,7 +727,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03929">3929</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00719">719</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -739,7 +747,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03806">3806</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00590">590</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -759,7 +767,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03935">3935</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00725">725</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -779,7 +787,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03941">3941</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00737">737</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -801,7 +809,27 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Forward preview note callback to key lane. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03819">3819</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00603">603</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4f738e179dc516809fff6a885d1fc052" name="a4f738e179dc516809fff6a885d1fc052"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4f738e179dc516809fff6a885d1fc052">&#9670;&#160;</a></span>setOnUnitChoiceSelected()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollView::setOnUnitChoiceSelected </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(int unitValue)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00731">731</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -831,7 +859,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03878">3878</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00662">662</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -851,7 +879,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03884">3884</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00674">674</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -871,7 +899,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03874">3874</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00658">658</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -891,7 +919,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03836">3836</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00620">620</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -913,7 +941,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set platform bridge for cursor style changes (forwarded to note layer). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03870">3870</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00654">654</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -943,7 +971,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03896">3896</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00686">686</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -973,7 +1001,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03853">3853</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00637">637</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -993,7 +1021,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03864">3864</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00648">648</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -1013,7 +1041,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03849">3849</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00633">633</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -1033,7 +1061,37 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03919">3919</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00709">709</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae2ddf8df9a3a6f63d4cc05e1e82ffb6b" name="ae2ddf8df9a3a6f63d4cc05e1e82ffb6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2ddf8df9a3a6f63d4cc05e1e82ffb6b">&#9670;&#160;</a></span>setUnitChoices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollView::setUnitChoices </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PianoRollToolbar::PatternChoice</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>choices</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>selectedValue</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00668">668</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
@@ -1063,13 +1121,13 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l03979">3979</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html#l00775">775</a> of file <a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraUI/Widgets/<a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a></li>
-<li>AestraUI/Widgets/<a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../d9/d6b/PianoRollView_8cpp_source.html">PianoRollView.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

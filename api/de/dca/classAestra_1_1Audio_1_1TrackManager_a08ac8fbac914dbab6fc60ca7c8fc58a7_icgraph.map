@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::TrackManager::addChannelWithId" name="Aestra::Audio::TrackManager::addChannelWithId">
+<area shape="rect" id="Node000001" title="Add a channel while restoring a persisted stable identity." alt="" coords="504,37,712,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="248,37,456,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="491,60,456,60,456,55,491,55"/>
+<area shape="rect" id="Node000003" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4439b06fc72f0560a8277aed0e34eda9" title="Add the channel if the command has not been executed yet." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="234,45,200,40,201,35,235,40"/>
+<area shape="rect" id="Node000004" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo." alt="" coords="5,69,200,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="235,75,201,79,200,74,234,70"/>
+</map>

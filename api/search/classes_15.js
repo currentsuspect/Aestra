@@ -1,9 +1,9 @@
 var searchData=
 [
-  ['validationresult_0',['ValidationResult',['../d1/d32/structAestra_1_1Audio_1_1ProjectValidator_1_1ValidationResult.html',1,'Aestra::Audio::ProjectValidator']]],
-  ['vector2_1',['Vector2',['../d2/d46/structAestra_1_1Vector2.html',1,'Aestra']]],
-  ['vector3_2',['Vector3',['../db/d2f/structAestra_1_1Vector3.html',1,'Aestra']]],
-  ['vector4_3',['Vector4',['../d5/d17/structAestra_1_1Vector4.html',1,'Aestra']]],
+  ['vector2_0',['Vector2',['../d2/d46/structAestra_1_1Vector2.html',1,'Aestra']]],
+  ['vector3_1',['Vector3',['../db/d2f/structAestra_1_1Vector3.html',1,'Aestra']]],
+  ['vector4_2',['Vector4',['../d5/d17/structAestra_1_1Vector4.html',1,'Aestra']]],
+  ['viewopenstate_3',['ViewOpenState',['../dc/d8c/structAestraContent_1_1ViewOpenState.html',1,'AestraContent']]],
   ['viewstate_4',['ViewState',['../dc/dce/structAestraContent_1_1ViewState.html',1,'AestraContent']]],
   ['vst3hosttestaccess_5',['VST3HostTestAccess',['../dc/daf/classAestra_1_1Audio_1_1VST3HostTestAccess.html',1,'Aestra::Audio']]],
   ['vst3pluginfactory_6',['VST3PluginFactory',['../d3/ded/classAestra_1_1Audio_1_1VST3PluginFactory.html',1,'Aestra::Audio']]],

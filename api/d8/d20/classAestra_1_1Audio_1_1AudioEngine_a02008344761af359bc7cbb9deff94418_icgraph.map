@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::setMetronomeBeatsPerBar" name="Aestra::Audio::AudioEngine::setMetronomeBeatsPerBar">
+<area shape="rect" id="Node000001" title="Set metronome beats&#45;per&#45;bar (time&#45;signature numerator)." alt="" coords="295,5,500,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,13,247,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="281,28,247,28,247,23,281,23"/>
+</map>

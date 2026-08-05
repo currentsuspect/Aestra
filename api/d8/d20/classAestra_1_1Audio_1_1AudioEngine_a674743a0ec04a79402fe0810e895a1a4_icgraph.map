@@ -11,4 +11,6 @@
 <area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,37,204,37,204,31,241,32"/>
 <area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="218,14,254,14,254,19,218,19"/>
+<area shape="rect" id="Node000007" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="7,133,202,173"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="245,156,202,156,202,151,245,151"/>
 </map>

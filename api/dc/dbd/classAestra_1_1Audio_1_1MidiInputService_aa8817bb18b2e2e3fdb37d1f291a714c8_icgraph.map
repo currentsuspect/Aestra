@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::MidiInputService::setTargetUnit" name="Aestra::Audio::MidiInputService::setTargetUnit">
-<area shape="rect" id="Node000001" title="The unit live hardware input plays. 0 = no target (events dropped)." alt="" coords="257,5,436,45"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a88967824174ebd36ba1d535fce9ea7d6" title="Bind hardware MIDI input; live notes follow the selected unit." alt="" coords="5,13,209,38"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+<area shape="rect" id="Node000001" title="The unit live hardware input plays. 0 = no target (events dropped)." alt="" coords="261,27,440,67"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a88967824174ebd36ba1d535fce9ea7d6" title="Bind hardware MIDI input; live notes follow the selected unit." alt="" coords="7,5,211,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="247,37,211,33,212,28,248,32"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,55,213,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="248,62,214,66,213,61,248,57"/>
 </map>

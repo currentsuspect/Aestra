@@ -15,12 +15,13 @@ var searchData=
   ['lockfreeringbuffer_3c_20aestra_3a_3aaudio_3a_3aaudiocommandmessage_2c_20command_5fqueue_5fsize_20_3e_12',['LockFreeRingBuffer&lt; Aestra::Audio::AudioCommandMessage, COMMAND_QUEUE_SIZE &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
   ['lockfreeringbuffer_3c_20aestra_3a_3aaudio_3a_3aaudioqueuecommand_2c_20kqueuecapacity_20_3e_13',['LockFreeRingBuffer&lt; Aestra::Audio::AudioQueueCommand, kQueueCapacity &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
   ['lockfreeringbuffer_3c_20aestra_3a_3alogmessage_2c_201024_20_3e_14',['LockFreeRingBuffer&lt; Aestra::LogMessage, 1024 &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
-  ['lockfreeringbuffer_3c_20retiredresource_2c_20incomingcapacity_20_3e_15',['LockFreeRingBuffer&lt; RetiredResource, IncomingCapacity &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
-  ['lockfreespscqueue_16',['LockFreeSPSCQueue',['../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html',1,'Aestra::Audio']]],
-  ['lockfreespscqueue_3c_20aestra_3a_3aaudio_3a_3ascheduledevent_2c_208192_20_3e_17',['LockFreeSPSCQueue&lt; Aestra::Audio::ScheduledEvent, 8192 &gt;',['../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html',1,'Aestra::Audio']]],
-  ['log_18',['Log',['../d0/d15/classAestra_1_1Log.html',1,'Aestra']]],
-  ['logmessage_19',['LogMessage',['../d3/d47/structAestra_1_1LogMessage.html',1,'Aestra']]],
-  ['logstream_20',['LogStream',['../dc/d24/classAestra_1_1LogStream.html',1,'Aestra']]],
-  ['looppoints_21',['LoopPoints',['../d2/d42/structAestra_1_1Audio_1_1SampleEditorPanel_1_1LoopPoints.html',1,'Aestra::Audio::SampleEditorPanel']]],
-  ['looptoggle_22',['LoopToggle',['../da/dbc/classAestraUI_1_1LoopToggle.html',1,'AestraUI']]]
+  ['lockfreeringbuffer_3c_20paramchange_2c_20kparamqueuecapacity_20_3e_15',['LockFreeRingBuffer&lt; ParamChange, kParamQueueCapacity &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
+  ['lockfreeringbuffer_3c_20retiredresource_2c_20incomingcapacity_20_3e_16',['LockFreeRingBuffer&lt; RetiredResource, IncomingCapacity &gt;',['../da/d94/classAestra_1_1LockFreeRingBuffer.html',1,'Aestra']]],
+  ['lockfreespscqueue_17',['LockFreeSPSCQueue',['../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html',1,'Aestra::Audio']]],
+  ['lockfreespscqueue_3c_20aestra_3a_3aaudio_3a_3ascheduledevent_2c_208192_20_3e_18',['LockFreeSPSCQueue&lt; Aestra::Audio::ScheduledEvent, 8192 &gt;',['../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html',1,'Aestra::Audio']]],
+  ['log_19',['Log',['../d0/d15/classAestra_1_1Log.html',1,'Aestra']]],
+  ['logmessage_20',['LogMessage',['../d3/d47/structAestra_1_1LogMessage.html',1,'Aestra']]],
+  ['logstream_21',['LogStream',['../dc/d24/classAestra_1_1LogStream.html',1,'Aestra']]],
+  ['looppoints_22',['LoopPoints',['../d2/d42/structAestra_1_1Audio_1_1SampleEditorPanel_1_1LoopPoints.html',1,'Aestra::Audio::SampleEditorPanel']]],
+  ['looptoggle_23',['LoopToggle',['../da/dbc/classAestraUI_1_1LoopToggle.html',1,'AestraUI']]]
 ];

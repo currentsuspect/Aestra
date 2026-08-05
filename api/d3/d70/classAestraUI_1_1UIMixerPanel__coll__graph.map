@@ -1,7 +1,7 @@
 <map id="AestraUI::UIMixerPanel" name="AestraUI::UIMixerPanel">
-<area shape="rect" id="Node000001" title="Main mixer panel container with channel meters." alt="" coords="609,125,780,150"/>
+<area shape="rect" id="Node000001" title="Main mixer panel container with channel meters." alt="" coords="816,141,987,166"/>
 <area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="568,116,609,122,609,127,567,121"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,109,792,132,831,138,831,143,792,137,574,115"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
@@ -9,5 +9,7 @@
 <area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
 <area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,412,119,376,130,351,141,279,157,209,165"/>
 <area shape="rect" id="Node000006" href="$d3/d88/classAestraUI_1_1IDropTarget.html" title="Interface for components that can receive drops." alt="" coords="387,141,548,166"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="562,144,609,141,609,146,562,149"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="562,151,816,151,816,156,562,156"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="392,191,543,231"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="556,200,792,171,835,163,836,169,792,176,557,205"/>
 </map>

@@ -1,0 +1,27 @@
+<map id="Aestra::Audio::HostVerbSpec" name="Aestra::Audio::HostVerbSpec">
+<area shape="rect" id="Node000001" title="Everything the registry knows about a capability, minus its implementation." alt="" coords="1097,313,1304,338"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="193,13,280,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="294,26,424,38,602,66,701,87,802,113,902,147,997,187,1054,218,1107,252,1185,310,1182,314,1104,257,1051,222,995,192,900,152,800,119,700,92,601,71,423,44,293,31"/>
+<area shape="rect" id="Node000006" href="$d9/d69/structAestra_1_1Audio_1_1HostVerbArg.html" title="One typed argument." alt="" coords="405,209,604,234"/>
+<area shape="poly" id="edge6_Node000006_Node000002" title=" " alt="" coords="280,45,282,48,293,71,294,92,295,112,306,133,475,206,473,211,302,137,290,114,289,93,288,72,278,51,276,49"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="157,23,193,23,193,28,157,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="845,363,977,389"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="990,367,1073,356,1157,335,1158,341,1074,361,991,373"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="825,201,996,241"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="981,243,1165,310,1163,315,979,248"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="618,219,825,219,825,224,618,224"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="197,163,277,189"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="291,182,429,206,428,211,290,188"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="211,293,262,318"/>
+<area shape="poly" id="edge13_Node000001_Node000008" title=" " alt="" coords="276,303,1097,321,1097,326,276,309"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="274,291,462,232,464,237,276,296"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="203,223,270,249"/>
+<area shape="poly" id="edge9_Node000006_Node000009" title=" " alt="" coords="284,234,381,232,405,230,405,236,381,237,284,239"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="440,121,569,146"/>
+<area shape="poly" id="edge10_Node000005_Node000010" title=" " alt="" coords="578,146,826,200,825,206,577,152"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="217,62,256,87"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="270,77,382,97,461,118,460,123,381,103,269,82"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="839,413,983,438"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="992,407,1072,384,1129,360,1176,336,1178,341,1131,365,1074,389,993,412"/>
+</map>

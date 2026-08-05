@@ -1,5 +1,9 @@
 <map id="Aestra::Audio::PlaylistModel::createLaneWithId" name="Aestra::Audio::PlaylistModel::createLaneWithId">
-<area shape="rect" id="Node000001" title="Create a lane restoring a serialized identity (#446)." alt="" coords="259,5,464,45"/>
-<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a13fea5fc5ad7ffd58d3abdc5da43eb4d" title="Create a new playlist lane." alt="" coords="5,5,211,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,28,211,28,211,23,245,23"/>
+<area shape="rect" id="Node000001" title="Create a lane restoring a serialized identity (#446)." alt="" coords="540,41,745,81"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a13fea5fc5ad7ffd58d3abdc5da43eb4d" title="Create a new playlist lane." alt="" coords="287,5,492,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="526,47,492,43,493,37,527,42"/>
+<area shape="rect" id="Node000003" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a807cae773d69b41d42093fd6a040a6e5" title="Execute the command (first time)" alt="" coords="291,70,487,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="527,80,488,86,487,81,526,75"/>
+<area shape="rect" id="Node000004" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,77,239,117"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="278,100,239,100,239,95,278,95"/>
 </map>

@@ -1,13 +1,13 @@
 <map id="AestraAudio/src" name="AestraAudio/src">
 <area shape="rect" id="node1" href="dir_abdf151f50288a307116a45335cc5f3c.html" title="include" alt="" coords="776,136,845,161"/>
-<area shape="poly" id="edge2" href="dir_000041_000021.html" alt="" coords="1034,90,1016,101,934,128,859,143,858,138,933,123,1014,96,1032,86"/>
-<area shape="rect" id="edge2-headlabel" href="dir_000041_000021.html" title="11" alt="" coords="856,141,873,156"/>
+<area shape="poly" id="edge2" href="dir_000042_000021.html" alt="" coords="1034,90,1016,101,934,128,859,143,858,138,933,123,1014,96,1032,86"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000042_000021.html" title="12" alt="" coords="856,141,873,156"/>
 <area shape="rect" id="node14" href="dir_076f0c708729df0fdf39f7c6910b5ba2.html" title="AestraCore" alt="" coords="1102,136,1197,161"/>
-<area shape="poly" id="edge1" href="dir_000041_000001.html" alt="" coords="1066,86,1123,126,1120,130,1063,90"/>
-<area shape="rect" id="edge1-headlabel" href="dir_000041_000001.html" title="4" alt="" coords="1118,111,1127,126"/>
+<area shape="poly" id="edge1" href="dir_000042_000001.html" alt="" coords="1066,86,1123,126,1120,130,1063,90"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000042_000001.html" title="4" alt="" coords="1118,111,1127,126"/>
 <area shape="rect" id="node3" href="dir_c76bf9a03c7d6ea926c10f53d1056c8f.html" title="Commands" alt="" coords="212,63,308,88"/>
 <area shape="poly" id="edge3" href="dir_000006_000021.html" alt="" coords="288,86,321,96,444,119,567,133,762,144,762,149,567,138,443,124,319,101,286,91"/>
-<area shape="rect" id="edge3-headlabel" href="dir_000006_000021.html" title="2" alt="" coords="753,131,762,145"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000006_000021.html" title="3" alt="" coords="753,131,762,145"/>
 <area shape="rect" id="node4" href="dir_db235444803ffc97859c06a0777936bc.html" title="Core" alt="" coords="878,63,930,88"/>
 <area shape="poly" id="edge4" href="dir_000009_000021.html" alt="" coords="891,90,838,130,835,125,887,86"/>
 <area shape="rect" id="edge4-headlabel" href="dir_000009_000021.html" title="2" alt="" coords="841,124,850,139"/>
@@ -24,8 +24,8 @@
 <area shape="rect" id="node9" href="dir_48568fc6ac5c2ae3498cc89980ff7edb.html" title="Linux" alt="" coords="426,63,483,88"/>
 <area shape="rect" id="node10" href="dir_076cc8f32e5c6f24d1b292c6257612b6.html" title="Models" alt="" coords="332,63,401,88"/>
 <area shape="rect" id="node11" href="dir_c9375fdb9b5991f51cd2d7c7bc053159.html" title="Playback" alt="" coords="678,63,759,88"/>
-<area shape="poly" id="edge8" href="dir_000036_000021.html" alt="" coords="735,86,787,125,783,130,732,90"/>
-<area shape="rect" id="edge8-headlabel" href="dir_000036_000021.html" title="2" alt="" coords="782,111,791,125"/>
+<area shape="poly" id="edge8" href="dir_000037_000021.html" alt="" coords="735,86,787,125,783,130,732,90"/>
+<area shape="rect" id="edge8-headlabel" href="dir_000037_000021.html" title="2" alt="" coords="782,111,791,125"/>
 <area shape="rect" id="node12" href="dir_bc1e18916c17ff95a08623bfa14669cd.html" title="Plugin" alt="" coords="125,63,187,88"/>
 <area shape="rect" id="node13" href="dir_8d4e87e8407c94c1326f18d6f18e1e9e.html" title="Win32" alt="" coords="38,63,101,88"/>
 <area shape="rect" id="clust2" href="dir_4c0f98f8bb3708ee418030e480a45ddc.html" alt="" coords="27,52,1080,99"/>

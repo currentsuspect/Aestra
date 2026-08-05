@@ -13,10 +13,11 @@ var searchData=
   ['clips_10',['clips',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aef1b09294d60d430c22b885418642fbc',1,'Aestra::Audio::PlaylistLane']]],
   ['color_11',['color',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad681cd279871f5ad0e788650355332a1',1,'Aestra::Audio::UnitInfo::color'],['../d1/dc8/structAestraUI_1_1PianoRollNoteLayer_1_1GhostPattern.html#a1280ffa968007440d370dc57da03ed73',1,'AestraUI::PianoRollNoteLayer::GhostPattern::color']]],
   ['colorrgba_12',['colorRGBA',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#a466e1b13a4393b058e94443c2a6696f5',1,'Aestra::Audio::PlaylistLane']]],
-  ['compensationsamples_13',['compensationsamples',['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a1f32446efdafd77b406d076371f97dfe',1,'Aestra::Audio::EdgeDelayState::compensationSamples'],['../dd/d89/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1EdgeSolution.html#a02216ef1b70972dab1d7ec3f75d547c6',1,'Aestra::Audio::SolvedLatencyTopology::EdgeSolution::compensationSamples']]],
-  ['control_14',['control',['../de/d1d/structAestra_1_1KeyModifiers.html#a729f4ce29fcfa8c47fe6a1af253339dc',1,'Aestra::KeyModifiers']]],
-  ['correlation_15',['correlation',['../d4/d81/structAestra_1_1ChannelViewModel.html#af321ec30ed47c906b5a3bfd8de4e79af',1,'Aestra::ChannelViewModel']]],
-  ['createdatms_16',['createdAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#a7d41ebad87c59c74f83f9209f161de5c',1,'TakeManager::TakeEntry']]],
-  ['createdid_17',['createdId',['../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a28de6f18d2ca73cf7c4ec9aab15b09f1',1,'Aestra::Audio::CommandResult']]],
-  ['current_18',['current',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365',1,'Aestra::Audio::SmoothedParamD']]]
+  ['compensationenabled_13',['compensationEnabled',['../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a6cf5a1afada206a6a8507a2d6db39bc9',1,'Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot']]],
+  ['compensationsamples_14',['compensationsamples',['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a1f32446efdafd77b406d076371f97dfe',1,'Aestra::Audio::EdgeDelayState::compensationSamples'],['../dd/d89/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1EdgeSolution.html#a02216ef1b70972dab1d7ec3f75d547c6',1,'Aestra::Audio::SolvedLatencyTopology::EdgeSolution::compensationSamples']]],
+  ['control_15',['control',['../de/d1d/structAestra_1_1KeyModifiers.html#a729f4ce29fcfa8c47fe6a1af253339dc',1,'Aestra::KeyModifiers']]],
+  ['correlation_16',['correlation',['../d4/d81/structAestra_1_1ChannelViewModel.html#af321ec30ed47c906b5a3bfd8de4e79af',1,'Aestra::ChannelViewModel']]],
+  ['createdatms_17',['createdAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#a7d41ebad87c59c74f83f9209f161de5c',1,'TakeManager::TakeEntry']]],
+  ['createdid_18',['createdId',['../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a28de6f18d2ca73cf7c4ec9aab15b09f1',1,'Aestra::Audio::CommandResult']]],
+  ['current_19',['current',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365',1,'Aestra::Audio::SmoothedParamD']]]
 ];

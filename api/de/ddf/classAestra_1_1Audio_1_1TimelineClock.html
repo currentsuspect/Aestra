@@ -93,6 +93,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a74c4e977b92218bcb3580f54cbc74e9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a881465911e15daab65442a028119b754" id="r_a881465911e15daab65442a028119b754"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html#a881465911e15daab65442a028119b754">getCurrentTempo</a> () const</td></tr>
 <tr class="separator:a881465911e15daab65442a028119b754"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f30883e1e3bb1205d21f2b3e9947465" id="r_a2f30883e1e3bb1205d21f2b3e9947465"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html#a2f30883e1e3bb1205d21f2b3e9947465">setBeatsPerBar</a> (int beats)</td></tr>
+<tr class="separator:a2f30883e1e3bb1205d21f2b3e9947465"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fee8f84538e94463725ab02761de682" id="r_a2fee8f84538e94463725ab02761de682"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html#a2fee8f84538e94463725ab02761de682">getBeatsPerBar</a> () const</td></tr>
+<tr class="separator:a2fee8f84538e94463725ab02761de682"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e3973666d7a6df78e895fc38aae6691" id="r_a0e3973666d7a6df78e895fc38aae6691"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html#a0e3973666d7a6df78e895fc38aae6691">secondsAtBeat</a> (double beat) const</td></tr>
 <tr class="separator:a0e3973666d7a6df78e895fc38aae6691"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aadc45fcba7479f7c5e25a1b3e3d6f7b8" id="r_aadc45fcba7479f7c5e25a1b3e3d6f7b8"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html#aadc45fcba7479f7c5e25a1b3e3d6f7b8">sampleFrameAtBeat</a> (double beat, int sampleRate) const</td></tr>
@@ -102,7 +106,7 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00015">15</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00016">16</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ac896094966f519fe87dcda1de2f388b1" name="ac896094966f519fe87dcda1de2f388b1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac896094966f519fe87dcda1de2f388b1">&#9670;&#160;</a></span>TimelineClock()</h2>
@@ -163,6 +167,33 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a2fee8f84538e94463725ab02761de682" name="a2fee8f84538e94463725ab02761de682"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2fee8f84538e94463725ab02761de682">&#9670;&#160;</a></span>getBeatsPerBar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Aestra::Audio::TimelineClock::getBeatsPerBar </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00030">30</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
+
+</div>
+</div>
 <a id="a881465911e15daab65442a028119b754" name="a881465911e15daab65442a028119b754"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a881465911e15daab65442a028119b754">&#9670;&#160;</a></span>getCurrentTempo()</h2>
 
@@ -186,7 +217,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00023">23</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00024">24</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
 
 </div>
 </div>
@@ -257,6 +288,34 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../dc/d28/TimelineClock_8cpp_source.html#l00038">38</a> of file <a class="el" href="../../dc/d28/TimelineClock_8cpp_source.html">TimelineClock.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2f30883e1e3bb1205d21f2b3e9947465" name="a2f30883e1e3bb1205d21f2b3e9947465"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f30883e1e3bb1205d21f2b3e9947465">&#9670;&#160;</a></span>setBeatsPerBar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TimelineClock::setBeatsPerBar </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>beats</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/de7/TimelineClock_8h_source.html#l00029">29</a> of file <a class="el" href="../../d5/de7/TimelineClock_8h_source.html">TimelineClock.h</a>.</p>
 
 </div>
 </div>

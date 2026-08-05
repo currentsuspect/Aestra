@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute" name="Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="287,5,483,60"/>
+<area shape="rect" id="Node000002" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,13,239,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="273,35,239,35,239,30,273,30"/>
+</map>

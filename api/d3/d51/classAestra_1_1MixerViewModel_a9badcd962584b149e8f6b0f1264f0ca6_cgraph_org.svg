@@ -21,7 +21,7 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ac95ae664600037300449ab8a86832782" target="_top" xlink:title="Get current configuration.">
+<g id="a_Node000002"><a xlink:href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb68fdaf2ecab1f132d82c9da85ca78a" target="_top" xlink:title="Get current configuration.">
 <polygon fill="white" stroke="#666666" points="320,-30 171,-30 171,0 320,0 320,-30"/>
 <text text-anchor="start" x="179" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioDevice</text>
 <text text-anchor="middle" x="245.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Manager::getCurrentConfig</text>

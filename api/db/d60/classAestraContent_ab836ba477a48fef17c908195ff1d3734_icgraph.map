@@ -1,0 +1,5 @@
+<map id="AestraContent::loadInstrumentIntoArsenalUnit" name="AestraContent::loadInstrumentIntoArsenalUnit">
+<area shape="rect" id="Node000001" title="Load an instrument plugin into a specific Arsenal unit." alt="" coords="261,5,484,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

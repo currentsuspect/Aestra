@@ -1,0 +1,7 @@
+<map id="AestraApp::initialize" name="AestraApp::initialize">
+<area shape="rect" id="Node000001" title="Initialize all subsystems." alt="" coords="5,45,159,70"/>
+<area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a8e396bac7a726c61bb454624bd97c397" title="The autosave path, or an empty string when it cannot be resolved." alt="" coords="207,5,407,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="159,44,193,39,193,44,159,49"/>
+<area shape="rect" id="Node000003" href="$d3/dc8/classAestra_1_1CrashFlagPath.html#a8e6a0c126e2a4ecc5b6ca6c0fbd72a88" title="Record the resolved path." alt="" coords="224,69,389,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="159,66,211,73,210,78,159,71"/>
+</map>

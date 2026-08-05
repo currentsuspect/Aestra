@@ -1,7 +1,9 @@
 <map id="Aestra::Audio::MixerChannel::getChannelId" name="Aestra::Audio::MixerChannel::getChannelId">
-<area shape="rect" id="Node000001" title="Get the dense numeric channel identifier." alt="" coords="248,37,455,77"/>
-<area shape="rect" id="Node000002" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="5,5,200,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,45,200,41,201,35,235,40"/>
-<area shape="rect" id="Node000003" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="5,69,200,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,75,201,79,200,74,234,70"/>
+<area shape="rect" id="Node000001" title="Get the dense numeric channel identifier." alt="" coords="496,37,703,77"/>
+<area shape="rect" id="Node000002" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="251,5,445,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="482,45,445,40,446,35,483,40"/>
+<area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,69,448,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="483,75,449,79,448,74,482,70"/>
+<area shape="rect" id="Node000004" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,69,200,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="235,92,200,92,200,87,235,87"/>
 </map>

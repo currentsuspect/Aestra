@@ -2,22 +2,24 @@
 <area shape="rect" id="Node000001" title="Load a plugin into an effect slot." alt="" coords="5,133,209,173"/>
 <area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16" title="Create instance by plugin ID." alt="" coords="257,69,472,109"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,131,270,110,271,115,189,136"/>
-<area shape="rect" id="Node000006" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaff8505a90c35c0272cddbc5b378045e" title="Insert plugin into slot." alt="" coords="269,133,460,173"/>
+<area shape="rect" id="Node000006" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a00a6a69855aeed72bf72a3cd390a75dd" title="Insert plugin into slot." alt="" coords="269,133,460,173"/>
 <area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="210,151,255,151,255,156,210,156"/>
-<area shape="rect" id="Node000007" href="$da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" title="Refresh rack display from effect chain state." alt="" coords="263,197,467,237"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="189,171,271,191,270,197,188,176"/>
+<area shape="rect" id="Node000008" href="$da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" title="Refresh rack display from effect chain state." alt="" coords="263,261,467,301"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="150,171,312,253,310,257,147,176"/>
 <area shape="rect" id="Node000003" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a48c405b4bbf034c8e2a8e3a2aab246b0" title="Create a new plugin instance." alt="" coords="539,5,753,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="453,67,544,46,545,51,454,72"/>
 <area shape="rect" id="Node000004" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6" title="Find plugin by ID." alt="" coords="539,69,753,109"/>
 <area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="472,87,525,87,525,92,472,92"/>
 <area shape="rect" id="Node000005" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a65732f310fa233a82cc026438959b555" title="Find plugin by ID." alt="" coords="820,69,1029,109"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="754,87,806,87,806,92,754,92"/>
-<area shape="rect" id="Node000008" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" title="Get plugin in slot." alt="" coords="551,133,741,173"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="453,195,544,174,545,179,454,200"/>
-<area shape="rect" id="Node000009" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" title="Check if slot is bypassed." alt="" coords="551,197,741,237"/>
-<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="467,215,537,215,537,220,467,220"/>
-<area shape="rect" id="Node000010" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" title="Check if a slot was automatically bypassed after unsafe non&#45;finite output." alt="" coords="520,261,772,301"/>
-<area shape="poly" id="edge9_Node000007_Node000010" title=" " alt="" coords="454,235,545,256,544,261,453,240"/>
-<area shape="rect" id="Node000011" href="$dc/d87/classAestraUI_1_1EffectChainRack.html#aa1a49c978b7db7520556bfd002d93835" title="Update slot info." alt="" coords="550,325,742,365"/>
-<area shape="poly" id="edge10_Node000007_Node000011" title=" " alt="" coords="394,235,451,273,521,311,541,318,539,323,519,316,448,278,391,240"/>
+<area shape="rect" id="Node000007" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a38d290063ec53ffaff3f54a2c2ac25d6" title="Find the slot currently holding plugin instance instanceId (#667)." alt="" coords="551,133,741,173"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="460,151,537,151,537,156,460,156"/>
+<area shape="rect" id="Node000009" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" title="Get plugin in slot." alt="" coords="551,197,741,237"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="453,259,544,238,545,243,454,264"/>
+<area shape="rect" id="Node000010" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" title="Check if slot is bypassed." alt="" coords="551,261,741,301"/>
+<area shape="poly" id="edge9_Node000008_Node000010" title=" " alt="" coords="467,279,537,279,537,284,467,284"/>
+<area shape="rect" id="Node000011" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" title="Check if a slot was automatically bypassed after unsafe non&#45;finite output." alt="" coords="520,325,772,365"/>
+<area shape="poly" id="edge10_Node000008_Node000011" title=" " alt="" coords="454,299,545,320,544,325,453,304"/>
+<area shape="rect" id="Node000012" href="$dc/d87/classAestraUI_1_1EffectChainRack.html#aa1a49c978b7db7520556bfd002d93835" title="Update slot info." alt="" coords="550,389,742,429"/>
+<area shape="poly" id="edge11_Node000008_Node000012" title=" " alt="" coords="394,299,451,337,521,375,541,382,539,387,519,380,448,342,391,304"/>
 </map>

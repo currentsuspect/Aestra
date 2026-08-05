@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AssignUnitToFirstFreeInsertCommand" name="Aestra::Audio::AssignUnitToFirstFreeInsertCommand">
+<area shape="rect" id="Node000001" title="Assign a unit to the first unused insert, atomically creating a lane and insert when necessary." alt="" coords="5,79,201,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="9,5,197,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="106,44,106,79,101,79,101,44"/>
+</map>

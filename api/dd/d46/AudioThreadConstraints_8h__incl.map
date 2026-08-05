@@ -1,9 +1,13 @@
 <map id="Source/AudioThreadConstraints.h" name="Source/AudioThreadConstraints.h">
-<area shape="rect" id="Node000001" title="B&#45;005: Audio thread safety checks and documentation B&#45;007: Allocation tracking in debug builds." alt="" coords="11,5,250,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,72,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,33,66,72,63,68,114,29"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="96,79,165,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="133,31,133,65,128,65,128,31"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="190,79,261,104"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="147,29,200,68,197,72,144,33"/>
+<area shape="rect" id="Node000001" title="B&#45;005: Audio thread safety checks and documentation B&#45;007: Allocation tracking in debug builds." alt="" coords="55,5,294,31"/>
+<area shape="rect" id="Node000002" href="$dc/d3a/RealtimeThreadGuard_8h_source.html" title=" " alt="" coords="23,79,201,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="166,33,133,70,129,66,162,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="24,152,91,177"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="87,33,45,51,27,64,13,80,8,95,12,111,35,141,30,144,7,113,3,95,8,77,24,60,43,46,85,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="132,152,201,177"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="188,30,211,62,218,83,216,105,205,126,191,144,187,140,201,123,211,103,212,84,206,65,184,33"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="277,79,347,104"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="198,28,279,70,276,75,195,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="105,106,76,143,72,140,101,103"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="123,103,151,140,147,143,119,106"/>
 </map>

@@ -187,6 +187,25 @@ var sectionId = 'dynsection-2';
 </a>
 </g>
 </g>
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute every fully received request line on the caller&#39;s thread.">
+<polygon fill="white" stroke="#666666" points="147.5,-30 1.5,-30 1.5,0 147.5,0 147.5,-30"/>
+<text text-anchor="start" x="9.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseSocket</text>
+<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Server::processPending</text>
+</a>
+</g>
+</g>
+<!-- Node7&#45;&gt;Node8 -->
+<g id="edge8_Node000007_Node000008" class="edge">
+<title>Node7&#45;&gt;Node8</title>
+<g id="a_edge8_Node000007_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M180.03,-15C169.2,-15 158.19,-15 147.58,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="180.34,-18.5 190.34,-15 180.34,-11.5 180.34,-18.5"/>
+</a>
+</g>
+</g>
 </g>
 </svg>
 

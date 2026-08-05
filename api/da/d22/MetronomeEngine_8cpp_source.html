@@ -281,145 +281,166 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>}</div>
 </div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span><span class="keywordtype">void</span> MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate) {</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span><span class="keywordtype">void</span> MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, <span class="keywordtype">bool</span> skipCurrentBeat) {</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    <span class="keywordflow">if</span> (sampleRate == 0)</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    m_sampleRate.store(sampleRate, std::memory_order_relaxed);</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span> </div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="keywordtype">float</span> bpm = m_bpm.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordtype">int</span> beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="keywordtype">double</span> samplesPerBeat = (<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(sampleRate) * 60.0) / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(bpm);</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    uint64_t samplesPerBeatInt = <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(samplesPerBeat);</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span> </div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    <span class="keywordflow">if</span> (samplesPerBeatInt &gt; 0) {</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        m_nextBeatSample = (globalSamplePos / samplesPerBeatInt) * samplesPerBeatInt;</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        m_currentBeat = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>((globalSamplePos / samplesPerBeatInt) % beatsPerBar);</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        m_clickPlaying = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        m_clickPlayhead = 0;</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    }</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>}</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span> </div>
-<div class="foldopen" id="foldopen00218" data-start="{" data-end="}">
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno"><a class="line" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">  218</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">MetronomeEngine::process</a>(<span class="keywordtype">float</span>* outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos,</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>                              uint32_t sampleRate, <span class="keywordtype">bool</span> transportPlaying) {</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keywordflow">if</span> (!m_enabled.load(std::memory_order_relaxed) || !transportPlaying)</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    <span class="keywordflow">if</span> (numFrames == 0 || sampleRate == 0)</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> bpm = m_bpm.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> clickVol = m_volume.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keyword">const</span> uint64_t samplesPerBeat =</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>((<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(sampleRate) * 60.0) / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(bpm));</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    <span class="comment">// Reset tracking on jumps</span></div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    uint64_t prevBeatSample = (m_nextBeatSample &gt;= samplesPerBeat) ? m_nextBeatSample - samplesPerBeat : 0;</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    <span class="keywordflow">if</span> (globalSamplePos &lt; prevBeatSample) {</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        reset(globalSamplePos, sampleRate);</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    }</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="comment">// Init first beat</span></div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="keywordflow">if</span> (m_nextBeatSample == 0 &amp;&amp; globalSamplePos == 0) {</div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>        m_nextBeatSample = 0;</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        m_currentBeat = 0;</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    }</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">// A loop wrap (skipCurrentBeat) keeps the ringing click: the ~100 ms tail</span></div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="comment">// is position-independent and cutting it audibly truncates the last click</span></div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="comment">// of every loop. Any other reset is a start/locate — a stale tail from the</span></div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="comment">// previous run must not resume there.</span></div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    <span class="keywordflow">if</span> (!skipCurrentBeat) {</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        m_clickPlaying = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        m_clickPlayhead = 0;</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    }</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span> </div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    <span class="keywordtype">float</span> bpm = m_bpm.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    <span class="keywordtype">int</span> beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span> </div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    <span class="keywordtype">double</span> samplesPerBeat = (<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(sampleRate) * 60.0) / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(bpm);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    uint64_t samplesPerBeatInt = <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(samplesPerBeat);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span> </div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    <span class="keywordflow">if</span> (samplesPerBeatInt &gt; 0) {</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        uint64_t beatIndex = globalSamplePos / samplesPerBeatInt;</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        uint64_t beatSample = beatIndex * samplesPerBeatInt;</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="comment">// At a loop wrap the boundary beat already clicked in the pre-wrap</span></div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="comment">// timeline (loop end == loop start); re-scheduling it here would make</span></div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        <span class="comment">// it fire twice with a cut in between.</span></div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <span class="keywordflow">if</span> (skipCurrentBeat &amp;&amp; beatSample == globalSamplePos) {</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>            ++beatIndex;</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>            beatSample += samplesPerBeatInt;</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        }</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        m_nextBeatSample = beatSample;</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>        m_currentBeat = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(beatIndex % beatsPerBar);</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    }</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>}</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span> </div>
+<div class="foldopen" id="foldopen00234" data-start="{" data-end="}">
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno"><a class="line" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">  234</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">MetronomeEngine::process</a>(<span class="keywordtype">float</span>* outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos,</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>                              uint32_t sampleRate, <span class="keywordtype">bool</span> transportPlaying) {</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    <span class="keywordflow">if</span> (!m_enabled.load(std::memory_order_relaxed) || !transportPlaying)</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="keywordflow">if</span> (numFrames == 0 || sampleRate == 0)</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> bpm = m_bpm.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> clickVol = m_volume.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> beatsPerBar = m_beatsPerBar.load(std::memory_order_relaxed);</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="keyword">const</span> uint64_t blockStart = globalSamplePos;</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    <span class="keyword">const</span> uint64_t blockEnd = blockStart + numFrames;</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="keyword">const</span> uint64_t samplesPerBeat =</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>((<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(sampleRate) * 60.0) / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(bpm));</div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <span class="keywordtype">bool</span> newBeatTriggers = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    uint32_t triggerOffset = numFrames;</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <span class="comment">// Reset tracking on jumps</span></div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    uint64_t prevBeatSample = (m_nextBeatSample &gt;= samplesPerBeat) ? m_nextBeatSample - samplesPerBeat : 0;</div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span> </div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordflow">while</span> (m_nextBeatSample &lt; blockEnd &amp;&amp; samplesPerBeat &gt; 0) {</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        <span class="keywordflow">if</span> (m_nextBeatSample &gt;= blockStart) {</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>            newBeatTriggers = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>            triggerOffset = <span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_nextBeatSample - blockStart);</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        }</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        m_nextBeatSample += samplesPerBeat;</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    }</div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span> </div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    <span class="comment">// Mix TAIL</span></div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="keywordflow">if</span> (m_clickPlaying &amp;&amp; m_activeClickSamples &amp;&amp; !m_activeClickSamples-&gt;empty()) {</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        <span class="keywordtype">size_t</span> clickLen = m_activeClickSamples-&gt;size();</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>        uint32_t tailFrames = std::min(numFrames, triggerOffset);</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span> </div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>        <span class="keywordflow">for</span> (uint32_t i = 0; i &lt; tailFrames &amp;&amp; m_clickPlayhead &lt; clickLen; ++i) {</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>            <span class="keywordtype">float</span> sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>            <span class="comment">// Mix into all channels</span></div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>            <span class="keywordflow">for</span> (uint32_t ch = 0; ch &lt; numChannels; ++ch) {</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>                outputBuffer[i * numChannels + ch] += sample;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>            }</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>            ++m_clickPlayhead;</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordflow">if</span> (globalSamplePos &lt; prevBeatSample) {</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        reset(globalSamplePos, sampleRate);</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    }</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span> </div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    <span class="comment">// Init first beat</span></div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    <span class="keywordflow">if</span> (m_nextBeatSample == 0 &amp;&amp; globalSamplePos == 0) {</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        m_nextBeatSample = 0;</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        m_currentBeat = 0;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    }</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="keyword">const</span> uint64_t blockStart = globalSamplePos;</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keyword">const</span> uint64_t blockEnd = blockStart + numFrames;</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span> </div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="keywordtype">bool</span> newBeatTriggers = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    uint32_t triggerOffset = numFrames;</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keywordflow">while</span> (m_nextBeatSample &lt; blockEnd &amp;&amp; samplesPerBeat &gt; 0) {</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        <span class="keywordflow">if</span> (m_nextBeatSample &gt;= blockStart) {</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>            newBeatTriggers = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>            triggerOffset = <span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_nextBeatSample - blockStart);</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>            <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        }</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span> </div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <span class="keywordflow">if</span> (m_clickPlayhead &gt;= clickLen) {</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>            m_clickPlaying = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>        }</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    }</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span> </div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    <span class="comment">// Start NEW Click</span></div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    <span class="keywordflow">if</span> (newBeatTriggers) {</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>        m_clickPlaying = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>        m_clickPlayhead = 0;</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        <span class="comment">// Select sample based on beat (Downbeat vs Upbeat)</span></div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>        <span class="comment">// Note: m_currentBeat will be incremented AFTER we select the sample?</span></div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>        <span class="comment">// AudioEngine.cpp: &quot;m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_synthClickLow : &amp;m_synthClickHigh;&quot;</span></div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        <span class="comment">// Then &quot;m_currentBeat = (m_currentBeat + 1) % beatsPerBar;&quot;</span></div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>        <span class="comment">// If custom samples loaded</span></div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        <span class="keywordflow">if</span> (!m_clickSamplesDown.empty()) {</div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_clickSamplesDown : &amp;m_clickSamplesUp;</div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>            m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_synthClickLow : &amp;m_synthClickHigh;</div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        }</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span> </div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>        m_currentClickGain = 1.0f;</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span> </div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        <span class="comment">// Advance Beat Counter</span></div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        m_currentBeat = (m_currentBeat + 1) % beatsPerBar;</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        m_nextBeatSample += samplesPerBeat;</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span> </div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        <span class="comment">// Mix New Click</span></div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        <span class="keywordflow">if</span> (m_activeClickSamples &amp;&amp; !m_activeClickSamples-&gt;empty()) {</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>            <span class="keywordtype">size_t</span> clickLen = m_activeClickSamples-&gt;size();</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>            uint32_t remainingFrames = numFrames - triggerOffset;</div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>            uint32_t framesToMix = std::min(remainingFrames, (uint32_t)clickLen);</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>            <span class="keywordflow">for</span> (uint32_t i = 0; i &lt; framesToMix; ++i) {</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                <span class="keywordtype">float</span> sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                uint32_t dstIdx = triggerOffset + i;</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                <span class="keywordflow">for</span> (uint32_t ch = 0; ch &lt; numChannels; ++ch) {</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>                    outputBuffer[dstIdx * numChannels + ch] += sample;</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>                }</div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>                ++m_clickPlayhead;</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>            }</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>        }</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    }</div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>}</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>        <span class="comment">// Skipping past an already-elapsed beat (after a reset/jump): advance</span></div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <span class="comment">// the accent counter with it, or the next audible beat replays the</span></div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>        <span class="comment">// skipped beat&#39;s sound — after a loop wrap that meant a second</span></div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>        <span class="comment">// downbeat click right after the real one.</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>        m_nextBeatSample += samplesPerBeat;</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>        m_currentBeat = (m_currentBeat + 1) % beatsPerBar;</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    }</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    <span class="comment">// Mix TAIL</span></div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    <span class="keywordflow">if</span> (m_clickPlaying &amp;&amp; m_activeClickSamples &amp;&amp; !m_activeClickSamples-&gt;empty()) {</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>        <span class="keywordtype">size_t</span> clickLen = m_activeClickSamples-&gt;size();</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>        uint32_t tailFrames = std::min(numFrames, triggerOffset);</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span> </div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>        <span class="keywordflow">for</span> (uint32_t i = 0; i &lt; tailFrames &amp;&amp; m_clickPlayhead &lt; clickLen; ++i) {</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>            <span class="keywordtype">float</span> sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>            <span class="comment">// Mix into all channels</span></div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>            <span class="keywordflow">for</span> (uint32_t ch = 0; ch &lt; numChannels; ++ch) {</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>                outputBuffer[i * numChannels + ch] += sample;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            }</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>            ++m_clickPlayhead;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        }</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span> </div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        <span class="keywordflow">if</span> (m_clickPlayhead &gt;= clickLen) {</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>            m_clickPlaying = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        }</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    }</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span> </div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    <span class="comment">// Start NEW Click</span></div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    <span class="keywordflow">if</span> (newBeatTriggers) {</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>        m_clickPlaying = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        m_clickPlayhead = 0;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span> </div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>        <span class="comment">// Select sample based on beat (Downbeat vs Upbeat)</span></div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>        <span class="comment">// Note: m_currentBeat will be incremented AFTER we select the sample?</span></div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>        <span class="comment">// AudioEngine.cpp: &quot;m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_synthClickLow : &amp;m_synthClickHigh;&quot;</span></div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>        <span class="comment">// Then &quot;m_currentBeat = (m_currentBeat + 1) % beatsPerBar;&quot;</span></div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span> </div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>        <span class="comment">// If custom samples loaded</span></div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>        <span class="keywordflow">if</span> (!m_clickSamplesDown.empty()) {</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>            m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_clickSamplesDown : &amp;m_clickSamplesUp;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>            m_activeClickSamples = (m_currentBeat == 0) ? &amp;m_synthClickLow : &amp;m_synthClickHigh;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>        }</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span> </div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        m_currentClickGain = 1.0f;</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>        <span class="comment">// Advance Beat Counter</span></div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        m_currentBeat = (m_currentBeat + 1) % beatsPerBar;</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>        m_nextBeatSample += samplesPerBeat;</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span> </div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>        <span class="comment">// Mix New Click</span></div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        <span class="keywordflow">if</span> (m_activeClickSamples &amp;&amp; !m_activeClickSamples-&gt;empty()) {</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>            <span class="keywordtype">size_t</span> clickLen = m_activeClickSamples-&gt;size();</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>            uint32_t remainingFrames = numFrames - triggerOffset;</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>            uint32_t framesToMix = std::min(remainingFrames, (uint32_t)clickLen);</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>            <span class="keywordflow">for</span> (uint32_t i = 0; i &lt; framesToMix; ++i) {</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>                <span class="keywordtype">float</span> sample = (*m_activeClickSamples)[m_clickPlayhead] * clickVol * m_currentClickGain;</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>                uint32_t dstIdx = triggerOffset + i;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>                <span class="keywordflow">for</span> (uint32_t ch = 0; ch &lt; numChannels; ++ch) {</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>                    outputBuffer[dstIdx * numChannels + ch] += sample;</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>                }</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>                ++m_clickPlayhead;</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>            }</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>        }</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    }</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>}</div>
 </div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span> </div>
-<div class="foldopen" id="foldopen00320" data-start="{" data-end="}">
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno"><a class="line" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">  320</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">MetronomeEngine::setSampleRate</a>(uint32_t rate) {</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    uint32_t old = m_sampleRate.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    m_sampleRate.store(rate, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    <span class="keywordflow">if</span> (old != rate &amp;&amp; rate &gt; 0) {</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        generateDefaultSounds();</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    }</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>}</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
+<div class="foldopen" id="foldopen00341" data-start="{" data-end="}">
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno"><a class="line" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">  341</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">MetronomeEngine::setSampleRate</a>(uint32_t rate) {</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    uint32_t old = m_sampleRate.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    m_sampleRate.store(rate, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">if</span> (old != rate &amp;&amp; rate &gt; 0) {</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        generateDefaultSounds();</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    }</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>}</div>
 </div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span> </div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a0980fa0c94824c537416a79ca2c0132f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">Aestra::Audio::MetronomeEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t rate)</div><div class="ttdoc">Set the project sample rate and regenerate click sounds.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00320">MetronomeEngine.cpp:320</a></div></div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span> </div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a0980fa0c94824c537416a79ca2c0132f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">Aestra::Audio::MetronomeEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t rate)</div><div class="ttdoc">Set the project sample rate and regenerate click sounds.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00341">MetronomeEngine.cpp:341</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a9b80000110113cc99566a8a831a385db"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a9b80000110113cc99566a8a831a385db">Aestra::Audio::MetronomeEngine::loadClickSounds</a></div><div class="ttdeci">void loadClickSounds(const std::string &amp;downbeatPath, const std::string &amp;upbeatPath)</div><div class="ttdoc">Load custom click sounds from WAV files.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00045">MetronomeEngine.cpp:45</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_aeeaf1bbf2592bfefe8bcba4189630b4f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">Aestra::Audio::MetronomeEngine::process</a></div><div class="ttdeci">void process(float *outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos, uint32_t sampleRate, bool transportPlaying)</div><div class="ttdoc">Mixes metronome click into the output buffer if enabled and playing.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00218">MetronomeEngine.cpp:218</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_aeeaf1bbf2592bfefe8bcba4189630b4f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">Aestra::Audio::MetronomeEngine::process</a></div><div class="ttdeci">void process(float *outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos, uint32_t sampleRate, bool transportPlaying)</div><div class="ttdoc">Mixes metronome click into the output buffer if enabled and playing.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00234">MetronomeEngine.cpp:234</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

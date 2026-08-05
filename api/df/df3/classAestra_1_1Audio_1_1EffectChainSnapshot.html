@@ -99,6 +99,9 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ab966879cdd957cb3cbdbf12a4ca576c0" id="r_ab966879cdd957cb3cbdbf12a4ca576c0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html#ab966879cdd957cb3cbdbf12a4ca576c0">EffectChainSnapshot</a> (const std::array&lt; <a class="el" href="../../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html">EffectSlot</a>, MAX_SLOTS &gt; &amp;slots)</td></tr>
 <tr class="separator:ab966879cdd957cb3cbdbf12a4ca576c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af287a4c75505c290417ddd283b0028dd" id="r_af287a4c75505c290417ddd283b0028dd"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html#af287a4c75505c290417ddd283b0028dd">findSlotByInstanceId</a> (uint64_t instanceId) const noexcept</td></tr>
+<tr class="memdesc:af287a4c75505c290417ddd283b0028dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the snapshot slot holding plugin instance <code>instanceId</code> (#667).  <br /></td></tr>
+<tr class="separator:af287a4c75505c290417ddd283b0028dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1628f87a0e1e746db8b3463ea9bb7344" id="r_a1628f87a0e1e746db8b3463ea9bb7344"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html#a1628f87a0e1e746db8b3463ea9bb7344">slotCount</a> () const noexcept</td></tr>
 <tr class="separator:a1628f87a0e1e746db8b3463ea9bb7344"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1adae9e9b8e6a1c0ea670908c76be7d8" id="r_a1adae9e9b8e6a1c0ea670908c76be7d8"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d4/d0e/structAestra_1_1Audio_1_1EffectChainSnapshotSlot.html">EffectChainSnapshotSlot</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html#a1adae9e9b8e6a1c0ea670908c76be7d8">slot</a> (size_t index) const noexcept</td></tr>
@@ -126,7 +129,7 @@ Static Public Attributes</h2></td></tr>
 <p>This snapshot is designed to replace raw EffectChain* access in the audio thread. It is built from the mutable <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html" title="Effect chain for insert effects on a mixer channel.">EffectChain</a> and published atomically.</p>
 <p>Pass 1 implementation: snapshot type and builder only. Future passes will add publication and <a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html" title="Immutable graph snapshot consumed by the audio thread.">AudioGraph</a> consumption. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00333">333</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00476">476</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab966879cdd957cb3cbdbf12a4ca576c0" name="ab966879cdd957cb3cbdbf12a4ca576c0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab966879cdd957cb3cbdbf12a4ca576c0">&#9670;&#160;</a></span>EffectChainSnapshot()</h2>
@@ -152,11 +155,42 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00339">339</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00482">482</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="af287a4c75505c290417ddd283b0028dd" name="af287a4c75505c290417ddd283b0028dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af287a4c75505c290417ddd283b0028dd">&#9670;&#160;</a></span>findSlotByInstanceId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Aestra::Audio::EffectChainSnapshot::findSlotByInstanceId </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>instanceId</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Find the snapshot slot holding plugin instance <code>instanceId</code> (#667). </p>
+<p>RT-safe: a bounded linear scan over MAX_SLOTS with no allocation, the same shape as <a class="el" href="../../de/d7e/classAestra_1_1Audio_1_1ChannelSlotMap.html#a7563641adcd4bd47b2490f91c70f948d" title="Get the dense slot index for a channel ID.">ChannelSlotMap::getSlotIndex()</a>. Returns MAX_SLOTS when the id is absent, and always for id 0 ("no instance"). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00500">500</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+
+</div>
+</div>
 <a id="aa10aed7955c6448c59d86fae623f5db2" name="aa10aed7955c6448c59d86fae623f5db2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa10aed7955c6448c59d86fae623f5db2">&#9670;&#160;</a></span>getActiveSlotCount()</h2>
 
@@ -180,7 +214,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00359">359</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00522">522</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -247,9 +281,9 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00480">480</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00618">618</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00317">Aestra::Audio::EffectChainSnapshotSlot::bypassed</a>, <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00318">Aestra::Audio::EffectChainSnapshotSlot::dryWetMix</a>, <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00319">Aestra::Audio::EffectChainSnapshotSlot::faultState</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00043">Aestra::Audio::PluginInfo::id</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00052">Aestra::Audio::PluginInfo::numAudioInputs</a>, and <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00316">Aestra::Audio::EffectChainSnapshotSlot::plugin</a>.</p>
+<p class="reference">References <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00456">Aestra::Audio::EffectChainSnapshotSlot::bypassed</a>, <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00457">Aestra::Audio::EffectChainSnapshotSlot::dryWetMix</a>, <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00458">Aestra::Audio::EffectChainSnapshotSlot::faultState</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00043">Aestra::Audio::PluginInfo::id</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00052">Aestra::Audio::PluginInfo::numAudioInputs</a>, and <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00455">Aestra::Audio::EffectChainSnapshotSlot::plugin</a>.</p>
 
 </div>
 </div>
@@ -277,7 +311,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00351">351</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00514">514</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +338,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00349">349</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00512">512</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -331,7 +365,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00355">355</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00518">518</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -348,7 +382,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00369">369</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00532">532</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>
@@ -372,7 +406,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00335">335</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00478">478</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
 
 </div>
 </div>

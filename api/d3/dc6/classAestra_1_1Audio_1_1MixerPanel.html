@@ -112,6 +112,11 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a87c680d787bc43a3f60a44eb50c1cc42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a53600ff241f04622e1b4fc96c9d38e85" id="r_a53600ff241f04622e1b4fc96c9d38e85"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html#a53600ff241f04622e1b4fc96c9d38e85">setPlatformBridge</a> (<a class="el" href="../../d2/d9e/classAestraUI_1_1NUIPlatformBridge.html">AestraUI::NUIPlatformBridge</a> *bridge)</td></tr>
 <tr class="separator:a53600ff241f04622e1b4fc96c9d38e85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ce18e05d3b89e39f86586d021618c31" id="r_a8ce18e05d3b89e39f86586d021618c31"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html#a8ce18e05d3b89e39f86586d021618c31">loadUIPreferences</a> ()</td></tr>
+<tr class="memdesc:a8ce18e05d3b89e39f86586d021618c31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mixer layout preferences live in ~/.config/aestra/mixer_settings.json — application state, deliberately outside the project file so switching projects never rearranges the mixer.  <br /></td></tr>
+<tr class="separator:a8ce18e05d3b89e39f86586d021618c31"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2569fa40e456811cb4b6e246823a77d0" id="r_a2569fa40e456811cb4b6e246823a77d0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html#a2569fa40e456811cb4b6e246823a77d0">saveUIPreferences</a> () const</td></tr>
+<tr class="separator:a2569fa40e456811cb4b6e246823a77d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1WindowPanel"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1WindowPanel')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html">Aestra::Audio::WindowPanel</a></td></tr>
 <tr class="memitem:a46e1db7f33c5672b34e279ee125219ea inherit pub_methods_classAestra_1_1Audio_1_1WindowPanel" id="r_a46e1db7f33c5672b34e279ee125219ea"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html#a46e1db7f33c5672b34e279ee125219ea">WindowPanel</a> (const std::string &amp;title)</td></tr>
 <tr class="separator:a46e1db7f33c5672b34e279ee125219ea inherit pub_methods_classAestra_1_1Audio_1_1WindowPanel"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -297,12 +302,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
 <tr class="separator:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aaf6ad4f424ae5a7e61ea7f0cbb0af4c1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aaf6ad4f424ae5a7e61ea7f0cbb0af4c1">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
-<tr class="separator:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ac48c836258df2124192f9587f13c136a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ac48c836258df2124192f9587f13c136a">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport={})</td></tr>
+<tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3544f64233bc0ff1cab9f0fdd71131eb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3544f64233bc0ff1cab9f0fdd71131eb">setCursorCaptureActive</a> (bool active)</td></tr>
-<tr class="separator:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
+<tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
+<tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
@@ -349,7 +358,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00014">14</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00016">16</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -408,6 +417,36 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="a8ce18e05d3b89e39f86586d021618c31" name="a8ce18e05d3b89e39f86586d021618c31"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ce18e05d3b89e39f86586d021618c31">&#9670;&#160;</a></span>loadUIPreferences()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MixerPanel::loadUIPreferences </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Mixer layout preferences live in ~/.config/aestra/mixer_settings.json — application state, deliberately outside the project file so switching projects never rearranges the mixer. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00049">49</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/dd8/MixerUIPreferences_8h_source.html#l00027">Aestra::MixerUIPreferences::inspectorExpanded</a>, <a class="el" href="../../d3/dd8/MixerUIPreferences_8h_source.html#l00083">Aestra::MixerUIPreferences::load()</a>, and <a class="el" href="../../d3/dd8/MixerUIPreferences_8h_source.html#l00067">Aestra::MixerUIPreferences::settingsPath()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/dc6/classAestra_1_1Audio_1_1MixerPanel_a8ce18e05d3b89e39f86586d021618c31_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
 <a id="a61cd8d1ca40de9775dd1748a05214d46" name="a61cd8d1ca40de9775dd1748a05214d46"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a61cd8d1ca40de9775dd1748a05214d46">&#9670;&#160;</a></span>refreshChannels()</h2>
 
@@ -423,7 +462,26 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00045">45</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00077">77</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2569fa40e456811cb4b6e246823a77d0" name="a2569fa40e456811cb4b6e246823a77d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2569fa40e456811cb4b6e246823a77d0">&#9670;&#160;</a></span>saveUIPreferences()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MixerPanel::saveUIPreferences </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00064">64</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -443,7 +501,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00079">79</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html#l00111">111</a> of file <a class="el" href="../../d6/dda/MixerPanel_8cpp_source.html">MixerPanel.cpp</a>.</p>
 
 </div>
 </div>

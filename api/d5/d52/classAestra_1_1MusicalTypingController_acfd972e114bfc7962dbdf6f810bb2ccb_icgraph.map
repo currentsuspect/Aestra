@@ -1,5 +1,7 @@
 <map id="Aestra::MusicalTypingController::setTargetUnit" name="Aestra::MusicalTypingController::setTargetUnit">
-<area shape="rect" id="Node000001" title="Select the Arsenal unit that receives future note&#45;ons." alt="" coords="277,5,505,45"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="5,13,229,38"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,28,230,28,230,23,264,23"/>
+<area shape="rect" id="Node000001" title="Select the Arsenal unit that receives future note&#45;ons." alt="" coords="277,27,505,67"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="5,5,229,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,36,229,33,230,27,264,31"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="13,55,221,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,63,222,67,221,62,263,58"/>
 </map>

@@ -119,42 +119,45 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a9b80000110113cc99566a8a831a385db">loadClickSounds</a>(<span class="keyword">const</span> std::string&amp; downbeatPath, <span class="keyword">const</span> std::string&amp; upbeatPath);</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="comment">// Reset internal state (e.g. on seek/loop)</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordtype">void</span> reset(uint64_t globalSamplePos, uint32_t sampleRate);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">setSampleRate</a>(uint32_t rate);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="comment">// Re-align beat scheduling to a new transport position. Pass</span></div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="comment">// skipCurrentBeat=true when the beat exactly at globalSamplePos already</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="comment">// clicked in the pre-jump timeline (loop wrap) so it doesn&#39;t fire twice.</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">void</span> reset(uint64_t globalSamplePos, uint32_t sampleRate, <span class="keywordtype">bool</span> skipCurrentBeat = <span class="keyword">false</span>);</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">void</span> generateDefaultSounds();</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">setSampleRate</a>(uint32_t rate);</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="comment">// State</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    std::atomic&lt;bool&gt; m_enabled{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    std::atomic&lt;float&gt; m_volume{0.7f};</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    std::atomic&lt;float&gt; m_bpm{120.0f};</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    std::atomic&lt;int&gt; m_beatsPerBar{4};</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    std::atomic&lt;uint32_t&gt; m_sampleRate{48000};</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">// Audio Data</span></div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    std::vector&lt;float&gt; m_synthClickLow;    <span class="comment">// Generated default (Downbeat)</span></div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    std::vector&lt;float&gt; m_synthClickHigh;   <span class="comment">// Generated default (Upbeat)</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    std::vector&lt;float&gt; m_clickSamplesDown; <span class="comment">// Custom (Downbeat)</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::vector&lt;float&gt; m_clickSamplesUp;   <span class="comment">// Custom (Upbeat)</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="comment">// Playback State</span></div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="keyword">const</span> std::vector&lt;float&gt;* m_activeClickSamples{<span class="keyword">nullptr</span>};</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">size_t</span> m_clickPlayhead{0};</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordtype">bool</span> m_clickPlaying{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    uint64_t m_nextBeatSample{0};</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">int</span> m_currentBeat{0};</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordtype">float</span> m_currentClickGain{1.0f};</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>};</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordtype">void</span> generateDefaultSounds();</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="comment">// State</span></div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    std::atomic&lt;bool&gt; m_enabled{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    std::atomic&lt;float&gt; m_volume{0.7f};</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    std::atomic&lt;float&gt; m_bpm{120.0f};</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    std::atomic&lt;int&gt; m_beatsPerBar{4};</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    std::atomic&lt;uint32_t&gt; m_sampleRate{48000};</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="comment">// Audio Data</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::vector&lt;float&gt; m_synthClickLow;    <span class="comment">// Generated default (Downbeat)</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::vector&lt;float&gt; m_synthClickHigh;   <span class="comment">// Generated default (Upbeat)</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    std::vector&lt;float&gt; m_clickSamplesDown; <span class="comment">// Custom (Downbeat)</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    std::vector&lt;float&gt; m_clickSamplesUp;   <span class="comment">// Custom (Upbeat)</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="comment">// Playback State</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keyword">const</span> std::vector&lt;float&gt;* m_activeClickSamples{<span class="keyword">nullptr</span>};</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">size_t</span> m_clickPlayhead{0};</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordtype">bool</span> m_clickPlaying{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    uint64_t m_nextBeatSample{0};</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordtype">int</span> m_currentBeat{0};</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="keywordtype">float</span> m_currentClickGain{1.0f};</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>};</div>
 </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span> </div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html">Aestra::Audio::MetronomeEngine</a></div><div class="ttdoc">Handles metronome click generation and mixing.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/ddd/MetronomeEngine_8h_source.html#l00017">MetronomeEngine.h:17</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a0980fa0c94824c537416a79ca2c0132f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">Aestra::Audio::MetronomeEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t rate)</div><div class="ttdoc">Set the project sample rate and regenerate click sounds.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00320">MetronomeEngine.cpp:320</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a0980fa0c94824c537416a79ca2c0132f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">Aestra::Audio::MetronomeEngine::setSampleRate</a></div><div class="ttdeci">void setSampleRate(uint32_t rate)</div><div class="ttdoc">Set the project sample rate and regenerate click sounds.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00341">MetronomeEngine.cpp:341</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_a9b80000110113cc99566a8a831a385db"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a9b80000110113cc99566a8a831a385db">Aestra::Audio::MetronomeEngine::loadClickSounds</a></div><div class="ttdeci">void loadClickSounds(const std::string &amp;downbeatPath, const std::string &amp;upbeatPath)</div><div class="ttdoc">Load custom click sounds from WAV files.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00045">MetronomeEngine.cpp:45</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_aeeaf1bbf2592bfefe8bcba4189630b4f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">Aestra::Audio::MetronomeEngine::process</a></div><div class="ttdeci">void process(float *outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos, uint32_t sampleRate, bool transportPlaying)</div><div class="ttdoc">Mixes metronome click into the output buffer if enabled and playing.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00218">MetronomeEngine.cpp:218</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1MetronomeEngine_html_aeeaf1bbf2592bfefe8bcba4189630b4f"><div class="ttname"><a href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f">Aestra::Audio::MetronomeEngine::process</a></div><div class="ttdeci">void process(float *outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos, uint32_t sampleRate, bool transportPlaying)</div><div class="ttdoc">Mixes metronome click into the output buffer if enabled and playing.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d22/MetronomeEngine_8cpp_source.html#l00234">MetronomeEngine.cpp:234</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

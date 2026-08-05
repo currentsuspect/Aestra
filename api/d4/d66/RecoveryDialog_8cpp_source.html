@@ -273,81 +273,85 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span><span class="keywordtype">bool</span> RecoveryDialog::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="keywordflow">if</span> (!m_isVisible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    </div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x;</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y;</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    </div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    <span class="comment">// Update hover states</span></div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> recoverHovered = m_recoverButtonRect.contains(mx, my);</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> discardHovered = m_discardButtonRect.contains(mx, my);</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    <span class="keywordflow">if</span> (recoverHovered != m_recoverHovered || discardHovered != m_discardHovered) {</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        m_recoverHovered = recoverHovered;</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        m_discardHovered = discardHovered;</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    }</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    </div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        <span class="keywordflow">if</span> (event.pressed) {</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            m_pressedResponse = m_recoverHovered ? RecoveryResponse::Recover</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>                              : m_discardHovered ? RecoveryResponse::Discard</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>                                                 : RecoveryResponse::None;</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        }</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        <span class="keywordflow">if</span> (event.released) {</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>            <span class="keyword">const</span> RecoveryResponse armed = m_pressedResponse;</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>            m_pressedResponse = RecoveryResponse::None;</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>            <span class="keywordflow">if</span> ((armed == RecoveryResponse::Recover &amp;&amp; m_recoverHovered) ||</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>                (armed == RecoveryResponse::Discard &amp;&amp; m_discardHovered)) {</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>                handleResponse(armed);</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            }</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        }</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    }</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    </div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    <span class="comment">// Block all mouse events when visible</span></div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>}</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span><span class="keywordtype">bool</span> RecoveryDialog::onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a>&amp; event) {</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keywordflow">if</span> (!m_isVisible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    </div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="keywordflow">if</span> (event.pressed) {</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordflow">if</span> (event.keyCode == AestraUI::NUIKeyCode::Escape) {</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            <span class="comment">// Escape = Recover (safe default)</span></div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>            handleResponse(RecoveryResponse::Recover);</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        }</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>        <span class="keywordflow">if</span> (event.keyCode == AestraUI::NUIKeyCode::Enter) {</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>            <span class="comment">// Enter = Recover (primary action)</span></div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>            handleResponse(RecoveryResponse::Recover);</div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        }</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    }</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="comment">// Block all key events when visible</span></div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>}</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span><span class="keywordtype">void</span> RecoveryDialog::handleResponse(RecoveryResponse response) {</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    m_response = response;</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    hide();</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    </div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keywordflow">if</span> (m_callback) {</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        m_callback(response);</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    }</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>}</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00023">NUIRenderer.h:23</a></div></div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span> </div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    <span class="comment">// Input may arrive before the first rendered frame or immediately after a</span></div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="comment">// resize. Hit-test against current bounds rather than stale/default rects.</span></div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    calculateLayout();</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    </div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x;</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y;</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    </div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    <span class="comment">// Update hover states</span></div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> recoverHovered = m_recoverButtonRect.contains(mx, my);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> discardHovered = m_discardButtonRect.contains(mx, my);</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <span class="keywordflow">if</span> (recoverHovered != m_recoverHovered || discardHovered != m_discardHovered) {</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        m_recoverHovered = recoverHovered;</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        m_discardHovered = discardHovered;</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    }</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    </div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        <span class="keywordflow">if</span> (event.pressed) {</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            m_pressedResponse = m_recoverHovered ? RecoveryResponse::Recover</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>                              : m_discardHovered ? RecoveryResponse::Discard</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>                                                 : RecoveryResponse::None;</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        }</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keywordflow">if</span> (event.released) {</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>            <span class="keyword">const</span> RecoveryResponse armed = m_pressedResponse;</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            m_pressedResponse = RecoveryResponse::None;</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>            <span class="keywordflow">if</span> ((armed == RecoveryResponse::Recover &amp;&amp; m_recoverHovered) ||</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>                (armed == RecoveryResponse::Discard &amp;&amp; m_discardHovered)) {</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>                handleResponse(armed);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>            }</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        }</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    }</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    </div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="comment">// Block all mouse events when visible</span></div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>}</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span><span class="keywordtype">bool</span> RecoveryDialog::onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a>&amp; event) {</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    <span class="keywordflow">if</span> (!m_isVisible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    </div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="keywordflow">if</span> (event.pressed) {</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keywordflow">if</span> (event.keyCode == AestraUI::NUIKeyCode::Escape) {</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            <span class="comment">// Escape = Recover (safe default)</span></div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>            handleResponse(RecoveryResponse::Recover);</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>        }</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>        <span class="keywordflow">if</span> (event.keyCode == AestraUI::NUIKeyCode::Enter) {</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>            <span class="comment">// Enter = Recover (primary action)</span></div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>            handleResponse(RecoveryResponse::Recover);</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        }</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    }</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    </div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    <span class="comment">// Block all key events when visible</span></div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>}</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span> </div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span><span class="keywordtype">void</span> RecoveryDialog::handleResponse(RecoveryResponse response) {</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    m_response = response;</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    hide();</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    </div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordflow">if</span> (m_callback) {</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        m_callback(response);</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    }</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>}</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span> </div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00022">NUIRenderer.h:22</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a316c06990c4cb6f5a13fd7de95bca7a4"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">AestraUI::NUIRenderer::fillRect</a></div><div class="ttdeci">virtual void fillRect(const NUIRect &amp;rect, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a filled rectangle.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a8ca30417ddb0b0523e3d9e9ba3eaefdf"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">AestraUI::NUIRenderer::strokeRoundedRect</a></div><div class="ttdeci">virtual void strokeRoundedRect(const NUIRect &amp;rect, float radius, float thickness, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a rounded rectangle outline.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a8edd36aab59578f6c121fae6046db289"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">AestraUI::NUIRenderer::fillRoundedRect</a></div><div class="ttdeci">virtual void fillRoundedRect(const NUIRect &amp;rect, float radius, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a filled rounded rectangle.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a91ed36d4b7fbb90f1d98f0a116b6debc"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">AestraUI::NUIRenderer::drawText</a></div><div class="ttdeci">virtual void drawText(const std::string &amp;text, const NUIPoint &amp;position, float fontSize, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw text at the given position.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_aa89fb8461f9b876452eee397232544bf"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">AestraUI::NUIRenderer::drawTextCentered</a></div><div class="ttdeci">virtual void drawTextCentered(const std::string &amp;text, const NUIRect &amp;rect, float fontSize, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw text centered within a rectangle.</div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIColor_html"><div class="ttname"><a href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00098">NUITypes.h:98</a></div></div>
-<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00450">NUITypes.h:450</a></div></div>
+<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00452">NUITypes.h:452</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIMouseEvent_html"><div class="ttname"><a href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00437">NUITypes.h:437</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIPoint_html"><div class="ttname"><a href="../../dd/d25/structAestraUI_1_1NUIPoint.html">AestraUI::NUIPoint</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00026">NUITypes.h:26</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIRect_html"><div class="ttname"><a href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00058">NUITypes.h:58</a></div></div>

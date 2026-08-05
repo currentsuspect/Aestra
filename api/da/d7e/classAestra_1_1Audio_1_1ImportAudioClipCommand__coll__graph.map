@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ImportAudioClipCommand" name="Aestra::Audio::ImportAudioClipCommand">
+<area shape="rect" id="Node000001" title="Import a decoded audio file as a playable clip on a lane." alt="" coords="5,79,203,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="10,5,198,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,44,107,79,101,79,101,44"/>
+</map>

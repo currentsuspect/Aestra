@@ -105,9 +105,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a968a7b802dbe9dc8d54b3f251778674a" id="r_a968a7b802dbe9dc8d54b3f251778674a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html">ClipSourceID</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a968a7b802dbe9dc8d54b3f251778674a">getAllSourceIDs</a> () const</td></tr>
 <tr class="memdesc:a968a7b802dbe9dc8d54b3f251778674a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get all source IDs.  <br /></td></tr>
 <tr class="separator:a968a7b802dbe9dc8d54b3f251778674a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60c963c56b78d533f03e16ad3ba560e5" id="r_a60c963c56b78d533f03e16ad3ba560e5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html">ClipSourceID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a60c963c56b78d533f03e16ad3ba560e5">findSourceByPath</a> (const std::string &amp;filePath) const</td></tr>
+<tr class="memdesc:a60c963c56b78d533f03e16ad3ba560e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Look up an existing source by file path without creating one.  <br /></td></tr>
+<tr class="separator:a60c963c56b78d533f03e16ad3ba560e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b7eca8906040cc11691aa174c3fd92a" id="r_a6b7eca8906040cc11691aa174c3fd92a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6b7eca8906040cc11691aa174c3fd92a">removeSource</a> (<a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html">ClipSourceID</a> id)</td></tr>
+<tr class="memdesc:a6b7eca8906040cc11691aa174c3fd92a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a source nothing references yet.  <br /></td></tr>
+<tr class="separator:a6b7eca8906040cc11691aa174c3fd92a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a52aae6f6e78591514b6727ac2058be47" id="r_a52aae6f6e78591514b6727ac2058be47"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a52aae6f6e78591514b6727ac2058be47">clear</a> ()</td></tr>
 <tr class="memdesc:a52aae6f6e78591514b6727ac2058be47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all sources.  <br /></td></tr>
 <tr class="separator:a52aae6f6e78591514b6727ac2058be47"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a786245e5986997c5fe6869aeca38d589" id="r_a786245e5986997c5fe6869aeca38d589"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a786245e5986997c5fe6869aeca38d589">getRevision</a> () const</td></tr>
+<tr class="memdesc:a786245e5986997c5fe6869aeca38d589"><td class="mdescLeft">&#160;</td><td class="mdescRight">Monotonic counter bumped whenever the source set or a source's readiness changes.  <br /></td></tr>
+<tr class="separator:a786245e5986997c5fe6869aeca38d589"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages audio sources (clip sources) for the project. </p>
@@ -140,7 +149,7 @@ Public Member Functions</h2></td></tr>
 <p>Clear all sources. </p>
 <p>No mutex required: <a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html" title="Audio source for clips.">ClipSource</a> buffers are now co-owned via shared_ptr&lt;AudioBufferData&gt; held by <a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html" title="Render-time clip state used by the audio thread.">ClipRenderState</a> in each live <a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html" title="Immutable graph snapshot consumed by the audio thread.">AudioGraph</a>. When <a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a52aae6f6e78591514b6727ac2058be47" title="Clear all sources.">clear()</a> destroys all <a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html" title="Audio source for clips.">ClipSource</a> objects, the shared_ptr refcounts held by any in-flight <a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html" title="Immutable graph snapshot consumed by the audio thread.">AudioGraph</a> keep <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html" title="Audio buffer data for clip sources.">AudioBufferData</a> alive until the graph is replaced. The atomic swap in <a class="el" href="../../d7/da4/classAestra_1_1Audio_1_1EngineState.html" title="Double-buffered engine state for safe UI → RT handoff.">EngineState</a> ensures the audio thread never sees a partially-constructed graph. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00148">148</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00195">195</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
 </div>
 </div>
@@ -195,9 +204,11 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source ID (returns <a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html" title="Type-safe identifier for clip sources.">ClipSourceID</a>{0} on failure) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00090">90</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00092">92</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00025">getOrCreateSource()</a>, and <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00110">getSource()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00025">getOrCreateSource()</a>, and <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">getSource()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00319">Aestra::Audio::ClipRenderService::commit()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -205,6 +216,45 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a6fff22f797d8e03841f60afdcda1bf7a_cgraph.svg" width="496" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a6fff22f797d8e03841f60afdcda1bf7a_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a60c963c56b78d533f03e16ad3ba560e5" name="a60c963c56b78d533f03e16ad3ba560e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60c963c56b78d533f03e16ad3ba560e5">&#9670;&#160;</a></span>findSourceByPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html">ClipSourceID</a> Aestra::Audio::SourceManager::findSourceByPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>filePath</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Look up an existing source by file path without creating one. </p>
+<p>Lets a caller tell "this file was already in the project" from "I am the
+one who introduced it", which decides whether it may be taken back out again on failure. </p><dl class="section return"><dt>Returns</dt><dd>An invalid ID when no source holds that path. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00152">152</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
 </div>
 </div>
@@ -233,15 +283,15 @@ Public Member Functions</h2></td></tr>
 
 <p>Get all source IDs. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00129">129</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00135">135</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>.</p>
-<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a968a7b802dbe9dc8d54b3f251778674a_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a968a7b802dbe9dc8d54b3f251778674a_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -285,13 +335,13 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00025">25</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00090">createRecordedSource()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00092">createRecordedSource()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a313c3de5cc2eb2b11a0f947ebe89d11e_icgraph.svg" width="496" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a313c3de5cc2eb2b11a0f947ebe89d11e_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -347,7 +397,37 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Source ID (returns <a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html" title="Type-safe identifier for clip sources.">ClipSourceID</a>{0} on failure) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00056">56</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00057">57</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+
+</div>
+</div>
+<a id="a786245e5986997c5fe6869aeca38d589" name="a786245e5986997c5fe6869aeca38d589"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a786245e5986997c5fe6869aeca38d589">&#9670;&#160;</a></span>getRevision()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::SourceManager::getRevision </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Monotonic counter bumped whenever the source set or a source's readiness changes. </p>
+<p>Lets a UI change-gate an O(n) sweep over sources (such as building missing waveform caches) down to an O(1) comparison per frame, without every import path having to remember to notify anyone. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00209">209</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
 </div>
 </div>
@@ -378,15 +458,15 @@ Public Member Functions</h2></td></tr>
 <p>Get a source by ID. </p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to source, or nullptr if not found </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00110">110</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">116</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00407">Aestra::Audio::PlaylistModel::buildRuntimeSnapshot()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00090">createRecordedSource()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00452">Aestra::Audio::PlaylistModel::buildRuntimeSnapshot()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00092">createRecordedSource()</a>, <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>, and <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00039">Aestra::Audio::ClipRenderService::resolveClipRegion()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a9df135788c4b7117579dc103b01d9f94_icgraph.svg" width="100%" height="458"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager_a9df135788c4b7117579dc103b01d9f94_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -415,7 +495,39 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00118">118</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00124">124</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
+
+</div>
+</div>
+<a id="a6b7eca8906040cc11691aa174c3fd92a" name="a6b7eca8906040cc11691aa174c3fd92a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b7eca8906040cc11691aa174c3fd92a">&#9670;&#160;</a></span>removeSource()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::SourceManager::removeSource </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d4/da6/structAestra_1_1Audio_1_1ClipSourceID.html">ClipSourceID</a>&#160;</td>
+          <td class="paramname"><em>id</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Remove a source nothing references yet. </p>
+<p>Only safe for a source whose registration is being rolled back before it ever reached a pattern or a built <a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html" title="Immutable graph snapshot consumed by the audio thread.">AudioGraph</a> — an import that failed partway. Never call it to "clean up" a source a project object still points at.</p>
+<p>Same reasoning as <a class="el" href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a52aae6f6e78591514b6727ac2058be47" title="Clear all sources.">clear()</a>: buffers are co-owned via shared_ptr&lt;AudioBufferData&gt;, so any in-flight graph keeps its audio alive regardless. </p><dl class="section return"><dt>Returns</dt><dd>True when a source was removed. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00170">170</a> of file <a class="el" href="../../dc/d22/SourceManager_8h_source.html">SourceManager.h</a>.</p>
 
 </div>
 </div>

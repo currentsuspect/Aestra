@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['viewfocus_0',['ViewFocus',['../dc/dd6/AestraContent_8h.html#adcb0a7e988b7d2d5fc5ee5c1bddad1a3',1,'AestraContent.h']]]
+  ['outcome_0',['Outcome',['../d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html#a75e925977614e2f4df0010efef14ed8f',1,'Aestra::MuseAgent::MuseSocketClient']]]
 ];

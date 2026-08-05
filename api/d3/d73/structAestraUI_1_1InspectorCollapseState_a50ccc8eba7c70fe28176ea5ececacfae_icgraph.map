@@ -1,0 +1,5 @@
+<map id="AestraUI::InspectorCollapseState::effectiveExpanded" name="AestraUI::InspectorCollapseState::effectiveExpanded">
+<area shape="rect" id="Node000001" title="What the panel should actually draw." alt="" coords="224,5,427,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html#a9a10626d0d8bf4f80809da620c4bfed0" title="What the panel actually draws right now." alt="" coords="5,5,176,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,28,176,28,176,23,210,23"/>
+</map>

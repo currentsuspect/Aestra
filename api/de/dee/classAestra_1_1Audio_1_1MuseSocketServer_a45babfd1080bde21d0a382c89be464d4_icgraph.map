@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MuseSocketServer::port" name="Aestra::Audio::MuseSocketServer::port">
+<area shape="rect" id="Node000001" title="The bound port (resolved when start() was given 0)." alt="" coords="248,5,443,45"/>
+<area shape="rect" id="Node000002" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#a8e6173b89f92975d2eea0581d398bbf5" title="Bind 127.0.0.1:port and start the IO thread." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,28,200,28,200,23,234,23"/>
+</map>

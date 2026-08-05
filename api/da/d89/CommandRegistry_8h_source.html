@@ -84,56 +84,54 @@ $(document).ready(function() { init_codefold(1); });
 <div class="contents">
 <div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &quot;Commands/ICommand.h&quot;</span></div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;Commands/MuseGrammar.h&quot;</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;functional&gt;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;string&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;unordered_map&gt;</span></div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>Aestra {</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">namespace </span>Audio {</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">class </span>AudioEngine;</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">class </span>TrackManager;</div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="foldopen" id="foldopen00017" data-start="{" data-end="};">
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno"><a class="line" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">   17</a></span><span class="keyword">class </span><a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a> {</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    <span class="keyword">using </span>Factory = std::function&lt;std::unique_ptr&lt;ICommand&gt;(</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>        <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp;)&gt;;</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a>&amp; instance();</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keywordtype">void</span> registerCommand(<span class="keyword">const</span> std::string&amp; verb, Factory factory);</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    std::unique_ptr&lt;ICommand&gt; build(</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>        <span class="keyword">const</span> std::string&amp; verb,</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp; flags);</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keyword">static</span> std::unique_ptr&lt;ICommand&gt; <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977">fail</a>(<span class="keyword">const</span> std::string&amp; reason);</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b">consumeLastBuildError</a>();</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> initialize(<a class="code hl_class" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a>* trackManager);</div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &quot;Commands/CommandContext.h&quot;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;Commands/ICommand.h&quot;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &quot;Commands/MuseGrammar.h&quot;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;functional&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;unordered_map&gt;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keyword">namespace </span>Audio {</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
+<div class="foldopen" id="foldopen00015" data-start="{" data-end="};">
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno"><a class="line" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">   15</a></span><span class="keyword">class </span><a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a> {</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    <span class="comment">// Factories are registered once and are stateless: every runtime dependency</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    <span class="comment">// (the engine, the track model) arrives per build through CommandContext,</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    <span class="comment">// never captured or reached ambiently.</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keyword">using </span>Factory = std::function&lt;std::unique_ptr&lt;ICommand&gt;(</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>        <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp;, <span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestra_1_1Audio_1_1CommandContext.html">CommandContext</a>&amp;)&gt;;</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a>&amp; instance();</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keywordtype">void</span> registerCommand(<span class="keyword">const</span> std::string&amp; verb, Factory factory);</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    std::unique_ptr&lt;ICommand&gt; build(</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keyword">const</span> std::string&amp; verb,</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>        <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp; flags,</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestra_1_1Audio_1_1CommandContext.html">CommandContext</a>&amp; context);</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keyword">static</span> std::unique_ptr&lt;ICommand&gt; <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977">fail</a>(<span class="keyword">const</span> std::string&amp; reason);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keyword">static</span> std::string <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b">consumeLastBuildError</a>();</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a6a742d61667fe0457245460291739a8d">setAudioEngine</a>(<a class="code hl_class" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a>* engine);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a>* getAudioEngine();</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    std::unordered_map&lt;std::string, Factory&gt; m_factories;</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>};</div>
-</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081">initialize</a>();</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">Aestra::Audio::AudioEngine</a></div><div class="ttdoc">Real-time audio engine with 144dB dynamic range.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00057">AudioEngine.h:57</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">Aestra::Audio::CommandRegistry</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d89/CommandRegistry_8h_source.html#l00017">CommandRegistry.h:17</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_a6a742d61667fe0457245460291739a8d"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a6a742d61667fe0457245460291739a8d">Aestra::Audio::CommandRegistry::setAudioEngine</a></div><div class="ttdeci">static void setAudioEngine(AudioEngine *engine)</div><div class="ttdoc">Set the AudioEngine for transport commands (play/stop/set_bpm).</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00147">CommandRegistry.cpp:147</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_ad7b2a4074b0b099b6b8879f5374d971b"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b">Aestra::Audio::CommandRegistry::consumeLastBuildError</a></div><div class="ttdeci">static std::string consumeLastBuildError()</div><div class="ttdoc">Take the reason recorded by the most recent failed build.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00126">CommandRegistry.cpp:126</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_ae5a2648a9167e92cf4875d8bbdb5b977"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977">Aestra::Audio::CommandRegistry::fail</a></div><div class="ttdeci">static std::unique_ptr&lt; ICommand &gt; fail(const std::string &amp;reason)</div><div class="ttdoc">Record why a factory refused to build, then return nullptr.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00121">CommandRegistry.cpp:121</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00050">TrackManager.h:50</a></div></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <a class="code hl_class" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    std::unordered_map&lt;std::string, Factory&gt; m_factories;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>};</div>
+</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">Aestra::Audio::CommandRegistry</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d89/CommandRegistry_8h_source.html#l00015">CommandRegistry.h:15</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_a98f09f72ec0a8d2493880dc6f7b4d081"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081">Aestra::Audio::CommandRegistry::initialize</a></div><div class="ttdeci">static void initialize()</div><div class="ttdoc">Register every Muse command factory once.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">CommandRegistry.cpp:164</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_ad7b2a4074b0b099b6b8879f5374d971b"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b">Aestra::Audio::CommandRegistry::consumeLastBuildError</a></div><div class="ttdeci">static std::string consumeLastBuildError()</div><div class="ttdoc">Take the reason recorded by the most recent failed build.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00142">CommandRegistry.cpp:142</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1CommandRegistry_html_ae5a2648a9167e92cf4875d8bbdb5b977"><div class="ttname"><a href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977">Aestra::Audio::CommandRegistry::fail</a></div><div class="ttdeci">static std::unique_ptr&lt; ICommand &gt; fail(const std::string &amp;reason)</div><div class="ttdoc">Record why a factory refused to build, then return nullptr.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/de4/CommandRegistry_8cpp_source.html#l00137">CommandRegistry.cpp:137</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1CommandContext_html"><div class="ttname"><a href="../../dd/d88/structAestra_1_1Audio_1_1CommandContext.html">Aestra::Audio::CommandContext</a></div><div class="ttdoc">Live session dependencies a command factory needs to build a command.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/deb/CommandContext_8h_source.html#l00022">CommandContext.h:22</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

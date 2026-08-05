@@ -1,16 +1,32 @@
 <map id="AestraContent::syncViewState" name="AestraContent::syncViewState">
-<area shape="rect" id="Node000001" title="Synchronize overlay state into owned child views." alt="" coords="777,71,996,97"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="529,20,721,60"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="797,72,720,59,721,53,798,66"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#aa076399851deccb029cfbea3642d1725" title="Open or close a specific workspace overlay." alt="" coords="520,99,729,125"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="764,100,730,103,729,98,763,94"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a4feb8815fae20c321c2abde07f12879a" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="254,5,467,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="515,37,467,34,468,29,515,31"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="5,42,201,67"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,42,202,46,201,41,240,36"/>
-<area shape="poly" id="edge7_Node000005_Node000004" title=" " alt="" coords="506,102,201,68,202,63,507,96"/>
-<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="260,120,461,160"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="506,127,462,132,461,127,506,122"/>
-<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="249,185,472,210"/>
-<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="583,133,473,175,425,187,424,182,471,169,581,128"/>
+<area shape="rect" id="Node000001" title="Synchronize overlay state into owned child views." alt="" coords="1083,147,1301,173"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="834,89,1026,129"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1112,147,1026,131,1027,125,1113,142"/>
+<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#aa076399851deccb029cfbea3642d1725" title="Open or close a specific workspace overlay." alt="" coords="825,175,1035,201"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="1069,176,1035,179,1034,174,1069,170"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="297,155,505,195"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="821,125,505,165,505,159,820,120"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a4feb8815fae20c321c2abde07f12879a" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="559,32,773,72"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="823,89,758,75,759,69,825,84"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="303,105,499,130"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="571,78,454,107,452,102,570,73"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="26,183,226,209"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="320,136,296,145,272,160,248,174,211,186,209,181,246,170,269,155,294,140,319,131"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="29,5,223,45"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="356,102,246,60,207,48,208,43,248,55,358,97"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="29,69,223,109"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="289,109,223,102,224,97,289,103"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#adde34f69a39cdca3682dc5fbcb183c98" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="29,240,223,280"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="307,138,296,145,280,163,273,182,265,203,248,223,216,242,213,238,245,219,261,200,268,181,275,160,293,141,305,133"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,134,247,159"/>
+<area shape="poly" id="edge9_Node000005_Node000010" title=" " alt="" coords="289,132,245,137,245,131,288,127"/>
+<area shape="poly" id="edge16_Node000011_Node000005" title=" " alt="" coords="820,176,496,133,497,127,820,171"/>
+<area shape="rect" id="Node000012" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="565,248,767,288"/>
+<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="878,207,778,239,738,250,736,245,777,233,876,202"/>
+<area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="555,198,777,223"/>
+<area shape="poly" id="edge15_Node000011_Node000014" title=" " alt="" coords="812,201,778,204,778,198,811,196"/>
+<area shape="poly" id="edge12_Node000012_Node000003" title=" " alt="" coords="572,246,553,238,529,224,505,209,475,197,477,192,508,204,532,219,556,234,574,241"/>
+<area shape="poly" id="edge14_Node000012_Node000009" title=" " alt="" coords="551,273,507,273,401,275,295,273,223,270,223,264,295,268,401,269,507,268,551,267"/>
+<area shape="rect" id="Node000013" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="295,219,507,259"/>
+<area shape="poly" id="edge13_Node000012_Node000013" title=" " alt="" coords="551,258,507,253,507,248,552,253"/>
 </map>

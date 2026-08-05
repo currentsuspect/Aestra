@@ -1,5 +1,8 @@
 <map id="AestraContent::stopFromCurrentFocus" name="AestraContent::stopFromCurrentFocus">
-<area shape="rect" id="Node000001" title="Stop playback based on the current focus mode." alt="" coords="248,5,480,45"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a78c40e3abcccefa46157ebbb7b8f38a3" title="Pause playback based on the current focus mode." alt="" coords="5,5,200,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,28,200,28,200,23,234,23"/>
+<area shape="rect" id="Node000001" title="Stop playback based on the current focus mode." alt="" coords="537,35,769,75"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a78c40e3abcccefa46157ebbb7b8f38a3" title="Pause playback based on the current focus mode." alt="" coords="295,5,489,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="523,43,489,39,490,34,524,37"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,42,247,67"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="523,60,489,60,295,60,247,59,247,54,295,55,489,55,523,54"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="281,40,241,45,241,39,281,35"/>
 </map>

@@ -123,7 +123,7 @@ Functions</h2></td></tr>
 <div class="textblock"><p>Cross-platform Unicode path handling utilities. </p>
 <p>This header provides robust UTF-8 &lt;-&gt; UTF-16 path conversion for Windows, avoiding the deprecated and unreliable std::wstring_convert/codecvt approach.</p>
 <hr  />
- <h1><a class="anchor" id="autotoc_md1"></a>
+ <h1><a class="anchor" id="autotoc_md2"></a>
 THE UNICODE PATH LAW FOR AESTRA:</h1>
 <ol type="1">
 <li>INTERNAL STORAGE: Always use std::filesystem::path for file paths</li>
@@ -131,7 +131,7 @@ THE UNICODE PATH LAW FOR AESTRA:</h1>
 <li>FOR WIN32 APIs: Use path.native() or path.wstring() directly</li>
 <li>FOR DECODERS: Use pathToWide() for APIs expecting wchar_t*, or path.string() only for ASCII-only codecs</li>
 </ol>
-<h1><a class="anchor" id="autotoc_md2"></a>
+<h1><a class="anchor" id="autotoc_md3"></a>
 NEVER use raw std::string for file paths in core audio/file code on Windows!</h1>
 
 <p class="definition">Definition in file <a class="el" href="../../d4/dc5/PathUtils_8h_source.html">PathUtils.h</a>.</p>
@@ -215,7 +215,7 @@ NEVER use raw std::string for file paths in core audio/file code on Windows!</h1
 
 <p class="reference">References <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00077">Aestra::Audio::pathStringToWide()</a>, and <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00047">Aestra::Audio::utf8ToWide()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03244">Aestra::Audio::AudioEngine::bounceRangeToWav()</a>, <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00110">Aestra::Audio::makeUnicodePath()</a>, and <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00077">Aestra::Audio::pathStringToWide()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03193">Aestra::Audio::AudioEngine::bounceRangeToWav()</a>, <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00110">Aestra::Audio::makeUnicodePath()</a>, and <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00077">Aestra::Audio::pathStringToWide()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">

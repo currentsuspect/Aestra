@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 735;
 var viewHeight = 230;
-var sectionId = 'dynsection-25';
+var sectionId = 'dynsection-24';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -222,6 +222,25 @@ var sectionId = 'dynsection-25';
 <g id="a_edge7_Node000007_Node000006"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M159.44,-117.71C168.55,-117.78 177.78,-117.76 186.81,-117.65"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="159.28,-114.21 149.24,-117.6 159.2,-121.21 159.28,-114.21"/>
+</a>
+</g>
+</g>
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute every fully received request line on the caller&#39;s thread.">
+<polygon fill="white" stroke="#666666" points="147.5,-30 1.5,-30 1.5,0 147.5,0 147.5,-30"/>
+<text text-anchor="start" x="9.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseSocket</text>
+<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Server::processPending</text>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node10 -->
+<g id="edge10_Node000009_Node000010" class="edge">
+<title>Node9&#45;&gt;Node10</title>
+<g id="a_edge10_Node000009_Node000010"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M180.03,-15C169.2,-15 158.19,-15 147.58,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="180.34,-18.5 190.34,-15 180.34,-11.5 180.34,-18.5"/>
 </a>
 </g>
 </g>

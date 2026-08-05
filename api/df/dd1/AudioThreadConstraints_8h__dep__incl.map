@@ -1,7 +1,5 @@
 <map id="Source/AudioThreadConstraints.h" name="Source/AudioThreadConstraints.h">
-<area shape="rect" id="Node000001" title="B&#45;005: Audio thread safety checks and documentation B&#45;007: Allocation tracking in debug builds." alt="" coords="111,5,349,31"/>
-<area shape="rect" id="Node000002" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="5,79,199,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="199,40,124,81,122,76,196,35"/>
-<area shape="rect" id="Node000003" href="$dc/d21/AestraAudioController_8cpp_source.html" title=" " alt="" coords="223,79,496,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,35,339,76,337,81,262,40"/>
+<area shape="rect" id="Node000001" title="B&#45;005: Audio thread safety checks and documentation B&#45;007: Allocation tracking in debug builds." alt="" coords="23,5,261,31"/>
+<area shape="rect" id="Node000002" href="$dc/d21/AestraAudioController_8cpp_source.html" title=" " alt="" coords="5,79,279,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="145,44,145,79,139,79,139,44"/>
 </map>

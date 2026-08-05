@@ -152,6 +152,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8f130ee6e14f7236910dc18492afc302" id="r_a8f130ee6e14f7236910dc18492afc302"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a8f130ee6e14f7236910dc18492afc302">isMaximized</a> () const override</td></tr>
 <tr class="memdesc:a8f130ee6e14f7236910dc18492afc302"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check whether the window is currently maximized.  <br /></td></tr>
 <tr class="separator:a8f130ee6e14f7236910dc18492afc302"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ce6f04e52b219c84622b5d3319ea5e6" id="r_a2ce6f04e52b219c84622b5d3319ea5e6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a2ce6f04e52b219c84622b5d3319ea5e6">getRestoreBounds</a> (int &amp;x, int &amp;y, int &amp;width, int &amp;height) const override</td></tr>
+<tr class="memdesc:a2ce6f04e52b219c84622b5d3319ea5e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The window's NON-maximized geometry (#655).  <br /></td></tr>
+<tr class="separator:a2ce6f04e52b219c84622b5d3319ea5e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0b4337ef9706663e07c2fcc1fdd2d2b" id="r_af0b4337ef9706663e07c2fcc1fdd2d2b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#af0b4337ef9706663e07c2fcc1fdd2d2b">isMinimized</a> () const override</td></tr>
 <tr class="memdesc:af0b4337ef9706663e07c2fcc1fdd2d2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check whether the window is currently minimized.  <br /></td></tr>
 <tr class="separator:af0b4337ef9706663e07c2fcc1fdd2d2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -182,10 +185,16 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9860105b9daa3686d60af2904342629f" id="r_a9860105b9daa3686d60af2904342629f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a9860105b9daa3686d60af2904342629f">setCursorVisible</a> (bool visible) override</td></tr>
 <tr class="separator:a9860105b9daa3686d60af2904342629f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3c094e1eee4631c0064154ece4eaea1b" id="r_a3c094e1eee4631c0064154ece4eaea1b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a3c094e1eee4631c0064154ece4eaea1b">setCursorPosition</a> (int x, int y) override</td></tr>
-<tr class="memdesc:a3c094e1eee4631c0064154ece4eaea1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Warp the cursor to a screen-space position.  <br /></td></tr>
+<tr class="memdesc:a3c094e1eee4631c0064154ece4eaea1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Warp the cursor to a WINDOW-RELATIVE position (client-area coords).  <br /></td></tr>
 <tr class="separator:a3c094e1eee4631c0064154ece4eaea1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a273ed08d55ed216e066351cd7ac3e708" id="r_a273ed08d55ed216e066351cd7ac3e708"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a273ed08d55ed216e066351cd7ac3e708">setCursorClip</a> (bool clipped) override</td></tr>
+<tr class="memdesc:a273ed08d55ed216e066351cd7ac3e708"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clip cursor to window bounds (for hidden-cursor drag to prevent escape).  <br /></td></tr>
+<tr class="separator:a273ed08d55ed216e066351cd7ac3e708"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2fee9aa3a8314fc5dbfd9f19de5fe1b" id="r_ae2fee9aa3a8314fc5dbfd9f19de5fe1b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#ae2fee9aa3a8314fc5dbfd9f19de5fe1b">setCursorClipRect</a> (int x, int y, int w, int h) override</td></tr>
+<tr class="memdesc:ae2fee9aa3a8314fc5dbfd9f19de5fe1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clip the cursor to a small WINDOW-RELATIVE rectangle.  <br /></td></tr>
+<tr class="separator:ae2fee9aa3a8314fc5dbfd9f19de5fe1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a309dff27bdb6308f21d429d5475afba7" id="r_a309dff27bdb6308f21d429d5475afba7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a309dff27bdb6308f21d429d5475afba7">getCursorPosition</a> (int &amp;x, int &amp;y) const override</td></tr>
-<tr class="memdesc:a309dff27bdb6308f21d429d5475afba7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query the current cursor position in screen-space coordinates.  <br /></td></tr>
+<tr class="memdesc:a309dff27bdb6308f21d429d5475afba7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Query the current cursor position in WINDOW-RELATIVE coordinates.  <br /></td></tr>
 <tr class="separator:a309dff27bdb6308f21d429d5475afba7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a57ff3d28f07499d23ed652ee6c29ebc7" id="r_a57ff3d28f07499d23ed652ee6c29ebc7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/classAestra_1_1PlatformWindowWin32.html#a57ff3d28f07499d23ed652ee6c29ebc7">setMouseCapture</a> (bool captured) override</td></tr>
 <tr class="memdesc:a57ff3d28f07499d23ed652ee6c29ebc7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Capture or release the mouse for drag operations outside the window.  <br /></td></tr>
@@ -222,9 +231,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a7d6a1c534bf2e21a3574171bdde253ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Request the window to be brought to front and gain focus.  <br /></td></tr>
 <tr class="separator:a7d6a1c534bf2e21a3574171bdde253ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classAestra_1_1IPlatformWindow"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1IPlatformWindow')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html">Aestra::IPlatformWindow</a></td></tr>
-<tr class="memitem:a0f2458341fc4abc222de4538c7159367 inherit pub_methods_classAestra_1_1IPlatformWindow" id="r_a0f2458341fc4abc222de4538c7159367"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a0f2458341fc4abc222de4538c7159367">setCursorClip</a> (bool clipped)</td></tr>
-<tr class="memdesc:a0f2458341fc4abc222de4538c7159367 inherit pub_methods_classAestra_1_1IPlatformWindow"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clip cursor to window bounds (for hidden-cursor drag to prevent escape).  <br /></td></tr>
-<tr class="separator:a0f2458341fc4abc222de4538c7159367 inherit pub_methods_classAestra_1_1IPlatformWindow"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac8b3a9006428cd4e99cc915bcd8ac8b3 inherit pub_methods_classAestra_1_1IPlatformWindow" id="r_ac8b3a9006428cd4e99cc915bcd8ac8b3"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#ac8b3a9006428cd4e99cc915bcd8ac8b3">setMouseMoveCallback</a> (std::function&lt; void(int x, int y)&gt; callback)=0</td></tr>
 <tr class="memdesc:ac8b3a9006428cd4e99cc915bcd8ac8b3 inherit pub_methods_classAestra_1_1IPlatformWindow"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the mouse-move callback.  <br /></td></tr>
 <tr class="separator:ac8b3a9006428cd4e99cc915bcd8ac8b3 inherit pub_methods_classAestra_1_1IPlatformWindow"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -429,7 +435,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#aa566ce598e933ac15302a59134e514d0">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00062">62</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00065">65</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -467,11 +473,11 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Query the current cursor position in screen-space coordinates. </p>
+<p>Query the current cursor position in WINDOW-RELATIVE coordinates. </p>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#aaa376b4b95be5d970b06702eabc24fc8">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00954">954</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00989">989</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -502,7 +508,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#afa74d78fa1bcd6503de7dc5add4a8524">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00051">51</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00052">52</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -533,7 +539,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a2b69b9faf425c74f75b018271b3fc341">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00049">49</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00050">50</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -564,7 +570,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a6c6726c7a4ff1f75db654ce37af96549">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00048">48</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00049">49</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -607,6 +613,63 @@ Static Public Member Functions</h2></td></tr>
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a2d5d7b60eee7f5fe82355263b6fc5ea1">Aestra::IPlatformWindow</a>.</p>
 
 <p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00943">943</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2ce6f04e52b219c84622b5d3319ea5e6" name="a2ce6f04e52b219c84622b5d3319ea5e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ce6f04e52b219c84622b5d3319ea5e6">&#9670;&#160;</a></span>getRestoreBounds()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::PlatformWindowWin32::getRestoreBounds </td>
+          <td>(</td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>y</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>width</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>height</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The window's NON-maximized geometry (#655). </p>
+<p>getPosition/getSize report where the window is <em>now</em>, which while maximized is the maximized rectangle. Persisting that destroys the size the user actually chose, and there is no way to recover it: applyWindowState skips size entirely when the maximized flag is set, so the value is never even read back.</p>
+<p>Implementations must track this independently of the current rect — Win32 has it natively as WINDOWPLACEMENT::rcNormalPosition; other backends record the last geometry observed while not maximized.</p>
+<dl class="section return"><dt>Returns</dt><dd>false if no restore geometry is known yet, leaving the outputs untouched, so callers can fall back rather than persist zeroes. </dd></dl>
+
+<p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a4a4d2753a8f7021fb085bd6520c5bf7d">Aestra::IPlatformWindow</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01039">1039</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -679,7 +742,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a92cc5acf88c25672f7525432f60a2fd2">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00969">969</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01008">1008</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -710,7 +773,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#ac2937533359c3bfb6385c6b546c727e5">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00042">42</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00043">43</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -741,7 +804,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a8f46b89456e30ea2fa174367c48b8fb7">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00977">977</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01016">1016</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -772,7 +835,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a9f36401618b84f6c40ded7f55beb6809">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00993">993</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01032">1032</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -803,7 +866,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#ab9f7131c269d1fc8124bc7a0456b4819">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01000">1000</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01058">1058</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -865,7 +928,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a20b9744f088c4f965d49c0691bbea23e">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00973">973</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01012">1012</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -927,7 +990,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#aa18ba33f7853a7228fc070efe37dc5bc">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00985">985</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01024">1024</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -958,7 +1021,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a74099a19a3ce9b3be6ec8011b81e1f21">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00981">981</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01020">1020</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1021,7 +1084,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a6058215da8ead301b9fb6c627c18ee73">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01053">1053</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01111">1111</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1052,7 +1115,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a95938ea9fb3aefe9c2b79b0b9aef763a">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01059">1059</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01117">1117</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1083,7 +1146,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#aec9be98a64f1f0703b39000cf9e8e66b">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00989">989</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01028">1028</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1111,7 +1174,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00073">73</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00076">76</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1143,7 +1206,94 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#af2c01e9f401251727b1df9c997ed4c84">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00075">75</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00078">78</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+
+</div>
+</div>
+<a id="a273ed08d55ed216e066351cd7ac3e708" name="a273ed08d55ed216e066351cd7ac3e708"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a273ed08d55ed216e066351cd7ac3e708">&#9670;&#160;</a></span>setCursorClip()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::PlatformWindowWin32::setCursorClip </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>clipped</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Clip cursor to window bounds (for hidden-cursor drag to prevent escape). </p>
+
+<p>Reimplemented from <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a0f2458341fc4abc222de4538c7159367">Aestra::IPlatformWindow</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00973">973</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae2fee9aa3a8314fc5dbfd9f19de5fe1b" name="ae2fee9aa3a8314fc5dbfd9f19de5fe1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2fee9aa3a8314fc5dbfd9f19de5fe1b">&#9670;&#160;</a></span>setCursorClipRect()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::PlatformWindowWin32::setCursorClipRect </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>y</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>w</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>h</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Clip the cursor to a small WINDOW-RELATIVE rectangle. </p>
+<p>Confining to the whole window is insufficient for a borderless custom-titlebar app: the title bar and in-window panels are inside the window, so the hidden drag pointer can still roam over them. A tiny rect around the drag anchor hard-locks the pointer to the control. Coords are client-area (same space as setCursorPosition). Default no-op. </p>
+
+<p>Reimplemented from <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a3be1253c4ace73c5c6d10b637e99dd9a">Aestra::IPlatformWindow</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00962">962</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1181,7 +1331,8 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Warp the cursor to a screen-space position. </p>
+<p>Warp the cursor to a WINDOW-RELATIVE position (client-area coords). </p>
+<p>Contract: callers (NUI widgets, window manager) pass UI/window coordinates. Backends convert to whatever the OS API expects (Win32 SetCursorPos is screen-space -&gt; ClientToScreen; SDL warp is already window-relative). This doc previously said "screen-space", which only the Win32 backend believed — that mismatch sent every drag-release warp-back on Windows to the wrong screen position. </p>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a173bc676a65716efaa1e606160bcb707">Aestra::IPlatformWindow</a>.</p>
 
@@ -1243,7 +1394,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00077">77</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00080">80</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1271,7 +1422,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00076">76</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00079">79</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1303,7 +1454,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a9c9acb604a10f469b87bad79b5e2b279">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01008">1008</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01066">1066</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>
@@ -1335,7 +1486,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a3794eb4a2f9d77d2915d7970a3900fa6">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00064">64</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00067">67</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1363,7 +1514,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00070">70</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00073">73</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1391,7 +1542,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00066">66</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00069">69</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1451,7 +1602,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00065">65</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00068">68</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1479,7 +1630,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00069">69</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00072">72</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1549,7 +1700,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00074">74</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html#l00077">77</a> of file <a class="el" href="../../dc/df3/PlatformWindowWin32_8h_source.html">PlatformWindowWin32.h</a>.</p>
 
 </div>
 </div>
@@ -1686,7 +1837,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/d57/classAestra_1_1IPlatformWindow.html#a0d8416ad5e4def4807fdd8dd50ed33e8">Aestra::IPlatformWindow</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l00965">965</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html#l01004">1004</a> of file <a class="el" href="../../de/de1/PlatformWindowWin32_8cpp_source.html">PlatformWindowWin32.cpp</a>.</p>
 
 </div>
 </div>

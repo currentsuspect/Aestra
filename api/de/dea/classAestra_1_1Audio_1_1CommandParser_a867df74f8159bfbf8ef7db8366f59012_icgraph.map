@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::CommandParser::buildValidated" name="Aestra::Audio::CommandParser::buildValidated">
+<area shape="rect" id="Node000001" title="Validate and build a command without executing it." alt="" coords="768,35,992,75"/>
+<area shape="rect" id="Node000002" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="496,5,720,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="754,44,720,40,720,35,755,38"/>
+<area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,35,448,75"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="754,60,720,60,496,60,448,59,448,54,496,55,720,55,754,54"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="483,42,449,46,448,41,482,37"/>
+<area shape="rect" id="Node000004" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,35,200,75"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="235,57,200,57,200,52,235,52"/>
+</map>

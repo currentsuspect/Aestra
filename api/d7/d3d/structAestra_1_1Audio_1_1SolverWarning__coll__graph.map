@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::SolverWarning" name="Aestra::Audio::SolverWarning">
+<area shape="rect" id="Node000001" title="One diagnostic raised during solve, classified and described." alt="" coords="8,183,219,208"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,155,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="92,132,111,181,106,183,87,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="179,95,266,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="199,131,130,185,127,180,195,127"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="153,5,292,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="225,59,225,94,220,94,220,59"/>
+</map>

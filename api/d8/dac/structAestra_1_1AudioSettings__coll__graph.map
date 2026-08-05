@@ -1,0 +1,5 @@
+<map id="Aestra::AudioSettings" name="Aestra::AudioSettings">
+<area shape="rect" id="Node000001" title="Audio configuration as persisted in audio_settings.conf." alt="" coords="5,240,168,265"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="67,5,106,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="89,45,89,240,84,240,84,45"/>
+</map>

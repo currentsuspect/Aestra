@@ -11,7 +11,7 @@
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="True when this unit currently routes to master preview path.">
+<g id="a_Node000001"><a xlink:title="True when this unit has no legacy Timeline assignment.">
 <polygon fill="#999999" stroke="#666666" points="137,-30 0,-30 0,0 137,0 137,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitInfo</text>
 <text text-anchor="middle" x="68.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::routesToMasterPreview</text>
@@ -21,7 +21,7 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab463abb07c8a3c9fea46007a1b6d999b" target="_top" xlink:title="Effective route mode, preserving legacy route fields as authority until cleared.">
+<g id="a_Node000002"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab463abb07c8a3c9fea46007a1b6d999b" target="_top" xlink:title="Effective legacy Timeline ownership mode.">
 <polygon fill="white" stroke="#666666" points="300,-30 173,-30 173,0 300,0 300,-30"/>
 <text text-anchor="start" x="181" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitInfo</text>
 <text text-anchor="middle" x="236.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::getRouteMode</text>

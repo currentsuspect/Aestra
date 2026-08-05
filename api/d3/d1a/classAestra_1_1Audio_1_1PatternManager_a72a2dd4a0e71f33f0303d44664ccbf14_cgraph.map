@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternManager::reinsertPattern" name="Aestra::Audio::PatternManager::reinsertPattern">
+<area shape="rect" id="Node000001" title="Reinsert a detached pattern with the same stable identity." alt="" coords="5,5,225,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="273,5,493,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,23,260,23,260,28,225,28"/>
+</map>

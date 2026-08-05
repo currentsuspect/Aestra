@@ -1,0 +1,12 @@
+<map id="AestraUI::NUICursorService::beginDragCapture" name="AestraUI::NUICursorService::beginDragCapture">
+<area shape="rect" id="Node000001" title="Begin an infinite&#45;drag capture: hides the cursor and confines the pointer." alt="" coords="5,63,205,103"/>
+<area shape="rect" id="Node000002" href="$d0/d89/classAestraUI_1_1NUICursorService.html#a416b1ff3dc3397dad992422f30397cac" title="Abort without warping (focus lost, window deactivated, client destroyed mid&#45;drag)." alt="" coords="253,63,453,103"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,80,240,80,240,85,205,85"/>
+<area shape="rect" id="Node000003" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#afdd1d8197af7db7b5ab1874a27bfe8da" title="Confine pointer to window." alt="" coords="501,5,684,45"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="188,60,253,48,374,34,488,27,488,32,375,40,254,53,189,65"/>
+<area shape="rect" id="Node000005" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#a40271949e1ab3b04b2b724406ede5d55" title="Style&#45;channel hide (Hidden)." alt="" coords="262,127,445,167"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="184,100,263,121,261,126,183,105"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="437,60,495,46,496,51,438,65"/>
+<area shape="rect" id="Node000004" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#a0c0997a0e0cc4ab316155b8d501479f7" title="Style&#45;channel restore (Arrow)." alt="" coords="501,69,684,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="454,83,488,84,487,89,454,88"/>
+</map>

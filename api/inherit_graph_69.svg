@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="145,-30 0,-30 0,0 145,0 145,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Automation</text>
-<text text-anchor="middle" x="72.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Curve</text>
+<text text-anchor="middle" x="72.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Point</text>
 </a>
 </g>
 </g>

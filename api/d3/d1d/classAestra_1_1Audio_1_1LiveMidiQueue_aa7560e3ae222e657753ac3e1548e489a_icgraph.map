@@ -4,6 +4,8 @@
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="502,45,468,40,469,35,503,40"/>
 <area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a2fbcb0afd72f57c31b645b89b70e2346" title="Post a live MIDI event (note input) for an Arsenal unit." alt="" coords="269,69,468,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="503,75,469,79,468,74,502,70"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a124c4627537f1e3710165263eaea3515" title="Create the main application workspace component." alt="" coords="5,77,221,102"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="256,92,221,92,221,87,256,87"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a124c4627537f1e3710165263eaea3515" title="Create the main application workspace component." alt="" coords="5,47,221,73"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="256,79,221,75,222,70,256,74"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="16,97,211,137"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="256,104,211,109,211,104,255,99"/>
 </map>

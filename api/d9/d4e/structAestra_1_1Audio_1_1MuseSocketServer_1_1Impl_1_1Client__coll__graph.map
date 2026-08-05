@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MuseSocketServer::Impl::Client" name="Aestra::Audio::MuseSocketServer::Impl::Client">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,197,200,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="27,95,101,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="71,133,81,172,93,196,88,198,76,174,65,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="126,95,213,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="157,133,117,198,112,196,153,130"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="100,5,239,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="172,59,172,94,167,94,167,59"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::UnitManager::getUnitMixerChannel" name="Aestra::Audio::UnitManager::getUnitMixerChannel">
+<area shape="rect" id="Node000001" title="Return the unit&#39;s stable mixer destination ID (0 means Master)." alt="" coords="536,85,737,125"/>
+<area shape="rect" id="Node000002" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a807cae773d69b41d42093fd6a040a6e5" title="Execute the command (first time)" alt="" coords="289,5,485,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="553,83,482,63,483,57,554,78"/>
+<area shape="rect" id="Node000004" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="290,85,485,125"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="522,107,485,107,485,102,522,102"/>
+<area shape="rect" id="Node000005" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a619d59586f8cb342ded7bb6e0078ebf0" title="Execute the command (first time)" alt="" coords="287,149,488,189"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="546,131,466,151,465,146,544,126"/>
+<area shape="rect" id="Node000003" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,13,239,53"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="276,35,239,35,239,30,276,30"/>
+<area shape="rect" id="Node000006" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a608dc40a7dbc4550f6652ab0fcf5a8ce" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="21,149,223,189"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="273,171,223,171,223,166,273,166"/>
+</map>

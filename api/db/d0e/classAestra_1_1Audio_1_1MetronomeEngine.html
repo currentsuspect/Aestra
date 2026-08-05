@@ -110,8 +110,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9b80000110113cc99566a8a831a385db" id="r_a9b80000110113cc99566a8a831a385db"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a9b80000110113cc99566a8a831a385db">loadClickSounds</a> (const std::string &amp;downbeatPath, const std::string &amp;upbeatPath)</td></tr>
 <tr class="memdesc:a9b80000110113cc99566a8a831a385db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load custom click sounds from WAV files.  <br /></td></tr>
 <tr class="separator:a9b80000110113cc99566a8a831a385db"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7db28b35b8e8987430c688120e169205" id="r_a7db28b35b8e8987430c688120e169205"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a7db28b35b8e8987430c688120e169205">reset</a> (uint64_t globalSamplePos, uint32_t sampleRate)</td></tr>
-<tr class="separator:a7db28b35b8e8987430c688120e169205"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad89f312a86b9fdd1f59df65a9e3dcf6e" id="r_ad89f312a86b9fdd1f59df65a9e3dcf6e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#ad89f312a86b9fdd1f59df65a9e3dcf6e">reset</a> (uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat=false)</td></tr>
+<tr class="separator:ad89f312a86b9fdd1f59df65a9e3dcf6e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0980fa0c94824c537416a79ca2c0132f" id="r_a0980fa0c94824c537416a79ca2c0132f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a0980fa0c94824c537416a79ca2c0132f">setSampleRate</a> (uint32_t rate)</td></tr>
 <tr class="memdesc:a0980fa0c94824c537416a79ca2c0132f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the project sample rate and regenerate click sounds.  <br /></td></tr>
 <tr class="separator:a0980fa0c94824c537416a79ca2c0132f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -281,7 +281,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00045">45</a> of file <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html">MetronomeEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00332">Aestra::Audio::AudioEngine::loadMetronomeClicks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00347">Aestra::Audio::AudioEngine::loadMetronomeClicks()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -345,21 +345,12 @@ Public Member Functions</h2></td></tr>
 <p>Mixes metronome click into the output buffer if enabled and playing. </p>
 <p>Real-time safe. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00218">218</a> of file <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html">MetronomeEngine.cpp</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00661">Aestra::Audio::AudioEngine::processBlock()</a>.</p>
-<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/d0e/classAestra_1_1Audio_1_1MetronomeEngine_aeeaf1bbf2592bfefe8bcba4189630b4f_icgraph.svg" width="100%" height="445"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
-</div>
+<p class="definition">Definition at line <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00234">234</a> of file <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html">MetronomeEngine.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a7db28b35b8e8987430c688120e169205" name="a7db28b35b8e8987430c688120e169205"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7db28b35b8e8987430c688120e169205">&#9670;&#160;</a></span>reset()</h2>
+<a id="ad89f312a86b9fdd1f59df65a9e3dcf6e" name="ad89f312a86b9fdd1f59df65a9e3dcf6e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad89f312a86b9fdd1f59df65a9e3dcf6e">&#9670;&#160;</a></span>reset()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -374,7 +365,13 @@ Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">uint32_t&#160;</td>
-          <td class="paramname"><em>sampleRate</em>&#160;</td>
+          <td class="paramname"><em>sampleRate</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>skipCurrentBeat</em> = <code>false</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -482,7 +479,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the project sample rate and regenerate click sounds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00320">320</a> of file <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html">MetronomeEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00341">341</a> of file <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html">MetronomeEngine.cpp</a>.</p>
 
 </div>
 </div>

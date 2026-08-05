@@ -1,9 +1,11 @@
 <map id="Aestra::Audio::RemovePluginCommand::redo" name="Aestra::Audio::RemovePluginCommand::redo">
-<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,37,216,77"/>
-<area shape="rect" id="Node000002" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#ad4103b850b318e867b2c150932bbe6d7" title="Execute the command (first time)" alt="" coords="264,37,475,77"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,55,251,55,251,60,216,60"/>
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,216,109"/>
+<area shape="rect" id="Node000002" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#ad4103b850b318e867b2c150932bbe6d7" title="Execute the command (first time)" alt="" coords="264,69,475,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,87,251,87,251,92,216,92"/>
 <area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="523,5,729,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="474,42,509,37,509,43,475,47"/>
-<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="531,69,721,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="475,68,518,73,517,78,474,73"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="450,67,532,46,533,51,451,72"/>
+<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a86c3dbaad785b1f341561936dec18fc4" title="The permanent identity of whatever occupies slotIndex (#667)." alt="" coords="531,69,721,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="475,87,517,87,517,92,475,92"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="531,133,721,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="451,107,533,127,532,133,450,112"/>
 </map>

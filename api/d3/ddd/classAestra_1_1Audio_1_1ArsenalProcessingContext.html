@@ -107,6 +107,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:add0fa3ac949d102c8619f0d2ff4d7e0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f9cbe380ae87501635906aff924312e" id="r_a6f9cbe380ae87501635906aff924312e"><td class="memItemLeft" align="right" valign="top">ArsenalRouteMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/ddd/classAestra_1_1Audio_1_1ArsenalProcessingContext.html#a6f9cbe380ae87501635906aff924312e">resolveRouteMode</a> (const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;unit) const noexcept</td></tr>
 <tr class="separator:a6f9cbe380ae87501635906aff924312e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a719c8aef28f70e30a85a854b4ceaeb8c" id="r_a719c8aef28f70e30a85a854b4ceaeb8c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/ddd/classAestra_1_1Audio_1_1ArsenalProcessingContext.html#a719c8aef28f70e30a85a854b4ceaeb8c">shouldRenderToMixerChannel</a> (const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;unit, uint32_t mixerChannelId) const noexcept</td></tr>
+<tr class="separator:a719c8aef28f70e30a85a854b4ceaeb8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45bdaf767559110a4552f9ff8034b16b" id="r_a45bdaf767559110a4552f9ff8034b16b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/ddd/classAestra_1_1Audio_1_1ArsenalProcessingContext.html#a45bdaf767559110a4552f9ff8034b16b">shouldRenderToMaster</a> (const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;unit) const noexcept</td></tr>
+<tr class="separator:a45bdaf767559110a4552f9ff8034b16b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a83a4aa1883ff6d94e2f83dc1a7e83b2d" id="r_a83a4aa1883ff6d94e2f83dc1a7e83b2d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/ddd/classAestra_1_1Audio_1_1ArsenalProcessingContext.html#a83a4aa1883ff6d94e2f83dc1a7e83b2d">shouldRenderToTimelineTrack</a> (const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;unit, uint32_t trackIndex) const noexcept</td></tr>
 <tr class="separator:a83a4aa1883ff6d94e2f83dc1a7e83b2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a767c3d263e2a1ee305af509a2dd45cc4" id="r_a767c3d263e2a1ee305af509a2dd45cc4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/ddd/classAestra_1_1Audio_1_1ArsenalProcessingContext.html#a767c3d263e2a1ee305af509a2dd45cc4">shouldRenderToMasterPreview</a> (const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;unit) const noexcept</td></tr>
@@ -226,7 +230,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00040">40</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00049">49</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
 
 </div>
 </div>
@@ -397,6 +401,34 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a45bdaf767559110a4552f9ff8034b16b" name="a45bdaf767559110a4552f9ff8034b16b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a45bdaf767559110a4552f9ff8034b16b">&#9670;&#160;</a></span>shouldRenderToMaster()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::ArsenalProcessingContext::shouldRenderToMaster </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;&#160;</td>
+          <td class="paramname"><em>unit</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00037">37</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a767c3d263e2a1ee305af509a2dd45cc4" name="a767c3d263e2a1ee305af509a2dd45cc4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a767c3d263e2a1ee305af509a2dd45cc4">&#9670;&#160;</a></span>shouldRenderToMasterPreview()</h2>
 
@@ -421,7 +453,45 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00036">36</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00045">45</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a719c8aef28f70e30a85a854b4ceaeb8c" name="a719c8aef28f70e30a85a854b4ceaeb8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a719c8aef28f70e30a85a854b4ceaeb8c">&#9670;&#160;</a></span>shouldRenderToMixerChannel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::ArsenalProcessingContext::shouldRenderToMixerChannel </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d3/d38/structAestra_1_1Audio_1_1UnitState.html">UnitState</a> &amp;&#160;</td>
+          <td class="paramname"><em>unit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>mixerChannelId</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00032">32</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
 
 </div>
 </div>
@@ -459,7 +529,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00032">32</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html#l00041">41</a> of file <a class="el" href="../../d7/dad/ArsenalProcessingContext_8cpp_source.html">ArsenalProcessingContext.cpp</a>.</p>
 
 </div>
 </div>

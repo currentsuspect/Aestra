@@ -1,7 +1,11 @@
 <map id="Aestra::Audio::AddChannelCommand::execute" name="Aestra::Audio::AddChannelCommand::execute">
-<area shape="rect" id="Node000001" title="Add the channel if the command has not been executed yet." alt="" coords="5,5,200,45"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="248,5,456,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,23,234,23,234,28,200,28"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="504,5,712,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="456,23,490,23,490,28,456,28"/>
+<area shape="rect" id="Node000001" title="Add the channel if the command has not been executed yet." alt="" coords="5,37,200,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="248,37,456,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,55,234,55,234,60,200,60"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a08ac8fbac914dbab6fc60ca7c8fc58a7" title="Add a channel while restoring a persisted stable identity." alt="" coords="504,37,712,77"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="456,55,490,55,490,60,456,60"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="760,5,968,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="712,42,746,37,747,43,712,47"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="760,69,968,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="712,68,747,72,746,77,712,73"/>
 </map>

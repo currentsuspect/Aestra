@@ -1,0 +1,54 @@
+<map id="Aestra::Audio::RenderAudioClipCommand::execute" name="Aestra::Audio::RenderAudioClipCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,557,205,597"/>
+<area shape="rect" id="Node000002" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#aa91ccfd9091449abf51e79b0c6f81c04" title="Hook for edits that become redundant once baked into the audio." alt="" coords="253,69,524,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="104,557,109,476,116,419,128,357,147,293,172,230,207,171,251,119,256,115,260,119,255,123,211,174,177,232,152,295,133,359,121,420,114,476,109,557"/>
+<area shape="rect" id="Node000003" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#a4f02b217619f2c540dfc913686497f77" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="295,133,483,173"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="106,557,115,488,139,390,158,337,183,285,213,236,252,193,280,173,283,178,255,197,218,239,187,287,163,339,144,392,121,489,111,558"/>
+<area shape="rect" id="Node000011" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a672117a00d363d60ddee6c70af61c431" title="Detach a pattern while preserving its identity and state for undo." alt="" coords="279,301,499,341"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="111,556,130,513,159,457,200,400,224,374,252,351,265,343,268,348,255,356,228,378,204,403,164,460,135,515,116,558"/>
+<area shape="rect" id="Node000012" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="286,365,491,405"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="117,555,170,486,208,447,252,415,272,405,274,410,255,420,212,452,174,490,121,559"/>
+<area shape="rect" id="Node000013" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="285,429,493,469"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="130,555,184,516,252,479,273,471,275,476,254,484,187,521,133,559"/>
+<area shape="rect" id="Node000014" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="285,493,493,533"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="194,555,286,534,287,539,195,560"/>
+<area shape="rect" id="Node000015" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3" title="Get the project sample rate." alt="" coords="286,557,491,597"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="206,575,272,575,272,580,206,580"/>
+<area shape="rect" id="Node000016" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="285,621,493,661"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="195,595,287,616,286,621,194,600"/>
+<area shape="rect" id="Node000017" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a10f853c9ec1cd607bc408aa5d988942f" title="Mark the project as modified." alt="" coords="285,685,493,725"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="133,595,187,634,254,671,275,679,273,684,252,676,184,638,130,600"/>
+<area shape="rect" id="Node000018" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a72a2dd4a0e71f33f0303d44664ccbf14" title="Reinsert a detached pattern with the same stable identity." alt="" coords="572,261,792,301"/>
+<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="107,557,120,500,146,425,165,386,188,348,217,314,252,287,293,266,336,252,382,244,428,240,517,244,594,256,593,261,516,249,428,245,382,249,338,257,295,271,255,292,221,318,193,351,169,388,151,427,125,502,112,558"/>
+<area shape="rect" id="Node000019" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#acbaff8feefb9759c2c959d0187e73de1" title="Produce the replacement audio for this clip." alt="" coords="287,749,490,789"/>
+<area shape="poly" id="edge19_Node000001_Node000019" title=" " alt="" coords="121,596,174,665,212,703,255,735,276,745,273,750,252,740,208,707,170,669,117,599"/>
+<area shape="rect" id="Node000020" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6936846e98e161e82c7c084974cdeae6" title="Directory for audio committed by destructive clip operations." alt="" coords="285,813,493,853"/>
+<area shape="poly" id="edge20_Node000001_Node000020" title=" " alt="" coords="116,596,135,639,164,695,204,752,228,777,255,799,274,810,271,815,252,804,224,781,200,755,159,697,130,642,111,598"/>
+<area shape="rect" id="Node000021" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a412dbfc4852da5b65cc2046102b91826" title="Suffix appended to the new pattern/file name, e.g." alt="" coords="288,877,489,917"/>
+<area shape="poly" id="edge21_Node000001_Node000021" title=" " alt="" coords="113,597,128,651,155,723,174,762,197,799,224,834,255,863,277,876,274,881,252,867,220,837,192,802,169,764,150,725,123,652,108,598"/>
+<area shape="rect" id="Node000022" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="285,941,493,981"/>
+<area shape="poly" id="edge22_Node000001_Node000022" title=" " alt="" coords="111,597,122,662,147,751,165,800,189,846,219,890,255,927,273,940,271,944,252,931,215,893,185,849,160,802,141,753,117,663,106,598"/>
+<area shape="rect" id="Node000023" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#adbc6b59ea80b9b1efca3eb534d66ef27" title="Resolve the audio a clip currently plays." alt="" coords="584,197,780,237"/>
+<area shape="poly" id="edge23_Node000001_Node000023" title=" " alt="" coords="106,557,117,494,141,408,160,362,184,318,214,279,252,246,288,224,328,208,369,198,411,191,495,188,571,193,570,199,495,193,412,196,370,203,329,214,291,229,255,250,218,282,188,321,164,365,146,409,122,495,111,557"/>
+<area shape="rect" id="Node000024" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a17983ade5aa7a81a8f2d11fba2db2ad6" title="Replace the editable playback properties for one clip instance." alt="" coords="286,1005,491,1045"/>
+<area shape="poly" id="edge26_Node000001_Node000024" title=" " alt="" coords="110,597,117,672,125,723,138,779,157,836,182,893,214,946,255,991,275,1005,272,1009,252,995,210,949,177,896,152,838,133,780,120,724,112,672,105,598"/>
+<area shape="rect" id="Node000025" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#afef7f68c8b1a5e22fb9b0ddfb21731ed" title="Replace the source pattern referenced by one clip instance." alt="" coords="286,1069,491,1109"/>
+<area shape="poly" id="edge27_Node000001_Node000025" title=" " alt="" coords="109,598,112,682,119,741,130,806,149,874,174,940,210,1002,255,1055,275,1069,272,1074,252,1059,205,1005,170,942,143,875,125,807,114,742,107,683,104,598"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a4213fb303f26d646b6b418b203723e31" title="Create an audio pattern." alt="" coords="572,5,792,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="482,138,522,119,538,104,546,88,554,72,570,55,580,49,583,54,574,59,559,75,551,91,542,108,526,124,484,143"/>
+<area shape="rect" id="Node000006" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="573,69,791,109"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="481,131,576,110,577,115,482,136"/>
+<area shape="rect" id="Node000009" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="572,133,792,173"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="483,151,558,151,558,156,483,156"/>
+<area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a06fe24536a8be9e7c0d7acf64da1b3ae" title="Create an audio pattern restoring a serialized identity (#446)." alt="" coords="840,5,1060,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="792,23,826,23,826,28,792,28"/>
+<area shape="rect" id="Node000007" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a313c3de5cc2eb2b11a0f947ebe89d11e" title="Get or create a source for a file path." alt="" coords="841,69,1059,109"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="792,87,827,87,827,92,792,92"/>
+<area shape="rect" id="Node000008" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="841,133,1059,173"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="767,107,853,128,852,133,766,112"/>
+<area shape="rect" id="Node000010" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="840,197,1060,237"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="767,171,853,192,852,197,766,176"/>
+<area shape="poly" id="edge18_Node000018_Node000010" title=" " alt="" coords="766,259,852,238,853,243,767,264"/>
+<area shape="poly" id="edge25_Node000023_Node000008" title=" " alt="" coords="766,195,852,174,853,179,767,200"/>
+<area shape="poly" id="edge24_Node000023_Node000010" title=" " alt="" coords="780,215,826,215,826,220,780,220"/>
+</map>

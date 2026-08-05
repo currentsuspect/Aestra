@@ -1,22 +1,7 @@
 <map id="Aestra::Audio::AudioDeviceManager::switchInputDevice" name="Aestra::Audio::AudioDeviceManager::switchInputDevice">
-<area shape="rect" id="Node000001" title="Switch to a different input device while preserving the current output device." alt="" coords="5,165,212,205"/>
-<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a59ff87f6eacda2f6d4a2ef7f3851a7ac" title="Close current audio stream." alt="" coords="260,69,459,109"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="153,163,259,119,280,111,282,116,261,124,155,168"/>
-<area shape="rect" id="Node000004" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ae53f5ef0d824641f1b8a020b1b121564" title="Get available audio devices." alt="" coords="260,5,459,45"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="127,163,183,110,219,81,259,55,272,48,274,53,261,60,222,85,186,114,130,167"/>
-<area shape="rect" id="Node000006" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aee6ca4d0f38d2c11024f3888e09b1ac2" title="Check if stream is active." alt="" coords="260,133,459,173"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="212,169,246,165,247,170,213,175"/>
-<area shape="rect" id="Node000007" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5f43c54eebe1a9600ca3a8df6936448a" title="Open audio stream with configuration." alt="" coords="260,197,459,237"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="213,196,247,200,246,206,212,201"/>
-<area shape="rect" id="Node000008" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5a1f1a932cad85a931383f493dad71b7" title="Start audio processing." alt="" coords="260,325,459,365"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="130,204,186,257,222,286,261,311,274,317,272,322,259,316,219,290,183,261,127,207"/>
-<area shape="rect" id="Node000010" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a035f837c1320901be122e30661f72bb3" title="Stop audio processing." alt="" coords="260,261,459,301"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="155,203,261,247,282,254,280,259,259,252,153,208"/>
-<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb6da257a490a04dfba8d46618b44a90" title="Stop the automatic driver health monitoring thread." alt="" coords="508,165,716,205"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="426,107,460,119,554,157,552,162,458,124,424,112"/>
-<area shape="rect" id="Node000005" href="$d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html#ad1cf40d79d4bbfd6a66ad49c03f5a1d6" title="Get list of available output devices." alt="" coords="513,5,711,45"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="459,23,499,23,499,28,459,28"/>
-<area shape="rect" id="Node000009" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#af3ce5f21cb3a5e924319c9b2c2c39577" title="Start the automatic driver health monitoring thread." alt="" coords="507,325,717,365"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="459,343,493,343,493,348,459,348"/>
-<area shape="poly" id="edge10_Node000010_Node000003" title=" " alt="" coords="424,259,458,247,552,208,554,213,460,252,426,264"/>
+<area shape="rect" id="Node000001" title="Switch to a different input device while preserving the current output device." alt="" coords="5,37,212,77"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aee6ca4d0f38d2c11024f3888e09b1ac2" title="Check if stream is active." alt="" coords="265,5,463,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,42,251,37,251,42,212,47"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb6da257a490a04dfba8d46618b44a90" title="Stop the automatic driver health monitoring thread." alt="" coords="260,69,468,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="212,68,247,72,246,77,212,73"/>
 </map>

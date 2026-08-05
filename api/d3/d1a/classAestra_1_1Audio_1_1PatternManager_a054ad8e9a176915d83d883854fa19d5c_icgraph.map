@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::PatternManager::setPatternMixerChannel" name="Aestra::Audio::PatternManager::setPatternMixerChannel">
+<area shape="rect" id="Node000001" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="809,101,1029,141"/>
+<area shape="rect" id="Node000002" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#a4f02b217619f2c540dfc913686497f77" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="556,21,744,61"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="837,100,718,64,719,59,839,95"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4d54a269442ca4263c5bed22e8d0ef64" title="Route an audio source pattern independently from Playlist placement." alt="" coords="539,101,761,141"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="796,124,762,124,762,119,796,119"/>
+<area shape="rect" id="Node000009" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="553,165,747,205"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="822,147,735,168,734,163,820,142"/>
+<area shape="rect" id="Node000003" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="272,5,472,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="542,38,472,34,473,28,543,32"/>
+<area shape="rect" id="Node000004" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,205,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="259,28,206,28,206,23,259,23"/>
+<area shape="rect" id="Node000006" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a8dda8e69e7f016b4c164faaa39f8dd99" title="Execute the command (first time)" alt="" coords="253,69,491,109"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="525,110,491,106,491,100,526,104"/>
+<area shape="rect" id="Node000007" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a80109cb1b71b1d2c214809c2d2454e5a" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="261,133,483,173"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="525,138,483,143,482,138,525,133"/>
+<area shape="rect" id="Node000008" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#ae97dcd11075ce2847a6fd66e7d573fad" title="Undo the command." alt="" coords="261,197,483,237"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="557,148,540,156,516,172,492,188,461,200,459,195,489,183,513,167,537,151,555,143"/>
+</map>

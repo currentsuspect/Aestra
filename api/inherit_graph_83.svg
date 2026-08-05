@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="de/d56/structAestra_1_1Audio_1_1ClipRenderState.html" target="_top" xlink:title="Render&#45;time clip state used by the audio thread.">
+<g id="a_Node000000"><a xlink:href="df/de5/structAestra_1_1Audio_1_1ClipRenderKernel_1_1ClipRenderResult.html" target="_top" xlink:title="What rendering one clip reported back, beyond the audio it mixed.">
 <polygon fill="white" stroke="#666666" points="141,-30 0,-30 0,0 141,0 141,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ClipRender</text>
-<text text-anchor="middle" x="70.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">State</text>
+<text text-anchor="middle" x="70.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Kernel::ClipRenderResult</text>
 </a>
 </g>
 </g>

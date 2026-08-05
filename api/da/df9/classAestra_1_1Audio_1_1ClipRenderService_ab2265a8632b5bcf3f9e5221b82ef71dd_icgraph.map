@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ClipRenderService::extractRegion" name="Aestra::Audio::ClipRenderService::extractRegion">
+<area shape="rect" id="Node000001" title="Copy a frame range out of source into a fresh buffer." alt="" coords="288,37,476,77"/>
+<area shape="rect" id="Node000002" href="$d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" title="Produce the replacement audio for this clip." alt="" coords="19,5,226,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="274,47,226,41,227,35,275,41"/>
+<area shape="rect" id="Node000003" href="$dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" title="Produce the replacement audio for this clip." alt="" coords="5,69,240,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="274,73,241,77,240,72,274,68"/>
+</map>

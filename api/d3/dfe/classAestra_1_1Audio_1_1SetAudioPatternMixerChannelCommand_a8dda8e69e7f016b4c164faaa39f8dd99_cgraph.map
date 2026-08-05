@@ -1,0 +1,16 @@
+<map id="Aestra::Audio::SetAudioPatternMixerChannelCommand::execute" name="Aestra::Audio::SetAudioPatternMixerChannelCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,43,243,83"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="829,79,1049,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,40,290,28,429,13,537,4,590,3,645,6,782,28,840,46,893,70,890,75,839,51,781,33,645,12,589,8,537,9,429,18,291,33,213,45"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="298,43,506,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="243,60,284,60,284,65,243,65"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4d54a269442ca4263c5bed22e8d0ef64" title="Route an audio source pattern independently from Playlist placement." alt="" coords="291,107,513,147"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="212,80,302,101,301,106,211,85"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="567,43,775,83"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="486,104,573,83,574,89,488,109"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="567,107,775,147"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="513,124,553,124,553,129,513,129"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="561,171,781,211"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="488,144,574,165,573,170,486,149"/>
+<area shape="poly" id="edge7_Node000007_Node000002" title=" " alt="" coords="743,168,780,156,875,121,877,126,782,161,744,173"/>
+</map>

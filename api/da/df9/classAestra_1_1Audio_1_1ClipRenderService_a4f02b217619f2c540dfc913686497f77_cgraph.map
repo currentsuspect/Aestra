@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::ClipRenderService::commit" name="Aestra::Audio::ClipRenderService::commit">
+<area shape="rect" id="Node000001" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="5,85,193,125"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a4213fb303f26d646b6b418b203723e31" title="Create an audio pattern." alt="" coords="241,13,461,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,83,267,55,268,60,171,88"/>
+<area shape="rect" id="Node000004" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="242,85,461,125"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="194,103,228,103,228,108,194,108"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="241,165,461,205"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="164,123,276,159,274,164,163,128"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a06fe24536a8be9e7c0d7acf64da1b3ae" title="Create an audio pattern restoring a serialized identity (#446)." alt="" coords="509,5,729,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="461,27,496,26,496,32,461,33"/>
+<area shape="rect" id="Node000005" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a313c3de5cc2eb2b11a0f947ebe89d11e" title="Get or create a source for a file path." alt="" coords="510,69,729,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="461,96,496,94,496,99,461,101"/>
+<area shape="rect" id="Node000006" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="510,133,729,173"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="461,122,497,129,496,134,460,128"/>
+<area shape="rect" id="Node000008" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="509,197,729,237"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="462,196,496,200,495,205,461,201"/>
+</map>

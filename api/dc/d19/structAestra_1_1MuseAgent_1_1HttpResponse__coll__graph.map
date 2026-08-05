@@ -1,0 +1,9 @@
+<map id="Aestra::MuseAgent::HttpResponse" name="Aestra::MuseAgent::HttpResponse">
+<area shape="rect" id="Node000001" title="Minimal blocking HTTPS POST via libcurl — all a provider adapter needs." alt="" coords="5,197,159,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="19,95,70,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="48,133,57,172,69,196,65,198,51,174,43,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="95,95,181,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="128,133,94,198,90,196,123,131"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="69,5,207,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="141,59,141,94,135,94,135,59"/>
+</map>

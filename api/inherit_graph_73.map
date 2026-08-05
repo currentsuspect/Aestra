@@ -1,3 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$d1/d26/structAestra_1_1Audio_1_1AutosaveManager_1_1RecoveryInfo.html" title=" " alt="" coords="5,5,240,45"/>
+<area shape="rect" id="Node000000" href="$d8/ddb/classAestra_1_1Audio_1_1BasicGarbageCollector.html" title=" " alt="" coords="5,5,212,45"/>
+<area shape="rect" id="Node000001" href="$d4/d1e/classAestra_1_1Audio_1_1GarbageCollector.html" title=" " alt="" coords="260,13,491,38"/>
+<area shape="poly" id="edge5_Node000000_Node000001" title=" " alt="" coords="225,23,260,23,260,28,225,28"/>
 </map>

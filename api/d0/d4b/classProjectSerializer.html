@@ -74,16 +74,29 @@ $(function() {
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../d3/d3a/classProjectSerializer-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">ProjectSerializer Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Collaboration diagram for ProjectSerializer:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d4/d97/classProjectSerializer__coll__graph.svg" width="271" height="154"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d7c/structProjectSerializer_1_1CandidateLoadResult.html">CandidateLoadResult</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d98/structProjectSerializer_1_1HistoryEntry.html">HistoryEntry</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">LoadResult</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/ddd/structProjectSerializer_1_1MissingPlugin.html">MissingPlugin</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A plugin referenced by the project that could not be instantiated (#647).  <a href="../../d1/ddd/structProjectSerializer_1_1MissingPlugin.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d2f/structProjectSerializer_1_1PanelState.html">PanelState</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -113,14 +126,26 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a4aac22cb36e44c83acad9b342dd3c797"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3012ec0f8942300d4dd651abbc5cbaeb" id="r_a3012ec0f8942300d4dd651abbc5cbaeb"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">LoadResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#a3012ec0f8942300d4dd651abbc5cbaeb">load</a> (const std::string &amp;path, const std::shared_ptr&lt; <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a> &gt; &amp;trackManager, const std::string &amp;assetBasePath)</td></tr>
 <tr class="separator:a3012ec0f8942300d4dd651abbc5cbaeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0017f4e381f9eb654b39ef13ac72f90" id="r_ab0017f4e381f9eb654b39ef13ac72f90"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../dd/d7c/structProjectSerializer_1_1CandidateLoadResult.html">CandidateLoadResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#ab0017f4e381f9eb654b39ef13ac72f90">loadFirstValid</a> (const std::vector&lt; std::string &gt; &amp;candidatePaths, const std::shared_ptr&lt; <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a> &gt; &amp;trackManager, const std::string &amp;assetBasePath)</td></tr>
+<tr class="separator:ab0017f4e381f9eb654b39ef13ac72f90"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a676df83ae6245846dd7d90b4ea62000f" id="r_a676df83ae6245846dd7d90b4ea62000f"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#a676df83ae6245846dd7d90b4ea62000f">getHistoryDirectory</a> (const std::string &amp;projectPath)</td></tr>
 <tr class="separator:a676df83ae6245846dd7d90b4ea62000f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad89bf642ffc433c087e9144863dab3ca" id="r_ad89bf642ffc433c087e9144863dab3ca"><td class="memItemLeft" align="right" valign="top">static std::vector&lt; <a class="el" href="../../d3/d98/structProjectSerializer_1_1HistoryEntry.html">HistoryEntry</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#ad89bf642ffc433c087e9144863dab3ca">listHistory</a> (const std::string &amp;projectPath)</td></tr>
 <tr class="separator:ad89bf642ffc433c087e9144863dab3ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a481232c8599deb5c5e91e54a869cbdb3" id="r_a481232c8599deb5c5e91e54a869cbdb3"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#a481232c8599deb5c5e91e54a869cbdb3">setHistoryLimits</a> (size_t maxEntries, uintmax_t maxTotalBytes)</td></tr>
+<tr class="memdesc:a481232c8599deb5c5e91e54a869cbdb3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure the .history directory caps (issue #274).  <br /></td></tr>
+<tr class="separator:a481232c8599deb5c5e91e54a869cbdb3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a3fec829df67eb829523d6e694decdb66" id="r_a3fec829df67eb829523d6e694decdb66"><td class="memItemLeft" align="right" valign="top">static constexpr int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#a3fec829df67eb829523d6e694decdb66">PROJECT_VERSION_CURRENT</a> = 3</td></tr>
+<tr class="separator:a3fec829df67eb829523d6e694decdb66"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa959ef7fe63710717ec7e18d6091801f" id="r_aa959ef7fe63710717ec7e18d6091801f"><td class="memItemLeft" align="right" valign="top">static constexpr int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d4b/classProjectSerializer.html#aa959ef7fe63710717ec7e18d6091801f">PROJECT_VERSION_MIN_SUPPORTED</a> = 1</td></tr>
+<tr class="separator:aa959ef7fe63710717ec7e18d6091801f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00046">46</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00048">48</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
 <a id="a2efc2e03f6c36944463cea9acaae84bb" name="a2efc2e03f6c36944463cea9acaae84bb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2efc2e03f6c36944463cea9acaae84bb">&#9670;&#160;</a></span>LoadIntegrity</h2>
@@ -149,7 +174,7 @@ Static Public Member Functions</h2></td></tr>
 <li>Mismatch: content changed since save; load proceeds non-destructively with a loud warning (structural corruption still hard-fails through the existing validators). </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00078">78</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00083">83</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
 
 </div>
 </div>
@@ -178,7 +203,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01914">1914</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l02287">2287</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -206,7 +231,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01918">1918</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l02291">2291</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -244,7 +269,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00979">979</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01101">1101</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -288,7 +313,51 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00984">984</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01123">1123</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab0017f4e381f9eb654b39ef13ac72f90" name="ab0017f4e381f9eb654b39ef13ac72f90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0017f4e381f9eb654b39ef13ac72f90">&#9670;&#160;</a></span>loadFirstValid()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../dd/d7c/structProjectSerializer_1_1CandidateLoadResult.html">ProjectSerializer::CandidateLoadResult</a> ProjectSerializer::loadFirstValid </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>candidatePaths</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::shared_ptr&lt; <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>trackManager</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>assetBasePath</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01107">1107</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -344,7 +413,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00946">946</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01068">1068</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -400,7 +469,48 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00680">680</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00749">749</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a481232c8599deb5c5e91e54a869cbdb3" name="a481232c8599deb5c5e91e54a869cbdb3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a481232c8599deb5c5e91e54a869cbdb3">&#9670;&#160;</a></span>setHistoryLimits()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ProjectSerializer::setHistoryLimits </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>maxEntries</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uintmax_t&#160;</td>
+          <td class="paramname"><em>maxTotalBytes</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Configure the .history directory caps (issue #274). </p>
+<p>History snapshots are pruned so the directory keeps at most <code>maxEntries</code> snapshots AND stays within <code>maxTotalBytes</code> on disk, whichever is hit first; the newest snapshot is always retained. Defaults are 50 entries / 512 MB. Applies to subsequent saves. Thread-safe. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l02278">2278</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
 
 </div>
 </div>
@@ -438,7 +548,56 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l00942">942</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html#l01064">1064</a> of file <a class="el" href="../../d2/d27/ProjectSerializer_8cpp_source.html">ProjectSerializer.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="a3fec829df67eb829523d6e694decdb66" name="a3fec829df67eb829523d6e694decdb66"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fec829df67eb829523d6e694decdb66">&#9670;&#160;</a></span>PROJECT_VERSION_CURRENT</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr int ProjectSerializer::PROJECT_VERSION_CURRENT = 3</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00050">50</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
+
+</div>
+</div>
+<a id="aa959ef7fe63710717ec7e18d6091801f" name="aa959ef7fe63710717ec7e18d6091801f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa959ef7fe63710717ec7e18d6091801f">&#9670;&#160;</a></span>PROJECT_VERSION_MIN_SUPPORTED</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr int ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED = 1</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html#l00051">51</a> of file <a class="el" href="../../db/d69/ProjectSerializer_8h_source.html">ProjectSerializer.h</a>.</p>
 
 </div>
 </div>

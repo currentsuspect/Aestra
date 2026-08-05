@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::SetUnitGainCommand::undo" name="Aestra::Audio::SetUnitGainCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,200,45"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a4d51a016108eec36518ca3634a89c656" title="Set the unit&#39;s linear output gain (published to the audio snapshot)." alt="" coords="248,5,449,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,23,234,23,234,28,200,28"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="747,5,948,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="449,20,497,19,699,19,733,19,733,25,699,24,497,24,450,25"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="497,33,699,73"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="450,34,484,38,483,43,449,39"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="699,39,733,35,733,41,699,45"/>
+</map>

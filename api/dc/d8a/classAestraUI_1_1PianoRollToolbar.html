@@ -123,10 +123,15 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a5a0ee6d9b8323fea49730faa459509ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c02e11a6a98872fd8e8cfd1f815ad65" id="r_a5c02e11a6a98872fd8e8cfd1f815ad65"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a5c02e11a6a98872fd8e8cfd1f815ad65">setPatternChoices</a> (const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PatternChoice</a> &gt; &amp;choices, int selectedValue)</td></tr>
 <tr class="separator:a5c02e11a6a98872fd8e8cfd1f815ad65"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91eb61d0d67f30c64d55ceba75ec09ac" id="r_a91eb61d0d67f30c64d55ceba75ec09ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a91eb61d0d67f30c64d55ceba75ec09ac">setUnitChoices</a> (const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PatternChoice</a> &gt; &amp;choices, int selectedValue)</td></tr>
+<tr class="memdesc:a91eb61d0d67f30c64d55ceba75ec09ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populate the unit switcher (reuses the <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PatternChoice</a> value/label shape).  <br /></td></tr>
+<tr class="separator:a91eb61d0d67f30c64d55ceba75ec09ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2edf333e534f3e93c748749c64dd9ab3" id="r_a2edf333e534f3e93c748749c64dd9ab3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a2edf333e534f3e93c748749c64dd9ab3">setOnAdjustPatternLength</a> (std::function&lt; void(int barsDelta)&gt; cb)</td></tr>
 <tr class="separator:a2edf333e534f3e93c748749c64dd9ab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9422e48520dfc7f2ef8a8331229f026" id="r_ac9422e48520dfc7f2ef8a8331229f026"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#ac9422e48520dfc7f2ef8a8331229f026">setOnPatternChoiceSelected</a> (std::function&lt; void(int patternValue)&gt; cb)</td></tr>
 <tr class="separator:ac9422e48520dfc7f2ef8a8331229f026"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a151d3840959b076ce619d22d74063ad7" id="r_a151d3840959b076ce619d22d74063ad7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a151d3840959b076ce619d22d74063ad7">setOnUnitChoiceSelected</a> (std::function&lt; void(int unitValue)&gt; cb)</td></tr>
+<tr class="separator:a151d3840959b076ce619d22d74063ad7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a5abef34743113bebdedf48c4207ce4" id="r_a4a5abef34743113bebdedf48c4207ce4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a4a5abef34743113bebdedf48c4207ce4">setOnShowShortcutHelp</a> (std::function&lt; void()&gt; cb)</td></tr>
 <tr class="memdesc:a4a5abef34743113bebdedf48c4207ce4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set callback fired by the menu's "Keyboard Shortcuts" item.  <br /></td></tr>
 <tr class="separator:a4a5abef34743113bebdedf48c4207ce4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -259,12 +264,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
 <tr class="separator:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aaf6ad4f424ae5a7e61ea7f0cbb0af4c1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aaf6ad4f424ae5a7e61ea7f0cbb0af4c1">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
-<tr class="separator:aaf6ad4f424ae5a7e61ea7f0cbb0af4c1 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ac48c836258df2124192f9587f13c136a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ac48c836258df2124192f9587f13c136a">renderGlobalTooltip</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport={})</td></tr>
+<tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3544f64233bc0ff1cab9f0fdd71131eb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3544f64233bc0ff1cab9f0fdd71131eb">setCursorCaptureActive</a> (bool active)</td></tr>
-<tr class="separator:a3544f64233bc0ff1cab9f0fdd71131eb inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
+<tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
+<tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
@@ -311,7 +320,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Create the internal piano-roll toolbar. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00592">592</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00019">19</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -341,7 +350,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Close and remove the currently open context menu, if any. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00181">181</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00186">186</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -370,7 +379,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the currently open context menu, if any. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00179">179</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00184">184</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +409,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00990">990</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00448">448</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -430,7 +439,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00805">805</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00282">282</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -452,7 +461,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Bind the grid widget controlled by the toolbar. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00969">969</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00427">427</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -474,7 +483,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Bind the note layer controlled by the toolbar tools. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00976">976</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00434">434</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -502,7 +511,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00172">172</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00174">174</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -530,7 +539,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00173">173</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00175">175</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -560,7 +569,35 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback fired by the menu's "Keyboard Shortcuts" item. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00177">177</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00182">182</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+
+</div>
+</div>
+<a id="a151d3840959b076ce619d22d74063ad7" name="a151d3840959b076ce619d22d74063ad7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a151d3840959b076ce619d22d74063ad7">&#9670;&#160;</a></span>setOnUnitChoiceSelected()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollToolbar::setOnUnitChoiceSelected </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(int unitValue)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00178">178</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -590,7 +627,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00789">789</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00251">251</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -610,7 +647,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00784">784</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00246">246</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
@@ -632,13 +669,45 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the visible pattern name displayed in the toolbar. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00779">779</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00241">241</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a91eb61d0d67f30c64d55ceba75ec09ac" name="a91eb61d0d67f30c64d55ceba75ec09ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91eb61d0d67f30c64d55ceba75ec09ac">&#9670;&#160;</a></span>setUnitChoices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollToolbar::setUnitChoices </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PatternChoice</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>choices</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>selectedValue</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Populate the unit switcher (reuses the <a class="el" href="../../d8/d5e/structAestraUI_1_1PianoRollToolbar_1_1PatternChoice.html">PatternChoice</a> value/label shape). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html#l00266">266</a> of file <a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraUI/Widgets/<a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a></li>
-<li>AestraUI/Widgets/<a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../db/d57/PianoRollToolbar_8cpp_source.html">PianoRollToolbar.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

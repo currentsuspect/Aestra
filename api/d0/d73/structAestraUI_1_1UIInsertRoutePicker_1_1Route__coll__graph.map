@@ -1,0 +1,11 @@
+<map id="AestraUI::UIInsertRoutePicker::Route" name="AestraUI::UIInsertRoutePicker::Route">
+<area shape="rect" id="Node000001" title=" " alt="" coords="33,197,247,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,80,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="51,133,58,153,70,172,99,195,96,199,66,175,54,155,46,135"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="121,95,159,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="143,134,143,197,137,197,137,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="221,95,307,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="260,134,251,155,237,175,220,189,201,200,198,195,217,184,233,171,246,153,255,132"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="195,5,333,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="267,59,267,94,261,94,261,59"/>
+</map>

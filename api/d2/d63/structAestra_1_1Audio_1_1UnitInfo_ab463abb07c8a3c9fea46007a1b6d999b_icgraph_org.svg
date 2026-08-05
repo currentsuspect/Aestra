@@ -11,7 +11,7 @@
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Effective route mode, preserving legacy route fields as authority until cleared.">
+<g id="a_Node000001"><a xlink:title="Effective legacy Timeline ownership mode.">
 <polygon fill="#999999" stroke="#666666" points="300,-54 173,-54 173,-24 300,-24 300,-54"/>
 <text text-anchor="start" x="181" y="-42" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitInfo</text>
 <text text-anchor="middle" x="236.5" y="-31" font-family="Helvetica,sans-Serif" font-size="10.00">::getRouteMode</text>
@@ -21,7 +21,7 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab435733f2cc4ca63ba5f3bf144eeb661" target="_top" xlink:title="True when this unit currently routes to master preview path.">
+<g id="a_Node000002"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ab435733f2cc4ca63ba5f3bf144eeb661" target="_top" xlink:title="True when this unit has no legacy Timeline assignment.">
 <polygon fill="white" stroke="#666666" points="137,-78 0,-78 0,-48 137,-48 137,-78"/>
 <text text-anchor="start" x="8" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitInfo</text>
 <text text-anchor="middle" x="68.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::routesToMasterPreview</text>
@@ -40,7 +40,7 @@
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad87a5e883a573636844c93e55a8082ba" target="_top" xlink:title="True when this unit currently routes into the Timeline track path.">
+<g id="a_Node000003"><a xlink:href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad87a5e883a573636844c93e55a8082ba" target="_top" xlink:title="True when this unit carries a legacy Timeline assignment.">
 <polygon fill="white" stroke="#666666" points="134.5,-30 2.5,-30 2.5,0 134.5,0 134.5,-30"/>
 <text text-anchor="start" x="10.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitInfo</text>
 <text text-anchor="middle" x="68.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::routesToTimelineTrack</text>

@@ -1,0 +1,9 @@
+<map id="AestraUI::NUICursorService::endDragCapture" name="AestraUI::NUICursorService::endDragCapture">
+<area shape="rect" id="Node000001" title="End the capture: warp to the restore point, then unhide, then release the grab." alt="" coords="5,69,205,109"/>
+<area shape="rect" id="Node000002" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#afdd1d8197af7db7b5ab1874a27bfe8da" title="Confine pointer to window." alt="" coords="253,5,436,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="180,67,256,46,257,51,182,72"/>
+<area shape="rect" id="Node000003" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#a0c0997a0e0cc4ab316155b8d501479f7" title="Style&#45;channel restore (Arrow)." alt="" coords="253,69,436,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,87,239,87,239,92,206,92"/>
+<area shape="rect" id="Node000004" href="$dc/d0c/classAestraUI_1_1NUICursorHost.html#a878a323906ef647d4b746ef5ca615d73" title="Window&#45;relative UI coords." alt="" coords="253,133,436,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="182,107,257,127,256,132,180,112"/>
+</map>

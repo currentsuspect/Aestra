@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::SetUnitGainCommand::redo" name="Aestra::Audio::SetUnitGainCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,200,45"/>
+<area shape="rect" id="Node000002" href="$d3/dcd/classAestra_1_1Audio_1_1SetUnitGainCommand.html#a9f7d67e8af3e87a1b9a0a8527c4a6890" title="Execute the command (first time)" alt="" coords="248,5,443,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,23,234,23,234,28,200,28"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="989,27,1191,67"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="443,20,491,19,716,18,942,29,976,32,975,37,941,35,716,23,491,24,443,25"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a4d51a016108eec36518ca3634a89c656" title="Set the unit&#39;s linear output gain (published to the audio snapshot)." alt="" coords="491,33,692,73"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="443,34,477,38,477,43,443,39"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="692,49,976,46,976,51,692,55"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="740,84,941,124"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="691,71,729,79,728,84,690,76"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="928,81,989,67,990,72,929,87"/>
+</map>

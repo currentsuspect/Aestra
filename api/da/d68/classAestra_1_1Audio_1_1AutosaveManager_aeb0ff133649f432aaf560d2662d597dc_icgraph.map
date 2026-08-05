@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AutosaveManager::captureSnapshotIfDue" name="Aestra::Audio::AutosaveManager::captureSnapshotIfDue">
+<area shape="rect" id="Node000001" title="Capture one due snapshot on the calling/model&#45;owner thread." alt="" coords="172,5,407,45"/>
+<area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#ab5b9cbe1d125683e846e573c373696af" title="Main application loop." alt="" coords="5,13,124,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="158,28,124,28,124,23,158,23"/>
+</map>

@@ -1,0 +1,6 @@
+<map id="Aestra::Audio::PlaylistModel::getLaneId" name="Aestra::Audio::PlaylistModel::getLaneId">
+<area shape="rect" id="Node000001" title="Get lane ID by index." alt="" coords="292,29,497,69"/>
+<area shape="rect" id="Node000002" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="5,29,244,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="278,52,244,52,244,47,278,47"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="171,18,155,11,125,8,99,10,83,15,77,21,80,28,75,30,72,20,80,10,98,5,125,3,156,5,173,13"/>
+</map>
