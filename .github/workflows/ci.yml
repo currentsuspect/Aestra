@@ -668,6 +668,19 @@ jobs:
       - name: Verifier self-tests
         run: python3 scripts/ci/test-verify-test-contracts.py
 
+      # The maximal configuration enables UI, which pulls in AestraLicense and
+      # its pkg_check_modules(libsodium). The four headless configurations do
+      # not, which is why the first run of this job configured four of five and
+      # then failed — a gap a local dry-run cannot reproduce on a developer
+      # machine that already has the library. Same set as build-linux-app
+      # installs, so the two jobs cannot drift into disagreeing about what a
+      # configurable tree needs.
+      - name: Install configure-time dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev \
+            libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
+
       # Configure only. The census is a property of a *configured* tree, and
       # nothing here needs a compiled binary — which is what keeps this job
       # minutes rather than tens of minutes.
