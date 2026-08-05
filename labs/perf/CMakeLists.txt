@@ -43,3 +43,12 @@ target_link_libraries(FolioProbeFixture PRIVATE AestraAudio)
 target_include_directories(FolioProbeFixture PRIVATE ${AESTRA_PERF_TOOL_INCLUDES})
 
 message(STATUS "Folio perf apparatus enabled (FolioBuildFixture, FolioValidateFixture, FolioProbeFixture)")
+
+# Raw, append-only performance collector. Emits samples and telemetry windows;
+# computes no summaries and no percentiles.
+add_executable(FolioCollect
+    tools/collect.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(FolioCollect PRIVATE AestraAudio)
+target_include_directories(FolioCollect PRIVATE ${AESTRA_PERF_TOOL_INCLUDES})

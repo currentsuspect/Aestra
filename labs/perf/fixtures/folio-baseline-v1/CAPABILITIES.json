@@ -166,7 +166,8 @@
       "removing the chord effect chain changes the render",
       "early and late automation windows differ in the expected gain direction",
       "all eight intended lanes produce nonzero signal, MIDI included"
-    ]
+    ],
+    "silenceFloorRms": 1e-05
   },
   "midiPlayback": {
     "structurallyPresent": true,
@@ -177,9 +178,13 @@
     ],
     "engineSha": "e81fd95a",
     "renderRequirement": "Arsenal instruments live outside the AudioGraph. A renderer MUST call AudioEngine::setUnitManager() and AudioEngine::setPatternPlaybackEngine(), and TrackManager::scheduleTimelineForOfflineRender() for offline runs. Without the first two, processBlock renders the units with a null MIDI buffer and the MIDI lanes are exactly silent while every audio lane sounds normal.",
-    "measuredRms": {
-      "Lead": 0.009046804,
-      "Pad": 0.010235251
+    "informational_observedRmsOnDevBox": {
+      "values": {
+        "Lead": 0.009046804,
+        "Pad": 0.010235251
+      },
+      "contract": "NOT a validation target. The contract is finite output strictly above probes.silenceFloorRms. These figures are one machine, one build, one run \u2014 cross-machine and future-build checks must never depend on them.",
+      "observedOn": "e81fd95a apparatus dev box, 2026-08-05"
     }
   }
 }
