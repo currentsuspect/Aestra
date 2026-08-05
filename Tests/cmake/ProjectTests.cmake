@@ -23,7 +23,7 @@ target_include_directories(DropTransactionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME DropTransactionTest COMMAND DropTransactionTest)
-set_tests_properties(DropTransactionTest PROPERTIES LABELS "audio;commands;project")
+set_tests_properties(DropTransactionTest PROPERTIES LABELS "audio;commands;project;contract:application")
 
 # Cancelled-drag history regression test (#551)
 add_executable(CancelledDragHistoryTest AestraAudio/CancelledDragHistoryTest.cpp)
@@ -33,7 +33,7 @@ target_include_directories(CancelledDragHistoryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME CancelledDragHistoryTest COMMAND CancelledDragHistoryTest)
-set_tests_properties(CancelledDragHistoryTest PROPERTIES LABELS "audio;commands;project")
+set_tests_properties(CancelledDragHistoryTest PROPERTIES LABELS "audio;commands;project;contract:application")
 
 # Project dirty-state integrity regression test (#551)
 add_executable(ProjectDirtyStateTest AestraAudio/ProjectDirtyStateTest.cpp)
@@ -94,7 +94,7 @@ add_test(
         -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_migration_lifecycle.cmake
 )
 set_tests_properties(ProjectMigrationLifecycleGuardTest PROPERTIES
-    LABELS "project;migration;compatibility;guard"
+    LABELS "project;migration;compatibility;guard;contract:durability"
 )
 
 add_test(NAME ProjectFixtureImmutabilityTest
@@ -125,7 +125,7 @@ add_test(
         -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_crash_flag_shutdown_order.cmake
 )
 set_tests_properties(CrashFlagShutdownOrderGuardTest PROPERTIES
-    LABELS "app;recovery;guard"
+    LABELS "app;recovery;guard;contract:durability"
 )
 
 add_test(
@@ -135,7 +135,7 @@ add_test(
         -P ${CMAKE_CURRENT_SOURCE_DIR}/Guards/verify_project_load_report_lifecycle.cmake
 )
 set_tests_properties(ProjectLoadReportLifecycleGuardTest PROPERTIES
-    LABELS "app;project;muse;recovery;guard"
+    LABELS "app;project;muse;recovery;guard;contract:durability"
 )
 
 # SourceManager revision counter — the change signal TrackManagerUI uses to
@@ -147,4 +147,4 @@ target_include_directories(SourceManagerRevisionTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME SourceManagerRevisionTest COMMAND SourceManagerRevisionTest)
-set_tests_properties(SourceManagerRevisionTest PROPERTIES LABELS "audio;waveform")
+set_tests_properties(SourceManagerRevisionTest PROPERTIES LABELS "audio;waveform;contract:application")

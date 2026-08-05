@@ -336,7 +336,7 @@ if(BUILD_TESTING)
 			-P "${CMAKE_SOURCE_DIR}/Tests/Guards/verify_aestra_font_bundle.cmake"
 	)
 	set_tests_properties(AestraDesktopFontBundleTest PROPERTIES
-		LABELS "ui;assets;fonts;regression"
+		LABELS "ui;assets;fonts;regression;contract:application"
 		TIMEOUT 30
 	)
 endif()
