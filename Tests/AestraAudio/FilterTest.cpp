@@ -18,7 +18,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 using namespace Aestra::Audio;
@@ -354,7 +356,29 @@ void interactiveAudioTest() {
     std::cout << "\nâœ“ Audio stream stopped" << std::endl;
 }
 
-int main() {
+// Interactive playback is opt-in. A registered CTest case must never depend on
+// stdin being non-interactive: under a runner, an IDE, a local terminal or an
+// agent harness, stdin can be open and the prompt below would wait forever.
+//
+// The failure mode is a hang, not a failure. A failing test names the broken
+// assertion; a hanging test consumes the runner until something else kills it,
+// and the report says "timeout" — which points at infrastructure rather than at
+// the line that asked a question nobody was there to answer. See #720.
+namespace {
+
+bool interactiveRequested(int argc, char** argv) {
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--interactive") {
+            return true;
+        }
+    }
+    const char* env = std::getenv("AESTRA_FILTER_INTERACTIVE");
+    return env != nullptr && std::string(env) == "1";
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
     std::cout << "========================================" << std::endl;
     std::cout << "  AestraAudio - Filter Test" << std::endl;
     std::cout << "========================================" << std::endl;
@@ -376,13 +400,13 @@ int main() {
     }
     std::cout << "========================================" << std::endl;
 
-    // Interactive audio test
-    std::cout << "\nRun interactive audio test? (y/n): ";
-    char choice;
-    std::cin >> choice;
-
-    if (choice == 'y' || choice == 'Y') {
+    // Interactive audio test — opt-in only, and never reached by CTest.
+    if (interactiveRequested(argc, argv)) {
         interactiveAudioTest();
+    } else {
+        std::cout << "\n(interactive playback skipped; pass --interactive or set "
+                     "AESTRA_FILTER_INTERACTIVE=1)"
+                  << std::endl;
     }
 
     return allPassed ? 0 : 1;
