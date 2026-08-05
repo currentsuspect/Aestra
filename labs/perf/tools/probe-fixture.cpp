@@ -154,6 +154,15 @@ RenderResult render(const std::string& projectFile, double startBeat, double dur
     tm->setOutputSampleRate(static_cast<double>(kSampleRate));
     engine.setTrackManager(tm);
 
+    // Arsenal instruments are wired separately from the AudioGraph. processBlock
+    // builds its unit MIDI routes and pops pattern events only when BOTH of
+    // these are set; without them the units still render, but with a null MIDI
+    // buffer, so they produce exact silence while every audio lane sounds
+    // normal. This is the pairing HeadlessMusicGenerator performs before an
+    // offline export.
+    engine.setUnitManager(&tm->getUnitManager());
+    engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
+
     if (!engine.initialize()) {
         std::cerr << "  render: engine initialize failed\n";
         out.finite = false;
@@ -433,46 +442,24 @@ int main(int argc, char* argv[]) {
     std::cout << "\n== per-lane signal ==\n";
     // Beats 0..8 covers at least one active clip on every lane, including
     // "Texture Alt", whose first clip lands on beat 4.
-    const std::vector<std::string> audioLanes = {"Kick", "Chord", "Texture", "Sub", "Texture Alt", "Chord Alt"};
-
-    // The MIDI lanes are structurally complete — patterns, notes, sampler units
-    // and clips all survive the round trip and pass structural validation — but
-    // they render EXACT silence in song mode at this engine SHA.
-    //
-    // AudioEngine::processArsenalUnits early-returns unless m_patternPlaybackMode
-    // is set, and the population of m_unitMidiBuffers (the only route from the
-    // pattern-playback engine into a unit's plugin) lives inside that same
-    // early-returning function. So timeline MIDI clips never reach their
-    // instruments through processBlock outside Arsenal/pattern mode.
-    //
-    // This is asserted rather than skipped, deliberately. Pinning the current
-    // behaviour makes the probe a tripwire: if a future engine change wires
-    // timeline MIDI to arsenal units, this check fails loudly and the baseline
-    // gets revisited instead of silently changing meaning underneath the
-    // measurements. Switching the probe to pattern-playback mode to force signal
-    // was rejected — it loops a pattern instead of playing the timeline, which
-    // would make the render unrepresentative of the arrangement being measured.
-    const std::vector<std::string> midiLanes = {"Lead", "Pad"};
+    // All eight lanes must sound, MIDI included. The MIDI lanes reach their
+    // instruments only because render() wires setUnitManager and
+    // setPatternPlaybackEngine: arsenal units live outside the AudioGraph, and
+    // without that pairing processBlock renders them with a null MIDI buffer —
+    // exact silence on those lanes while every audio lane sounds normal. That
+    // failure mode is indistinguishable from an engine defect from the outside,
+    // which is why it is called out here rather than left to the render code.
+    const std::vector<std::string> laneChannels = {"Kick",  "Chord", "Texture",     "Sub",
+                                                   "Lead",  "Pad",   "Texture Alt", "Chord Alt"};
 
     std::vector<std::pair<std::string, double>> laneRms;
-    for (const auto& name : audioLanes) {
+    for (const auto& name : laneChannels) {
         const RenderResult lane =
             render(projectFile, 0.0, 8.0, isolateChannels({name, "Return"}), wavFor("lane_" + name));
         laneRms.emplace_back(name, lane.rms);
-        check(lane.finite, "audio lane '" + name + "' renders finite output");
+        check(lane.finite, "lane '" + name + "' renders finite output");
         check(lane.rms > kSilenceFloorRms,
-              "audio lane '" + name + "' produces signal above the silence floor (rms " + std::to_string(lane.rms) +
-                  ")");
-    }
-    for (const auto& name : midiLanes) {
-        const RenderResult lane =
-            render(projectFile, 0.0, 8.0, isolateChannels({name, "Return"}), wavFor("lane_" + name));
-        laneRms.emplace_back(name, lane.rms);
-        check(lane.finite, "midi lane '" + name + "' renders finite output");
-        check(lane.rms <= kSilenceFloorRms,
-              "midi lane '" + name + "' is silent in song mode, as pinned for this engine SHA (rms " +
-                  std::to_string(lane.rms) + ") — if this fails, timeline MIDI became audible and the baseline "
-                  "must be re-cut");
+              "lane '" + name + "' produces signal above the silence floor (rms " + std::to_string(lane.rms) + ")");
     }
 
     // -----------------------------------------------------------------------
