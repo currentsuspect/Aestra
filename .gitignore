@@ -219,3 +219,14 @@ labs/reverb/tremolo/proto/
 # CTest scratch written into the SOURCE tree when ctest runs from the repo root
 # rather than from a build directory. Generated scheduling data, never source.
 /Testing/
+
+# Folio performance-baseline fixture (labs/perf/fixtures).
+# The fixture tree is frozen evidence: its SHA256SUMS manifest is only
+# meaningful if the files it lists are actually in the repository. The broad
+# `assets/` and `*.aes` rules above would otherwise leave the manifest
+# describing files a clean checkout does not have. The directory itself must be
+# un-ignored first — git does not descend into an ignored directory to find
+# negations inside it.
+!labs/perf/fixtures/**/assets/
+!labs/perf/fixtures/**/assets/*.wav
+!labs/perf/fixtures/**/*.aes

@@ -408,6 +408,14 @@ if(AESTRA_ENABLE_TESTS)
     add_subdirectory(Tests)
 endif()
 
+# =============================================================================
+# Performance-baseline apparatus (labs/perf) — opt-in, never on by default.
+# =============================================================================
+option(AESTRA_BUILD_PERF_APPARATUS "Build the Folio performance-baseline apparatus" OFF)
+if(AESTRA_BUILD_PERF_APPARATUS)
+    add_subdirectory(labs/perf)
+endif()
+
 message(STATUS "")
 message(STATUS "=================================")
 message(STATUS "  Aestra - Pure Native")
