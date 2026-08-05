@@ -174,7 +174,15 @@ target_include_directories(AestraFilterBench PRIVATE
 )
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraFilterBench COMMAND AestraFilterBench)
-    set_tests_properties(AestraFilterBench PROPERTIES LABELS "audio;benchmark;experimental")
+    # No contract label. This case reports per-callback cost and asserts no
+    # threshold, so it cannot fail on a regression — calling it
+    # contract:realtime would claim a gate that does not exist.
+    #
+    # The exemption needs two independent keys: this role, and an exact-name
+    # entry in Tests/policy/benchmark-allowlist.txt. Neither alone exempts a
+    # case, so adding this label to a failing test buys nothing without a
+    # separate change to the allowlist.
+    set_tests_properties(AestraFilterBench PROPERTIES LABELS "audio;benchmark;experimental;role:benchmark")
 else()
     message(STATUS "AestraFilterBench built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
