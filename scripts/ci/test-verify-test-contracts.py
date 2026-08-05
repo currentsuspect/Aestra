@@ -60,7 +60,7 @@ VERIFIER = os.path.join(
 
 
 def run_case(name, small, maximal, allowlist_text, expect_ok, expect_substring=None,
-             corrupt_census=None, allowlist_bytes=None, raw_census=None):
+             corrupt_census=None, allowlist_bytes=None, raw_census=None, extra_specs=None):
     """Exercise the verifier through its real CLI.
 
     Deliberately not through the imported functions: invoking the script proves
@@ -89,6 +89,9 @@ def run_case(name, small, maximal, allowlist_text, expect_ok, expect_substring=N
                 else:
                     json.dump(census_json(tests), handle)
             specs.append(f"--census={label}={path}")
+
+        for label, source in (extra_specs or []):
+            specs.append(f"--census={label}={os.path.join(tmp, source)}")
 
         proc = subprocess.run(
             [sys.executable, VERIFIER, f"--allowlist={allow}", "--maximal=maximal"] + specs,
@@ -328,6 +331,19 @@ run_case(
     "14c an internal blank line is rejected",
     BASE_SMALL, BASE_MAXIMAL, "BenchOne\n\nOther\n",
     expect_ok=False, expect_substring="line 2 is blank",
+)
+
+# --- 15. repeated --census label -------------------------------------------
+#
+# The same silent-collapse class as case 13, one level up: a repeated label
+# would overwrite the earlier configuration, removing it from the comparison
+# while every remaining check still passed.
+
+run_case(
+    "15 repeated --census label",
+    BASE_SMALL, BASE_MAXIMAL, BASE_ALLOWLIST,
+    expect_ok=False, expect_substring="was given more than once",
+    extra_specs=[("maximal", "small.json")],
 )
 
 # --- report ----------------------------------------------------------------

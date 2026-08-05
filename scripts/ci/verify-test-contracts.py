@@ -320,11 +320,19 @@ def run(allowlist_path, maximal_label, census_args):
 
     allowlist = parse_allowlist(allowlist_path)
 
+    # A repeated --census label is diagnosed rather than silently overwritten.
+    # Same defect class as a duplicate test name inside one census: the second
+    # value would replace the first, one configuration would vanish from the
+    # comparison, and every remaining check would still pass. A coverage
+    # authority must not contain a silent-collapse path even where no caller
+    # currently exercises it.
     censuses = {}
     for spec in census_args:
         if "=" not in spec:
             raise PolicyError(f"--census expects <label>=<path>, got {spec!r}")
         label, path = spec.split("=", 1)
+        if label in censuses:
+            raise PolicyError(f"--census label {label!r} was given more than once")
         censuses[label] = parse_census(label, path)
 
     if not censuses:
