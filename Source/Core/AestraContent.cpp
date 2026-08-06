@@ -2374,10 +2374,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_routingMapPanel->bringToFront();
                 m_routingMapPanel->setDirty(true);
             }
-            // Keep mixer visible so user still sees context
-            if (m_mixerPanel && m_viewState.mixerOpen) {
-                m_mixerPanel->setVisible(true);
-            }
+            // Keep mixer visible so user still sees context. The centralized
+            // visibility rules also hide the piano roll and sequencer and
+            // unregister sequencer drop targets for the map's isolation.
+            applyOverlayPanelVisibility(focus);
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Routing Map");
         }
 

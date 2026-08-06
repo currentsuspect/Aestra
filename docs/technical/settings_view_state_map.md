@@ -104,10 +104,11 @@ currently see it.
 remembered-open overlay flags ARE now persisted in the `.aes` project file as
 optional `ui.viewFocus` / `ui.pianoRollOpen` / `ui.sequencerOpen` keys
 (`ProjectSerializer::UIState`), and reapplied through `AestraApp::applyUIState`
-→ `AestraContent::restoreWorkspaceState`. Muse sees them as before: only
-`view.current` still lacks the focus field the B1 resolution proposes — the
-`viewFocus` protocol string now exists (`WorkspaceFocusModel::workspaceFocusName`),
-so the field can be added without introducing a new verb.
+→ `AestraContent::restoreWorkspaceState`. Muse `view.current` reports the active
+workspace through its `focus` field, whose protocol string now lives in
+`WorkspaceFocusModel::workspaceFocusName` (adds `pianoRoll`); the B1 `status`
+field resolution can also consume that dedicated verb without relying on a
+`viewFocus` key.
 
 ---
 

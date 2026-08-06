@@ -121,7 +121,7 @@ inline WorkspaceTransitionKind classifyTransition(ViewFocus current, ViewFocus p
     }
     const bool currentIsDaw = (current == ViewFocus::Arsenal || current == ViewFocus::Timeline);
     const bool previousIsDaw = (previous == ViewFocus::Arsenal || previous == ViewFocus::Timeline);
-    if (currentIsDaw && previousIsDaw) {
+    if (current != previous && currentIsDaw && previousIsDaw) {
         return WorkspaceTransitionKind::PlaybackHotSwap;
     }
     return WorkspaceTransitionKind::Ordinary;

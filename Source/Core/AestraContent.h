@@ -214,8 +214,10 @@ public:
     void setViewFocus(ViewFocus focus);
     /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
-    /** @brief Get the remembered-open overlay state (for project persistence). */
-    const ViewState& getViewState() const { return m_viewState; }
+    /** @brief Whether the piano-roll overlay is remembered-open (for persistence). */
+    bool isPianoRollOpen() const { return m_viewState.pianoRollOpen; }
+    /** @brief Whether the sequencer overlay is remembered-open (for persistence). */
+    bool isSequencerOpen() const { return m_viewState.sequencerOpen; }
     /**
      * @brief Restore persisted workspace state (project load).
      * Restores the remembered-open overlay flags, then applies the workspace

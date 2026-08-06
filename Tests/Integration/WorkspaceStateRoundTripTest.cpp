@@ -100,10 +100,11 @@ int main() {
                 "legacy file must keep overlays closed");
     }
 
-    // --- Malformed focus name is ignored (defaults preserved).
+    // --- Malformed focus name still restores flags (focus falls back to Timeline).
     {
         ProjectSerializer::UIState ui;
         ui.viewFocus = "notAFocus";
+        ui.pianoRollOpen = true;
         const std::string contents = serializeWithUI(makeManager(), ui);
         const auto path = tempDir / "bad-focus.aes";
         require(ProjectSerializer::writeAtomically(path.string(), contents), "atomic write failed");
@@ -113,6 +114,11 @@ int main() {
         require(result.ok, "file with malformed focus must load cleanly");
         require(!result.ui.has_value() || result.ui->viewFocus.empty(),
                 "malformed focus must be dropped (default Timeline)");
+        // The app restore path (AestraApp::applyUIState) is not headless;
+        // the serializer contract is that the flag still survives alongside a
+        // malformed focus, so the caller can apply it with the Timeline fallback.
+        require(result.ui.has_value() && result.ui->pianoRollOpen,
+                "pianoRollOpen must survive alongside a malformed focus");
     }
 
     std::cout << "[PASS] WorkspaceStateRoundTripTest\n";

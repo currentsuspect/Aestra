@@ -52,6 +52,7 @@ void testTransitionClassification() {
             const bool anyRoutingMap = (current == ViewFocus::RoutingMap || previous == ViewFocus::RoutingMap);
             const bool bothDaw = (current == ViewFocus::Arsenal || current == ViewFocus::Timeline) &&
                                  (previous == ViewFocus::Arsenal || previous == ViewFocus::Timeline);
+            const bool distinctDawSwap = bothDaw && current != previous;
 
             if (anyAudition) {
                 require(kind == WorkspaceFocusModel::WorkspaceTransitionKind::Audition,
@@ -59,9 +60,12 @@ void testTransitionClassification() {
             } else if (anyRoutingMap) {
                 require(kind == WorkspaceFocusModel::WorkspaceTransitionKind::RoutingMap,
                         "any RoutingMap pair must classify as RoutingMap");
-            } else if (bothDaw) {
+            } else if (distinctDawSwap) {
                 require(kind == WorkspaceFocusModel::WorkspaceTransitionKind::PlaybackHotSwap,
-                        "Arsenal/Timeline pairs must classify as PlaybackHotSwap");
+                        "distinct Arsenal/Timeline pairs must classify as PlaybackHotSwap");
+            } else if (bothDaw) {
+                require(kind == WorkspaceFocusModel::WorkspaceTransitionKind::Ordinary,
+                        "Arsenal/Timeline self-switches must stay ordinary (no hot-swap)");
             } else {
                 require(kind == WorkspaceFocusModel::WorkspaceTransitionKind::Ordinary,
                         "remaining pairs must classify as Ordinary");
@@ -79,6 +83,10 @@ void testTransitionClassification() {
             "PianoRoll <- Arsenal must be ordinary");
     require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::PianoRoll, ViewFocus::PianoRoll),
             "PianoRoll self-switch must be ordinary");
+    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Arsenal, ViewFocus::Arsenal),
+            "Arsenal self-switch must be ordinary (no hot-swap)");
+    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Timeline, ViewFocus::Timeline),
+            "Timeline self-switch must be ordinary (no hot-swap)");
     require(!WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Arsenal, ViewFocus::Timeline),
             "Arsenal <-> Timeline must NOT be ordinary (hot-swap)");
     require(WorkspaceFocusModel::isAuditionTransition(ViewFocus::PianoRoll, ViewFocus::Audition),
