@@ -845,11 +845,12 @@ public:
      */
     void play() {
         if (!m_patternMode.load(std::memory_order_relaxed)) {
-            // Timeline playback owns the scheduler outright. flush() only rewinds, so an
-            // Arsenal instance survived into timeline playback and kept sounding under a
-            // linear transport; scheduleTimelinePatternInstances() below starts at id 2 and
-            // would never have replaced it. Clear before rebuilding the timeline set.
-            m_patternPlaybackEngine.clearInstances();
+            // Timeline playback owns the scheduler outright. rewindScheduledInstances() only
+            // rewinds, so an Arsenal instance survived into timeline playback and kept
+            // sounding under a linear transport; scheduleTimelinePatternInstances() below
+            // starts at id 2 and would never have replaced it. Clear before rebuilding the
+            // timeline set.
+            m_patternPlaybackEngine.clearScheduledInstances();
         }
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
@@ -902,10 +903,11 @@ public:
      * live transport (playing flag, position, transport command). An offline
      * render (headless export) drives the engine's own transport instead, so it
      * only needs the scheduling — this leaves isPlaying/isPaused/position
-     * untouched. Callers clearInstances() the pattern engine before and after the
-     * render so neither prior content nor this render's instances leak into the
-     * caller's session: flush() only rewinds active instances, so anything already
-     * scheduled stayed live and was rendered into the export alongside the timeline.
+     * untouched. Callers clearScheduledInstances() the pattern engine before and after
+     * the render so neither prior content nor this render's instances leak into the
+     * caller's session: rewindScheduledInstances() only rewinds active instances, so
+     * anything already scheduled stayed live and was rendered into the export alongside
+     * the timeline.
      */
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
@@ -982,7 +984,7 @@ public:
         stop();
         // Arsenal playback is over: drop its instances rather than rewinding them, so
         // nothing carries into whatever plays next.
-        m_patternPlaybackEngine.clearInstances();
+        m_patternPlaybackEngine.clearScheduledInstances();
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -1185,13 +1187,13 @@ public:
         m_isPaused.store(false, std::memory_order_relaxed);
         m_position.store(startSeconds, std::memory_order_relaxed);
         m_playStartPosition.store(startSeconds, std::memory_order_relaxed);
-        // Arsenal preview means "play THIS pattern alone". flush() only rewinds, so
-        // whatever was already scheduled — timeline clip instances from a previous
-        // play(), or an earlier preview — kept sounding alongside it and was mixed
+        // Arsenal preview means "play THIS pattern alone". rewindScheduledInstances() only
+        // rewinds, so whatever was already scheduled — timeline clip instances from a
+        // previous play(), or an earlier preview — kept sounding alongside it and was mixed
         // into offline pattern renders too (a render_pattern was measured emitting 3
         // instances when the caller asked for one, inflating its peak by ~3 dB).
         // Start from an empty scheduler so the preview renders exactly what was asked for.
-        m_patternPlaybackEngine.clearInstances();
+        m_patternPlaybackEngine.clearScheduledInstances();
 
         {
             auto* pattern = m_patternManager.getPattern(pid);
@@ -1209,12 +1211,12 @@ public:
     }
 
     /**
-     * @brief Flush the Arsenal scheduler before arming a pattern for playback.
+     * @brief Rewind the Arsenal scheduler before arming a pattern for playback.
      * @param pid Pattern identifier prepared for playback.
      */
     void preparePatternForArsenal(PatternID pid) {
         (void)pid;
-        m_patternPlaybackEngine.flush();
+        m_patternPlaybackEngine.rewindScheduledInstances();
     }
 
     /**

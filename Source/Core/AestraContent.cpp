@@ -1194,8 +1194,9 @@ void AestraContent::setupArsenalPanels() {
         }
         // Re-prepare the pattern so the playback engine re-schedules the notes
         // just edited in the Arsenal grid. Without this, newly placed steps stay
-        // silent during pattern playback until some other path flushes (e.g.
-        // editing the same pattern in the Piano Roll). Mirrors setActivePattern.
+        // silent during pattern playback until some other path rewinds the
+        // scheduler (e.g. editing the same pattern in the Piano Roll). Mirrors
+        // setActivePattern.
         if (m_trackManager) {
             m_trackManager->preparePatternForArsenal(patternId);
         }
@@ -2245,16 +2246,17 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             // unconditionally below, so keying the TrackManager teardown off previousFocus
             // — where we came FROM rather than what state we are actually IN — lets the two
             // disagree for any path that reaches Timeline without previousFocus==Arsenal.
-            // With TrackManager left in pattern mode, play() skips BOTH the scheduler flush
-            // and scheduleTimelinePatternInstances(). Keyed off real state, matching the
-            // ENTERING AUDITION branch below, which was already written this way.
+            // With TrackManager left in pattern mode, play() skips BOTH the scheduler
+            // clear and scheduleTimelinePatternInstances(). Keyed off real state,
+            // matching the ENTERING AUDITION branch below, which was already written
+            // this way.
             // (Hardening: the observed limbo in this pass came from updatePatternLoopLength,
             // fixed separately. This asymmetry is latent, not the measured cause.)
             const bool leavingArsenal = (previousFocus == ViewFocus::Arsenal);
             const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
             if (leavingArsenal || patternStillArmed) {
                 if (patternStillArmed) {
-                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND flushes
+                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND the scheduler
                 } else if (m_trackManager && m_trackManager->isPlaying()) {
                     m_trackManager->stop();
                 }

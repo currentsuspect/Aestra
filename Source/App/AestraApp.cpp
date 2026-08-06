@@ -963,7 +963,7 @@ void AestraApp::connectAudioToUI() {
                 if (auto trackManager = m_content->getTrackManager()) {
                     trackManager->getPlaylistModel().setBPM(bpm);
                     trackManager->getTimelineClock().setTempo(bpm);
-                    trackManager->getPatternPlaybackEngine().flush();
+                    trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
                 }
                 if (auto trackManagerUI = m_content->getTrackManagerUI()) {
                     trackManagerUI->invalidateCache();
@@ -1620,7 +1620,7 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
         if (auto trackManager = m_content->getTrackManager()) {
             trackManager->getPlaylistModel().setBPM(result.tempo);
             trackManager->getTimelineClock().setTempo(result.tempo);
-            trackManager->getPatternPlaybackEngine().flush();
+            trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();

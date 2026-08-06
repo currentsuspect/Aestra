@@ -1069,7 +1069,7 @@ private:
     std::atomic<uint64_t> m_patternMonotonicFrame{0};
     // Last loop length (samples) used for a maintenance refill. Only touched
     // on the maintenance thread; a change (BPM / sample-rate) means queued
-    // timestamps are in a stale domain and the pattern engine must flush.
+    // timestamps are in a stale domain and the pattern engine must rewind.
     uint64_t m_lastRefillLoopLenSamples{0};
 
     // Test Tone State

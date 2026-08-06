@@ -2045,7 +2045,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     TrackManager& trackManager;
                     std::vector<float>& block;
                     ~TransportGuard() {
-                        // Full Arsenal teardown: stop, flush the scheduled
+                        // Full Arsenal teardown: stop, clear the scheduled
                         // instance, and leave pattern mode — a lingering
                         // pattern-mode flag or instance would bleed into the
                         // next timeline play/render.

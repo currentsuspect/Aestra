@@ -578,10 +578,10 @@ void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
     // A loop-length change while playing shifts the monotonic scheduling
     // domain (iteration * loopLen + pos) on both threads at once; already
     // queued events were stamped in the OLD domain and would never come due.
-    // Flush so the scheduler re-queues everything in the new domain.
+    // Rewind so the scheduler re-queues everything in the new domain.
     if (enabled && (!wasEnabled || std::abs(oldLength - lengthBeats) > 1e-9)) {
         if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
-            patEng->flush();
+            patEng->rewindScheduledInstances();
         }
     }
 }
@@ -624,19 +624,19 @@ void AudioEngine::performNonRealtimeMaintenance() {
                 if (loopLenSamples > 0) {
                     // BPM or sample-rate changes re-scale the sample domain:
                     // queued event timestamps and scheduledThroughFrame were
-                    // computed against the old loopLenSamples — flush so they
+                    // computed against the old loopLenSamples — rewind so they
                     // re-queue in the new domain (length-in-beats changes are
-                    // already flushed by setPatternPlaybackMode).
+                    // already rewound by setPatternPlaybackMode).
                     if (m_lastRefillLoopLenSamples != 0 && m_lastRefillLoopLenSamples != loopLenSamples) {
                         // m_patternMonotonicFrame is still encoded in the OLD
                         // loop-length domain until the audio callback republishes
                         // it (which it does every block, from the same BPM /
                         // length source). Refilling now with the new loopLen but
-                        // the stale frame would schedule an epoch ahead, so flush
+                        // the stale frame would schedule an epoch ahead, so rewind
                         // and DEFER this refill one maintenance tick — the next
                         // tick reads a coherent new-domain frame. The lookahead
                         // (~85ms) dwarfs one tick (~16ms), so no underrun.
-                        patEng->flush();
+                        patEng->rewindScheduledInstances();
                         m_lastRefillLoopLenSamples = loopLenSamples;
                         deferRefill = true; // skip the refill below this tick
                     } else {
@@ -813,7 +813,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     if (transportHardStop) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
-            pe->flush();
+            pe->rewindScheduledInstances();
 
         resetCachedSamplerVoicesRt();
 
@@ -830,21 +830,21 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
     // }
 
-    // Flush Pattern Engine on Stop to prevent stale events.
+    // Rewind Pattern Engine on Stop to prevent stale events.
     // NOTE: normal stop does NOT cut one-shots (tails are allowed).
     if (transportStop) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
-            pe->flush();
+            pe->rewindScheduledInstances();
     }
 
     // On transport restart (play start or seek):
-    // - flush pattern queue
+    // - rewind pattern queue
     // - in pattern mode, cut any still-playing one-shots so the loop restarts audibly
     if (transportRestart) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
-            pe->flush();
+            pe->rewindScheduledInstances();
 
         if (patternModeNow) {
             resetCachedSamplerVoicesRt();
@@ -1023,13 +1023,13 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
             if (patternMode) {
                 // Pattern events are scheduled in a monotonic loop domain, so
-                // advance the epoch instead of flushing pre-scheduled events.
+                // advance the epoch instead of rewinding pre-scheduled events.
                 m_patternLoopIteration.fetch_add(1, std::memory_order_release);
             } else if (isPlaying) {
-                // Timeline loops keep the flush-on-wrap behavior.
+                // Timeline loops keep the rewind-on-wrap behavior.
                 auto* pe = m_patternEngine.load(std::memory_order_relaxed);
                 if (pe)
-                    pe->flush();
+                    pe->rewindScheduledInstances();
             }
             m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
             renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame, patternFrame(loopStartSample));
@@ -3003,10 +3003,10 @@ void AudioEngine::panic() {
         }
     }
 
-    // 4. Flush pattern engine
+    // 4. Rewind pattern engine
     auto* pe = m_patternEngine.load(std::memory_order_relaxed);
     if (pe)
-        pe->flush();
+        pe->rewindScheduledInstances();
 }
 
 void AudioEngine::requestVoiceResetOnPatternChange() {

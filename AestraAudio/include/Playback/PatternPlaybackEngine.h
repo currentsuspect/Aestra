@@ -179,7 +179,7 @@ public:
      * @param currentFrame Current transport frame. In looped pattern mode this
      *        is MONOTONIC (iteration * loopLengthSamples + wrapped position) so
      *        the window can pre-schedule the next iteration's events before the
-     *        wrap — flushing at the wrap and rescheduling on the next UI tick
+     *        wrap — rewinding at the wrap and rescheduling on the next UI tick
      *        made every loop's downbeat land late by the maintenance latency.
      * @param sampleRate Active sample rate.
      * @param lookaheadSamples Number of frames to schedule ahead.
@@ -200,23 +200,23 @@ public:
     void processAudio(uint64_t currentFrame, int bufferSize, const UnitMidiRoute* routes, size_t routeCount) noexcept;
 
     /**
-     * @brief Flush queued events and rewind active instances.
+     * @brief Rewind queued events and all scheduled instances.
      *
      * Rewind, NOT removal: instances stay scheduled and re-emit from the top. That is
-     * what a loop restart needs. Use clearInstances() when the content must not carry
-     * forward at all.
+     * what a loop restart needs. Use clearScheduledInstances() when the content must not
+     * carry forward at all.
      */
-    void flush();
+    void rewindScheduledInstances();
 
     /**
-     * @brief Drop every scheduled instance and queued event.
+     * @brief Remove every scheduled instance and queued event.
      *
      * For transitions that must not carry pattern content forward — leaving Arsenal, or
-     * starting timeline playback. flush() alone was insufficient there: it rewinds, so an
-     * Arsenal instance survived into timeline playback and kept sounding.
+     * starting timeline playback. rewindScheduledInstances() alone was insufficient there:
+     * it rewinds, so an Arsenal instance survived into timeline playback and kept sounding.
      * Control thread only (takes the scheduler mutex); the RT path reads m_rtQueue only.
      */
-    void clearInstances();
+    void clearScheduledInstances();
 
     /**
      * @brief Number of scheduled pattern instances (control thread).
