@@ -57,14 +57,14 @@ int main() {
     playback.refillWindow(0, sampleRate, sampleRate * 3);
 
     clock.setTempo(60.0);
-    playback.flush();
+    playback.rewindScheduledInstances();
     playback.refillWindow(0, sampleRate, sampleRate * 3);
 
     MidiBuffer midiAtOldTempoFrame;
     PatternPlaybackEngine::UnitMidiRoute route{unitId, &midiAtOldTempoFrame};
     playback.processAudio(sampleRate, 128, &route, 1);
     if (hasNoteOn(midiAtOldTempoFrame, pitch)) {
-        std::cerr << "stale note-on fired at old 120 BPM frame after tempo flush\n";
+        std::cerr << "stale note-on fired at old 120 BPM frame after tempo rewind\n";
         return 1;
     }
 

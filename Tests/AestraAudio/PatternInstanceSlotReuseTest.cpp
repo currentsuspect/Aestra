@@ -1,9 +1,9 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
 // Regression: the pattern scheduler treated every schedulePatternInstance() call as a NEW
-// occurrence and appended it, while nothing ever erased entries — flush() only rewinds
-// (scheduledThroughFrame = 0) so instances re-emit from the top, which is what a loop
-// restart needs but not what leaving Arsenal needs.
+// occurrence and appended it, while nothing ever erased entries — rewindScheduledInstances()
+// only rewinds (scheduledThroughFrame = 0) so instances re-emit from the top, which is what
+// a loop restart needs but not what leaving Arsenal needs.
 //
 // Live consequence: the Arsenal preview always re-arms slot 1, so a session accumulated
 // dozens of overlapping copies of the same instance (31 observed in one sitting), each
@@ -12,7 +12,7 @@
 // transport.
 //
 // These assertions fail on the pre-fix engine: re-arming slot 1 five times left five live
-// instances, and clearInstances() did not exist.
+// instances, and clearScheduledInstances() did not exist.
 
 #include "Models/PatternManager.h"
 #include "Models/TrackManager.h"
@@ -84,18 +84,21 @@ int main() {
     engine.schedulePatternInstance(patternB, 8.0, 2);
     check(engine.getActiveInstanceCount() == 3, "re-arming slot 2 does not change the census");
 
-    // --- flush() REWINDS, it does not remove. Guard that distinction explicitly:
-    // conflating the two is what let an Arsenal instance survive into timeline playback.
-    engine.flush();
-    check(engine.getActiveInstanceCount() == 3, "flush() rewinds and must NOT drop instances");
+    // --- rewindScheduledInstances() REWINDS, it does not remove. Guard that distinction
+    // explicitly: conflating the two is what let an Arsenal instance survive into timeline
+    // playback.
+    engine.rewindScheduledInstances();
+    check(engine.getActiveInstanceCount() == 3,
+          "rewindScheduledInstances() rewinds and must NOT drop instances");
 
-    // --- clearInstances() removes outright. ---
-    engine.clearInstances();
-    check(engine.getActiveInstanceCount() == 0, "clearInstances() drops every instance");
+    // --- clearScheduledInstances() removes outright. ---
+    engine.clearScheduledInstances();
+    check(engine.getActiveInstanceCount() == 0, "clearScheduledInstances() drops every instance");
 
     // Usable again afterwards.
     engine.schedulePatternInstance(patternA, 0.0, 1);
-    check(engine.getActiveInstanceCount() == 1, "scheduler still usable after clearInstances()");
+    check(engine.getActiveInstanceCount() == 1,
+          "scheduler still usable after clearScheduledInstances()");
 
     // Out-of-range ids are rejected without corrupting the census.
     engine.schedulePatternInstance(patternA, 0.0, 999);
@@ -105,9 +108,10 @@ int main() {
     //
     // scheduleTimelinePatternInstances() allocates ids from 2 upward and reserves 1 for the
     // Arsenal preview, so a timeline play() leaves ids 2..N scheduled. playPatternInArsenal()
-    // used to call flush(), which only rewinds — those clip instances stayed live and were
-    // mixed into the preview AND into offline render_pattern output. Measured directly: a
-    // render that asked for one pattern emitted three instances, inflating its peak from
+    // used to call rewindScheduledInstances(), which only rewinds — those clip instances
+    // stayed live and were mixed into the preview AND into offline render_pattern output.
+    // Measured directly: a render that asked for one pattern emitted three instances,
+    // inflating its peak from
     // 0.094194 to 0.133211 (~3 dB) and breaking MuseServiceTest's half-gain ratio.
     //
     // Arsenal preview means "play THIS pattern alone". Assert that boundary directly rather

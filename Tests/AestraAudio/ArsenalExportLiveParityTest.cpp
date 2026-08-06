@@ -155,7 +155,7 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     engine.setGlobalSamplePos(0);
     engine.setMetronomeEnabled(false);
     engine.setAuditionModeEnabled(false);
-    tm->getPatternPlaybackEngine().flush();
+    tm->getPatternPlaybackEngine().rewindScheduledInstances();
     tm->getPatternPlaybackEngine().schedulePatternInstance(patternId, 0.0, 1);
     engine.setTransportPlaying(true);
 
@@ -282,7 +282,7 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     engine.setGlobalSamplePos(0);
     engine.setMetronomeEnabled(false);
     engine.setAuditionModeEnabled(false);
-    tm->getPatternPlaybackEngine().flush();
+    tm->getPatternPlaybackEngine().rewindScheduledInstances();
     tm->getPatternPlaybackEngine().schedulePatternInstance(previewPatternId, 0.0, 1);
     tm->getPatternPlaybackEngine().schedulePatternInstance(trackPatternId, 0.0, 2);
     engine.setTransportPlaying(true);
@@ -409,7 +409,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     engine.setGlobalSamplePos(0);
     engine.setMetronomeEnabled(false);
     engine.setAuditionModeEnabled(false);
-    tm->getPatternPlaybackEngine().flush();
+    tm->getPatternPlaybackEngine().rewindScheduledInstances();
     tm->getPatternPlaybackEngine().schedulePatternInstance(track0PatId, 0.0, 1);
 
     // Full bounce (trackId=-1): Arsenal on track 0 audible.

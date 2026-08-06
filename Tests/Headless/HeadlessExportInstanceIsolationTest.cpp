@@ -4,8 +4,8 @@
 // HeadlessMusicGenerator::exportTo() claims, in both its own comments and
 // TrackManager::scheduleTimelineForOfflineRender()'s docs, that the pattern engine is
 // cleared before the render and again on exit "so the render's scheduled instances do not
-// leak". It implemented that with flush() — which only REWINDS active instances
-// (scheduledThroughFrame = 0, re-emit from the top) and never removes them.
+// leak". It implemented that with rewindScheduledInstances() — which only REWINDS active
+// instances (scheduledThroughFrame = 0, re-emit from the top) and never removes them.
 //
 // Consequence: anything already scheduled when exportTo() is called — an Arsenal preview,
 // clip instances from a previous play() — was still live during the render and got mixed
