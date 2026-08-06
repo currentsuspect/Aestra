@@ -373,21 +373,35 @@ void PianoRollPanel::savePattern() {
         m_onPatternEdited(m_currentPatternId);
     }
 
-    double longestBeat = 0.0;
-    for (const auto& note : currentNotes) {
-        longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
+    // Only a real note edit may drive the pattern length. savePattern() also runs
+    // when nothing was edited — setEditingUnit() commits pending edits before every
+    // unit switch — and recomputing the length there rewrote the user's pattern:
+    // adding or selecting a unit collapsed an empty 2-bar pattern to 1 bar, and an
+    // explicitly-sized 4-bar pattern to 1 bar, silently halving the audible loop
+    // while the Arsenal grid still displayed the old bar count.
+    double newLengthBeats = m_patternDurationBeats;
+    if (!diff.empty()) {
+        double longestBeat = 0.0;
+        for (const auto& note : currentNotes) {
+            longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
+        }
+        // Keep patterns musical in whole bars and let note content drive the
+        // default loop size on add/delete.
+        newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+
+        // Persist the updated length back to the PatternManager so playback uses it
+        pm.applyPatch(m_currentPatternId, [newLengthBeats](PatternSource& pattern) {
+            pattern.lengthBeats = newLengthBeats;
+        });
+    } else if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
+        // Nothing changed: adopt the stored length instead of rewriting it, so an
+        // explicit length set via the bars control survives a unit switch.
+        newLengthBeats = std::max(static_cast<double>(beatsPerBar()), storedPattern->lengthBeats);
     }
-    // Keep patterns musical in whole bars and let note content drive the
-    // default loop size on add/delete.
-    const double newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+
     m_patternDurationBeats = newLengthBeats;
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
-
-    // Persist the updated length back to the PatternManager so playback uses it
-    pm.applyPatch(m_currentPatternId, [newLengthBeats](PatternSource& pattern) {
-        pattern.lengthBeats = newLengthBeats;
-    });
 
     // If we're in Arsenal pattern mode, update the audio engine's loop length immediately
     // so the next playback restart uses the correct boundary without requiring a focus switch.

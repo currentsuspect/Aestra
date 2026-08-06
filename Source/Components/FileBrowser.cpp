@@ -2301,28 +2301,17 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
 
-        if (!(event.modifiers & NUIModifiers::Ctrl) &&
-            !(event.modifiers & NUIModifiers::Alt) &&
-            !(event.modifiers & NUIModifiers::Super)) {
-            char c = event.character;
-            if (c == 0) {
-                if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
-                    c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
-                    const bool shift = event.modifiers & NUIModifiers::Shift;
-                    const bool caps = event.modifiers & NUIModifiers::CapsLock;
-                    if (shift != caps) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                } else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
-                    c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
-                }
-            }
-            if (c >= 32 && c <= 126 && searchInput_) {
-                searchInput_->setFocused(true);
-                NUIKeyEvent resolvedEvent = event;
-                resolvedEvent.character = c;
-                searchInput_->onKeyEvent(resolvedEvent);
-                return true;
-            }
-        }
+        // NOTE: type-to-search was removed deliberately. A printable key reaching the
+        // browser used to call searchInput_->setFocused(true) and forward the character,
+        // which meant that once the browser was anywhere in the focus chain every letter
+        // the user typed was swallowed into the search box — letters are musical typing
+        // and shortcuts in this app, so search would "start typing" seemingly at random.
+        // It also double-entered the first character: the char was forwarded manually AND
+        // then delivered again by the normal charCallback to the now-focused input
+        // ("hello" arrived as "hhello"). Search is now focused explicitly only, via
+        // Ctrl+F (above) or by clicking the field. Note the search action button is
+        // NOT a focus path — ChromeAction::SearchAction clears the query or opens the
+        // quick-filter menu, and that stays its job.
     }
 
     // Handle navigation/activation on key-down only.
@@ -3056,6 +3045,19 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         } else if (isFilterActive()) {
             drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
                                "Press Esc to clear the search and filters");
+        } else if (!currentPath_.empty() && !rootPath_.empty() &&
+                   normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_)) {
+            // Both paths must be real: setCurrentPath() clears currentPath_ when a path
+            // fails to resolve, and that is not a subfolder — telling the user to "go up"
+            // out of a folder they are not in would be worse than the generic copy.
+            // An empty SUBFOLDER is not an empty library. currentPath_ is persisted
+            // across sessions (ui_state.json fileBrowser.lastPath), so a user who last
+            // browsed into an empty category folder reopens the app to what reads as
+            // "you have no content at all" — with nothing pointing back to the library.
+            const std::string rootName = std::filesystem::path(rootPath_).filename().string();
+            drawListEmptyState(renderer, listClip, folderIcon_, "This folder is empty",
+                               rootName.empty() ? "Go up to see the rest of your library"
+                                                : ("Go up to " + rootName + " to see your library"));
         } else {
             drawListEmptyState(renderer, listClip, folderIcon_, "Nothing here yet",
                                "Audio, MIDI, and Aestra projects show up here");
