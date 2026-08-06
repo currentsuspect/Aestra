@@ -2309,7 +2309,9 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
         // It also double-entered the first character: the char was forwarded manually AND
         // then delivered again by the normal charCallback to the now-focused input
         // ("hello" arrived as "hhello"). Search is now focused explicitly only, via
-        // Ctrl+F (above), clicking the field, or the search action button.
+        // Ctrl+F (above) or by clicking the field. Note the search action button is
+        // NOT a focus path — ChromeAction::SearchAction clears the query or opens the
+        // quick-filter menu, and that stays its job.
     }
 
     // Handle navigation/activation on key-down only.
@@ -3043,7 +3045,11 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         } else if (isFilterActive()) {
             drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
                                "Press Esc to clear the search and filters");
-        } else if (normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_)) {
+        } else if (!currentPath_.empty() && !rootPath_.empty() &&
+                   normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_)) {
+            // Both paths must be real: setCurrentPath() clears currentPath_ when a path
+            // fails to resolve, and that is not a subfolder — telling the user to "go up"
+            // out of a folder they are not in would be worse than the generic copy.
             // An empty SUBFOLDER is not an empty library. currentPath_ is persisted
             // across sessions (ui_state.json fileBrowser.lastPath), so a user who last
             // browsed into an empty category folder reopens the app to what reads as
