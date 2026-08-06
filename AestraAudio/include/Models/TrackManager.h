@@ -902,10 +902,10 @@ public:
      * live transport (playing flag, position, transport command). An offline
      * render (headless export) drives the engine's own transport instead, so it
      * only needs the scheduling — this leaves isPlaying/isPaused/position
-     * untouched. Callers flush() the pattern engine before and after so the
-     * render's scheduled instances do not leak into the caller's session. Callers must
-     * use clearInstances(), NOT flush(): flush only rewinds active instances, so prior
-     * content stayed scheduled and was rendered into the export alongside the timeline.
+     * untouched. Callers clearInstances() the pattern engine before and after the
+     * render so neither prior content nor this render's instances leak into the
+     * caller's session: flush() only rewinds active instances, so anything already
+     * scheduled stayed live and was rendered into the export alongside the timeline.
      */
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
