@@ -530,7 +530,20 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                         if (playheadBeat < 0.0) playheadBeat += patternLength;
                         follow = m_trackManager->isPlaying();
                     } else {
-                        playheadBeat = std::max(0.0, currentBeat);
+                        // This editor's X axis is PATTERN-LOCAL beats; the transport reports
+                        // ARRANGEMENT beats. Feeding one into the other drew a playhead that
+                        // drifted across the pattern and off its end — at 8.6s (17.2 beats) it
+                        // sat past bar 5 of a 2-bar pattern — asserting a playback position
+                        // that does not exist in this editor, then vanishing off the right.
+                        //
+                        // Timeline playback of a pattern happens through clip instances placed
+                        // on lanes, each with its own offset into the source; this panel edits
+                        // the pattern itself and resolves no clip, so there is no single honest
+                        // pattern-local position to show. Park at the pattern start rather than
+                        // display a false one. (Mapping a clip under the playhead back into
+                        // pattern-local beats would be the richer behaviour, and needs the clip
+                        // lookup this panel deliberately does not carry.)
+                        playheadBeat = 0.0;
                     }
                 }
             }
