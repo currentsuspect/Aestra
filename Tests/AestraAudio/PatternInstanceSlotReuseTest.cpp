@@ -15,12 +15,14 @@
 // instances, and clearInstances() did not exist.
 
 #include "Models/PatternManager.h"
+#include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 #include "Playback/PatternPlaybackEngine.h"
 #include "Playback/TimelineClock.h"
 
 #include <cstdint>
 #include <iostream>
+#include <memory>
 
 using namespace Aestra::Audio;
 
@@ -98,6 +100,41 @@ int main() {
     // Out-of-range ids are rejected without corrupting the census.
     engine.schedulePatternInstance(patternA, 0.0, 999);
     check(engine.getActiveInstanceCount() == 1, "out-of-range instance id is rejected, census unchanged");
+
+    // --- ISOLATION: an Arsenal preview must not carry timeline clip instances. ---
+    //
+    // scheduleTimelinePatternInstances() allocates ids from 2 upward and reserves 1 for the
+    // Arsenal preview, so a timeline play() leaves ids 2..N scheduled. playPatternInArsenal()
+    // used to call flush(), which only rewinds — those clip instances stayed live and were
+    // mixed into the preview AND into offline render_pattern output. Measured directly: a
+    // render that asked for one pattern emitted three instances, inflating its peak from
+    // 0.094194 to 0.133211 (~3 dB) and breaking MuseServiceTest's half-gain ratio.
+    //
+    // Arsenal preview means "play THIS pattern alone". Assert that boundary directly rather
+    // than inferring it from a rendered level.
+    {
+        auto trackManager = std::make_shared<TrackManager>();
+        auto& tmEngine = trackManager->getPatternPlaybackEngine();
+        auto& tmPatterns = trackManager->getPatternManager();
+
+        const PatternID arsenalPattern = makePattern(tmPatterns, "arsenal");
+        const PatternID timelinePattern = makePattern(tmPatterns, "timeline");
+
+        // Stand in for what a timeline play() leaves behind: clip instances at ids 2+.
+        tmEngine.schedulePatternInstance(timelinePattern, 0.0, 2);
+        tmEngine.schedulePatternInstance(timelinePattern, 8.0, 3);
+        check(tmEngine.getActiveInstanceCount() == 2, "timeline clip instances are scheduled at ids 2+");
+
+        trackManager->playPatternInArsenal(arsenalPattern, 0.0);
+        check(tmEngine.getActiveInstanceCount() == 1,
+              "Arsenal preview starts from an EMPTY scheduler — timeline clip instances cannot "
+              "contribute to it (was 3 before the fix)");
+
+        // And the reverse boundary still holds: leaving Arsenal drops its instance too, so
+        // nothing bleeds the other way into timeline playback.
+        trackManager->stopArsenalPlayback(false);
+        check(tmEngine.getActiveInstanceCount() == 0, "leaving Arsenal drops its preview instance");
+    }
 
     if (failures == 0) {
         std::cout << "All pattern-instance slot-reuse checks passed\n";
