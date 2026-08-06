@@ -845,7 +845,11 @@ public:
      */
     void play() {
         if (!m_patternMode.load(std::memory_order_relaxed)) {
-            m_patternPlaybackEngine.flush();
+            // Timeline playback owns the scheduler outright. flush() only rewinds, so an
+            // Arsenal instance survived into timeline playback and kept sounding under a
+            // linear transport; scheduleTimelinePatternInstances() below starts at id 2 and
+            // would never have replaced it. Clear before rebuilding the timeline set.
+            m_patternPlaybackEngine.clearInstances();
         }
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
@@ -974,7 +978,9 @@ public:
      */
     void stopArsenalPlayback(bool keepPatternMode = false) {
         stop();
-        m_patternPlaybackEngine.flush();
+        // Arsenal playback is over: drop its instances rather than rewinding them, so
+        // nothing carries into whatever plays next.
+        m_patternPlaybackEngine.clearInstances();
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -1177,7 +1183,13 @@ public:
         m_isPaused.store(false, std::memory_order_relaxed);
         m_position.store(startSeconds, std::memory_order_relaxed);
         m_playStartPosition.store(startSeconds, std::memory_order_relaxed);
-        m_patternPlaybackEngine.flush();
+        // Arsenal preview means "play THIS pattern alone". flush() only rewinds, so
+        // whatever was already scheduled — timeline clip instances from a previous
+        // play(), or an earlier preview — kept sounding alongside it and was mixed
+        // into offline pattern renders too (a render_pattern was measured emitting 3
+        // instances when the caller asked for one, inflating its peak by ~3 dB).
+        // Start from an empty scheduler so the preview renders exactly what was asked for.
+        m_patternPlaybackEngine.clearInstances();
 
         {
             auto* pattern = m_patternManager.getPattern(pid);
