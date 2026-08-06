@@ -2239,10 +2239,22 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         // === ENTERING TIMELINE ===
         else if (focus == ViewFocus::Timeline) {
             stopPatternClipPreview(false);
-            // Stop any running playback from previous mode
-            if (previousFocus == ViewFocus::Arsenal) {
-                if (m_trackManager && m_trackManager->isPatternMode()) {
-                    m_trackManager->stopArsenalPlayback(false);
+            // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
+            // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
+            // whether the timeline is scheduled at all). The engine mirror is cleared
+            // unconditionally below, so keying the TrackManager teardown off previousFocus
+            // — where we came FROM rather than what state we are actually IN — lets the two
+            // disagree for any path that reaches Timeline without previousFocus==Arsenal.
+            // With TrackManager left in pattern mode, play() skips BOTH the scheduler flush
+            // and scheduleTimelinePatternInstances(). Keyed off real state, matching the
+            // ENTERING AUDITION branch below, which was already written this way.
+            // (Hardening: the observed limbo in this pass came from updatePatternLoopLength,
+            // fixed separately. This asymmetry is latent, not the measured cause.)
+            const bool leavingArsenal = (previousFocus == ViewFocus::Arsenal);
+            const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
+            if (leavingArsenal || patternStillArmed) {
+                if (patternStillArmed) {
+                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND flushes
                 } else if (m_trackManager && m_trackManager->isPlaying()) {
                     m_trackManager->stop();
                 }
@@ -2980,6 +2992,19 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
     // domain from the audio thread (= silence after the next wrap).
     const double barBeats = static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar());
     double lengthBeats = std::max(barBeats, pattern->lengthBeats);
+
+    // Only Arsenal focus may put the ENGINE into pattern playback. This function runs
+    // from pattern-edit callbacks (setOnPatternEdited), and the Arsenal panel stays open
+    // across a focus change — so editing a pattern from it while the user is on the
+    // Timeline used to seize the transport: the engine looped the pattern length while
+    // TrackManager stayed in timeline mode, so play() scheduled the timeline but the
+    // transport never left the pattern's first bars and timeline audio stopped sounding.
+    // It was unrecoverable from the UI, because the user was ALREADY on Timeline, so
+    // clicking Timeline fired no focus transition to clear the flag.
+    // Creating or deleting a unit while in timeline mode is the shortest repro.
+    if (resolveTransportFocus() != ViewFocus::Arsenal) {
+        return; // Pattern loop length governs Arsenal playback only.
+    }
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
 }
 
