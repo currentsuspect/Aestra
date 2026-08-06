@@ -96,9 +96,18 @@ was open" or leaving Audition cannot put it back. This is not a bug in
 from one and two from the other. `view.current` gains a field; nothing loses the
 restore semantics it needs.
 
-Also unexposed today: `m_viewFocus` (Arsenal / Timeline / Audition / RoutingMap),
-which is the state that *causes* the divergence. An agent cannot currently see
-it.
+Also unexposed today: `m_viewFocus` (Arsenal / Timeline / Audition / RoutingMap /
+PianoRoll), which is the state that *causes* the divergence. An agent cannot
+currently see it.
+
+**Update (phase-3, workspace-panel ownership):** the active workspace and the
+remembered-open overlay flags ARE now persisted in the `.aes` project file as
+optional `ui.viewFocus` / `ui.pianoRollOpen` / `ui.sequencerOpen` keys
+(`ProjectSerializer::UIState`), and reapplied through `AestraApp::applyUIState`
+→ `AestraContent::restoreWorkspaceState`. Muse sees them as before: only
+`view.current` still lacks the focus field the B1 resolution proposes — the
+`viewFocus` protocol string now exists (`WorkspaceFocusModel::workspaceFocusName`),
+so the field can be added without introducing a new verb.
 
 ---
 

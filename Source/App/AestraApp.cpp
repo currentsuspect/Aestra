@@ -2036,6 +2036,13 @@ ProjectSerializer::UIState AestraApp::captureUIState() const {
         }
     }
 
+    // Phase-3 workspace state: active workspace + remembered-open overlays.
+    if (m_content) {
+        state.viewFocus = WorkspaceFocusModel::workspaceFocusName(m_content->getViewFocus());
+        state.pianoRollOpen = m_content->getViewState().pianoRollOpen;
+        state.sequencerOpen = m_content->getViewState().sequencerOpen;
+    }
+
     return state;
 }
 
@@ -2052,6 +2059,15 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
             settingsDialog->show();
         } else {
             settingsDialog->hide();
+        }
+    }
+
+    // Restore persisted workspace state. Legacy files leave viewFocus empty,
+    // which keeps the default Timeline workspace.
+    if (m_content) {
+        ViewFocus focus = ViewFocus::Timeline;
+        if (WorkspaceFocusModel::parseWorkspaceFocus(state.viewFocus, focus)) {
+            m_content->restoreWorkspaceState(focus, state.pianoRollOpen, state.sequencerOpen);
         }
     }
 }
