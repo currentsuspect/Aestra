@@ -409,7 +409,9 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
             engine.setUnitManager(nullptr);
             engine.setChannelSlotMap(nullptr);
             engine.setTrackManager(nullptr);
-            trackManager.getPatternPlaybackEngine().flush();
+            // Remove, don't rewind: this render's instances must not survive into the
+            // caller's session (flush() would leave them scheduled and merely restarted).
+            trackManager.getPatternPlaybackEngine().clearInstances();
         }
     };
 
@@ -436,9 +438,12 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     // (AudioEngine::processBlock pops scheduled notes into unit MIDI routes).
     // Schedule the committed timeline into it WITHOUT starting live transport —
     // the exporter drives the engine's own transport, so we must not mutate the
-    // caller's playing flag / position. flush() first clears any prior contents;
-    // the render guard flushes again on exit so these instances don't leak.
-    m_trackManager.getPatternPlaybackEngine().flush();
+    // caller's playing flag / position. clearInstances() first removes any prior
+    // contents; the render guard clears again on exit so these instances don't leak.
+    // flush() cannot serve here — it only REWINDS active instances (re-emit from the
+    // top, which a loop restart wants), so anything already scheduled would have been
+    // rendered into the export alongside the timeline we just asked for.
+    m_trackManager.getPatternPlaybackEngine().clearInstances();
     m_trackManager.scheduleTimelineForOfflineRender(0.0);
 
     // Setup exporter
