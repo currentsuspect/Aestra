@@ -845,7 +845,11 @@ public:
      */
     void play() {
         if (!m_patternMode.load(std::memory_order_relaxed)) {
-            m_patternPlaybackEngine.flush();
+            // Timeline playback owns the scheduler outright. flush() only rewinds, so an
+            // Arsenal instance survived into timeline playback and kept sounding under a
+            // linear transport; scheduleTimelinePatternInstances() below starts at id 2 and
+            // would never have replaced it. Clear before rebuilding the timeline set.
+            m_patternPlaybackEngine.clearInstances();
         }
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
@@ -974,7 +978,9 @@ public:
      */
     void stopArsenalPlayback(bool keepPatternMode = false) {
         stop();
-        m_patternPlaybackEngine.flush();
+        // Arsenal playback is over: drop its instances rather than rewinding them, so
+        // nothing carries into whatever plays next.
+        m_patternPlaybackEngine.clearInstances();
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }

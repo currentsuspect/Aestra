@@ -201,8 +201,28 @@ public:
 
     /**
      * @brief Flush queued events and rewind active instances.
+     *
+     * Rewind, NOT removal: instances stay scheduled and re-emit from the top. That is
+     * what a loop restart needs. Use clearInstances() when the content must not carry
+     * forward at all.
      */
     void flush();
+
+    /**
+     * @brief Drop every scheduled instance and queued event.
+     *
+     * For transitions that must not carry pattern content forward — leaving Arsenal, or
+     * starting timeline playback. flush() alone was insufficient there: it rewinds, so an
+     * Arsenal instance survived into timeline playback and kept sounding.
+     * Control thread only (takes the scheduler mutex); the RT path reads m_rtQueue only.
+     */
+    void clearInstances();
+
+    /**
+     * @brief Number of scheduled pattern instances (control thread).
+     * @return Count of live instances.
+     */
+    size_t getActiveInstanceCount() const;
 
     /**
      * @brief Get the number of scheduler overflows observed so far.

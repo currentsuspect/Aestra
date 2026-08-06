@@ -2116,3 +2116,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression;contract:core")
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
+
+# An instanceId identifies a scheduler SLOT, not an occurrence. Re-arming a slot used to
+# append another live copy, and nothing ever erased entries (flush() only rewinds), so the
+# Arsenal preview slot accumulated dozens of overlapping instances and survived into
+# timeline playback. Guards replacement-on-reuse, the flush/clear distinction, and clearing.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternInstanceSlotReuseTest.cpp")
+    add_executable(PatternInstanceSlotReuseTest AestraAudio/PatternInstanceSlotReuseTest.cpp)
+    target_link_libraries(PatternInstanceSlotReuseTest PRIVATE AestraAudio)
+    target_include_directories(PatternInstanceSlotReuseTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternInstanceSlotReuseTest COMMAND PatternInstanceSlotReuseTest)
+    set_tests_properties(PatternInstanceSlotReuseTest PROPERTIES LABELS "audio;pattern;scheduler;regression;contract:audio")
+    message(STATUS "PatternInstanceSlotReuseTest added - pattern scheduler slot reuse + clearing")
+endif()

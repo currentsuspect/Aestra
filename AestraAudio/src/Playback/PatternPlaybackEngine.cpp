@@ -94,7 +94,6 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        // Add to active instances
         PatternInstance inst;
         inst.patternId = pid;
         inst.startBeat = startBeat;
@@ -104,7 +103,20 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
             durationBeats > 0.0 ? (inst.sourceStartBeat + durationBeats) : std::numeric_limits<double>::infinity();
         inst.scheduledThroughFrame = 0;
 
-        m_activeInstances.push_back(inst);
+        // An instanceId identifies a SLOT, not an occurrence — cancellation is keyed on
+        // it (m_instanceCancelled is indexed by id), so two live entries sharing an id
+        // were never individually addressable anyway. This used to push_back
+        // unconditionally: the Arsenal preview always re-arms slot 1, and nothing ever
+        // erased entries (flush() only rewinds scheduledThroughFrame), so a session
+        // accumulated dozens of overlapping copies — 31 observed in one sitting — each
+        // emitting its own events into the same units. Re-arming a slot must replace it.
+        auto existing = std::find_if(m_activeInstances.begin(), m_activeInstances.end(),
+                                     [instanceId](const PatternInstance& e) { return e.instanceId == instanceId; });
+        if (existing != m_activeInstances.end()) {
+            *existing = inst;
+        } else {
+            m_activeInstances.push_back(inst);
+        }
     }
 
     Aestra::Log::info("[PatternPlayback] Scheduled instance " + std::to_string(instanceId) + " pattern " +
@@ -373,6 +385,33 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 
         m_rtQueue.pop();
     }
+}
+
+void PatternPlaybackEngine::clearInstances() {
+    // Control thread only — takes the scheduler mutex. processAudio() consumes m_rtQueue
+    // and never reads m_activeInstances, so erasing here cannot race the audio thread.
+    if (reportRealtimeMisuse("PatternPlaybackEngine::clearInstances")) {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_activeInstances.clear();
+        m_lastRefillFrame = 0;
+    }
+
+    for (auto& flag : m_instanceCancelled) {
+        flag.store(false, std::memory_order_release);
+    }
+
+    // A pending rewind is moot once the instances are gone.
+    m_flushRequested.store(false, std::memory_order_release);
+    m_rtQueue.forceDrain();
+}
+
+size_t PatternPlaybackEngine::getActiveInstanceCount() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeInstances.size();
 }
 
 void PatternPlaybackEngine::flush() {
