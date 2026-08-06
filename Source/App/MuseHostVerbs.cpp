@@ -70,15 +70,10 @@ bool lookupView(const std::string& name, ViewType& out) {
 }
 
 // The workspace modes, as protocol strings. Same contract as kViews: agents will
-// hardcode these, so renaming one is a breaking change.
+// hardcode these, so renaming one is a breaking change. Single source of truth:
+// WorkspaceFocusModel::workspaceFocusName (includes the PianoRoll workspace).
 const char* focusName(::ViewFocus focus) {
-    switch (focus) {
-    case ::ViewFocus::Arsenal:    return "arsenal";
-    case ::ViewFocus::Timeline:   return "timeline";
-    case ::ViewFocus::Audition:   return "audition";
-    case ::ViewFocus::RoutingMap: return "routingMap";
-    }
-    return "unknown";
+    return WorkspaceFocusModel::workspaceFocusName(focus);
 }
 
 HostVerbArg viewArg() {

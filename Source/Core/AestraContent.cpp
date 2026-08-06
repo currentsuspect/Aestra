@@ -267,26 +267,13 @@ AestraContent::AestraContent()
     // Create Focus Toggle Buttons
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& themeProps = theme.getCurrentTheme();
-    m_viewToggle =
-        std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
+    m_viewToggle = std::make_shared<AestraUI::NUISegmentedControl>(
+        std::vector<std::string>(WorkspaceFocusModel::kSegmentLabels.begin(),
+                                 WorkspaceFocusModel::kSegmentLabels.end()));
     m_viewToggle->setCornerRadius(themeProps.radiusL);             // tokenized: 12.0
     m_viewToggle->setAccentColor(theme.getColor("primary"));        // tokenized: theme accent
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
-        ViewFocus newFocus;
-        switch (index) {
-        case 0:
-            newFocus = ViewFocus::Arsenal;
-            break;
-        case 1:
-            newFocus = ViewFocus::Timeline;
-            break;
-        case 2:
-            newFocus = ViewFocus::Audition;
-            break;
-        default:
-            newFocus = ViewFocus::Timeline;
-            break;
-        }
+        ViewFocus newFocus = WorkspaceFocusModel::focusForSegmentIndex(index);
         setViewFocus(newFocus);
 
         // Auto-open Arsenal panel when switching TO Arsenal mode
@@ -2182,26 +2169,20 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     m_viewFocus = focus;
 
-    auto applyOverlayPanelVisibility = [this](bool auditionMode) {
-        if (auditionMode) {
-            if (m_mixerPanel)
-                m_mixerPanel->setVisible(false);
-            if (m_pianoRollPanel)
-                m_pianoRollPanel->setVisible(false);
-            if (m_sequencerPanel) {
-                m_sequencerPanel->setVisible(false);
-                m_sequencerPanel->unregisterDropTargets();
-            }
-            return;
-        }
-
+    auto applyOverlayPanelVisibility = [this](ViewFocus activeFocus) {
+        // Overlay visibility is derived from remembered-open state + active
+        // focus (see WorkspaceFocusModel::derivePanelVisibility). RoutingMap
+        // never reaches here: its branch manages its own panel and mixer.
+        const WorkspaceFocusModel::WorkspacePanelVisibility vis =
+            WorkspaceFocusModel::derivePanelVisibility(activeFocus, m_viewState.mixerOpen,
+                                                       m_viewState.pianoRollOpen, m_viewState.sequencerOpen);
         if (m_mixerPanel)
-            m_mixerPanel->setVisible(m_viewState.mixerOpen);
+            m_mixerPanel->setVisible(vis.mixer);
         if (m_pianoRollPanel)
-            m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
+            m_pianoRollPanel->setVisible(vis.pianoRoll);
         if (m_sequencerPanel) {
-            m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
-            if (m_viewState.sequencerOpen) {
+            m_sequencerPanel->setVisible(vis.sequencer);
+            if (vis.sequencer) {
                 m_sequencerPanel->registerDropTargets(true);
             } else {
                 m_sequencerPanel->unregisterDropTargets();
@@ -2358,7 +2339,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             m_auditionPanel->setVisible(true);
             if (m_trackManagerUI)
                 m_trackManagerUI->setVisible(false);
-            applyOverlayPanelVisibility(true);
+            applyOverlayPanelVisibility(focus);
 
             // POLISH: Hide Transport, Pattern Browser, and Visualizers for immersion
             if (m_transportBar)
@@ -2371,6 +2352,17 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_audioVisualizer->setVisible(false);
 
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Audition Mode");
+        }
+        // === ENTERING PIANO ROLL ===
+        else if (focus == ViewFocus::PianoRoll) {
+            // PianoRoll is an ordinary workspace: pure visibility change, no
+            // transport/engine mutation (no stop/play/panic/position/mode
+            // changes, no pattern-clip-preview teardown, no scheduled-instance
+            // clearing). Overlay visibility (including the piano roll itself)
+            // is derived from remembered-open state by the global block below.
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+            AESTRA_LOG_DEBUG("[ViewFocus] Entering Piano Roll");
         }
         // === ENTERING ROUTING MAP ===
         else if (focus == ViewFocus::RoutingMap) {
@@ -2420,7 +2412,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_waveformVisualizer->setVisible(true);
             if (m_audioVisualizer)
                 m_audioVisualizer->setVisible(true);
-            applyOverlayPanelVisibility(false);
+            applyOverlayPanelVisibility(focus);
         } else if (isAudition) {
             // Audition Mode - Hide Distractions
             if (m_transportBar)
@@ -2431,17 +2423,14 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_waveformVisualizer->setVisible(false);
             if (m_audioVisualizer)
                 m_audioVisualizer->setVisible(false);
-            applyOverlayPanelVisibility(true);
+            applyOverlayPanelVisibility(focus);
         }
 
         // Sync segment control to reflect the new focus
         if (m_viewToggle) {
-            size_t idx = 0;
-            if (focus == ViewFocus::Arsenal) idx = 0;
-            else if (focus == ViewFocus::Timeline) idx = 1;
-            else if (focus == ViewFocus::Audition) idx = 2;
             // RoutingMap doesn't map to a toggle segment; leave prior selection
-            if (focus != ViewFocus::RoutingMap) {
+            size_t idx = 0;
+            if (WorkspaceFocusModel::segmentIndexForFocus(focus, idx)) {
                 m_viewToggle->setSelectedIndex(idx);
             }
         }
@@ -2455,16 +2444,29 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ViewFocus::Arsenal);
     }
 
-    // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition or RoutingMap)
-    bool isRoutingMapTransition = (focus == ViewFocus::RoutingMap || previousFocus == ViewFocus::RoutingMap);
-    if (wasPlaying && m_transportBar && !isRoutingMapTransition &&
-        focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
+    // Hot-swap playback on focus switch. Only Arsenal<->Timeline re-arms the
+    // transport (pattern == arrangement); Audition and RoutingMap transitions
+    // and every ordinary workspace transition (incl. PianoRoll pairs) leave
+    // playback/scheduled-instances untouched.
+    const auto transitionKind = WorkspaceFocusModel::classifyTransition(focus, previousFocus);
+    if (wasPlaying && m_transportBar &&
+        transitionKind == WorkspaceFocusModel::WorkspaceTransitionKind::PlaybackHotSwap) {
         AESTRA_LOG_DEBUG("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
     }
 
     isUpdating = false;
+}
+
+void AestraContent::restoreWorkspaceState(ViewFocus focus, bool pianoRollOpen, bool sequencerOpen) {
+    // Restore remembered-open flags first, then the workspace focus. Because
+    // setViewFocus caches engine mode/mirrors keyed off `wasPlaying` and the
+    // current focus, restoring focus first would have the overlay visibility
+    // derive from the pre-restore flags.
+    m_viewState.pianoRollOpen = pianoRollOpen;
+    m_viewState.sequencerOpen = sequencerOpen;
+    setViewFocus(focus);
 }
 
 void AestraContent::setArsenalPanelVisible(bool visible) {
@@ -2914,13 +2916,15 @@ void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
 
 ViewFocus AestraContent::resolveTransportFocus() const {
     if (m_viewToggle) {
-        switch (m_viewToggle->getSelectedIndex()) {
-        case 0:
+        const ViewFocus segmentFocus =
+            WorkspaceFocusModel::focusForSegmentIndex(m_viewToggle->getSelectedIndex());
+        switch (segmentFocus) {
+        case ViewFocus::Arsenal:
             return ViewFocus::Arsenal;
-        case 2:
+        case ViewFocus::Audition:
             return ViewFocus::Audition;
-        case 1:
         default:
+            // Timeline and PianoRoll share the arrangement transport context.
             return ViewFocus::Timeline;
         }
     }
@@ -3200,6 +3204,12 @@ void AestraContent::openPatternInPianoRoll(PatternID patternId) {
     m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
     m_pianoRollPanel->loadPattern(patternId);
     setViewOpen(Audio::ViewType::PianoRoll, true);
+    // Contextual pattern navigation reaches the PianoRoll workspace through the
+    // same single control point as the segmented control. This is an ordinary
+    // (pure-visibility) transition: it never touches playback/engine state.
+    if (m_viewFocus != ViewFocus::PianoRoll) {
+        setViewFocus(ViewFocus::PianoRoll);
+    }
 }
 
 Aestra::Audio::UnitID AestraContent::resolveEditingUnitForPattern(PatternID patternId) const {
@@ -4280,15 +4290,18 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.keyCode == AestraUI::NUIKeyCode::Space) {
         ViewFocus transportFocus = m_viewFocus;
         if (m_viewToggle) {
-            switch (m_viewToggle->getSelectedIndex()) {
-            case 0:
+            const ViewFocus segmentFocus =
+                WorkspaceFocusModel::focusForSegmentIndex(m_viewToggle->getSelectedIndex());
+            switch (segmentFocus) {
+            case ViewFocus::Arsenal:
                 transportFocus = ViewFocus::Arsenal;
                 break;
-            case 2:
+            case ViewFocus::Audition:
                 transportFocus = ViewFocus::Audition;
                 break;
-            case 1:
+            case ViewFocus::Timeline:
             default:
+                // PianoRoll shares the arrangement transport context.
                 transportFocus = ViewFocus::Timeline;
                 break;
             }
