@@ -408,4 +408,27 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
     )
 endif()
 
+# Headless export must contain ONLY the timeline's content. exportTo() documented that
+# guarantee but implemented it with flush(), which rewinds instances rather than removing
+# them, so anything already scheduled bled into the rendered file. The sibling
+# HeadlessExportSessionInvarianceTest covers the TRANSPORT half of the contract only.
+# Deliberately unguarded: this regression test is part of the repo, and silently omitting
+# it on configuration would drop the isolation guarantee without failing loudly.
+add_executable(HeadlessExportInstanceIsolationTest
+    HeadlessExportInstanceIsolationTest.cpp
+)
+target_link_libraries(HeadlessExportInstanceIsolationTest PRIVATE AestraAudio)
+target_include_directories(HeadlessExportInstanceIsolationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME HeadlessExportInstanceIsolationTest
+    COMMAND HeadlessExportInstanceIsolationTest
+)
+set_tests_properties(HeadlessExportInstanceIsolationTest PROPERTIES
+    LABELS "headless;export;engine;regression;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+)
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
