@@ -107,9 +107,10 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
         // it (m_instanceCancelled is indexed by id), so two live entries sharing an id
         // were never individually addressable anyway. This used to push_back
         // unconditionally: the Arsenal preview always re-arms slot 1, and nothing ever
-        // erased entries (flush() only rewinds scheduledThroughFrame), so a session
-        // accumulated dozens of overlapping copies — 31 observed in one sitting — each
-        // emitting its own events into the same units. Re-arming a slot must replace it.
+        // erased entries (rewindScheduledInstances() only rewinds scheduledThroughFrame),
+        // so a session accumulated dozens of overlapping copies — 31 observed in one
+        // sitting — each emitting its own events into the same units. Re-arming a slot
+        // must replace it.
         auto existing = std::find_if(m_activeInstances.begin(), m_activeInstances.end(),
                                      [instanceId](const PatternInstance& e) { return e.instanceId == instanceId; });
         if (existing != m_activeInstances.end()) {
@@ -387,10 +388,10 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
     }
 }
 
-void PatternPlaybackEngine::clearInstances() {
+void PatternPlaybackEngine::clearScheduledInstances() {
     // Control thread only — takes the scheduler mutex. processAudio() consumes m_rtQueue
     // and never reads m_activeInstances, so erasing here cannot race the audio thread.
-    if (reportRealtimeMisuse("PatternPlaybackEngine::clearInstances")) {
+    if (reportRealtimeMisuse("PatternPlaybackEngine::clearScheduledInstances")) {
         return;
     }
 
@@ -414,7 +415,7 @@ size_t PatternPlaybackEngine::getActiveInstanceCount() const {
     return m_activeInstances.size();
 }
 
-void PatternPlaybackEngine::flush() {
+void PatternPlaybackEngine::rewindScheduledInstances() {
     // RT-safe: set atomic flag for deferred processing by non-RT maintenance.
     // The SPSC queue and m_activeInstances are only safely mutable from the
     // control thread, so actual drain/reset happens in refillWindow().
