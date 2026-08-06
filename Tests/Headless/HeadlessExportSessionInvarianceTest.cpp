@@ -5,14 +5,23 @@
 // is a synchronous offline render that must not mutate the caller's live
 // session. It schedules the timeline into the pattern-playback engine via
 // TrackManager::scheduleTimelineForOfflineRender() — NOT play() — so the
-// transport flags and position are left untouched, and its RenderStateGuard
-// flushes the pattern engine on every exit path so the render's scheduled
-// instances do not leak.
+// transport flags and position are left untouched, and its RenderStateGuard clears the
+// pattern engine on every exit path so the render's scheduled instances do not leak.
 //
-// This test snapshots (isPlaying, isPaused, position) before exportTo() and
-// asserts they are unchanged afterward, on BOTH the success path and a forced
-// failure path (empty output path — the exporter rejects it after the engine
-// wiring is already in place, exercising the guard's cleanup on failure).
+// SCOPE: this test owns the OUTPUT half of that contract — the caller's session is
+// unchanged after exportTo() returns. It snapshots (isPlaying, isPaused, position,
+// scheduledInstances) before the export and asserts they are unchanged afterward, on
+// BOTH the success path and a forced failure path (empty output path — the exporter
+// rejects it after the engine wiring is already in place, exercising the guard's
+// cleanup on failure).
+//
+// The scheduledInstances field was added after a real leak survived beside this test:
+// the header claimed the no-leak guarantee while every assertion only checked the
+// transport triple, so nothing here COULD fail when instances leaked. A test only
+// covers behaviour an assertion can fail for.
+//
+// The INPUT half — that prior scheduler state cannot contaminate the render — is owned
+// by HeadlessExportInstanceIsolationTest. The two do not overlap.
 
 #include "Core/AudioEngine.h"
 #include "Headless/HeadlessMusicGenerator.h"
@@ -39,10 +48,16 @@ struct TransportSnapshot {
     bool playing;
     bool paused;
     double position;
+    // The caller's SCHEDULER state is part of its session too. Leaving this out is what
+    // let a real leak survive next to a green "session invariance" test: exportTo() left
+    // its own pattern instances scheduled in the caller afterwards, and nothing here
+    // could fail because of it.
+    size_t scheduledInstances;
 };
 
 TransportSnapshot snapshot(const TrackManager& tm) {
-    return {tm.isPlaying(), tm.isPaused(), tm.getPosition()};
+    return {tm.isPlaying(), tm.isPaused(), tm.getPosition(),
+            tm.getPatternPlaybackEngine().getActiveInstanceCount()};
 }
 
 void requireUnchanged(const TrackManager& tm, const TransportSnapshot& before, const char* path) {
@@ -53,6 +68,8 @@ void requireUnchanged(const TrackManager& tm, const TransportSnapshot& before, c
             (std::string("export must not change isPaused (") + path + ")").c_str());
     require(std::abs(after.position - before.position) < 1e-9,
             (std::string("export must not change transport position (") + path + ")").c_str());
+    require(after.scheduledInstances == before.scheduledInstances,
+            (std::string("export must not leave scheduled pattern instances behind (") + path + ")").c_str());
 }
 
 // Builds a small but genuinely audible project on the given engine/manager.
