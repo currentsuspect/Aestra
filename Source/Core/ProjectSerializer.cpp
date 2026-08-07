@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "WorkspaceFocus.h"
 #include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
@@ -1026,6 +1027,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         settings.set("activePage", JSON(uiState->settingsDialogActivePage));
         ui.set("settingsDialog", settings);
 
+        // Phase-3 workspace state (optional on load; written on every save).
+        if (!uiState->viewFocus.empty()) {
+            ui.set("viewFocus", JSON(uiState->viewFocus));
+        }
+        ui.set("pianoRollOpen", JSON(uiState->pianoRollOpen));
+        ui.set("sequencerOpen", JSON(uiState->sequencerOpen));
+
         JSON panels = JSON::array();
         for (const auto& p : uiState->panels) {
             JSON pj = JSON::object();
@@ -1456,6 +1464,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             if (sd.has("activePage") && sd["activePage"].isString()) {
                 uiState.settingsDialogActivePage = sd["activePage"].asString();
             }
+        }
+
+        // Phase-3 workspace state: all keys optional (pre-phase-3 files keep the
+        // historical defaults: Timeline focus, overlays closed).
+        if (ui.has("viewFocus") && ui["viewFocus"].isString()) {
+            const std::string focusName = ui["viewFocus"].asString();
+            if (focusName.size() <= 32) {
+                ViewFocus parsed;
+                if (WorkspaceFocusModel::parseWorkspaceFocus(focusName, parsed)) {
+                    uiState.viewFocus = focusName;
+                }
+            }
+        }
+        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) {
+            uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
+        }
+        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) {
+            uiState.sequencerOpen = ui["sequencerOpen"].asBool();
         }
 
         if (ui.has("panels") && ui["panels"].isArray()) {

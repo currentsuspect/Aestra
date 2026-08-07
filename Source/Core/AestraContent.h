@@ -80,16 +80,10 @@ namespace AestraUI {
     class PluginBrowserPanel;
 }
 
-/**
- * @brief View focus - which part of the UI is emphasized
- * Arsenal, Timeline, and Audition are the three main modes
- */
-enum class ViewFocus {
-    Arsenal,     // Pattern construction/sound design
-    Timeline,    // Arrangement/composition
-    Audition,    // Album listening/reference/DSP preview
-    RoutingMap   // Full-panel routing visualization
-};
+// ViewFocus and the workspace-focus model (segment mapping, transition
+// classification, visibility derivation) live in WorkspaceFocus.h — a pure,
+// headless-constructible module shared by the app and the table-driven tests.
+#include "WorkspaceFocus.h"
 
 /**
  * @brief Playback scope - what the transport will play
@@ -220,6 +214,17 @@ public:
     void setViewFocus(ViewFocus focus);
     /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
+    /** @brief Whether the piano-roll overlay is remembered-open (for persistence). */
+    bool isPianoRollOpen() const { return m_viewState.pianoRollOpen; }
+    /** @brief Whether the sequencer overlay is remembered-open (for persistence). */
+    bool isSequencerOpen() const { return m_viewState.sequencerOpen; }
+    /**
+     * @brief Restore persisted workspace state (project load).
+     * Restores the remembered-open overlay flags, then applies the workspace
+     * focus through the single control point. Optional on load: callers that
+     * have no persisted state simply keep the defaults.
+     */
+    void restoreWorkspaceState(ViewFocus focus, bool pianoRollOpen, bool sequencerOpen);
 
     /** @brief Explicitly show or hide the Arsenal panel. */
     void setArsenalPanelVisible(bool visible);

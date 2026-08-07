@@ -66,6 +66,16 @@ public:
         bool settingsDialogVisible{false};
         std::string settingsDialogActivePage;
         std::vector<PanelState> panels;
+
+        // Phase-3 workspace state. All three are OPTIONAL in project files:
+        // files saved before they existed load with the historical defaults
+        // (Timeline workspace, overlays closed) — see the loader's has() guards.
+        // `viewFocus` matches WorkspaceFocusModel::workspaceFocusName
+        // ("arsenal|timeline|audition|routingMap|pianoRoll"); empty means the
+        // loader keeps the default Timeline focus.
+        std::string viewFocus;
+        bool pianoRollOpen{false};
+        bool sequencerOpen{false};
     };
 
     /**

@@ -105,6 +105,36 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
+# Workspace-state roundtrip test (phase-3): the optional viewFocus/pianoRollOpen/
+# sequencerOpen UIState fields roundtrip, legacy files keep default, malformed
+# focus names are dropped. Serialization is AGENTS.md §12 high-risk; this runs
+# on every CI build alongside the other ProjectSerializer roundtrips.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/WorkspaceStateRoundTripTest.cpp")
+    add_executable(WorkspaceStateRoundTripTest
+        Integration/WorkspaceStateRoundTripTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(WorkspaceStateRoundTripTest PRIVATE AestraAudio)
+    target_include_directories(WorkspaceStateRoundTripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Tests
+    )
+    add_test(NAME WorkspaceStateRoundTripTest COMMAND WorkspaceStateRoundTripTest)
+    set_tests_properties(WorkspaceStateRoundTripTest PROPERTIES LABELS "integration;serialization;workspace;contract:durability")
+endif()
+
 # Session Recovery Test (autosave + crash flag + recovery flow)
 add_executable(ProjectDocumentStateTest Integration/ProjectDocumentStateTest.cpp)
 target_include_directories(ProjectDocumentStateTest PRIVATE
@@ -112,6 +142,17 @@ target_include_directories(ProjectDocumentStateTest PRIVATE
 )
 add_test(NAME ProjectDocumentStateTest COMMAND ProjectDocumentStateTest)
 set_tests_properties(ProjectDocumentStateTest PROPERTIES LABELS "unit;project;identity;recovery;contract:durability")
+
+# Workspace-focus model contract test (phase-3): pure, headless-constructible
+# segment mapping, transition classification, and visibility derivation. No
+# libraries — compiles straight against Source/Core, so it runs in every CI
+# lane including headless.
+add_executable(WorkspaceFocusModelTest Integration/WorkspaceFocusModelTest.cpp)
+target_include_directories(WorkspaceFocusModelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
+set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
 
 add_executable(ProjectLifecycleInteractionTest
     Integration/ProjectLifecycleInteractionTest.cpp
