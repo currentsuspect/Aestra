@@ -237,7 +237,10 @@ struct TrackRTState {
     uint32_t pluginLatencySamples{0};        // Total latency from effect chain
 
     // Compensation ring (stereo interleaved), allocated ONLY for tracks that
-    // actually carry a nonzero delay.
+    // actually carry a nonzero delay: the 128 KiB ring lives inside
+    // CompensationRingDescriptor and is allocated on the FIRST nonzero-delay
+    // publication. The tiny slot below (~200 B) is pre-created on TrackRTState
+    // construction so the shared pointer is immutable for the RT thread.
     //
     // This was a std::array<float, 32768> — 128 KiB embedded BY VALUE in every
     // TrackRTState. m_trackState.reserve(kMaxTracks) therefore asked for a
@@ -253,11 +256,16 @@ struct TrackRTState {
     //
     // The ring + delay are published as an immutable CompensationRingDescriptor
     // behind an atomic pointer on the slot (see TrackCompensationState): RT
-    // reads {buffer, capacity, delay, generation} as one consistent tuple, and
-    // generations are retired only after RT acknowledges them. The slot itself
-    // is created once and never replaced or freed while the state lives, so
-    // this unique_ptr is stable for the RT path to dereference.
-    std::unique_ptr<TrackCompensationState> compensation;
+    // reads {published, capacity, delay, generation} as one consistent tuple,
+    // and generations are retired only after RT acknowledges them.
+    //
+    // The slot itself is pre-created when the TrackRTState is constructed and
+    // NEVER reassigned afterward, so `compensation.get()` is immutable for the
+    // RT thread: the whole 128 KiB ring stays lazy (behind `published`, which
+    // control fills on the first nonzero-delay publication). This removes the
+    // first-use assignment entirely, so control can never write this unique_ptr
+    // while an RT block is reading it (CodeRabbit, PR #730).
+    std::unique_ptr<TrackCompensationState> compensation{std::make_unique<TrackCompensationState>()};
 
     // PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated
     // off-RT by AudioEngine::calculateLatencyCompensation() from

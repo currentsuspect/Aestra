@@ -2892,9 +2892,10 @@ void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySam
     const size_t samples = static_cast<size_t>(kCompensationFrames) * 2;
 
     auto& slot = state.compensation;
-    if (!slot) {
-        slot = std::make_unique<TrackCompensationState>();
-    }
+    // Pre-created at TrackRTState construction (see AudioGraphState.h); never
+    // lazily assigned here. Assigning first-use would race with the RT thread
+    // reading compensation.get() (CodeRabbit, PR #730).
+    assert(slot != nullptr && "compensation slot must be pre-created");
 
     // Same delay as the current publication: nothing to do. Keeps the common
     // unchanged-recompute path allocation-free and ack-free.
@@ -3759,10 +3760,6 @@ void AudioEngine::calculateLatencyCompensation() {
         const auto& sol = topology.nodes[n];
 
         auto& rtState = rtStates[trackIdx];
-        const uint32_t prevDelay =
-            (rtState.compensation && rtState.compensation->currentDesc)
-                ? rtState.compensation->currentDesc->delaySamples
-                : 0u;
         rtState.pluginLatencySamples = sol.intrinsicLatency;
 
         // Publish a new compensation generation whenever the applied delay
@@ -3775,14 +3772,19 @@ void AudioEngine::calculateLatencyCompensation() {
         // ensureTrackState() -> m_trackState, while the per-edge pass below
         // operates on rtStates.
         //
+        // Each copy is gated INDEPENDENTLY: prepareCompensationRing no-ops
+        // when that copy's published delay already matches the target, so an
+        // unchanged recompute never publishes and a changed recompute always
+        // reaches both copies. There is deliberately no shared prevDelay read
+        // from one copy gating the other — that could suppress a needed
+        // publication on the golden m_trackState copy (CodeRabbit, PR #730).
+        //
         // v1 parity: the ring is also reset when the delay changes. P6 (G3
         // smooth recompute) will replace that with a sample-hold / crossfade
         // migration.
-        if (sol.outputCompensationSamples != prevDelay) {
-            prepareCompensationRing(rtState, sol.outputCompensationSamples);
-            if (trackIdx < m_trackState.size()) {
-                prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples);
-            }
+        prepareCompensationRing(rtState, sol.outputCompensationSamples);
+        if (trackIdx < m_trackState.size()) {
+            prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples);
         }
 
         // Mirror to m_trackState so renderGraph() (which reads through
