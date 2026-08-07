@@ -1,0 +1,209 @@
+name: PR 740 one-shot self-transition fix
+
+on:
+  push:
+    branches:
+      - fix/piano-roll-contextual-editor
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/piano-roll-contextual-editor
+          fetch-depth: 0
+
+      - name: Apply verified AestraContent fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("Source/Core/AestraContent.cpp")
+          text = path.read_text()
+
+          old = '''    bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
+    ViewFocus previousFocus = m_viewFocus;
+
+    m_viewFocus = focus;
+'''
+          new = '''    bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
+    ViewFocus previousFocus = m_viewFocus;
+    const bool focusChanged = (focus != previousFocus);
+
+    m_viewFocus = focus;
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one focus prelude, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = '''        if (focus == ViewFocus::Arsenal) {
+            stopPatternClipPreview(false);
+            // Use actual pattern length from the active pattern
+            double lengthBeats = getActivePatternLengthBeats();
+
+            // Save current timeline position before switching context
+            if (m_trackManager) {
+                m_savedTimelinePosition = m_trackManager->getPosition();
+            }
+
+            m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+            m_audioEngine->setAuditionModeEnabled(false);
+
+            // UI: Hide timeline playhead and FREEZE usage
+'''
+          new = '''        if (focus == ViewFocus::Arsenal) {
+            if (focusChanged) {
+                stopPatternClipPreview(false);
+                // Use actual pattern length from the active pattern
+                double lengthBeats = getActivePatternLengthBeats();
+
+                // Save current timeline position before switching context
+                if (m_trackManager) {
+                    m_savedTimelinePosition = m_trackManager->getPosition();
+                }
+
+                m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+                m_audioEngine->setAuditionModeEnabled(false);
+            }
+
+            // UI: Hide timeline playhead and FREEZE usage
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one Arsenal entry block, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = '''        else if (focus == ViewFocus::Timeline) {
+            stopPatternClipPreview(false);
+            // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
+            // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
+            // whether the timeline is scheduled at all). The engine mirror is cleared
+            // unconditionally below, so keying the TrackManager teardown off previousFocus
+            // — where we came FROM rather than what state we are actually IN — lets the two
+            // disagree for any path that reaches Timeline without previousFocus==Arsenal.
+            // With TrackManager left in pattern mode, play() skips BOTH the scheduler
+            // clear and scheduleTimelinePatternInstances(). Keyed off real state,
+            // matching the ENTERING AUDITION branch below, which was already written
+            // this way.
+            // (Hardening: the observed limbo in this pass came from updatePatternLoopLength,
+            // fixed separately. This asymmetry is latent, not the measured cause.)
+            const bool leavingArsenal = (previousFocus == ViewFocus::Arsenal);
+            const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
+            if (leavingArsenal || patternStillArmed) {
+                if (patternStillArmed) {
+                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND the scheduler
+                } else if (m_trackManager && m_trackManager->isPlaying()) {
+                    m_trackManager->stop();
+                }
+                m_audioEngine->panic(); // Kill all voices/ring-outs
+            }
+
+            // Restore playback position
+            m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            // Reinstall the owner-bound preview callback after returning to timeline mode. The destructor clears it.
+            if (m_trackManager) {
+                m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+            }
+
+            m_audioEngine->setAuditionModeEnabled(false);
+
+            if (m_trackManager) {
+                m_trackManager->setPosition(m_savedTimelinePosition);
+                m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+            }
+
+            if (m_trackManagerUI) {
+'''
+          new = '''        else if (focus == ViewFocus::Timeline) {
+            if (focusChanged) {
+                stopPatternClipPreview(false);
+                // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
+                // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
+                // whether the timeline is scheduled at all). The engine mirror is cleared
+                // unconditionally below, so keying the TrackManager teardown off previousFocus
+                // — where we came FROM rather than what state we are actually IN — lets the two
+                // disagree for any path that reaches Timeline without previousFocus==Arsenal.
+                // With TrackManager left in pattern mode, play() skips BOTH the scheduler
+                // clear and scheduleTimelinePatternInstances(). Keyed off real state,
+                // matching the ENTERING AUDITION branch below, which was already written
+                // this way.
+                // (Hardening: the observed limbo in this pass came from updatePatternLoopLength,
+                // fixed separately. This asymmetry is latent, not the measured cause.)
+                const bool leavingArsenal = (previousFocus == ViewFocus::Arsenal);
+                const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
+                if (leavingArsenal || patternStillArmed) {
+                    if (patternStillArmed) {
+                        m_trackManager->stopArsenalPlayback(false); // clears the mirror AND the scheduler
+                    } else if (m_trackManager && m_trackManager->isPlaying()) {
+                        m_trackManager->stop();
+                    }
+                    m_audioEngine->panic(); // Kill all voices/ring-outs
+                }
+
+                // Restore playback position
+                m_audioEngine->setPatternPlaybackMode(false, 4.0);
+                // Reinstall the owner-bound preview callback after returning to timeline mode. The destructor clears it.
+                if (m_trackManager) {
+                    m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+                }
+
+                m_audioEngine->setAuditionModeEnabled(false);
+
+                if (m_trackManager) {
+                    m_trackManager->setPosition(m_savedTimelinePosition);
+                    m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+                }
+            }
+
+            if (m_trackManagerUI) {
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one Timeline entry block, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = '''    AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
+    // Ensure correct initial state now that engine is valid
+    setViewFocus(ViewFocus::Timeline);
+'''
+          new = '''    AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
+    // A Timeline self-transition deliberately skips entry-side engine work. On
+    // first engine attachment Timeline is already the default focus, so perform
+    // the engine's one-time Timeline initialization explicitly before the UI
+    // refresh below instead of relying on a synthetic self-transition.
+    if (m_audioEngine && m_viewFocus == ViewFocus::Timeline) {
+        m_audioEngine->setPatternPlaybackMode(false, 4.0);
+        m_audioEngine->setAuditionModeEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+            m_trackManager->setPosition(m_savedTimelinePosition);
+            m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+        }
+    }
+    // Ensure correct initial UI state now that engine is valid. If the current
+    // focus is not Timeline this remains a real transition and uses the normal
+    // Timeline entry path above.
+    setViewFocus(ViewFocus::Timeline);
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one setAudioEngine tail, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+
+      - name: Verify patch shape
+        run: |
+          git diff --check
+          git diff -- Source/Core/AestraContent.cpp
+
+      - name: Commit patch and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr740-self-transition-fix.yml
+          git add Source/Core/AestraContent.cpp
+          git commit -m "fix(ui): make DAW focus self-transitions engine-idempotent"
+          git push origin HEAD:fix/piano-roll-contextual-editor
