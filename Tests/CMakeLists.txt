@@ -152,7 +152,7 @@ target_include_directories(WorkspaceFocusModelTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Core
 )
 add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
-set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:unit")
+set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
 
 add_executable(ProjectLifecycleInteractionTest
     Integration/ProjectLifecycleInteractionTest.cpp
