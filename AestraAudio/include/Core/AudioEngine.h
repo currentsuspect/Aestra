@@ -289,6 +289,12 @@ public:
         };
         uint32_t pluginLatencySamples{0};
         uint32_t outputCompensationSamples{0};
+        /// Generation of the currently published compensation descriptor for this
+        /// track's output ring (see TrackCompensationState). Monotonic per publish.
+        uint32_t outputCompensationGeneration{0};
+        /// Highest compensation generation the RT thread has acknowledged
+        /// consuming. Control may not reclaim a retired ring behind this.
+        uint32_t outputCompensationAckedGeneration{0};
         /// Engine-wide latency compensation toggle. Per-track enablement is not
         /// implemented, so this is the same value for every track index.
         bool compensationEnabled{false};
@@ -693,17 +699,19 @@ private:
     TrackRTState& ensureTrackState(uint32_t trackId);
 
     /**
-     * @brief Prepare a track's PDC ring off the audio thread (#727).
+     * @brief Prepare/publish a track's PDC compensation ring off the audio thread (#727).
      *
-     * The only place a compensation buffer is allocated. Allocates 16384 frames
-     * once on first use and never reallocates, so the RT-visible pointer is
-     * published exactly once per track; subsequent calls just clear the ring (v1
-     * reset-on-delay-change behaviour). Must be called BEFORE publishing a
-     * nonzero compensationDelaySamples, which is what gates the RT read.
+     * The only place a compensation buffer is allocated. Publish-replacement
+     * protocol: each call that changes the delay publishes a fresh immutable
+     * descriptor + zeroed 16384-frame ring and retires the previous generation,
+     * which stays alive until RT acknowledges it (PR #730 follow-up). Calls with
+     * an unchanged delay no-op. Must be called BEFORE the RT path can act on a
+     * new nonzero delay — publication is atomic, so there is no window where a
+     * delay is visible without its ring.
      *
      * Control thread only — never call from processBlock.
      */
-    void prepareCompensationRing(TrackRTState& state);
+    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one

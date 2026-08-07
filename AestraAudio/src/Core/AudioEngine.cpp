@@ -2366,18 +2366,26 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     // Compensation must apply to dry tracks too; those are often the tracks
     // delayed to align with a parallel latent path elsewhere in the graph.
     // The ring is prepared off-RT and only for tracks with a nonzero delay, so a
-    // null pointer here means "nothing to compensate" rather than an error. The
-    // delay < capacity guard is retained verbatim: it is what previously caused
-    // delays at or beyond the old fixed 16384-frame ring to pass through
-    // uncompensated, and changing that would silently alter mix alignment.
-    if (state.compensationDelaySamples > 0 && state.compensationBuffer != nullptr) {
-        const uint32_t delay = state.compensationDelaySamples;
-        const uint32_t capacity = state.compensationCapacityFrames;
+    // null pointer here means "nothing to compensate" rather than an error.
+    //
+    // The published unit is a single immutable CompensationRingDescriptor behind
+    // one atomic pointer (PR #730 follow-up): RT acquire-loads it once per block
+    // and reads {buffer, capacity, delay, generation} from that one descriptor,
+    // so control publications can never interleave into a mixed-generation
+    // snapshot. The `delay < capacity` guard is retained verbatim: it is what
+    // previously caused delays at or beyond the old fixed 16384-frame ring to
+    // pass through uncompensated, and changing that would silently alter mix
+    // alignment.
+    auto* const comp = state.compensation.get();
+    const CompensationRingDescriptor* desc = comp ? comp->published.load(std::memory_order_acquire) : nullptr;
+    if (desc != nullptr && desc->delaySamples > 0 && desc->buffer != nullptr) {
+        const uint32_t delay = desc->delaySamples;
+        const uint32_t capacity = desc->capacityFrames;
         if (capacity > 0 && delay < capacity) {
-            float* const ring = state.compensationBuffer;
+            float* const ring = desc->buffer;
             double* dOut = buffer.data();
+            uint32_t writePos = comp->compensationWritePos;
             for (uint32_t k = 0; k < numFrames; ++k) {
-                const uint32_t writePos = state.compensationWritePos;
                 const uint32_t readPos = (writePos + capacity - delay) % capacity;
 
                 ring[writePos * 2] = static_cast<float>(dOut[k * 2]);
@@ -2386,8 +2394,23 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 dOut[k * 2] = static_cast<double>(ring[readPos * 2]);
                 dOut[k * 2 + 1] = static_cast<double>(ring[readPos * 2 + 1]);
 
-                state.compensationWritePos = (writePos + 1) % capacity;
+                writePos = (writePos + 1) % capacity;
             }
+            comp->compensationWritePos = writePos;
+        }
+    }
+
+    // RT acknowledgement: once this block is done with the descriptor it
+    // observed, publish that generation to the slot. Control acquire-loads this
+    // before reclaiming retired generations, so no buffer is freed while an
+    // in-flight RT block could still be reading it. Monotonic, and a relaxed
+    // read is enough here because ack only moves forward when the descriptor
+    // generation does (control publishes ascending generations).
+    if (comp != nullptr) {
+        const uint32_t observed = desc ? desc->generation : 0;
+        const uint32_t acked = comp->ackedGeneration.load(std::memory_order_relaxed);
+        if (observed > acked) {
+            comp->ackedGeneration.store(observed, std::memory_order_release);
         }
     }
 
@@ -2784,14 +2807,19 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                      audibleEligible);
 }
 
-void AudioEngine::prepareCompensationRing(TrackRTState& state) {
+void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples) {
     // Control thread only. Never called from the audio callback.
     //
-    // The ring is allocated at its FINAL size the first time a track needs one,
-    // and never reallocated. That is the whole safety argument: the pointer is
-    // published exactly once per track and never republished, so there is no
-    // replacement for an in-flight RT block to race against and nothing to
-    // retire.
+    // Publish-replacement protocol (PR #730 follow-up): every call publishes a
+    // BRAND-NEW immutable descriptor + zeroed ring, then retires the previous
+    // generation. There is deliberately no in-place reset of an already-
+    // published buffer: fill_n / cursor-zeroing against live ring storage was
+    // the race the CodeRabbit finding flagged. "Reset" is now replacement.
+    //
+    // Retirement rule: publish N -> RT consumes N -> RT acks N -> only then may
+    // control reclaim anything retired behind N. A retired descriptor keeps its
+    // own buffer alive until the RT thread acknowledges a newer generation, so
+    // no in-flight RT block can ever read freed or half-cleared memory.
     //
     // An earlier revision of this PR sized the ring to the delay and grew it on
     // demand, which reintroduced exactly that hazard — a second growth could free
@@ -2808,21 +2836,47 @@ void AudioEngine::prepareCompensationRing(TrackRTState& state) {
     constexpr uint32_t kCompensationFrames = 16384;
     const size_t samples = static_cast<size_t>(kCompensationFrames) * 2;
 
-    if (!state.compensationOwned) {
-        state.compensationOwned = std::make_unique<float[]>(samples);
-        std::fill_n(state.compensationOwned.get(), samples, 0.0f);
-        // Capacity first, pointer last: a non-null buffer is the readiness signal
-        // the RT guard keys on, so it must not become visible ahead of the
-        // capacity that bounds it.
-        state.compensationCapacityFrames = kCompensationFrames;
-        state.compensationBuffer = state.compensationOwned.get();
-    } else {
-        // v1 reset-on-delay-change behaviour, applied to the already-published ring.
-        std::fill_n(state.compensationBuffer, samples, 0.0f);
+    auto& slot = state.compensation;
+    if (!slot) {
+        slot = std::make_unique<TrackCompensationState>();
     }
 
-    state.compensationWritePos = 0;
-    state.compensationReadPos = 0;
+    // Same delay as the current publication: nothing to do. Keeps the common
+    // unchanged-recompute path allocation-free and ack-free.
+    if (slot->currentDesc && slot->currentDesc->delaySamples == delaySamples) {
+        return;
+    }
+
+    auto newDesc = std::make_unique<CompensationRingDescriptor>();
+    newDesc->generation = slot->nextGeneration++;
+    newDesc->delaySamples = delaySamples;
+    if (delaySamples > 0) {
+        newDesc->capacityFrames = kCompensationFrames;
+        newDesc->ownedBuffer = std::unique_ptr<float[]>(new float[samples]());
+        newDesc->buffer = newDesc->ownedBuffer.get();
+    }
+
+    // Retire the previous generation (if any). The retired descriptor keeps its
+    // buffer; it is reclaimed once RT acks a newer generation, below.
+    if (slot->currentDesc) {
+        slot->retired.push_back(std::move(slot->currentDesc));
+    }
+
+    // Publish: the descriptor is fully constructed and immutable before its
+    // pointer becomes visible, and RT reads everything from this one pointer,
+    // so the tuple {buffer, capacity, delay, generation} is always coherent.
+    slot->published.store(newDesc.get(), std::memory_order_release);
+    slot->currentDesc = std::move(newDesc);
+
+    // Reclaim generations the RT thread has acknowledged consuming. Anything
+    // retired behind the acked generation can no longer be referenced by an
+    // in-flight block (RT acks only after its consuming block has finished).
+    const uint32_t ackedGen = slot->ackedGeneration.load(std::memory_order_acquire);
+    auto it = std::remove_if(slot->retired.begin(), slot->retired.end(),
+                             [ackedGen](const std::unique_ptr<CompensationRingDescriptor>& d) {
+                                 return d->generation < ackedGen;
+                             });
+    slot->retired.erase(it, slot->retired.end());
 }
 
 TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
@@ -3650,15 +3704,17 @@ void AudioEngine::calculateLatencyCompensation() {
         const auto& sol = topology.nodes[n];
 
         auto& rtState = rtStates[trackIdx];
-        const uint32_t prevDelay = rtState.compensationDelaySamples;
+        const uint32_t prevDelay =
+            (rtState.compensation && rtState.compensation->currentDesc)
+                ? rtState.compensation->currentDesc->delaySamples
+                : 0u;
         rtState.pluginLatencySamples = sol.intrinsicLatency;
 
-        // Ring BEFORE delay, deliberately. The RT path gates on
-        // compensationDelaySamples > 0 and then uses the buffer, so publishing a
-        // nonzero delay before the ring exists leaves a window where RT sees a
-        // delay it cannot honour and silently skips a block of compensation. The
-        // old inline array could not expose that window because it always
-        // existed; a pointer can, so the ordering is now load-bearing.
+        // Publish a new compensation generation whenever the applied delay
+        // changes. The descriptor + zeroed ring are published atomically (see
+        // prepareCompensationRing): RT reads the whole tuple through one
+        // pointer, so a nonzero delay can never be observed ahead of its ring.
+        // Publication is replacement, never in-place reset of a live ring.
         //
         // Prepared on both copies: renderGraph() reads through
         // ensureTrackState() -> m_trackState, while the per-edge pass below
@@ -3667,21 +3723,18 @@ void AudioEngine::calculateLatencyCompensation() {
         // v1 parity: the ring is also reset when the delay changes. P6 (G3
         // smooth recompute) will replace that with a sample-hold / crossfade
         // migration.
-        if (sol.outputCompensationSamples != prevDelay && sol.outputCompensationSamples > 0) {
-            prepareCompensationRing(rtState);
+        if (sol.outputCompensationSamples != prevDelay) {
+            prepareCompensationRing(rtState, sol.outputCompensationSamples);
             if (trackIdx < m_trackState.size()) {
-                prepareCompensationRing(m_trackState[trackIdx]);
+                prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples);
             }
         }
-
-        rtState.compensationDelaySamples = sol.outputCompensationSamples;
 
         // Mirror to m_trackState so renderGraph() (which reads through
         // ensureTrackState() -> m_trackState) observes the same values.
         if (trackIdx < m_trackState.size()) {
             auto& goldenState = m_trackState[trackIdx];
             goldenState.pluginLatencySamples = sol.intrinsicLatency;
-            goldenState.compensationDelaySamples = sol.outputCompensationSamples;
         }
     }
 
@@ -3846,7 +3899,37 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     const auto& state = rtStates[trackIndex];
     snap.valid = true;
     snap.pluginLatencySamples = state.pluginLatencySamples;
-    snap.outputCompensationSamples = state.compensationDelaySamples;
+
+    // writePos is updated on m_trackState by the RT thread each block.
+    // m_graphStates edge delays do not have double-buffered EdgeDelayState
+    // objects (see step 4 notes); their writePos is stale, so we overlay
+    // from m_trackState when available.
+    const auto* goldenState = (trackIndex < m_trackState.size()) ? &m_trackState[trackIndex] : nullptr;
+
+    // The compensation delay is no longer a scalar field: it lives inside the
+    // published immutable descriptor (see TrackCompensationState), the same
+    // pointer the RT path acquire-loads. Expose generation/ack too so tests and
+    // tooling can observe the retirement protocol's progress.
+    //
+    // The RT thread reads and acks only the m_trackState (golden) compensation
+    // slot; the m_graphStates copy read above is never acted on by the RT path
+    // (same reason the edge writePos is overlaid below). Prefer the golden
+    // descriptor when available so all four fields come from one coherent view.
+    if (goldenState && goldenState->compensation) {
+        const auto* desc = goldenState->compensation->published.load(std::memory_order_acquire);
+        if (desc) {
+            snap.outputCompensationSamples = desc->delaySamples;
+            snap.outputCompensationGeneration = desc->generation;
+        }
+        snap.outputCompensationAckedGeneration =
+            goldenState->compensation->ackedGeneration.load(std::memory_order_acquire);
+    } else if (state.compensation) {
+        const auto* desc = state.compensation->published.load(std::memory_order_acquire);
+        if (desc) {
+            snap.outputCompensationSamples = desc->delaySamples;
+            snap.outputCompensationGeneration = desc->generation;
+        }
+    }
     // Report the global toggle, not TrackRTState::compensationEnabled. That
     // per-track field is declared "can be disabled per-track" but nothing ever
     // writes it, so it is pinned at its `true` default; forwarding it would
@@ -3854,12 +3937,6 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     // the engine-wide toggle is off. Until per-track enablement actually
     // exists, the global flag is the only honest answer.
     snap.compensationEnabled = m_latencyCompensationEnabled;
-
-    // writePos is updated on m_trackState by the RT thread each block.
-    // m_graphStates edge delays do not have double-buffered EdgeDelayState
-    // objects (see step 4 notes); their writePos is stale, so we overlay
-    // from m_trackState when available.
-    const auto* goldenState = (trackIndex < m_trackState.size()) ? &m_trackState[trackIndex] : nullptr;
 
     // Overlay writePos from m_trackState where the RT thread updates it.
     auto fillSlot = [](const std::unique_ptr<EdgeDelayState>& slotPtr) -> TrackEdgeDelaySnapshot::EdgeSlotSnapshot {
@@ -3902,9 +3979,16 @@ void AudioEngine::clearAppliedLatencyCompensation() {
     // The ring-buffer cursors are deliberately left alone — the apply pass
     // resets them whenever a delay changes from zero to non-zero, so a
     // re-enable starts from silence without extra RT-visible writes here.
-    auto clearStates = [](std::vector<TrackRTState>& states) {
+    auto clearStates = [this](std::vector<TrackRTState>& states) {
         for (auto& state : states) {
-            state.compensationDelaySamples = 0;
+            // Publish a zero-delay generation so the RT path stops compensating
+            // through the normal atomic path (replacement, never a plain write).
+            // prepareCompensationRing no-ops when the published delay is already
+            // zero, so re-clearing is cheap. Only publish when a slot exists:
+            // a track that never had a slot has nothing published to withdraw.
+            if (state.compensation) {
+                prepareCompensationRing(state, 0);
+            }
             if (state.mainOutEdgeDelay) {
                 state.mainOutEdgeDelay->compensationSamples.store(0, std::memory_order_release);
             }

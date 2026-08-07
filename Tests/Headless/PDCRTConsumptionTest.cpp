@@ -19,6 +19,7 @@
 #include "Core/AudioEngine.h"
 #include "Core/MixerChannel.h"
 #include "Core/AudioGraph.h"
+#include "Core/AudioGraphBuilder.h"
 #include "Models/TrackManager.h"
 #include "Plugin/EffectChain.h"
 
@@ -80,6 +81,10 @@ struct Fixture {
     }
 
     MixerChannel* addTrack(const std::string& name) { return trackManager->addChannel(name); }
+
+    // Publish a real RT graph so renderGraph() iterates actual tracks and the
+    // compensation rings are consumed by mixAndMeterTrack().
+    void publishGraph() { engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager)); }
 
     void renderBlocks(uint32_t n) {
         for (uint32_t b = 0; b < n; ++b) {
@@ -229,6 +234,64 @@ void testRTPathBufferLayoutInvariants() {
     EXPECT_TRUE(cap >= fastSlot.compensationSamples + kBufferFrames);
 }
 
+void testCompensationRingRetirementProtocol() {
+    std::printf("[PDCRTConsumptionTest] ring generations: publish/ack monotonic, retired generations drained on ack...\n");
+    Fixture fx;
+    auto* latent = fx.addTrack("latent");
+    auto* dry = fx.addTrack("dry");
+
+    // dry is an audible source with no plugin, aligned against a latent sibling.
+    // Solver math (matches PDCSolverPurityTest flat case): maxAlignment = 256,
+    // dry's totalPathLatency = 0 => dry gets outputCompensationSamples = 256.
+    auto latentPlug = std::make_shared<PDCTest::MockLatencyPlugin>(256, "LatentPlugin");
+    EXPECT_TRUE(latent->getEffectChain().insertPlugin(0, latentPlug));
+    fx.publishGraph();
+
+    // First solve publishes generation 1. No RT blocks yet, so ack stays 0.
+    fx.engine.calculateLatencyCompensation();
+    auto snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_TRUE(snap.valid);
+    EXPECT_TRUE(snap.outputCompensationSamples > 0);
+    EXPECT_EQ(snap.outputCompensationGeneration, 1u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 0u);
+
+    // Render one block: RT consumes gen 1 and acks it. The generated ring is
+    // still the current descriptor (nothing retired yet), so ack == published.
+    fx.renderBlocks(1);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 1u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u);
+
+    // Change the delay: publish gen 2, retiring gen 1's ring. RT has NOT yet
+    // consumed gen 2, so ack stays at 1 and gen 1 must remain held (retained,
+    // not leaked). We cannot observe the internal retired-vector from here, but
+    // the externally visible contract is: ack must lag published until RT runs.
+    latentPlug->setLatencySamples(512);
+    fx.engine.calculateLatencyCompensation();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u);
+
+    // Let RT consume gen 2: ack must catch up to published.
+    fx.renderBlocks(1);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+
+    // A few more generations, alternating publish/consume: generation must be
+    // monotonic and ack must stay in lockstep with what RT has actually seen.
+    latentPlug->setLatencySamples(384);
+    fx.engine.calculateLatencyCompensation();
+    fx.renderBlocks(1);
+    latentPlug->setLatencySamples(768);
+    fx.engine.calculateLatencyCompensation();
+    fx.renderBlocks(1);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 4u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 4u);
+    EXPECT_TRUE(snap.outputCompensationAckedGeneration <= snap.outputCompensationGeneration);
+}
+
 } // namespace
 
 int main() {
@@ -238,6 +301,7 @@ int main() {
     testRTPathStableAcrossRecomputes();
     testCompensationGoesToZeroSafely();
     testRTPathBufferLayoutInvariants();
+    testCompensationRingRetirementProtocol();
 
     if (g_failures == 0) {
         std::printf("=== PDCRTConsumptionTest: all checks passed ===\n");
