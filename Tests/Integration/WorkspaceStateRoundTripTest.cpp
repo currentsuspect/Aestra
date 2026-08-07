@@ -109,6 +109,10 @@ int main() {
         ui.viewFocus = "pianoRoll";
         ui.pianoRollOpen = true;
         const std::string contents = serializeWithUI(makeManager(), ui);
+        const auto focusKey = contents.find("\"viewFocus\"");
+        require(focusKey != std::string::npos &&
+                    contents.find("\"pianoRoll\"", focusKey) != std::string::npos,
+                "legacy fixture must contain viewFocus = pianoRoll before load");
         const auto path = tempDir / "legacy-pianoRoll-focus.aes";
         require(ProjectSerializer::writeAtomically(path.string(), contents), "atomic write failed");
 
