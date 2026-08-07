@@ -39,6 +39,7 @@
 #include <intrin.h>
 #endif
 #include <map>
+#include <thread>
 #include <unordered_map>
 
 // Denormal protection macros
@@ -678,6 +679,54 @@ void AudioEngine::drainDeferredResourcesForShutdown() {
     }
 
     GarbageCollector::instance().drainUntilStable(8);
+}
+
+void AudioEngine::reclaimRetiredCompensationWhenStopped() {
+    if (reportRealtimeMisuse("AudioEngine::reclaimRetiredCompensationWhenStopped")) {
+        return;
+    }
+
+    // Quiescence proof: wait (bounded) until no renderGraph() is in flight.
+    // The caller's contract is "device stream stopped and joined", so in the
+    // steady state this is already satisfied; the wait only covers a callback
+    // that was mid-block when the stream stop was requested. A block is at
+    // most kMaxBufferFrames (default 4096) samples, so 10 ms is ample.
+    constexpr uint32_t kReclaimWaitIters = 100;
+    constexpr std::chrono::nanoseconds kReclaimWaitStep{1000000}; // 1 ms
+    for (uint32_t i = 0; i < kReclaimWaitIters && m_rtCallbackDepth.load(std::memory_order_acquire) != 0; ++i) {
+        std::this_thread::sleep_for(kReclaimWaitStep);
+    }
+    if (m_rtCallbackDepth.load(std::memory_order_acquire) != 0) {
+        // A callback is still in flight. Do NOT reclaim: freeing a ring it
+        // could still read would be the exact race the retirement protocol
+        // exists to prevent. Fall back to the ack-gated path (does nothing
+        // while stopped, which is acceptable), and leave the rings in place
+        // for a later reclaim or shutdown drain.
+        return;
+    }
+
+    // Quiescent: no live path can read any compensation ring. Reclaim every
+    // retired generation unconditionally, on both the golden m_trackState and
+    // the double-buffered graph copies (all of which receive publications from
+    // the apply pass), and converge the ack counters to the current generation
+    // so subsequent polls report a fully-consumed state.
+    auto drainTrack = [](TrackRTState& state) {
+        if (!state.compensation) {
+            return;
+        }
+        state.compensation->retired.clear();
+        if (state.compensation->currentDesc) {
+            state.compensation->ackedGeneration.store(state.compensation->currentDesc->generation, std::memory_order_release);
+        }
+    };
+    for (auto& state : m_trackState) {
+        drainTrack(state);
+    }
+    for (auto& graphState : m_graphStates) {
+        for (auto& state : graphState.trackStates) {
+            drainTrack(state);
+        }
+    }
 }
 
 void AudioEngine::resetCachedSamplerVoicesRt() noexcept {
@@ -1970,6 +2019,12 @@ void AudioEngine::loudnessWorkerLoop() {
 
 void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset,
                               uint64_t patternFrameStart) {
+    // Compensation rings are read exclusively inside renderGraph (the live
+    // path). Mark the whole call in-flight so the control thread can PROVE
+    // quiescence before reclaiming retired generations (see
+    // reclaimRetiredCompensationWhenStopped).
+    RealtimeCallbackDepthGuard callbackDepthGuard(*this);
+
     bool srcActiveThisBlock = false;
     constexpr uint32_t numChannels = kInternalRenderChannels;
 
@@ -3923,12 +3978,23 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
         }
         snap.outputCompensationAckedGeneration =
             goldenState->compensation->ackedGeneration.load(std::memory_order_acquire);
+        // Retired queue depth on the golden slot (control-owned vector; the RT
+        // thread never touches it). Lets tests and tooling observe the
+        // retirement protocol draining.
+        snap.outputCompensationRetiredGenerationCount =
+            static_cast<uint32_t>(goldenState->compensation->retired.size());
     } else if (state.compensation) {
         const auto* desc = state.compensation->published.load(std::memory_order_acquire);
         if (desc) {
             snap.outputCompensationSamples = desc->delaySamples;
             snap.outputCompensationGeneration = desc->generation;
         }
+        // Mirror path: no golden RT slot to read an ack from. 0 means "no RT
+        // acknowledgement observed" — generations start at 1, so 0 is outside
+        // the valid ack range. Explicit so consumers can rely on the meaning.
+        snap.outputCompensationAckedGeneration = 0;
+        snap.outputCompensationRetiredGenerationCount =
+            static_cast<uint32_t>(state.compensation->retired.size());
     }
     // Report the global toggle, not TrackRTState::compensationEnabled. That
     // per-track field is declared "can be disabled per-track" but nothing ever

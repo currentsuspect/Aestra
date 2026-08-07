@@ -112,6 +112,10 @@ void testRTPathDoesNotCrashWithCompensatedSend() {
     send.sidechainOnly = false;
     source->addSend(send);
 
+    // Publish the RT graph so renderGraph() actually iterates the tracks and
+    // mixAndMeterTrack() consumes the compensation rings.
+    fx.publishGraph();
+
     fx.engine.calculateLatencyCompensation();
 
     // Confirm a non-trivial send-edge compensation was published before we
@@ -138,6 +142,8 @@ void testRTPathStableAcrossRecomputes() {
     send.gain = 1.0f;
     send.sidechainOnly = false;
     source->addSend(send);
+
+    fx.publishGraph();
 
     // Drive several rounds of: render -> change plugin latency -> recompute.
     // Each recompute potentially grows the per-send buffer; the retirement
@@ -170,6 +176,8 @@ void testCompensationGoesToZeroSafely() {
     send.gain = 1.0f;
     send.sidechainOnly = false;
     source->addSend(send);
+
+    fx.publishGraph();
 
     fx.engine.calculateLatencyCompensation();
     fx.renderBlocks(8);
@@ -254,42 +262,108 @@ void testCompensationRingRetirementProtocol() {
     EXPECT_TRUE(snap.outputCompensationSamples > 0);
     EXPECT_EQ(snap.outputCompensationGeneration, 1u);
     EXPECT_EQ(snap.outputCompensationAckedGeneration, 0u);
+    // Nothing retired yet: gen 1 is still the current descriptor.
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 0u);
 
-    // Render one block: RT consumes gen 1 and acks it. The generated ring is
-    // still the current descriptor (nothing retired yet), so ack == published.
+    // Render one block: RT consumes gen 1 and acks it.
     fx.renderBlocks(1);
     snap = fx.engine.getTrackEdgeDelaySnapshot(1);
     EXPECT_EQ(snap.outputCompensationGeneration, 1u);
     EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u);
 
-    // Change the delay: publish gen 2, retiring gen 1's ring. RT has NOT yet
+// Change the delay: publish gen 2, retiring gen 1's ring. RT has NOT yet
     // consumed gen 2, so ack stays at 1 and gen 1 must remain held (retained,
-    // not leaked). We cannot observe the internal retired-vector from here, but
-    // the externally visible contract is: ack must lag published until RT runs.
+    // not leaked). The retired-queue depth is now observable.
     latentPlug->setLatencySamples(512);
     fx.engine.calculateLatencyCompensation();
     snap = fx.engine.getTrackEdgeDelaySnapshot(1);
     EXPECT_EQ(snap.outputCompensationGeneration, 2u);
     EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 1u);
 
-    // Let RT consume gen 2: ack must catch up to published.
+    // Let RT consume gen 2: ack advances, but reclaiming is DEFERRED to the
+    // next publish (the drain runs inside prepareCompensationRing, on the
+    // publish path, not the ack path), so the queue still holds gen 1.
     fx.renderBlocks(1);
     snap = fx.engine.getTrackEdgeDelaySnapshot(1);
     EXPECT_EQ(snap.outputCompensationGeneration, 2u);
     EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 1u);
 
-    // A few more generations, alternating publish/consume: generation must be
-    // monotonic and ack must stay in lockstep with what RT has actually seen.
+    // The gen-3 publish drains behind the ack: gen 1 (< 2) is reclaimed and
+    // exactly the just-retired gen 2 remains.
     latentPlug->setLatencySamples(384);
     fx.engine.calculateLatencyCompensation();
-    fx.renderBlocks(1);
-    latentPlug->setLatencySamples(768);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 3u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 1u);
+
+    // Zero-delay transition: publishing a 0-delay solution still emits a new
+    // generation (delay dropped 384 -> 0), so samples read 0 while ack lags.
+    // Gens 2 and 3 are both floating behind the ack at this point.
+    latentPlug->setLatencySamples(0);
     fx.engine.calculateLatencyCompensation();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 4u);
+    EXPECT_EQ(snap.outputCompensationSamples, 0u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 2u);
+
+    // RT consumes the zero-delay gen 4: ack converges (reclamation is still
+    // deferred to the next publish, so the two queued generations remain).
     fx.renderBlocks(1);
     snap = fx.engine.getTrackEdgeDelaySnapshot(1);
     EXPECT_EQ(snap.outputCompensationGeneration, 4u);
     EXPECT_EQ(snap.outputCompensationAckedGeneration, 4u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 2u);
+
+    // Snapping back to 384 publishes gen 5, which drains behind ack==4:
+    // gens 2 and 3 are reclaimed, leaving just the freshly retired gen 4.
+    latentPlug->setLatencySamples(384);
+    fx.engine.calculateLatencyCompensation();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 5u);
+    EXPECT_EQ(snap.outputCompensationSamples, 384u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 4u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 1u);
+
+    // The quiescent reclaim waits for any in-flight renderGraph to finish and
+    // then reclaims every retired generation, converging ack to published.
+    fx.engine.reclaimRetiredCompensationWhenStopped();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 5u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 5u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 0u);
+
+    // After reclamation the rings still work: one more publish/render cycle
+    // behaves identically — the correct drain was cleared but the slot lives.
+    latentPlug->setLatencySamples(768);
+    fx.engine.calculateLatencyCompensation();
+    fx.renderBlocks(1);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 6u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 6u);
     EXPECT_TRUE(snap.outputCompensationAckedGeneration <= snap.outputCompensationGeneration);
+
+    // The reviewer-flagged hazard: MANY recomputes while the stream is stopped
+    // must not pile up one 128 KiB ring per recompute indefinitely. Each
+    // publish while stopped retires a generation RT cannot ack, so the queue
+    // grows by the number of recomputes; the quiescent path must drain ALL.
+    for (uint32_t i = 0; i < 5; ++i) {
+        latentPlug->setLatencySamples(128u + i * 64u);
+        fx.engine.calculateLatencyCompensation();
+    }
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 11u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 6u);
+    // Gens 6..10 are all held behind the frozen ack (one per recompute).
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 5u);
+
+    fx.engine.reclaimRetiredCompensationWhenStopped();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 11u);
+    EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 0u);
 }
 
 } // namespace

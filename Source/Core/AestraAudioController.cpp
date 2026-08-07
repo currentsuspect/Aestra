@@ -399,6 +399,12 @@ bool AestraAudioController::startStream() {
 
 void AestraAudioController::stopStream() {
     if (m_audioManager) m_audioManager->stopStream();
+    // Stream stopped + joined: no renderGraph can be in flight, so reclaim
+    // compensation rings retired while the transport was stopped (their ack
+    // counters cannot advance without a live callback).
+    if (m_audioEngine) {
+        m_audioEngine->reclaimRetiredCompensationWhenStopped();
+    }
     m_isAudioRunning = false;
     m_rtTrackManager.store(nullptr, std::memory_order_release);
     m_rtPreviewEngine.store(nullptr, std::memory_order_release);

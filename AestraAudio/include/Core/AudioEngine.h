@@ -110,6 +110,25 @@ public:
     void drainDeferredResourcesForShutdown();
 
     /**
+     * @brief Reclaim compensation rings retired while the audio stream was
+     *        stopped (control thread only).
+     *
+     * The normal retirement drain is ack-gated: control only frees a retired
+     * ring once RT has acknowledged a newer generation. While the stream is
+     * stopped RT never runs, so ackedGeneration never advances and every
+     * latency recompute would otherwise retain its 128 KiB ring indefinitely.
+     * This path PROVES quiescence first — it waits (bounded) until no
+     * processBlock is in flight (engine-wide RT callback depth) — then
+     * reclaims every retired ring unconditionally and converges the ack to the
+     * current generation.
+     *
+     * Call after stopping/joining the device stream (e.g. from the controller
+     * after AudioDeviceManager::stopStream, and at shutdown). Safe to call
+     * repeatedly; cheap when nothing is pending.
+     */
+    void reclaimRetiredCompensationWhenStopped();
+
+    /**
      * @brief Immediate panic/reset (Double Stop).
      * Clears all buffers and resets plugin states. Main Thread.
      */
@@ -295,6 +314,9 @@ public:
         /// Highest compensation generation the RT thread has acknowledged
         /// consuming. Control may not reclaim a retired ring behind this.
         uint32_t outputCompensationAckedGeneration{0};
+        /// Generations currently held in the retired queue (published but not
+        /// yet acked). Dropping to 0 proves the retirement queue drained.
+        uint32_t outputCompensationRetiredGenerationCount{0};
         /// Engine-wide latency compensation toggle. Per-track enablement is not
         /// implemented, so this is the same value for every track index.
         bool compensationEnabled{false};
@@ -826,6 +848,29 @@ private:
     std::atomic<uint64_t> m_metronomeCountInSamplePos{0};
     std::atomic<uint32_t> m_pendingMetronomeCountInBeats{0};
     std::atomic<bool> m_pendingMetronomeCountInStop{false};
+
+    // Engine-wide realtime callback depth. Incremented on renderGraph entry
+    // (the only place compensation rings are read) and decremented on exit
+    // (RAII, covers all return paths). Control thread, via
+    // reclaimRetiredCompensationWhenStopped(), waits for this to reach 0 to
+    // PROVE no callback can still be reading compensation rings before it
+    // reclaims retired generations that ackedGeneration never advanced past.
+    std::atomic<uint32_t> m_rtCallbackDepth{0};
+
+    // RAII depth guard for renderGraph; increments on entry, decrements on all
+    // exit paths (including early returns). Cheap (relaxed fetch-add).
+    class RealtimeCallbackDepthGuard {
+    public:
+        explicit RealtimeCallbackDepthGuard(AudioEngine& engine) noexcept : m_engine(engine) {
+            m_engine.m_rtCallbackDepth.fetch_add(1, std::memory_order_relaxed);
+        }
+        ~RealtimeCallbackDepthGuard() noexcept { m_engine.m_rtCallbackDepth.fetch_sub(1, std::memory_order_relaxed); }
+        RealtimeCallbackDepthGuard(const RealtimeCallbackDepthGuard&) = delete;
+        RealtimeCallbackDepthGuard& operator=(const RealtimeCallbackDepthGuard&) = delete;
+
+    private:
+        AudioEngine& m_engine;
+    };
 
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};

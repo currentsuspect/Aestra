@@ -130,7 +130,7 @@ struct EdgeDelayState {
 /**
  * @brief One immutable compensation-ring publication (PR #730 follow-up).
  *
- * This is the coherent snapshot unit: RT acquire-loads the `publisher`
+ * This is the coherent snapshot unit: RT acquire-loads the `published`
  * pointer once per block and reads every field from the single descriptor it
  * lands on. Separate atomics (like EdgeDelayState's compensationSamples /
  * bufferPtr / capacityMask) cannot be read as one consistent tuple — a
@@ -142,6 +142,8 @@ struct CompensationRingDescriptor {
     CompensationRingDescriptor() = default;
     CompensationRingDescriptor(const CompensationRingDescriptor&) = delete;
     CompensationRingDescriptor& operator=(const CompensationRingDescriptor&) = delete;
+    CompensationRingDescriptor(CompensationRingDescriptor&&) = delete;
+    CompensationRingDescriptor& operator=(CompensationRingDescriptor&&) = delete;
 
     /** @brief Monotonic per-publish counter. RT acks the generation it observed. */
     uint32_t generation{0};
@@ -190,7 +192,16 @@ struct TrackCompensationState {
     std::atomic<uint32_t> ackedGeneration{0};
 
     /** @brief RT-side write cursor (frames). RT updates it each block; control never
-     *         writes it. Plain, not atomic: single-owner (RT). */
+     *         writes it. Plain, not atomic: single-owner (RT).
+     *
+     * Deliberately lives on the slot (state object) rather than in the
+     * descriptor, so it survives descriptor replacement: when control publishes a
+     * new generation, RT keeps cycling the same cursor into the new ring at the
+     * same phase. Copying the cursor into a fresh descriptor per publish would
+     * both mutate an "immutable" unit and lose the position continuity across
+     * migrations; keeping it slot-owned means a mid-block publication cannot
+     * split-cursor a mixed buffer. Control never touches it, so no atomic fence
+     * is needed. */
     uint32_t compensationWritePos{0};
 
     // Control-owned. RT never touches these.
