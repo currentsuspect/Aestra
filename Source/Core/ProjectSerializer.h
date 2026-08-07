@@ -71,8 +71,11 @@ public:
         // files saved before they existed load with the historical defaults
         // (Timeline workspace, overlays closed) — see the loader's has() guards.
         // `viewFocus` matches WorkspaceFocusModel::workspaceFocusName
-        // ("arsenal|timeline|audition|routingMap|pianoRoll"); empty means the
-        // loader keeps the default Timeline focus.
+        // ("arsenal|timeline|audition|routingMap"); empty means the loader
+        // keeps the default Timeline focus. The piano roll is a contextual
+        // editor, not a workspace: its remembered-open flag is `pianoRollOpen`,
+        // and the legacy "pianoRoll" focus value (phase-3 builds) is rejected
+        // by the loader and degrades to Timeline.
         std::string viewFocus;
         bool pianoRollOpen{false};
         bool sequencerOpen{false};

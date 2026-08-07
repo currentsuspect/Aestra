@@ -2166,6 +2166,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
     ViewFocus previousFocus = m_viewFocus;
+    const bool focusChanged = (focus != previousFocus);
 
     m_viewFocus = focus;
 
@@ -2193,7 +2194,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
     // Handle mode transitions
     if (m_audioEngine) {
         // === ENTERING ARSENAL ===
-        if (focus == ViewFocus::Arsenal) {
+        if (focusChanged && focus == ViewFocus::Arsenal) {
             stopPatternClipPreview(false);
             // Use actual pattern length from the active pattern
             double lengthBeats = getActivePatternLengthBeats();
@@ -2219,7 +2220,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_trackManagerUI->setVisible(true);
         }
         // === ENTERING TIMELINE ===
-        else if (focus == ViewFocus::Timeline) {
+        else if (focusChanged && focus == ViewFocus::Timeline) {
             stopPatternClipPreview(false);
             // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
             // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
@@ -2264,6 +2265,28 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             // Hide Audition panel if it exists (returning from Audition)
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        // Self-transitions refresh UI only. Engine, transport, preview,
+        // scheduler, and position state must remain untouched.
+        else if (!focusChanged && focus == ViewFocus::Arsenal) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(true);
+                m_trackManagerUI->setFollowPlayhead(false);
+            }
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        else if (!focusChanged && focus == ViewFocus::Timeline) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(false);
+                m_trackManagerUI->setFollowPlayhead(true);
+            }
             if (m_auditionPanel)
                 m_auditionPanel->setVisible(false);
             if (m_trackManagerUI)
@@ -2353,17 +2376,6 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Audition Mode");
         }
-        // === ENTERING PIANO ROLL ===
-        else if (focus == ViewFocus::PianoRoll) {
-            // PianoRoll is an ordinary workspace: pure visibility change, no
-            // transport/engine mutation (no stop/play/panic/position/mode
-            // changes, no pattern-clip-preview teardown, no scheduled-instance
-            // clearing). Overlay visibility (including the piano roll itself)
-            // is derived from remembered-open state by the global block below.
-            if (m_trackManagerUI)
-                m_trackManagerUI->setVisible(true);
-            AESTRA_LOG_DEBUG("[ViewFocus] Entering Piano Roll");
-        }
         // === ENTERING ROUTING MAP ===
         else if (focus == ViewFocus::RoutingMap) {
             // Routing map is an overlay; preserve existing DAW state
@@ -2446,8 +2458,8 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     // Hot-swap playback on focus switch. Only Arsenal<->Timeline re-arms the
     // transport (pattern == arrangement); Audition and RoutingMap transitions
-    // and every ordinary workspace transition (incl. PianoRoll pairs) leave
-    // playback/scheduled-instances untouched.
+    // and every ordinary workspace transition leave playback/scheduled-instances
+    // untouched.
     const auto transitionKind = WorkspaceFocusModel::classifyTransition(focus, previousFocus);
     if (wasPlaying && m_transportBar &&
         transitionKind == WorkspaceFocusModel::WorkspaceTransitionKind::PlaybackHotSwap) {
@@ -2924,7 +2936,7 @@ ViewFocus AestraContent::resolveTransportFocus() const {
         case ViewFocus::Audition:
             return ViewFocus::Audition;
         default:
-            // Timeline and PianoRoll share the arrangement transport context.
+            // Timeline is the arrangement transport context.
             return ViewFocus::Timeline;
         }
     }
@@ -3204,12 +3216,10 @@ void AestraContent::openPatternInPianoRoll(PatternID patternId) {
     m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
     m_pianoRollPanel->loadPattern(patternId);
     setViewOpen(Audio::ViewType::PianoRoll, true);
-    // Contextual pattern navigation reaches the PianoRoll workspace through the
-    // same single control point as the segmented control. This is an ordinary
-    // (pure-visibility) transition: it never touches playback/engine state.
-    if (m_viewFocus != ViewFocus::PianoRoll) {
-        setViewFocus(ViewFocus::PianoRoll);
-    }
+    // The piano roll is a contextual editor, not a workspace: it opens inside
+    // the owning focus (Arsenal for pattern construction, Timeline for
+    // arrangement material) and keeps that focus. Closing it returns to the
+    // owning workspace. No transport/engine state is touched.
 }
 
 Aestra::Audio::UnitID AestraContent::resolveEditingUnitForPattern(PatternID patternId) const {
@@ -3309,7 +3319,18 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
         });
     }
     AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
-    // Ensure correct initial state now that engine is valid
+    // Timeline is already the default focus on first engine attachment. Since a
+    // focus self-transition is engine-idempotent, initialize that engine state
+    // explicitly before using setViewFocus() for the UI refresh.
+    if (m_audioEngine && m_viewFocus == ViewFocus::Timeline) {
+        m_audioEngine->setPatternPlaybackMode(false, 4.0);
+        m_audioEngine->setAuditionModeEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+            m_trackManager->setPosition(m_savedTimelinePosition);
+            m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+        }
+    }
     setViewFocus(ViewFocus::Timeline);
 }
 
@@ -4301,7 +4322,7 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 break;
             case ViewFocus::Timeline:
             default:
-                // PianoRoll shares the arrangement transport context.
+                // Timeline is the arrangement transport context.
                 transportFocus = ViewFocus::Timeline;
                 break;
             }

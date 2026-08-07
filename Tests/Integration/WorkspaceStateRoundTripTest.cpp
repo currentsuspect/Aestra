@@ -47,28 +47,28 @@ int main() {
         return tm;
     };
 
-    // --- Roundtrip: pianoRoll workspace + remembered-open overlays.
+    // --- Roundtrip: timeline workspace + remembered-open editor flags.
     {
         ProjectSerializer::UIState ui;
-        ui.viewFocus = "pianoRoll";
+        ui.viewFocus = "timeline";
         ui.pianoRollOpen = true;
         ui.sequencerOpen = true;
 
         const std::string contents = serializeWithUI(makeManager(), ui);
-        const auto path = tempDir / "pianoRoll-workspace.aes";
+        const auto path = tempDir / "timeline-editors.aes";
         require(ProjectSerializer::writeAtomically(path.string(), contents), "atomic write failed");
 
         auto tm = makeManager();
         const auto result = ProjectSerializer::load(path.string(), tm);
-        require(result.ok, "load failed for pianoRoll workspace file");
+        require(result.ok, "load failed for timeline editors file");
         require(result.ui.has_value(), "UIState missing from load result");
-        require(result.ui->viewFocus == "pianoRoll", "viewFocus did not roundtrip");
+        require(result.ui->viewFocus == "timeline", "viewFocus did not roundtrip");
         require(result.ui->pianoRollOpen, "pianoRollOpen did not roundtrip");
         require(result.ui->sequencerOpen, "sequencerOpen did not roundtrip");
     }
 
     // --- Roundtrip: every persisted focus name.
-    for (const std::string focusName : {"arsenal", "timeline", "audition", "routingMap", "pianoRoll"}) {
+    for (const std::string focusName : {"arsenal", "timeline", "audition", "routingMap"}) {
         ProjectSerializer::UIState ui;
         ui.viewFocus = focusName;
         const std::string contents = serializeWithUI(makeManager(), ui);
@@ -98,6 +98,30 @@ int main() {
                 "legacy file must not restore a workspace focus");
         require(!result.ui.has_value() || (!result.ui->pianoRollOpen && !result.ui->sequencerOpen),
                 "legacy file must keep overlays closed");
+    }
+
+    // --- Legacy phase-3 file: viewFocus "pianoRoll" must degrade, not resurrect.
+    {
+        // Serialize with the phase-3 protocol string, which the loader no
+        // longer recognizes as a workspace focus (the piano roll is now a
+        // contextual editor, not a workspace).
+        ProjectSerializer::UIState ui;
+        ui.viewFocus = "pianoRoll";
+        ui.pianoRollOpen = true;
+        const std::string contents = serializeWithUI(makeManager(), ui);
+        const auto focusKey = contents.find("\"viewFocus\"");
+        require(focusKey != std::string::npos &&
+                    contents.find("\"pianoRoll\"", focusKey) != std::string::npos,
+                "legacy fixture must contain viewFocus = pianoRoll before load");
+        const auto path = tempDir / "legacy-pianoRoll-focus.aes";
+        require(ProjectSerializer::writeAtomically(path.string(), contents), "atomic write failed");
+
+        auto tm = makeManager();
+        const auto result = ProjectSerializer::load(path.string(), tm);
+        require(result.ok, "legacy pianoRoll-focus file must load cleanly");
+        require(result.ui.has_value() && result.ui->viewFocus.empty(),
+                "legacy pianoRoll focus must be dropped (default Timeline)");
+        require(result.ui->pianoRollOpen, "remembered-open editor flag must survive alongside the dropped focus");
     }
 
     // --- Malformed focus name still restores flags (focus falls back to Timeline).
