@@ -2166,6 +2166,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
     ViewFocus previousFocus = m_viewFocus;
+    const bool focusChanged = (focus != previousFocus);
 
     m_viewFocus = focus;
 
@@ -2193,7 +2194,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
     // Handle mode transitions
     if (m_audioEngine) {
         // === ENTERING ARSENAL ===
-        if (focus == ViewFocus::Arsenal) {
+        if (focusChanged && focus == ViewFocus::Arsenal) {
             stopPatternClipPreview(false);
             // Use actual pattern length from the active pattern
             double lengthBeats = getActivePatternLengthBeats();
@@ -2219,7 +2220,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_trackManagerUI->setVisible(true);
         }
         // === ENTERING TIMELINE ===
-        else if (focus == ViewFocus::Timeline) {
+        else if (focusChanged && focus == ViewFocus::Timeline) {
             stopPatternClipPreview(false);
             // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
             // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
@@ -2264,6 +2265,28 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             // Hide Audition panel if it exists (returning from Audition)
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        // Self-transitions refresh UI only. Engine, transport, preview,
+        // scheduler, and position state must remain untouched.
+        else if (!focusChanged && focus == ViewFocus::Arsenal) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(true);
+                m_trackManagerUI->setFollowPlayhead(false);
+            }
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        else if (!focusChanged && focus == ViewFocus::Timeline) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(false);
+                m_trackManagerUI->setFollowPlayhead(true);
+            }
             if (m_auditionPanel)
                 m_auditionPanel->setVisible(false);
             if (m_trackManagerUI)
@@ -3296,7 +3319,18 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
         });
     }
     AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
-    // Ensure correct initial state now that engine is valid
+    // Timeline is already the default focus on first engine attachment. Since a
+    // focus self-transition is engine-idempotent, initialize that engine state
+    // explicitly before using setViewFocus() for the UI refresh.
+    if (m_audioEngine && m_viewFocus == ViewFocus::Timeline) {
+        m_audioEngine->setPatternPlaybackMode(false, 4.0);
+        m_audioEngine->setAuditionModeEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+            m_trackManager->setPosition(m_savedTimelinePosition);
+            m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+        }
+    }
     setViewFocus(ViewFocus::Timeline);
 }
 
