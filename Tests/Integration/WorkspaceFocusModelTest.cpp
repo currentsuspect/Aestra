@@ -18,8 +18,8 @@ void require(bool condition, const std::string& message) {
 void testSegmentMapping() {
     // Every segment index maps to the canonical focus, and every focus with a
     // segment round-trips back to the same index. RoutingMap owns no segment;
-    // the piano roll is a contextual editor, not a workspace, so it owns an
-    // index here either.
+    // the piano roll is a contextual editor, not a workspace, so it does not
+    // own an index here either.
     require(WorkspaceFocusModel::focusForSegmentIndex(0) == ViewFocus::Arsenal, "segment 0 must be Arsenal");
     require(WorkspaceFocusModel::focusForSegmentIndex(1) == ViewFocus::Timeline, "segment 1 must be Timeline");
     require(WorkspaceFocusModel::focusForSegmentIndex(2) == ViewFocus::Audition, "segment 2 must be Audition");
