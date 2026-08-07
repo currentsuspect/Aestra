@@ -313,6 +313,8 @@ public:
         uint32_t outputCompensationGeneration{0};
         /// Highest compensation generation the RT thread has acknowledged
         /// consuming. Control may not reclaim a retired ring behind this.
+        /// 0 means "no RT acknowledgement observed" (generations start at 1);
+        /// the mirror fallback path reports 0 explicitly, never a stale ack.
         uint32_t outputCompensationAckedGeneration{0};
         /// Generations currently held in the retired queue (published but not
         /// yet acked). Dropping to 0 proves the retirement queue drained.
@@ -855,16 +857,25 @@ private:
     // reclaimRetiredCompensationWhenStopped(), waits for this to reach 0 to
     // PROVE no callback can still be reading compensation rings before it
     // reclaims retired generations that ackedGeneration never advanced past.
+    //
+    // Memory ordering: the guard uses acquire-on-increment / release-on-
+    // decrement so the control thread's acquire-load of 0 synchronizes-with
+    // the releasing callback's entire critical section. Without that pairing,
+    // observing depth == 0 would not order the ring free after the callback's
+    // final ring access, and the reclaim would be a data race. On x86 this is
+    // free; on weaker ISAs it is one acquire and one release per block.
     std::atomic<uint32_t> m_rtCallbackDepth{0};
 
     // RAII depth guard for renderGraph; increments on entry, decrements on all
-    // exit paths (including early returns). Cheap (relaxed fetch-add).
+    // exit paths (including early returns). Acquire/release pairing (see
+    // m_rtCallbackDepth) is what makes the quiescence proof real; do not
+    // weaken to relaxed.
     class RealtimeCallbackDepthGuard {
     public:
         explicit RealtimeCallbackDepthGuard(AudioEngine& engine) noexcept : m_engine(engine) {
-            m_engine.m_rtCallbackDepth.fetch_add(1, std::memory_order_relaxed);
+            m_engine.m_rtCallbackDepth.fetch_add(1, std::memory_order_acquire);
         }
-        ~RealtimeCallbackDepthGuard() noexcept { m_engine.m_rtCallbackDepth.fetch_sub(1, std::memory_order_relaxed); }
+        ~RealtimeCallbackDepthGuard() noexcept { m_engine.m_rtCallbackDepth.fetch_sub(1, std::memory_order_release); }
         RealtimeCallbackDepthGuard(const RealtimeCallbackDepthGuard&) = delete;
         RealtimeCallbackDepthGuard& operator=(const RealtimeCallbackDepthGuard&) = delete;
 
