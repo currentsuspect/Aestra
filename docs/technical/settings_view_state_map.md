@@ -46,9 +46,9 @@ Read at `develop`, 2026-07-27.
 |---|---|
 | displayed | panel `isVisible()` |
 | editing | none — no transient edit state for views |
-| committed | `AestraContent::m_viewState.*Open` |
-| persistence | `Source/Core/UIState.h` — `browserVisible`, `mixerVisible` only |
-| runtime consumer | `setViewOpen` → `panel->setVisible()` |
+| committed | `AestraContent::m_viewState.*Open` plus `AestraContent::m_viewFocus` |
+| persistence | per-install `Source/Core/UIState.h` for `browserVisible` / `mixerVisible`; per-project `ProjectSerializer::UIState` for `viewFocus` / `pianoRollOpen` / `sequencerOpen` |
+| runtime consumer | `setViewOpen` / `setViewFocus`; project workspace state reapplied by `AestraApp::applyUIState` → `AestraContent::restoreWorkspaceState` |
 
 ### B1 — committed and displayed disagree, and the query reads whichever is handy
 
@@ -247,7 +247,7 @@ buckets are different work:
 | type | holds | persisted to |
 |---|---|---|
 | `Source/Core/UIState.h` | window geometry, browser width/visibility, mixer height/visibility, browser expanded folders, last path, timeline zoom + scroll | a global UI-state file, per install |
-| `ProjectSerializer::UIState` | settings-dialog visibility + active page, panel geometry (B2) | inside the `.aes` project file |
+| `ProjectSerializer::UIState` | settings-dialog visibility + active page, panel geometry (B2), active workspace (`viewFocus`), remembered-open piano roll and Arsenal overlay flags (`pianoRollOpen`, `sequencerOpen`) | inside the `.aes` project file |
 
 Both are named `UIState` and both are reachable from `AestraApp`. They are
 genuinely different things — one is per-install, one is per-project — and the
