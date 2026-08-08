@@ -5,8 +5,13 @@
 
 namespace AestraUI {
 
-// Compatibility alias for code written before mixer destinations were named consistently.
-// New code must use UIMixerRoutePicker.
-using UIInsertRoutePicker = UIMixerRoutePicker;
+/**
+ * Compatibility wrapper for code written before mixer destinations were named consistently.
+ * New code must use UIMixerRoutePicker.
+ */
+class UIInsertRoutePicker final : public UIMixerRoutePicker {
+public:
+    using UIMixerRoutePicker::UIMixerRoutePicker;
+};
 
 } // namespace AestraUI
