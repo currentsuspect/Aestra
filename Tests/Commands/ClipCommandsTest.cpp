@@ -413,7 +413,7 @@ void testTrimClipCommandAudioContract(const std::string& dir) {
 int main() {
     std::cout << "\n=== Aestra Clip Commands Test ===\n";
 
-    const std::string renderDir = std::string(std::filesystem::temp_directory_path()) + "/aestra-clipcmd-trim";
+    const std::string renderDir = std::filesystem::temp_directory_path().string() + "/aestra-clipcmd-trim";
 
     testTrimClipCommand();
     testTrimClipCommandAudioContract(renderDir);
