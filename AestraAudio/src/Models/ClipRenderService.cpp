@@ -165,6 +165,53 @@ void ClipRenderService::reverseInPlace(AudioBufferData& buffer) {
     }
 }
 
+void ClipRenderService::applyPlaybackRate(AudioBufferData& buffer, float playbackRate) {
+    if (!buffer.isValid()) {
+        return;
+    }
+
+    const double rate = std::isfinite(playbackRate) ? std::clamp(static_cast<double>(playbackRate), 0.25, 4.0) : 1.0;
+    if (std::abs(rate - 1.0) < 1.0e-9) {
+        return;
+    }
+
+    const uint64_t sourceFrames = buffer.numFrames;
+    const uint32_t channels = buffer.numChannels;
+    const uint64_t outputFrames =
+        std::max<uint64_t>(1, static_cast<uint64_t>(static_cast<double>(sourceFrames) / rate));
+    size_t outputSamples = 0;
+    if (!framesToSamples(outputFrames, channels, outputSamples)) {
+        return;
+    }
+
+    std::vector<float> output(outputSamples, 0.0f);
+    const auto sampleAt = [&buffer, sourceFrames, channels](int64_t frame, uint32_t channel) {
+        const auto clamped =
+            static_cast<uint64_t>(std::clamp<int64_t>(frame, 0, static_cast<int64_t>(sourceFrames) - 1));
+        const float sample = buffer.interleavedData[static_cast<size_t>(clamped) * channels + channel];
+        return std::isfinite(sample) ? sample : 0.0f;
+    };
+
+    for (uint64_t outputFrame = 0; outputFrame < outputFrames; ++outputFrame) {
+        const double phase = std::min(static_cast<double>(sourceFrames - 1), static_cast<double>(outputFrame) * rate);
+        const int64_t frame = static_cast<int64_t>(phase);
+        const double fraction = phase - static_cast<double>(frame);
+        for (uint32_t channel = 0; channel < channels; ++channel) {
+            const double s0 = sampleAt(frame - 1, channel);
+            const double s1 = sampleAt(frame, channel);
+            const double s2 = sampleAt(frame + 1, channel);
+            const double s3 = sampleAt(frame + 2, channel);
+            const double sample = 0.5 * ((2.0 * s1) + (-s0 + s2) * fraction +
+                                         (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * fraction * fraction +
+                                         (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * fraction * fraction * fraction);
+            output[static_cast<size_t>(outputFrame) * channels + channel] = static_cast<float>(sample);
+        }
+    }
+
+    buffer.numFrames = outputFrames;
+    buffer.interleavedData = std::move(output);
+}
+
 void ClipRenderService::applyGain(AudioBufferData& buffer, float gainLinear) {
     if (!std::isfinite(gainLinear) || gainLinear == 1.0f) {
         return;
