@@ -31,7 +31,15 @@ constexpr float kMinPanelWidth = 660.0f;
 constexpr float kMinPanelHeight = 500.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
-constexpr float kControlsCardHeight = 194.0f;
+constexpr float kControlsCardHeight = 242.0f;
+constexpr float kSourceCardHeight = 88.0f;
+
+NUIColor clipAccent() {
+    return NUIColor(0.20f, 0.82f, 0.68f, 1.0f);
+}
+NUIColor pitchAccent() {
+    return NUIColor(0.96f, 0.68f, 0.28f, 1.0f);
+}
 
 class AudioClipEditorSurface final : public NUIComponent {
 public:
@@ -42,15 +50,34 @@ public:
         auto& theme = NUIThemeManager::getInstance();
         renderer.fillRect(bounds, theme.getColor("workspaceBackground"));
 
-        const auto card = theme.getColor("surfaceTertiary").withAlpha(0.46f);
-        const auto stroke = theme.getColor("borderSubtle").withAlpha(0.68f);
-        const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, 78.0f};
+        const auto card = theme.getColor("surfaceTertiary").withAlpha(0.52f);
+        const auto stroke = theme.getColor("borderSubtle").withAlpha(0.72f);
+        const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, kSourceCardHeight};
         const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - kControlsCardHeight - 8.0f, bounds.width - 16.0f,
                                    kControlsCardHeight};
-        renderer.fillRoundedRect(sourceCard, 7.0f, card);
-        renderer.strokeRoundedRect(sourceCard, 7.0f, 1.0f, stroke);
-        renderer.fillRoundedRect(controlsCard, 7.0f, card.withAlpha(0.38f));
-        renderer.strokeRoundedRect(controlsCard, 7.0f, 1.0f, stroke);
+        renderer.fillRoundedRect(sourceCard, 10.0f, card);
+        renderer.strokeRoundedRect(sourceCard, 10.0f, 1.0f, stroke);
+        renderer.fillRoundedRect({sourceCard.x, sourceCard.y + 13.0f, 3.0f, sourceCard.height - 26.0f}, 1.5f,
+                                 clipAccent().withAlpha(0.92f));
+
+        renderer.fillRoundedRect(controlsCard, 10.0f, card.withAlpha(0.44f));
+        renderer.strokeRoundedRect(controlsCard, 10.0f, 1.0f, stroke);
+
+        const float innerPad = 10.0f;
+        const float sectionGap = 10.0f;
+        const float sectionTop = controlsCard.y + 42.0f;
+        const float sectionHeight = controlsCard.height - 52.0f;
+        const float sectionWidth = (controlsCard.width - innerPad * 2.0f - sectionGap) * 0.5f;
+        const NUIRect toneCard{controlsCard.x + innerPad, sectionTop, sectionWidth, sectionHeight};
+        const NUIRect timingCard{toneCard.right() + sectionGap, sectionTop, sectionWidth, sectionHeight};
+        renderer.fillRoundedRect(toneCard, 8.0f, theme.getColor("recessedPanel").withAlpha(0.62f));
+        renderer.strokeRoundedRect(toneCard, 8.0f, 1.0f, clipAccent().withAlpha(0.24f));
+        renderer.fillRoundedRect(timingCard, 8.0f, theme.getColor("recessedPanel").withAlpha(0.62f));
+        renderer.strokeRoundedRect(timingCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.64f));
+        renderer.fillRoundedRect({toneCard.x + 10.0f, toneCard.y + 28.0f, toneCard.width - 20.0f, 2.0f}, 1.0f,
+                                 clipAccent().withAlpha(0.50f));
+        renderer.fillRoundedRect({timingCard.x + 10.0f, timingCard.y + 28.0f, timingCard.width - 20.0f, 2.0f}, 1.0f,
+                                 pitchAccent().withAlpha(0.38f));
         renderChildren(renderer);
         setDirty(false);
     }
@@ -94,7 +121,8 @@ void AudioClipEditorPanel::buildUI() {
         label->setEllipsize(true);
         return label;
     };
-    const auto makeSlider = [](const std::string& name, double minimum, double maximum, double initial) {
+    const auto makeSlider = [&theme](const std::string& name, double minimum, double maximum, double initial,
+                                     const NUIColor& fillColor = clipAccent()) {
         auto slider = std::make_shared<NUISlider>(name);
         slider->setOrientation(NUISlider::Orientation::Horizontal);
         slider->setTextBoxVisible(false);
@@ -102,6 +130,12 @@ void AudioClipEditorPanel::buildUI() {
         slider->setSliderThickness(5.0f);
         slider->setRange(minimum, maximum);
         slider->setValue(initial);
+        slider->setDefaultValue(initial);
+        slider->setDoubleClickReturnValue(true, initial);
+        slider->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.88f));
+        slider->setFillColor(fillColor.withAlpha(0.92f));
+        slider->setThumbColor(theme.getColor("textPrimary").withAlpha(0.96f));
+        slider->setThumbHoverColor(fillColor);
         return slider;
     };
     const auto styleButton = [&theme](const std::shared_ptr<NUIButton>& button) {
@@ -128,23 +162,29 @@ void AudioClipEditorPanel::buildUI() {
     m_routePicker->setOnRouteSelected([this](uint32_t routeId) { selectRoute(routeId); });
 
     m_waveform = std::make_shared<WaveformDisplayComponent>();
-    m_instanceLabel = makeLabel("THIS CLIP", 10.0f);
+    m_waveformTitleLabel = makeLabel("WAVEFORM", 9.0f);
+    m_waveformTitleLabel->setTextColor(clipAccent().withAlpha(0.90f));
+    m_instanceLabel = makeLabel("CLIP ACTIONS", 9.0f);
+    m_toneSectionLabel = makeLabel("LEVEL & PITCH", 9.0f);
+    m_timingSectionLabel = makeLabel("TIMING & SOURCE", 9.0f);
+    m_toneSectionLabel->setTextColor(clipAccent().withAlpha(0.92f));
+    m_timingSectionLabel->setTextColor(pitchAccent().withAlpha(0.90f));
     m_gainLabel = makeLabel("Gain");
     m_panLabel = makeLabel("Pan");
     m_fadeInLabel = makeLabel("Fade in");
     m_fadeOutLabel = makeLabel("Fade out");
-    m_speedLabel = makeLabel("Speed");
+    m_pitchLabel = makeLabel("Pitch");
     m_sourceStartLabel = makeLabel("Start");
     m_gainValueLabel = makeLabel("-5.0 dB", 10.0f);
     m_panValueLabel = makeLabel("Center", 10.0f);
     m_fadeInValueLabel = makeLabel("0.00 beats", 10.0f);
     m_fadeOutValueLabel = makeLabel("0.00 beats", 10.0f);
-    m_speedValueLabel = makeLabel("1.00x", 10.0f);
+    m_pitchValueLabel = makeLabel("0.0 st  •  1.00x", 10.0f);
     m_sourceStartValueLabel = makeLabel("0.000 s", 10.0f);
     m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 10.0f);
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
     for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
-                              m_speedValueLabel, m_sourceStartValueLabel}) {
+                              m_pitchValueLabel, m_sourceStartValueLabel}) {
         value->setAlignment(NUILabel::Alignment::Right);
     }
 
@@ -152,7 +192,8 @@ void AudioClipEditorPanel::buildUI() {
     m_panSlider = makeSlider("Clip pan", -1.0, 1.0, 0.0);
     m_fadeInSlider = makeSlider("Fade in", 0.0, 4.0, 0.0);
     m_fadeOutSlider = makeSlider("Fade out", 0.0, 4.0, 0.0);
-    m_speedSlider = makeSlider("Playback speed", 0.25, 4.0, 1.0);
+    m_pitchSlider = makeSlider("Clip pitch (varispeed)", ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones,
+                               0.0, pitchAccent());
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
@@ -190,7 +231,9 @@ void AudioClipEditorPanel::buildUI() {
     wireSlider(m_panSlider, [](ClipEdits& edits, double value) { edits.pan = static_cast<float>(value); });
     wireSlider(m_fadeInSlider, [](ClipEdits& edits, double value) { edits.fadeInBeats = static_cast<float>(value); });
     wireSlider(m_fadeOutSlider, [](ClipEdits& edits, double value) { edits.fadeOutBeats = static_cast<float>(value); });
-    wireSlider(m_speedSlider, [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); });
+    wireSlider(m_pitchSlider, [](ClipEdits& edits, double value) {
+        edits.playbackRate = ClipEdits::playbackRateFromSemitones(static_cast<float>(value));
+    });
     wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
         const double projectRate =
             m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
@@ -244,13 +287,18 @@ void AudioClipEditorPanel::buildUI() {
     });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
-        m_sourceNameLabel,   m_sourceMetaLabel,   m_routeLabel,        m_routeHintLabel,   m_routePicker,
-        m_waveform,          m_waveformHintLabel, m_instanceLabel,     m_gainLabel,        m_panLabel,
-        m_fadeInLabel,       m_fadeOutLabel,      m_speedLabel,        m_sourceStartLabel, m_gainValueLabel,
-        m_panValueLabel,     m_fadeInValueLabel,  m_fadeOutValueLabel, m_speedValueLabel,  m_sourceStartValueLabel,
-        m_gainSlider,        m_panSlider,         m_fadeInSlider,      m_fadeOutSlider,    m_speedSlider,
-        m_sourceStartSlider, m_muteButton,        m_normalizeButton,   m_resetButton,      m_makeUniqueButton,
-        m_reverseButton,     m_commitButton};
+        m_sourceNameLabel,    m_sourceMetaLabel,       m_routeLabel,
+        m_routeHintLabel,     m_routePicker,           m_waveform,
+        m_waveformTitleLabel, m_waveformHintLabel,     m_instanceLabel,
+        m_toneSectionLabel,   m_timingSectionLabel,    m_gainLabel,
+        m_panLabel,           m_fadeInLabel,           m_fadeOutLabel,
+        m_pitchLabel,         m_sourceStartLabel,      m_gainValueLabel,
+        m_panValueLabel,      m_fadeInValueLabel,      m_fadeOutValueLabel,
+        m_pitchValueLabel,    m_sourceStartValueLabel, m_gainSlider,
+        m_panSlider,          m_fadeInSlider,          m_fadeOutSlider,
+        m_pitchSlider,        m_sourceStartSlider,     m_muteButton,
+        m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
+        m_reverseButton,      m_commitButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
@@ -426,7 +474,7 @@ void AudioClipEditorPanel::syncControlsFromModel() {
     m_fadeOutSlider->setRange(0.0, fadeMaximum);
     m_fadeInSlider->setValue(std::min<double>(m_workingEdits.fadeInBeats, fadeMaximum));
     m_fadeOutSlider->setValue(std::min<double>(m_workingEdits.fadeOutBeats, fadeMaximum));
-    m_speedSlider->setValue(std::clamp<double>(m_workingEdits.playbackRate, 0.25, 4.0));
+    m_pitchSlider->setValue(ClipEdits::semitonesFromPlaybackRate(m_workingEdits.playbackRate));
     const double projectRate = std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate());
     const double sourceStartSeconds = std::max(0.0, m_workingEdits.sourceStart) / projectRate;
     const double sourceStartMaximum = std::max(0.001, m_sourceDurationSeconds);
@@ -449,7 +497,10 @@ void AudioClipEditorPanel::updateValueLabels() {
     }
     m_fadeInValueLabel->setText(formatFixed(m_workingEdits.fadeInBeats, 2) + " beats");
     m_fadeOutValueLabel->setText(formatFixed(m_workingEdits.fadeOutBeats, 2) + " beats");
-    m_speedValueLabel->setText(formatFixed(m_workingEdits.playbackRate, 2) + "x");
+    const float pitchSemitones = ClipEdits::semitonesFromPlaybackRate(m_workingEdits.playbackRate);
+    const std::string pitchSign = pitchSemitones > 0.049f ? "+" : "";
+    m_pitchValueLabel->setText(pitchSign + formatFixed(pitchSemitones, 1) + " st  •  " +
+                               formatFixed(m_workingEdits.playbackRate, 2) + "x");
     const double projectRate =
         m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
     m_sourceStartValueLabel->setText(formatFixed(std::max(0.0, m_workingEdits.sourceStart) / projectRate, 3) + " s");
@@ -513,17 +564,18 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const float pad = 16.0f;
     const float contentWidth = bounds.width - pad * 2.0f;
     const float routeWidth = std::min(270.0f, contentWidth * 0.36f);
-    m_sourceNameLabel->setBounds({bounds.x + pad, bounds.y + 14.0f, contentWidth - routeWidth - 18.0f, 20.0f});
-    m_sourceMetaLabel->setBounds({bounds.x + pad, bounds.y + 39.0f, contentWidth - routeWidth - 18.0f, 16.0f});
-    m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 14.0f, routeWidth, 14.0f});
-    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 34.0f, routeWidth, 30.0f});
-    m_routeHintLabel->setBounds({bounds.x + pad, bounds.y + 61.0f, contentWidth, 14.0f});
+    m_sourceNameLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 17.0f, contentWidth - routeWidth - 20.0f, 20.0f});
+    m_sourceMetaLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 43.0f, contentWidth - routeWidth - 20.0f, 16.0f});
+    m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 17.0f, routeWidth, 14.0f});
+    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 37.0f, routeWidth, 30.0f});
+    m_routeHintLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 69.0f, contentWidth - 4.0f, 14.0f});
 
     const float controlsTop = bounds.bottom() - kControlsCardHeight - 8.0f;
-    const float waveformTop = bounds.y + 96.0f;
+    const float waveformTop = bounds.y + 108.0f;
     m_waveform->setBounds(
         {bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, std::max(100.0f, controlsTop - waveformTop - 8.0f)});
-    m_waveformHintLabel->setBounds({bounds.x + pad, controlsTop - 23.0f, contentWidth - 4.0f, 14.0f});
+    m_waveformTitleLabel->setBounds({bounds.x + pad, waveformTop + 10.0f, 100.0f, 14.0f});
+    m_waveformHintLabel->setBounds({bounds.x + pad, waveformTop + 10.0f, contentWidth - 4.0f, 14.0f});
 
     m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, contentWidth, 14.0f});
     // Right-aligned strip, laid out right-to-left so the row stays anchored to
@@ -543,24 +595,26 @@ void AudioClipEditorPanel::onResize(int width, int height) {
         buttonRight -= buttonWidth + buttonGap;
     }
 
-    const float columnGap = 20.0f;
+    const float columnGap = 30.0f;
     const float columnWidth = (contentWidth - columnGap) * 0.5f;
     const float labelWidth = 58.0f;
-    const float valueWidth = 72.0f;
-    const float sliderWidth = columnWidth - labelWidth - valueWidth - 10.0f;
+    const float valueWidth = 116.0f;
+    const float sliderWidth = columnWidth - labelWidth - valueWidth - 18.0f;
     const auto layoutControl = [&](float x, float y, const auto& label, const auto& slider, const auto& value) {
         label->setBounds({x, y + 5.0f, labelWidth, 16.0f});
         slider->setBounds({x + labelWidth, y, sliderWidth, 24.0f});
         value->setBounds({x + labelWidth + sliderWidth + 8.0f, y + 5.0f, valueWidth, 16.0f});
     };
-    const float left = bounds.x + pad;
+    const float left = bounds.x + pad + 10.0f;
     const float right = left + columnWidth + columnGap;
-    layoutControl(left, controlsTop + 42.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
-    layoutControl(right, controlsTop + 42.0f, m_panLabel, m_panSlider, m_panValueLabel);
-    layoutControl(left, controlsTop + 88.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
-    layoutControl(right, controlsTop + 88.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
-    layoutControl(left, controlsTop + 134.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
-    layoutControl(right, controlsTop + 134.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
+    m_toneSectionLabel->setBounds({left, controlsTop + 49.0f, columnWidth - 20.0f, 14.0f});
+    m_timingSectionLabel->setBounds({right, controlsTop + 49.0f, columnWidth - 20.0f, 14.0f});
+    layoutControl(left, controlsTop + 78.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
+    layoutControl(left, controlsTop + 124.0f, m_panLabel, m_panSlider, m_panValueLabel);
+    layoutControl(left, controlsTop + 170.0f, m_pitchLabel, m_pitchSlider, m_pitchValueLabel);
+    layoutControl(right, controlsTop + 78.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
+    layoutControl(right, controlsTop + 124.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
+    layoutControl(right, controlsTop + 170.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
 }
 
 void AudioClipEditorPanel::onUpdate(double deltaTime) {
