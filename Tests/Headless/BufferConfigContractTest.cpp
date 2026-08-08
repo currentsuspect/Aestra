@@ -4,15 +4,16 @@
 // setBufferConfig grows RT-visible storage (track buffers, graph scratch,
 // plugin scratch), so it must never run while a stream callback is in flight.
 // Hosts reconfiguring a running stream go through AudioDeviceManager's
-// pre-restart config hook; this test pins the engine-side tripwire that makes
-// a live-callback call observable and harmless:
+// pre-restart config hook; this test pins the engine-side admission handshake:
 //
 //   * setBufferConfig is REFUSED (returns false) while a callback is in flight.
 //   * setBufferConfig is ACCEPTED once no callback is running.
+//   * a callback cannot enter after a configuration transaction owns admission.
 
 #include "Core/AudioEngine.h"
-#include "Core/MixerChannel.h"
 #include "Core/AudioGraph.h"
+#include "Core/MixerChannel.h"
+#include "Core/RTConfigAdmission.h"
 #include "Models/TrackManager.h"
 #include "Plugin/EffectChain.h"
 
@@ -67,7 +68,7 @@ struct Fixture {
 
 // Holds a callback deterministically in flight: the input callback spins until
 // released, and processBlock invokes it synchronously on the caller thread
-// AFTER the depth guard is active.
+// AFTER the admission guard is active.
 struct CallbackHold {
     std::atomic<bool> entered{false};
     std::atomic<bool> release{false};
@@ -88,8 +89,6 @@ void testRefusesWhileCallbackInFlight() {
     fx.engine.setInputCallback(holdCallback, &hold);
 
     std::thread rtThread([&] {
-        // Input callback blocks inside processBlock, keeping the depth marker
-        // non-zero until release.
         fx.engine.processBlock(fx.outputBuf.data(), fx.inputBuf.data(), kBufferFrames, 0.0);
     });
 
@@ -103,7 +102,6 @@ void testRefusesWhileCallbackInFlight() {
     hold.release.store(true);
     rtThread.join();
 
-    // No callback in flight anymore: the same call is accepted.
     EXPECT_TRUE(fx.engine.setBufferConfig(1024, kChannels));
 }
 
@@ -115,23 +113,26 @@ void testAcceptedWhenStopped() {
 }
 
 void testCallbackCannotEnterDuringConfigAdmission() {
-    std::printf("[BufferConfigContractTest] processBlock refuses to enter during setBufferConfig...\n");
-    Fixture fx;
+    std::printf("[BufferConfigContractTest] processBlock admission is refused while config owns the gate...\n");
 
-    // This test verifies that the admission protocol is exclusive: once
-    // setBufferConfig begins (outside any callback), processBlock cannot
-    // enter until it completes. The depth marker is zero when setBufferConfig
-    // runs (no callback in flight), and stays zero throughout the resize
-    // operation because the stream is stopped during reconfiguration.
-    // This deterministic scenario is covered by testAcceptedWhenStopped
-    // (accepted when depth is zero) and testRefusesWhileCallbackInFlight
-    // (refused when depth is non-zero). The protocol ensures mutual exclusion:
-    // either the callback owns the depth marker, or the config transaction does
-    // (and the callback is stopped). There is no race because the manager
-    // stops the stream before calling setBufferConfig.
+    std::atomic<uint32_t> gate{0};
+    EXPECT_TRUE(detail::tryBeginBufferConfig(gate));
 
-    // No additional test needed: the existing tests already cover the contract.
-    EXPECT_TRUE(true);
+    std::atomic<bool> callbackAdmitted{true};
+    std::thread callbackThread([&] {
+        const bool admitted = detail::tryEnterProcessBlock(gate);
+        callbackAdmitted.store(admitted, std::memory_order_release);
+        if (admitted) {
+            detail::leaveProcessBlock(gate);
+        }
+    });
+    callbackThread.join();
+
+    EXPECT_TRUE(!callbackAdmitted.load(std::memory_order_acquire));
+
+    detail::endBufferConfig(gate);
+    EXPECT_TRUE(detail::tryEnterProcessBlock(gate));
+    detail::leaveProcessBlock(gate);
 }
 
 } // namespace
