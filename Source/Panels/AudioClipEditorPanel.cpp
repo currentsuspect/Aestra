@@ -1,11 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioClipEditorPanel.h"
 
+#include "ChannelDisplayName.h"
 #include "Commands/MakeAudioClipUniqueCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
-#include "ChannelDisplayName.h"
+#include "Models/ClipRenderService.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
 #include "NUIRenderer.h"
@@ -209,9 +210,10 @@ void AudioClipEditorPanel::buildUI() {
     styleButton(m_reverseButton);
     styleButton(m_commitButton);
 
-    const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update) {
+    const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update,
+                                   bool updatesWaveform = false) {
         slider->setOnDragStart([this]() { beginEditGesture(); });
-        slider->setOnValueChange([this, slider, update](double value) {
+        slider->setOnValueChange([this, slider, update, updatesWaveform](double value) {
             if (m_suppressCallbacks)
                 return;
             if (!m_editGestureActive)
@@ -220,10 +222,17 @@ void AudioClipEditorPanel::buildUI() {
             applyWorkingEdits();
             // Double-click resets and other non-drag changes do not receive a
             // drag-end callback, so commit them immediately.
-            if (!slider->isDragging())
+            if (!slider->isDragging()) {
+                if (updatesWaveform)
+                    rebuildWaveform();
                 commitEditGesture();
+            }
         });
-        slider->setOnDragEnd([this]() { commitEditGesture(); });
+        slider->setOnDragEnd([this, updatesWaveform]() {
+            if (updatesWaveform)
+                rebuildWaveform();
+            commitEditGesture();
+        });
     };
     wireSlider(m_gainSlider, [](ClipEdits& edits, double value) {
         edits.gainLinear = static_cast<float>(value);
@@ -231,9 +240,12 @@ void AudioClipEditorPanel::buildUI() {
     wireSlider(m_panSlider, [](ClipEdits& edits, double value) { edits.pan = static_cast<float>(value); });
     wireSlider(m_fadeInSlider, [](ClipEdits& edits, double value) { edits.fadeInBeats = static_cast<float>(value); });
     wireSlider(m_fadeOutSlider, [](ClipEdits& edits, double value) { edits.fadeOutBeats = static_cast<float>(value); });
-    wireSlider(m_pitchSlider, [](ClipEdits& edits, double value) {
-        edits.playbackRate = ClipEdits::playbackRateFromSemitones(static_cast<float>(value));
-    });
+    wireSlider(
+        m_pitchSlider,
+        [](ClipEdits& edits, double value) {
+            edits.playbackRate = ClipEdits::playbackRateFromSemitones(static_cast<float>(value));
+        },
+        true);
     wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
         const double projectRate =
             m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
@@ -279,7 +291,8 @@ void AudioClipEditorPanel::buildUI() {
         // dead file, mint a source and pattern, and add an undo step that
         // changes nothing audible.
         if (m_workingEdits.gainLinear == 1.0f && m_workingEdits.fadeInBeats == 0.0f &&
-            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.sourceStart == 0.0)
+            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.playbackRate == 1.0f &&
+            m_workingEdits.sourceStart == 0.0)
             return;
         auto command = std::make_shared<CommitAudioClipEditsCommand>(*m_trackManager, m_clipId);
         m_trackManager->getCommandHistory().pushAndExecute(command);
@@ -376,31 +389,58 @@ void AudioClipEditorPanel::rebuildWaveform() {
     m_sourceNameLabel->setText(source->getName().empty() ? clip->name : source->getName());
     const char* channelText =
         buffer->numChannels == 1 ? "Mono" : (buffer->numChannels == 2 ? "Stereo" : "Multichannel");
-    m_sourceMetaLabel->setText(formatFixed(buffer->durationSeconds(), 2) + " s  •  " +
-                               std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
-                               (linkedInstances > 1
-                                    ? "Shared source • " + std::to_string(linkedInstances) + " instances"
-                                    : "Unique source • 1 instance"));
+    const float playbackRate =
+        std::isfinite(m_workingEdits.playbackRate) ? std::clamp(m_workingEdits.playbackRate, 0.25f, 4.0f) : 1.0f;
+    const double outputDurationSeconds = buffer->durationSeconds() / playbackRate;
+    m_sourceMetaLabel->setText(
+        formatFixed(buffer->durationSeconds(), 2) + " s source  •  " + formatFixed(outputDurationSeconds, 2) +
+        " s output  •  " + std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
+        (linkedInstances > 1 ? "Shared source • " + std::to_string(linkedInstances) + " instances"
+                             : "Unique source • 1 instance"));
     m_makeUniqueButton->setVisible(linkedInstances > 1);
     m_makeUniqueButton->setText(linkedInstances > 1 ? "Make unique" : "Unique");
     m_routeHintLabel->setText(linkedInstances > 1 ? "Shared source route • changes " + std::to_string(linkedInstances) +
                                                         " clips • Alt-drag to a channel"
                                                   : "Unique source route • Alt-drag this clip onto a channel");
 
-    const size_t frameCount = static_cast<size_t>(buffer->numFrames);
+    ClipRenderService renderService(m_trackManager->getSourceManager(), m_trackManager->getPatternManager());
+    const auto region = renderService.resolveClipRegion(
+        *clip, std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()));
+    const size_t sourceStartFrame = region.isValid() ? static_cast<size_t>(region.startFrame) : 0;
+    const size_t sourceFrameCount =
+        region.isValid() ? static_cast<size_t>(region.frameCount) : static_cast<size_t>(buffer->numFrames);
+    const size_t sourceEndFrame = sourceStartFrame + sourceFrameCount;
     const size_t channels = static_cast<size_t>(buffer->numChannels);
-    const size_t framesPerBucket = std::max<size_t>(1, (frameCount + kWaveformBuckets - 1) / kWaveformBuckets);
+    // The waveform width represents the clip's fixed timeline duration. Map
+    // each output-time bucket through playbackRate: faster rates exhaust the
+    // source early and leave visible silence, while slower rates stretch the
+    // audible prefix across the clip. Normalizing the pitched output back to
+    // the full width would make every rate look unchanged.
+    const double clipFrames = clip->durationSeconds * static_cast<double>(buffer->sampleRate);
+    const size_t outputFrameCount = std::max<size_t>(
+        1, std::isfinite(clipFrames) && clipFrames > 0.0 ? static_cast<size_t>(clipFrames) : sourceFrameCount);
+    const size_t framesPerBucket = std::max<size_t>(1, (outputFrameCount + kWaveformBuckets - 1) / kWaveformBuckets);
     m_waveformData.clear();
     m_waveformData.reserve(kWaveformBuckets * 2);
     for (size_t bucket = 0; bucket < kWaveformBuckets; ++bucket) {
         const size_t begin = bucket * framesPerBucket;
-        const size_t end = std::min(frameCount, begin + framesPerBucket);
+        const size_t end = std::min(outputFrameCount, begin + framesPerBucket);
         float minimum = 0.0f;
         float maximum = 0.0f;
-        for (size_t frame = begin; frame < end; ++frame) {
+        const size_t sampleStride = std::max<size_t>(1, framesPerBucket / 256);
+        for (size_t outputFrame = begin; outputFrame < end; outputFrame += sampleStride) {
+            const double phase =
+                static_cast<double>(sourceStartFrame) + static_cast<double>(outputFrame) * playbackRate;
+            if (phase >= static_cast<double>(sourceEndFrame))
+                continue;
+            const size_t frame = static_cast<size_t>(phase);
+            const size_t nextFrame = std::min(sourceEndFrame - 1, frame + 1);
+            const float fraction = static_cast<float>(phase - static_cast<double>(frame));
             float mono = 0.0f;
             for (size_t channel = 0; channel < channels; ++channel) {
-                mono += buffer->interleavedData[frame * channels + channel];
+                const float a = buffer->interleavedData[frame * channels + channel];
+                const float b = buffer->interleavedData[nextFrame * channels + channel];
+                mono += a + (b - a) * fraction;
             }
             mono /= static_cast<float>(channels);
             minimum = std::min(minimum, mono);
@@ -410,6 +450,9 @@ void AudioClipEditorPanel::rebuildWaveform() {
         m_waveformData.push_back(minimum);
     }
     m_waveform->setWaveformData(m_waveformData);
+    m_waveformTitleLabel->setText(std::abs(playbackRate - 1.0f) < 1.0e-5f
+                                      ? "WAVEFORM"
+                                      : "PITCHED WAVEFORM  •  " + formatFixed(outputDurationSeconds, 2) + " s");
 }
 
 uint64_t AudioClipEditorPanel::calculateRouteFingerprint() const {
