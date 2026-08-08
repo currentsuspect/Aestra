@@ -64,6 +64,10 @@ inline double clampD(double v, double lo, double hi) {
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::equalPower(pan, vol, gainL, gainR);
 }
+
+inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
+    PanLaw::stereoBalance(pan, vol, gainL, gainR);
+}
 } // namespace
 
 AudioRenderer::AudioRenderer() {}
@@ -360,7 +364,13 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
         }
 
         double gainL, gainR;
-        fastPanGainsD(panTarget, volTarget, gainL, gainR);
+        const bool receivesAudibleRoute =
+            track.trackIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[track.trackIndex].empty();
+        if (receivesAudibleRoute) {
+            fastStereoBalanceGainsD(panTarget, volTarget, gainL, gainR);
+        } else {
+            fastPanGainsD(panTarget, volTarget, gainL, gainR);
+        }
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
