@@ -152,6 +152,11 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
         if (unitMgr.getUnitCount() == 0) {
             UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
             unitMgr.setUnitEnabled(defaultUnit, true);
+            if (const auto* unit = unitMgr.getUnit(defaultUnit)) {
+                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                // Bootstrap routing belongs to the pristine default project, not to user edit history.
+                routeUnitToFirstFreeMixerChannel(*m_trackManager, defaultUnit, destinationName, unit->color, true);
+            }
         }
     }
 
@@ -368,6 +373,10 @@ void ArsenalPanel::refreshUnits() {
             if (!m_trackManager) return;
             UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
             if (newId != 0) {
+                if (const auto* unit = m_trackManager->getUnitManager().getUnit(newId)) {
+                    const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                    routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+                }
                 m_selectedUnitId = newId;
                 refreshUnits();
             }
@@ -413,6 +422,10 @@ void ArsenalPanel::createUnitOfType(UnitType type) {
                         type == UnitType::PitchedSampler ? "808 " :
                         type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count);
     m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
+    if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+        routeUnitToFirstFreeMixerChannel(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+    }
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
@@ -434,6 +447,10 @@ bool ArsenalPanel::removeSelectedUnit() {
         unitMgr.removeUnit(oldId);
         removeUnitNotes(oldId);
         UnitID newId = unitMgr.createUnit();
+        if (const auto* unit = unitMgr.getUnit(newId)) {
+            const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+            routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+        }
         m_selectedUnitId = newId;
         refreshUnits();
         if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
@@ -1414,7 +1431,7 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId);
         if (!unit)
             return false;
-        const std::string destinationName = unit->name.empty() ? "Mixer Insert" : unit->name;
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
         assignUnitToFirstFreeInsert(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
         return true;
     }

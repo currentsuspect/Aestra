@@ -10,7 +10,84 @@
 namespace Aestra {
 namespace Audio {
 
-/** Assign a unit to the first unused insert, atomically creating a lane and insert when necessary. */
+namespace detail {
+struct FirstFreeMixerChannelResult {
+    uint32_t channelId{MASTER_MIXER_CHANNEL_ID};
+    bool created{false};
+};
+
+/** Resolve the first mixer channel not owned by another source, creating one only when necessary. */
+inline FirstFreeMixerChannelResult selectOrCreateFirstFreeMixerChannel(TrackManager& manager, UnitID unitId,
+                                                                        const std::string& destinationName,
+                                                                        uint32_t color) {
+    std::unordered_set<uint32_t> usedChannelIds;
+    for (const UnitID otherUnitId : manager.getUnitManager().getAllUnitIDs()) {
+        if (otherUnitId == unitId)
+            continue;
+        const uint32_t channelId = manager.getUnitManager().getUnitMixerChannel(otherUnitId);
+        if (channelId != MASTER_MIXER_CHANNEL_ID) {
+            usedChannelIds.insert(channelId);
+        }
+    }
+    for (const auto& pattern : manager.getPatternManager().getAllPatterns()) {
+        if (!pattern || !pattern->isAudio())
+            continue;
+        const uint32_t channelId = pattern->getMixerChannelId();
+        if (channelId != MASTER_MIXER_CHANNEL_ID) {
+            usedChannelIds.insert(channelId);
+        }
+    }
+
+    for (size_t i = 0; i < manager.getChannelCount(); ++i) {
+        const auto* channel = manager.getChannel(i);
+        if (channel && usedChannelIds.find(channel->getChannelId()) == usedChannelIds.end()) {
+            return {channel->getChannelId(), false};
+        }
+    }
+
+    auto* channel = manager.addChannel(destinationName);
+    if (!channel)
+        return {};
+    channel->setColor(color);
+    return {channel->getChannelId(), true};
+}
+} // namespace detail
+
+/**
+ * Route a producer-facing Arsenal unit to its default mixer destination without creating Timeline placement state.
+ *
+ * Unit creation is not command-backed today, so its default route belongs to the same creation operation rather than
+ * becoming a separate Undo entry. Bootstrap callers can preserve the incoming dirty-state while still publishing the
+ * stable mixer route.
+ */
+inline bool routeUnitToFirstFreeMixerChannel(TrackManager& manager, UnitID unitId, const std::string& destinationName,
+                                             uint32_t color, bool preserveModifiedState = false) {
+    if (!manager.getUnitManager().getUnit(unitId))
+        return false;
+
+    const bool wasModified = manager.isModified();
+    const auto result = detail::selectOrCreateFirstFreeMixerChannel(manager, unitId, destinationName, color);
+    if (result.channelId == MASTER_MIXER_CHANNEL_ID) {
+        if (preserveModifiedState)
+            manager.setModified(wasModified);
+        return false;
+    }
+
+    manager.getUnitManager().setUnitMixerChannel(unitId, result.channelId);
+    if (preserveModifiedState) {
+        manager.setModified(wasModified);
+    } else {
+        manager.markModified();
+    }
+    return true;
+}
+
+/**
+ * Assign a unit to the first unused mixer channel.
+ *
+ * The legacy class name is retained to avoid widening this product change into a symbol/file rename. "Insert" here is
+ * historical only: mixer routing creates or reuses mixer channels and never creates a Timeline lane.
+ */
 class AssignUnitToFirstFreeInsertCommand final : public ICommand {
 public:
     AssignUnitToFirstFreeInsertCommand(TrackManager& manager, UnitID unitId, std::string destinationName,
@@ -27,23 +104,21 @@ public:
         }
 
         if (m_createdDestination) {
-            auto& playlist = m_manager.getPlaylistModel();
-            const auto restoredLaneId = playlist.createLaneWithId(m_laneId, m_destinationName);
-            if (restoredLaneId != m_laneId) {
-                playlist.removeLane(restoredLaneId);
+            if (!m_manager.reinsertChannel(m_detachedChannel, m_channelIndex))
                 return;
-            }
-            if (!m_manager.reinsertChannel(m_detachedChannel, m_channelIndex)) {
-                playlist.removeLane(m_laneId);
-                return;
-            }
-            if (auto* lane = playlist.getLane(m_laneId)) {
-                lane->colorRGBA = m_color;
-            }
         } else if (m_destinationChannelId == MASTER_MIXER_CHANNEL_ID) {
-            selectOrCreateDestination();
+            const size_t channelCountBefore = m_manager.getChannelCount();
+            const auto result =
+                detail::selectOrCreateFirstFreeMixerChannel(m_manager, m_unitId, m_destinationName, m_color);
+            m_destinationChannelId = result.channelId;
+            m_createdDestination = result.created;
             if (m_destinationChannelId == MASTER_MIXER_CHANNEL_ID)
                 return;
+            if (m_createdDestination) {
+                if (m_manager.getChannelCount() <= channelCountBefore)
+                    return;
+                m_channelIndex = m_manager.getChannelCount() - 1;
+            }
         }
 
         m_manager.getUnitManager().setUnitMixerChannel(m_unitId, m_destinationChannelId);
@@ -62,7 +137,6 @@ public:
                 m_manager.getUnitManager().setUnitMixerChannel(m_unitId, m_destinationChannelId);
                 return;
             }
-            m_manager.getPlaylistModel().removeLane(m_laneId);
         }
         m_manager.markModified();
         m_executed = false;
@@ -70,66 +144,18 @@ public:
 
     void redo() override { execute(); }
 
-    std::string getName() const override { return "Assign Unit to First Free Insert"; }
+    std::string getName() const override { return "Assign Unit to First Free Mixer Channel"; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
     bool isUndoable() const override { return m_executed; }
 
 private:
-    void selectOrCreateDestination() {
-        std::unordered_set<uint32_t> usedChannelIds;
-        for (const UnitID unitId : m_manager.getUnitManager().getAllUnitIDs()) {
-            if (unitId == m_unitId)
-                continue;
-            const uint32_t channelId = m_manager.getUnitManager().getUnitMixerChannel(unitId);
-            if (channelId != MASTER_MIXER_CHANNEL_ID) {
-                usedChannelIds.insert(channelId);
-            }
-        }
-        for (const auto& pattern : m_manager.getPatternManager().getAllPatterns()) {
-            if (!pattern || !pattern->isAudio())
-                continue;
-            const uint32_t channelId = pattern->getMixerChannelId();
-            if (channelId != MASTER_MIXER_CHANNEL_ID) {
-                usedChannelIds.insert(channelId);
-            }
-        }
-
-        for (size_t i = 0; i < m_manager.getChannelCount(); ++i) {
-            const auto* channel = m_manager.getChannel(i);
-            if (channel && usedChannelIds.find(channel->getChannelId()) == usedChannelIds.end()) {
-                m_destinationChannelId = channel->getChannelId();
-                return;
-            }
-        }
-
-        auto& playlist = m_manager.getPlaylistModel();
-        m_laneId = playlist.createLane(m_destinationName);
-        if (!m_laneId.isValid())
-            return;
-
-        auto* channel = m_manager.addChannel(m_destinationName);
-        if (!channel) {
-            playlist.removeLane(m_laneId);
-            m_laneId = {};
-            return;
-        }
-
-        m_destinationChannelId = channel->getChannelId();
-        channel->setColor(m_color);
-        if (auto* lane = playlist.getLane(m_laneId)) {
-            lane->colorRGBA = m_color;
-        }
-        m_createdDestination = true;
-    }
-
     TrackManager& m_manager;
     UnitID m_unitId;
     std::string m_destinationName;
     uint32_t m_color;
     uint32_t m_previousChannelId{MASTER_MIXER_CHANNEL_ID};
     uint32_t m_destinationChannelId{MASTER_MIXER_CHANNEL_ID};
-    PlaylistLaneID m_laneId;
     std::unique_ptr<MixerChannel> m_detachedChannel;
     size_t m_channelIndex{0};
     bool m_capturedPreviousRoute{false};
@@ -137,7 +163,7 @@ private:
     bool m_executed{false};
 };
 
-/** Execute and record first-free routing, reporting whether project state changed. */
+/** Execute and record first-free mixer routing, reporting whether project state changed. */
 inline bool assignUnitToFirstFreeInsert(TrackManager& manager, UnitID unitId, const std::string& destinationName,
                                         uint32_t color) {
     auto command = std::make_shared<AssignUnitToFirstFreeInsertCommand>(manager, unitId, destinationName, color);
