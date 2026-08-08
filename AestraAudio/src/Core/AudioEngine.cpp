@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
 #include "Core/ClipRenderKernel.h"
+#include "Core/RTConfigAdmission.h"
 
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
@@ -153,17 +154,26 @@ inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
 }
 
 /**
- * RAII liveness marker for the setBufferConfig contract (#731): keeps
- * m_processBlockDepth non-zero for the duration of one realtime callback so
- * the control thread can refuse any config change that would resize RT-visible
- * storage while the audio thread is inside processBlock.
+ * RAII guard for processBlock entry using the RTConfigAdmission protocol (#731).
+ * Tries to acquire admission; if a configuration transaction owns the gate,
+ * processBlock silently refuses to enter and returns early (preventing callback
+ * entry while setBufferConfig resizes RT-visible storage).
  */
-struct ProcessBlockDepthGuard {
-    std::atomic<uint32_t>& m_depth;
-    explicit ProcessBlockDepthGuard(std::atomic<uint32_t>& depth) : m_depth(depth) {
-        m_depth.fetch_add(1, std::memory_order_relaxed);
+struct ProcessBlockAdmissionGuard {
+    std::atomic<uint32_t>& m_gate;
+    bool m_admitted{false};
+
+    explicit ProcessBlockAdmissionGuard(std::atomic<uint32_t>& gate) : m_gate(gate) {
+        m_admitted = Aestra::Audio::detail::tryEnterProcessBlock(m_gate);
     }
-    ~ProcessBlockDepthGuard() { m_depth.fetch_sub(1, std::memory_order_relaxed); }
+
+    ~ProcessBlockAdmissionGuard() {
+        if (m_admitted) {
+            Aestra::Audio::detail::leaveProcessBlock(m_gate);
+        }
+    }
+
+    bool isAdmitted() const { return m_admitted; }
 };
 } // namespace
 
@@ -751,10 +761,16 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
  */
 int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
     ScopedRealtimeAudioThread realtimeScope;
-    // RT-callback liveness marker for the setBufferConfig contract (#731). The
-    // counter is only ever read for a zero/non-zero decision by the control
-    // thread, which pairs it with the driver stop/start barrier.
-    ProcessBlockDepthGuard depthGuard(m_processBlockDepth);
+    // Admission guard for the setBufferConfig contract (#731): if a config
+    // transaction owns the admission gate, refuse to enter and return early.
+    ProcessBlockAdmissionGuard admissionGuard(m_admissionGate);
+    if (!admissionGuard.isAdmitted()) {
+        // A buffer-config transaction is in flight; silence the output and return.
+        if (outputBuffer && numFrames > 0) {
+            std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * 2 * sizeof(float));
+        }
+        return 0;
+    }
     (void)streamTime;
 
     // Process Input (Recording)
@@ -1508,7 +1524,8 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     // while a stream callback is in flight. Hosts reconfiguring a running
     // stream must go through AudioDeviceManager's pre-restart config hook,
     // which applies the actual granted config while the callback is stopped.
-    if (m_processBlockDepth.load(std::memory_order_acquire) != 0) {
+    // Acquire the admission gate; fails if any processBlock is in flight.
+    if (!Aestra::Audio::detail::tryBeginBufferConfig(m_admissionGate)) {
         Aestra::Log::error("[AudioEngine] setBufferConfig refused: a realtime callback is in flight. "
                            "Configure the engine only while the stream is stopped (#731).");
         // Note: no assert() here — this tripwire must stay testable in every
@@ -1686,6 +1703,9 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             }
         }
     }
+
+    // Release the admission gate so processBlock() can resume.
+    Aestra::Audio::detail::endBufferConfig(m_admissionGate);
     return true;
 }
 

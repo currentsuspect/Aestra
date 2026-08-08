@@ -802,10 +802,11 @@ private:
 
     std::atomic<uint32_t> m_sampleRate{48000};
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
-    // RT-callback liveness counter (#731). Incremented around processBlock on
-    // the audio thread; setBufferConfig refuses to run while it is non-zero so
-    // RT-visible storage can never be resized mid-callback.
-    std::atomic<uint32_t> m_processBlockDepth{0};
+    // Admission gate for RT-callback vs buffer-config mutual exclusion (#731).
+    // High bit: owned by setBufferConfig while it resizes RT-visible storage.
+    // Lower 31 bits: count of processBlock() callbacks currently in flight.
+    // See RTConfigAdmission.h for protocol details.
+    std::atomic<uint32_t> m_admissionGate{0};
     std::shared_ptr<ChannelPrepareConfig> m_channelPrepareConfig{std::make_shared<ChannelPrepareConfig>()};
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
