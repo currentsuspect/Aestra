@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 
+#include "UIInsertRoutePicker.h"
 #include "UIMixerRoutePicker.h"
 
 #include <iostream>
@@ -57,6 +58,14 @@ int main() {
     picker.setSearchQuery("not present");
     check(picker.getFilteredRouteIds().empty(), "unmatched search must not silently choose a route");
     check(!picker.routeFirstMatch(), "routing an empty result must be rejected");
+
+    AestraUI::UIInsertRoutePicker legacyPicker;
+    legacyPicker.setRoutes({{0, 0, "Master", 0}, {42, 12, "Lead Bus", 0}}, 42);
+    check(legacyPicker.getSelectedRoute() == 42,
+          "legacy picker wrapper must remain source-compatible with class forward declarations");
+    legacyPicker.setSearchQuery("insert 12");
+    check(equals(legacyPicker.getFilteredRouteIds(), {42}),
+          "legacy picker wrapper must preserve legacy-prefixed search behavior");
 
     if (failures != 0) {
         std::cout << failures << " mixer route-picker check(s) failed\n";
