@@ -2862,7 +2862,7 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                      audibleEligible);
 }
 
-void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples) {
+void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId) {
     // Control thread only. Never called from the audio callback.
     //
     // Publish-replacement protocol (PR #730 follow-up): every call publishes a
@@ -2899,13 +2899,23 @@ void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySam
 
     // Same delay as the current publication: nothing to do. Keeps the common
     // unchanged-recompute path allocation-free and ack-free.
-    if (slot->currentDesc && slot->currentDesc->delaySamples == delaySamples) {
+    //
+    // Ownership exception: if the slot was stamped by a DIFFERENT track, the
+    // no-op would let RT keep reading the previous occupant's ring contents —
+    // m_trackState is positional, so a channel deletion shifts later tracks
+    // into the previous occupant's slot, and an equal delay otherwise inherits
+    // the old ring's audio (audible leakage). Force a fresh zeroed-ring
+    // publication instead. Zero-delay publications ignore ownership: with no
+    // ring in use there is nothing to leak, so re-clearing stays cheap.
+    if (slot->currentDesc && slot->currentDesc->delaySamples == delaySamples &&
+        (delaySamples == 0 || slot->ownerTrackId == ownerTrackId)) {
         return;
     }
 
     auto newDesc = std::make_unique<CompensationRingDescriptor>();
     newDesc->generation = slot->nextGeneration++;
     newDesc->delaySamples = delaySamples;
+    slot->ownerTrackId = ownerTrackId;
     if (delaySamples > 0) {
         newDesc->capacityFrames = kCompensationFrames;
         newDesc->ownedBuffer = std::unique_ptr<float[]>(new float[samples]());
@@ -3782,9 +3792,9 @@ void AudioEngine::calculateLatencyCompensation() {
         // v1 parity: the ring is also reset when the delay changes. P6 (G3
         // smooth recompute) will replace that with a sample-hold / crossfade
         // migration.
-        prepareCompensationRing(rtState, sol.outputCompensationSamples);
+        prepareCompensationRing(rtState, sol.outputCompensationSamples, sol.channelId);
         if (trackIdx < m_trackState.size()) {
-            prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples);
+            prepareCompensationRing(m_trackState[trackIdx], sol.outputCompensationSamples, sol.channelId);
         }
 
         // Mirror to m_trackState so renderGraph() (which reads through
@@ -4052,10 +4062,12 @@ void AudioEngine::clearAppliedLatencyCompensation() {
             // Publish a zero-delay generation so the RT path stops compensating
             // through the normal atomic path (replacement, never a plain write).
             // prepareCompensationRing no-ops when the published delay is already
-            // zero, so re-clearing is cheap. Only publish when a slot exists:
+            // zero, so re-clearing is cheap. Owner 0 = "no owner": zero-delay
+            // publications ignore ownership by design (nothing to leak), so a
+            // clear never force-publishes. Only publish when a slot exists:
             // a track that never had a slot has nothing published to withdraw.
             if (state.compensation) {
-                prepareCompensationRing(state, 0);
+                prepareCompensationRing(state, 0, 0);
             }
             if (state.mainOutEdgeDelay) {
                 state.mainOutEdgeDelay->compensationSamples.store(0, std::memory_order_release);

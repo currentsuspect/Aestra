@@ -366,6 +366,61 @@ void testCompensationRingRetirementProtocol() {
     EXPECT_EQ(snap.outputCompensationRetiredGenerationCount, 0u);
 }
 
+void testCompensationSlotOwnerChangeRepublishes() {
+    std::printf("[PDCRTConsumptionTest] positional slot reuse: owner change force-republishes same-delay ring...\n");
+    Fixture fx;
+
+    // [latent(256), dryA, dryB, latent2(256)] at indices 0..3. Flat solver:
+    // maxAlignment = 256, both drys get outputCompensationSamples = 256.
+    auto* latentA = fx.addTrack("latentA");
+    auto* dryA = fx.addTrack("dryA");
+    auto* dryB = fx.addTrack("dryB");
+    auto* latentB = fx.addTrack("latentB");
+    auto latentAPlugin = std::make_shared<PDCTest::MockLatencyPlugin>(256, "LatentA");
+    EXPECT_TRUE(latentA->getEffectChain().insertPlugin(0, latentAPlugin));
+    auto latentBPlugin = std::make_shared<PDCTest::MockLatencyPlugin>(256, "LatentB");
+    EXPECT_TRUE(latentB->getEffectChain().insertPlugin(0, latentBPlugin));
+    fx.publishGraph();
+
+    // First solve publishes gen 1 for every track; RT consumes and acks it.
+    fx.engine.calculateLatencyCompensation();
+    fx.renderBlocks(1);
+    auto snap = fx.engine.getTrackEdgeDelaySnapshot(2); // dryB at index 2
+    EXPECT_TRUE(snap.valid);
+    EXPECT_EQ(snap.outputCompensationSamples, 256u);
+    EXPECT_EQ(snap.outputCompensationGeneration, 1u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u);
+
+    // Delete the FIRST channel (latentA). dryB shifts from index 2 to index 1,
+    // landing on the slot previously owned by dryA — which published the SAME
+    // 256-frame delay. A positional no-op would keep publishing nothing and RT
+    // would keep reading dryA's ring contents (audible old-audio leakage).
+    // The owner stamp must force a fresh zeroed-ring publication instead.
+    const uint32_t latentAId = latentA->getChannelId();
+    EXPECT_TRUE(fx.trackManager->removeChannelById(latentAId));
+    fx.publishGraph();
+    fx.engine.calculateLatencyCompensation();
+
+    // dryB is now index 1. Same delay, different owner => new generation.
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_TRUE(snap.valid);
+    EXPECT_EQ(snap.outputCompensationSamples, 256u);
+    EXPECT_EQ(snap.outputCompensationGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 1u); // RT not yet consumed gen 2
+
+    // RT consumes gen 2: ack converges.
+    fx.renderBlocks(1);
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+
+    // Same-owner recompute with an unchanged delay still no-ops: no gen 3.
+    fx.engine.calculateLatencyCompensation();
+    snap = fx.engine.getTrackEdgeDelaySnapshot(1);
+    EXPECT_EQ(snap.outputCompensationGeneration, 2u);
+    EXPECT_EQ(snap.outputCompensationAckedGeneration, 2u);
+}
+
 } // namespace
 
 int main() {
@@ -376,6 +431,7 @@ int main() {
     testCompensationGoesToZeroSafely();
     testRTPathBufferLayoutInvariants();
     testCompensationRingRetirementProtocol();
+    testCompensationSlotOwnerChangeRepublishes();
 
     if (g_failures == 0) {
         std::printf("=== PDCRTConsumptionTest: all checks passed ===\n");

@@ -207,6 +207,19 @@ struct TrackCompensationState {
     // Control-owned. RT never touches these.
     /** @brief Monotonic publisher counter; assigned to the next descriptor's generation. */
     uint32_t nextGeneration{1};
+    /** @brief Stable trackId that owns the published generation (see @ref prepareCompensationRing).
+     *
+     * Control stamps this on every publication. It exists to detect POSITIONAL
+     * slot reuse: `m_trackState` is indexed by graph loop ordinal, so deleting a
+     * channel shifts every later track into the previous occupant's slot. If the
+     * new occupant's delay equals the old occupant's, the no-op gate below would
+     * otherwise keep publishing nothing and RT would keep reading the previous
+     * track's ring contents (audible old-audio leakage). An owner mismatch forces
+     * a fresh zeroed-ring publication even when the delay is unchanged.
+     *
+     * Zero-delay publications ignore ownership: with no ring in use there is no
+     * content to leak, so re-clearing stays cheap. */
+    uint32_t ownerTrackId{0};
     /** @brief Descriptor of the currently published generation (storage holder). */
     std::unique_ptr<CompensationRingDescriptor> currentDesc;
     /** @brief Previous publications, retired until acked (see class comment). */

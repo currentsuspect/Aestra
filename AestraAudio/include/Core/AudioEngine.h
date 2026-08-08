@@ -729,13 +729,19 @@ private:
      * protocol: each call that changes the delay publishes a fresh immutable
      * descriptor + zeroed 16384-frame ring and retires the previous generation,
      * which stays alive until RT acknowledges it (PR #730 follow-up). Calls with
-     * an unchanged delay no-op. Must be called BEFORE the RT path can act on a
-     * new nonzero delay — publication is atomic, so there is no window where a
-     * delay is visible without its ring.
+     * an unchanged delay no-op — UNLESS @p ownerTrackId differs from the slot's
+     * stamped owner, in which case the publication is forced: `m_trackState` is
+     * indexed positionally, so a deleted channel shifts later tracks into the
+     * previous occupant's slot, and a same-delay no-op would let RT keep reading
+     * the previous track's ring contents (audible leakage). A fresh zeroed ring
+     * makes the first `delay` frames silence — the same semantics as the v1
+     * delay-change reset. Must be called BEFORE the RT path can act on a new
+     * nonzero delay — publication is atomic, so there is no window where a delay
+     * is visible without its ring.
      *
      * Control thread only — never call from processBlock.
      */
-    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples);
+    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one
