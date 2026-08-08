@@ -33,6 +33,11 @@ void check(bool cond, const std::string& label) {
 
 constexpr uint32_t kDeviceA = 1;
 constexpr uint32_t kDeviceB = 2;
+// Input-device switch test reuses the same two enumerated fake devices (both
+// report maxInputChannels == 2 in makeDevice()), just addressed via the
+// input-device role rather than the output-device role.
+constexpr uint32_t kInputDeviceA = kDeviceA;
+constexpr uint32_t kInputDeviceB = kDeviceB;
 
 AudioDeviceInfo makeDevice(uint32_t id, const char* name, bool defOut) {
     AudioDeviceInfo d;
