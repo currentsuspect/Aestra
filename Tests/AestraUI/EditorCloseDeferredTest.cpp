@@ -25,7 +25,7 @@ namespace {
 class SelfCloser : public NUIComponent {
 public:
     bool sawEvent = false;
-    size_t childCountAfterRemoval = 0;
+    size_t m_childCountAfterRemoval = 0;
     bool onMouseEvent(const NUIMouseEvent&) override {
         sawEvent = true;
         if (auto* parent = getParent()) {
@@ -35,7 +35,7 @@ public:
                     break;
                 }
             }
-            childCountAfterRemoval = parent->getChildren().size();
+            m_childCountAfterRemoval = parent->getChildren().size();
         }
         return false; // don't consume — force the parent loop to continue past a removed child
     }
@@ -45,9 +45,9 @@ public:
 // replacement generation from inside the row's mouse callback.
 class HierarchyRebuilder : public NUIComponent {
 public:
-    std::shared_ptr<NUIComponent> replacementA = std::make_shared<NUIComponent>();
-    std::shared_ptr<NUIComponent> replacementB = std::make_shared<NUIComponent>();
-    size_t childCountDuringCallback = 0;
+    std::shared_ptr<NUIComponent> m_replacementA = std::make_shared<NUIComponent>();
+    std::shared_ptr<NUIComponent> m_replacementB = std::make_shared<NUIComponent>();
+    size_t m_childCountDuringCallback = 0;
 
     bool onMouseEvent(const NUIMouseEvent&) override {
         auto* parent = getParent();
@@ -58,10 +58,60 @@ public:
         for (const auto& child : parent->getChildren()) {
             parent->removeChild(child);
         }
-        parent->addChild(replacementA);
-        parent->addChild(replacementB);
-        childCountDuringCallback = parent->getChildren().size();
+        parent->addChild(m_replacementA);
+        parent->addChild(m_replacementB);
+        m_childCountDuringCallback = parent->getChildren().size();
         return true;
+    }
+};
+
+class AddThenRemoveChild : public NUIComponent {
+public:
+    std::shared_ptr<NUIComponent> m_transientChild = std::make_shared<NUIComponent>();
+    size_t m_childCountDuringCallback = 0;
+
+    bool onMouseEvent(const NUIMouseEvent&) override {
+        auto* parent = getParent();
+        if (!parent) {
+            return false;
+        }
+
+        parent->addChild(m_transientChild);
+        parent->removeChild(m_transientChild);
+        m_childCountDuringCallback = parent->getChildren().size();
+        return true;
+    }
+};
+
+class RemoveAllChildrenOnEvent : public NUIComponent {
+public:
+    size_t m_childCountDuringCallback = 0;
+
+    bool onMouseEvent(const NUIMouseEvent&) override {
+        auto* parent = getParent();
+        if (!parent) {
+            return false;
+        }
+
+        parent->removeAllChildren();
+        m_childCountDuringCallback = parent->getChildren().size();
+        return false;
+    }
+};
+
+class BringToFrontOnEvent : public NUIComponent {
+public:
+    bool m_wasFrontmostDuringCallback = false;
+
+    bool onMouseEvent(const NUIMouseEvent&) override {
+        auto* parent = getParent();
+        if (!parent) {
+            return false;
+        }
+
+        bringToFront();
+        m_wasFrontmostDuringCallback = parent->getChildren().back().get() == this;
+        return false;
     }
 };
 
@@ -91,7 +141,7 @@ void testSelfRemovalDuringDispatchIsSafe() {
 
     NUIComponent::dispatchMouseEvent(root.get(), ev); // both children remove themselves mid-traversal
 
-    check(a->childCountAfterRemoval == 3 && b->childCountAfterRemoval == 3,
+    check(a->m_childCountAfterRemoval == 3 && b->m_childCountAfterRemoval == 3,
           "canonical dispatch defers removal during traversal");
     check(a->sawEvent && b->sawEvent, "both self-closers received the event");
 
@@ -166,14 +216,64 @@ void testHierarchyRebuildDuringCanonicalDispatchIsSafe() {
     ev.button = NUIMouseButton::Left;
     check(NUIComponent::dispatchMouseEvent(root.get(), ev), "hierarchy rebuild event handled");
 
-    check(rebuilder->childCountDuringCallback == 2, "old hierarchy preserved until callback returns");
+    check(rebuilder->m_childCountDuringCallback == 2, "old hierarchy preserved until callback returns");
     check(root->getChildren().size() == 2, "replacement hierarchy installed after dispatch");
-    check(root->getChildren()[0] == rebuilder->replacementA && root->getChildren()[1] == rebuilder->replacementB,
+    check(root->getChildren()[0] == rebuilder->m_replacementA && root->getChildren()[1] == rebuilder->m_replacementB,
           "replacement hierarchy keeps insertion order");
 
     oldRow.reset();
     rebuilder.reset();
     check(oldRowWeak.expired() && rebuilderWeak.expired(), "old hierarchy released after guarded rebuild");
+}
+
+void testInterleavedAddThenRemovePreservesOrder() {
+    auto root = std::make_shared<NUIComponent>();
+    auto mutator = std::make_shared<AddThenRemoveChild>();
+    root->addChild(mutator);
+
+    NUIMouseEvent ev;
+    ev.pressed = true;
+    ev.button = NUIMouseButton::Left;
+    check(NUIComponent::dispatchMouseEvent(root.get(), ev), "add-then-remove event handled");
+
+    check(mutator->m_childCountDuringCallback == 1, "add and remove stay deferred during callback");
+    check(root->getChildren().size() == 1 && root->getChildren().front() == mutator,
+          "add-then-remove drains in original order");
+    check(mutator->m_transientChild->getParent() == nullptr, "transient child remains detached after ordered drain");
+}
+
+void testRemoveAllDuringDispatchIsDeferred() {
+    auto root = std::make_shared<NUIComponent>();
+    auto sibling = std::make_shared<NUIComponent>();
+    auto mutator = std::make_shared<RemoveAllChildrenOnEvent>();
+    root->addChild(sibling);
+    root->addChild(mutator);
+
+    NUIMouseEvent ev;
+    ev.pressed = true;
+    ev.button = NUIMouseButton::Left;
+    NUIComponent::dispatchMouseEvent(root.get(), ev);
+
+    check(mutator->m_childCountDuringCallback == 2, "removeAllChildren preserves hierarchy during callback");
+    check(root->getChildren().empty(), "removeAllChildren drains after dispatch");
+    check(sibling->getParent() == nullptr && mutator->getParent() == nullptr,
+          "removeAllChildren clears parent links after dispatch");
+}
+
+void testBringToFrontDuringDispatchIsDeferred() {
+    auto root = std::make_shared<NUIComponent>();
+    auto mutator = std::make_shared<BringToFrontOnEvent>();
+    auto sibling = std::make_shared<NUIComponent>();
+    root->addChild(mutator);
+    root->addChild(sibling);
+
+    NUIMouseEvent ev;
+    ev.pressed = true;
+    ev.button = NUIMouseButton::Left;
+    NUIComponent::dispatchMouseEvent(root.get(), ev);
+
+    check(!mutator->m_wasFrontmostDuringCallback, "bringToFront preserves ordering during callback");
+    check(root->getChildren().back() == mutator, "bringToFront drains after dispatch");
 }
 
 } // namespace
@@ -184,6 +284,9 @@ int main() {
     testNestedDispatchDepth();
     testAdditionDuringDispatchIsDeferred();
     testHierarchyRebuildDuringCanonicalDispatchIsSafe();
+    testInterleavedAddThenRemovePreservesOrder();
+    testRemoveAllDuringDispatchIsDeferred();
+    testBringToFrontDuringDispatchIsDeferred();
 
     if (g_failures > 0) {
         std::cout << g_failures << " check(s) failed\n";
