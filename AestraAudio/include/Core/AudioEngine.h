@@ -159,8 +159,20 @@ public:
     /** @brief Check if a routing cycle was detected on the audio thread (poll from UI). */
     bool hasRoutingCycleDetected() const { return m_loggedRoutingCycleWarning.load(std::memory_order_relaxed); }
 
-    /** @brief Configure the maximum buffer and output-channel counts. */
-    void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
+    /**
+     * @brief Configure the maximum buffer and output-channel counts.
+     * @return true when the configuration was applied, false when the call was
+     *         refused because a realtime callback was in flight (#731).
+     *
+     * Contract: this must only be called while no stream callback is running.
+     * It grows RT-visible storage (track buffers, graph scratch, plugin
+     * scratch), so a call racing a live processBlock is a use-after-free
+     * hazard. Hosts reconfiguring a running stream must do it through
+     * AudioDeviceManager's pre-restart config hook, which applies the actual
+     * granted config while the callback is stopped. A refused call leaves the
+     * engine unchanged and logs a critical error.
+     */
+    bool setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
     /** @brief Set transport running state and mirror it onto the audio command queue. */
     void setTransportPlaying(bool playing) {
         // Update immediately for UI queries, but also enqueue a command so the audio thread
@@ -790,6 +802,10 @@ private:
 
     std::atomic<uint32_t> m_sampleRate{48000};
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
+    // RT-callback liveness counter (#731). Incremented around processBlock on
+    // the audio thread; setBufferConfig refuses to run while it is non-zero so
+    // RT-visible storage can never be resized mid-callback.
+    std::atomic<uint32_t> m_processBlockDepth{0};
     std::shared_ptr<ChannelPrepareConfig> m_channelPrepareConfig{std::make_shared<ChannelPrepareConfig>()};
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};

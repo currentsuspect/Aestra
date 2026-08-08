@@ -370,6 +370,7 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
                 }
                 result = false;
             } else {
+                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -458,7 +459,7 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
             // Give the device time to fully release (avoids AUDCLNT_E_DEVICE_IN_USE).
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-            m_currentConfig.sampleRate = sampleRate;
+                m_currentConfig.sampleRate = sampleRate;
             if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
                 Aestra::Log::error("[AudioDeviceManager] Failed to reopen stream with sample rate " +
                                    std::to_string(sampleRate) + ", rolling back to " +
@@ -471,6 +472,7 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
                 }
                 result = false;
             } else {
+                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -514,6 +516,7 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
                 }
                 result = false;
             } else {
+                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -522,6 +525,31 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
         startHealthMonitorIfStopped();
     }
     return result;
+}
+
+void AudioDeviceManager::setPreRestartConfigCallback(std::function<void(const AudioStreamConfig&)> callback) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_preRestartConfigCallback = std::move(callback);
+}
+
+void AudioDeviceManager::firePreRestartConfigCallbackLocked() {
+    if (!m_preRestartConfigCallback || !m_activeDriver) {
+        return;
+    }
+    // Apply the ACTUAL granted config (post-backend), not the request: drivers
+    // may deliver different sizes than asked for. Fall back to the request when
+    // a driver reports no value. Caller holds m_mutex; the callback must not
+    // re-enter the manager (documented on setPreRestartConfigCallback).
+    AudioStreamConfig actual = m_currentConfig;
+    const uint32_t actualBuffer = m_activeDriver->getStreamBufferSize();
+    const uint32_t actualRate = m_activeDriver->getStreamSampleRate();
+    if (actualBuffer != 0) {
+        actual.bufferSize = actualBuffer;
+    }
+    if (actualRate != 0) {
+        actual.sampleRate = actualRate;
+    }
+    m_preRestartConfigCallback(actual);
 }
 
 // ---------------------------------------------------------------------------
@@ -638,11 +666,14 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
                 if (!openStreamLocked(savedConfig, savedCallback, savedUserData)) {
                     AESTRA_LOG_ERROR("Failed to reopen stream with any driver");
                     result = false;
-                } else if (wasRunning && !startStreamLocked()) {
-                    AESTRA_LOG_ERROR("Failed to restart stream");
-                    result = false;
                 } else {
-                    result = true;
+                    firePreRestartConfigCallbackLocked();
+                    if (wasRunning && !startStreamLocked()) {
+                        AESTRA_LOG_ERROR("Failed to restart stream");
+                        result = false;
+                    } else {
+                        result = true;
+                    }
                 }
             } else {
                 result = true;

@@ -59,6 +59,9 @@ public:
     std::atomic<int64_t> m_failDeviceId{-1}; // fail openStream for this deviceId (-1 = none)
     std::atomic<bool> m_startShouldFail{false};
     std::atomic<int> m_openCount{0};
+    // When non-zero, getStreamBufferSize() reports this value instead of the
+    // requested config — simulates a backend granting a different buffer size.
+    std::atomic<uint32_t> m_grantedBufferSize{0};
 
     // Enumeration barrier: when armed, getDevices() blocks until released, so a
     // transition on another thread runs while enumeration is mid-flight.
@@ -130,7 +133,10 @@ public:
     bool isStreamRunning() const override { return m_running.load(); }
     double getStreamLatency() const override { return 0.01; }
     uint32_t getStreamSampleRate() const override { return m_config.sampleRate; }
-    uint32_t getStreamBufferSize() const override { return m_config.bufferSize; }
+    uint32_t getStreamBufferSize() const override {
+        const uint32_t granted = m_grantedBufferSize.load();
+        return granted != 0 ? granted : m_config.bufferSize;
+    }
 
     DriverStatistics getStatistics() const override {
         DriverStatistics s;
@@ -396,6 +402,70 @@ void testSafetyDriverStartFailure() {
 
 } // namespace
 
+// 8. Pre-restart config hook: fires with the ACTUAL granted config while the
+//    callback is stopped, before the stream restarts (#731).
+void testPreRestartConfigHookFiresWithActualGrant() {
+    auto h = makeHarness();
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.isStreamRunning(), "stream running before buffer change");
+
+    // Backend grants 1024 even though 512 is requested (larger-than-request is
+    // exactly the case the engine must be configured with).
+    h->primary->m_grantedBufferSize.store(1024);
+
+    std::atomic<int> hookCount{0};
+    std::atomic<bool> runningDuringHook{true};
+    std::atomic<uint32_t> grantedBuffer{0};
+    std::atomic<uint32_t> grantedRate{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig& actual) {
+        hookCount.fetch_add(1);
+        // Direct driver read: the hook runs under the manager lock and must
+        // not re-enter the manager.
+        runningDuringHook.store(h->primary->isStreamRunning());
+        grantedBuffer.store(actual.bufferSize);
+        grantedRate.store(actual.sampleRate);
+    });
+
+    check(h->mgr.setBufferSize(512), "buffer size change accepted");
+    check(hookCount.load() == 1, "hook fired exactly once for the reopen");
+    check(!runningDuringHook.load(), "stream callback was stopped while the hook ran");
+    check(grantedBuffer.load() == 1024, "hook received the actual granted size (1024), not the request (512)");
+    check(grantedRate.load() == 48000, "hook received the actual sample rate");
+    check(h->mgr.isStreamRunning(), "stream running again after the reopen");
+    check(h->primary->isStreamRunning(), "primary driver restarted after the reopen");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
+// 9. Failed reopen (rollback): the hook must NOT fire — the config change was
+//    not applied, so the engine must not be touched (#731).
+void testPreRestartConfigHookSkippedOnFailedReopen() {
+    auto h = makeHarness(/*withDummy=*/false);
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.getCurrentConfig().deviceId == kDeviceA, "starts on device A");
+
+    std::atomic<int> hookCount{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig&) { hookCount.fetch_add(1); });
+
+    // Device B cannot open; device A (the rollback target) still can.
+    h->primary->m_failDeviceId.store(static_cast<int64_t>(kDeviceB));
+    check(!h->mgr.switchDevice(kDeviceB), "switch reports failure when the new device cannot open");
+    check(hookCount.load() == 0, "hook not fired on a failed reopen");
+    check(h->mgr.isStreamRunning(), "stream restored and running after rollback");
+
+    // Once the failure clears, the same transition fires the hook.
+    h->primary->m_failDeviceId.store(-1);
+    check(h->mgr.switchDevice(kDeviceB), "switch succeeds after failure cleared");
+    check(hookCount.load() == 1, "hook fires on the successful reopen");
+    check(h->mgr.getCurrentConfig().deviceId == kDeviceB, "now on device B");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
 int main() {
     std::cout << "=== AudioDeviceManager race/coherence tests (#391) ===\n";
     testEnumerationBarrierVsTransition();
@@ -405,6 +475,8 @@ int main() {
     testShutdownVsGetter();
     testFailedReopenRollsBack();
     testSafetyDriverStartFailure();
+    testPreRestartConfigHookFiresWithActualGrant();
+    testPreRestartConfigHookSkippedOnFailedReopen();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;

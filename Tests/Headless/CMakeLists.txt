@@ -360,6 +360,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
     )
 endif()
 
+# #731 — engine-side contract: setBufferConfig must be refused while a realtime
+# callback is in flight (RT-visible storage must never be resized mid-callback).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/BufferConfigContractTest.cpp")
+    add_executable(BufferConfigContractTest BufferConfigContractTest.cpp)
+    target_link_libraries(BufferConfigContractTest PRIVATE AestraAudio)
+    target_include_directories(BufferConfigContractTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME BufferConfigContractTest COMMAND BufferConfigContractTest)
+    set_tests_properties(BufferConfigContractTest PROPERTIES
+        LABELS "headless;engine;contract:core"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P4b.1 — engine populates LatencyGraph::edges from real project routing
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     add_executable(PDCEngineEdgeConstructionTest PDCEngineEdgeConstructionTest.cpp)

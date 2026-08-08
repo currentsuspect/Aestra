@@ -362,10 +362,11 @@ void AudioSettingsPage::createUI() {
 
         uint32_t newBufferSize = (uint32_t)m_bufferSizeDropdown->getSelectedValue();
         if (m_audioManager) {
-             bool success = m_audioManager->setBufferSize(newBufferSize);
-             if (success && m_audioEngine) {
-                 m_audioEngine->setBufferConfig(newBufferSize, 2);
-             }
+            // Engine reconfiguration is handled by the manager's pre-restart
+            // config hook (#731): it applies the actual granted buffer size
+            // while the callback is stopped. Calling setBufferConfig here would
+            // race the already-restarted callback.
+            m_audioManager->setBufferSize(newBufferSize);
         }
         updateLatencyEstimate();
     });

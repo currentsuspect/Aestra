@@ -151,6 +151,20 @@ inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
         buf.addEvent(0, allNotesOff, 3);
     }
 }
+
+/**
+ * RAII liveness marker for the setBufferConfig contract (#731): keeps
+ * m_processBlockDepth non-zero for the duration of one realtime callback so
+ * the control thread can refuse any config change that would resize RT-visible
+ * storage while the audio thread is inside processBlock.
+ */
+struct ProcessBlockDepthGuard {
+    std::atomic<uint32_t>& m_depth;
+    explicit ProcessBlockDepthGuard(std::atomic<uint32_t>& depth) : m_depth(depth) {
+        m_depth.fetch_add(1, std::memory_order_relaxed);
+    }
+    ~ProcessBlockDepthGuard() { m_depth.fetch_sub(1, std::memory_order_relaxed); }
+};
 } // namespace
 
 void AudioEngine::startMetronomeCountIn(uint32_t beats) {
@@ -737,6 +751,10 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
  */
 int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
     ScopedRealtimeAudioThread realtimeScope;
+    // RT-callback liveness marker for the setBufferConfig contract (#731). The
+    // counter is only ever read for a zero/non-zero decision by the control
+    // thread, which pairs it with the driver stop/start barrier.
+    ProcessBlockDepthGuard depthGuard(m_processBlockDepth);
     (void)streamTime;
 
     // Process Input (Recording)
@@ -1485,7 +1503,19 @@ void AudioEngine::updateTruePeakMeters(const float* outputBuffer, uint32_t numFr
     }
 }
 
-void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
+bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
+    // Contract (#731): this may resize RT-visible storage, so it must never run
+    // while a stream callback is in flight. Hosts reconfiguring a running
+    // stream must go through AudioDeviceManager's pre-restart config hook,
+    // which applies the actual granted config while the callback is stopped.
+    if (m_processBlockDepth.load(std::memory_order_acquire) != 0) {
+        Aestra::Log::error("[AudioEngine] setBufferConfig refused: a realtime callback is in flight. "
+                           "Configure the engine only while the stream is stopped (#731).");
+        // Note: no assert() here — this tripwire must stay testable in every
+        // build mode (asserts are active in RelWithDebInfo, which runs CI).
+        return false;
+    }
+
     // Treat maxFrames as a hint; never shrink RT buffers.
     // Some drivers deliver larger blocks than requested, and shrinking can cause
     // renderGraph() to early-out -> audible crackles.
@@ -1656,6 +1686,7 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             }
         }
     }
+    return true;
 }
 
 uint32_t AudioEngine::copyWaveformHistory(float* outInterleaved, uint32_t maxFrames) const {

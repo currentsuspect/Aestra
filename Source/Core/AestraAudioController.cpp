@@ -108,6 +108,19 @@ AestraAudioController::AestraAudioController() {
     m_audioManager = std::make_unique<AudioDeviceManager>();
     m_audioEngine = std::make_unique<AudioEngine>();
     m_midiInput = std::make_unique<MidiInputService>();
+
+    // Register the pre-restart config hook (#731): any manager-side reopen
+    // (device switch, sample rate, buffer size, driver type) applies the
+    // ACTUAL granted config to the engine inside the manager's locked
+    // transaction, while the stream callback is stopped. This replaces the
+    // old pattern of reconfiguring the engine after setBufferSize() returned
+    // — which raced the already-restarted callback. The hook runs on the
+    // calling thread and must not call back into the manager.
+    m_audioManager->setPreRestartConfigCallback([this](const Aestra::Audio::AudioStreamConfig& actualConfig) {
+        m_streamConfig = actualConfig;
+        m_audioEngine->setSampleRate(actualConfig.sampleRate);
+        m_audioEngine->setBufferConfig(actualConfig.bufferSize, actualConfig.numOutputChannels);
+    });
 }
 
 AestraAudioController::~AestraAudioController() {
@@ -421,19 +434,13 @@ bool AestraAudioController::setBufferSize(uint32_t bufferSize) {
         return true;
     }
 
-    // Update device (this will reopen the stream)
+    // Update device (this will reopen the stream). The manager's pre-restart
+    // config hook (#731) applies the actual granted config to the engine and
+    // updates m_streamConfig inside the reopen transaction, while the callback
+    // is stopped — so no engine reconfiguration happens here anymore.
     if (!m_audioManager->setBufferSize(bufferSize)) {
         return false;
     }
-
-    // IMPORTANT: Also update the engine's buffer config!
-    // Without this, renderGraph will reject blocks larger than the old config
-    if (m_audioEngine) {
-        m_audioEngine->setBufferConfig(bufferSize, m_streamConfig.numOutputChannels);
-    }
-
-    // Update our local config
-    m_streamConfig.bufferSize = bufferSize;
 
     return true;
 }
