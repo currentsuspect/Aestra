@@ -266,8 +266,21 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     if (!child->theme_ && theme_) {
         child->setTheme(theme_);
     }
-    
+
     setDirty();
+}
+
+bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event) {
+    if (!target) {
+        return false;
+    }
+
+    struct DispatchGuard {
+        DispatchGuard() { NUIComponent::beginEventDispatch(); }
+        ~DispatchGuard() { NUIComponent::endEventDispatch(); }
+    } guard;
+
+    return target->onMouseEvent(event);
 }
 
 void NUIComponent::beginEventDispatch() {

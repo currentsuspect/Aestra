@@ -259,7 +259,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
             event.button = AestraUI::NUIMouseButton::None;
             event.pressed = false;
-            m_recoveryDialog->onMouseEvent(event);
+            AestraUI::NUIComponent::dispatchMouseEvent(m_recoveryDialog.get(), event);
             return;
         }
 
@@ -269,10 +269,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
             event.button = AestraUI::NUIMouseButton::None;
             event.pressed = false;
-            m_confirmationDialog->onMouseEvent(event);
+            AestraUI::NUIComponent::dispatchMouseEvent(m_confirmationDialog.get(), event);
             return;
         }
-        
+
         // Drag & Drop (convert to float for NUI)
         if (m_content) {
             AestraUI::NUIDragDropManager::getInstance().updateDrag(AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y)));
@@ -287,11 +287,12 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             AestraUI::NUIMouseEvent event;
             event.type = pressed ? AestraUI::NUIMouseEventType::Down : AestraUI::NUIMouseEventType::Up;
             event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left :
-                          (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
+            event.button = (button == 0)   ? AestraUI::NUIMouseButton::Left
+                           : (button == 1) ? AestraUI::NUIMouseButton::Right
+                                           : AestraUI::NUIMouseButton::Middle;
             event.pressed = pressed;
             event.released = !pressed;
-            m_recoveryDialog->onMouseEvent(event);
+            AestraUI::NUIComponent::dispatchMouseEvent(m_recoveryDialog.get(), event);
             return; // Block all other mouse handling while recovery dialog is shown
         }
 
@@ -299,14 +300,15 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             AestraUI::NUIMouseEvent event;
             event.type = pressed ? AestraUI::NUIMouseEventType::Down : AestraUI::NUIMouseEventType::Up;
             event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left :
-                          (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
+            event.button = (button == 0)   ? AestraUI::NUIMouseButton::Left
+                           : (button == 1) ? AestraUI::NUIMouseButton::Right
+                                           : AestraUI::NUIMouseButton::Middle;
             event.pressed = pressed;
             event.released = !pressed;
-            m_confirmationDialog->onMouseEvent(event);
+            AestraUI::NUIComponent::dispatchMouseEvent(m_confirmationDialog.get(), event);
             return;
         }
-        
+
         if (!pressed) { // Release
             if (m_content) {
                 AestraUI::NUIDragDropManager::getInstance().endDrag(AestraUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg

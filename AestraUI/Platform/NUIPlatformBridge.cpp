@@ -147,11 +147,11 @@ void NUIPlatformBridge::setupEventBridges() {
                                   static_cast<float>(m_cursorService.anchorY())};
                 event.delta = {static_cast<float>(d.dx), static_cast<float>(d.dy)};
                 // Routed dispatch: ONLY the capture owner sees motion.
-                m_cursorCaptureOwner->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_cursorCaptureOwner, event);
             } else {
                 event.position = {static_cast<float>(x), static_cast<float>(y)};
                 event.delta = {deltaX, deltaY};
-                m_rootComponent->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_rootComponent, event);
             }
         }
     });
@@ -190,10 +190,18 @@ void NUIPlatformBridge::setupEventBridges() {
             event.position = {static_cast<float>(x), static_cast<float>(y)};
             // Map button
             switch (button) {
-                case Aestra::MouseButton::Left: event.button = NUIMouseButton::Left; break;
-                case Aestra::MouseButton::Right: event.button = NUIMouseButton::Right; break;
-                case Aestra::MouseButton::Middle: event.button = NUIMouseButton::Middle; break;
-                default: event.button = NUIMouseButton::None; break;
+            case Aestra::MouseButton::Left:
+                event.button = NUIMouseButton::Left;
+                break;
+            case Aestra::MouseButton::Right:
+                event.button = NUIMouseButton::Right;
+                break;
+            case Aestra::MouseButton::Middle:
+                event.button = NUIMouseButton::Middle;
+                break;
+            default:
+                event.button = NUIMouseButton::None;
+                break;
             }
             event.pressed = pressed;
             event.released = !pressed;
@@ -205,9 +213,9 @@ void NUIPlatformBridge::setupEventBridges() {
                 event.modifiers = convertModifiers(mods);
             }
             if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
-                m_cursorCaptureOwner->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_cursorCaptureOwner, event);
             } else {
-                m_rootComponent->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_rootComponent, event);
             }
         }
     });
@@ -249,9 +257,9 @@ void NUIPlatformBridge::setupEventBridges() {
             // (anchored position above); it must never leak to whatever sits
             // under the hidden physical pointer.
             if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
-                m_cursorCaptureOwner->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_cursorCaptureOwner, event);
             } else {
-                m_rootComponent->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(m_rootComponent, event);
             }
         }
     });
@@ -347,7 +355,7 @@ void NUIPlatformBridge::setupEventBridges() {
                 event.wheelDelta = 0.0f;
                 event.cursorCaptured = true;
                 event.synthetic = true; // "stop", not "accept" — see NUIMouseEvent
-                owner->onMouseEvent(event);
+                NUIComponent::dispatchMouseEvent(owner, event);
             }
         }
         if (m_focusCallback) {
@@ -411,7 +419,7 @@ bool NUIPlatformBridge::processEvents() {
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
                 event.modifiers = convertModifiers(mods);
             }
-            m_rootComponent->onMouseEvent(event);
+            NUIComponent::dispatchMouseEvent(m_rootComponent, event);
         }
     }
     return m_window ? m_window->pollEvents() : false;
