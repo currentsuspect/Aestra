@@ -979,21 +979,72 @@ void AestraEQEditor::syncBandsFromPlugin() {
         }
     }
     if (eq) {
+        const auto disabledBand = std::find_if(m_bands.begin(), m_bands.end(), [eq](const Band& band) {
+            return !eq->isDynamicBandSlotEnabled(band.slotIndex);
+        });
+        if (disabledBand == m_bands.end())
+            return;
+
+        constexpr uint32_t kInvalidBandSlot = static_cast<uint32_t>(-1);
+        const auto slotForBandIndex = [this](int bandIndex) {
+            return bandIndex >= 0 && bandIndex < static_cast<int>(m_bands.size())
+                       ? m_bands[static_cast<size_t>(bandIndex)].slotIndex
+                       : kInvalidBandSlot;
+        };
+        const uint32_t selectedSlot = slotForBandIndex(m_selectedBand);
+        const uint32_t hoveredSlot = slotForBandIndex(m_hoveredBand);
+        const uint32_t hoveredFloatingSlot = slotForBandIndex(m_hoveredFloatingBand);
+        const uint32_t typeMenuSlot = slotForBandIndex(m_typeMenuBand);
+        const uint32_t stereoMenuSlot = slotForBandIndex(m_stereoMenuBand);
+        const uint32_t contextMenuSlot = slotForBandIndex(m_bandContextMenuBand);
+        const uint32_t numericEditSlot = slotForBandIndex(m_numericEditBand);
+        const uint32_t graphDragSlot = slotForBandIndex(m_draggingGraphBand);
+        const uint32_t detectorDragSlot = slotForBandIndex(m_draggingDetectorBand);
+        const uint32_t cardDragSlot = slotForBandIndex(m_draggingCardBand);
+
         m_bands.erase(std::remove_if(m_bands.begin(), m_bands.end(),
                                      [eq](const Band& band) { return !eq->isDynamicBandSlotEnabled(band.slotIndex); }),
                       m_bands.end());
-        if (m_selectedBand >= static_cast<int>(m_bands.size()))
-            m_selectedBand = m_bands.empty() ? -1 : static_cast<int>(m_bands.size()) - 1;
-        if (m_hoveredBand >= static_cast<int>(m_bands.size()))
-            m_hoveredBand = -1;
-        if (m_hoveredFloatingBand >= static_cast<int>(m_bands.size()))
-            m_hoveredFloatingBand = -1;
-        if (m_typeMenuBand >= static_cast<int>(m_bands.size()))
-            m_typeMenuBand = -1;
-        if (m_stereoMenuBand >= static_cast<int>(m_bands.size()))
-            m_stereoMenuBand = -1;
-        if (m_bandContextMenuBand >= static_cast<int>(m_bands.size()))
+
+        const auto bandIndexForSlot = [this](uint32_t slotIndex) {
+            if (slotIndex == kInvalidBandSlot)
+                return -1;
+            const auto found = std::find_if(m_bands.begin(), m_bands.end(),
+                                            [slotIndex](const Band& band) { return band.slotIndex == slotIndex; });
+            return found == m_bands.end() ? -1 : static_cast<int>(std::distance(m_bands.begin(), found));
+        };
+
+        m_selectedBand = bandIndexForSlot(selectedSlot);
+        m_hoveredBand = bandIndexForSlot(hoveredSlot);
+        if (m_hoveredBand < 0)
+            m_hoveredBandFromGraph = false;
+        m_hoveredFloatingBand = bandIndexForSlot(hoveredFloatingSlot);
+
+        m_typeMenuBand = bandIndexForSlot(typeMenuSlot);
+        if (m_typeMenuBand < 0) {
+            m_typeMenuFromNodeQuickAction = false;
+            m_hoveredTypeOption = -1;
+        }
+        m_stereoMenuBand = bandIndexForSlot(stereoMenuSlot);
+        if (m_stereoMenuBand < 0) {
+            m_stereoMenuFromNodeQuickAction = false;
+            m_hoveredStereoOption = -1;
+        }
+        m_bandContextMenuBand = bandIndexForSlot(contextMenuSlot);
+        if (contextMenuSlot != kInvalidBandSlot && m_bandContextMenuBand < 0)
             closeBandContextMenu();
+
+        if (m_numericEditActive) {
+            m_numericEditBand = bandIndexForSlot(numericEditSlot);
+            if (m_numericEditBand < 0)
+                cancelNumericEdit();
+        }
+
+        m_draggingGraphBand = bandIndexForSlot(graphDragSlot);
+        m_draggingDetectorBand = bandIndexForSlot(detectorDragSlot);
+        m_draggingCardBand = bandIndexForSlot(cardDragSlot);
+        if (m_draggingCardBand < 0)
+            m_draggingKnob = Knob::None;
     }
 }
 
