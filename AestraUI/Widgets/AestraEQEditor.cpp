@@ -21,8 +21,12 @@ namespace AestraUI {
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
 
-NUIColor accent() { return NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }
-NUIColor accentSoft() { return NUIColor(0.55f, 0.40f, 0.92f, 0.35f); }
+NUIColor accent() {
+    return NUIColor(0.30f, 0.86f, 0.66f, 1.0f);
+}
+NUIColor accentSoft() {
+    return NUIColor(0.30f, 0.86f, 0.66f, 0.30f);
+}
 NUIColor graphBg() { return editorNeutral(0.045f, 0.96f); }
 
 std::shared_ptr<NUIIcon> makeSvgIcon(const char* svg) {
@@ -414,12 +418,12 @@ std::shared_ptr<NUIIcon> clearAllIcon() {
 
 NUIColor bandColor(size_t i) {
     static const NUIColor colors[] = {
-        NUIColor(0.376f, 0.647f, 0.980f, 1.0f), // HP #60a5fa
-        NUIColor(0.204f, 0.827f, 0.600f, 1.0f), // LS #34d399
-        NUIColor(0.655f, 0.545f, 0.980f, 1.0f), // B1 #a78bfa
-        NUIColor(0.910f, 0.475f, 0.976f, 1.0f), // B2 #e879f9
-        NUIColor(0.984f, 0.573f, 0.235f, 1.0f), // HS #fb923c
-        NUIColor(0.973f, 0.443f, 0.443f, 1.0f), // LP #f87171
+        NUIColor(0.290f, 0.871f, 0.651f, 1.0f), // Mint
+        NUIColor(0.949f, 0.757f, 0.306f, 1.0f), // Gold
+        NUIColor(0.984f, 0.443f, 0.522f, 1.0f), // Coral
+        NUIColor(0.220f, 0.741f, 0.973f, 1.0f), // Sky
+        NUIColor(0.639f, 0.902f, 0.208f, 1.0f), // Lime
+        NUIColor(0.984f, 0.573f, 0.235f, 1.0f), // Orange
     };
     return colors[i % 6];
 }
@@ -793,7 +797,12 @@ void AestraEQEditor::buildBands() {
     auto eq = std::dynamic_pointer_cast<EQ>(m_instance);
 
     for (size_t i = 0; i < kNumBands; ++i) {
-        appendLegacyBand(static_cast<uint32_t>(i));
+        const uint32_t slot = static_cast<uint32_t>(i);
+        const bool enabled = eq ? eq->isDynamicBandSlotEnabled(slot)
+                                : m_instance->getParameter(EQ::legacyBandSlot(slot).enableId) > 0.5f;
+        if (enabled) {
+            appendLegacyBand(slot);
+        }
     }
     if (eq) {
         for (uint32_t slot = EQ::kLegacyBandCount; slot < eq->getDynamicBandSlotCount(); ++slot) {
@@ -910,6 +919,8 @@ void AestraEQEditor::syncBandsFromPlugin() {
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
     if (eq) {
         for (uint32_t slot = 0; slot < Aestra::Audio::Plugins::AestraEQ::kLegacyBandCount; ++slot) {
+            if (!eq->isDynamicBandSlotEnabled(slot))
+                continue;
             const auto found = std::find_if(m_bands.begin(), m_bands.end(),
                                             [slot](const Band& band) { return band.slotIndex == slot; });
             if (found == m_bands.end()) {
@@ -969,9 +980,7 @@ void AestraEQEditor::syncBandsFromPlugin() {
     }
     if (eq) {
         m_bands.erase(std::remove_if(m_bands.begin(), m_bands.end(),
-                                     [eq](const Band& band) {
-                                         return !band.legacySlot && !eq->isDynamicBandSlotEnabled(band.slotIndex);
-                                     }),
+                                     [eq](const Band& band) { return !eq->isDynamicBandSlotEnabled(band.slotIndex); }),
                       m_bands.end());
         if (m_selectedBand >= static_cast<int>(m_bands.size()))
             m_selectedBand = m_bands.empty() ? -1 : static_cast<int>(m_bands.size()) - 1;
@@ -1789,7 +1798,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
     const bool canPrev = adjacentGraphBand(-1) >= 0;
     const bool canNext = adjacentGraphBand(1) >= 0;
     const bool canCopy = static_cast<int>(idx) >= 0 && static_cast<int>(idx) < static_cast<int>(m_bands.size());
-    const bool canDelete = !bd.legacySlot;
+    const bool canDelete = true;
     drawCollapseButton(m_selectedCollapseRect, m_selectedCollapseHovered);
     drawChevronButton(m_selectedPrevRect, false, m_selectedPrevHovered, canPrev);
     drawChevronButton(m_selectedNextRect, true, m_selectedNextHovered, canNext);
@@ -2029,17 +2038,17 @@ void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& 
         const float lowWeight = std::clamp(1.0f - t * 2.2f, 0.0f, 1.0f);
         const float highWeight = std::clamp((t - 0.58f) * 2.4f, 0.0f, 1.0f);
         const float midWeight = 1.0f - std::max(lowWeight, highWeight);
-        const NUIColor low(0.34f, 0.70f, 1.00f, 1.0f);
-        const NUIColor mid(0.62f, 0.42f, 0.98f, 1.0f);
-        const NUIColor high(0.98f, 0.64f, 0.42f, 1.0f);
+        const NUIColor low(0.18f, 0.66f, 0.58f, 1.0f);
+        const NUIColor mid(0.86f, 0.68f, 0.26f, 1.0f);
+        const NUIColor high(0.96f, 0.44f, 0.30f, 1.0f);
         const NUIColor band(low.r * lowWeight + mid.r * midWeight + high.r * highWeight,
                             low.g * lowWeight + mid.g * midWeight + high.g * highWeight,
                             low.b * lowWeight + mid.b * midWeight + high.b * highWeight, 1.0f);
 
-        renderer.fillRect({x, inner.bottom() - bh, bw, bh}, band.withAlpha(0.035f + mag * 0.105f));
+        renderer.fillRect({x, inner.bottom() - bh, bw, bh}, band.withAlpha(0.025f + mag * 0.085f));
         if (mag > 0.08f) {
             const float capY = inner.bottom() - bh;
-            renderer.drawLine({x, capY}, {x + bw, capY}, 1.0f, band.withAlpha(0.10f + mag * 0.14f));
+            renderer.drawLine({x, capY}, {x + bw, capY}, 1.0f, band.withAlpha(0.09f + mag * 0.12f));
         }
         if (peak > 0.12f && (i % 2 == 0)) {
             const float peakY = inner.bottom() - peak * inner.height;
@@ -2154,36 +2163,11 @@ void AestraEQEditor::drawBandResponseCurves(NUIRenderer& renderer, const NUIRect
         const NUIColor c = bandColor(m_bands[band].slotIndex);
         const bool soloed = eq->isBandSoloed(m_bands[band].slotIndex);
         if (soloed || selected || hovered) {
-            const auto node = graphNodePosition(band, bounds);
-            const float q = std::clamp(m_bands[band].q, 0.0f, 1.0f);
-            const float width = soloed ? (126.0f - q * 56.0f) : (82.0f - q * 30.0f);
-            const float glowW = std::clamp(width, soloed ? 50.0f : 36.0f, soloed ? 128.0f : 92.0f);
-            const float glowX = std::clamp(node.x - glowW * 0.5f, inner.x, inner.right() - glowW);
-            const float fadeRange = std::max(1.0f, inner.height * (soloed ? 0.36f : 0.28f));
-            const float glowH = std::min(inner.height, fadeRange * 2.0f);
-            const float glowY = std::clamp(node.y - glowH * 0.5f, inner.y, inner.bottom() - glowH);
-            const NUIRect region{glowX, glowY, glowW, glowH};
-            constexpr int kGlowSlices = 28;
-            const float peakAlpha = soloed ? 0.085f : 0.052f;
-            for (int slice = 0; slice < kGlowSlices; ++slice) {
-                const float y0 = region.y + region.height * static_cast<float>(slice) / static_cast<float>(kGlowSlices);
-                const float y1 =
-                    region.y + region.height * static_cast<float>(slice + 1) / static_cast<float>(kGlowSlices);
-                const float cy = (y0 + y1) * 0.5f;
-                const float distance = std::abs(cy - node.y) / fadeRange;
-                const float falloff = std::clamp(1.0f - distance, 0.0f, 1.0f);
-                const float alpha = falloff * falloff * peakAlpha;
-                if (alpha > 0.002f) {
-                    renderer.fillRect({region.x, y0, region.width, y1 - y0 + 0.75f}, c.withAlpha(alpha));
-                }
-            }
-            renderer.drawLine({node.x, region.y + 2.0f}, {node.x, region.bottom() - 2.0f}, soloed ? 1.4f : 1.0f,
-                              c.withAlpha(soloed ? 0.18f : 0.080f));
             if (pts.size() > 1) {
-                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 9.0f : 6.0f,
-                                      c.withAlpha(soloed ? 0.13f : 0.075f));
-                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 4.4f : 3.0f,
-                                      c.withAlpha(soloed ? 0.30f : 0.17f));
+                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 10.0f : 7.0f,
+                                      c.withAlpha(soloed ? 0.10f : 0.055f));
+                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 4.5f : 3.0f,
+                                      c.withAlpha(soloed ? 0.28f : 0.16f));
             }
         }
         const float alpha = soloed ? 0.74f : (selected || hovered ? 0.48f : 0.22f);
@@ -2345,7 +2329,7 @@ void AestraEQEditor::drawSelectedNodeQuickActions(NUIRenderer& renderer, const N
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
     const bool soloed = eq && eq->isBandSoloed(bd.slotIndex);
     const bool canType = bd.typeId != 0 || !bd.legacySlot;
-    const bool canDelete = !bd.legacySlot;
+    const bool canDelete = true;
 
     renderer.fillRoundedRect(m_nodeQuickActionRect, 7.0f, editorNeutral(0.028f, 0.94f));
     renderer.strokeRoundedRect(m_nodeQuickActionRect, 7.0f, 1.0f, band.withAlpha(0.32f));
@@ -2512,12 +2496,20 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         maxAbsResponse = std::max(maxAbsResponse, std::abs(db));
     }
 
-    const NUIColor curveCol(0.78f, 0.62f, 1.0f, 0.95f);
+    const NUIColor curveCol(0.54f, 0.92f, 0.70f, 0.96f);
     if (maxAbsResponse > 0.02f) {
         renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 6.0f, curveCol.withAlpha(0.10f));
         renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 3.0f, curveCol.withAlpha(0.30f));
     }
     renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 1.6f, curveCol);
+    if (m_bands.empty()) {
+        const NUIRect emptyTitle{inner.x, inner.center().y - 20.0f, inner.width, 18.0f};
+        const NUIRect emptyHint{inner.x, inner.center().y + 2.0f, inner.width, 16.0f};
+        renderer.drawTextCentered("Click the spectrum to add a band", emptyTitle, 11.0f,
+                                  theme.getColor("textPrimary").withAlpha(0.72f));
+        renderer.drawTextCentered("Start clean. Every node can be removed.", emptyHint, 8.8f,
+                                  theme.getColor("textSecondary").withAlpha(0.54f));
+    }
     drawAnalyzerMenuPill(renderer);
     drawCurveScalePill(renderer);
 
@@ -3598,12 +3590,27 @@ void AestraEQEditor::resetBandToDefault(int idx) {
 bool AestraEQEditor::deleteBand(int idx) {
     if (idx < 0 || idx >= static_cast<int>(m_bands.size()) || !m_instance)
         return false;
-    const auto& bd = m_bands[static_cast<size_t>(idx)];
-    if (bd.legacySlot)
-        return false;
+    const auto bd = m_bands[static_cast<size_t>(idx)];
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
-    if (!eq || !eq->clearDynamicBandSlot(bd.slotIndex))
+    if (bd.legacySlot) {
+        m_instance->setParameter(bd.enableId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.enableId));
+        m_instance->setParameter(bd.freqId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.freqId));
+        if (bd.gainId != 0) {
+            m_instance->setParameter(bd.gainId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.gainId));
+        }
+        m_instance->setParameter(bd.qId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.qId));
+        if (bd.typeId != 0) {
+            m_instance->setParameter(bd.typeId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.typeId));
+        }
+        if (bd.stereoId != 0) {
+            m_instance->setParameter(bd.stereoId, Aestra::Audio::Plugins::AestraEQ::defaultParameterValue(bd.stereoId));
+        }
+        if (eq && eq->isBandSoloed(bd.slotIndex)) {
+            eq->setSoloBandSlot(-1);
+        }
+    } else if (!eq || !eq->clearDynamicBandSlot(bd.slotIndex)) {
         return false;
+    }
     m_bands.erase(m_bands.begin() + idx);
     m_selectedBand = m_bands.empty() ? -1 : std::min(idx, static_cast<int>(m_bands.size()) - 1);
     setDirty(true);
@@ -3805,7 +3812,7 @@ bool AestraEQEditor::canApplyBandContextAction(BandMenuAction action) const {
     case BandMenuAction::Copy:
         return true;
     case BandMenuAction::Delete:
-        return !bd.legacySlot;
+        return true;
     case BandMenuAction::InvertGain:
         return bd.usesGain && (bd.gainId != 0 || !bd.legacySlot);
     case BandMenuAction::ToggleDynamic:
@@ -4496,9 +4503,7 @@ bool AestraEQEditor::handleSelectedNodeQuickActionClick(const NUIMouseEvent& eve
             duplicateBand(m_selectedBand);
             return true;
         case NodeQuickAction::Delete:
-            if (!bd.legacySlot) {
-                deleteBand(m_selectedBand);
-            }
+            deleteBand(m_selectedBand);
             return true;
         case NodeQuickAction::Count:
             return true;
@@ -4842,8 +4847,7 @@ bool AestraEQEditor::handlePress(const NUIMouseEvent& event) {
             return true;
         }
         if (m_selectedDeleteRect.contains(event.position)) {
-            if (selectedIdx >= 0 && selectedIdx < static_cast<int>(m_bands.size()) &&
-                !m_bands[static_cast<size_t>(selectedIdx)].legacySlot) {
+            if (selectedIdx >= 0 && selectedIdx < static_cast<int>(m_bands.size())) {
                 deleteBand(selectedIdx);
             }
             return true;
@@ -5380,8 +5384,7 @@ bool AestraEQEditor::onKeyEvent(const NUIKeyEvent& event) {
         }
     }
     if (event.pressed && selectedIdx >= 0 &&
-        (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) &&
-        !m_bands[static_cast<size_t>(selectedIdx)].legacySlot) {
+        (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace)) {
         deleteBand(selectedIdx);
         closeTransientBandMenus();
         return true;
