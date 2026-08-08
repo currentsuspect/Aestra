@@ -115,11 +115,16 @@ AestraAudioController::AestraAudioController() {
     // transaction, while the stream callback is stopped. This replaces the
     // old pattern of reconfiguring the engine after setBufferSize() returned
     // — which raced the already-restarted callback. The hook runs on the
-    // calling thread and must not call back into the manager.
-    m_audioManager->setPreRestartConfigCallback([this](const Aestra::Audio::AudioStreamConfig& actualConfig) {
+    // calling thread and must not call back into the manager. Return false
+    // to reject the configuration and trigger a rollback.
+    m_audioManager->setPreRestartConfigCallback([this](const Aestra::Audio::AudioStreamConfig& actualConfig) -> bool {
         m_streamConfig = actualConfig;
         m_audioEngine->setSampleRate(actualConfig.sampleRate);
-        m_audioEngine->setBufferConfig(actualConfig.bufferSize, actualConfig.numOutputChannels);
+        if (!m_audioEngine->setBufferConfig(actualConfig.bufferSize, actualConfig.numOutputChannels)) {
+            AESTRA_LOG_ERROR("[AestraAudioController] Engine rejected buffer config; aborting stream reconfiguration");
+            return false;
+        }
+        return true;
     });
 }
 

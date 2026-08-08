@@ -366,7 +366,14 @@ void AudioSettingsPage::createUI() {
             // config hook (#731): it applies the actual granted buffer size
             // while the callback is stopped. Calling setBufferConfig here would
             // race the already-restarted callback.
-            m_audioManager->setBufferSize(newBufferSize);
+            if (!m_audioManager->setBufferSize(newBufferSize)) {
+                // Failure: restore the dropdown selection to the current config.
+                const auto currentConfig = m_audioManager->getCurrentConfig();
+                m_isPopulatingDeviceUI = true;
+                m_bufferSizeDropdown->setSelectedByValue(static_cast<int>(currentConfig.bufferSize));
+                m_isPopulatingDeviceUI = false;
+                updateLatencyEstimate();
+            }
         }
         updateLatencyEstimate();
     });

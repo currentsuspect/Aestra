@@ -171,7 +171,8 @@ public:
      *        after a reopen inside a reconfiguration transaction and before the
      *        stream restarts (#731).
      * @param callback Function to call with the actual granted config, or empty
-     *        to unregister.
+     *        to unregister. The callback must return true to accept the
+     *        configuration or false to reject it (triggering a rollback).
      *
      * Fires after openStream succeeds and before startStream for device
      * switches, input-device switches, sample-rate and buffer-size changes, and
@@ -180,9 +181,11 @@ public:
      * (buffer size, sample rate, channel counts) against the real granted
      * values instead of the requested ones. The callback must not call back
      * into AudioDeviceManager — the reconfiguration lock is held while it runs.
-     * It is not invoked on failed reopens or rollbacks.
+     * It is not invoked on failed reopens or rollbacks. When the callback
+     * returns false or throws, the stream is rolled back to its previous
+     * configuration instead of restarting with the new settings.
      */
-    void setPreRestartConfigCallback(std::function<void(const AudioStreamConfig&)> callback);
+    void setPreRestartConfigCallback(std::function<bool(const AudioStreamConfig&)> callback);
 
     /**
      * @brief Validate if a device supports the given configuration
@@ -361,8 +364,9 @@ private:
 
     // Pre-restart config hook (#731): applied with the actual granted config
     // after a successful reopen, while the stream callback is stopped. Invoked
-    // only under m_mutex; must never be re-entered by the callback.
-    std::function<void(const AudioStreamConfig&)> m_preRestartConfigCallback;
+    // only under m_mutex; must never be re-entered by the callback. Returns
+    // true to accept the configuration, false to reject and trigger rollback.
+    std::function<bool(const AudioStreamConfig&)> m_preRestartConfigCallback;
 
     // Driver mode change notification
     DriverModeChangeCallback m_driverModeChangeCallback;
@@ -409,7 +413,7 @@ private:
     void closeStreamLocked();
     bool startStreamLocked();
     void stopStreamLocked();
-    void firePreRestartConfigCallbackLocked();
+    bool firePreRestartConfigCallbackLocked();
     bool validateDeviceConfigLocked(uint32_t deviceId, uint32_t sampleRate) const;
     bool validateStreamConfigLocked(const AudioStreamConfig& config) const;
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);

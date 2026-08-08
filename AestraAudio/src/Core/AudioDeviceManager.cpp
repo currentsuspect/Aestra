@@ -369,8 +369,15 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
                     startStreamLocked();
                 }
                 result = false;
+            } else if (!firePreRestartConfigCallbackLocked()) {
+                // Callback rejected the configuration; roll back.
+                closeStreamLocked();
+                m_currentConfig.deviceId = previousDevice;
+                if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
             } else {
-                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -412,6 +419,15 @@ bool AudioDeviceManager::switchInputDevice(uint32_t deviceId) {
                 }
 
                 if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    m_currentConfig.inputDeviceId = previousInput;
+                    m_currentConfig.numInputChannels = previousInChans;
+                    if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && m_wasRunning) {
+                        startStreamLocked();
+                    }
+                    result = false;
+                } else if (!firePreRestartConfigCallbackLocked()) {
+                    // Callback rejected the configuration; roll back.
+                    closeStreamLocked();
                     m_currentConfig.inputDeviceId = previousInput;
                     m_currentConfig.numInputChannels = previousInChans;
                     if (openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData) && m_wasRunning) {
@@ -471,8 +487,20 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
                     startStreamLocked();
                 }
                 result = false;
+            } else if (!firePreRestartConfigCallbackLocked()) {
+                // Callback rejected the configuration; roll back.
+                Aestra::Log::error("[AudioDeviceManager] Pre-restart callback rejected sample rate " +
+                                   std::to_string(sampleRate) + ", rolling back to " +
+                                   std::to_string(previousSampleRate));
+                closeStreamLocked();
+                m_currentConfig.sampleRate = previousSampleRate;
+                if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    Aestra::Log::error("[AudioDeviceManager] CRITICAL: Failed to restore previous sample rate!");
+                } else if (m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
             } else {
-                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -515,8 +543,20 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
                     startStreamLocked();
                 }
                 result = false;
+            } else if (!firePreRestartConfigCallbackLocked()) {
+                // Callback rejected the configuration; roll back.
+                AESTRA_LOG_ERROR("[AudioDeviceManager] Pre-restart callback rejected buffer size " +
+                                 std::to_string(bufferSize) + ", rolling back to " +
+                                 std::to_string(previousBufferSize));
+                closeStreamLocked();
+                m_currentConfig.bufferSize = previousBufferSize;
+                if (!openStreamLocked(m_currentConfig, m_currentCallback, m_currentUserData)) {
+                    AESTRA_LOG_ERROR("[AudioDeviceManager] CRITICAL: Failed to restore previous buffer size!");
+                } else if (m_wasRunning) {
+                    startStreamLocked();
+                }
+                result = false;
             } else {
-                firePreRestartConfigCallbackLocked();
                 result = (!m_wasRunning) || startStreamLocked();
             }
         }
@@ -527,14 +567,14 @@ bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
     return result;
 }
 
-void AudioDeviceManager::setPreRestartConfigCallback(std::function<void(const AudioStreamConfig&)> callback) {
+void AudioDeviceManager::setPreRestartConfigCallback(std::function<bool(const AudioStreamConfig&)> callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_preRestartConfigCallback = std::move(callback);
 }
 
-void AudioDeviceManager::firePreRestartConfigCallbackLocked() {
+bool AudioDeviceManager::firePreRestartConfigCallbackLocked() {
     if (!m_preRestartConfigCallback || !m_activeDriver) {
-        return;
+        return true; // No callback registered: accept by default
     }
     // Apply the ACTUAL granted config (post-backend), not the request: drivers
     // may deliver different sizes than asked for. Fall back to the request when
@@ -549,7 +589,15 @@ void AudioDeviceManager::firePreRestartConfigCallbackLocked() {
     if (actualRate != 0) {
         actual.sampleRate = actualRate;
     }
-    m_preRestartConfigCallback(actual);
+    try {
+        return m_preRestartConfigCallback(actual);
+    } catch (const std::exception& e) {
+        AESTRA_LOG_ERROR(std::string("[AudioDeviceManager] Pre-restart config callback threw: ") + e.what());
+        return false; // Reject on exception
+    } catch (...) {
+        AESTRA_LOG_ERROR("[AudioDeviceManager] Pre-restart config callback threw unknown exception");
+        return false;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -666,8 +714,13 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
                 if (!openStreamLocked(savedConfig, savedCallback, savedUserData)) {
                     AESTRA_LOG_ERROR("Failed to reopen stream with any driver");
                     result = false;
+                } else if (!firePreRestartConfigCallbackLocked()) {
+                    // Callback rejected the configuration; close the stream.
+                    // No rollback here: changing driver type has no previous driver to restore.
+                    AESTRA_LOG_ERROR("Pre-restart callback rejected driver type change");
+                    closeStreamLocked();
+                    result = false;
                 } else {
-                    firePreRestartConfigCallbackLocked();
                     if (wasRunning && !startStreamLocked()) {
                         AESTRA_LOG_ERROR("Failed to restart stream");
                         result = false;
