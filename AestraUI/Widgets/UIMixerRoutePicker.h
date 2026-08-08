@@ -20,7 +20,7 @@ class NUITextInput;
  * Channel numbers are presentation only; selection callbacks always return the
  * stable mixer channel ID.
  */
-class UIMixerRoutePicker final : public NUIComponent {
+class UIMixerRoutePicker : public NUIComponent {
 public:
     struct Route {
         uint32_t id{0};
