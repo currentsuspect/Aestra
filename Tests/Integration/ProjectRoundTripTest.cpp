@@ -3,6 +3,7 @@
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../Support/TestTempDirectory.h"
+#include "Commands/TrimClipCommand.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -80,6 +81,7 @@ int main() {
     const auto wavPath = tempDir / "test.wav";
     const auto projectPath = tempDir / "project.aes";
     const auto autosavePath = tempDir / "autosave.aes";
+    const auto negativeOffsetPath = tempDir / "negative-offset.aes";
 
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
     std::cout << "[INFO] Writing WAV...\n";
@@ -140,6 +142,8 @@ int main() {
     require(clipId.isValid(), "Failed to add clip from pattern");
 
     if (auto* clip = playlist1.getClip(clipId)) {
+        clip->durationSeconds = playlist1.beatToSeconds(4.0);
+        clip->sourceOffsetSeconds = 0.0;
         clip->edits.gainLinear = 0.9f;
         clip->edits.pan = 0.1f;
         clip->edits.muted = false;
@@ -148,6 +152,17 @@ int main() {
         clip->edits.fadeOutBeats = 0.0;
         clip->edits.sourceStart = 0.0;
     }
+
+    // Exercise the same explicit command variant used when the UI releases a
+    // live left-edge trim, then carry that state through both save paths.
+    const double expectedTrimStartBeat = 1.0;
+    const double expectedTrimDurationBeats = 3.0;
+    const double expectedTrimDurationSeconds = playlist1.beatToSeconds(expectedTrimDurationBeats);
+    const double expectedTrimSourceOffsetSeconds = playlist1.beatToSeconds(expectedTrimStartBeat);
+    tm1->setModified(false);
+    tm1->getCommandHistory().pushAndExecute(std::make_shared<TrimClipCommand>(
+        playlist1, clipId, 0.0, 4.0, 0.0, playlist1.beatToSeconds(4.0), expectedTrimStartBeat, 4.0));
+    require(tm1->isModified(), "UI-style trim command did not dirty the project before serialization");
 
     channel1->setMainOutputId(channel2Src->getChannelId());
     AudioRoute audibleSend{};
@@ -169,11 +184,13 @@ int main() {
     channel1->addSend(sidechainSend);
 
     // --- Autosave-style path: serialize compact (indent=0) + atomic write
+    std::string autosaveContents;
     {
         std::cout << "[INFO] Serializing (indent=0) + atomic write (autosave)...\n";
         auto ser = ProjectSerializer::serialize(tm1, 128.0, 1.234, 0);
         require(ser.ok, "ProjectSerializer::serialize failed");
         require(!ser.contents.empty(), "ProjectSerializer::serialize produced empty output");
+        autosaveContents = ser.contents;
         require(ProjectSerializer::writeAtomically(autosavePath.string(), ser.contents),
                 "ProjectSerializer::writeAtomically failed");
         std::cout << "[INFO] Autosave written: " << autosavePath.string() << " (" << ser.contents.size() << " bytes)\n";
@@ -221,8 +238,14 @@ int main() {
 
     require(loadedLane1->clips.size() == 1, "Clip count mismatch after load");
     const auto& loadedClip = loadedLane1->clips[0];
-    require(std::abs(loadedClip.startBeat - 0.0) < 1e-9, "Clip start mismatch after load");
-    require(std::abs(loadedClip.durationBeats - 4.0) < 1e-9, "Clip duration mismatch after load");
+    require(std::abs(loadedClip.startBeat - expectedTrimStartBeat) < 1e-9,
+            "Trimmed clip start mismatch after canonical load");
+    require(std::abs(loadedClip.durationBeats - expectedTrimDurationBeats) < 1e-9,
+            "Trimmed clip beat duration mismatch after canonical load");
+    require(std::abs(loadedClip.durationSeconds - expectedTrimDurationSeconds) < 1e-9,
+            "Trimmed clip second duration mismatch after canonical load");
+    require(std::abs(loadedClip.sourceOffsetSeconds - expectedTrimSourceOffsetSeconds) < 1e-9,
+            "Trimmed clip source offset mismatch after canonical load");
     require(std::abs(loadedClip.edits.gainLinear - 0.9f) < 1e-6f, "Clip gain mismatch after load");
 
     PlaylistLaneID loadedLane2Id = playlist2.getLaneId(1);
@@ -289,6 +312,52 @@ int main() {
             "Autosave audible send mismatch");
     require(autosaveSends[1].postFader == true && autosaveSends[1].sidechainOnly == true,
             "Autosave sidechain send mismatch");
+
+    const auto* autosaveLane = tm3->getPlaylistModel().getLane(tm3->getPlaylistModel().getLaneId(0));
+    require(autosaveLane != nullptr && autosaveLane->clips.size() == 1, "Autosave trimmed clip missing");
+    const auto& autosaveClip = autosaveLane->clips[0];
+    require(std::abs(autosaveClip.startBeat - expectedTrimStartBeat) < 1e-9,
+            "Trimmed clip start mismatch after autosave load");
+    require(std::abs(autosaveClip.durationSeconds - expectedTrimDurationSeconds) < 1e-9,
+            "Trimmed clip duration mismatch after autosave load");
+    require(std::abs(autosaveClip.sourceOffsetSeconds - expectedTrimSourceOffsetSeconds) < 1e-9,
+            "Trimmed clip source offset mismatch after autosave load");
+
+    // Historical builds could persist a negative sourceOffsetSeconds after a
+    // left-edge extension. Such a file cannot reveal source material before
+    // time zero: load must clamp, warn observably, and require a corrective save.
+    const std::string offsetKey = "\"sourceOffsetSeconds\":";
+    const size_t offsetKeyAt = autosaveContents.find(offsetKey);
+    require(offsetKeyAt != std::string::npos, "Serialized audio clip source offset missing");
+    const size_t offsetValueAt = offsetKeyAt + offsetKey.size();
+    const size_t offsetValueEnd = autosaveContents.find_first_of(",}", offsetValueAt);
+    require(offsetValueEnd != std::string::npos, "Serialized audio clip source offset terminator missing");
+    autosaveContents.replace(offsetValueAt, offsetValueEnd - offsetValueAt, "-0.5");
+    require(ProjectSerializer::writeAtomically(negativeOffsetPath.string(), autosaveContents),
+            "Failed to write legacy negative-offset project");
+
+    auto tm4 = std::make_shared<TrackManager>();
+    tm4->getPlaylistModel().setPatternManager(&tm4->getPatternManager());
+    const auto negativeOffsetLoad = ProjectSerializer::load(negativeOffsetPath.string(), tm4);
+    require(negativeOffsetLoad.ok, "Legacy negative-offset project failed to load");
+    require(negativeOffsetLoad.negativeAudioClipOffsetsCorrected == 1,
+            "Legacy negative source offset correction was not counted");
+    require(negativeOffsetLoad.requiresSaveAfterLoad(),
+            "Legacy negative source offset correction did not require a resave");
+    const auto* correctedLane = tm4->getPlaylistModel().getLane(tm4->getPlaylistModel().getLaneId(0));
+    require(correctedLane != nullptr && correctedLane->clips.size() == 1, "Corrected negative-offset clip missing");
+    require(std::abs(correctedLane->clips[0].sourceOffsetSeconds) < 1e-12,
+            "Legacy negative source offset was not clamped to zero");
+    bool sawClipTimingWarning = false;
+    if (negativeOffsetLoad.report) {
+        for (const auto& issue : negativeOffsetLoad.report->issues) {
+            if (issue.category == "clip_timing" && issue.referenceId == correctedLane->clips[0].id.toString()) {
+                sawClipTimingWarning = true;
+                break;
+            }
+        }
+    }
+    require(sawClipTimingWarning, "Legacy negative source offset correction was not reported structurally");
 
     std::cout << "[PASS] ProjectRoundTripTest\n";
     return 0;

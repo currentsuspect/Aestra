@@ -15,6 +15,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
+#include "Commands/TrimClipCommand.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -2235,6 +2236,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         bool wasActive = m_isTrimming || m_isDraggingClip || m_clipDragPotential;
         if (m_isTrimming) {
+            // The trim was applied to the model live during the drag. Push the
+            // command now so the edit survives as unsaved work, round-trips,
+            // and can be undone (#744).
+            if (auto* clip = m_trackManager->getPlaylistModel().getClip(m_activeClipId)) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                const double originalEnd = m_trimOriginalStart + m_trimOriginalDuration;
+                const double newStart = clip->startBeat;
+                const double newEnd = clip->startBeat + clip->durationBeats;
+                if (newStart != m_trimOriginalStart || newEnd != originalEnd) {
+                    auto command = std::make_shared<TrimClipCommand>(
+                        playlist, m_activeClipId, m_trimOriginalStart, originalEnd,
+                        m_trimOriginalSourceOffsetSeconds, m_trimOriginalDurationSeconds, newStart,
+                        newEnd);
+                    m_trackManager->getCommandHistory().pushAndExecute(command);
+                }
+            }
             Log::info("Finished trimming clip");
         }
         
@@ -2283,9 +2300,27 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         double deltaBeats = (deltaX / m_pixelsPerBeat);
                         
                         if (m_trimEdge == TrimEdge::Left) {
-                            // Trim left: move start beat and reduce duration
-                            double newStart = std::max(0.0, m_trimOriginalStart + deltaBeats);
+                            // Trim left: move start beat and reduce duration. The
+                            // left edge must never extend before the source start
+                            // (that writes a negative source read offset the
+                            // renderer cannot honor), so clamp to the source-start
+                            // beat for audio clips, using the same rate formula as
+                            // TrimClipCommand so drag and command agree.
+                            double minStart = 0.0;
+                            if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
+                                auto& playlistModel = m_trackManager->getPlaylistModel();
+                                float rate = clip.edits.playbackRate;
+                                if (!std::isfinite(rate) || rate <= 0.0f) {
+                                    rate = 1.0f;
+                                }
+                                rate = std::clamp(rate, 0.25f, 4.0f);
+                                const double secondsPerBeat = playlistModel.beatToSeconds(1.0);
+                                minStart = std::max(
+                                    0.0, m_trimOriginalStart - m_trimOriginalSourceOffsetSeconds / (secondsPerBeat * rate));
+                            }
+                            double newStart = std::max(minStart, m_trimOriginalStart + deltaBeats);
                             newStart = snapBeatToGrid(newStart); // Apply snap
+                            newStart = std::max(newStart, minStart); // Snap must not push before source start
                             
                             double endBeat = m_trimOriginalStart + m_trimOriginalDuration;
                             clip.startBeat = std::min(newStart, endBeat - 0.1); // Keep minimum duration
@@ -2478,6 +2513,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 if (clip.id == clickedClipId) {
                                     m_trimOriginalStart = clip.startBeat;
                                     m_trimOriginalDuration = clip.durationBeats;
+                                    m_trimOriginalSourceOffsetSeconds = clip.sourceOffsetSeconds;
+                                    m_trimOriginalDurationSeconds = clip.durationSeconds;
                                     break;
                                 }
                             }
@@ -2511,6 +2548,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 if (clip.id == clickedClipId) {
                                     m_trimOriginalStart = clip.startBeat;
                                     m_trimOriginalDuration = clip.durationBeats;
+                                    m_trimOriginalSourceOffsetSeconds = clip.sourceOffsetSeconds;
+                                    m_trimOriginalDurationSeconds = clip.durationSeconds;
                                     break;
                                 }
                             }
