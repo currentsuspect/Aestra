@@ -485,14 +485,15 @@ private:
     // Interaction State
     enum class State : uint8_t {
         None,
-        Painting,       // Creating a new note (Drag extends duration)
-        BrushPainting,  // Ctrl+pencil drag: lay one note per snap cell crossed
-        Moving,         // Moving existing note(s)
-        Resizing,       // Resizing existing note(s) (Right edge)
-        ResizingLeft,   // Resizing from left edge (moves start, keeps end)
-        SelectingBox,   // Dragging selection rectangle
-        Erasing,        // Eraser Box/Hover
-        CopyDragging    // Alt+drag copy of selection
+        Painting,            // Creating a new note (Drag extends duration)
+        BrushPainting,       // Ctrl+pencil drag: lay one note per snap cell crossed
+        Moving,              // Moving existing note(s)
+        Resizing,            // Resizing existing note(s) (Right edge)
+        ResizingLeft,        // Resizing from left edge (moves start, keeps end)
+        StretchingSelection, // Proportionally scale selected starts and lengths
+        SelectingBox,        // Dragging selection rectangle
+        Erasing,             // Eraser Box/Hover
+        CopyDragging         // Alt+drag copy of selection
     };
     State state_ = State::None;
     // Alt held during a move/resize/paint drag: snapToGrid passes through
@@ -505,6 +506,8 @@ private:
     double hoverBeat_ = -1.0; // Snapped cursor beat for the draw-mode preview; <0 when idle
     bool hoverOnRightEdge_ = false;
     bool hoverOnLeftEdge_ = false;
+    bool m_hoverOnSelectionStretch = false;
+    bool m_selectionStretchChanged = false;
 
     // Alt+drag copy state
     std::vector<int> copyDragIndices_;
@@ -576,6 +579,8 @@ private:
 
     // Helpers
     int findNoteAt(float localX, float localY);
+    NUIRect selectionTimeBoundsRect() const;
+    NUIRect selectionStretchHandleRect() const;
     void commitNotes();
     double snapToGrid(double beat);
     int snapPitchToScale(int pitch);
