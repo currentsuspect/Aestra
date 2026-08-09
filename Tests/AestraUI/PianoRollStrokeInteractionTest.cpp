@@ -146,6 +146,12 @@ void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
     // 4, vertically centred on the selection frame; drag it to beat 8.
     constexpr float HANDLE_Y = 1572.0f;
     check(layer.onMouseEvent(mouseDown(320.0f, HANDLE_Y, NUIMouseButton::Left)),
+          "unchanged selection stretch press should be handled");
+    check(layer.onMouseEvent(mouseUp(320.0f, HANDLE_Y, NUIMouseButton::Left)),
+          "unchanged selection stretch release should be handled");
+    check(commits == 0, "an unchanged selection stretch should not commit");
+
+    check(layer.onMouseEvent(mouseDown(320.0f, HANDLE_Y, NUIMouseButton::Left)),
           "selection stretch handle press should be handled");
     check(layer.onMouseEvent(mouseDrag(640.0f, HANDLE_Y, NUIMouseButton::Left)),
           "selection stretch drag should be handled");

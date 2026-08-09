@@ -662,8 +662,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(selectionBounds, 3.0f, 1.0f, accent.withAlpha(0.68f));
         const NUIRect handle = selectionStretchHandleRect();
         renderer.fillRoundedRect(handle, 3.0f,
-                                 accent.lightened(hoverOnSelectionStretch_ ? 0.24f : 0.10f)
-                                     .withAlpha(hoverOnSelectionStretch_ ? 1.0f : 0.88f));
+                                 accent.lightened(m_hoverOnSelectionStretch ? 0.24f : 0.10f)
+                                     .withAlpha(m_hoverOnSelectionStretch ? 1.0f : 0.88f));
         renderer.strokeRoundedRect(handle, 3.0f, 1.0f, NUIColor::white().withAlpha(0.82f));
     }
 
@@ -845,8 +845,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             hoverOnLeftEdge_ = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
         }
-        if (hoverOnSelectionStretch_) {
-            hoverOnSelectionStretch_ = false;
+        if (m_hoverOnSelectionStretch) {
+            m_hoverOnSelectionStretch = false;
             if (platformBridge_)
                 platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             repaint();
@@ -893,8 +893,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (state_ == State::None && !event.pressed && !event.released) {
         const bool onSelectionStretch =
             tool_ != GlobalTool::Eraser && selectionStretchHandleRect().contains(event.position);
-        if (hoverOnSelectionStretch_ != onSelectionStretch) {
-            hoverOnSelectionStretch_ = onSelectionStretch;
+        if (m_hoverOnSelectionStretch != onSelectionStretch) {
+            m_hoverOnSelectionStretch = onSelectionStretch;
             repaint();
         }
         if (onSelectionStretch) {
@@ -1028,10 +1028,11 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // whereas an ordinary note-edge drag still resizes lengths only.
         if (tool_ != GlobalTool::Eraser && selectionStretchHandleRect().contains(event.position)) {
             state_ = State::StretchingSelection;
+            m_selectionStretchChanged = false;
             dragStartPos_ = event.position;
             dragStartScrollX_ = scrollX_;
             dragStartNotes_ = notes_;
-            hoverOnSelectionStretch_ = true;
+            m_hoverOnSelectionStretch = true;
             if (platformBridge_)
                 platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
             repaint();
@@ -1481,6 +1482,17 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                     notes_[i].startBeat = anchorBeat + (original.startBeat - anchorBeat) * factor;
                     notes_[i].durationBeats = std::max(0.125, original.durationBeats * factor);
                 }
+                m_selectionStretchChanged = false;
+                for (size_t i = 0; i < notes_.size() && i < dragStartNotes_.size(); ++i) {
+                    const auto& original = dragStartNotes_[i];
+                    if (!original.selected || original.isDeleted)
+                        continue;
+                    if (std::abs(notes_[i].startBeat - original.startBeat) > 0.000001 ||
+                        std::abs(notes_[i].durationBeats - original.durationBeats) > 0.000001) {
+                        m_selectionStretchChanged = true;
+                        break;
+                    }
+                }
             }
             repaint();
             return true;
@@ -1540,13 +1552,17 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             const std::string description = state_ == State::CopyDragging
                                                 ? "Alt+Drag Copy"
                                                 : (state_ == State::StretchingSelection ? "Stretch Selection" : "Edit");
-            pushUndo(description, dragStartNotes_, notes_);
+            const bool shouldCommit = state_ != State::StretchingSelection || m_selectionStretchChanged;
+            if (shouldCommit)
+                pushUndo(description, dragStartNotes_, notes_);
             state_ = State::None;
             paintingNoteIndex_ = -1;
             copyDragIndices_.clear();
-            hoverOnSelectionStretch_ = false;
+            m_hoverOnSelectionStretch = false;
+            m_selectionStretchChanged = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
-            commitNotes();
+            if (shouldCommit)
+                commitNotes();
             repaint();
             return true;
         }

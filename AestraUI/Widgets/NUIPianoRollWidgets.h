@@ -506,7 +506,8 @@ private:
     double hoverBeat_ = -1.0; // Snapped cursor beat for the draw-mode preview; <0 when idle
     bool hoverOnRightEdge_ = false;
     bool hoverOnLeftEdge_ = false;
-    bool hoverOnSelectionStretch_ = false;
+    bool m_hoverOnSelectionStretch = false;
+    bool m_selectionStretchChanged = false;
 
     // Alt+drag copy state
     std::vector<int> copyDragIndices_;
