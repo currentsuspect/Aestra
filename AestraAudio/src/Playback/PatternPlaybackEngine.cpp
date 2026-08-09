@@ -56,14 +56,6 @@ const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNot
     return nullptr;
 }
 
-int resolveSamplerRootMidiNote(const UnitInfo* unit) {
-    if (!unit) {
-        return 60;
-    }
-    auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin);
-    return sampler ? sampler->getRootMidiNote() : 60;
-}
-
 int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
     if (note.pitchOffset == 0 && note.pitch > 0 && note.pitch != rootMidiNote) {
         return std::clamp(note.pitch, 0, 127);
@@ -231,13 +223,17 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
             const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
             const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+            const auto sampler = unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
+            const bool runsToSampleEnd = unit && unit->type == UnitType::Sampler && sampler &&
+                                         !sampler->isLoopEnabled();
             const int resolvedMidiNote = isPitchedSampler
-                                             ? resolvePitchedSamplerMidiNote(note, resolveSamplerRootMidiNote(unit))
+                                             ? resolvePitchedSamplerMidiNote(note,
+                                                                             sampler ? sampler->getRootMidiNote() : 60)
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
-            bool suppressNoteOff = false;
+            bool suppressNoteOff = runsToSampleEnd;
 
             if (isPitchedSampler) {
                 const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);

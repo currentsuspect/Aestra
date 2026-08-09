@@ -27,7 +27,7 @@ constexpr float kSampleEditorMinPanelW = 500.0f;
 constexpr float kSampleEditorMinContentH = 480.0f;
 constexpr float kSampleEditorMinPanelH = kSampleEditorMinContentH + 28.0f;
 constexpr float kSampleEditorModeRowH = 36.0f;
-constexpr float kSampleEditorPitchRowH = 64.0f;
+constexpr float kSampleEditorPitchRowH = 92.0f;
 constexpr float kSampleEditorADSRH = 140.0f;
 constexpr float kSampleEditorButtonRowH = 36.0f;
 constexpr float kSampleEditorWaveformMinH = 120.0f;
@@ -37,6 +37,14 @@ constexpr float kTwoPi = 6.28318530718f;
 float remapClamped(float value, float inMin, float inMax, float outMin, float outMax) {
     const float t = std::clamp((value - inMin) / std::max(0.001f, inMax - inMin), 0.0f, 1.0f);
     return outMin + t * (outMax - outMin);
+}
+
+std::string midiNoteName(int midiNote) {
+    static constexpr const char* kPitchNames[] = {"C", "C#", "D", "D#", "E", "F",
+                                                  "F#", "G", "G#", "A", "A#", "B"};
+    const int clamped = std::clamp(midiNote, 0, 127);
+    return std::string(kPitchNames[clamped % 12]) + std::to_string(clamped / 12 - 2) +
+           " (" + std::to_string(clamped) + ")";
 }
 
 // Perceptual (logarithmic) time mapping for the envelope handles. The linear
@@ -660,9 +668,12 @@ void SampleEditorPanel::buildUI() {
     };
 
     // Pitch/Tune controls
+    m_pitchRootSlider = makeSlider("Root", 0.0, 127.0, 60.0);
     m_pitchCoarseSlider = makeSlider("Coarse", -24.0, 24.0, 0.0);
     m_pitchFineSlider = makeSlider("Fine", -100.0, 100.0, 0.0);
     m_voiceCountSlider = makeSlider("Voices", 1.0, 8.0, 4.0);
+    m_pitchRootSlider->setSnapValue(1.0);
+    m_pitchRootSlider->setSliderThickness(4.0f);
     m_pitchCoarseSlider->setSliderThickness(8.0f);
     m_pitchFineSlider->setSliderThickness(4.0f);
     m_voiceCountSlider->setSliderThickness(4.0f);
@@ -689,7 +700,10 @@ void SampleEditorPanel::buildUI() {
     m_voiceCountLabel = makeLabel("Voices");
     m_voiceCountValueLabel = makeLabel("4");
     m_voiceCountValueLabel->setAlignment(NUILabel::Alignment::Right);
-    m_pitchLabel = makeLabel("KEYBOARD PITCH");
+    m_pitchLabel = makeLabel("KEYBOARD PITCH / ROOT");
+    m_pitchRootLabel = makeLabel("Root");
+    m_pitchRootValueLabel = makeLabel(midiNoteName(60));
+    m_pitchRootValueLabel->setAlignment(NUILabel::Alignment::Right);
     m_pitchCoarseLabel = makeLabel("Coarse");
     m_pitchFineLabel = makeLabel("Fine");
     m_adsrLabel = makeLabel("ENVELOPE");
@@ -704,8 +718,10 @@ void SampleEditorPanel::buildUI() {
     updateMonoPolyControls();
 
     auto pitchChanged = [this]() { onPitchControlChanged(); };
+    m_pitchRootSlider->setOnValueChange([this, pitchChanged](double) { pitchChanged(); });
     m_pitchCoarseSlider->setOnValueChange([this, pitchChanged](double) { pitchChanged(); });
     m_pitchFineSlider->setOnValueChange([this, pitchChanged](double) { pitchChanged(); });
+    m_pitchRootSlider->setOnDragEnd([this]() { requestControlCommit(); });
     m_pitchCoarseSlider->setOnDragEnd([this]() { requestControlCommit(); });
     m_pitchFineSlider->setOnDragEnd([this]() { requestControlCommit(); });
     m_voiceCountSlider->setOnValueChange([this](double) { onVoiceCountControlChanged(); });
@@ -731,6 +747,8 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_voiceCountLabel);
     m_contentContainer->addChild(m_voiceCountValueLabel);
     m_contentContainer->addChild(m_pitchLabel);
+    m_contentContainer->addChild(m_pitchRootLabel);
+    m_contentContainer->addChild(m_pitchRootValueLabel);
     m_contentContainer->addChild(m_pitchCoarseLabel);
     m_contentContainer->addChild(m_pitchFineLabel);
     m_contentContainer->addChild(m_adsrLabel);
@@ -739,6 +757,7 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_pingPongModeBtn);
     m_contentContainer->addChild(m_monoModeBtn);
     m_contentContainer->addChild(m_polyModeBtn);
+    m_contentContainer->addChild(m_pitchRootSlider);
     m_contentContainer->addChild(m_pitchCoarseSlider);
     m_contentContainer->addChild(m_pitchFineSlider);
     m_contentContainer->addChild(m_voiceCountSlider);
@@ -843,9 +862,11 @@ void SampleEditorPanel::setLoopPoints(const LoopPoints& lp) {
 void SampleEditorPanel::setPitchTune(const PitchTune& pt) {
     m_pitchTune = pt;
     m_suppressControlCallbacks = true;
+    m_pitchRootSlider->setValue(static_cast<double>(pt.rootMidiNote));
     m_pitchCoarseSlider->setValue(static_cast<double>(pt.coarse));
     m_pitchFineSlider->setValue(pt.fine);
     m_suppressControlCallbacks = false;
+    m_pitchRootValueLabel->setText(midiNoteName(pt.rootMidiNote));
 }
 
 void SampleEditorPanel::setVoiceCount(int voices) {
@@ -932,6 +953,14 @@ void SampleEditorPanel::onResize(int width, int height) {
     m_pitchLabel->setBounds(NUIRect(cb.x + pad, pitchRowY, contentW, labelH));
     y = pitchRowY + labelH;
     const float pitchLabelW = 56.0f;
+    const float pitchValueW = 64.0f;
+    m_pitchRootLabel->setBounds(NUIRect(cb.x + pad, y + 4.0f, pitchLabelW, labelH));
+    m_pitchRootSlider->setBounds(
+        NUIRect(cb.x + pad + pitchLabelW + gutter, y,
+                contentW - pitchLabelW - pitchValueW - gutter * 2.0f, rowH));
+    m_pitchRootValueLabel->setBounds(
+        NUIRect(cb.x + layoutW - pad - pitchValueW, y + 4.0f, pitchValueW, labelH));
+    y += rowH + gutter;
     m_pitchCoarseLabel->setBounds(NUIRect(cb.x + pad, y + 4.0f, pitchLabelW, labelH));
     m_pitchCoarseSlider->setBounds(NUIRect(cb.x + pad + pitchLabelW + gutter, y, contentW - pitchLabelW - gutter, rowH));
     y += rowH + gutter;
@@ -1122,8 +1151,10 @@ void SampleEditorPanel::onPitchControlChanged() {
     if (m_suppressControlCallbacks) {
         return;
     }
+    m_pitchTune.rootMidiNote = static_cast<int>(std::round(m_pitchRootSlider->getValue()));
     m_pitchTune.coarse = static_cast<int>(m_pitchCoarseSlider->getValue());
     m_pitchTune.fine = static_cast<float>(m_pitchFineSlider->getValue());
+    m_pitchRootValueLabel->setText(midiNoteName(m_pitchTune.rootMidiNote));
 
     if (onPitchTuneChanged) onPitchTuneChanged(m_pitchTune);
 }

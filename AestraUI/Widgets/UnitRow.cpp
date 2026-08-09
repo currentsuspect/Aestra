@@ -763,8 +763,11 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         float relativeX = position.x - gridBounds.x;
         float availWidth = gridBounds.width;
         float stepWidth = gridStepWidth(availWidth);
+        if (stepWidth <= 0.0f || relativeX < 0.0f || relativeX >= availWidth) {
+            return -1;
+        }
         float contentX = relativeX + m_scrollX;
-        return static_cast<int>(contentX / stepWidth);
+        return static_cast<int>(std::floor(contentX / stepWidth));
     };
 
     // === Scroll Handling ===
@@ -824,18 +827,22 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         invalidateVisuals();
     }
 
-    // === Velocity-drag session (Sampler step grid) ===
+    // === Step-grid gesture session ===
     if (m_velEditStep >= 0) {
         if (event.released || event.type == NUIMouseEventType::Up) {
-            // Release: a click that never moved vertically toggles the step
-            // (place was already done on press; remove if it pre-existed).
-            if (!m_velEditMoved && m_velEditWasActive) {
-                removeStepNote(m_velEditStep);
+            // A stationary left click toggles the initial step. Empty steps
+            // were placed on press for immediate feedback; active ones are
+            // removed here once we know the gesture was not a velocity edit.
+            if (m_stepGestureMode == StepGestureMode::Pending && m_velEditWasActive) {
+                m_stepGestureChanged |= removeStepNote(m_velEditStep);
             }
-            if (m_onPatternEdited && m_patternId.isValid()) {
-                m_onPatternEdited(m_patternId); // reschedule audio once, on release
+            if (m_stepGestureChanged && m_onPatternEdited && m_patternId.isValid()) {
+                m_onPatternEdited(m_patternId);
             }
             m_velEditStep = -1;
+            m_stepGestureLastStep = -1;
+            m_stepGestureMode = StepGestureMode::None;
+            m_stepGestureChanged = false;
             invalidateVisuals();
             return true;
         }
@@ -844,17 +851,36 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                                    (event.type == NUIMouseEventType::Drag || event.type == NUIMouseEventType::Move ||
                                     event.button == NUIMouseButton::None);
         if (isPointerMove) {
+            const float dx = event.position.x - m_stepGestureStartX;
             const float dy = m_velEditStartY - event.position.y; // up = louder
-            if (!m_velEditMoved && std::abs(dy) > 3.0f) {
-                m_velEditMoved = true;
-                if (!m_velEditWasActive) {
-                    // We placed on press; a drag now edits that fresh note.
+            if (m_stepGestureMode == StepGestureMode::Pending && std::max(std::abs(dx), std::abs(dy)) > 3.0f) {
+                if (std::abs(dx) >= std::abs(dy)) {
+                    m_stepGestureMode = m_velEditWasActive ? StepGestureMode::Erase : StepGestureMode::Paint;
+                    if (m_stepGestureMode == StepGestureMode::Erase) {
+                        m_stepGestureChanged |= removeStepNote(m_velEditStep);
+                    }
+                } else {
+                    m_stepGestureMode = StepGestureMode::Velocity;
                 }
             }
-            if (m_velEditMoved) {
+
+            if (m_stepGestureMode == StepGestureMode::Paint || m_stepGestureMode == StepGestureMode::Erase) {
+                const int currentStep = resolveGridStep(localPoint, localGridRect);
+                if (currentStep >= 0 && currentStep < m_stepCount && currentStep != m_stepGestureLastStep) {
+                    const int first = std::min(m_stepGestureLastStep, currentStep);
+                    const int last = std::max(m_stepGestureLastStep, currentStep);
+                    for (int step = first; step <= last; ++step) {
+                        m_stepGestureChanged |=
+                            m_stepGestureMode == StepGestureMode::Paint ? placeStepNote(step) : removeStepNote(step);
+                    }
+                    m_stepGestureLastStep = currentStep;
+                    invalidateVisuals();
+                }
+            } else if (m_stepGestureMode == StepGestureMode::Velocity) {
                 // Full row height ≈ full velocity range.
                 const float vel = m_velEditBaseVelocity + dy / 90.0f;
                 setStepNoteVelocity(m_velEditStep, vel);
+                m_stepGestureChanged = true;
                 invalidateVisuals();
             }
             return true;
@@ -884,23 +910,25 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     handleControlClick(event, localControlRect);
                     return true;
                 } else if (localContextRect.contains(localPoint)) {
-                    // Loaded Sampler step grid: arm a velocity-drag session.
-                    // A vertical drag sets the step's velocity; a plain click
-                    // toggles it on release. Empty units / pitched / note-roll
-                    // fall through to the classic toggle.
+                    // Loaded step grids support one continuous gesture:
+                    // vertical movement edits velocity, horizontal movement
+                    // paints or erases, and a stationary click toggles.
                     const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
-                    if (m_type == Aestra::Audio::UnitType::Sampler && !shouldUseNoteRoll() && hasContent &&
+                    if (usesStepSequencerForType(m_type) && !shouldUseNoteRoll() && hasContent &&
                         m_patternId.isValid() && m_trackManager) {
                         const int step = resolveGridStep(localPoint, localGridRect);
                         if (step >= 0 && step < m_stepCount) {
                             float vel = kDefaultStepVelocity;
                             const bool active = stepHasNote(step, vel);
                             m_velEditStep = step;
+                            m_stepGestureLastStep = step;
+                            m_stepGestureStartX = event.position.x;
                             m_velEditStartY = event.position.y;
-                            m_velEditMoved = false;
+                            m_stepGestureMode = StepGestureMode::Pending;
                             m_velEditWasActive = active;
+                            m_stepGestureChanged = false;
                             if (!active) {
-                                placeStepNote(step); // show immediately; kept unless click-removed
+                                m_stepGestureChanged = placeStepNote(step);
                                 vel = kDefaultStepVelocity;
                             }
                             m_velEditBaseVelocity = vel;
@@ -917,38 +945,24 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
-                // On a step pad with a note: right-click deletes it (FL-style).
-                // Anywhere else on the row keeps the context menu.
-                if (localContextRect.contains(localPoint) && !shouldUseNoteRoll() && m_patternId.isValid() &&
-                    m_trackManager) {
+                // Right-drag across a step grid erases every crossed pad.
+                // Outside the grid, right-click keeps the row context menu.
+                const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
+                if (localContextRect.contains(localPoint) && hasContent && usesStepSequencerForType(m_type) &&
+                    !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
                     if (stepIndex >= 0 && stepIndex < m_stepCount) {
-                        bool removed = false;
-                        m_trackManager->getPatternManager().applyPatch(
-                            m_patternId, [this, stepIndex, &removed](Aestra::Audio::PatternSource& p) {
-                                if (!p.isMidi())
-                                    return;
-                                auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
-                                const double targetBeat = stepIndex * 0.25;
-                                auto it =
-                                    std::find_if(midi.notes.begin(), midi.notes.end(),
-                                                 [this, targetBeat](const Aestra::Audio::MidiNote& n) {
-                                                     const double endBeat =
-                                                         std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
-                                                     return n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 &&
-                                                            targetBeat < endBeat - 0.01;
-                                                 });
-                                if (it != midi.notes.end()) {
-                                    midi.notes.erase(it);
-                                    removed = true;
-                                }
-                            });
-                        if (removed) {
-                            if (m_onPatternEdited)
-                                m_onPatternEdited(m_patternId);
-                            invalidateVisuals();
-                            return true;
-                        }
+                        float velocity = kDefaultStepVelocity;
+                        m_velEditStep = stepIndex;
+                        m_stepGestureLastStep = stepIndex;
+                        m_stepGestureStartX = event.position.x;
+                        m_velEditStartY = event.position.y;
+                        m_velEditBaseVelocity = velocity;
+                        m_velEditWasActive = stepHasNote(stepIndex, velocity);
+                        m_stepGestureMode = StepGestureMode::Erase;
+                        m_stepGestureChanged = removeStepNote(stepIndex);
+                        invalidateVisuals();
+                        return true;
                     }
                 }
                 showRowContextMenu(event.position);
@@ -1025,8 +1039,8 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
 
     // === Double-click to load sample (EMPTY units only) ===
     // With a sample loaded, rapid taps are step programming — treating any two
-    // grid clicks within 400ms as "open the file picker" made fast FL-style
-    // tap-tap placement randomly hijack the second click.
+    // grid clicks within 400ms as "open the file picker" made fast rhythmic
+    // tap placement randomly hijack the second click.
     auto now = std::chrono::steady_clock::now();
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;

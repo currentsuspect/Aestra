@@ -1,10 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
-#include "Core/ClipRenderKernel.h"
 
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
+#include "Core/ClipRenderKernel.h"
 #include "DSP/PanLaw.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
@@ -137,6 +137,10 @@ inline double dbToLinearD(double db) {
 
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::equalPower(pan, vol, gainL, gainR);
+}
+
+inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
+    PanLaw::stereoBalance(pan, vol, gainL, gainR);
 }
 
 inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
@@ -2228,8 +2232,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     }
 }
 
-
-
 void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
                               bool& srcActiveThisBlock) {
     // Verbatim clip-rendering phase moved out of renderTrack(); same ctx
@@ -2351,7 +2353,8 @@ float AudioEngine::processTrackEffects(const TrackRenderState& track, uint32_t t
 
 void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
                                    std::vector<double>& buffer, const RenderContext& ctx, double volTarget,
-                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible) {
+                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible,
+                                   bool receivesAudibleRoute) {
     // Verbatim output stage moved out of renderTrack(): plugin-delay
     // compensation, routing to master/destination + sends (with the peak/RMS
     // accumulation interleaved in the mix loop), and the meter snapshot write.
@@ -2387,7 +2390,11 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
 
     // Route post-fader output to the selected main destination and any audible sends.
     double tL, tR;
-    fastPanGainsD(panTarget, volTarget, tL, tR);
+    if (receivesAudibleRoute) {
+        fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
+    } else {
+        fastPanGainsD(panTarget, volTarget, tL, tR);
+    }
     state.gainL.setTarget(tL);
     state.gainR.setTarget(tR);
     state.gainL.beginRamp(numFrames);
@@ -2726,8 +2733,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
         for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
             double targetL = 0.0;
             double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                                    static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].current = targetL;
             state.sendGainL[sendIndex].target = targetL;
             state.sendGainR[sendIndex].current = targetR;
@@ -2742,8 +2749,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
             }
             double targetL = 0.0;
             double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                                    static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].setTarget(targetL);
             state.sendGainR[sendIndex].setTarget(targetR);
             state.sendGainL[sendIndex].beginRamp(numFrames);
@@ -2774,8 +2781,10 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     // Output stage (PDC + routing/sends + metering) — verbatim extraction,
     // see mixAndMeterTrack() directly above.
+    const bool receivesAudibleRoute =
+        orderedIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[orderedIndex].empty();
     mixAndMeterTrack(track, trackIdx, slot, state, buffer, ctx, volTarget, panTarget, trackSidechainPeak, muted,
-                     audibleEligible);
+                     audibleEligible, receivesAudibleRoute);
 }
 
 TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
@@ -2869,8 +2878,12 @@ void AudioEngine::compileGraph() {
     auto graphRead = m_state.activeGraphRead();
     const auto& graph = graphRead.get(); // Fixed method name
 
-    // Iterate Tracks directly from the graph snapshot
-    for (const auto& tr : graph.tracks) {
+    // Compile in routing order so each destination consumes all upstream audio
+    // before its result is forwarded to the next hop.
+    for (const size_t orderedIndex : graph.topologicalOrder) {
+        if (orderedIndex >= graph.tracks.size())
+            continue;
+        const auto& tr = graph.tracks[orderedIndex];
         const uint32_t idx = tr.trackIndex;
 
         // Safety Check
@@ -2928,8 +2941,8 @@ void AudioEngine::compileGraph() {
 
             double sendGainL = 0.0;
             double sendGainR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(send.pan), -1.0, 1.0), static_cast<double>(send.gain), sendGainL,
-                          sendGainR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(send.pan), -1.0, 1.0), static_cast<double>(send.gain),
+                                    sendGainL, sendGainR);
 
             if (send.targetChannelId == 0xFFFFFFFF) {
                 // Route to Master

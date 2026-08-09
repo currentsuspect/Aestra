@@ -972,6 +972,7 @@ void AestraContent::setupArsenalPanels() {
         if (!sampler) {
             return;
         }
+        sampler->setRootMidiNote(pitchTune.rootMidiNote);
         sampler->setCoarseSemitones(static_cast<float>(pitchTune.coarse));
         sampler->setFineTuneCents(pitchTune.fine);
     };
@@ -2493,16 +2494,9 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
     if (visible) {
         // Calculate initial position on first show (if position is at origin)
         if (m_viewState.sequencerRect.x == 0 && m_viewState.sequencerRect.y == 0) {
-            AestraUI::NUIRect safe = computeSafeRect();
-            // Position below title bar with some margin
-            float titleBarHeight = 35.0f;
-            float margin = 10.0f;
-            m_viewState.sequencerRect.x = margin;
-            m_viewState.sequencerRect.y = titleBarHeight + safe.y + margin;
-
-            // Clamp to allowed area
             AestraUI::NUIRect allowed = computeAllowedRectForPanels();
-            m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+            m_viewState.sequencerRect = {
+                allowed.x, allowed.y, allowed.width, std::min(300.0f, allowed.height)};
         }
 
         m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, computeAllowedRectForPanels());
@@ -3822,6 +3816,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     m_sampleEditorPanel->setLoopPoints(loop);
 
     SampleEditorPanel::PitchTune pitch;
+    pitch.rootMidiNote = sampler->getRootMidiNote();
     pitch.coarse = static_cast<int>(std::round(sampler->getCoarseSemitones()));
     pitch.fine = sampler->getFineTuneCents();
     m_sampleEditorPanel->setPitchTune(pitch);
