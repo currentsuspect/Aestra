@@ -2,6 +2,7 @@
 #include "Helpers/PianoRollInteraction.h"
 #include "Helpers/TimelineGridRenderer.h"
 #include "Common/MusicHelpers.h"
+#include "Widgets/NUIPianoRollWidgets.h"
 #include <cassert>
 #include <iostream>
 
@@ -252,6 +253,43 @@ static void test_snap_pitch_to_scale_edge_cases() {
     PASS("snapPitchToScale edge cases documented");
 }
 
+static void test_harmony_context_edit_notification() {
+    PianoRollToolbar toolbar;
+    auto grid = std::make_shared<PianoRollGrid>();
+    auto notes = std::make_shared<PianoRollNoteLayer>();
+    toolbar.setGrid(grid);
+    toolbar.setNoteLayer(notes);
+
+    int notificationCount = 0;
+    int notifiedRoot = -1;
+    ScaleType notifiedScale = ScaleType::Chromatic;
+    bool notifiedSnap = false;
+    toolbar.setOnHarmonyContextChanged([&](int root, ScaleType scale, bool snap) {
+        ++notificationCount;
+        notifiedRoot = root;
+        notifiedScale = scale;
+        notifiedSnap = snap;
+    });
+
+    toolbar.setHarmonyContext(9, ScaleType::Minor, false);
+    ASSERT(notificationCount == 0, "loading harmony context must not masquerade as a user edit");
+    ASSERT(toolbar.getRootKey() == 9 && toolbar.getScaleType() == ScaleType::Minor,
+           "loaded harmony context should become the toolbar authority");
+
+    toolbar.applyHarmonyContextEdit(9, ScaleType::Minor, true);
+    ASSERT(notificationCount == 1, "a harmony edit should notify the owning panel exactly once");
+    ASSERT(notifiedRoot == 9 && notifiedScale == ScaleType::Minor && notifiedSnap,
+           "harmony notification should carry the complete context");
+    ASSERT(notes->getSnapToScale(), "harmony edit should update the note layer before notification");
+
+    toolbar.applyHarmonyContextEdit(99, ScaleType::Count, false);
+    ASSERT(toolbar.getRootKey() == 11,
+           "out-of-range root edits should clamp before reaching persistent state");
+    ASSERT(toolbar.getScaleType() == ScaleType::Blues,
+           "out-of-range scale edits should clamp before reaching persistent state");
+    PASS("Piano Roll harmony edits publish one complete, normalized context");
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -274,6 +312,7 @@ int main() {
     test_next_pitch_in_scale();
     test_previous_pitch_in_scale();
     test_snap_pitch_to_scale_edge_cases();
+    test_harmony_context_edit_notification();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

@@ -83,6 +83,10 @@ public:
      * @param bpb Beats per bar.
      */
     void setBeatsPerBar(int bpb);
+    /** @brief Apply one complete harmony edit through the editor view. */
+    void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
+    /** @brief Return the complete harmony context currently shown by the editor. */
+    ScaleContext getHarmonyContext() const;
     /**
      * @brief Bind the live audio engine used for transport/playhead sync.
      * @param engine Audio engine pointer, or nullptr to disable engine sync.

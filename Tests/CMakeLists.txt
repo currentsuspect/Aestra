@@ -1680,9 +1680,9 @@ endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
-if(TARGET AestraUI_Core)
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
-    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
+    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
@@ -1690,7 +1690,38 @@ if(TARGET AestraUI_Core)
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
 else()
-    message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+    message(STATUS "PianoRollInteractionTest skipped (AestraUI targets unavailable in this build mode)")
+endif()
+
+# Piano Roll harmony edits must traverse the real panel/view callback into
+# PatternManager and reload as one complete context.
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(PianoRollPanelPersistenceTest
+        AestraUI/PianoRollPanelPersistenceTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/PianoRollPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    target_link_libraries(PianoRollPanelPersistenceTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PianoRollPanelPersistenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+    )
+    add_test(NAME PianoRollPanelPersistenceTest COMMAND PianoRollPanelPersistenceTest)
+    set_tests_properties(PianoRollPanelPersistenceTest PROPERTIES
+        LABELS "ui;pianoroll;persistence;regression;contract:application")
 endif()
 
 # Editor-close deferred-destruction regression (#475): removeChild() during

@@ -635,20 +635,33 @@ void PianoRollView::setTool(GlobalTool tool) {
 }
 
 void PianoRollView::setScale(int root, ScaleType type) {
-    if (m_grid) {
-        m_grid->setRootKey(root);
-        m_grid->setScaleType(type);
-    }
-    if (m_notes) {
-        m_notes->setRootKey(root);
-        m_notes->setScaleType(type);
-    }
+    const bool snapToScale = m_notes && m_notes->getSnapToScale();
+    if (m_toolbar) m_toolbar->setHarmonyContext(root, type, snapToScale);
 }
 
 void PianoRollView::setSnapToScale(bool enabled) {
-    if (m_notes) {
-        m_notes->setSnapToScale(enabled);
-    }
+    if (!m_toolbar) return;
+    m_toolbar->setHarmonyContext(m_toolbar->getRootKey(), m_toolbar->getScaleType(), enabled);
+}
+
+void PianoRollView::applyHarmonyContextEdit(int root, ScaleType type, bool snapToScale) {
+    if (m_toolbar) m_toolbar->applyHarmonyContextEdit(root, type, snapToScale);
+}
+
+int PianoRollView::getRootKey() const {
+    return m_toolbar ? m_toolbar->getRootKey() : 0;
+}
+
+ScaleType PianoRollView::getScaleType() const {
+    return m_toolbar ? m_toolbar->getScaleType() : ScaleType::Chromatic;
+}
+
+bool PianoRollView::getSnapToScale() const {
+    return m_toolbar && m_toolbar->getSnapToScale();
+}
+
+void PianoRollView::setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb) {
+    if (m_toolbar) m_toolbar->setOnHarmonyContextChanged(std::move(cb));
 }
 
 void PianoRollView::setPlatformBridge(NUIPlatformBridge* bridge) {

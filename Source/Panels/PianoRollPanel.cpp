@@ -49,6 +49,34 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     m_pianoRoll->setOnNotesChanged([this](const std::vector<AestraUI::MidiNote>&) {
         savePattern();
     });
+    m_pianoRoll->setOnHarmonyContextChanged([this](int rootKey, AestraUI::ScaleType scaleType, bool snapToScale) {
+        if (!m_trackManager || !m_currentPatternId.isValid()) return;
+
+        ScaleContext context;
+        context.rootKey = clampRootKey(rootKey);
+        context.scaleKind = static_cast<ScaleKind>(static_cast<int>(scaleType));
+        context.snapToScale = snapToScale;
+
+        auto& patternManager = m_trackManager->getPatternManager();
+        const auto* pattern = patternManager.getPattern(m_currentPatternId);
+        if (!pattern || !pattern->isMidi()) return;
+
+        std::optional<ScaleContext> desired;
+        assignScaleContextOverride(desired, context);
+        const bool unchanged = (!desired && !pattern->scaleOverride) ||
+                               (desired && pattern->scaleOverride &&
+                                desired->rootKey == pattern->scaleOverride->rootKey &&
+                                desired->scaleKind == pattern->scaleOverride->scaleKind &&
+                                desired->snapToScale == pattern->scaleOverride->snapToScale);
+        if (unchanged) return;
+
+        patternManager.applyPatch(m_currentPatternId, [desired](PatternSource& mutablePattern) {
+            mutablePattern.scaleOverride = desired;
+        });
+        if (m_onPatternEdited) {
+            m_onPatternEdited(m_currentPatternId);
+        }
+    });
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setOnAdjustPatternLength([this](int barsDelta) {
         adjustPatternLengthBars(barsDelta);
@@ -184,6 +212,22 @@ void PianoRollPanel::setBeatsPerBar(int bpb) {
     if (m_pianoRoll) {
         m_pianoRoll->setBeatsPerBar(bpb);
     }
+}
+
+void PianoRollPanel::applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale) {
+    if (m_pianoRoll) {
+        m_pianoRoll->applyHarmonyContextEdit(rootKey, scaleType, snapToScale);
+    }
+}
+
+ScaleContext PianoRollPanel::getHarmonyContext() const {
+    ScaleContext context;
+    if (m_pianoRoll) {
+        context.rootKey = m_pianoRoll->getRootKey();
+        context.scaleKind = static_cast<ScaleKind>(static_cast<int>(m_pianoRoll->getScaleType()));
+        context.snapToScale = m_pianoRoll->getSnapToScale();
+    }
+    return context;
 }
 
 void PianoRollPanel::onResize(int width, int height) {
