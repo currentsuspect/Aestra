@@ -672,6 +672,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
+    add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
+    target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)
+    target_include_directories(SamplerLoopModeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerLoopModeTest COMMAND SamplerLoopModeTest)
+    set_tests_properties(SamplerLoopModeTest PROPERTIES LABELS "audio;sampler;loop;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
     add_executable(PatternPlaybackTempoChangeTest AestraAudio/PatternPlaybackTempoChangeTest.cpp)
     target_link_libraries(PatternPlaybackTempoChangeTest PRIVATE AestraAudio)

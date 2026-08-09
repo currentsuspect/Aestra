@@ -961,7 +961,12 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setSampleWindow(loopPoints.start, loopPoints.end);
-        sampler->setLoopEnabled(loopPoints.mode != SampleEditorPanel::LoopMode::OneShot);
+        const auto mode = loopPoints.mode == SampleEditorPanel::LoopMode::PingPong
+                              ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong
+                              : (loopPoints.mode == SampleEditorPanel::LoopMode::Loop
+                                     ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward
+                                     : Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot);
+        sampler->setLoopMode(mode);
     };
     m_sampleEditorPanel->onPitchTuneChanged = [this](const SampleEditorPanel::PitchTune& pitchTune) {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -3812,7 +3817,17 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     SampleEditorPanel::LoopPoints loop;
     loop.start = sampler->getLoopStartNorm();
     loop.end = sampler->getLoopEndNorm();
-    loop.mode = sampler->isLoopEnabled() ? SampleEditorPanel::LoopMode::Loop : SampleEditorPanel::LoopMode::OneShot;
+    switch (sampler->getLoopMode()) {
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong:
+        loop.mode = SampleEditorPanel::LoopMode::PingPong;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward:
+        loop.mode = SampleEditorPanel::LoopMode::Loop;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot:
+        loop.mode = SampleEditorPanel::LoopMode::OneShot;
+        break;
+    }
     m_sampleEditorPanel->setLoopPoints(loop);
 
     SampleEditorPanel::PitchTune pitch;
