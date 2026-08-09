@@ -3,6 +3,7 @@
 #include "Plugin/PluginHost.h"
 #include "Plugin/SamplerPlugin.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -29,13 +30,14 @@ std::vector<float> makeRamp(uint32_t frames) {
     return sample;
 }
 
-std::vector<float> renderLoop(SamplerPlugin::LoopMode mode) {
-    constexpr uint32_t sampleRate = 1000;
-    constexpr uint32_t outputFrames = 180;
+std::vector<float> renderLoop(SamplerPlugin::LoopMode mode, uint32_t sourceRate = 1000,
+                              uint32_t engineRate = 1000, uint32_t outputFrames = 180) {
+    constexpr uint32_t SAMPLE_FRAMES = 128;
 
     SamplerPlugin sampler;
-    require(sampler.initialize(sampleRate, outputFrames), "sampler initialization failed");
-    require(sampler.loadSampleData("loop-mode-ramp", makeRamp(128), sampleRate, 1), "ramp sample load failed");
+    require(sampler.initialize(engineRate, outputFrames), "sampler initialization failed");
+    require(sampler.loadSampleData("loop-mode-ramp", makeRamp(SAMPLE_FRAMES), sourceRate, 1),
+            "ramp sample load failed");
     sampler.setEnvelope(0.001f, 0.001f, 1.0f, 0.1f);
     sampler.setSampleWindow(0.25f, 0.75f);
     sampler.setLoopMode(mode);
@@ -93,6 +95,24 @@ int main() {
     require(linearSlope(pingPong, 12, 48) > 3.0e-4, "bidirectional loop did not traverse forward first");
     require(linearSlope(pingPong, 78, 112) < -3.0e-4, "bidirectional loop did not reverse at its end");
     require(linearSlope(pingPong, 142, 174) > 3.0e-4, "bidirectional loop did not reverse again at its start");
+
+    // A source/engine ratio of 131 crosses more than two 63-frame loop spans
+    // per output frame. The folded overshoot must still traverse both ways
+    // without an unbounded correction loop or invalid output.
+    constexpr uint32_t EXTREME_SOURCE_RATE = 131000;
+    constexpr uint32_t EXTREME_ENGINE_RATE = 1000;
+    constexpr uint32_t EXTREME_OUTPUT_FRAMES = 80;
+    const auto extremePingPong = renderLoop(SamplerPlugin::LoopMode::PingPong, EXTREME_SOURCE_RATE,
+                                            EXTREME_ENGINE_RATE, EXTREME_OUTPUT_FRAMES);
+    require(linearSlope(extremePingPong, 4, 12) > 3.0e-4,
+            "extreme-rate bidirectional loop did not traverse forward");
+    require(linearSlope(extremePingPong, 18, 26) < -3.0e-4,
+            "extreme-rate bidirectional loop did not reverse from its end");
+    require(linearSlope(extremePingPong, 32, 40) > 3.0e-4,
+            "extreme-rate bidirectional loop did not reverse from its start");
+    require(std::any_of(extremePingPong.begin(), extremePingPong.end(),
+                        [](float value) { return std::abs(value) > 1.0e-5f; }),
+            "extreme-rate bidirectional loop produced silence");
 
     SamplerPlugin saved;
     saved.setLoopMode(SamplerPlugin::LoopMode::PingPong);
