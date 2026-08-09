@@ -644,6 +644,22 @@ void PianoRollView::setSnapToScale(bool enabled) {
     m_toolbar->setHarmonyContext(m_toolbar->getRootKey(), m_toolbar->getScaleType(), enabled);
 }
 
+void PianoRollView::applyHarmonyContextEdit(int root, ScaleType type, bool snapToScale) {
+    if (m_toolbar) m_toolbar->applyHarmonyContextEdit(root, type, snapToScale);
+}
+
+int PianoRollView::getRootKey() const {
+    return m_toolbar ? m_toolbar->getRootKey() : 0;
+}
+
+ScaleType PianoRollView::getScaleType() const {
+    return m_toolbar ? m_toolbar->getScaleType() : ScaleType::Chromatic;
+}
+
+bool PianoRollView::getSnapToScale() const {
+    return m_toolbar && m_toolbar->getSnapToScale();
+}
+
 void PianoRollView::setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb) {
     if (m_toolbar) m_toolbar->setOnHarmonyContextChanged(std::move(cb));
 }

@@ -678,6 +678,10 @@ public:
     void setTool(GlobalTool tool);
     void setScale(int root, ScaleType type);
     void setSnapToScale(bool enabled);
+    void applyHarmonyContextEdit(int root, ScaleType type, bool snapToScale);
+    int getRootKey() const;
+    ScaleType getScaleType() const;
+    bool getSnapToScale() const;
 
     /** @brief Set platform bridge for cursor style changes (forwarded to note layer). */
     void setPlatformBridge(NUIPlatformBridge* bridge);

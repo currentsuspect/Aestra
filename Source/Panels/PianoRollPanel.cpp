@@ -214,6 +214,22 @@ void PianoRollPanel::setBeatsPerBar(int bpb) {
     }
 }
 
+void PianoRollPanel::applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale) {
+    if (m_pianoRoll) {
+        m_pianoRoll->applyHarmonyContextEdit(rootKey, scaleType, snapToScale);
+    }
+}
+
+ScaleContext PianoRollPanel::getHarmonyContext() const {
+    ScaleContext context;
+    if (m_pianoRoll) {
+        context.rootKey = m_pianoRoll->getRootKey();
+        context.scaleKind = static_cast<ScaleKind>(static_cast<int>(m_pianoRoll->getScaleType()));
+        context.snapToScale = m_pianoRoll->getSnapToScale();
+    }
+    return context;
+}
+
 void PianoRollPanel::onResize(int width, int height) {
     WindowPanel::onResize(width, height);
 }
