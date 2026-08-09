@@ -110,6 +110,27 @@ static void test_optional_behavior() {
     PASS("optional behavior");
 }
 
+static void test_pattern_override_assignment() {
+    std::optional<ScaleContext> stored;
+
+    ScaleContext edited;
+    edited.rootKey = 9;
+    edited.scaleKind = ScaleKind::Minor;
+    edited.snapToScale = true;
+    assignScaleContextOverride(stored, edited);
+    ASSERT(stored.has_value(), "a non-default harmony edit should create a pattern override");
+    ASSERT(stored->rootKey == 9 && stored->scaleKind == ScaleKind::Minor && stored->snapToScale,
+           "the complete harmony context should be stored together");
+
+    edited.rootKey = 99;
+    assignScaleContextOverride(stored, edited);
+    ASSERT(stored->rootKey == 11, "stored harmony roots should be normalized");
+
+    assignScaleContextOverride(stored, ScaleContext::defaultContext());
+    ASSERT(!stored.has_value(), "restoring every default should remove the redundant override");
+    PASS("pattern harmony override stores, normalizes, and clears atomically");
+}
+
 // -----------------------------------------------------------------------------
 // Main
 // -----------------------------------------------------------------------------
@@ -121,6 +142,7 @@ int main() {
     test_scaleKind_roundtrip();
     test_rootKey_range();
     test_optional_behavior();
+    test_pattern_override_assignment();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

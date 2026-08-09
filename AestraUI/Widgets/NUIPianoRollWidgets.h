@@ -178,6 +178,17 @@ public:
     void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
         onUnitChoiceSelected_ = std::move(cb);
     }
+    /** @brief Set the harmony context without treating the update as a user edit. */
+    void setHarmonyContext(int rootKey, ScaleType scaleType, bool snapToScale);
+    /** @brief Apply a user-originated harmony edit and notify the owning panel. */
+    void applyHarmonyContextEdit(int rootKey, ScaleType scaleType, bool snapToScale);
+    int getRootKey() const { return m_rootKey; }
+    ScaleType getScaleType() const { return m_scaleType; }
+    bool getSnapToScale() const { return m_snapToScale; }
+    /** @brief Set callback fired when the user edits root, scale, or scale snapping. */
+    void setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb) {
+        onHarmonyContextChanged_ = std::move(cb);
+    }
     /** @brief Set callback fired by the menu's "Keyboard Shortcuts" item. */
     void setOnShowShortcutHelp(std::function<void()> cb) { onShowShortcutHelp_ = std::move(cb); }
     /** @brief Get the currently open context menu, if any. */
@@ -219,11 +230,15 @@ private:
     std::function<void(int barsDelta)> onAdjustPatternLength_;
     std::function<void(int patternValue)> onPatternChoiceSelected_;
     std::function<void(int unitValue)> onUnitChoiceSelected_;
+    std::function<void(int rootKey, ScaleType scaleType, bool snapToScale)> onHarmonyContextChanged_;
     std::function<void()> onShowShortcutHelp_;
     bool m_updatingPatternDropdown = false;
     bool m_updatingUnitDropdown = false;
     bool m_updatingSnapDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
+    int m_rootKey = 0;
+    ScaleType m_scaleType = ScaleType::Chromatic;
+    bool m_snapToScale = false;
 
     void closeActiveContextMenu();
     
@@ -653,6 +668,7 @@ public:
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb);
     void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb);
+    void setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb);
     void setOnPlayheadScrubbed(std::function<void(double beat, bool active)> cb);
 
     void setPixelsPerBeat(float ppb);

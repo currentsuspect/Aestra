@@ -1680,9 +1680,9 @@ endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
-if(TARGET AestraUI_Core)
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
-    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
+    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
@@ -1690,7 +1690,7 @@ if(TARGET AestraUI_Core)
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
 else()
-    message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+    message(STATUS "PianoRollInteractionTest skipped (AestraUI targets unavailable in this build mode)")
 endif()
 
 # Editor-close deferred-destruction regression (#475): removeChild() during
