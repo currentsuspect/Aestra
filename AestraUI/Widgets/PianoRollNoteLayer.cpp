@@ -13,6 +13,11 @@
 
 namespace AestraUI {
 
+namespace {
+constexpr float SELECTION_STRETCH_HANDLE_WIDTH = 9.0f;
+constexpr float SELECTION_STRETCH_HANDLE_HEIGHT = 16.0f;
+} // namespace
+
 // =============================================================================
 // PianoRollNoteLayer (split from NUIPianoRollWidgets.cpp)
 // =============================================================================
@@ -648,6 +653,20 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         }
     }
 
+    // A multi-note selection exposes one time-transform frame. Dragging the
+    // right handle scales both note spacing and note lengths around the
+    // earliest selected start, preserving the phrase's internal rhythm.
+    const NUIRect selectionBounds = selectionTimeBoundsRect();
+    if (selectionBounds.width > 0.0f && selectionBounds.height > 0.0f) {
+        const auto accent = themeManager.getColor("accentSecondary");
+        renderer.strokeRoundedRect(selectionBounds, 3.0f, 1.0f, accent.withAlpha(0.68f));
+        const NUIRect handle = selectionStretchHandleRect();
+        renderer.fillRoundedRect(handle, 3.0f,
+                                 accent.lightened(hoverOnSelectionStretch_ ? 0.24f : 0.10f)
+                                     .withAlpha(hoverOnSelectionStretch_ ? 1.0f : 0.88f));
+        renderer.strokeRoundedRect(handle, 3.0f, 1.0f, NUIColor::white().withAlpha(0.82f));
+    }
+
     // Draw-mode preview: a translucent phantom of the note a click would place,
     // tracking the snapped cursor cell so placement reads before you commit it.
     // Only while the pencil hovers empty space — never over an existing note.
@@ -781,6 +800,42 @@ int PianoRollNoteLayer::findNoteAt(float localX, float localY) {
     return findNoteAtLocal(notes_, localX, localY, pixelsPerBeat_, keyHeight_);
 }
 
+NUIRect PianoRollNoteLayer::selectionTimeBoundsRect() const {
+    size_t selectedCount = 0;
+    double startBeat = std::numeric_limits<double>::max();
+    double endBeat = 0.0;
+    int highestPitch = 0;
+    int lowestPitch = 127;
+
+    for (const auto& note : notes_) {
+        if (!note.selected || note.isDeleted)
+            continue;
+        ++selectedCount;
+        startBeat = std::min(startBeat, note.startBeat);
+        endBeat = std::max(endBeat, note.startBeat + note.durationBeats);
+        highestPitch = std::max(highestPitch, note.pitch);
+        lowestPitch = std::min(lowestPitch, note.pitch);
+    }
+    if (selectedCount < 2 || endBeat <= startBeat)
+        return NUIRect(0.0f, 0.0f, 0.0f, 0.0f);
+
+    const auto bounds = getBounds();
+    const float left = bounds.x + static_cast<float>(startBeat * pixelsPerBeat_) - scrollX_;
+    const float right = bounds.x + static_cast<float>(endBeat * pixelsPerBeat_) - scrollX_;
+    const float top = bounds.y + static_cast<float>(127 - highestPitch) * keyHeight_ - scrollY_ + 1.0f;
+    const float bottom = bounds.y + static_cast<float>(128 - lowestPitch) * keyHeight_ - scrollY_ - 1.0f;
+    return NUIRect(left, top, std::max(1.0f, right - left), std::max(1.0f, bottom - top));
+}
+
+NUIRect PianoRollNoteLayer::selectionStretchHandleRect() const {
+    const NUIRect selection = selectionTimeBoundsRect();
+    if (selection.width <= 0.0f || selection.height <= 0.0f)
+        return NUIRect(0.0f, 0.0f, 0.0f, 0.0f);
+    return NUIRect(selection.right() - SELECTION_STRETCH_HANDLE_WIDTH * 0.5f,
+                   selection.y + (selection.height - SELECTION_STRETCH_HANDLE_HEIGHT) * 0.5f,
+                   SELECTION_STRETCH_HANDLE_WIDTH, SELECTION_STRETCH_HANDLE_HEIGHT);
+}
+
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (state_ == State::None && !getBounds().contains(event.position)) {
         // Reset hover when leaving bounds
@@ -789,6 +844,12 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             hoverOnRightEdge_ = false;
             hoverOnLeftEdge_ = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+        }
+        if (hoverOnSelectionStretch_) {
+            hoverOnSelectionStretch_ = false;
+            if (platformBridge_)
+                platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+            repaint();
         }
         if (hoveredPitch_ != -1) {
             hoveredPitch_ = -1;
@@ -810,8 +871,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // double as the fine toggle there. Recomputed every event so it can never
     // go stale between gestures.
     fineDrag_ = (event.modifiers & NUIModifiers::Alt) &&
-                (state_ == State::Painting || state_ == State::Moving ||
-                 state_ == State::Resizing || state_ == State::ResizingLeft);
+                (state_ == State::Painting || state_ == State::Moving || state_ == State::Resizing ||
+                 state_ == State::ResizingLeft || state_ == State::StretchingSelection);
 
     // The Note Properties popup is modal within the layer while open.
     if (propNoteIndex_ >= 0) {
@@ -830,6 +891,22 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
 
     // --- HOVER / SMART CURSOR (no button activity) ---
     if (state_ == State::None && !event.pressed && !event.released) {
+        const bool onSelectionStretch =
+            tool_ != GlobalTool::Eraser && selectionStretchHandleRect().contains(event.position);
+        if (hoverOnSelectionStretch_ != onSelectionStretch) {
+            hoverOnSelectionStretch_ = onSelectionStretch;
+            repaint();
+        }
+        if (onSelectionStretch) {
+            hoveredNoteIndex_ = -1;
+            hoverOnRightEdge_ = false;
+            hoverOnLeftEdge_ = false;
+            hoverBeat_ = -1.0;
+            if (platformBridge_)
+                platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+            return true;
+        }
+
         int hitIdx = findNoteAt(localX, localY);
         // Track the snapped beat the cursor sits on so the pencil can render a
         // phantom of the note a click would place. Only meaningful over empty
@@ -945,6 +1022,22 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // --- LEFT CLICK HANDLING ---
     if (event.pressed && event.button == NUIMouseButton::Left) {
         setFocused(true); // Gain keyboard focus for shortcuts
+
+        // The shared handle takes precedence over the right edge of the last
+        // selected note. Its gesture changes the complete phrase timing,
+        // whereas an ordinary note-edge drag still resizes lengths only.
+        if (tool_ != GlobalTool::Eraser && selectionStretchHandleRect().contains(event.position)) {
+            state_ = State::StretchingSelection;
+            dragStartPos_ = event.position;
+            dragStartScrollX_ = scrollX_;
+            dragStartNotes_ = notes_;
+            hoverOnSelectionStretch_ = true;
+            if (platformBridge_)
+                platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+            repaint();
+            return true;
+        }
+
         int clickedIndex = findNoteAt(localX, localY);
 
         // The platform never sets event.doubleClick, so detect it here: a
@@ -1363,8 +1456,35 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             }
             repaint();
             return true;
-        }
-        else if (state_ == State::CopyDragging) {
+        } else if (state_ == State::StretchingSelection) {
+            double anchorBeat = std::numeric_limits<double>::max();
+            double originalEndBeat = 0.0;
+            double minimumFactor = 0.0;
+            for (const auto& note : dragStartNotes_) {
+                if (!note.selected || note.isDeleted)
+                    continue;
+                anchorBeat = std::min(anchorBeat, note.startBeat);
+                originalEndBeat = std::max(originalEndBeat, note.startBeat + note.durationBeats);
+                minimumFactor = std::max(minimumFactor, 0.125 / std::max(0.125, note.durationBeats));
+            }
+
+            const double originalSpan = originalEndBeat - anchorBeat;
+            if (std::isfinite(anchorBeat) && originalSpan > 0.0001) {
+                const double cursorBeat = std::max(anchorBeat, static_cast<double>(localX) / pixelsPerBeat_);
+                const double targetEndBeat =
+                    std::max(anchorBeat + originalSpan * minimumFactor, snapToGrid(cursorBeat));
+                const double factor = std::max(minimumFactor, (targetEndBeat - anchorBeat) / originalSpan);
+                for (size_t i = 0; i < notes_.size() && i < dragStartNotes_.size(); ++i) {
+                    const auto& original = dragStartNotes_[i];
+                    if (!original.selected || original.isDeleted)
+                        continue;
+                    notes_[i].startBeat = anchorBeat + (original.startBeat - anchorBeat) * factor;
+                    notes_[i].durationBeats = std::max(0.125, original.durationBeats * factor);
+                }
+            }
+            repaint();
+            return true;
+        } else if (state_ == State::CopyDragging) {
             float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             float dy = (event.position.y - dragStartPos_.y) + (scrollY_ - dragStartScrollY_);
 
@@ -1412,14 +1532,19 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             // Update Memory
             if (state_ == State::Painting && paintingNoteIndex_ != -1) {
                 lastNoteDuration_ = notes_[paintingNoteIndex_].durationBeats;
-            } else if (state_ == State::Resizing || state_ == State::ResizingLeft) {
+            } else if (state_ == State::Resizing || state_ == State::ResizingLeft ||
+                       state_ == State::StretchingSelection) {
                 for (const auto& n : notes_) { if (n.selected) { lastNoteDuration_ = n.durationBeats; break; } }
             }
 
-            pushUndo(state_ == State::CopyDragging ? "Alt+Drag Copy" : "Edit", dragStartNotes_, notes_);
+            const std::string description = state_ == State::CopyDragging
+                                                ? "Alt+Drag Copy"
+                                                : (state_ == State::StretchingSelection ? "Stretch Selection" : "Edit");
+            pushUndo(description, dragStartNotes_, notes_);
             state_ = State::None;
             paintingNoteIndex_ = -1;
             copyDragIndices_.clear();
+            hoverOnSelectionStretch_ = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             commitNotes();
             repaint();

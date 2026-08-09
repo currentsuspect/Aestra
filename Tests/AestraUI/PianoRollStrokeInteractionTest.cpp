@@ -123,11 +123,56 @@ void testRightDragEraseIsOneUndoableStroke() {
     check(layer.getNotes().size() == 3, "one undo should restore the complete erase stroke");
 }
 
+void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
+    PianoRollNoteLayer layer;
+    layer.setBounds({0.0f, 0.0f, 800.0f, 3072.0f});
+    layer.setSnap(SnapGrid::Beat);
+
+    MidiNote root;
+    root.pitch = 60;
+    root.startBeat = 0.0;
+    root.durationBeats = 1.0;
+    root.selected = true;
+    MidiNote upper = root;
+    upper.pitch = 64;
+    upper.startBeat = 2.0;
+    upper.durationBeats = 2.0;
+    layer.setNotes({root, upper});
+
+    int commits = 0;
+    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+
+    // The two selected notes span beats 0..4. Their shared handle sits at beat
+    // 4, vertically centred on the selection frame; drag it to beat 8.
+    constexpr float HANDLE_Y = 1572.0f;
+    check(layer.onMouseEvent(mouseDown(320.0f, HANDLE_Y, NUIMouseButton::Left)),
+          "selection stretch handle press should be handled");
+    check(layer.onMouseEvent(mouseDrag(640.0f, HANDLE_Y, NUIMouseButton::Left)),
+          "selection stretch drag should be handled");
+    check(layer.onMouseEvent(mouseUp(640.0f, HANDLE_Y, NUIMouseButton::Left)),
+          "selection stretch release should be handled");
+
+    const auto& stretched = layer.getNotes();
+    check(stretched.size() == 2, "selection stretch must preserve note count");
+    check(std::abs(stretched[0].startBeat - 0.0) < 0.001 && std::abs(stretched[0].durationBeats - 2.0) < 0.001,
+          "selection stretch should keep the anchor and scale its length");
+    check(std::abs(stretched[1].startBeat - 4.0) < 0.001 && std::abs(stretched[1].durationBeats - 4.0) < 0.001,
+          "selection stretch should scale later starts and lengths proportionally");
+    check(commits == 1, "selection stretch should commit once on release");
+
+    layer.undo();
+    const auto& restored = layer.getNotes();
+    check(std::abs(restored[0].durationBeats - 1.0) < 0.001 && std::abs(restored[1].startBeat - 2.0) < 0.001 &&
+              std::abs(restored[1].durationBeats - 2.0) < 0.001,
+          "one undo should restore the complete phrase timing");
+}
+
 } // namespace
 
 int main() {
     testChordBrushPaintsCompleteTriadsAsOneEdit();
     testRightDragEraseIsOneUndoableStroke();
+    testSelectionHandleStretchesPhraseTimingAsOneEdit();
 
     if (g_failures == 0) {
         std::cout << "Piano Roll stroke interaction tests passed\n";
