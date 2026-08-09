@@ -2878,8 +2878,12 @@ void AudioEngine::compileGraph() {
     auto graphRead = m_state.activeGraphRead();
     const auto& graph = graphRead.get(); // Fixed method name
 
-    // Iterate Tracks directly from the graph snapshot
-    for (const auto& tr : graph.tracks) {
+    // Compile in routing order so each destination consumes all upstream audio
+    // before its result is forwarded to the next hop.
+    for (const size_t orderedIndex : graph.topologicalOrder) {
+        if (orderedIndex >= graph.tracks.size())
+            continue;
+        const auto& tr = graph.tracks[orderedIndex];
         const uint32_t idx = tr.trackIndex;
 
         // Safety Check

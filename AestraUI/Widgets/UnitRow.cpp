@@ -947,8 +947,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             if (bounds.contains(event.position)) {
                 // Right-drag across a step grid erases every crossed pad.
                 // Outside the grid, right-click keeps the row context menu.
-                if (localContextRect.contains(localPoint) && usesStepSequencerForType(m_type) && !shouldUseNoteRoll() &&
-                    m_patternId.isValid() && m_trackManager) {
+                const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
+                if (localContextRect.contains(localPoint) && hasContent && usesStepSequencerForType(m_type) &&
+                    !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
                     if (stepIndex >= 0 && stepIndex < m_stepCount) {
                         float velocity = kDefaultStepVelocity;

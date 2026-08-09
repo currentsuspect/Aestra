@@ -14,9 +14,12 @@
 // deterministic generator plugin as the signal source — no clips, no audio
 // hardware, no file I/O on the verification path.
 
+#include "../AestraAudio/GoldenAudio/GoldenAudioHarness.h"
 #include "Core/AudioEngine.h"
 #include "Core/AudioGraph.h"
 #include "Core/AudioGraphBuilder.h"
+#include "Core/AudioGraphState.h"
+#include "Core/AudioRenderer.h"
 #include "Core/MixerChannel.h"
 #include "Models/TrackManager.h"
 #include "Plugin/EffectChain.h"
@@ -282,6 +285,120 @@ std::vector<float> renderMainChain(size_t destinationCount) {
     return captured;
 }
 
+std::shared_ptr<TrackManager> buildClipMainChain(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    std::vector<float> source(static_cast<size_t>(totalFrames) * kChannels, 0.0f);
+    for (uint32_t frame = 0; frame < totalFrames; ++frame) {
+        source[static_cast<size_t>(frame) * 2] = sourceL(frame);
+        source[static_cast<size_t>(frame) * 2 + 1] = sourceR(frame);
+    }
+
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    GoldenAudio::addAudioTrack(*trackManager, "renderer-route-source", source, totalFrames, config);
+
+    MixerChannel* previous = trackManager->getChannel(0);
+    EXPECT_TRUE(previous != nullptr);
+    for (size_t index = 0; previous && index < destinationCount; ++index) {
+        MixerChannel* destination = trackManager->addChannel("renderer-route-destination");
+        EXPECT_TRUE(destination != nullptr);
+        if (!destination) {
+            break;
+        }
+        previous->setMainOutputId(destination->getChannelId());
+        previous = destination;
+    }
+    return trackManager;
+}
+
+std::vector<float> renderClipMainChainLive(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    auto trackManager = buildClipMainChain(destinationCount, totalFrames);
+    AudioEngine engine;
+    GoldenAudio::prepareEngine(engine, trackManager, config);
+    engine.setTransportPlaying(true);
+    return GoldenAudio::renderBlocks(engine, totalFrames, config);
+}
+
+std::vector<float> renderClipMainChainOffline(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    auto trackManager = buildClipMainChain(destinationCount, totalFrames);
+    AudioEngine engine;
+    GoldenAudio::prepareEngine(engine, trackManager, config);
+    AudioGraph graph = AudioGraphBuilder::buildFromTrackManager(*trackManager);
+
+    std::vector<std::vector<double>> trackBuffers(
+        graph.tracks.size(), std::vector<double>(static_cast<size_t>(kBlockFrames) * kChannels, 0.0));
+    std::vector<double> masterBuffer(static_cast<size_t>(kBlockFrames) * kChannels, 0.0);
+    AudioGraphState state;
+    state.trackStates.resize(graph.tracks.size());
+    state.renderTracks.reserve(graph.tracks.size());
+
+    for (const size_t orderedIndex : graph.topologicalOrder) {
+        EXPECT_TRUE(orderedIndex < graph.tracks.size());
+        if (orderedIndex >= graph.tracks.size()) {
+            continue;
+        }
+        const auto& graphTrack = graph.tracks[orderedIndex];
+        RenderTrack renderTrack;
+        renderTrack.trackIndex = graphTrack.trackIndex;
+        renderTrack.selfBuffer = trackBuffers[graphTrack.trackIndex].data();
+
+        RuntimeConnection output;
+        output.stride = 2;
+        if (graphTrack.mainOutputId == kMasterId) {
+            output.destinationBufferL = masterBuffer.data();
+            output.destinationBufferR = masterBuffer.data() + 1;
+        } else {
+            const size_t destinationIndex = graphTrack.mainOutputId < graph.trackIndexById.size()
+                                                ? graph.trackIndexById[graphTrack.mainOutputId]
+                                                : AudioGraph::kInvalidTrackIndex;
+            EXPECT_TRUE(destinationIndex != AudioGraph::kInvalidTrackIndex);
+            if (destinationIndex == AudioGraph::kInvalidTrackIndex) {
+                continue;
+            }
+            output.destinationBufferL = trackBuffers[destinationIndex].data();
+            output.destinationBufferR = trackBuffers[destinationIndex].data() + 1;
+        }
+        renderTrack.activeConnections.push_back(output);
+        state.renderTracks.push_back(std::move(renderTrack));
+    }
+
+    AudioRenderer renderer;
+    std::vector<float> captured;
+    captured.reserve(static_cast<size_t>(totalFrames) * kChannels);
+    for (uint64_t rendered = 0; rendered < totalFrames; rendered += kBlockFrames) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<uint64_t>(kBlockFrames, totalFrames - rendered));
+        std::fill(masterBuffer.begin(), masterBuffer.end(), 0.0);
+        AudioRenderer::Context context;
+        context.masterBuffer = masterBuffer.data();
+        context.numFrames = frames;
+        context.bufferOffset = 0;
+        context.globalPos = rendered;
+        context.sampleRate = kSampleRate;
+        context.graph = &graph;
+        context.isOffline = true;
+        renderer.renderBlock(context, state, engine);
+        for (uint32_t frame = 0; frame < frames; ++frame) {
+            captured.push_back(static_cast<float>(masterBuffer[static_cast<size_t>(frame) * 2]));
+            captured.push_back(static_cast<float>(masterBuffer[static_cast<size_t>(frame) * 2 + 1]));
+        }
+    }
+    return captured;
+}
+
 double maxAbsDiff(const std::vector<float>& a, const std::vector<float>& b) {
     if (a.size() != b.size() || a.empty()) {
         return 1e9;
@@ -370,6 +487,30 @@ void testCentredMainRoutingPreservesLevelAcrossHops() {
     }
 }
 
+void testOfflineRendererMatchesLiveCentredRouting() {
+    std::printf("[RoutingSendPanParityTest] offline renderer matches live centred routing...\n");
+    constexpr uint32_t totalBlocks = kWarmupBlocks + kMeasureBlocks;
+    constexpr uint32_t totalFrames = totalBlocks * kBlockFrames;
+    const size_t firstMeasuredSample = static_cast<size_t>(kWarmupBlocks) * kBlockFrames * kChannels;
+
+    for (const size_t destinations : {size_t{0}, size_t{2}}) {
+        const std::vector<float> live = renderClipMainChainLive(destinations, totalFrames);
+        const std::vector<float> offline = renderClipMainChainOffline(destinations, totalFrames);
+        EXPECT_TRUE(live.size() == offline.size());
+        if (live.size() != offline.size() || live.size() <= firstMeasuredSample) {
+            continue;
+        }
+        const std::vector<float> liveMeasured(live.begin() + static_cast<ptrdiff_t>(firstMeasuredSample), live.end());
+        const std::vector<float> offlineMeasured(offline.begin() + static_cast<ptrdiff_t>(firstMeasuredSample),
+                                                 offline.end());
+        const double diff = maxAbsDiff(liveMeasured, offlineMeasured);
+        if (diff > 1e-6) {
+            reportFailure("offline renderer/live centred route parity",
+                          std::to_string(destinations) + " destination(s), max abs diff " + std::to_string(diff));
+        }
+    }
+}
+
 // #262 acceptance: the engine's batched send loop must match a naive
 // per-sample reference computed directly from the deterministic source.
 void testBatchedSendMatchesPerSampleReference() {
@@ -412,6 +553,7 @@ int main() {
     testPreFaderSendMatchesBalanceReference();
     testCentredPostFaderSendPreservesLevel();
     testCentredMainRoutingPreservesLevelAcrossHops();
+    testOfflineRendererMatchesLiveCentredRouting();
     testBatchedSendMatchesPerSampleReference();
 
     if (g_failures == 0) {
