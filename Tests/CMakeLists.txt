@@ -1693,6 +1693,21 @@ else()
     message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(PianoRollStrokeInteractionTest AestraUI/PianoRollStrokeInteractionTest.cpp)
+    target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PianoRollStrokeInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PianoRollStrokeInteractionTest COMMAND PianoRollStrokeInteractionTest)
+    set_tests_properties(PianoRollStrokeInteractionTest
+        PROPERTIES LABELS "ui;interaction;pianoroll;regression;contract:application")
+else()
+    message(STATUS "PianoRollStrokeInteractionTest skipped (AestraUI targets unavailable in this build mode)")
+endif()
+
 # Editor-close deferred-destruction regression (#475): removeChild() during
 # event dispatch must defer and free safely (no iterator invalidation / UAF).
 if(TARGET AestraUI_Core)

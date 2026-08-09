@@ -102,26 +102,29 @@ std::vector<int> PianoRollNoteLayer::buildTriad(int rootPitch) const {
 
 bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
     const double snappedBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
-    const int pitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+    const int rootPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+    const std::vector<int> strokePitches = chordMode_ ? buildTriad(rootPitch) : std::vector<int>{rootPitch};
+    bool changed = false;
 
-    // One note per cell: skip if a note already starts on this pitch+beat so a
-    // jittery drag doesn't stack duplicates.
-    for (const auto& n : notes_) {
-        if (n.isDeleted) continue;
-        if (n.pitch == pitch && std::abs(n.startBeat - snappedBeat) < 0.001) return false;
+    for (const int pitch : strokePitches) {
+        const bool occupied = std::any_of(notes_.begin(), notes_.end(), [pitch, snappedBeat](const MidiNote& note) {
+            return !note.isDeleted && note.pitch == pitch && std::abs(note.startBeat - snappedBeat) < 0.001;
+        });
+        if (occupied) continue;
+
+        MidiNote note;
+        note.pitch = pitch;
+        note.startBeat = snappedBeat;
+        note.durationBeats = lastNoteDuration_;
+        note.velocity = lastNoteVelocity_;
+        note.unitId = defaultUnitId_;
+        note.selected = true;
+        note.animationScale = 1.0f;
+        notes_.push_back(note);
+        auditionPitch(pitch);
+        changed = true;
     }
-
-    MidiNote note;
-    note.pitch = pitch;
-    note.startBeat = snappedBeat;
-    note.durationBeats = lastNoteDuration_;
-    note.velocity = lastNoteVelocity_;
-    note.unitId = defaultUnitId_;
-    note.selected = true; // the whole stroke ends up selected
-    note.animationScale = 1.0f;
-    notes_.push_back(note);
-    auditionPitch(pitch);
-    return true;
+    return changed;
 }
 
 void PianoRollNoteLayer::connectSelectedNotes() {
@@ -905,30 +908,38 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // --- RIGHT CLICK / ERASER (FAST ERASE) ---
     if (event.button == NUIMouseButton::Right) {
         if (event.pressed) {
-             state_ = State::Erasing;
-             
-             // Delete immediately on press
-             int idx = findNoteAt(localX, localY);
-             if (idx != -1) {
-                 auto oldNotes = notes_;
-                 notes_.erase(notes_.begin() + idx);
-                 pushUndo("Delete Note", oldNotes, notes_);
-                 commitNotes();
-                 repaint();
-             }
+            state_ = State::Erasing;
+            dragStartNotes_ = notes_;
+            eraseStrokeChanged_ = false;
+
+            const int idx = findNoteAt(localX, localY);
+            if (idx != -1) {
+                notes_.erase(notes_.begin() + idx);
+                eraseStrokeChanged_ = true;
+                repaint();
+            }
+            return true;
         }
-        if (event.released) state_ = State::None;
+        if (event.released && state_ == State::Erasing) {
+            if (eraseStrokeChanged_) {
+                pushUndo("Erase Stroke", dragStartNotes_, notes_);
+                commitNotes();
+            }
+            state_ = State::None;
+            eraseStrokeChanged_ = false;
+            repaint();
+            return true;
+        }
     }
     
     if (state_ == State::Erasing && !event.released) {
-         int idx = findNoteAt(localX, localY);
-         if (idx != -1 && !notes_[idx].isDeleted) {
-             auto oldNotes = notes_;
-             notes_.erase(notes_.begin() + idx);
-             commitNotes();
-             repaint();
-         }
-         return true;
+        int idx = findNoteAt(localX, localY);
+        if (idx != -1 && !notes_[idx].isDeleted) {
+            notes_.erase(notes_.begin() + idx);
+            eraseStrokeChanged_ = true;
+            repaint();
+        }
+        return true;
     }
 
     // --- LEFT CLICK HANDLING ---

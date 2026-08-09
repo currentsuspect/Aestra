@@ -571,8 +571,10 @@ private:
     void auditionStop();
 
     // Paint-brush: stamp one snapped note at the cursor cell if empty, used for
-    // Ctrl+pencil drag strokes. Returns true if a note was added.
+    // Shift+pencil drag strokes. Chord mode stamps the active triad. Returns
+    // true if at least one note was added.
     bool paintBrushAt(float localX, float localY);
+    bool eraseStrokeChanged_ = false;
 };
 
 // -----------------------------------------------------------------------------
