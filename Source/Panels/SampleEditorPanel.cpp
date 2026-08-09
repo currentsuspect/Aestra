@@ -1050,7 +1050,6 @@ void SampleEditorPanel::setLoopMode(LoopMode mode) {
     }
     m_loopPoints.mode = mode;
     updateModeButtons();
-    // TODO: Ping-pong currently shares the loop engine path until sampler ping-pong playback is implemented.
     onLoopControlChanged();
     requestControlCommit();
 }

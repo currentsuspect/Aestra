@@ -17,6 +17,9 @@ namespace Plugins {
 
 class SamplerPlugin : public IPluginInstance {
 public:
+    // Values are persisted in sampler state; append new modes rather than renumbering these.
+    enum class LoopMode : int { OneShot = 0, Forward = 1, PingPong = 2 };
+
     SamplerPlugin();
     ~SamplerPlugin() override = default;
 
@@ -63,6 +66,7 @@ public:
     void setCoarseSemitones(float semitones) noexcept;
     void setFineTuneCents(float cents) noexcept;
     void setSampleWindow(float startNorm, float endNorm) noexcept;
+    void setLoopMode(LoopMode mode) noexcept;
     void setLoopEnabled(bool enabled) noexcept;
     void setMaxVoices(int maxVoices) noexcept;
     void setRootMidiNote(int note) noexcept;
@@ -75,7 +79,8 @@ public:
     float getFineTuneCents() const noexcept;
     float getLoopStartNorm() const noexcept { return m_loopStartNorm.load(std::memory_order_relaxed); }
     float getLoopEndNorm() const noexcept { return m_loopEndNorm.load(std::memory_order_relaxed); }
-    bool isLoopEnabled() const noexcept { return m_loopEnabled.load(std::memory_order_relaxed); }
+    LoopMode getLoopMode() const noexcept;
+    bool isLoopEnabled() const noexcept { return getLoopMode() != LoopMode::OneShot; }
     int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
     int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
     bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
@@ -111,7 +116,7 @@ private:
     std::atomic<float> m_fineTuneCents{0.0f};
     std::atomic<float> m_loopStartNorm{0.0f};
     std::atomic<float> m_loopEndNorm{1.0f};
-    std::atomic<bool> m_loopEnabled{false}; // one-shot default
+    std::atomic<int> m_loopMode{static_cast<int>(LoopMode::OneShot)};
     std::atomic<int> m_maxVoices{4};
     std::atomic<int> m_rootMidiNote{60}; // C3 default
     std::atomic<bool> m_monoMode{false};
@@ -129,6 +134,7 @@ private:
         double position = 0.0; // Sample index
         double playbackRate = 1.0; // sample index increment/frame
         double targetPlaybackRate = 1.0;
+        int playbackDirection = 1;
         bool glideActive = false;
         EnvStage stage = EnvStage::Off;
         double stageTime = 0.0; // Seconds in current stage
