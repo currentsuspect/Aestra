@@ -175,6 +175,27 @@ struct ProcessBlockAdmissionGuard {
 
     bool isAdmitted() const { return m_admitted; }
 };
+
+/**
+ * RAII guard for the buffer-config transaction side of the RTConfigAdmission
+ * protocol (#731): releases the ownership bit on every exit path, including
+ * exceptions thrown by allocation or prepare calls inside setBufferConfig.
+ * Without it a failed transaction would leave processBlock refused forever.
+ */
+struct BufferConfigGateGuard {
+    std::atomic<uint32_t>& m_gate;
+    bool m_owned{false};
+
+    BufferConfigGateGuard(std::atomic<uint32_t>& gate, bool owned) : m_gate(gate), m_owned(owned) {}
+
+    ~BufferConfigGateGuard() {
+        if (m_owned) {
+            Aestra::Audio::detail::endBufferConfig(m_gate);
+        }
+    }
+
+    bool isOwned() const { return m_owned; }
+};
 } // namespace
 
 void AudioEngine::startMetronomeCountIn(uint32_t beats) {
@@ -766,8 +787,11 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     ProcessBlockAdmissionGuard admissionGuard(m_admissionGate);
     if (!admissionGuard.isAdmitted()) {
         // A buffer-config transaction is in flight; silence the output and return.
+        // Use the configured channel count, not a hard-coded stereo assumption.
+        const uint32_t silenceChannels =
+            std::max<uint32_t>(1, m_outputChannels.load(std::memory_order_relaxed));
         if (outputBuffer && numFrames > 0) {
-            std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * 2 * sizeof(float));
+            std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * silenceChannels * sizeof(float));
         }
         return 0;
     }
@@ -1525,7 +1549,9 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     // stream must go through AudioDeviceManager's pre-restart config hook,
     // which applies the actual granted config while the callback is stopped.
     // Acquire the admission gate; fails if any processBlock is in flight.
-    if (!Aestra::Audio::detail::tryBeginBufferConfig(m_admissionGate)) {
+    const bool gateOwned = Aestra::Audio::detail::tryBeginBufferConfig(m_admissionGate);
+    BufferConfigGateGuard gateGuard(m_admissionGate, gateOwned);
+    if (!gateGuard.isOwned()) {
         Aestra::Log::error("[AudioEngine] setBufferConfig refused: a realtime callback is in flight. "
                            "Configure the engine only while the stream is stopped (#731).");
         // Note: no assert() here — this tripwire must stay testable in every
@@ -1536,27 +1562,19 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     // Treat maxFrames as a hint; never shrink RT buffers.
     // Some drivers deliver larger blocks than requested, and shrinking can cause
     // renderGraph() to early-out -> audible crackles.
+    // Work on locals and publish only after every allocation succeeds: an
+    // exception mid-config must leave the engine fully on its old config.
     const uint32_t outputChannels = std::max<uint32_t>(1, numChannels);
-    m_outputChannels.store(outputChannels, std::memory_order_relaxed);
-    if (maxFrames > m_maxBufferFrames.load(std::memory_order_relaxed)) {
-        m_maxBufferFrames.store(maxFrames, std::memory_order_relaxed);
-    }
-    if (m_channelPrepareConfig) {
-        m_channelPrepareConfig->sampleRate.store(m_sampleRate.load(std::memory_order_relaxed),
-                                                 std::memory_order_relaxed);
-        m_channelPrepareConfig->maxBlockSize.store(m_maxBufferFrames.load(std::memory_order_relaxed),
-                                                   std::memory_order_relaxed);
-    }
+    const uint32_t maxBufferFrames = std::max(m_maxBufferFrames.load(std::memory_order_relaxed), maxFrames);
 
-    const size_t requiredSize =
-        static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) * kInternalRenderChannels;
+    const size_t requiredSize = static_cast<size_t>(maxBufferFrames) * kInternalRenderChannels;
     const bool needAlloc = m_masterBufferD.size() < requiredSize;
 
     if (needAlloc) {
         m_masterBufferD.resize(requiredSize);
 
         // Resize plugin scratch buffers (mono size)
-        size_t monoSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed));
+        size_t monoSize = static_cast<size_t>(maxBufferFrames);
         if (m_scratchL.size() < monoSize)
             m_scratchL.resize(monoSize);
         if (m_scratchR.size() < monoSize)
@@ -1566,7 +1584,7 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         if (m_sidechainScratchR.size() < monoSize)
             m_sidechainScratchR.resize(monoSize);
         // Dry buffer for EffectChainSnapshot dry/wet mixing (stereo)
-        size_t dryBufferSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) * 2;
+        size_t dryBufferSize = static_cast<size_t>(maxBufferFrames) * 2;
         if (m_dryBuffer.size() < dryBufferSize)
             m_dryBuffer.resize(dryBufferSize);
 
@@ -1693,7 +1711,7 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     // Prepare insert chains at a safe point (may allocate). This prevents RT prepare() calls.
     // Snapshot publication still depends on EffectChain::prepare(), so this remains required.
     const double sampleRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
-    const uint32_t maxBlockSize = m_maxBufferFrames.load(std::memory_order_relaxed);
+    const uint32_t maxBlockSize = maxBufferFrames;
     if (auto trackMgr = m_trackManager.lock()) {
         const size_t channelCount = trackMgr->getChannelCount();
         for (size_t i = 0; i < channelCount; ++i) {
@@ -1704,8 +1722,18 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         }
     }
 
-    // Release the admission gate so processBlock() can resume.
-    Aestra::Audio::detail::endBufferConfig(m_admissionGate);
+    // Publish the new config only after every allocation succeeded, so an
+    // exception mid-config leaves the engine fully on its previous config.
+    m_outputChannels.store(outputChannels, std::memory_order_relaxed);
+    m_maxBufferFrames.store(maxBufferFrames, std::memory_order_relaxed);
+    if (m_channelPrepareConfig) {
+        m_channelPrepareConfig->sampleRate.store(m_sampleRate.load(std::memory_order_relaxed),
+                                                 std::memory_order_relaxed);
+        m_channelPrepareConfig->maxBlockSize.store(maxBufferFrames, std::memory_order_relaxed);
+    }
+
+    // The BufferConfigGateGuard releases the admission gate on every exit
+    // (including exceptions), so processBlock() can resume.
     return true;
 }
 

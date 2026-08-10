@@ -1331,6 +1331,21 @@ target_include_directories(AudioEngineOwnershipTest PRIVATE
 add_test(NAME AudioEngineOwnershipTest COMMAND AudioEngineOwnershipTest)
 set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity;contract:core" TIMEOUT 120)
 
+# Buffer Config Exception Safety Test (#731) — pins the exception-safety
+# contract of AudioEngine::setBufferConfig: the RTConfigAdmission gate is
+# released by RAII on every throwing path, and config values are published
+# only after all allocations succeed, so a mid-config exception can never
+# wedge or half-reconfigure the engine.
+add_executable(BufferConfigExceptionSafetyTest AestraAudio/BufferConfigExceptionSafetyTest.cpp)
+target_link_libraries(BufferConfigExceptionSafetyTest PRIVATE AestraAudio)
+target_include_directories(BufferConfigExceptionSafetyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME BufferConfigExceptionSafetyTest COMMAND BufferConfigExceptionSafetyTest)
+set_tests_properties(BufferConfigExceptionSafetyTest PROPERTIES LABELS "audio;engine;rt-safety;contract:core" TIMEOUT 120)
+
 # Zero-tolerance source guard (R2): fails if any AudioEngine global-instance
 # mechanism (accessor, registration pointer) reappears anywhere in the tree.
 add_test(NAME NoAudioEngineSingletonGuard

@@ -118,12 +118,30 @@ AestraAudioController::AestraAudioController() {
     // calling thread and must not call back into the manager. Return false
     // to reject the configuration and trigger a rollback.
     m_audioManager->setPreRestartConfigCallback([this](const Aestra::Audio::AudioStreamConfig& actualConfig) -> bool {
+        // Apply the granted sample rate BEFORE setBufferConfig(): buffer
+        // configuration prepares channel/effect buffers sized from the
+        // engine's current rate, so a rate reopen must see the new rate
+        // first (#731). Roll the rate back on rejection or exception.
+        struct RateRollback {
+            AudioEngine* engine;
+            uint32_t previousRate;
+            bool committed{false};
+            ~RateRollback() {
+                if (!committed) {
+                    engine->setSampleRate(previousRate);
+                }
+            }
+            void commit() { committed = true; }
+        };
+        const uint32_t previousRate = m_audioEngine->getSampleRate();
+        m_audioEngine->setSampleRate(actualConfig.sampleRate);
+        RateRollback rateRollback{m_audioEngine.get(), previousRate};
         if (!m_audioEngine->setBufferConfig(actualConfig.bufferSize, actualConfig.numOutputChannels)) {
             AESTRA_LOG_ERROR("[AestraAudioController] Engine rejected buffer config; aborting stream reconfiguration");
             return false;
         }
-        m_audioEngine->setSampleRate(actualConfig.sampleRate);
         m_streamConfig = actualConfig;
+        rateRollback.commit();
         return true;
     });
 }
