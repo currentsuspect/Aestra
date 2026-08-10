@@ -445,6 +445,14 @@ public:
     /** @brief Merge overlapping/touching selected notes on the same pitch into one. */
     void glueSelectedNotes();
 
+    /**
+     * @brief Split selected notes into consecutive cells of the current snap duration.
+     *
+     * The final cell retains any remainder so the operation never changes a
+     * note's start, end, pitch, expression, or unit routing.
+     */
+    void subdivideSelectedNotes();
+
     /** @brief Add slight random velocity variation to the selected notes. */
     void humanizeSelectedVelocities();
 
