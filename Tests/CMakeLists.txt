@@ -1795,6 +1795,28 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Floating panels must only raise themselves on presses inside their bounds:
+# the overlay forwards every press to every visible panel, so a transport-bar
+# click must not pop panels to the front (the Arsenal-mode double-stop bug).
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(WindowPanelRaiseTest
+        AestraUI/WindowPanelRaiseTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+    )
+    target_link_libraries(WindowPanelRaiseTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(WindowPanelRaiseTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+    )
+    add_test(NAME WindowPanelRaiseTest COMMAND WindowPanelRaiseTest)
+    set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
+else()
+    message(STATUS "WindowPanelRaiseTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # Takes/History workspace panels: command-timeline presentation + navigation,
 # takes manifest listing, actions, inline rename, non-destructive branching.
 if(TARGET AestraUI_Core)

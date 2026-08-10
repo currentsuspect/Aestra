@@ -269,7 +269,14 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
     if (event.pressed) {
-        bringToFront();
+        // The overlay layer forwards every press to every visible panel so that
+        // clicks over empty overlay area pass through to the workspace. Only
+        // raise the panel when the press actually lands inside its bounds;
+        // otherwise any click on the transport bar would pop every panel to
+        // the front.
+        if (getGlobalBounds().contains(event.position)) {
+            bringToFront();
+        }
     }
 
     if (m_resizing) {
