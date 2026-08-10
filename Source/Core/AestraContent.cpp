@@ -1003,6 +1003,17 @@ void AestraContent::setupArsenalPanels() {
         }
         sampler->setMonoMode(monoMode);
     };
+    m_sampleEditorPanel->onCutSelfModeChanged = [this](bool cutSelf) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setCutSelfMode(cutSelf);
+    };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
             return;
@@ -3837,6 +3848,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     m_sampleEditorPanel->setPitchTune(pitch);
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
+    m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {

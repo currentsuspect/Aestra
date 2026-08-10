@@ -686,6 +686,7 @@ void SampleEditorPanel::buildUI() {
     m_pingPongModeBtn = std::make_shared<NUIButton>("Ping-Pong");
     m_monoModeBtn = std::make_shared<NUIButton>("Mono");
     m_polyModeBtn = std::make_shared<NUIButton>("Poly");
+    m_cutSelfModeBtn = std::make_shared<NUIButton>("Cut-Self");
     styleActionButton(m_normalizeBtn);
     styleActionButton(m_reverseBtn);
     styleModeButton(m_oneShotModeBtn);
@@ -693,6 +694,7 @@ void SampleEditorPanel::buildUI() {
     styleModeButton(m_pingPongModeBtn);
     styleModeButton(m_monoModeBtn);
     styleModeButton(m_polyModeBtn);
+    styleModeButton(m_cutSelfModeBtn);
     m_waveformHintLabel = makeLabel("Scroll to zoom  |  Drag handles to trim");
     m_waveformHintLabel->setTextColor(theme.getColor("textSecondary").withAlpha(0.56f));
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
@@ -714,6 +716,7 @@ void SampleEditorPanel::buildUI() {
     m_pingPongModeBtn->setOnClick([this]() { setLoopMode(LoopMode::PingPong); });
     m_monoModeBtn->setOnClick([this]() { setMonoModeInternal(true, true); });
     m_polyModeBtn->setOnClick([this]() { setMonoModeInternal(false, true); });
+    m_cutSelfModeBtn->setOnClick([this]() { setCutSelfModeInternal(!m_cutSelfMode, true); });
     updateModeButtons();
     updateMonoPolyControls();
 
@@ -757,6 +760,7 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_pingPongModeBtn);
     m_contentContainer->addChild(m_monoModeBtn);
     m_contentContainer->addChild(m_polyModeBtn);
+    m_contentContainer->addChild(m_cutSelfModeBtn);
     m_contentContainer->addChild(m_pitchRootSlider);
     m_contentContainer->addChild(m_pitchCoarseSlider);
     m_contentContainer->addChild(m_pitchFineSlider);
@@ -926,7 +930,7 @@ void SampleEditorPanel::onResize(int width, int height) {
     m_modeLabel->setBounds(NUIRect(cb.x + pad, modeRowY, contentW, labelH));
     y = modeRowY + labelH;
     const float monoBtnW = 52.0f;
-    const float monoGroupW = monoBtnW * 2.0f - 1.0f;
+    const float monoGroupW = monoBtnW * 3.0f - 2.0f;
     const float voiceValueW = 24.0f;
     const float voiceSliderW = std::min(132.0f, std::max(84.0f, contentW * 0.20f));
     const float voiceLabelW = 42.0f;
@@ -937,6 +941,8 @@ void SampleEditorPanel::onResize(int width, int height) {
     m_monoModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
     x += monoBtnW - 1.0f;
     m_polyModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
+    x += monoBtnW - 1.0f;
+    m_cutSelfModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
     x += monoBtnW + gutter;
     m_oneShotModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
     x += modeBtnW - 1.0f;
@@ -1098,6 +1104,25 @@ void SampleEditorPanel::setMonoModeInternal(bool mono, bool notify) {
     }
 }
 
+void SampleEditorPanel::setCutSelfModeInternal(bool cutSelf, bool notify) {
+    if (m_cutSelfMode == cutSelf) {
+        updateMonoPolyControls();
+        return;
+    }
+
+    m_cutSelfMode = cutSelf;
+    updateMonoPolyControls();
+
+    if (notify && !m_suppressControlCallbacks) {
+        if (onCutSelfModeChanged) onCutSelfModeChanged(m_cutSelfMode);
+        requestControlCommit();
+    }
+}
+
+void SampleEditorPanel::setCutSelfMode(bool cutSelf) {
+    setCutSelfModeInternal(cutSelf, false);
+}
+
 void SampleEditorPanel::updateMonoPolyControls() {
     auto& theme = NUIThemeManager::getInstance();
     const auto activeBg = theme.getColor("secondary").withAlpha(0.78f);
@@ -1121,6 +1146,7 @@ void SampleEditorPanel::updateMonoPolyControls() {
 
     styleButton(m_monoModeBtn, m_monoMode);
     styleButton(m_polyModeBtn, !m_monoMode);
+    styleButton(m_cutSelfModeBtn, m_cutSelfMode);
 
     const int voices = getVoiceCount();
     if (m_voiceCountValueLabel) {

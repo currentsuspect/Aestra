@@ -71,6 +71,7 @@ public:
     void setMaxVoices(int maxVoices) noexcept;
     void setRootMidiNote(int note) noexcept;
     void setMonoMode(bool mono) noexcept;
+    void setCutSelfMode(bool cutSelf) noexcept;
     void setGlideTimeMs(float glideTimeMs) noexcept;
     bool normalizeSample(float targetPeak = 0.95f);
     bool reverseSample();
@@ -84,6 +85,7 @@ public:
     int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
     int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
     bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
+    bool isCutSelfMode() const noexcept { return m_cutSelfMode.load(std::memory_order_relaxed); }
     float getGlideTimeMs() const noexcept { return m_glideTimeMs.load(std::memory_order_relaxed); }
     float getAttack() const noexcept { return m_params[kParamAttack].load(std::memory_order_relaxed); }
     float getDecay() const noexcept { return m_params[kParamDecay].load(std::memory_order_relaxed); }
@@ -120,6 +122,7 @@ private:
     std::atomic<int> m_maxVoices{4};
     std::atomic<int> m_rootMidiNote{60}; // C3 default
     std::atomic<bool> m_monoMode{false};
+    std::atomic<bool> m_cutSelfMode{false};
     std::atomic<float> m_glideTimeMs{80.0f};
 
     // Voice Architecture

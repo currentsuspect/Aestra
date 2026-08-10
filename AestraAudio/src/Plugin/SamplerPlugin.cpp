@@ -105,6 +105,10 @@ void SamplerPlugin::setMonoMode(bool mono) noexcept {
     m_monoMode.store(mono, std::memory_order_relaxed);
 }
 
+void SamplerPlugin::setCutSelfMode(bool cutSelf) noexcept {
+    m_cutSelfMode.store(cutSelf, std::memory_order_relaxed);
+}
+
 void SamplerPlugin::setGlideTimeMs(float glideTimeMs) noexcept {
     m_glideTimeMs.store(std::clamp(glideTimeMs, 0.0f, 2000.0f), std::memory_order_relaxed);
 }
@@ -557,6 +561,23 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         }
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
+
+        // Cut-self: a new trigger on the same note chokes any previous voice
+        // playing it, so retriggered one-shots (e.g. an 808 in an ordinary
+        // sampler) never overlap. Explicit voice-layer policy — independent
+        // of mono mode, ADSR, and unit type. Different notes stay polyphonic.
+        if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            for (auto& v : m_voices) {
+                if (v.active && v.note == note) {
+                    v.active = false;
+                    v.stage = EnvStage::Off;
+                    v.stageTime = 0.0;
+                    v.currentGain = 0.0f;
+                    v.releaseGain = 0.0f;
+                }
+            }
+        }
+
         double noteStartFrame = 0.0;
         if (currentData && currentData->channels > 0) {
             const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
@@ -725,6 +746,7 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
     json.set("maxVoices", Aestra::JSON(static_cast<double>(m_maxVoices.load(std::memory_order_relaxed))));
     json.set("rootMidiNote", Aestra::JSON(static_cast<double>(m_rootMidiNote.load(std::memory_order_relaxed))));
     json.set("monoMode", Aestra::JSON(m_monoMode.load(std::memory_order_relaxed)));
+    json.set("cutSelfMode", Aestra::JSON(m_cutSelfMode.load(std::memory_order_relaxed)));
     json.set("glideTimeMs", Aestra::JSON(static_cast<double>(m_glideTimeMs.load(std::memory_order_relaxed))));
 
     // Sample Path
@@ -782,6 +804,9 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     }
     if (json.has("monoMode")) {
         setMonoMode(json["monoMode"].asBool());
+    }
+    if (json.has("cutSelfMode")) {
+        setCutSelfMode(json["cutSelfMode"].asBool());
     }
     if (json.has("glideTimeMs")) {
         setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));
