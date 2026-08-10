@@ -71,8 +71,6 @@ void test_press_outside_bounds_does_not_raise() {
     check(!consumed, "an outside press must pass through to the workspace");
     check(isTopmost(overlay, *panelB), "topmost panel must stay topmost after an outside press");
     check(overlay.getChildren().size() == 2, "no panel may be removed or duplicated");
-
-    std::cout << "PASS: press outside panel bounds does not raise panels\n";
 }
 
 void test_press_inside_bounds_raises_panel() {

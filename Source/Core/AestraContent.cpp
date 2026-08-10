@@ -3155,6 +3155,12 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
             AESTRA_LOG_DEBUG("[Arsenal] Focus-aware stop");
+            if (hardStop) {
+                // Zero the cue BEFORE the stop command goes out: stop() pushes the
+                // stored play-start into the command, and the audio thread's drain is
+                // authoritative — a UI-side rewind after the fact races it.
+                m_trackManager->setPlayStartPosition(0.0);
+            }
             m_trackManager->stopArsenalPlayback(true);
         }
         if (hardStop && m_audioEngine) {
@@ -3172,6 +3178,9 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     }
 
     if (m_trackManager) {
+        if (hardStop) {
+            m_trackManager->setPlayStartPosition(0.0);
+        }
         m_trackManager->stop();
     }
     if (hardStop && m_audioEngine) {

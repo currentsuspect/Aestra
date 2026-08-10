@@ -75,6 +75,9 @@ inline float snapRectX(float x) {
  *        when pixels-per-beat changes from `oldPPB` to `newPPB`.
  */
 inline float pianoRollZoomAnchorScroll(float scrollX, float oldPPB, float newPPB, float anchorX) {
+    if (!std::isfinite(oldPPB) || oldPPB <= 0.0f) {
+        return scrollX;
+    }
     const float mouseBeat = (scrollX + anchorX) / oldPPB;
     return std::max(0.0f, mouseBeat * newPPB - anchorX);
 }
@@ -88,6 +91,9 @@ inline float pianoRollFollowTargetScroll(float scrollX,
                                          float pixelsPerBeat,
                                          float visibleWidth,
                                          double playheadBeat) {
+    if (!std::isfinite(pixelsPerBeat) || pixelsPerBeat <= 0.0f) {
+        return scrollX;
+    }
     const double visibleStart = static_cast<double>(scrollX) / pixelsPerBeat;
     const double visibleDur = static_cast<double>(visibleWidth) / pixelsPerBeat;
     const double leftGuard = visibleStart + visibleDur * 0.15;

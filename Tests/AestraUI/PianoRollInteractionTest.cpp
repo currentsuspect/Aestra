@@ -6,6 +6,7 @@
 #include "Widgets/PianoRollWidgetShared.h"
 #include <cassert>
 #include <iostream>
+#include <limits>
 
 using namespace AestraUI;
 
@@ -343,6 +344,55 @@ static void test_zoom_anchor_preserves_beat() {
 }
 
 // ---------------------------------------------------------------------------
+// Test: Ctrl-wheel zoom anchors on grid-local X, matching the ruler path.
+// The key lane shifts the grid right of the view origin, so a view-local
+// anchor makes the beat under the cursor drift by the lane width per zoom.
+// ---------------------------------------------------------------------------
+static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    // startBeat 1.25 at 80 ppb over an 810 px grid: scrollX = 100.
+    view.setViewWindow(1.25, 810.0 / 80.0);
+
+    // Default layout: key lane 76 px, vertical scrollbar 14 px.
+    const float keyLaneWidth = 76.0f;
+    const float gridWidthPx = 900.0f - keyLaneWidth - 14.0f;
+    const float cursorViewX = 500.0f;
+
+    const auto beatAtCursor = [&]() {
+        const double ppb = static_cast<double>(gridWidthPx) / view.getViewDurationBeats();
+        return view.getViewStartBeat() + static_cast<double>(cursorViewX - keyLaneWidth) / ppb;
+    };
+    const double beatBefore = beatAtCursor();
+
+    NUIMouseEvent zoom;
+    zoom.type = NUIMouseEventType::Scroll;
+    zoom.position = {cursorViewX, 300.0f};
+    zoom.modifiers = NUIModifiers::Ctrl;
+    zoom.wheelDelta = 1.0f;
+    view.onMouseEvent(zoom);
+
+    // Guard against a vacuous pass: the zoom must actually have applied.
+    ASSERT(view.getViewDurationBeats() < 9.5, "ctrl-wheel zoom fired");
+    const double beatAfter = beatAtCursor();
+    ASSERT(std::abs(beatAfter - beatBefore) < 0.001,
+           "ctrl-wheel zoom keeps the beat under the cursor stationary (grid-local anchor)");
+
+    // Invalid pixels-per-beat must be rejected, not stored.
+    view.setPixelsPerBeat(120.0f);
+    ASSERT(std::abs(static_cast<double>(gridWidthPx) / view.getViewDurationBeats() - 120.0) < 0.001,
+           "valid pixels-per-beat is accepted");
+    view.setPixelsPerBeat(0.0f);
+    view.setPixelsPerBeat(-5.0f);
+    view.setPixelsPerBeat(std::numeric_limits<float>::quiet_NaN());
+    ASSERT(std::abs(static_cast<double>(gridWidthPx) / view.getViewDurationBeats() - 120.0) < 0.001,
+           "non-positive or non-finite pixels-per-beat is rejected");
+
+    PASS("ctrl-wheel zoom anchors on grid-local X");
+}
+
+// ---------------------------------------------------------------------------
 // Test: the grid subdivision tier matches the active snap resolution
 // ---------------------------------------------------------------------------
 static void test_grid_subdivision_matches_snap() {
@@ -449,6 +499,7 @@ int main() {
     test_harmony_context_edit_notification();
     test_follow_target_keeps_playhead_visible();
     test_zoom_anchor_preserves_beat();
+    test_ctrl_wheel_zoom_uses_grid_local_anchor();
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
 

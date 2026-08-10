@@ -515,8 +515,10 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         
         if (ctrl) {
             // Zoom (Fallback) — same anchored, multiplicative semantics as the ruler.
+            // The ruler passes grid-local X (its bounds start after the key lane);
+            // mirror that basis or the beat under the cursor drifts with the lane width.
             applyZoom((event.wheelDelta > 0) ? 1.15f : 0.85f,
-                      event.position.x - getBounds().x);
+                      event.position.x - getBounds().x - m_grid->getBounds().x);
         } else if (shift) {
             // H-Scroll
             m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * 40.0f);
@@ -603,6 +605,9 @@ void PianoRollView::setDefaultUnitId(uint64_t unitId) {
 }
 
 void PianoRollView::setPixelsPerBeat(float ppb) {
+    if (!std::isfinite(ppb) || ppb <= 0.0f) {
+        return;
+    }
     m_pixelsPerBeat = ppb;
     updateScrollbars();
     syncChildren();

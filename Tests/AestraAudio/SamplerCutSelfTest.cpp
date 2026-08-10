@@ -34,9 +34,10 @@ constexpr int kRetriggerBlock = 1;
 // (block starts at 256). The choke cut lands on the old voice's maximum
 // value — the loudest possible step.
 constexpr int kChokeOffset = 17;
-// Offset 436: a whole number of 220 Hz cycles (48000/220 = 218.18 frames), so
-// a non-choked overlap lands in-phase and measures as a clean ~1.414x
-// amplitude boost instead of a phase-dependent fluke.
+// Offset 436: two full 220 Hz cycles span 436.36 frames (48000/220 = 218.18
+// frames per cycle); 256 + 180 = 436 sits 0.36 frames short of the in-phase
+// point, so a non-choked overlap lands ~in-phase and measures as a clean
+// ~1.414x amplitude boost instead of a phase-dependent fluke.
 constexpr int kInPhaseOffset = 180; // 256 + 180 = 436
 
 void writeLe16(std::ofstream& out, uint16_t value) {
