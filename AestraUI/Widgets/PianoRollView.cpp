@@ -237,7 +237,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
     };
     static constexpr Entry kKeys[] = {
         {"Q", "quantize note starts"},
-        {"Ctrl+G", "glue same-pitch runs"},
+        {"Ctrl+G / Ctrl+Shift+G", "glue runs / subdivide by snap"},
         {"Ctrl+L", "connect notes (legato)"},
         {"Ctrl+Z / Y", "undo / redo"},
         {"Ctrl+C / V / D", "copy / paste / duplicate"},

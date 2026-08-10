@@ -244,6 +244,53 @@ void PianoRollNoteLayer::glueSelectedNotes() {
     repaint();
 }
 
+void PianoRollNoteLayer::subdivideSelectedNotes() {
+    constexpr double kSubdivisionEpsilon = 1.0e-9;
+    const double snapDuration = MusicTheory::getSnapDuration(snap_);
+    if (!std::isfinite(snapDuration) || snapDuration <= kSubdivisionEpsilon) return;
+
+    auto oldNotes = notes_;
+    std::vector<MidiNote> rebuilt;
+    rebuilt.reserve(notes_.size());
+    bool changed = false;
+
+    for (const auto& note : notes_) {
+        const bool canSubdivide = note.selected && !note.isDeleted && std::isfinite(note.startBeat) &&
+                                  std::isfinite(note.durationBeats) &&
+                                  note.durationBeats > snapDuration + kSubdivisionEpsilon;
+        if (!canSubdivide) {
+            rebuilt.push_back(note);
+            continue;
+        }
+
+        double remaining = note.durationBeats;
+        double segmentStart = note.startBeat;
+        while (remaining > snapDuration + kSubdivisionEpsilon) {
+            MidiNote segment = note;
+            segment.startBeat = segmentStart;
+            segment.durationBeats = snapDuration;
+            segment.selected = true;
+            rebuilt.push_back(segment);
+            segmentStart += snapDuration;
+            remaining -= snapDuration;
+        }
+
+        MidiNote finalSegment = note;
+        finalSegment.startBeat = segmentStart;
+        finalSegment.durationBeats = remaining;
+        finalSegment.selected = true;
+        rebuilt.push_back(finalSegment);
+        changed = true;
+    }
+
+    if (!changed) return;
+
+    notes_ = std::move(rebuilt);
+    pushUndo("Subdivide", oldNotes, notes_);
+    commitNotes();
+    repaint();
+}
+
 void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     std::vector<int> selected;
     for (size_t i = 0; i < notes_.size(); ++i) {
@@ -1612,13 +1659,18 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
         }
 
         // Q: quantize selected note starts to the grid. Ctrl+G: glue selected
-        // notes on the same pitch into one. Both are no-ops without a selection.
+        // notes on the same pitch into one. Ctrl+Shift+G performs the inverse
+        // rhythmic operation, splitting selected notes by the current snap.
         if (!ctrl && event.keyCode == NUIKeyCode::Q) {
             quantizeSelectedNotes();
             return true;
         }
         if (ctrl && event.keyCode == NUIKeyCode::G) {
-            glueSelectedNotes();
+            if (event.modifiers & NUIModifiers::Shift) {
+                subdivideSelectedNotes();
+            } else {
+                glueSelectedNotes();
+            }
             return true;
         }
 

@@ -49,6 +49,14 @@ NUIMouseEvent mouseUp(float x, float y, NUIMouseButton button, NUIModifiers modi
     return event;
 }
 
+NUIKeyEvent keyPress(NUIKeyCode keyCode, NUIModifiers modifiers = NUIModifiers::None) {
+    NUIKeyEvent event;
+    event.keyCode = keyCode;
+    event.modifiers = modifiers;
+    event.pressed = true;
+    return event;
+}
+
 float pitchRowCenter(int pitch) {
     return static_cast<float>(127 - pitch) * 24.0f + 12.0f;
 }
@@ -173,12 +181,103 @@ void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
           "one undo should restore the complete phrase timing");
 }
 
+void testSubdivideSelectionUsesSnapAndPreservesNoteData() {
+    PianoRollNoteLayer layer;
+    layer.setSnap(SnapGrid::Quarter);
+
+    MidiNote selected;
+    selected.pitch = 60;
+    selected.startBeat = 0.125;
+    selected.durationBeats = 0.75;
+    selected.velocity = 0.61f;
+    selected.pan = -0.3f;
+    selected.unitId = 42;
+    selected.selected = true;
+
+    MidiNote untouched = selected;
+    untouched.pitch = 64;
+    untouched.startBeat = 2.0;
+    untouched.durationBeats = 1.0;
+    untouched.selected = false;
+    layer.setNotes({selected, untouched});
+
+    int commits = 0;
+    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    check(layer.onKeyEvent(keyPress(NUIKeyCode::G, NUIModifiers::Ctrl | NUIModifiers::Shift)),
+          "Ctrl+Shift+G should route to subdivision");
+
+    const auto& notes = layer.getNotes();
+    check(notes.size() == 4, "subdivision should replace one three-cell note without touching other notes");
+    for (double beat : {0.125, 0.375, 0.625}) {
+        const auto fragment = std::find_if(notes.begin(), notes.end(), [beat](const MidiNote& note) {
+            return note.pitch == 60 && std::abs(note.startBeat - beat) < 0.001;
+        });
+        check(fragment != notes.end(), "subdivision should preserve each sequential segment start");
+        if (fragment != notes.end()) {
+            check(std::abs(fragment->durationBeats - 0.25) < 0.001,
+                  "subdivision should use the current snap duration");
+            check(fragment->selected && std::abs(fragment->velocity - 0.61f) < 0.001f &&
+                      std::abs(fragment->pan + 0.3f) < 0.001f && fragment->unitId == 42,
+                  "subdivision should preserve selected-note expression and routing");
+        }
+    }
+    check(std::any_of(notes.begin(), notes.end(), [](const MidiNote& note) {
+              return note.pitch == 64 && !note.selected && std::abs(note.startBeat - 2.0) < 0.001 &&
+                     std::abs(note.durationBeats - 1.0) < 0.001;
+          }),
+          "subdivision should leave unselected notes unchanged");
+    check(commits == 1, "subdivision should commit once");
+
+    layer.undo();
+    const auto& restored = layer.getNotes();
+    check(restored.size() == 2, "one undo should restore the original selected note");
+    const auto original = std::find_if(restored.begin(), restored.end(), [](const MidiNote& note) {
+        return note.pitch == 60;
+    });
+    check(original != restored.end() && std::abs(original->startBeat - 0.125) < 0.001 &&
+              std::abs(original->durationBeats - 0.75) < 0.001,
+          "undo should restore the original note timing");
+}
+
+void testSubdividePreservesPartialTailAndHonorsNoSnap() {
+    PianoRollNoteLayer layer;
+    layer.setSnap(SnapGrid::Quarter);
+
+    MidiNote note;
+    note.pitch = 72;
+    note.startBeat = 1.0;
+    note.durationBeats = 0.6;
+    note.selected = true;
+    layer.setNotes({note});
+    layer.subdivideSelectedNotes();
+
+    const auto& subdivided = layer.getNotes();
+    check(subdivided.size() == 3, "a partial final grid cell should become its own note");
+    check(std::abs(subdivided[0].durationBeats - 0.25) < 0.001 &&
+              std::abs(subdivided[1].durationBeats - 0.25) < 0.001 &&
+              std::abs(subdivided[2].durationBeats - 0.1) < 0.001,
+          "subdivision should retain the exact final remainder");
+    check(std::abs(subdivided.back().startBeat + subdivided.back().durationBeats - 1.6) < 0.001,
+          "subdivision should preserve the selected note's original end");
+
+    layer.undo();
+    layer.setSnap(SnapGrid::None);
+    int commits = 0;
+    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    layer.subdivideSelectedNotes();
+    check(layer.getNotes().size() == 1 && std::abs(layer.getNotes()[0].durationBeats - 0.6) < 0.001,
+          "subdivision should not invent a grid when snapping is disabled");
+    check(commits == 0, "a no-snap subdivision should not create an edit");
+}
+
 } // namespace
 
 int main() {
     testChordBrushPaintsCompleteTriadsAsOneEdit();
     testRightDragEraseIsOneUndoableStroke();
     testSelectionHandleStretchesPhraseTimingAsOneEdit();
+    testSubdivideSelectionUsesSnapAndPreservesNoteData();
+    testSubdividePreservesPartialTailAndHonorsNoSnap();
 
     if (g_failures == 0) {
         std::cout << "Piano Roll stroke interaction tests passed\n";

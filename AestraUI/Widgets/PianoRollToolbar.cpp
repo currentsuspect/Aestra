@@ -115,6 +115,11 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Strum Selection", strumMenu);
 
+        // --- SUBDIVIDE ---
+        menu->addItem("Subdivide Selection", [this]() {
+            if (auto n = notes_.lock()) n->subdivideSelectedNotes();
+        });
+
         // --- HUMANIZE ---
         menu->addItem("Humanize Velocity", [this]() {
             if (auto n = notes_.lock()) n->humanizeSelectedVelocities();
