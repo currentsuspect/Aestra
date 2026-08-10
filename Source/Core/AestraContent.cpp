@@ -3160,6 +3160,14 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
         if (hardStop && m_audioEngine) {
             m_audioEngine->panic();
         }
+        if (hardStop && m_trackManager) {
+            m_trackManager->setPlayStartPosition(0.0);
+            m_trackManager->setPosition(0.0);
+            m_trackManager->clearDisplayPositionOverride();
+            if (m_audioEngine) {
+                m_audioEngine->setGlobalSamplePos(0);
+            }
+        }
         return;
     }
 
