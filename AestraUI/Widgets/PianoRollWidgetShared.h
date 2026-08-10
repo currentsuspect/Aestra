@@ -70,4 +70,34 @@ inline float snapRectX(float x) {
     return std::round(x);
 }
 
+/**
+ * @brief New scroll offset that keeps the beat under `anchorX` stationary
+ *        when pixels-per-beat changes from `oldPPB` to `newPPB`.
+ */
+inline float pianoRollZoomAnchorScroll(float scrollX, float oldPPB, float newPPB, float anchorX) {
+    const float mouseBeat = (scrollX + anchorX) / oldPPB;
+    return std::max(0.0f, mouseBeat * newPPB - anchorX);
+}
+
+/**
+ * @brief Scroll offset that keeps `playheadBeat` inside the visible guard
+ *        band (15%-85%), or the current offset when already inside.
+ *        Returns a *target* — callers ease toward it instead of teleporting.
+ */
+inline float pianoRollFollowTargetScroll(float scrollX,
+                                         float pixelsPerBeat,
+                                         float visibleWidth,
+                                         double playheadBeat) {
+    const double visibleStart = static_cast<double>(scrollX) / pixelsPerBeat;
+    const double visibleDur = static_cast<double>(visibleWidth) / pixelsPerBeat;
+    const double leftGuard = visibleStart + visibleDur * 0.15;
+    const double rightGuard = visibleStart + visibleDur * 0.85;
+
+    if (playheadBeat < leftGuard || playheadBeat > rightGuard) {
+        const double targetStart = std::max(0.0, playheadBeat - visibleDur * 0.2);
+        return static_cast<float>(targetStart * pixelsPerBeat);
+    }
+    return scrollX;
+}
+
 } // namespace AestraUI

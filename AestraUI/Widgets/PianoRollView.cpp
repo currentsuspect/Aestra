@@ -68,23 +68,7 @@ PianoRollView::PianoRollView()
     
     // Ruler Zoom Callback
     m_ruler->onZoomRequested = [this](float delta, float mouseX) {
-        float oldPPB = m_pixelsPerBeat;
-        float zoomFactor = (delta > 0) ? 1.15f : 0.85f;
-        float newPPB = std::clamp(oldPPB * zoomFactor, 10.0f, 500.0f);
-        
-        // Anchor logic: Keep beat under mouse stationary
-        float mouseBeat = (m_scrollX + mouseX) / oldPPB;
-        float newWorldX = mouseBeat * newPPB;
-        float newScrollX = newWorldX - mouseX;
-        
-        if (newScrollX < 0) newScrollX = 0;
-        
-        m_pixelsPerBeat = newPPB;
-        m_scrollX = newScrollX;
-        m_targetScrollX = newScrollX;
-        
-        updateScrollbars();
-        syncChildren();
+        applyZoom((delta > 0) ? 1.15f : 0.85f, mouseX);
     };
 
     m_ruler->onPlayheadScrubbed = [this](double beat, bool active) {
@@ -530,8 +514,9 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         bool ctrl = (event.modifiers & NUIModifiers::Ctrl);
         
         if (ctrl) {
-            // Zoom (Fallback)
-            m_pixelsPerBeat = std::max(20.0f, m_pixelsPerBeat + event.wheelDelta * 5.0f);
+            // Zoom (Fallback) — same anchored, multiplicative semantics as the ruler.
+            applyZoom((event.wheelDelta > 0) ? 1.15f : 0.85f,
+                      event.position.x - getBounds().x);
         } else if (shift) {
             // H-Scroll
             m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * 40.0f);
@@ -696,23 +681,29 @@ void PianoRollView::setPatternLengthBeats(double beats) {
     }
 }
 
+void PianoRollView::applyZoom(float factor, float anchorX) {
+    const float oldPPB = m_pixelsPerBeat;
+    const float newPPB = std::clamp(oldPPB * factor, 10.0f, 500.0f);
+    if (std::abs(newPPB - oldPPB) < 0.001f) {
+        return;
+    }
+    m_pixelsPerBeat = newPPB;
+    m_scrollX = pianoRollZoomAnchorScroll(m_scrollX, oldPPB, newPPB, anchorX);
+    m_targetScrollX = m_scrollX;
+    updateScrollbars();
+    syncChildren();
+}
+
 void PianoRollView::setPlayheadBeat(double beat, bool follow) {
     m_playheadBeat = std::max(0.0, beat);
 
     if (follow && m_grid) {
         const float visibleW = m_grid->getWidth();
         if (visibleW > 0.0f) {
-            const double visibleStart = static_cast<double>(m_scrollX) / m_pixelsPerBeat;
-            const double visibleDur = static_cast<double>(visibleW) / m_pixelsPerBeat;
-            const double leftGuard = visibleStart + visibleDur * 0.15;
-            const double rightGuard = visibleStart + visibleDur * 0.85;
-
-            if (m_playheadBeat < leftGuard || m_playheadBeat > rightGuard) {
-                const double targetStart = std::max(0.0, m_playheadBeat - visibleDur * 0.2);
-                m_scrollX = static_cast<float>(targetStart * m_pixelsPerBeat);
-                m_targetScrollX = m_scrollX;
-                updateScrollbars();
-            }
+            // Target-only update: the onUpdate ease animates the scroll, so
+            // follow never teleports or fights user/scrub scrolling.
+            m_targetScrollX = pianoRollFollowTargetScroll(m_scrollX, m_pixelsPerBeat, visibleW, m_playheadBeat);
+            updateScrollbars();
         }
     }
 
