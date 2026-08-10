@@ -152,6 +152,11 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
         if (unitMgr.getUnitCount() == 0) {
             UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
             unitMgr.setUnitEnabled(defaultUnit, true);
+            if (const auto* unit = unitMgr.getUnit(defaultUnit)) {
+                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                // Bootstrap routing belongs to the pristine default project, not to user edit history.
+                routeUnitToFirstFreeMixerChannel(*m_trackManager, defaultUnit, destinationName, unit->color, true);
+            }
         }
     }
 
@@ -368,6 +373,10 @@ void ArsenalPanel::refreshUnits() {
             if (!m_trackManager) return;
             UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
             if (newId != 0) {
+                if (const auto* unit = m_trackManager->getUnitManager().getUnit(newId)) {
+                    const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                    routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+                }
                 m_selectedUnitId = newId;
                 refreshUnits();
             }
@@ -413,6 +422,10 @@ void ArsenalPanel::createUnitOfType(UnitType type) {
                         type == UnitType::PitchedSampler ? "808 " :
                         type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count);
     m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
+    if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+        routeUnitToFirstFreeMixerChannel(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+    }
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
@@ -434,6 +447,10 @@ bool ArsenalPanel::removeSelectedUnit() {
         unitMgr.removeUnit(oldId);
         removeUnitNotes(oldId);
         UnitID newId = unitMgr.createUnit();
+        if (const auto* unit = unitMgr.getUnit(newId)) {
+            const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+            routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+        }
         m_selectedUnitId = newId;
         refreshUnits();
         if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
@@ -963,8 +980,10 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     // Draw step indicators
     for (int i = 0; i < m_stepCount; ++i) {
-        float stepX = gridStartX + (i * stepWidth) - m_gridScrollX + 2.0f;
-        float indicatorWidth = stepWidth - 4.0f;
+        const float stepOriginX = gridStartX + (i * stepWidth) - m_gridScrollX;
+        const float cellGap = 3.0f;
+        const float stepX = stepOriginX + cellGap * 0.5f;
+        const float indicatorWidth = std::max(1.0f, stepWidth - cellGap);
         if (stepX > gridCard.right()) break;
         if (stepX + stepWidth < gridCard.x) continue;
 
@@ -1005,7 +1024,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
 
         if (isBarStart) {
-            const NUIRect labelRect(stepX, indicatorY, stepWidth * static_cast<float>(stepsPerBar), indicatorHeight);
+            const NUIRect labelRect(stepOriginX, indicatorY,
+                                    stepWidth * static_cast<float>(stepsPerBar), indicatorHeight);
             renderer.drawTextCentered(std::to_string((i / stepsPerBar) + 1), labelRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
         }
     }
@@ -1414,7 +1434,7 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId);
         if (!unit)
             return false;
-        const std::string destinationName = unit->name.empty() ? "Mixer Insert" : unit->name;
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
         assignUnitToFirstFreeInsert(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
         return true;
     }

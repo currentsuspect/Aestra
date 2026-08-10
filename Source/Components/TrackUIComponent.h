@@ -230,6 +230,8 @@ private:
     double m_trimOriginalStart = 0.0;         // Original trim start before drag
     double m_trimOriginalDuration = 0.0;      // Original trim duration before drag
     double m_trimOriginalEnd = 0.0;           // Original trim end before drag
+    double m_trimOriginalSourceOffsetSeconds = 0.0; // Original source offset (audio) before drag
+    double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
     

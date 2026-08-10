@@ -216,6 +216,11 @@ labs/reverb/listening/
 labs/reverb/tremolo/ab/
 labs/reverb/tremolo/proto/
 
+# Perf lab apparatus results and local WIP: fixtures, tools, and collected
+# runs of the Folio baseline apparatus, not source. Tracked specs/reports
+# stay tracked; the apparatus source itself lives on perf/* branches.
+labs/perf/
+
 # CTest scratch written into the SOURCE tree when ctest runs from the repo root
 # rather than from a build directory. Generated scheduling data, never source.
 /Testing/

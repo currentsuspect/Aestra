@@ -2,8 +2,11 @@
 #include "Helpers/PianoRollInteraction.h"
 #include "Helpers/TimelineGridRenderer.h"
 #include "Common/MusicHelpers.h"
+#include "Widgets/NUIPianoRollWidgets.h"
+#include "Widgets/PianoRollWidgetShared.h"
 #include <cassert>
 #include <iostream>
+#include <limits>
 
 using namespace AestraUI;
 
@@ -252,6 +255,225 @@ static void test_snap_pitch_to_scale_edge_cases() {
     PASS("snapPitchToScale edge cases documented");
 }
 
+static void test_harmony_context_edit_notification() {
+    PianoRollToolbar toolbar;
+    auto grid = std::make_shared<PianoRollGrid>();
+    auto notes = std::make_shared<PianoRollNoteLayer>();
+    toolbar.setGrid(grid);
+    toolbar.setNoteLayer(notes);
+
+    int notificationCount = 0;
+    int notifiedRoot = -1;
+    ScaleType notifiedScale = ScaleType::Chromatic;
+    bool notifiedSnap = false;
+    toolbar.setOnHarmonyContextChanged([&](int root, ScaleType scale, bool snap) {
+        ++notificationCount;
+        notifiedRoot = root;
+        notifiedScale = scale;
+        notifiedSnap = snap;
+    });
+
+    toolbar.setHarmonyContext(9, ScaleType::Minor, false);
+    ASSERT(notificationCount == 0, "loading harmony context must not masquerade as a user edit");
+    ASSERT(toolbar.getRootKey() == 9 && toolbar.getScaleType() == ScaleType::Minor,
+           "loaded harmony context should become the toolbar authority");
+
+    toolbar.applyHarmonyContextEdit(9, ScaleType::Minor, true);
+    ASSERT(notificationCount == 1, "a harmony edit should notify the owning panel exactly once");
+    ASSERT(notifiedRoot == 9 && notifiedScale == ScaleType::Minor && notifiedSnap,
+           "harmony notification should carry the complete context");
+    ASSERT(notes->getSnapToScale(), "harmony edit should update the note layer before notification");
+
+    toolbar.applyHarmonyContextEdit(99, ScaleType::Count, false);
+    ASSERT(toolbar.getRootKey() == 11,
+           "out-of-range root edits should clamp before reaching persistent state");
+    ASSERT(toolbar.getScaleType() == ScaleType::Blues,
+           "out-of-range scale edits should clamp before reaching persistent state");
+    PASS("Piano Roll harmony edits publish one complete, normalized context");
+}
+
+// ---------------------------------------------------------------------------
+// Test: follow-playhead target keeps playback inside the visible guard
+// ---------------------------------------------------------------------------
+static void test_follow_target_keeps_playhead_visible() {
+    const float ppb = 80.0f;
+    const float visibleW = 800.0f; // 10 visible beats
+
+    // Playhead inside the 15%-85% guard → scroll unchanged (no jitter while playing).
+    float target = pianoRollFollowTargetScroll(400.0f, ppb, visibleW, 10.0);
+    ASSERT(target == 400.0f, "playhead inside guard must not move the view");
+
+    // Playhead past the right guard → target places it at 20% of view width.
+    target = pianoRollFollowTargetScroll(0.0f, ppb, visibleW, 14.0);
+    ASSERT(target == 960.0f, "right-guard follow should place playhead at 20% width");
+
+    // Playhead past the left guard (loop wrap) → same rule.
+    target = pianoRollFollowTargetScroll(800.0f, ppb, visibleW, 1.0);
+    ASSERT(target == 0.0f, "left-guard follow should place playhead at 20% width");
+
+    // Follow target never goes negative.
+    target = pianoRollFollowTargetScroll(0.0f, ppb, visibleW, 0.2);
+    ASSERT(target >= 0.0f, "follow target must clamp to zero");
+
+    PASS("follow-playhead target keeps playback inside the visible guard");
+}
+
+// ---------------------------------------------------------------------------
+// Test: zoom anchor keeps the beat under the cursor stationary
+// ---------------------------------------------------------------------------
+static void test_zoom_anchor_preserves_beat() {
+    const float scrollX = 320.0f;
+    const float anchorX = 200.0f;
+    const float oldPPB = 80.0f;
+    const float oldBeat = (scrollX + anchorX) / oldPPB;
+
+    const float factors[] = { 1.15f, 0.85f, 2.0f, 0.5f };
+    for (float factor : factors) {
+        const float newPPB = oldPPB * factor;
+        const float newScroll = pianoRollZoomAnchorScroll(scrollX, oldPPB, newPPB, anchorX);
+        const float newBeat = (newScroll + anchorX) / newPPB;
+        ASSERT(std::abs(newBeat - oldBeat) < 0.001f, "zoom must keep the anchor beat stationary");
+    }
+
+    // Extreme zoom-out floors pixels-per-beat; scroll must stay non-negative.
+    const float clampedPPB = std::clamp(oldPPB * 0.01f, 10.0f, 500.0f);
+    const float clampedScroll = pianoRollZoomAnchorScroll(scrollX, oldPPB, clampedPPB, anchorX);
+    ASSERT(clampedScroll >= 0.0f, "zoom scroll must never go negative");
+
+    PASS("zoom anchor preserves the beat under the cursor");
+}
+
+// ---------------------------------------------------------------------------
+// Test: Ctrl-wheel zoom anchors on grid-local X, matching the ruler path.
+// The key lane shifts the grid right of the view origin, so a view-local
+// anchor makes the beat under the cursor drift by the lane width per zoom.
+// ---------------------------------------------------------------------------
+static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    // startBeat 1.25 at 80 ppb over an 810 px grid: scrollX = 100.
+    view.setViewWindow(1.25, 810.0 / 80.0);
+
+    // Default layout: key lane 76 px, vertical scrollbar 14 px.
+    const float keyLaneWidth = 76.0f;
+    const float gridWidthPx = 900.0f - keyLaneWidth - 14.0f;
+    const float cursorViewX = 500.0f;
+
+    const auto beatAtCursor = [&]() {
+        const double ppb = static_cast<double>(gridWidthPx) / view.getViewDurationBeats();
+        return view.getViewStartBeat() + static_cast<double>(cursorViewX - keyLaneWidth) / ppb;
+    };
+    const double beatBefore = beatAtCursor();
+
+    NUIMouseEvent zoom;
+    zoom.type = NUIMouseEventType::Scroll;
+    zoom.position = {cursorViewX, 300.0f};
+    zoom.modifiers = NUIModifiers::Ctrl;
+    zoom.wheelDelta = 1.0f;
+    view.onMouseEvent(zoom);
+
+    // Guard against a vacuous pass: the zoom must actually have applied.
+    ASSERT(view.getViewDurationBeats() < 9.5, "ctrl-wheel zoom fired");
+    const double beatAfter = beatAtCursor();
+    ASSERT(std::abs(beatAfter - beatBefore) < 0.001,
+           "ctrl-wheel zoom keeps the beat under the cursor stationary (grid-local anchor)");
+
+    // Invalid pixels-per-beat must be rejected, not stored.
+    view.setPixelsPerBeat(120.0f);
+    ASSERT(std::abs(static_cast<double>(gridWidthPx) / view.getViewDurationBeats() - 120.0) < 0.001,
+           "valid pixels-per-beat is accepted");
+    view.setPixelsPerBeat(0.0f);
+    view.setPixelsPerBeat(-5.0f);
+    view.setPixelsPerBeat(std::numeric_limits<float>::quiet_NaN());
+    ASSERT(std::abs(static_cast<double>(gridWidthPx) / view.getViewDurationBeats() - 120.0) < 0.001,
+           "non-positive or non-finite pixels-per-beat is rejected");
+
+    PASS("ctrl-wheel zoom anchors on grid-local X");
+}
+
+// ---------------------------------------------------------------------------
+// Test: the grid subdivision tier matches the active snap resolution
+// ---------------------------------------------------------------------------
+static void test_grid_subdivision_matches_snap() {
+    PianoRollGrid grid;
+    ASSERT(grid.getSnapSubdivisionBeats() == 1.0,
+           "default snap (Beat) must render subdivisions at one beat");
+
+    bool sawFine = false;
+    for (SnapGrid snap : MusicTheory::getSnapOptions()) {
+        grid.setSnap(snap);
+        const double sub = grid.getSnapSubdivisionBeats();
+        if (snap == SnapGrid::None) {
+            ASSERT(sub == 0.0, "None snap must disable the subdivision tier");
+            continue;
+        }
+        ASSERT(sub > 0.0 && sub <= 4.0, "every snap duration must be a positive musical span");
+        if (sub < 0.5) sawFine = true;
+
+        // A note snapped to this grid lands exactly on a drawn line: the
+        // renderer draws a subdivision line at every multiple of `sub`, and
+        // snap positions are exactly those multiples.
+        const double snapped = std::round(2.37 / sub) * sub;
+        const double k = snapped / sub;
+        ASSERT(std::abs(k - std::round(k)) < 1e-9,
+               "snapped positions must be multiples of the drawn subdivision");
+    }
+    ASSERT(sawFine, "snap options must include subdivisions finer than a beat");
+
+    PASS("grid subdivision tier matches the active snap resolution");
+}
+
+// ---------------------------------------------------------------------------
+// Test: grid tiers never advertise positions the snap does not allow
+// ---------------------------------------------------------------------------
+static void test_grid_tiers_follow_snap() {
+    // Without snap info (timeline contract) every tier stays visible.
+    ASSERT(timelineGridTierAlignedToSnap(1.0, 0.0), "no snap keeps the beat tier");
+    ASSERT(timelineGridTierAlignedToSnap(0.5, 0.0), "no snap keeps the half-beat tier");
+
+    const struct {
+        double sub;
+        bool beat;
+        bool half;
+    } kExpectations[] = {
+        {4.0, false, false},          // snap to bar: bars only
+        {1.0, true, false},           // snap to beat: NO 1/2 grid (the reported bug)
+        {0.5, true, true},            // snap to half
+        {0.25, true, true},           // snap to quarter
+        {0.125, true, true},          // snap to eighth
+        {0.0625, true, true},         // snap to sixteenth
+        {1.0 / 3.0, true, false},     // triplet: 0.5 is not on the 1/3 lattice
+    };
+    for (const auto& e : kExpectations) {
+        ASSERT(timelineGridTierAlignedToSnap(1.0, e.sub) == e.beat,
+               "beat tier visibility must follow the snap");
+        ASSERT(timelineGridTierAlignedToSnap(0.5, e.sub) == e.half,
+               "half-beat tier visibility must follow the snap");
+    }
+
+    // Every snap option the editor exposes must be covered by the same rule.
+    for (SnapGrid snap : MusicTheory::getSnapOptions()) {
+        const double sub = MusicTheory::getSnapDuration(snap);
+        if (sub <= 0.0) {
+            continue;
+        }
+        const bool beat = timelineGridTierAlignedToSnap(1.0, sub);
+        const bool half = timelineGridTierAlignedToSnap(0.5, sub);
+        ASSERT(beat || half || sub == 4.0, "only snap-to-bar may hide both tiers");
+        if (beat) {
+            ASSERT(std::abs(1.0 / sub - std::round(1.0 / sub)) < 1e-4,
+                   "a visible beat tier must be a multiple of the snap");
+        }
+        if (half) {
+            ASSERT(std::abs(0.5 / sub - std::round(0.5 / sub)) < 1e-4,
+                   "a visible half-beat tier must be a multiple of the snap");
+        }
+    }
+
+    PASS("grid tiers follow the active snap");
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -274,6 +496,12 @@ int main() {
     test_next_pitch_in_scale();
     test_previous_pitch_in_scale();
     test_snap_pitch_to_scale_edge_cases();
+    test_harmony_context_edit_notification();
+    test_follow_target_keeps_playhead_visible();
+    test_zoom_anchor_preserves_beat();
+    test_ctrl_wheel_zoom_uses_grid_local_anchor();
+    test_grid_subdivision_matches_snap();
+    test_grid_tiers_follow_snap();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

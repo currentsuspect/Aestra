@@ -76,6 +76,7 @@ namespace {
         AutomationTarget,
         DroppedClip,
         SendRoute,
+        ClipTiming,
         Count
     };
 
@@ -2127,9 +2128,34 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                             finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
                                         clip.durationSeconds = legacyDurationBeats * 60.0 / std::max(result.tempo, 1.0);
                                     }
-                                    clip.sourceOffsetSeconds =
-                                        finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
-                                    if (clip.sourceOffsetSeconds <= 0.0) {
+                                    const bool hadNegativeSourceOffset =
+                                        cj[c].has("sourceOffsetSeconds") && cj[c]["sourceOffsetSeconds"].isNumber() &&
+                                        std::isfinite(cj[c]["sourceOffsetSeconds"].asNumber()) &&
+                                        cj[c]["sourceOffsetSeconds"].asNumber() < 0.0;
+                                    if (hadNegativeSourceOffset) {
+                                        clip.sourceOffsetSeconds = 0.0;
+                                        ++result.negativeAudioClipOffsetsCorrected;
+                                        const std::string clipReference = clip.id.toString();
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::ClipTiming,
+                                            "[ProjectLoad] Audio clip " + clipReference +
+                                                " had a negative source offset; clamped to 0 because source material "
+                                                "before time zero does not exist",
+                                            "[ProjectLoad] Additional negative audio clip source-offset warnings "
+                                            "suppressed.");
+                                        if (!result.report) {
+                                            result.report = std::make_unique<ProjectLoadReport>();
+                                        }
+                                        result.report->issues.push_back(
+                                            {LoadIssueSeverity::Warning, "clip_timing",
+                                             "Audio clip had a negative source offset; clamped to zero because source "
+                                             "material before time zero does not exist",
+                                             0, clipReference, laneName});
+                                    } else {
+                                        clip.sourceOffsetSeconds =
+                                            finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
+                                    }
+                                    if (!hadNegativeSourceOffset && clip.sourceOffsetSeconds <= 0.0) {
                                         const double legacySourceOffsetBeats =
                                             finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
                                         clip.sourceOffsetSeconds =
@@ -2294,6 +2320,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
         Log::info("[ProjectLoad] Split " + std::to_string(result.legacyAudioPatternsSplit) +
                   " legacy audio pattern(s) across mixer channels — project must be saved to keep the split");
+    }
+    if (result.negativeAudioClipOffsetsCorrected > 0) {
+        result.migrationOutcome = combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+        Log::warning("[ProjectLoad] Corrected " + std::to_string(result.negativeAudioClipOffsetsCorrected) +
+                     " negative audio clip source offset(s) — project must be saved to keep the correction");
     }
 
     result.ok = true;

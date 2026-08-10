@@ -117,6 +117,25 @@ void testGain() {
     requireClose(guarded.interleavedData[2], 1.0f, "non-finite gain is ignored");
 }
 
+void testPlaybackRate() {
+    std::printf("applyPlaybackRate...\n");
+    AudioBufferData faster = makeRamp(8);
+    ClipRenderService::applyPlaybackRate(faster, 2.0f);
+    require(faster.numFrames == 4, "double-rate playback halves the baked duration");
+    requireClose(faster.interleavedData[0], 0.0f, "double-rate output starts at the source start");
+    requireClose(faster.interleavedData[2], 2.0f, "double-rate output advances two source frames");
+    requireClose(faster.interleavedData[6], 6.0f, "double-rate output reaches the expected source frame");
+
+    AudioBufferData slower = makeRamp(8);
+    ClipRenderService::applyPlaybackRate(slower, 0.5f);
+    require(slower.numFrames == 16, "half-rate playback doubles the baked duration");
+    requireClose(slower.interleavedData[2], 0.4375f, "half-rate output uses cubic interpolation");
+
+    AudioBufferData invalid = makeRamp(8);
+    ClipRenderService::applyPlaybackRate(invalid, std::nanf(""));
+    require(invalid.numFrames == 8, "invalid playback rates fall back to unity");
+}
+
 void testFades() {
     std::printf("applyFades...\n");
     AudioBufferData buffer;
@@ -227,6 +246,7 @@ int main() {
     testExtractRegion();
     testReverse();
     testGain();
+    testPlaybackRate();
     testFades();
     testFadeLengthsCannotOverrun();
     testFadeMatchesEngineShape();

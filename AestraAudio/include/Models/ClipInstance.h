@@ -4,6 +4,8 @@
 #include "../AestraUUID.h"
 #include "PatternSource.h" // For PatternID
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -58,6 +60,9 @@ struct PlaylistLaneID : public AestraUUID {
  * @brief Clip edits (user modifications to clip content)
  */
 struct ClipEdits {
+    static constexpr float kMinPitchSemitones = -24.0f;
+    static constexpr float kMaxPitchSemitones = 24.0f;
+
     float fadeInBeats = 0.0f;
     float fadeOutBeats = 0.0f;
     /** Clip level, linear. The only gain field: the render path, the editor
@@ -67,6 +72,23 @@ struct ClipEdits {
     bool muted = false;
     float playbackRate = 1.0f;
     double sourceStart = 0.0;
+
+    /** Musical varispeed control used by the Audio Clip Editor. Pitch and
+     *  duration move together because playbackRate is the render authority;
+     *  this does not claim independent time-stretching. */
+    static float playbackRateFromSemitones(float semitones) noexcept {
+        if (!std::isfinite(semitones))
+            return 1.0f;
+        const float clamped = std::clamp(semitones, kMinPitchSemitones, kMaxPitchSemitones);
+        return std::pow(2.0f, clamped / 12.0f);
+    }
+
+    static float semitonesFromPlaybackRate(float playbackRate) noexcept {
+        if (!std::isfinite(playbackRate) || playbackRate <= 0.0f)
+            return 0.0f;
+        const float semitones = 12.0f * std::log2(playbackRate);
+        return std::clamp(semitones, kMinPitchSemitones, kMaxPitchSemitones);
+    }
 
     /**
      * Defaults for a newly created audio clip. The value-initialized defaults

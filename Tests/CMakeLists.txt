@@ -672,6 +672,30 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
+    add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
+    target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
+    target_include_directories(SamplerCutSelfTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerCutSelfTest COMMAND SamplerCutSelfTest)
+    set_tests_properties(SamplerCutSelfTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
+    add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
+    target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)
+    target_include_directories(SamplerLoopModeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerLoopModeTest COMMAND SamplerLoopModeTest)
+    set_tests_properties(SamplerLoopModeTest PROPERTIES LABELS "audio;sampler;loop;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
     add_executable(PatternPlaybackTempoChangeTest AestraAudio/PatternPlaybackTempoChangeTest.cpp)
     target_link_libraries(PatternPlaybackTempoChangeTest PRIVATE AestraAudio)
@@ -1695,9 +1719,9 @@ endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
-if(TARGET AestraUI_Core)
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
-    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
+    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
@@ -1705,7 +1729,53 @@ if(TARGET AestraUI_Core)
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
 else()
-    message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+    message(STATUS "PianoRollInteractionTest skipped (AestraUI targets unavailable in this build mode)")
+endif()
+
+# Piano Roll harmony edits must traverse the real panel/view callback into
+# PatternManager and reload as one complete context.
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(PianoRollPanelPersistenceTest
+        AestraUI/PianoRollPanelPersistenceTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/PianoRollPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    target_link_libraries(PianoRollPanelPersistenceTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PianoRollPanelPersistenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+    )
+    add_test(NAME PianoRollPanelPersistenceTest COMMAND PianoRollPanelPersistenceTest)
+    set_tests_properties(PianoRollPanelPersistenceTest PROPERTIES
+        LABELS "ui;pianoroll;persistence;regression;contract:application")
+endif()
+
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(PianoRollStrokeInteractionTest AestraUI/PianoRollStrokeInteractionTest.cpp)
+    target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PianoRollStrokeInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PianoRollStrokeInteractionTest COMMAND PianoRollStrokeInteractionTest)
+    set_tests_properties(PianoRollStrokeInteractionTest
+        PROPERTIES LABELS "ui;interaction;pianoroll;regression;contract:application")
+else()
+    message(STATUS "PianoRollStrokeInteractionTest skipped (AestraUI targets unavailable in this build mode)")
 endif()
 
 # Editor-close deferred-destruction regression (#475): removeChild() during
@@ -1738,6 +1808,28 @@ if(TARGET AestraUI_Core)
     set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression;contract:application")
 else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# Floating panels must only raise themselves on presses inside their bounds:
+# the overlay forwards every press to every visible panel, so a transport-bar
+# click must not pop panels to the front (the Arsenal-mode double-stop bug).
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(WindowPanelRaiseTest
+        AestraUI/WindowPanelRaiseTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+    )
+    target_link_libraries(WindowPanelRaiseTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(WindowPanelRaiseTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+    )
+    add_test(NAME WindowPanelRaiseTest COMMAND WindowPanelRaiseTest)
+    set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
+else()
+    message(STATUS "WindowPanelRaiseTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Takes/History workspace panels: command-timeline presentation + navigation,
@@ -2000,6 +2092,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
     )
     add_test(NAME TransportPausePreservesPositionTest COMMAND TransportPausePreservesPositionTest)
     set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
+endif()
+
+# Pattern Transport Position Test (piano-roll playhead cue preservation)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternTransportPositionTest.cpp")
+    add_executable(PatternTransportPositionTest AestraAudio/PatternTransportPositionTest.cpp)
+    target_link_libraries(PatternTransportPositionTest PRIVATE AestraAudio)
+    target_include_directories(PatternTransportPositionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternTransportPositionTest COMMAND PatternTransportPositionTest)
+    set_tests_properties(PatternTransportPositionTest PROPERTIES LABELS "audio;engine;transport;pattern;contract:audio")
 endif()
 
 # AudioEngine Diagnostics Test

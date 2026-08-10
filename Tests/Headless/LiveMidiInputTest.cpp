@@ -43,6 +43,34 @@ Stats analyze(const std::vector<float>& interleaved) {
     }
     return stats;
 }
+
+double toneAmplitude(const std::vector<float>& interleaved, double frequency, uint32_t sampleRate,
+                     size_t skipFrames = 1024) {
+    const size_t frameCount = interleaved.size() / 2;
+    if (frameCount <= skipFrames) {
+        return 0.0;
+    }
+    double real = 0.0;
+    double imag = 0.0;
+    const double omega = 2.0 * 3.14159265358979 * frequency / static_cast<double>(sampleRate);
+    for (size_t frame = skipFrames; frame < frameCount; ++frame) {
+        const double sample = static_cast<double>(interleaved[frame * 2]);
+        const double phase = omega * static_cast<double>(frame);
+        real += sample * std::cos(phase);
+        imag -= sample * std::sin(phase);
+    }
+    return 2.0 * std::sqrt(real * real + imag * imag) / static_cast<double>(frameCount - skipFrames);
+}
+
+bool hasMidiEvent(const Aestra::Audio::MidiBuffer& midi, uint8_t status, uint8_t pitch) {
+    for (size_t index = 0; index < midi.getEventCount(); ++index) {
+        const auto& event = midi.getEvent(index);
+        if ((event.data[0] & 0xF0u) == status && event.data[1] == pitch) {
+            return true;
+        }
+    }
+    return false;
+}
 } // namespace
 
 int main() {
@@ -78,7 +106,7 @@ int main() {
                 "loadSampleData failed");
     }
 
-    UnitID unitId = unitManager.createUnit("Live Sampler", UnitGroup::Synth);
+    UnitID unitId = unitManager.createUnit("Live Sampler", UnitType::Sampler);
     unitManager.attachPlugin(unitId, "com.Aestrastudios.sampler", sampler);
     unitManager.setUnitEnabled(unitId, true);
     unitManager.setUnitMixerChannel(unitId, MASTER_MIXER_CHANNEL_ID); // route directly to master in Arsenal mode
@@ -141,13 +169,63 @@ int main() {
     const auto chordStats = analyze(chordAudio);
     require(!chordStats.hasInvalid, "Chord audio contains NaN/Inf");
     require(chordStats.peak > 1.0e-4f, "Chord produced silence");
+    const double rootAmplitude = toneAmplitude(chordAudio, 220.0, sampleRate);
+    const double fifthFrequency = 220.0 * std::pow(2.0, 7.0 / 12.0);
+    const double fifthAmplitude = toneAmplitude(chordAudio, fifthFrequency, sampleRate);
+    const double rootOnlyFifthLeak = toneAmplitude(noteAudio, fifthFrequency, sampleRate);
+    require(rootAmplitude > 1.0e-3, "Chord render is missing its root frequency");
+    require(fifthAmplitude > 1.0e-3, "Chord render is missing its transposed fifth");
+    require(fifthAmplitude > rootOnlyFifthLeak * 4.0,
+            "Transposed fifth is not distinguishable from root-only spectral leakage");
     engine.postLiveMidiEvent(unitId, kNoteOff, kMiddleC, 0);
     engine.postLiveMidiEvent(unitId, kNoteOff, kMiddleC + 7, 0);
     renderBlocks(112, nullptr);
 
-    // ---------------- 5. Events for unknown units are dropped harmlessly.
-    require(engine.postLiveMidiEvent(unitId + 999, kNoteOn, kMiddleC, 100),
-            "unknown-unit event rejected at queue");
+    // ---------------- 5. Pattern one-shots preserve Piano Roll pitch and play
+    // through their natural sample end instead of being gated by the short
+    // visual note length. Looping sampler modes still receive note-offs.
+    PatternID chordPattern = patternManager.createPattern();
+    auto* pattern = patternManager.getPattern(chordPattern);
+    require(pattern != nullptr, "Failed to create chord pattern");
+    pattern->type = PatternSource::Type::Midi;
+    pattern->lengthBeats = 4.0;
+    pattern->payload = MidiPayload{};
+    auto& chordNotes = std::get<MidiPayload>(pattern->payload).notes;
+    MidiNote rootNote;
+    rootNote.pitch = kMiddleC;
+    rootNote.startBeat = 0.0;
+    rootNote.durationBeats = 0.25;
+    rootNote.velocity = 1.0f;
+    rootNote.unitId = unitId;
+    chordNotes.push_back(rootNote);
+    MidiNote fifthNote = rootNote;
+    fifthNote.pitch = kMiddleC + 7;
+    chordNotes.push_back(fifthNote);
+
+    PatternPlaybackEngine chordScheduler(&clock, &patternManager, &unitManager);
+    chordScheduler.schedulePatternInstance(chordPattern, 0.0, 1);
+    chordScheduler.refillWindow(0, sampleRate, sampleRate);
+    MidiBuffer scheduledMidi;
+    PatternPlaybackEngine::UnitMidiRoute scheduledRoute{unitId, &scheduledMidi};
+    chordScheduler.processAudio(0, sampleRate, &scheduledRoute, 1);
+    require(hasMidiEvent(scheduledMidi, kNoteOn, kMiddleC), "Pattern chord lost its root pitch");
+    require(hasMidiEvent(scheduledMidi, kNoteOn, kMiddleC + 7), "Pattern chord lost its fifth pitch");
+    require(!hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC), "One-shot root was gated by Piano Roll note length");
+    require(!hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC + 7), "One-shot fifth was gated by Piano Roll note length");
+
+    sampler->setLoopEnabled(true);
+    PatternPlaybackEngine loopScheduler(&clock, &patternManager, &unitManager);
+    loopScheduler.schedulePatternInstance(chordPattern, 0.0, 2);
+    loopScheduler.refillWindow(0, sampleRate, sampleRate);
+    MidiBuffer loopMidi;
+    PatternPlaybackEngine::UnitMidiRoute loopRoute{unitId, &loopMidi};
+    loopScheduler.processAudio(0, sampleRate, &loopRoute, 1);
+    require(hasMidiEvent(loopMidi, kNoteOff, kMiddleC), "Looping root lost its Piano Roll note-off");
+    require(hasMidiEvent(loopMidi, kNoteOff, kMiddleC + 7), "Looping fifth lost its Piano Roll note-off");
+    sampler->setLoopEnabled(false);
+
+    // ---------------- 6. Events for unknown units are dropped harmlessly.
+    require(engine.postLiveMidiEvent(unitId + 999, kNoteOn, kMiddleC, 100), "unknown-unit event rejected at queue");
     std::vector<float> unknownUnit;
     renderBlocks(16, &unknownUnit);
     const auto unknownStats = analyze(unknownUnit);

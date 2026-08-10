@@ -219,16 +219,20 @@ private:
     bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
 
-    // Velocity-drag session (Sampler step grid). A press arms a step; a
-    // vertical drag sets its velocity, a click without vertical movement
-    // toggles the step (place empty / remove active) on release.
+    // Step gesture session. A vertical drag edits velocity; a horizontal drag
+    // paints from an empty starting pad or erases from an active one. Right
+    // drag always erases. A click without movement keeps toggle semantics.
+    enum class StepGestureMode { None, Pending, Velocity, Paint, Erase };
     static constexpr float kDefaultStepVelocity = 100.0f / 127.0f;
     static constexpr float kMinStepVelocity = 0.05f;
-    int m_velEditStep = -1;         // -1 = no session
-    float m_velEditStartY = 0.0f;   // pointer Y at press
+    StepGestureMode m_stepGestureMode = StepGestureMode::None;
+    int m_velEditStep = -1; // initial step; -1 = no session
+    int m_stepGestureLastStep = -1;
+    float m_stepGestureStartX = 0.0f;
+    float m_velEditStartY = 0.0f;
     float m_velEditBaseVelocity = kDefaultStepVelocity;
-    bool m_velEditMoved = false;    // crossed the drag threshold → velocity edit
     bool m_velEditWasActive = false; // step already had a note at press
+    bool m_stepGestureChanged = false;
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
 
