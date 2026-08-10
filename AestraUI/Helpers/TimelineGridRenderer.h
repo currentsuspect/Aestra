@@ -32,6 +32,22 @@ inline int timelineGridBarStride(float pixelsPerBeat, int beatsPerBar) {
 }
 
 /**
+ * Whether a grid tier of the given duration may be drawn under the active snap.
+ *
+ * The grid must never advertise positions the snap does not allow: a tier of
+ * duration d is only musical when the snap duration divides it evenly (e.g. at
+ * snap-to-beat a half-beat tier would show 1/2 as possible, so it is hidden).
+ * Zero/absent snap keeps every tier, which is the timeline grid's contract.
+ */
+inline bool timelineGridTierAlignedToSnap(double tierBeats, double subdivisionBeats) {
+    if (subdivisionBeats <= 0.0) {
+        return true;
+    }
+    const double ratio = tierBeats / subdivisionBeats;
+    return std::abs(ratio - std::round(ratio)) < 1e-4;
+}
+
+/**
  * Draw the canonical Track Manager timeline grid inside an arbitrary grid span.
  *
  * The power-of-two hierarchy and zebra crossfade stay stable at every zoom,
@@ -106,6 +122,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
     };
     const float beatLineAlpha = style.beatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
     const float halfBeatLineAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
+    const bool showBeatTier = timelineGridTierAlignedToSnap(1.0, subdivisionBeats);
+    const bool showHalfBeatTier = timelineGridTierAlignedToSnap(0.5, subdivisionBeats);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - scrollX;
@@ -124,14 +142,14 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
             if (alpha > 0.001f) drawGridLine(barX, alpha);
         }
 
-        if (beatLineAlpha > 0.001f) {
+        if (showBeatTier && beatLineAlpha > 0.001f) {
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 const float beatX = barX + beat * pixelsPerBeat;
                 if (beatX >= gridStartX && beatX <= gridEndX) drawGridLine(beatX, beatLineAlpha);
             }
         }
 
-        if (halfBeatLineAlpha > 0.001f) {
+        if (showHalfBeatTier && halfBeatLineAlpha > 0.001f) {
             const float halfBeatOffset = pixelsPerBeat * 0.5f;
             for (int beat = 0; beat < beatsPerBar; ++beat) {
                 const float subBeatX = barX + beat * pixelsPerBeat + halfBeatOffset;

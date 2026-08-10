@@ -375,6 +375,56 @@ static void test_grid_subdivision_matches_snap() {
 }
 
 // ---------------------------------------------------------------------------
+// Test: grid tiers never advertise positions the snap does not allow
+// ---------------------------------------------------------------------------
+static void test_grid_tiers_follow_snap() {
+    // Without snap info (timeline contract) every tier stays visible.
+    ASSERT(timelineGridTierAlignedToSnap(1.0, 0.0), "no snap keeps the beat tier");
+    ASSERT(timelineGridTierAlignedToSnap(0.5, 0.0), "no snap keeps the half-beat tier");
+
+    const struct {
+        double sub;
+        bool beat;
+        bool half;
+    } kExpectations[] = {
+        {4.0, false, false},          // snap to bar: bars only
+        {1.0, true, false},           // snap to beat: NO 1/2 grid (the reported bug)
+        {0.5, true, true},            // snap to half
+        {0.25, true, true},           // snap to quarter
+        {0.125, true, true},          // snap to eighth
+        {0.0625, true, true},         // snap to sixteenth
+        {1.0 / 3.0, true, false},     // triplet: 0.5 is not on the 1/3 lattice
+    };
+    for (const auto& e : kExpectations) {
+        ASSERT(timelineGridTierAlignedToSnap(1.0, e.sub) == e.beat,
+               "beat tier visibility must follow the snap");
+        ASSERT(timelineGridTierAlignedToSnap(0.5, e.sub) == e.half,
+               "half-beat tier visibility must follow the snap");
+    }
+
+    // Every snap option the editor exposes must be covered by the same rule.
+    for (SnapGrid snap : MusicTheory::getSnapOptions()) {
+        const double sub = MusicTheory::getSnapDuration(snap);
+        if (sub <= 0.0) {
+            continue;
+        }
+        const bool beat = timelineGridTierAlignedToSnap(1.0, sub);
+        const bool half = timelineGridTierAlignedToSnap(0.5, sub);
+        ASSERT(beat || half || sub == 4.0, "only snap-to-bar may hide both tiers");
+        if (beat) {
+            ASSERT(std::abs(1.0 / sub - std::round(1.0 / sub)) < 1e-4,
+                   "a visible beat tier must be a multiple of the snap");
+        }
+        if (half) {
+            ASSERT(std::abs(0.5 / sub - std::round(0.5 / sub)) < 1e-4,
+                   "a visible half-beat tier must be a multiple of the snap");
+        }
+    }
+
+    PASS("grid tiers follow the active snap");
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 int main() {
@@ -400,6 +450,7 @@ int main() {
     test_follow_target_keeps_playhead_visible();
     test_zoom_anchor_preserves_beat();
     test_grid_subdivision_matches_snap();
+    test_grid_tiers_follow_snap();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
