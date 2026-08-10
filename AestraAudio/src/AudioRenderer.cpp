@@ -64,6 +64,10 @@ inline double clampD(double v, double lo, double hi) {
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::equalPower(pan, vol, gainL, gainR);
 }
+
+inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
+    PanLaw::stereoBalance(pan, vol, gainL, gainR);
+}
 } // namespace
 
 AudioRenderer::AudioRenderer() {}
@@ -73,6 +77,15 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
     // Get meter snapshot buffer for track metering
     auto* snaps = engineRef.m_meterSnapshotsRaw.load(std::memory_order_relaxed);
     auto* slotMap = engineRef.m_channelSlotMapRaw.load(std::memory_order_relaxed);
+
+    // Clear every track once before routing begins. Clearing inside
+    // renderClipAudio would erase audio already accumulated from an upstream
+    // track when a destination is processed later in topological order.
+    for (const auto& track : state.renderTracks) {
+        if (track.selfBuffer) {
+            std::memset(track.selfBuffer + ctx.bufferOffset * 2, 0, ctx.numFrames * 2 * sizeof(double));
+        }
+    }
 
     // Iterate through topologically sorted render tracks
     for (const auto& track : state.renderTracks) {
@@ -157,7 +170,6 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
                                     AudioEngine& engineRef) {
     uint32_t numFrames = ctx.numFrames;
     uint32_t bufferOffset = ctx.bufferOffset;
-    std::memset(outputBuffer + bufferOffset * 2, 0, numFrames * 2 * sizeof(double));
     if (state.mute)
         return;
 
@@ -360,7 +372,13 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
         }
 
         double gainL, gainR;
-        fastPanGainsD(panTarget, volTarget, gainL, gainR);
+        const bool receivesAudibleRoute =
+            track.trackIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[track.trackIndex].empty();
+        if (receivesAudibleRoute) {
+            fastStereoBalanceGainsD(panTarget, volTarget, gainL, gainR);
+        } else {
+            fastPanGainsD(panTarget, volTarget, gainL, gainR);
+        }
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }

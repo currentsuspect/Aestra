@@ -95,6 +95,14 @@ public:
     /** @brief Reverse @p buffer in place, keeping channel interleaving intact. */
     static void reverseInPlace(AudioBufferData& buffer);
 
+    /**
+     * @brief Bake varispeed playback into @p buffer using cubic interpolation.
+     *
+     * The output keeps the source sample rate but changes frame count, matching
+     * the default live clip interpolator. Invalid rates are treated as unity.
+     */
+    static void applyPlaybackRate(AudioBufferData& buffer, float playbackRate);
+
     /** @brief Scale every sample by @p gainLinear. Non-finite gains are ignored. */
     static void applyGain(AudioBufferData& buffer, float gainLinear);
 

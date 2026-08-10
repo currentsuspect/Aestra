@@ -236,11 +236,19 @@ NUIRect NUIComponent::getGlobalBounds() const {
 namespace {
 // The dispatch guard is a per-thread context: begin/endEventDispatch and the
 // hierarchy mutations they bracket all run on the same (UI) thread. Depth
-// counts nested dispatches; queued entries hold strong refs so children stay
-// alive until dispatch unwinds.
+// counts nested dispatches; queued entries preserve mutation order and hold
+// strong refs so affected children stay alive until dispatch unwinds.
 thread_local int g_eventDispatchDepth = 0;
-thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredRemovals;
-thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredAdditions;
+
+enum class DeferredHierarchyOperationType { Add, Remove, RemoveAll, BringToFront };
+
+struct DeferredHierarchyOperation {
+    DeferredHierarchyOperationType type;
+    NUIComponent* parent;
+    std::shared_ptr<NUIComponent> child;
+};
+
+thread_local std::vector<DeferredHierarchyOperation> g_deferredHierarchyOperations;
 } // namespace
 
 void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
@@ -249,7 +257,7 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     // Adding a popup from a mouse callback can otherwise reallocate the
     // parent's children vector while that same vector is being iterated.
     if (g_eventDispatchDepth > 0) {
-        g_deferredAdditions.emplace_back(this, std::move(child));
+        g_deferredHierarchyOperations.push_back({DeferredHierarchyOperationType::Add, this, std::move(child)});
         return;
     }
     
@@ -266,8 +274,21 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     if (!child->theme_ && theme_) {
         child->setTheme(theme_);
     }
-    
+
     setDirty();
+}
+
+bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event) {
+    if (!target) {
+        return false;
+    }
+
+    struct DispatchGuard {
+        DispatchGuard() { NUIComponent::beginEventDispatch(); }
+        ~DispatchGuard() { NUIComponent::endEventDispatch(); }
+    } guard;
+
+    return target->onMouseEvent(event);
 }
 
 void NUIComponent::beginEventDispatch() {
@@ -278,22 +299,34 @@ void NUIComponent::endEventDispatch() {
     if (g_eventDispatchDepth > 0) {
         --g_eventDispatchDepth;
     }
-    if (g_eventDispatchDepth == 0 && !g_deferredRemovals.empty()) {
-        auto pending = std::move(g_deferredRemovals);
-        g_deferredRemovals.clear();
-        for (auto& entry : pending) {
-            if (entry.first) {
-                entry.first->removeChild(entry.second); // depth == 0 now -> immediate
-            }
-        }
+    if (g_eventDispatchDepth != 0 || g_deferredHierarchyOperations.empty()) {
+        return;
     }
-    if (g_eventDispatchDepth == 0 && !g_deferredAdditions.empty()) {
-        auto pending = std::move(g_deferredAdditions);
-        g_deferredAdditions.clear();
-        for (auto& entry : pending) {
-            if (entry.first) {
-                entry.first->addChild(entry.second); // depth == 0 now -> immediate
+
+    auto pending = std::move(g_deferredHierarchyOperations);
+    g_deferredHierarchyOperations.clear();
+    for (auto& operation : pending) {
+        switch (operation.type) {
+        case DeferredHierarchyOperationType::Add:
+            if (operation.parent) {
+                operation.parent->addChild(operation.child);
             }
+            break;
+        case DeferredHierarchyOperationType::Remove:
+            if (operation.parent) {
+                operation.parent->removeChild(operation.child);
+            }
+            break;
+        case DeferredHierarchyOperationType::RemoveAll:
+            if (operation.parent) {
+                operation.parent->removeAllChildren();
+            }
+            break;
+        case DeferredHierarchyOperationType::BringToFront:
+            if (operation.child) {
+                operation.child->bringToFront();
+            }
+            break;
         }
     }
 }
@@ -305,7 +338,7 @@ void NUIComponent::removeChild(std::shared_ptr<NUIComponent> child) {
     if (g_eventDispatchDepth > 0) {
         // Defer until the dispatch unwinds; the strong ref keeps the child alive
         // through the rest of the current event.
-        g_deferredRemovals.emplace_back(this, std::move(child));
+        g_deferredHierarchyOperations.push_back({DeferredHierarchyOperationType::Remove, this, std::move(child)});
         return;
     }
     auto it = std::find(children_.begin(), children_.end(), child);
@@ -317,6 +350,11 @@ void NUIComponent::removeChild(std::shared_ptr<NUIComponent> child) {
 }
 
 void NUIComponent::removeAllChildren() {
+    if (g_eventDispatchDepth > 0) {
+        g_deferredHierarchyOperations.push_back({DeferredHierarchyOperationType::RemoveAll, this, nullptr});
+        return;
+    }
+
     for (auto& child : children_) {
         child->parent_ = nullptr;
     }
@@ -326,7 +364,13 @@ void NUIComponent::removeAllChildren() {
 
 void NUIComponent::bringToFront() {
     if (!parent_) return;
-    
+
+    if (g_eventDispatchDepth > 0) {
+        g_deferredHierarchyOperations.push_back(
+            {DeferredHierarchyOperationType::BringToFront, parent_, shared_from_this()});
+        return;
+    }
+
     auto& store = parent_->children_;
     // Check if valid before searching
     if (store.empty()) return;

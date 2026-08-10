@@ -774,13 +774,12 @@ private:
     void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
                      bool& srcActiveThisBlock);
 
-
     void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
     float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
                               uint32_t numFrames);
     void mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
                           std::vector<double>& buffer, const RenderContext& ctx, double volTarget, double panTarget,
-                          float trackSidechainPeak, bool muted, bool audibleEligible);
+                          float trackSidechainPeak, bool muted, bool audibleEligible, bool receivesAudibleRoute);
     void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx, bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();

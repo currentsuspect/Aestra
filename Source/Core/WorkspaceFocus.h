@@ -23,29 +23,30 @@
 
 /**
  * @brief View focus - which workspace is emphasized.
- * Arsenal, Timeline, and Audition are the three main modes; RoutingMap is a
- * full-panel overlay; PianoRoll is a first-class workspace reachable from the
- * segmented control and from contextual pattern navigation.
+ * Arsenal, Timeline, and Audition are the three main workspaces; RoutingMap is
+ * a full-panel overlay. The piano roll is NOT a workspace: it is a contextual
+ * editor for musical data inside an owning workspace, opened by pattern-level
+ * navigation (see AestraContent::openPatternInPianoRoll), and it retains that
+ * owning focus while open. Keeping it out of ViewFocus means later editors
+ * (clip editor, automation lane) extend the model without pretending each one
+ * is a new application mode.
  */
 enum class ViewFocus {
     Arsenal,    // Pattern construction/sound design
     Timeline,   // Arrangement/composition
     Audition,   // Album listening/reference/DSP preview
-    RoutingMap, // Full-panel routing visualization
-    PianoRoll   // Pattern editing workspace
+    RoutingMap  // Full-panel routing visualization
 };
 
 namespace WorkspaceFocusModel {
 
 /**
  * @brief Canonical segmented-control segments, in displayed order.
- * Segment 3 (PianoRoll) is the phase-3 addition. The array is capture-by-value
- * at NUISegmentedControl construction, so a fourth segment must be present
- * here up front.
+ * The array is captured by-value at NUISegmentedControl construction, so every
+ * segment must be present here up front.
  */
-inline constexpr size_t kSegmentCount = 4;
-inline constexpr std::array<const char*, kSegmentCount> kSegmentLabels = {"Arsenal", "Timeline", "Audition",
-                                                                          "PianoRoll"};
+inline constexpr size_t kSegmentCount = 3;
+inline constexpr std::array<const char*, kSegmentCount> kSegmentLabels = {"Arsenal", "Timeline", "Audition"};
 
 /** @brief True when the focus owns a segmented-control segment. */
 inline constexpr bool hasSegment(ViewFocus focus) {
@@ -65,8 +66,6 @@ inline ViewFocus focusForSegmentIndex(size_t index) {
         return ViewFocus::Timeline;
     case 2:
         return ViewFocus::Audition;
-    case 3:
-        return ViewFocus::PianoRoll;
     default:
         return ViewFocus::Timeline;
     }
@@ -88,9 +87,6 @@ inline bool segmentIndexForFocus(ViewFocus focus, size_t& outIndex) {
     case ViewFocus::Audition:
         outIndex = 2;
         return true;
-    case ViewFocus::PianoRoll:
-        outIndex = 3;
-        return true;
     case ViewFocus::RoutingMap:
         return false;
     }
@@ -100,9 +96,9 @@ inline bool segmentIndexForFocus(ViewFocus focus, size_t& outIndex) {
 /**
  * @brief What a focus switch is allowed to mutate.
  * This is the single source of truth used by the transport paths in
- * AestraContent. Ordinary transitions (including every PianoRoll pair) are
- * pure visibility changes: no playback, pause, position, scheduled-instance,
- * or engine-mode mutation.
+ * AestraContent. Ordinary transitions are pure visibility changes: no playback,
+ * pause, position, scheduled-instance, or engine-mode mutation. The piano roll
+ * editor never participates here — it is a contextual editor, not a focus.
  */
 enum class WorkspaceTransitionKind {
     PlaybackHotSwap, // Arsenal<->Timeline: re-arm pattern/arrangement transport (stop + play)
@@ -137,16 +133,16 @@ inline bool isRoutingMapTransition(ViewFocus current, ViewFocus previous) {
     return classifyTransition(current, previous) == WorkspaceTransitionKind::RoutingMap;
 }
 
-/** @brief True for ordinary (pure-visibility) transitions, including PianoRoll pairs. */
+/** @brief True for ordinary (pure-visibility) transitions. */
 inline bool isOrdinaryWorkspaceTransition(ViewFocus current, ViewFocus previous) {
     return classifyTransition(current, previous) == WorkspaceTransitionKind::Ordinary;
 }
 
 /**
  * @brief Effective overlay-panel visibility for a focus, derived from the
- *        remembered-open state. Ordinary workspaces (Timeline/Arsenal/
- *        PianoRoll) restore overlays from remembered-open; Audition hides
- *        everything; RoutingMap shows only the mixer over its own map panel.
+ *        remembered-open state. Ordinary workspaces (Timeline/Arsenal) restore
+ *        overlays from remembered-open; Audition hides everything; RoutingMap
+ *        shows only the mixer over its own map panel.
  */
 struct WorkspacePanelVisibility {
     bool mixer = false;
@@ -162,6 +158,8 @@ inline WorkspacePanelVisibility derivePanelVisibility(ViewFocus focus, bool mixe
     if (focus == ViewFocus::RoutingMap) {
         return {mixerOpen, false, false};
     }
+    // The piano roll editor is a remembered-open overlay inside the owning
+    // workspace; its flag applies here without PianoRoll being a focus.
     return {mixerOpen, pianoRollOpen, sequencerOpen};
 }
 
@@ -179,8 +177,6 @@ inline const char* workspaceFocusName(ViewFocus focus) {
         return "audition";
     case ViewFocus::RoutingMap:
         return "routingMap";
-    case ViewFocus::PianoRoll:
-        return "pianoRoll";
     }
     return "unknown";
 }
@@ -203,10 +199,9 @@ inline bool parseWorkspaceFocus(const std::string& name, ViewFocus& out) {
         out = ViewFocus::RoutingMap;
         return true;
     }
-    if (name == "pianoRoll") {
-        out = ViewFocus::PianoRoll;
-        return true;
-    }
+    // Legacy "pianoRoll" persisted by phase-3 builds is deliberately NOT
+    // accepted: the piano roll is a contextual editor, not a workspace. Files
+    // saved with it fall back to Timeline (parse failure -> caller default).
     return false;
 }
 

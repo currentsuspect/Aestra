@@ -106,29 +106,56 @@ int main() {
     require(postDeleteInsert && postDeleteInsert->getName() == "Channel 2",
             "Default channel name reused a deleted channel number");
 
+    auto defaultRouteTracksOwner = std::make_unique<TrackManager>();
+    auto& defaultRouteTracks = *defaultRouteTracksOwner;
+    const UnitID defaultRouteUnit =
+        defaultRouteTracks.getUnitManager().createUnit("Default Route", UnitType::Instrument);
+    defaultRouteTracks.setModified(false);
+    require(routeUnitToFirstFreeMixerChannel(defaultRouteTracks, defaultRouteUnit, "Default Route", 0xFF336699, true),
+            "Default Arsenal route could not create a mixer destination");
+    const uint32_t defaultRouteChannelId =
+        defaultRouteTracks.getUnitManager().getUnitMixerChannel(defaultRouteUnit);
+    require(defaultRouteChannelId != MASTER_MIXER_CHANNEL_ID &&
+                defaultRouteTracks.getChannelById(defaultRouteChannelId) != nullptr,
+            "Default Arsenal route did not resolve to a stable mixer channel");
+    require(defaultRouteTracks.getChannelCount() == 1 && defaultRouteTracks.getPlaylistModel().getLaneCount() == 0,
+            "Default Arsenal routing coupled mixer ownership to Timeline placement");
+    require(!defaultRouteTracks.isModified(), "Bootstrap Arsenal routing dirtied the pristine project");
+    require(routeUnitToFirstFreeMixerChannel(defaultRouteTracks, defaultRouteUnit, "Default Route", 0xFF336699, true) &&
+                defaultRouteTracks.getUnitManager().getUnitMixerChannel(defaultRouteUnit) == defaultRouteChannelId &&
+                defaultRouteTracks.getChannelCount() == 1,
+            "Repeating default Arsenal routing did not remain stable");
+
+    auto userRouteTracksOwner = std::make_unique<TrackManager>();
+    auto& userRouteTracks = *userRouteTracksOwner;
+    const UnitID userRouteUnit = userRouteTracks.getUnitManager().createUnit("User Route", UnitType::Sampler);
+    userRouteTracks.setModified(false);
+    require(routeUnitToFirstFreeMixerChannel(userRouteTracks, userRouteUnit, "User Route", 0xFF224466),
+            "User-created Arsenal unit could not acquire a mixer destination");
+    require(userRouteTracks.isModified(), "User-created Arsenal routing did not dirty the project");
+    require(userRouteTracks.getPlaylistModel().getLaneCount() == 0,
+            "User-created Arsenal routing manufactured a Timeline lane");
+
     auto firstFreeTracksOwner = std::make_unique<TrackManager>();
     auto& firstFreeTracks = *firstFreeTracksOwner;
     const UnitID firstFreeUnit = firstFreeTracks.getUnitManager().createUnit("Bass", UnitType::Instrument);
     firstFreeTracks.getCommandHistory().pushAndExecute(
         std::make_shared<AssignUnitToFirstFreeInsertCommand>(firstFreeTracks, firstFreeUnit, "Bass", 0xFF336699));
-    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 1,
-            "First-free route did not atomically create its insert and lane");
+    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 0,
+            "First-free mixer routing created Timeline placement state");
     const uint32_t createdDestinationId = firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit);
-    const auto createdLaneId = firstFreeTracks.getPlaylistModel().getLaneId(0);
     require(createdDestinationId != MASTER_MIXER_CHANNEL_ID &&
-                firstFreeTracks.getChannel(0)->getColor() == 0xFF336699 &&
-                firstFreeTracks.getPlaylistModel().getLane(createdLaneId)->colorRGBA == 0xFF336699,
-            "First-free route did not apply destination identity and color");
+                firstFreeTracks.getChannel(0)->getColor() == 0xFF336699,
+            "First-free route did not apply mixer destination identity and color");
     require(firstFreeTracks.getCommandHistory().undo(), "First-free route undo was unavailable");
     require(firstFreeTracks.getChannelCount() == 0 && firstFreeTracks.getPlaylistModel().getLaneCount() == 0 &&
                 firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == MASTER_MIXER_CHANNEL_ID,
-            "First-free route undo left created project state behind");
+            "First-free route undo left mixer or Timeline state behind");
     require(firstFreeTracks.getCommandHistory().redo(), "First-free route redo was unavailable");
-    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 1 &&
+    require(firstFreeTracks.getChannelCount() == 1 && firstFreeTracks.getPlaylistModel().getLaneCount() == 0 &&
                 firstFreeTracks.getChannel(0)->getChannelId() == createdDestinationId &&
-                firstFreeTracks.getPlaylistModel().getLaneId(0) == createdLaneId &&
                 firstFreeTracks.getUnitManager().getUnitMixerChannel(firstFreeUnit) == createdDestinationId,
-            "First-free route redo did not restore stable identities atomically");
+            "First-free route redo did not restore the stable mixer identity without Timeline coupling");
 
     auto patternOccupiedTracksOwner = std::make_unique<TrackManager>();
     auto& patternOccupiedTracks = *patternOccupiedTracksOwner;
@@ -178,6 +205,7 @@ int main() {
             "Ctrl+L routing helper did not route the selected unit");
     const size_t shortcutChannelCount = shortcutTracks.getChannelCount();
     const size_t shortcutLaneCount = shortcutTracks.getPlaylistModel().getLaneCount();
+    require(shortcutLaneCount == 0, "Ctrl+L mixer routing created Timeline placement state");
     require(!assignUnitToFirstFreeInsert(shortcutTracks, 0, "Missing", 0xFFFFFFFF),
             "Ctrl+L routing helper handled a missing selection");
     require(!assignUnitToFirstFreeInsert(shortcutTracks, shortcutUnit + 999, "Missing", 0xFFFFFFFF),
@@ -248,11 +276,17 @@ int main() {
     playlist.addClip(laneA, audioClip);
 
     ClipEdits edited = audioClip.edits;
+    require(std::abs(ClipEdits::playbackRateFromSemitones(12.0f) - 2.0f) < 1.0e-6f &&
+                std::abs(ClipEdits::playbackRateFromSemitones(-12.0f) - 0.5f) < 1.0e-6f,
+            "Audio clip musical pitch conversion did not preserve octave ratios");
+    require(std::abs(ClipEdits::semitonesFromPlaybackRate(2.0f) - 12.0f) < 1.0e-6f &&
+                ClipEdits::playbackRateFromSemitones(std::numeric_limits<float>::quiet_NaN()) == 1.0f,
+            "Audio clip pitch conversion did not sanitize invalid values");
     edited.gainLinear = 0.5f;
     edited.pan = -0.25f;
     edited.fadeInBeats = 0.25f;
     edited.fadeOutBeats = 0.5f;
-    edited.playbackRate = 1.5f;
+    edited.playbackRate = ClipEdits::playbackRateFromSemitones(7.0f);
     edited.sourceStart = 12.0;
     tracks.getCommandHistory().pushAndExecute(std::make_shared<SetClipEditsCommand>(playlist, audioClip.id, edited));
 
@@ -287,8 +321,9 @@ int main() {
             "Clip editor gain/pan did not reach the audio graph");
     require(renderedEdit.fadeInSamples > 0 && renderedEdit.fadeOutSamples > renderedEdit.fadeInSamples,
             "Clip editor fades did not reach the audio graph");
-    require(renderedEdit.playbackRate == 1.5f && renderedEdit.sampleOffset > 0.0,
-            "Clip editor speed/source-start did not reach the audio graph");
+    require(std::abs(renderedEdit.playbackRate - ClipEdits::playbackRateFromSemitones(7.0f)) < 1.0e-6f &&
+                renderedEdit.sampleOffset > 0.0,
+            "Clip editor pitch/source-start did not reach the audio graph");
 
     require(tracks.getCommandHistory().undo(), "Clip edit undo was unavailable");
     graph = AudioGraphBuilder::buildFromTrackManager(tracks);

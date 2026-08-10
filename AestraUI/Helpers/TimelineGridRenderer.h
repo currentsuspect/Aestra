@@ -32,6 +32,22 @@ inline int timelineGridBarStride(float pixelsPerBeat, int beatsPerBar) {
 }
 
 /**
+ * Whether a grid tier of the given duration may be drawn under the active snap.
+ *
+ * The grid must never advertise positions the snap does not allow: a tier of
+ * duration d is only musical when the snap duration divides it evenly (e.g. at
+ * snap-to-beat a half-beat tier would show 1/2 as possible, so it is hidden).
+ * Zero/absent snap keeps every tier, which is the timeline grid's contract.
+ */
+inline bool timelineGridTierAlignedToSnap(double tierBeats, double subdivisionBeats) {
+    if (subdivisionBeats <= 0.0) {
+        return true;
+    }
+    const double ratio = tierBeats / subdivisionBeats;
+    return std::abs(ratio - std::round(ratio)) < 1e-4;
+}
+
+/**
  * Draw the canonical Track Manager timeline grid inside an arbitrary grid span.
  *
  * The power-of-two hierarchy and zebra crossfade stay stable at every zoom,
@@ -45,7 +61,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                                float pixelsPerBeat,
                                int beatsPerBar,
                                const NUIColor& ink = NUIColor::white(),
-                               const TimelineGridStyle& style = {}) {
+                               const TimelineGridStyle& style = {},
+                               double subdivisionBeats = 0.0) {
     const float gridWidth = std::max(0.0f, gridEndX - gridStartX);
     beatsPerBar = std::max(1, beatsPerBar);
     const float pixelsPerBar = pixelsPerBeat * static_cast<float>(beatsPerBar);
@@ -105,6 +122,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
     };
     const float beatLineAlpha = style.beatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
     const float halfBeatLineAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
+    const bool showBeatTier = timelineGridTierAlignedToSnap(1.0, subdivisionBeats);
+    const bool showHalfBeatTier = timelineGridTierAlignedToSnap(0.5, subdivisionBeats);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - scrollX;
@@ -123,19 +142,45 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
             if (alpha > 0.001f) drawGridLine(barX, alpha);
         }
 
-        if (beatLineAlpha > 0.001f) {
+        if (showBeatTier && beatLineAlpha > 0.001f) {
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 const float beatX = barX + beat * pixelsPerBeat;
                 if (beatX >= gridStartX && beatX <= gridEndX) drawGridLine(beatX, beatLineAlpha);
             }
         }
 
-        if (halfBeatLineAlpha > 0.001f) {
+        if (showHalfBeatTier && halfBeatLineAlpha > 0.001f) {
             const float halfBeatOffset = pixelsPerBeat * 0.5f;
             for (int beat = 0; beat < beatsPerBar; ++beat) {
                 const float subBeatX = barX + beat * pixelsPerBeat + halfBeatOffset;
                 if (subBeatX >= gridStartX && subBeatX <= gridEndX) {
                     drawGridLine(subBeatX, halfBeatLineAlpha);
+                }
+            }
+        }
+
+        // Optional snap-aligned subdivision tier. The caller (e.g. the piano
+        // roll grid) passes the active snap duration so every position notes
+        // snap to is actually drawn. Lines that coincide with beat or bar
+        // lines are skipped — those tiers already own them.
+        if (subdivisionBeats > 0.0 && subdivisionBeats < 0.5) {
+            const float subPixels = pixelsPerBeat * static_cast<float>(subdivisionBeats);
+            const float subAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(subPixels);
+            if (subAlpha > 0.001f) {
+                const double sub = subdivisionBeats;
+                const double firstSub = std::ceil((static_cast<double>(bar) * beatsPerBar) / sub);
+                const double lastSub =
+                    std::floor((static_cast<double>(bar + 1) * beatsPerBar - 1e-9) / sub);
+                for (double k = firstSub; k <= lastSub; ++k) {
+                    const double lineBeat = k * sub;
+                    const double nearestBeat = std::round(lineBeat);
+                    const double nearestBar = std::round(lineBeat / beatsPerBar);
+                    if (std::abs(lineBeat - nearestBeat) < 1e-9 ||
+                        std::abs(lineBeat - nearestBar * beatsPerBar) < 1e-9) {
+                        continue;
+                    }
+                    const float subX = gridStartX + static_cast<float>(lineBeat * pixelsPerBeat) - scrollX;
+                    if (subX >= gridStartX && subX <= gridEndX) drawGridLine(subX, subAlpha);
                 }
             }
         }

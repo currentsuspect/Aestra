@@ -25,6 +25,25 @@ inline void equalPower(double pan, double gain, double& leftGain, double& rightG
     rightGain = std::sin(p * static_cast<double>(kHalfPi)) * gain;
 }
 
+/**
+ * Balance an existing stereo signal without changing its level at centre.
+ *
+ * Unlike equalPower(), which places a mono source in a stereo field and is
+ * therefore -3 dB per leg at centre, a stereo balance control must leave both
+ * legs at unity when centred. This is the appropriate law for mixer sends and
+ * channels that are receiving an already-panned stereo route.
+ */
+inline void stereoBalance(double pan, double gain, double& leftGain, double& rightGain) noexcept {
+    const double clampedPan = std::clamp(pan, -1.0, 1.0);
+    if (clampedPan < 0.0) {
+        leftGain = gain;
+        rightGain = std::cos(-clampedPan * static_cast<double>(kHalfPi)) * gain;
+    } else {
+        leftGain = std::cos(clampedPan * static_cast<double>(kHalfPi)) * gain;
+        rightGain = gain;
+    }
+}
+
 } // namespace PanLaw
 } // namespace Audio
 } // namespace Aestra

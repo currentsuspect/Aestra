@@ -1,10 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioEngine.h"
-#include "Core/ClipRenderKernel.h"
 
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
+#include "Core/ClipRenderKernel.h"
 #include "DSP/PanLaw.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
@@ -138,6 +138,10 @@ inline double dbToLinearD(double db) {
 
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::equalPower(pan, vol, gainL, gainR);
+}
+
+inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
+    PanLaw::stereoBalance(pan, vol, gainL, gainR);
 }
 
 inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
@@ -648,6 +652,20 @@ void AudioEngine::performNonRealtimeMaintenance() {
                         // writes them at different points) and schedule an epoch
                         // ahead, starving legitimate events.
                         currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
+                        // A transport restart cued mid-pattern (scrubbed piano-roll
+                        // playhead, pause→resume) leaves the monotonic frame at 0 —
+                        // it was reset while stopped and is only republished by the
+                        // first playing block. Refilling from that stale 0 would queue
+                        // the loop-top events, which a playhead past the loop top
+                        // would fire at the buffer edge ("starts from beat 1"). The
+                        // cued global position IS the monotonic domain start here
+                        // (iteration is 0), so refill from it instead.
+                        if (currentFrame == 0) {
+                            const uint64_t cuedPos = m_globalSamplePos.load(std::memory_order_relaxed);
+                            if (cuedPos > 0) {
+                                currentFrame = cuedPos;
+                            }
+                        }
                     }
                 }
             }
@@ -838,10 +856,22 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     const bool transportRestart = m_transportRestartRequested.exchange(false, std::memory_order_acq_rel);
     const bool transportHardStop = m_transportHardStopRequested.exchange(false, std::memory_order_acq_rel);
 
-    // Pattern mode semantics: stop/restart always resets playhead to the pattern start.
+    // Pattern mode: honor a cued playhead (a scrubbed piano-roll position, or the
+    // position preserved by a pause) instead of resetting to the pattern top on every
+    // stop/restart edge. Only a cue at or past the loop end — e.g. a stale timeline
+    // position entering pattern mode — is wrapped back into the loop, matching the
+    // render path's wrap logic below.
     const bool patternModeNow = m_patternPlaybackMode.load(std::memory_order_relaxed);
     if (patternModeNow && (transportStop || transportRestart)) {
-        m_globalSamplePos.store(0, std::memory_order_relaxed);
+        const uint64_t cuedPos = m_globalSamplePos.load(std::memory_order_relaxed);
+        const double samplesPerBeat =
+            (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) /
+            std::max(static_cast<double>(m_metronomeEngine.getBPM()), 1.0);
+        const uint64_t loopEndSample =
+            static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
+        if (loopEndSample > 0 && cuedPos >= loopEndSample) {
+            m_globalSamplePos.store(cuedPos % loopEndSample, std::memory_order_relaxed);
+        }
     }
 
     // A transport restart is a semantic metronome discontinuity even when the
@@ -2283,8 +2313,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     }
 }
 
-
-
 void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
                               bool& srcActiveThisBlock) {
     // Verbatim clip-rendering phase moved out of renderTrack(); same ctx
@@ -2406,7 +2434,8 @@ float AudioEngine::processTrackEffects(const TrackRenderState& track, uint32_t t
 
 void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
                                    std::vector<double>& buffer, const RenderContext& ctx, double volTarget,
-                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible) {
+                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible,
+                                   bool receivesAudibleRoute) {
     // Verbatim output stage moved out of renderTrack(): plugin-delay
     // compensation, routing to master/destination + sends (with the peak/RMS
     // accumulation interleaved in the mix loop), and the meter snapshot write.
@@ -2471,7 +2500,11 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
 
     // Route post-fader output to the selected main destination and any audible sends.
     double tL, tR;
-    fastPanGainsD(panTarget, volTarget, tL, tR);
+    if (receivesAudibleRoute) {
+        fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
+    } else {
+        fastPanGainsD(panTarget, volTarget, tL, tR);
+    }
     state.gainL.setTarget(tL);
     state.gainR.setTarget(tR);
     state.gainL.beginRamp(numFrames);
@@ -2810,8 +2843,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
         for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
             double targetL = 0.0;
             double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                                    static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].current = targetL;
             state.sendGainL[sendIndex].target = targetL;
             state.sendGainR[sendIndex].current = targetR;
@@ -2826,8 +2859,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
             }
             double targetL = 0.0;
             double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                                    static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].setTarget(targetL);
             state.sendGainR[sendIndex].setTarget(targetR);
             state.sendGainL[sendIndex].beginRamp(numFrames);
@@ -2858,8 +2891,10 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     // Output stage (PDC + routing/sends + metering) — verbatim extraction,
     // see mixAndMeterTrack() directly above.
+    const bool receivesAudibleRoute =
+        orderedIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[orderedIndex].empty();
     mixAndMeterTrack(track, trackIdx, slot, state, buffer, ctx, volTarget, panTarget, trackSidechainPeak, muted,
-                     audibleEligible);
+                     audibleEligible, receivesAudibleRoute);
 }
 
 void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId) {
@@ -3036,8 +3071,12 @@ void AudioEngine::compileGraph() {
     auto graphRead = m_state.activeGraphRead();
     const auto& graph = graphRead.get(); // Fixed method name
 
-    // Iterate Tracks directly from the graph snapshot
-    for (const auto& tr : graph.tracks) {
+    // Compile in routing order so each destination consumes all upstream audio
+    // before its result is forwarded to the next hop.
+    for (const size_t orderedIndex : graph.topologicalOrder) {
+        if (orderedIndex >= graph.tracks.size())
+            continue;
+        const auto& tr = graph.tracks[orderedIndex];
         const uint32_t idx = tr.trackIndex;
 
         // Safety Check
@@ -3095,8 +3134,8 @@ void AudioEngine::compileGraph() {
 
             double sendGainL = 0.0;
             double sendGainR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(send.pan), -1.0, 1.0), static_cast<double>(send.gain), sendGainL,
-                          sendGainR);
+            fastStereoBalanceGainsD(clampD(static_cast<double>(send.pan), -1.0, 1.0), static_cast<double>(send.gain),
+                                    sendGainL, sendGainR);
 
             if (send.targetChannelId == 0xFFFFFFFF) {
                 // Route to Master

@@ -17,16 +17,18 @@ void require(bool condition, const std::string& message) {
 
 void testSegmentMapping() {
     // Every segment index maps to the canonical focus, and every focus with a
-    // segment round-trips back to the same index. RoutingMap owns no segment.
+    // segment round-trips back to the same index. RoutingMap owns no segment;
+    // the piano roll is a contextual editor, not a workspace, so it does not
+    // own an index here either.
     require(WorkspaceFocusModel::focusForSegmentIndex(0) == ViewFocus::Arsenal, "segment 0 must be Arsenal");
     require(WorkspaceFocusModel::focusForSegmentIndex(1) == ViewFocus::Timeline, "segment 1 must be Timeline");
     require(WorkspaceFocusModel::focusForSegmentIndex(2) == ViewFocus::Audition, "segment 2 must be Audition");
-    require(WorkspaceFocusModel::focusForSegmentIndex(3) == ViewFocus::PianoRoll, "segment 3 must be PianoRoll");
+    require(WorkspaceFocusModel::focusForSegmentIndex(3) == ViewFocus::Timeline,
+            "segment 3 must NOT exist (fall back to Timeline)");
     require(WorkspaceFocusModel::focusForSegmentIndex(99) == ViewFocus::Timeline,
             "out-of-range segment must fall back to Timeline");
 
-    const ViewFocus kSegmentFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition,
-                                      ViewFocus::PianoRoll};
+    const ViewFocus kSegmentFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition};
     for (size_t index = 0; index < WorkspaceFocusModel::kSegmentCount; ++index) {
         size_t back = 99;
         require(WorkspaceFocusModel::segmentIndexForFocus(kSegmentFoci[index], back),
@@ -41,8 +43,8 @@ void testSegmentMapping() {
 }
 
 void testTransitionClassification() {
-    const ViewFocus kAllFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition, ViewFocus::RoutingMap,
-                                  ViewFocus::PianoRoll};
+    const ViewFocus kAllFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition,
+                                  ViewFocus::RoutingMap};
 
     for (ViewFocus current : kAllFoci) {
         for (ViewFocus previous : kAllFoci) {
@@ -73,33 +75,20 @@ void testTransitionClassification() {
         }
     }
 
-    // PianoRoll pairs are ordinary: switching into/out of the piano roll must
-    // never re-arm the transport (the phase-3 ruling).
-    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::PianoRoll, ViewFocus::Timeline),
-            "PianoRoll <- Timeline must be ordinary");
-    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Timeline, ViewFocus::PianoRoll),
-            "Timeline <- PianoRoll must be ordinary");
-    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::PianoRoll, ViewFocus::Arsenal),
-            "PianoRoll <- Arsenal must be ordinary");
-    require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::PianoRoll, ViewFocus::PianoRoll),
-            "PianoRoll self-switch must be ordinary");
+    // DAW self-switches are ordinary: they must never re-arm the transport.
     require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Arsenal, ViewFocus::Arsenal),
             "Arsenal self-switch must be ordinary (no hot-swap)");
     require(WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Timeline, ViewFocus::Timeline),
             "Timeline self-switch must be ordinary (no hot-swap)");
     require(!WorkspaceFocusModel::isOrdinaryWorkspaceTransition(ViewFocus::Arsenal, ViewFocus::Timeline),
             "Arsenal <-> Timeline must NOT be ordinary (hot-swap)");
-    require(WorkspaceFocusModel::isAuditionTransition(ViewFocus::PianoRoll, ViewFocus::Audition),
-            "leaving Audition into PianoRoll must classify as Audition");
-    require(WorkspaceFocusModel::isRoutingMapTransition(ViewFocus::PianoRoll, ViewFocus::RoutingMap),
-            "routing-map pairs must classify as RoutingMap even with PianoRoll");
 }
 
 void testPanelVisibility() {
-    // Ordinary workspaces (Arsenal/Timeline/PianoRoll) restore every overlay
-    // from remembered-open; Audition hides everything; RoutingMap shows only
-    // the mixer over its own map.
-    for (ViewFocus focus : {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::PianoRoll}) {
+    // Ordinary workspaces (Arsenal/Timeline) restore every overlay from
+    // remembered-open, including the piano-roll editor flag; Audition hides
+    // everything; RoutingMap shows only the mixer over its own map.
+    for (ViewFocus focus : {ViewFocus::Arsenal, ViewFocus::Timeline}) {
         const auto vis = WorkspaceFocusModel::derivePanelVisibility(focus, true, true, true);
         require(vis.mixer && vis.pianoRoll && vis.sequencer,
                 "ordinary workspace must restore all remembered-open overlays");
@@ -112,10 +101,10 @@ void testPanelVisibility() {
     const auto routing = WorkspaceFocusModel::derivePanelVisibility(ViewFocus::RoutingMap, true, true, true);
     require(routing.mixer && !routing.pianoRoll && !routing.sequencer, "RoutingMap must show only the mixer");
 
-    // The piano roll only appears when remembered-open (phase-3 ruling).
-    const auto prClosed = WorkspaceFocusModel::derivePanelVisibility(ViewFocus::PianoRoll, true, false, true);
+    // The piano-roll editor only appears when remembered-open.
+    const auto prClosed = WorkspaceFocusModel::derivePanelVisibility(ViewFocus::Timeline, true, false, true);
     require(prClosed.mixer && !prClosed.pianoRoll && prClosed.sequencer,
-            "PianoRoll workspace shows the piano roll iff pianoRollOpen");
+            "piano-roll editor shows iff pianoRollOpen");
 }
 
 void testNames() {
@@ -127,11 +116,9 @@ void testNames() {
             "Audition protocol name");
     require(std::string(WorkspaceFocusModel::workspaceFocusName(ViewFocus::RoutingMap)) == "routingMap",
             "RoutingMap protocol name");
-    require(std::string(WorkspaceFocusModel::workspaceFocusName(ViewFocus::PianoRoll)) == "pianoRoll",
-            "PianoRoll protocol name");
 
-    const ViewFocus kAllFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition, ViewFocus::RoutingMap,
-                                  ViewFocus::PianoRoll};
+    const ViewFocus kAllFoci[] = {ViewFocus::Arsenal, ViewFocus::Timeline, ViewFocus::Audition,
+                                  ViewFocus::RoutingMap};
     for (ViewFocus focus : kAllFoci) {
         ViewFocus parsed = ViewFocus::Timeline;
         require(WorkspaceFocusModel::parseWorkspaceFocus(WorkspaceFocusModel::workspaceFocusName(focus), parsed),
@@ -142,6 +129,11 @@ void testNames() {
     ViewFocus parsed = ViewFocus::Timeline;
     require(!WorkspaceFocusModel::parseWorkspaceFocus("timelime", parsed), "typo'd focus name must not parse");
     require(!WorkspaceFocusModel::parseWorkspaceFocus("", parsed), "empty focus name must not parse");
+    // Phase-3 builds persisted "pianoRoll" as a workspace focus. The piano roll
+    // is now a contextual editor, not a workspace, so that legacy value must be
+    // rejected (callers fall back to Timeline) rather than resurrected.
+    require(!WorkspaceFocusModel::parseWorkspaceFocus("pianoRoll", parsed),
+            "legacy pianoRoll focus must not parse (editor, not workspace)");
 }
 
 } // namespace
