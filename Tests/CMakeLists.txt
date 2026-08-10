@@ -2045,6 +2045,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
     set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
 endif()
 
+# Pattern Transport Position Test (piano-roll playhead cue preservation)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternTransportPositionTest.cpp")
+    add_executable(PatternTransportPositionTest AestraAudio/PatternTransportPositionTest.cpp)
+    target_link_libraries(PatternTransportPositionTest PRIVATE AestraAudio)
+    target_include_directories(PatternTransportPositionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternTransportPositionTest COMMAND PatternTransportPositionTest)
+    set_tests_properties(PatternTransportPositionTest PROPERTIES LABELS "audio;engine;transport;pattern;contract:audio")
+endif()
+
 # AudioEngine Diagnostics Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cpp")
     add_executable(AudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
