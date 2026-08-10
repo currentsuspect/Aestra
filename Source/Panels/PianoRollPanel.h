@@ -87,6 +87,8 @@ public:
     void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
     /** @brief Return the complete harmony context currently shown by the editor. */
     ScaleContext getHarmonyContext() const;
+    /** @brief Current notes as shown by the editor view (including selection state). */
+    const std::vector<AestraUI::MidiNote>& getNotes() const { return m_pianoRoll->getNotes(); }
     /**
      * @brief Bind the live audio engine used for transport/playhead sync.
      * @param engine Audio engine pointer, or nullptr to disable engine sync.

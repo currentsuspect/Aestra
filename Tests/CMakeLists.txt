@@ -672,6 +672,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
+    add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
+    target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
+    target_include_directories(SamplerCutSelfTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerCutSelfTest COMMAND SamplerCutSelfTest)
+    set_tests_properties(SamplerCutSelfTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
     target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)
@@ -1783,6 +1795,28 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Floating panels must only raise themselves on presses inside their bounds:
+# the overlay forwards every press to every visible panel, so a transport-bar
+# click must not pop panels to the front (the Arsenal-mode double-stop bug).
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(WindowPanelRaiseTest
+        AestraUI/WindowPanelRaiseTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+    )
+    target_link_libraries(WindowPanelRaiseTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(WindowPanelRaiseTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+    )
+    add_test(NAME WindowPanelRaiseTest COMMAND WindowPanelRaiseTest)
+    set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
+else()
+    message(STATUS "WindowPanelRaiseTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # Takes/History workspace panels: command-timeline presentation + navigation,
 # takes manifest listing, actions, inline rename, non-destructive branching.
 if(TARGET AestraUI_Core)
@@ -2043,6 +2077,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
     )
     add_test(NAME TransportPausePreservesPositionTest COMMAND TransportPausePreservesPositionTest)
     set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
+endif()
+
+# Pattern Transport Position Test (piano-roll playhead cue preservation)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternTransportPositionTest.cpp")
+    add_executable(PatternTransportPositionTest AestraAudio/PatternTransportPositionTest.cpp)
+    target_link_libraries(PatternTransportPositionTest PRIVATE AestraAudio)
+    target_include_directories(PatternTransportPositionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternTransportPositionTest COMMAND PatternTransportPositionTest)
+    set_tests_properties(PatternTransportPositionTest PROPERTIES LABELS "audio;engine;transport;pattern;contract:audio")
 endif()
 
 # AudioEngine Diagnostics Test

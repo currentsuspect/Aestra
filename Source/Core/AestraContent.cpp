@@ -1003,6 +1003,17 @@ void AestraContent::setupArsenalPanels() {
         }
         sampler->setMonoMode(monoMode);
     };
+    m_sampleEditorPanel->onCutSelfModeChanged = [this](bool cutSelf) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setCutSelfMode(cutSelf);
+    };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
             return;
@@ -3144,15 +3155,32 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
             AESTRA_LOG_DEBUG("[Arsenal] Focus-aware stop");
+            if (hardStop) {
+                // Zero the cue BEFORE the stop command goes out: stop() pushes the
+                // stored play-start into the command, and the audio thread's drain is
+                // authoritative — a UI-side rewind after the fact races it.
+                m_trackManager->setPlayStartPosition(0.0);
+            }
             m_trackManager->stopArsenalPlayback(true);
         }
         if (hardStop && m_audioEngine) {
             m_audioEngine->panic();
         }
+        if (hardStop && m_trackManager) {
+            m_trackManager->setPlayStartPosition(0.0);
+            m_trackManager->setPosition(0.0);
+            m_trackManager->clearDisplayPositionOverride();
+            if (m_audioEngine) {
+                m_audioEngine->setGlobalSamplePos(0);
+            }
+        }
         return;
     }
 
     if (m_trackManager) {
+        if (hardStop) {
+            m_trackManager->setPlayStartPosition(0.0);
+        }
         m_trackManager->stop();
     }
     if (hardStop && m_audioEngine) {
@@ -3837,6 +3865,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     m_sampleEditorPanel->setPitchTune(pitch);
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
+    m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {

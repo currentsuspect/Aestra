@@ -77,6 +77,8 @@ public:
     int getVoiceCount() const;
     void setMonoMode(bool mono);
     bool isMonoMode() const { return m_monoMode; }
+    void setCutSelfMode(bool cutSelf);
+    bool isCutSelfMode() const { return m_cutSelfMode; }
 
     // Normalize and Reverse
     void normalize();
@@ -88,6 +90,7 @@ public:
     std::function<void(const PitchTune&)> onPitchTuneChanged;
     std::function<void(int)> onVoiceCountChanged;
     std::function<void(bool)> onMonoModeChanged;
+    std::function<void(bool)> onCutSelfModeChanged;
     std::function<void()> onControlCommitRequested;
     std::function<void()> onNormalizeRequested;
     std::function<void()> onReverseRequested;
@@ -111,6 +114,7 @@ private:
     // Loop
     LoopPoints m_loopPoints;
     bool m_monoMode{false};
+    bool m_cutSelfMode{false};
 
     // Pitch/Tune
     PitchTune m_pitchTune;
@@ -131,6 +135,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_pingPongModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_monoModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_polyModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_cutSelfModeBtn;
     std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUILabel> m_modeLabel;
     std::shared_ptr<AestraUI::NUILabel> m_voiceCountLabel;
@@ -154,6 +159,7 @@ private:
     void onPitchControlChanged();
     void onVoiceCountControlChanged();
     void setMonoModeInternal(bool mono, bool notify);
+    void setCutSelfModeInternal(bool cutSelf, bool notify);
     void setLoopMode(LoopMode mode);
     void updateModeButtons();
     void updateMonoPolyControls();

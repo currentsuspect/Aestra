@@ -284,6 +284,9 @@ public:
     /** @brief Set the active snap grid. */
     void setSnap(SnapGrid snap) { snap_ = snap; repaint(); }
 
+    /** @brief Beat span the grid renders subdivisions at for the active snap. */
+    double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
+
 private:
     float pixelsPerBeat_;
     float keyHeight_;
@@ -741,6 +744,7 @@ private:
     void layoutChildren();
     void updateScrollbars(); // Renamed to updateNavigation?
     void renderShortcutHelp(NUIRenderer& renderer);
+    void applyZoom(float factor, float anchorX);
 };
 
 } // namespace AestraUI

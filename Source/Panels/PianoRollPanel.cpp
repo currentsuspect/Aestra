@@ -175,10 +175,16 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         }
     });
 
-    // Wire CommandHistory state-changed callback to reload pattern into UI on undo/redo
+    // Wire CommandHistory state-changed callback to reload pattern into UI on undo/redo.
+    // savePattern() sets m_applyingUndoRedo while it pushes its own commands, so a
+    // state change with that flag already set is our own save in progress — the UI
+    // already reflects the edit, and reloading would rebuild every note with
+    // selected=false, wiping the user's selection after the first committed edit.
+    // Only reload when the state change came from outside (undo/redo elsewhere).
     if (m_trackManager) {
         m_trackManager->getCommandHistory().addOnStateChanged([this]() {
             if (!m_currentPatternId.isValid()) return;
+            if (m_applyingUndoRedo) return;
             m_applyingUndoRedo = true;
             loadPattern(m_currentPatternId);
             m_applyingUndoRedo = false;

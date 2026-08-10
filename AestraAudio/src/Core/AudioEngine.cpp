@@ -651,6 +651,20 @@ void AudioEngine::performNonRealtimeMaintenance() {
                         // writes them at different points) and schedule an epoch
                         // ahead, starving legitimate events.
                         currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
+                        // A transport restart cued mid-pattern (scrubbed piano-roll
+                        // playhead, pause→resume) leaves the monotonic frame at 0 —
+                        // it was reset while stopped and is only republished by the
+                        // first playing block. Refilling from that stale 0 would queue
+                        // the loop-top events, which a playhead past the loop top
+                        // would fire at the buffer edge ("starts from beat 1"). The
+                        // cued global position IS the monotonic domain start here
+                        // (iteration is 0), so refill from it instead.
+                        if (currentFrame == 0) {
+                            const uint64_t cuedPos = m_globalSamplePos.load(std::memory_order_relaxed);
+                            if (cuedPos > 0) {
+                                currentFrame = cuedPos;
+                            }
+                        }
                     }
                 }
             }
@@ -793,10 +807,22 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     const bool transportRestart = m_transportRestartRequested.exchange(false, std::memory_order_acq_rel);
     const bool transportHardStop = m_transportHardStopRequested.exchange(false, std::memory_order_acq_rel);
 
-    // Pattern mode semantics: stop/restart always resets playhead to the pattern start.
+    // Pattern mode: honor a cued playhead (a scrubbed piano-roll position, or the
+    // position preserved by a pause) instead of resetting to the pattern top on every
+    // stop/restart edge. Only a cue at or past the loop end — e.g. a stale timeline
+    // position entering pattern mode — is wrapped back into the loop, matching the
+    // render path's wrap logic below.
     const bool patternModeNow = m_patternPlaybackMode.load(std::memory_order_relaxed);
     if (patternModeNow && (transportStop || transportRestart)) {
-        m_globalSamplePos.store(0, std::memory_order_relaxed);
+        const uint64_t cuedPos = m_globalSamplePos.load(std::memory_order_relaxed);
+        const double samplesPerBeat =
+            (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) /
+            std::max(static_cast<double>(m_metronomeEngine.getBPM()), 1.0);
+        const uint64_t loopEndSample =
+            static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
+        if (loopEndSample > 0 && cuedPos >= loopEndSample) {
+            m_globalSamplePos.store(cuedPos % loopEndSample, std::memory_order_relaxed);
+        }
     }
 
     // A transport restart is a semantic metronome discontinuity even when the
