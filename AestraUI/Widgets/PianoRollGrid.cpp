@@ -57,7 +57,8 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     }
 
     renderTimelineGrid(
-        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk);
+        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
+        {}, getSnapSubdivisionBeats());
 
     if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
         const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;

@@ -214,6 +214,38 @@ void testCommitBakesGainAndResetsEdits(const std::string& dir) {
     }
 }
 
+void testCommitBakesPitchAndRecordsUndo(const std::string& dir) {
+    std::printf("commit edits: pitch-only varispeed is baked and undoable...\n");
+    Fixture fx = makeClipFixture(dir);
+
+    auto* clip = fx.tm->getPlaylistModel().getClip(fx.clipId);
+    require(clip != nullptr, "pitch-only fixture clip exists");
+    if (!clip) {
+        return;
+    }
+    ClipEdits edits = clip->edits;
+    edits.playbackRate = 2.0f;
+    fx.tm->getPlaylistModel().setClipEdits(fx.clipId, edits);
+    const PatternID originalPattern = clip->patternId;
+
+    auto command = std::make_shared<CommitAudioClipEditsCommand>(*fx.tm, fx.clipId);
+    fx.tm->getCommandHistory().pushAndExecute(command);
+    require(fx.tm->getCommandHistory().canUndo(), "pitch-only commit is recorded in command history");
+
+    const auto* committedClip = fx.tm->getPlaylistModel().getClip(fx.clipId);
+    require(committedClip && committedClip->patternId != originalPattern, "pitch-only commit renders a new pattern");
+    require(committedClip && std::fabs(committedClip->edits.playbackRate - 1.0f) < 1.0e-6f,
+            "pitch-only commit resets playback rate after baking");
+    auto committed = currentAudio(*fx.tm, fx.clipId);
+    require(committed && committed->numFrames == 1000, "double-rate pitch commit halves the rendered frame count");
+
+    require(fx.tm->getCommandHistory().undo(), "pitch-only commit can be undone");
+    const auto* restoredClip = fx.tm->getPlaylistModel().getClip(fx.clipId);
+    require(restoredClip && restoredClip->patternId == originalPattern, "undo restores the pre-commit pattern");
+    require(restoredClip && std::fabs(restoredClip->edits.playbackRate - 2.0f) < 1.0e-6f,
+            "undo restores the pitch-only edit");
+}
+
 void testSlipOffsetIsHonouredAndBaked(const std::string& dir) {
     std::printf("reverse: a slipped clip renders the region it plays...\n");
     Fixture fx = makeClipFixture(dir);
@@ -298,6 +330,7 @@ int main() {
 
     testReverseChangesAudioAndUndoRestores(dir.string());
     testCommitBakesGainAndResetsEdits(dir.string());
+    testCommitBakesPitchAndRecordsUndo(dir.string());
     testSlipOffsetIsHonouredAndBaked(dir.string());
     testMidiClipIsRefused(dir.string());
 

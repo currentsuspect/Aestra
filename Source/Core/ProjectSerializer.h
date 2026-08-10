@@ -124,6 +124,11 @@ public:
         /// not in the file, which is why such a load reports `Transformed`.
         size_t legacyAudioPatternsSplit{0};
 
+        /// Audio clips whose persisted source offset was negative. Source
+        /// material before time zero cannot be reconstructed, so load clamps
+        /// these offsets to zero, reports a warning, and requires a resave.
+        size_t negativeAudioClipOffsetsCorrected{0};
+
         std::string errorMessage;
         std::vector<std::string> missingAssets;
         std::vector<MissingPlugin> missingPlugins;

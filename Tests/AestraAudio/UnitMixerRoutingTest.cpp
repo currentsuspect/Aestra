@@ -276,11 +276,17 @@ int main() {
     playlist.addClip(laneA, audioClip);
 
     ClipEdits edited = audioClip.edits;
+    require(std::abs(ClipEdits::playbackRateFromSemitones(12.0f) - 2.0f) < 1.0e-6f &&
+                std::abs(ClipEdits::playbackRateFromSemitones(-12.0f) - 0.5f) < 1.0e-6f,
+            "Audio clip musical pitch conversion did not preserve octave ratios");
+    require(std::abs(ClipEdits::semitonesFromPlaybackRate(2.0f) - 12.0f) < 1.0e-6f &&
+                ClipEdits::playbackRateFromSemitones(std::numeric_limits<float>::quiet_NaN()) == 1.0f,
+            "Audio clip pitch conversion did not sanitize invalid values");
     edited.gainLinear = 0.5f;
     edited.pan = -0.25f;
     edited.fadeInBeats = 0.25f;
     edited.fadeOutBeats = 0.5f;
-    edited.playbackRate = 1.5f;
+    edited.playbackRate = ClipEdits::playbackRateFromSemitones(7.0f);
     edited.sourceStart = 12.0;
     tracks.getCommandHistory().pushAndExecute(std::make_shared<SetClipEditsCommand>(playlist, audioClip.id, edited));
 
@@ -315,8 +321,9 @@ int main() {
             "Clip editor gain/pan did not reach the audio graph");
     require(renderedEdit.fadeInSamples > 0 && renderedEdit.fadeOutSamples > renderedEdit.fadeInSamples,
             "Clip editor fades did not reach the audio graph");
-    require(renderedEdit.playbackRate == 1.5f && renderedEdit.sampleOffset > 0.0,
-            "Clip editor speed/source-start did not reach the audio graph");
+    require(std::abs(renderedEdit.playbackRate - ClipEdits::playbackRateFromSemitones(7.0f)) < 1.0e-6f &&
+                renderedEdit.sampleOffset > 0.0,
+            "Clip editor pitch/source-start did not reach the audio graph");
 
     require(tracks.getCommandHistory().undo(), "Clip edit undo was unavailable");
     graph = AudioGraphBuilder::buildFromTrackManager(tracks);

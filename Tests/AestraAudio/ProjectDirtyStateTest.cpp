@@ -16,6 +16,7 @@
 #include "Commands/AddClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/TrimClipCommand.h"
 #include "Models/TrackManager.h"
 
 #include <cstdlib>
@@ -70,8 +71,7 @@ int main() {
         const PlaylistLaneID laneId = playlist.createLane("Lane");
         tracks.setModified(false);
 
-        tracks.getCommandHistory().pushAndExecute(
-            std::make_shared<AddClipCommand>(playlist, laneId, makeClip(0.0)));
+        tracks.getCommandHistory().pushAndExecute(std::make_shared<AddClipCommand>(playlist, laneId, makeClip(0.0)));
         require(tracks.isModified(), "Adding a clip must mark the project modified");
     }
 
@@ -85,9 +85,27 @@ int main() {
         PlaylistLaneID laneId;
         const ClipInstanceID clipId = seedClip(tracks, laneId);
 
-        tracks.getCommandHistory().pushAndExecute(
-            std::make_shared<MoveClipCommand>(playlist, clipId, 8.0, laneId));
+        tracks.getCommandHistory().pushAndExecute(std::make_shared<MoveClipCommand>(playlist, clipId, 8.0, laneId));
         require(tracks.isModified(), "Completing a clip move must mark the project modified");
+    }
+
+    // Trim completion (TrackUIComponent trim release) pushes a TrimClipCommand
+    // and nothing else (#744). Trimming a clip is an edit; it must survive as
+    // unsaved work — this is the exact gap that let trims vanish through
+    // autosave/recovery before the gesture was wired through the history.
+    {
+        auto tracksOwner = std::make_unique<TrackManager>();
+        auto& tracks = *tracksOwner;
+        auto& playlist = tracks.getPlaylistModel();
+        PlaylistLaneID laneId;
+        const ClipInstanceID clipId = seedClip(tracks, laneId);
+
+        tracks.getCommandHistory().pushAndExecute(std::make_shared<TrimClipCommand>(playlist, clipId, 1.0, 4.0));
+        require(tracks.isModified(), "Completing a clip trim must mark the project modified");
+
+        tracks.setModified(false);
+        require(tracks.getCommandHistory().undo(), "Undo of a clip trim should succeed");
+        require(tracks.isModified(), "Undo of a trim must mark the project modified");
     }
 
     // Cut (TrackManagerUI::cutSelectedClip) and delete
@@ -153,8 +171,7 @@ int main() {
         int onModifiedCount = 0;
         tracks.setOnModified([&onModifiedCount]() { onModifiedCount++; });
 
-        tracks.getCommandHistory().pushAndExecute(
-            std::make_shared<MoveClipCommand>(playlist, clipId, 8.0, laneId));
+        tracks.getCommandHistory().pushAndExecute(std::make_shared<MoveClipCommand>(playlist, clipId, 8.0, laneId));
         require(onModifiedCount == 1, "The modified hook must fire once per history-driven edit");
     }
 
@@ -175,8 +192,7 @@ int main() {
 
         tracks.getCommandHistory().pushAndExecute(std::make_shared<RemoveClipCommand>(playlist, clipId));
         require(panelRefreshCount == 1, "A panel listener must be notified of history changes");
-        require(tracks.isModified(),
-                "Registering a panel listener must not displace project dirty tracking");
+        require(tracks.isModified(), "Registering a panel listener must not displace project dirty tracking");
     }
 
     // -------------------------------------------------------------------
@@ -208,9 +224,8 @@ int main() {
         for (int i = 1; i <= 50; ++i) {
             tracks.addChannel("Channel " + std::to_string(i));
         }
-        require(tracks.isModified(),
-                "addChannel must still mark the project modified — the defect is not "
-                "that addChannel dirties, it is that construction never cleared");
+        require(tracks.isModified(), "addChannel must still mark the project modified — the defect is not "
+                                     "that addChannel dirties, it is that construction never cleared");
 
         // What the constructor now does after populating.
         tracks.setModified(false);
@@ -218,8 +233,7 @@ int main() {
 
         // A real user edit through the very same path must dirty it again.
         tracks.addChannel("User added this one");
-        require(tracks.isModified(),
-                "A channel added after construction must mark the project modified");
+        require(tracks.isModified(), "A channel added after construction must mark the project modified");
     }
 
     std::cout << "[PASS] ProjectDirtyStateTest\n";

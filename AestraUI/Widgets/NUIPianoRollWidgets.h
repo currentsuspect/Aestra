@@ -178,6 +178,17 @@ public:
     void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
         onUnitChoiceSelected_ = std::move(cb);
     }
+    /** @brief Set the harmony context without treating the update as a user edit. */
+    void setHarmonyContext(int rootKey, ScaleType scaleType, bool snapToScale);
+    /** @brief Apply a user-originated harmony edit and notify the owning panel. */
+    void applyHarmonyContextEdit(int rootKey, ScaleType scaleType, bool snapToScale);
+    int getRootKey() const { return m_rootKey; }
+    ScaleType getScaleType() const { return m_scaleType; }
+    bool getSnapToScale() const { return m_snapToScale; }
+    /** @brief Set callback fired when the user edits root, scale, or scale snapping. */
+    void setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb) {
+        onHarmonyContextChanged_ = std::move(cb);
+    }
     /** @brief Set callback fired by the menu's "Keyboard Shortcuts" item. */
     void setOnShowShortcutHelp(std::function<void()> cb) { onShowShortcutHelp_ = std::move(cb); }
     /** @brief Get the currently open context menu, if any. */
@@ -219,11 +230,15 @@ private:
     std::function<void(int barsDelta)> onAdjustPatternLength_;
     std::function<void(int patternValue)> onPatternChoiceSelected_;
     std::function<void(int unitValue)> onUnitChoiceSelected_;
+    std::function<void(int rootKey, ScaleType scaleType, bool snapToScale)> onHarmonyContextChanged_;
     std::function<void()> onShowShortcutHelp_;
     bool m_updatingPatternDropdown = false;
     bool m_updatingUnitDropdown = false;
     bool m_updatingSnapDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
+    int m_rootKey = 0;
+    ScaleType m_scaleType = ScaleType::Chromatic;
+    bool m_snapToScale = false;
 
     void closeActiveContextMenu();
     
@@ -268,6 +283,9 @@ public:
     
     /** @brief Set the active snap grid. */
     void setSnap(SnapGrid snap) { snap_ = snap; repaint(); }
+
+    /** @brief Beat span the grid renders subdivisions at for the active snap. */
+    double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
 
 private:
     float pixelsPerBeat_;
@@ -430,6 +448,14 @@ public:
     /** @brief Merge overlapping/touching selected notes on the same pitch into one. */
     void glueSelectedNotes();
 
+    /**
+     * @brief Split selected notes into consecutive cells of the current snap duration.
+     *
+     * The final cell retains any remainder so the operation never changes a
+     * note's start, end, pitch, expression, or unit routing.
+     */
+    void subdivideSelectedNotes();
+
     /** @brief Add slight random velocity variation to the selected notes. */
     void humanizeSelectedVelocities();
 
@@ -470,14 +496,15 @@ private:
     // Interaction State
     enum class State : uint8_t {
         None,
-        Painting,       // Creating a new note (Drag extends duration)
-        BrushPainting,  // Ctrl+pencil drag: lay one note per snap cell crossed
-        Moving,         // Moving existing note(s)
-        Resizing,       // Resizing existing note(s) (Right edge)
-        ResizingLeft,   // Resizing from left edge (moves start, keeps end)
-        SelectingBox,   // Dragging selection rectangle
-        Erasing,        // Eraser Box/Hover
-        CopyDragging    // Alt+drag copy of selection
+        Painting,            // Creating a new note (Drag extends duration)
+        BrushPainting,       // Ctrl+pencil drag: lay one note per snap cell crossed
+        Moving,              // Moving existing note(s)
+        Resizing,            // Resizing existing note(s) (Right edge)
+        ResizingLeft,        // Resizing from left edge (moves start, keeps end)
+        StretchingSelection, // Proportionally scale selected starts and lengths
+        SelectingBox,        // Dragging selection rectangle
+        Erasing,             // Eraser Box/Hover
+        CopyDragging         // Alt+drag copy of selection
     };
     State state_ = State::None;
     // Alt held during a move/resize/paint drag: snapToGrid passes through
@@ -490,6 +517,8 @@ private:
     double hoverBeat_ = -1.0; // Snapped cursor beat for the draw-mode preview; <0 when idle
     bool hoverOnRightEdge_ = false;
     bool hoverOnLeftEdge_ = false;
+    bool m_hoverOnSelectionStretch = false;
+    bool m_selectionStretchChanged = false;
 
     // Alt+drag copy state
     std::vector<int> copyDragIndices_;
@@ -561,6 +590,8 @@ private:
 
     // Helpers
     int findNoteAt(float localX, float localY);
+    NUIRect selectionTimeBoundsRect() const;
+    NUIRect selectionStretchHandleRect() const;
     void commitNotes();
     double snapToGrid(double beat);
     int snapPitchToScale(int pitch);
@@ -571,8 +602,10 @@ private:
     void auditionStop();
 
     // Paint-brush: stamp one snapped note at the cursor cell if empty, used for
-    // Ctrl+pencil drag strokes. Returns true if a note was added.
+    // Shift+pencil drag strokes. Chord mode stamps the active triad. Returns
+    // true if at least one note was added.
     bool paintBrushAt(float localX, float localY);
+    bool eraseStrokeChanged_ = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -653,6 +686,7 @@ public:
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb);
     void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb);
+    void setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb);
     void setOnPlayheadScrubbed(std::function<void(double beat, bool active)> cb);
 
     void setPixelsPerBeat(float ppb);
@@ -662,6 +696,10 @@ public:
     void setTool(GlobalTool tool);
     void setScale(int root, ScaleType type);
     void setSnapToScale(bool enabled);
+    void applyHarmonyContextEdit(int root, ScaleType type, bool snapToScale);
+    int getRootKey() const;
+    ScaleType getScaleType() const;
+    bool getSnapToScale() const;
 
     /** @brief Set platform bridge for cursor style changes (forwarded to note layer). */
     void setPlatformBridge(NUIPlatformBridge* bridge);
@@ -706,6 +744,7 @@ private:
     void layoutChildren();
     void updateScrollbars(); // Renamed to updateNavigation?
     void renderShortcutHelp(NUIRenderer& renderer);
+    void applyZoom(float factor, float anchorX);
 };
 
 } // namespace AestraUI

@@ -85,8 +85,12 @@ void SamplerPlugin::setSampleWindow(float startNorm, float endNorm) noexcept {
     m_loopEndNorm.store(end, std::memory_order_relaxed);
 }
 
+void SamplerPlugin::setLoopMode(LoopMode mode) noexcept {
+    m_loopMode.store(static_cast<int>(mode), std::memory_order_relaxed);
+}
+
 void SamplerPlugin::setLoopEnabled(bool enabled) noexcept {
-    m_loopEnabled.store(enabled, std::memory_order_relaxed);
+    setLoopMode(enabled ? LoopMode::Forward : LoopMode::OneShot);
 }
 
 void SamplerPlugin::setMaxVoices(int maxVoices) noexcept {
@@ -101,6 +105,10 @@ void SamplerPlugin::setMonoMode(bool mono) noexcept {
     m_monoMode.store(mono, std::memory_order_relaxed);
 }
 
+void SamplerPlugin::setCutSelfMode(bool cutSelf) noexcept {
+    m_cutSelfMode.store(cutSelf, std::memory_order_relaxed);
+}
+
 void SamplerPlugin::setGlideTimeMs(float glideTimeMs) noexcept {
     m_glideTimeMs.store(std::clamp(glideTimeMs, 0.0f, 2000.0f), std::memory_order_relaxed);
 }
@@ -112,6 +120,17 @@ float SamplerPlugin::getCoarseSemitones() const noexcept {
 
 float SamplerPlugin::getFineTuneCents() const noexcept {
     return m_fineTuneCents.load(std::memory_order_relaxed);
+}
+
+SamplerPlugin::LoopMode SamplerPlugin::getLoopMode() const noexcept {
+    switch (m_loopMode.load(std::memory_order_relaxed)) {
+    case static_cast<int>(LoopMode::Forward):
+        return LoopMode::Forward;
+    case static_cast<int>(LoopMode::PingPong):
+        return LoopMode::PingPong;
+    default:
+        return LoopMode::OneShot;
+    }
 }
 
 bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
@@ -261,6 +280,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.position = 0.0;
             v.playbackRate = 1.0;
             v.targetPlaybackRate = 1.0;
+            v.playbackDirection = 1;
             v.glideActive = false;
             v.stageTime = 0.0;
             v.currentGain = 0.0f;
@@ -300,7 +320,10 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     const double startFrame = startNorm * (totalFrames - 1.0);
     const double endFrame = std::max(startFrame + 1.0, endNorm * totalFrames);
     const double loopLength = std::max(1.0, endFrame - startFrame);
-    const bool loopEnabled = m_loopEnabled.load(std::memory_order_relaxed);
+    const double pingPongEndFrame = std::max(startFrame, std::min(totalFrames - 1.0, endFrame - 1.0));
+    const double pingPongSpan = pingPongEndFrame - startFrame;
+    const LoopMode loopMode = getLoopMode();
+    const bool loopEnabled = loopMode != LoopMode::OneShot;
     int activeVoiceCount = 0;
     for (const auto& v : m_voices) {
         if (v.active) {
@@ -390,15 +413,41 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             }
 
             // Sample Lookup
-            if (v.position < startFrame) {
-                v.position = startFrame;
-            }
-            if (v.position >= endFrame) {
-                if (loopEnabled) {
+            if (loopMode == LoopMode::PingPong) {
+                // Fold any boundary overshoot into a triangle wave. This remains
+                // bounded even when extreme pitch makes one frame cross the loop
+                // multiple times, and avoids a callback-time correction loop.
+                if (pingPongSpan <= 1.0e-9) {
+                    v.position = startFrame;
+                    v.playbackDirection = 1;
+                } else if (v.playbackDirection >= 0 && v.position > pingPongEndFrame) {
+                    const double cycle = std::fmod(v.position - pingPongEndFrame, pingPongSpan * 2.0);
+                    if (cycle <= pingPongSpan) {
+                        v.position = pingPongEndFrame - cycle;
+                        v.playbackDirection = -1;
+                    } else {
+                        v.position = startFrame + (cycle - pingPongSpan);
+                        v.playbackDirection = 1;
+                    }
+                } else if (v.playbackDirection < 0 && v.position < startFrame) {
+                    const double cycle = std::fmod(startFrame - v.position, pingPongSpan * 2.0);
+                    if (cycle <= pingPongSpan) {
+                        v.position = startFrame + cycle;
+                        v.playbackDirection = 1;
+                    } else {
+                        v.position = pingPongEndFrame - (cycle - pingPongSpan);
+                        v.playbackDirection = -1;
+                    }
+                }
+            } else {
+                if (v.position < startFrame) {
+                    v.position = startFrame;
+                }
+                if (v.position >= endFrame && loopMode == LoopMode::Forward) {
                     const double offset = v.position - startFrame;
                     const double wraps = std::floor(offset / loopLength);
                     v.position = startFrame + offset - wraps * loopLength;
-                } else {
+                } else if (v.position >= endFrame) {
                     v.active = false;
                     activeVoiceCountDirty = true;
                     continue;
@@ -426,7 +475,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             R += outR * gain * v.gainR;
 
             // Advance
-            v.position += v.playbackRate;
+            v.position += v.playbackRate * static_cast<double>(
+                                                 loopMode == LoopMode::PingPong ? v.playbackDirection : 1);
         }
 
         // Guard against non-finite output: sinc interpolation at extreme
@@ -501,6 +551,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 voice.position = noteStartFrame;
                 voice.playbackRate = targetRate;
                 voice.targetPlaybackRate = targetRate;
+                voice.playbackDirection = 1;
                 voice.glideActive = false;
                 voice.stage = EnvStage::Attack;
                 voice.stageTime = 0.0;
@@ -510,6 +561,23 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         }
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
+
+        // Cut-self: a new trigger on the same note chokes any previous voice
+        // playing it, so retriggered one-shots (e.g. an 808 in an ordinary
+        // sampler) never overlap. Explicit voice-layer policy — independent
+        // of mono mode, ADSR, and unit type. Different notes stay polyphonic.
+        if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            for (auto& v : m_voices) {
+                if (v.active && v.note == note) {
+                    v.active = false;
+                    v.stage = EnvStage::Off;
+                    v.stageTime = 0.0;
+                    v.currentGain = 0.0f;
+                    v.releaseGain = 0.0f;
+                }
+            }
+        }
+
         double noteStartFrame = 0.0;
         if (currentData && currentData->channels > 0) {
             const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
@@ -556,6 +624,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->position = noteStartFrame;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
+        freeVoice->playbackDirection = 1;
         freeVoice->glideActive = false;
         freeVoice->stage = EnvStage::Attack;
         freeVoice->stageTime = 0.0;
@@ -669,10 +738,15 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
     json.set("fineTuneCents", Aestra::JSON(static_cast<double>(m_fineTuneCents.load(std::memory_order_relaxed))));
     json.set("loopStartNorm", Aestra::JSON(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed))));
     json.set("loopEndNorm", Aestra::JSON(static_cast<double>(m_loopEndNorm.load(std::memory_order_relaxed))));
-    json.set("loopEnabled", Aestra::JSON(m_loopEnabled.load(std::memory_order_relaxed)));
+    const LoopMode loopMode = getLoopMode();
+    json.set("loopMode", Aestra::JSON(static_cast<double>(static_cast<int>(loopMode))));
+    // Retain the old boolean so older builds can still open new forward or
+    // bidirectional projects as an ordinary enabled loop.
+    json.set("loopEnabled", Aestra::JSON(loopMode != LoopMode::OneShot));
     json.set("maxVoices", Aestra::JSON(static_cast<double>(m_maxVoices.load(std::memory_order_relaxed))));
     json.set("rootMidiNote", Aestra::JSON(static_cast<double>(m_rootMidiNote.load(std::memory_order_relaxed))));
     json.set("monoMode", Aestra::JSON(m_monoMode.load(std::memory_order_relaxed)));
+    json.set("cutSelfMode", Aestra::JSON(m_cutSelfMode.load(std::memory_order_relaxed)));
     json.set("glideTimeMs", Aestra::JSON(static_cast<double>(m_glideTimeMs.load(std::memory_order_relaxed))));
 
     // Sample Path
@@ -712,8 +786,15 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         const float endNorm = json.has("loopEndNorm") ? static_cast<float>(json["loopEndNorm"].asNumber()) : 1.0f;
         setSampleWindow(startNorm, endNorm);
     }
-    if (json.has("loopEnabled")) {
-        m_loopEnabled.store(json["loopEnabled"].asBool(), std::memory_order_relaxed);
+    // New state carries the complete mode. Historical state only had the
+    // enabled flag, which maps losslessly to one-shot or forward playback.
+    if (json.has("loopMode")) {
+        const int storedMode = static_cast<int>(json["loopMode"].asNumber());
+        setLoopMode(storedMode == static_cast<int>(LoopMode::PingPong)
+                        ? LoopMode::PingPong
+                        : (storedMode == static_cast<int>(LoopMode::Forward) ? LoopMode::Forward : LoopMode::OneShot));
+    } else if (json.has("loopEnabled")) {
+        setLoopEnabled(json["loopEnabled"].asBool());
     }
     if (json.has("maxVoices")) {
         setMaxVoices(static_cast<int>(json["maxVoices"].asNumber()));
@@ -723,6 +804,9 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     }
     if (json.has("monoMode")) {
         setMonoMode(json["monoMode"].asBool());
+    }
+    if (json.has("cutSelfMode")) {
+        setCutSelfMode(json["cutSelfMode"].asBool());
     }
     if (json.has("glideTimeMs")) {
         setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));

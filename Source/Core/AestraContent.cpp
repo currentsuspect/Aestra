@@ -961,7 +961,12 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setSampleWindow(loopPoints.start, loopPoints.end);
-        sampler->setLoopEnabled(loopPoints.mode != SampleEditorPanel::LoopMode::OneShot);
+        const auto mode = loopPoints.mode == SampleEditorPanel::LoopMode::PingPong
+                              ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong
+                              : (loopPoints.mode == SampleEditorPanel::LoopMode::Loop
+                                     ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward
+                                     : Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot);
+        sampler->setLoopMode(mode);
     };
     m_sampleEditorPanel->onPitchTuneChanged = [this](const SampleEditorPanel::PitchTune& pitchTune) {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -972,6 +977,7 @@ void AestraContent::setupArsenalPanels() {
         if (!sampler) {
             return;
         }
+        sampler->setRootMidiNote(pitchTune.rootMidiNote);
         sampler->setCoarseSemitones(static_cast<float>(pitchTune.coarse));
         sampler->setFineTuneCents(pitchTune.fine);
     };
@@ -996,6 +1002,17 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setMonoMode(monoMode);
+    };
+    m_sampleEditorPanel->onCutSelfModeChanged = [this](bool cutSelf) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setCutSelfMode(cutSelf);
     };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -2493,16 +2510,9 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
     if (visible) {
         // Calculate initial position on first show (if position is at origin)
         if (m_viewState.sequencerRect.x == 0 && m_viewState.sequencerRect.y == 0) {
-            AestraUI::NUIRect safe = computeSafeRect();
-            // Position below title bar with some margin
-            float titleBarHeight = 35.0f;
-            float margin = 10.0f;
-            m_viewState.sequencerRect.x = margin;
-            m_viewState.sequencerRect.y = titleBarHeight + safe.y + margin;
-
-            // Clamp to allowed area
             AestraUI::NUIRect allowed = computeAllowedRectForPanels();
-            m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+            m_viewState.sequencerRect = {
+                allowed.x, allowed.y, allowed.width, std::min(300.0f, allowed.height)};
         }
 
         m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, computeAllowedRectForPanels());
@@ -3145,15 +3155,32 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
             AESTRA_LOG_DEBUG("[Arsenal] Focus-aware stop");
+            if (hardStop) {
+                // Zero the cue BEFORE the stop command goes out: stop() pushes the
+                // stored play-start into the command, and the audio thread's drain is
+                // authoritative — a UI-side rewind after the fact races it.
+                m_trackManager->setPlayStartPosition(0.0);
+            }
             m_trackManager->stopArsenalPlayback(true);
         }
         if (hardStop && m_audioEngine) {
             m_audioEngine->panic();
         }
+        if (hardStop && m_trackManager) {
+            m_trackManager->setPlayStartPosition(0.0);
+            m_trackManager->setPosition(0.0);
+            m_trackManager->clearDisplayPositionOverride();
+            if (m_audioEngine) {
+                m_audioEngine->setGlobalSamplePos(0);
+            }
+        }
         return;
     }
 
     if (m_trackManager) {
+        if (hardStop) {
+            m_trackManager->setPlayStartPosition(0.0);
+        }
         m_trackManager->stop();
     }
     if (hardStop && m_audioEngine) {
@@ -3818,15 +3845,27 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     SampleEditorPanel::LoopPoints loop;
     loop.start = sampler->getLoopStartNorm();
     loop.end = sampler->getLoopEndNorm();
-    loop.mode = sampler->isLoopEnabled() ? SampleEditorPanel::LoopMode::Loop : SampleEditorPanel::LoopMode::OneShot;
+    switch (sampler->getLoopMode()) {
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong:
+        loop.mode = SampleEditorPanel::LoopMode::PingPong;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward:
+        loop.mode = SampleEditorPanel::LoopMode::Loop;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot:
+        loop.mode = SampleEditorPanel::LoopMode::OneShot;
+        break;
+    }
     m_sampleEditorPanel->setLoopPoints(loop);
 
     SampleEditorPanel::PitchTune pitch;
+    pitch.rootMidiNote = sampler->getRootMidiNote();
     pitch.coarse = static_cast<int>(std::round(sampler->getCoarseSemitones()));
     pitch.fine = sampler->getFineTuneCents();
     m_sampleEditorPanel->setPitchTune(pitch);
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
+    m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {

@@ -69,9 +69,8 @@ void PianoRollToolbar::setupUI() {
         auto rootMenu = std::make_shared<NUIContextMenu>();
         auto roots = MusicTheory::getRootNames();
         for (size_t i = 0; i < roots.size(); ++i) {
-            rootMenu->addItem(roots[i], [this, i]() {
-                if (auto g = grid_.lock()) g->setRootKey(static_cast<int>(i));
-                if (auto n = notes_.lock()) n->setRootKey(static_cast<int>(i));
+            rootMenu->addRadioItem(roots[i], "piano-roll-root", m_rootKey == static_cast<int>(i), [this, i]() {
+                applyHarmonyContextEdit(static_cast<int>(i), m_scaleType, m_snapToScale);
             });
         }
         menu->addSubmenu("Root Key", rootMenu);
@@ -80,22 +79,16 @@ void PianoRollToolbar::setupUI() {
         auto scaleMenu = std::make_shared<NUIContextMenu>();
         auto scales = MusicTheory::getScales();
         for (size_t i = 0; i < scales.size(); ++i) {
-            scaleMenu->addItem(scales[i].name, [this, i]() {
-                if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(i));
-                if (auto n = notes_.lock()) n->setScaleType(static_cast<ScaleType>(i));
+            scaleMenu->addRadioItem(scales[i].name, "piano-roll-scale",
+                                    m_scaleType == static_cast<ScaleType>(i), [this, i]() {
+                applyHarmonyContextEdit(m_rootKey, static_cast<ScaleType>(i), m_snapToScale);
             });
         }
         menu->addSubmenu("Scale Type", scaleMenu);
 
         // --- SNAP TO SCALE TOGGLE ---
-        bool snapToScaleActive = false;
-        if (auto n = notes_.lock()) {
-            snapToScaleActive = n->getSnapToScale();
-        }
-        menu->addCheckbox("Snap to Scale", snapToScaleActive, [this](bool) {
-            if (auto n = notes_.lock()) {
-                n->setSnapToScale(!n->getSnapToScale());
-            }
+        menu->addCheckbox("Snap to Scale", m_snapToScale, [this](bool enabled) {
+            applyHarmonyContextEdit(m_rootKey, m_scaleType, enabled);
         });
 
         // --- CHORD MODE TOGGLE (pencil stamps a diatonic triad) ---
@@ -121,6 +114,11 @@ void PianoRollToolbar::setupUI() {
             });
         }
         menu->addSubmenu("Strum Selection", strumMenu);
+
+        // --- SUBDIVIDE ---
+        menu->addItem("Subdivide Selection", [this]() {
+            if (auto n = notes_.lock()) n->subdivideSelectedNotes();
+        });
 
         // --- HUMANIZE ---
         menu->addItem("Humanize Velocity", [this]() {
@@ -276,6 +274,31 @@ void PianoRollToolbar::setUnitChoices(const std::vector<PatternChoice>& choices,
     m_unitDropdown->setSelectedByValue(selectedValue);
     m_updatingUnitDropdown = false;
     repaint();
+}
+
+void PianoRollToolbar::setHarmonyContext(int rootKey, ScaleType scaleType, bool snapToScale) {
+    const int scaleIndex = std::clamp(static_cast<int>(scaleType), 0, static_cast<int>(ScaleType::Count) - 1);
+    m_rootKey = std::clamp(rootKey, 0, 11);
+    m_scaleType = static_cast<ScaleType>(scaleIndex);
+    m_snapToScale = snapToScale;
+
+    if (auto grid = grid_.lock()) {
+        grid->setRootKey(m_rootKey);
+        grid->setScaleType(m_scaleType);
+    }
+    if (auto notes = notes_.lock()) {
+        notes->setRootKey(m_rootKey);
+        notes->setScaleType(m_scaleType);
+        notes->setSnapToScale(m_snapToScale);
+    }
+    repaint();
+}
+
+void PianoRollToolbar::applyHarmonyContextEdit(int rootKey, ScaleType scaleType, bool snapToScale) {
+    setHarmonyContext(rootKey, scaleType, snapToScale);
+    if (onHarmonyContextChanged_) {
+        onHarmonyContextChanged_(m_rootKey, m_scaleType, m_snapToScale);
+    }
 }
 
 
