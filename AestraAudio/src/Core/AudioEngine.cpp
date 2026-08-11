@@ -1589,6 +1589,12 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         return false;
     }
 
+    // Test-only fault injection (#731): throw before any mutation so the
+    // exception path is deterministic and sanitizer-safe (no huge allocs).
+    if (m_simulateBufferConfigAllocFailure) {
+        throw std::bad_alloc();
+    }
+
     // Treat maxFrames as a hint; never shrink RT buffers.
     // Some drivers deliver larger blocks than requested, and shrinking can cause
     // renderGraph() to early-out -> audible crackles.

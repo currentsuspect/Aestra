@@ -661,6 +661,17 @@ public:
         return 0.0;
     }
 
+public:
+    /**
+     * @brief Test-only fault injection (#731): makes the next setBufferConfig
+     * attempt throw std::bad_alloc before any mutation, deterministically and
+     * sanitizer-safe (no astronomically-sized allocations, which LSan/TSan
+     * interceptors abort on instead of throwing).
+     */
+    void setSimulateBufferConfigAllocFailure(bool simulate) {
+        m_simulateBufferConfigAllocFailure = simulate;
+    }
+
 private:
     /**
      * @brief Withdraw all applied latency compensation from the RT state.
@@ -801,6 +812,11 @@ private:
 
     std::atomic<uint32_t> m_sampleRate{48000};
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
+    // Test-only fault injection: makes setBufferConfig throw std::bad_alloc
+    // at the first allocation, deterministically (sanitizer-safe: no
+    // astronomically-sized allocs, which LSan/TSan interceptors abort on).
+    // Set via the public setSimulateBufferConfigAllocFailure() test hook.
+    bool m_simulateBufferConfigAllocFailure{false};
     // Admission gate for RT-callback vs buffer-config mutual exclusion (#731).
     // High bit: owned by setBufferConfig while it resizes RT-visible storage.
     // Lower 31 bits: count of processBlock() callbacks currently in flight.

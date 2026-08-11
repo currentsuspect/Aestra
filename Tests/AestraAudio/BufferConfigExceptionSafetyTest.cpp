@@ -14,17 +14,15 @@
 //   3. Repeated throwing attempts must never wedge the engine: it keeps
 //      rendering silence afterwards (the documented no-content output).
 //
-// The absurd allocation is refused deterministically: a single buffer of
-// UINT32_MAX frames exceeds every platform's address space / commit budget, so
-// vector resize throws std::bad_alloc on the first failure path. If a future
-// platform does NOT throw here, the test fails loudly instead of silently
-// passing.
+// The allocation failure is injected through a test-only fault-injection flag
+// on AudioEngine (setSimulateBufferConfigAllocFailure), so the exception path
+// is deterministic on every platform and sanitizer-safe — astronomically-sized
+// allocations would trip LSan's size interceptor and TSan's shadow allocator
+// instead of throwing.
 
 #include "Core/AudioEngine.h"
 
 #include <cstdio>
-#include <cstdint>
-#include <limits>
 #include <vector>
 
 using namespace Aestra::Audio;
@@ -70,17 +68,19 @@ void renderSilenceBlock(AudioEngine& engine) {
     CHECK(clean);
 }
 
-// Attempt a config that must throw (allocation failure), asserting it does.
+// Attempt a config with the fault-injection flag set; assert it throws.
 void attemptThrowingConfig(AudioEngine& engine) {
+    engine.setSimulateBufferConfigAllocFailure(true);
     bool threw = false;
     try {
-        engine.setBufferConfig(std::numeric_limits<uint32_t>::max(), 4);
+        engine.setBufferConfig(8192, 4);
     } catch (const std::exception&) {
         threw = true;
     }
+    engine.setSimulateBufferConfigAllocFailure(false);
     if (!threw) {
         std::fprintf(stderr, "FAIL (line %d): %s\n", __LINE__,
-                     "absurd buffer config must throw on this platform");
+                     "injected allocation failure must throw");
         ++g_failures;
     }
 }
