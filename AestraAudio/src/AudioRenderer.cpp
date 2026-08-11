@@ -93,26 +93,31 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
         if (track.trackIndex >= state.trackStates.size())
             continue;
 
-        // If we are isolating a track, skip others.
-        if (ctx.isolatedTrackIndex >= 0 && track.trackIndex != (uint32_t)ctx.isolatedTrackIndex) {
-            continue;
-        }
-
         TrackRTState& trackState = state.trackStates[track.trackIndex];
 
-        // 1. Render Clips (Generates Audio) -> track.selfBuffer
-        renderClipAudio(track.selfBuffer, trackState, track.trackIndex, ctx, engineRef);
+        // When isolating a track, only that track renders clips and units.
+        // Every track still applies its strip and routes its connections so
+        // content that arrived via sends or bus routing reaches master (#761).
+        const bool rendersClips =
+            ctx.isolatedTrackIndex < 0 || track.trackIndex == (uint32_t)ctx.isolatedTrackIndex;
 
-        // 1.5 Render units assigned to this track's stable mixer identity.
-        if (track.trackIndex < ctx.graph->tracks.size()) {
-            renderArsenalUnitsForTrack(ctx.graph->tracks[track.trackIndex].trackId, track.selfBuffer, ctx, engineRef);
+        if (rendersClips) {
+            // 1. Render Clips (Generates Audio) -> track.selfBuffer
+            renderClipAudio(track.selfBuffer, trackState, track.trackIndex, ctx, engineRef);
+
+            // 1.5 Render units assigned to this track's stable mixer identity.
+            if (track.trackIndex < ctx.graph->tracks.size()) {
+                renderArsenalUnitsForTrack(ctx.graph->tracks[track.trackIndex].trackId, track.selfBuffer, ctx,
+                                           engineRef);
+            }
         }
 
         // 2. Process Effects (In-Place) -> track.selfBuffer
         processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph, ctx.isOffline);
 
         // 3. Calculate Track Meter Peaks (post-fader)
-        if (!ctx.isOffline && track.selfBuffer && snaps && slotMap && track.trackIndex < ctx.graph->tracks.size()) {
+        if (rendersClips && !ctx.isOffline && track.selfBuffer && snaps && slotMap &&
+            track.trackIndex < ctx.graph->tracks.size()) {
             const auto& graphTrack = ctx.graph->tracks[track.trackIndex];
             const uint32_t slotIdx = slotMap->getSlotIndex(graphTrack.trackId);
 

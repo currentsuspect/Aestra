@@ -225,7 +225,30 @@ void TrackManagerUI::refreshTracks() {
 
         trackUI->setOnSendToAudition([this, i, lane]() {
             if (this->m_onSendToAudition) {
-                this->m_onSendToAudition(static_cast<uint32_t>(i), lane->name);
+                // Resolve the lane to a mixer channel position: lanes and mixer
+                // channels are separate domains (a lane can be arrangement-only
+                // or its clips routed to any channel), so the lane index is not
+                // a valid channel position (#761 review). Use the first clip's
+                // mixer channel; fall back to the lane index when unresolved.
+                uint32_t channelIndex = static_cast<uint32_t>(i);
+                for (const auto& clip : lane->clips) {
+                    if (!clip.patternId.isValid())
+                        continue;
+                    auto* pattern = this->m_trackManager->getPatternManager().getPattern(clip.patternId);
+                    if (!pattern)
+                        continue;
+                    const uint32_t channelId = pattern->getMixerChannelId();
+                    for (size_t c = 0; c < this->m_trackManager->getChannelCount(); ++c) {
+                        if (const auto* channel = this->m_trackManager->getChannel(c)) {
+                            if (channel->getChannelId() == channelId) {
+                                channelIndex = static_cast<uint32_t>(c);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+                this->m_onSendToAudition(channelIndex, lane->name);
             }
         });
 
