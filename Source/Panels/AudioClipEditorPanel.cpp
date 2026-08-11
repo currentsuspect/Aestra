@@ -100,7 +100,7 @@ std::string formatGainDb(float linear) {
 bool editsEqual(const ClipEdits& a, const ClipEdits& b) {
     return a.fadeInBeats == b.fadeInBeats && a.fadeOutBeats == b.fadeOutBeats && a.gainLinear == b.gainLinear &&
            a.pan == b.pan && a.muted == b.muted && a.playbackRate == b.playbackRate &&
-           a.sourceStart == b.sourceStart;
+           a.pitchSemitones == b.pitchSemitones && a.sourceStart == b.sourceStart;
 }
 
 } // namespace
@@ -175,17 +175,19 @@ void AudioClipEditorPanel::buildUI() {
     m_fadeInLabel = makeLabel("Fade in");
     m_fadeOutLabel = makeLabel("Fade out");
     m_pitchLabel = makeLabel("Pitch");
+    m_speedLabel = makeLabel("Speed");
     m_sourceStartLabel = makeLabel("Start");
     m_gainValueLabel = makeLabel("-5.0 dB", 10.0f);
     m_panValueLabel = makeLabel("Center", 10.0f);
     m_fadeInValueLabel = makeLabel("0.00 beats", 10.0f);
     m_fadeOutValueLabel = makeLabel("0.00 beats", 10.0f);
-    m_pitchValueLabel = makeLabel("0.0 st  •  1.00x", 10.0f);
+    m_pitchValueLabel = makeLabel("0.0 st", 10.0f);
+    m_speedValueLabel = makeLabel("1.00x", 10.0f);
     m_sourceStartValueLabel = makeLabel("0.000 s", 10.0f);
     m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 10.0f);
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
     for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
-                              m_pitchValueLabel, m_sourceStartValueLabel}) {
+                              m_pitchValueLabel, m_speedValueLabel, m_sourceStartValueLabel}) {
         value->setAlignment(NUILabel::Alignment::Right);
     }
 
@@ -193,8 +195,9 @@ void AudioClipEditorPanel::buildUI() {
     m_panSlider = makeSlider("Clip pan", -1.0, 1.0, 0.0);
     m_fadeInSlider = makeSlider("Fade in", 0.0, 4.0, 0.0);
     m_fadeOutSlider = makeSlider("Fade out", 0.0, 4.0, 0.0);
-    m_pitchSlider = makeSlider("Clip pitch (varispeed)", ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones,
-                               0.0, pitchAccent());
+    m_pitchSlider = makeSlider("Clip pitch", ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones, 0.0,
+                               pitchAccent());
+    m_speedSlider = makeSlider("Clip speed", 0.25, 4.0, 1.0);
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
@@ -242,9 +245,11 @@ void AudioClipEditorPanel::buildUI() {
     wireSlider(m_fadeOutSlider, [](ClipEdits& edits, double value) { edits.fadeOutBeats = static_cast<float>(value); });
     wireSlider(
         m_pitchSlider,
-        [](ClipEdits& edits, double value) {
-            edits.playbackRate = ClipEdits::playbackRateFromSemitones(static_cast<float>(value));
-        },
+        [](ClipEdits& edits, double value) { edits.pitchSemitones = static_cast<float>(value); },
+        true);
+    wireSlider(
+        m_speedSlider,
+        [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); },
         true);
     wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
         const double projectRate =
@@ -292,7 +297,7 @@ void AudioClipEditorPanel::buildUI() {
         // changes nothing audible.
         if (m_workingEdits.gainLinear == 1.0f && m_workingEdits.fadeInBeats == 0.0f &&
             m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.playbackRate == 1.0f &&
-            m_workingEdits.sourceStart == 0.0)
+            m_workingEdits.pitchSemitones == 0.0f && m_workingEdits.sourceStart == 0.0)
             return;
         auto command = std::make_shared<CommitAudioClipEditsCommand>(*m_trackManager, m_clipId);
         m_trackManager->getCommandHistory().pushAndExecute(command);
@@ -391,7 +396,12 @@ void AudioClipEditorPanel::rebuildWaveform() {
         buffer->numChannels == 1 ? "Mono" : (buffer->numChannels == 2 ? "Stereo" : "Multichannel");
     const float playbackRate =
         std::isfinite(m_workingEdits.playbackRate) ? std::clamp(m_workingEdits.playbackRate, 0.25f, 4.0f) : 1.0f;
-    const double outputDurationSeconds = buffer->durationSeconds() / playbackRate;
+    const float pitchSemitones =
+        std::isfinite(m_workingEdits.pitchSemitones)
+            ? std::clamp(m_workingEdits.pitchSemitones, ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones)
+            : 0.0f;
+    const double varispeed = static_cast<double>(playbackRate) * std::pow(2.0, pitchSemitones / 12.0);
+    const double outputDurationSeconds = buffer->durationSeconds() / varispeed;
     m_sourceMetaLabel->setText(
         formatFixed(buffer->durationSeconds(), 2) + " s source  •  " + formatFixed(outputDurationSeconds, 2) +
         " s output  •  " + std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
@@ -430,7 +440,7 @@ void AudioClipEditorPanel::rebuildWaveform() {
         const size_t sampleStride = std::max<size_t>(1, framesPerBucket / 256);
         for (size_t outputFrame = begin; outputFrame < end; outputFrame += sampleStride) {
             const double phase =
-                static_cast<double>(sourceStartFrame) + static_cast<double>(outputFrame) * playbackRate;
+                static_cast<double>(sourceStartFrame) + static_cast<double>(outputFrame) * varispeed;
             if (phase >= static_cast<double>(sourceEndFrame))
                 continue;
             const size_t frame = static_cast<size_t>(phase);
@@ -450,7 +460,7 @@ void AudioClipEditorPanel::rebuildWaveform() {
         m_waveformData.push_back(minimum);
     }
     m_waveform->setWaveformData(m_waveformData);
-    m_waveformTitleLabel->setText(std::abs(playbackRate - 1.0f) < 1.0e-5f
+    m_waveformTitleLabel->setText(std::abs(varispeed - 1.0) < 1.0e-5
                                       ? "WAVEFORM"
                                       : "PITCHED WAVEFORM  •  " + formatFixed(outputDurationSeconds, 2) + " s");
 }
@@ -517,7 +527,8 @@ void AudioClipEditorPanel::syncControlsFromModel() {
     m_fadeOutSlider->setRange(0.0, fadeMaximum);
     m_fadeInSlider->setValue(std::min<double>(m_workingEdits.fadeInBeats, fadeMaximum));
     m_fadeOutSlider->setValue(std::min<double>(m_workingEdits.fadeOutBeats, fadeMaximum));
-    m_pitchSlider->setValue(ClipEdits::semitonesFromPlaybackRate(m_workingEdits.playbackRate));
+    m_pitchSlider->setValue(m_workingEdits.pitchSemitones);
+    m_speedSlider->setValue(m_workingEdits.playbackRate);
     const double projectRate = std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate());
     const double sourceStartSeconds = std::max(0.0, m_workingEdits.sourceStart) / projectRate;
     const double sourceStartMaximum = std::max(0.001, m_sourceDurationSeconds);
@@ -540,10 +551,10 @@ void AudioClipEditorPanel::updateValueLabels() {
     }
     m_fadeInValueLabel->setText(formatFixed(m_workingEdits.fadeInBeats, 2) + " beats");
     m_fadeOutValueLabel->setText(formatFixed(m_workingEdits.fadeOutBeats, 2) + " beats");
-    const float pitchSemitones = ClipEdits::semitonesFromPlaybackRate(m_workingEdits.playbackRate);
+    const float pitchSemitones = m_workingEdits.pitchSemitones;
     const std::string pitchSign = pitchSemitones > 0.049f ? "+" : "";
-    m_pitchValueLabel->setText(pitchSign + formatFixed(pitchSemitones, 1) + " st  •  " +
-                               formatFixed(m_workingEdits.playbackRate, 2) + "x");
+    m_pitchValueLabel->setText(pitchSign + formatFixed(pitchSemitones, 1) + " st");
+    m_speedValueLabel->setText(formatFixed(m_workingEdits.playbackRate, 2) + "x");
     const double projectRate =
         m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
     m_sourceStartValueLabel->setText(formatFixed(std::max(0.0, m_workingEdits.sourceStart) / projectRate, 3) + " s");
@@ -655,6 +666,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     layoutControl(left, controlsTop + 78.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
     layoutControl(left, controlsTop + 124.0f, m_panLabel, m_panSlider, m_panValueLabel);
     layoutControl(left, controlsTop + 170.0f, m_pitchLabel, m_pitchSlider, m_pitchValueLabel);
+    layoutControl(left, controlsTop + 216.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
     layoutControl(right, controlsTop + 78.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
     layoutControl(right, controlsTop + 124.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
     layoutControl(right, controlsTop + 170.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);

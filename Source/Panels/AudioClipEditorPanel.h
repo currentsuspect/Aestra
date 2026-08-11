@@ -67,12 +67,14 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_fadeInLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeOutLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_speedLabel;
     std::shared_ptr<AestraUI::NUILabel> m_sourceStartLabel;
     std::shared_ptr<AestraUI::NUILabel> m_gainValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_panValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeInValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_fadeOutValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_speedValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_sourceStartValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUISlider> m_gainSlider;
@@ -80,6 +82,7 @@ private:
     std::shared_ptr<AestraUI::NUISlider> m_fadeInSlider;
     std::shared_ptr<AestraUI::NUISlider> m_fadeOutSlider;
     std::shared_ptr<AestraUI::NUISlider> m_pitchSlider;
+    std::shared_ptr<AestraUI::NUISlider> m_speedSlider;
     std::shared_ptr<AestraUI::NUISlider> m_sourceStartSlider;
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_normalizeButton;

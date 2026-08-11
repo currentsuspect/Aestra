@@ -549,6 +549,12 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     const double playbackRate = std::isfinite(clip.edits.playbackRate)
                                     ? std::clamp(static_cast<double>(clip.edits.playbackRate), 0.25, 4.0)
                                     : 1.0;
+    const double pitchSemitones = std::isfinite(clip.edits.pitchSemitones)
+                                      ? std::clamp(static_cast<double>(clip.edits.pitchSemitones), -24.0, 24.0)
+                                      : 0.0;
+    // Pitch and speed share the varispeed envelope, matching the render path
+    // (ClipRenderKernel) so the preview consumes source frames like the audio.
+    const double varispeed = std::clamp(playbackRate * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
 
     double projectSampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
     size_t scaledSourceOffset = static_cast<size_t>(std::round(static_cast<double>(sourceOffset) * (sampleRate / projectSampleRate)));
@@ -558,8 +564,8 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     const double visibleOutputStart = static_cast<double>(offsetRatio) * timelineFrames;
     const double visibleOutputEnd = static_cast<double>(offsetRatio + visibleRatio) * timelineFrames;
-    const double exactStart = static_cast<double>(scaledSourceOffset) + visibleOutputStart * playbackRate;
-    const double exactEnd = static_cast<double>(scaledSourceOffset) + visibleOutputEnd * playbackRate;
+    const double exactStart = static_cast<double>(scaledSourceOffset) + visibleOutputStart * varispeed;
+    const double exactEnd = static_cast<double>(scaledSourceOffset) + visibleOutputEnd * varispeed;
     size_t startFrame = static_cast<size_t>(exactStart);
     size_t endFrame = static_cast<size_t>(exactEnd);
     startFrame = std::min(startFrame, totalFrames);
@@ -573,7 +579,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     AestraUI::NUIRect audibleBounds = bounds;
     const double visibleOutputFrames = visibleOutputEnd - visibleOutputStart;
     const double availableOutputEnd =
-        (static_cast<double>(totalFrames) - static_cast<double>(scaledSourceOffset)) / playbackRate;
+        (static_cast<double>(totalFrames) - static_cast<double>(scaledSourceOffset)) / varispeed;
     if (visibleOutputFrames > 0.0 && availableOutputEnd < visibleOutputEnd) {
         const double audibleOutputFrames = std::max(0.0, availableOutputEnd - visibleOutputStart);
         audibleBounds.width *= static_cast<float>(std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0));
@@ -2327,6 +2333,11 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                     rate = 1.0f;
                                 }
                                 rate = std::clamp(rate, 0.25f, 4.0f);
+                                const float pitchSemitones =
+                                    std::isfinite(clip.edits.pitchSemitones)
+                                        ? std::clamp(clip.edits.pitchSemitones, -24.0f, 24.0f)
+                                        : 0.0f;
+                                rate = std::clamp(rate * std::pow(2.0f, pitchSemitones / 12.0f), 0.25f, 4.0f);
                                 const double secondsPerBeat = playlistModel.beatToSeconds(1.0);
                                 minStart = std::max(
                                     0.0, m_trimOriginalStart - m_trimOriginalSourceOffsetSeconds / (secondsPerBeat * rate));

@@ -1002,6 +1002,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 ejs.set("pan", JSON(static_cast<double>(clip.edits.pan)));
                 ejs.set("muted", JSON(clip.edits.muted));
                 ejs.set("playbackRate", JSON(static_cast<double>(clip.edits.playbackRate)));
+                ejs.set("pitchSemitones", JSON(static_cast<double>(clip.edits.pitchSemitones)));
                 ejs.set("fadeIn", JSON(clip.edits.fadeInBeats));
                 ejs.set("fadeOut", JSON(clip.edits.fadeOutBeats));
                 ejs.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
@@ -2187,6 +2188,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     clip.edits.muted = ej.has("muted") && ej["muted"].isBool() && ej["muted"].asBool();
                                     clip.edits.playbackRate = static_cast<float>(
                                         finiteNumberOr(ej, "playbackRate", 1.0, 0.01, 100.0));
+                                    clip.edits.pitchSemitones = static_cast<float>(
+                                        finiteNumberOr(ej, "pitchSemitones", 0.0, -24.0, 24.0));
                                     clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
                                     clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
                                     clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
