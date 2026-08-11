@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -33,6 +34,11 @@ void check(bool cond, const std::string& label) {
 
 constexpr uint32_t kDeviceA = 1;
 constexpr uint32_t kDeviceB = 2;
+// Input-device switch test reuses the same two enumerated fake devices (both
+// report maxInputChannels == 2 in makeDevice()), just addressed via the
+// input-device role rather than the output-device role.
+constexpr uint32_t kInputDeviceA = kDeviceA;
+constexpr uint32_t kInputDeviceB = kDeviceB;
 
 AudioDeviceInfo makeDevice(uint32_t id, const char* name, bool defOut) {
     AudioDeviceInfo d;
@@ -59,6 +65,9 @@ public:
     std::atomic<int64_t> m_failDeviceId{-1}; // fail openStream for this deviceId (-1 = none)
     std::atomic<bool> m_startShouldFail{false};
     std::atomic<int> m_openCount{0};
+    // When non-zero, getStreamBufferSize() reports this value instead of the
+    // requested config — simulates a backend granting a different buffer size.
+    std::atomic<uint32_t> m_grantedBufferSize{0};
 
     // Enumeration barrier: when armed, getDevices() blocks until released, so a
     // transition on another thread runs while enumeration is mid-flight.
@@ -130,7 +139,10 @@ public:
     bool isStreamRunning() const override { return m_running.load(); }
     double getStreamLatency() const override { return 0.01; }
     uint32_t getStreamSampleRate() const override { return m_config.sampleRate; }
-    uint32_t getStreamBufferSize() const override { return m_config.bufferSize; }
+    uint32_t getStreamBufferSize() const override {
+        const uint32_t granted = m_grantedBufferSize.load();
+        return granted != 0 ? granted : m_config.bufferSize;
+    }
 
     DriverStatistics getStatistics() const override {
         DriverStatistics s;
@@ -396,6 +408,142 @@ void testSafetyDriverStartFailure() {
 
 } // namespace
 
+// 8. Pre-restart config hook: fires with the ACTUAL granted config while the
+//    callback is stopped, before the stream restarts (#731).
+void testPreRestartConfigHookFiresWithActualGrant() {
+    auto h = makeHarness();
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.isStreamRunning(), "stream running before buffer change");
+
+    // Backend grants 1024 even though 512 is requested (larger-than-request is
+    // exactly the case the engine must be configured with).
+    h->primary->m_grantedBufferSize.store(1024);
+
+    std::atomic<int> hookCount{0};
+    std::atomic<bool> runningDuringHook{true};
+    std::atomic<uint32_t> grantedBuffer{0};
+    std::atomic<uint32_t> grantedRate{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig& actual) -> bool {
+        hookCount.fetch_add(1);
+        // Direct driver read: the hook runs under the manager lock and must
+        // not re-enter the manager.
+        runningDuringHook.store(h->primary->isStreamRunning());
+        grantedBuffer.store(actual.bufferSize);
+        grantedRate.store(actual.sampleRate);
+        return true; // Accept configuration
+    });
+
+    check(h->mgr.setBufferSize(512), "buffer size change accepted");
+    check(hookCount.load() == 1, "hook fired exactly once for the reopen");
+    check(!runningDuringHook.load(), "stream callback was stopped while the hook ran");
+    check(grantedBuffer.load() == 1024, "hook received the actual granted size (1024), not the request (512)");
+    check(grantedRate.load() == 48000, "hook received the actual sample rate");
+    check(h->mgr.isStreamRunning(), "stream running again after the reopen");
+    check(h->primary->isStreamRunning(), "primary driver restarted after the reopen");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
+// 9. Failed reopen (rollback): the hook must NOT fire — the config change was
+//    not applied, so the engine must not be touched (#731).
+void testPreRestartConfigHookSkippedOnFailedReopen() {
+    auto h = makeHarness(/*withDummy=*/false);
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.getCurrentConfig().deviceId == kDeviceA, "starts on device A");
+
+    std::atomic<int> hookCount{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig&) -> bool {
+        hookCount.fetch_add(1);
+        return true; // Accept configuration
+    });
+
+    // Device B cannot open; device A (the rollback target) still can.
+    h->primary->m_failDeviceId.store(static_cast<int64_t>(kDeviceB));
+    check(!h->mgr.switchDevice(kDeviceB), "switch reports failure when the new device cannot open");
+    check(hookCount.load() == 0, "hook not fired on a failed reopen");
+    check(h->mgr.isStreamRunning(), "stream restored and running after rollback");
+
+    // Once the failure clears, the same transition fires the hook.
+    h->primary->m_failDeviceId.store(-1);
+    check(h->mgr.switchDevice(kDeviceB), "switch succeeds after failure cleared");
+    check(hookCount.load() == 1, "hook fires on the successful reopen");
+    check(h->mgr.getCurrentConfig().deviceId == kDeviceB, "now on device B");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
+// 10. Input device switch: fires the pre-restart hook exactly once with the
+//     granted settings while the stream is stopped (#731).
+void testPreRestartConfigHookFiresOnInputDeviceSwitch() {
+    auto h = makeHarness();
+    AudioStreamConfig cfg = baseConfig();
+    cfg.inputDeviceId = kInputDeviceA;
+    cfg.numInputChannels = 2;
+    h->mgr.openStream(cfg, silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.isStreamRunning(), "stream running before input device switch");
+
+    std::atomic<int> hookCount{0};
+    std::atomic<bool> runningDuringHook{true};
+    std::atomic<uint32_t> grantedInputDevice{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig& actual) -> bool {
+        hookCount.fetch_add(1);
+        runningDuringHook.store(h->primary->isStreamRunning());
+        grantedInputDevice.store(actual.inputDeviceId);
+        return true; // Accept configuration
+    });
+
+    check(h->mgr.switchInputDevice(kInputDeviceB), "input device switch accepted");
+    check(hookCount.load() == 1, "hook fired exactly once for the input device switch");
+    check(!runningDuringHook.load(), "stream callback was stopped while the hook ran");
+    check(grantedInputDevice.load() == kInputDeviceB, "hook received the granted input device");
+    check(h->mgr.isStreamRunning(), "stream running again after the input device switch");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
+// 11. Pre-restart callback rejection: when the callback returns false or throws,
+//     the reconfiguration is aborted and the stream is rolled back to its
+//     previous configuration.
+void testPreRestartCallbackRejectionTriggersRollback() {
+    auto h = makeHarness();
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(h->mgr.isStreamRunning(), "stream running before buffer change");
+    check(h->mgr.getCurrentConfig().bufferSize == 256, "starts with 256-frame buffer");
+
+    std::atomic<int> hookCount{0};
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig&) -> bool {
+        hookCount.fetch_add(1);
+        return false; // Reject configuration
+    });
+
+    check(!h->mgr.setBufferSize(512), "buffer size change rejected when callback returns false");
+    check(hookCount.load() == 1, "hook was called before rejection");
+    check(h->mgr.getCurrentConfig().bufferSize == 256, "buffer size rolled back to original value");
+    check(h->mgr.isStreamRunning(), "stream still running after rollback");
+
+    // Exception in callback also triggers rollback
+    hookCount.store(0);
+    h->mgr.setPreRestartConfigCallback([&](const AudioStreamConfig&) -> bool {
+        hookCount.fetch_add(1);
+        throw std::runtime_error("test exception");
+    });
+
+    check(!h->mgr.setBufferSize(512), "buffer size change rejected when callback throws");
+    check(hookCount.load() == 1, "hook was called before exception");
+    check(h->mgr.getCurrentConfig().bufferSize == 256, "buffer size rolled back after exception");
+    check(h->mgr.isStreamRunning(), "stream still running after exception rollback");
+
+    h->mgr.setPreRestartConfigCallback({});
+    h->mgr.shutdown();
+}
+
 int main() {
     std::cout << "=== AudioDeviceManager race/coherence tests (#391) ===\n";
     testEnumerationBarrierVsTransition();
@@ -405,6 +553,10 @@ int main() {
     testShutdownVsGetter();
     testFailedReopenRollsBack();
     testSafetyDriverStartFailure();
+    testPreRestartConfigHookFiresWithActualGrant();
+    testPreRestartConfigHookSkippedOnFailedReopen();
+    testPreRestartConfigHookFiresOnInputDeviceSwitch();
+    testPreRestartCallbackRejectionTriggersRollback();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;
