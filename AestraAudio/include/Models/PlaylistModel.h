@@ -569,7 +569,7 @@ public:
      */
     uint64_t getClipSourceStartSamples(const ClipInstance& clip) const {
         constexpr uint64_t kMaxSampleOffset = std::numeric_limits<uint64_t>::max();
-        const auto toSampleOffset = [](double offset, double scale) -> uint64_t {
+        const auto toSampleOffset = [kMaxSampleOffset](double offset, double scale) -> uint64_t {
             if (!std::isfinite(offset) || offset <= 0.0 || !std::isfinite(scale) || scale <= 0.0) {
                 return 0;
             }
