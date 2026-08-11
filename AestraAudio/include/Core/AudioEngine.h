@@ -110,6 +110,25 @@ public:
     void drainDeferredResourcesForShutdown();
 
     /**
+     * @brief Reclaim compensation rings retired while the audio stream was
+     *        stopped (control thread only).
+     *
+     * The normal retirement drain is ack-gated: control only frees a retired
+     * ring once RT has acknowledged a newer generation. While the stream is
+     * stopped RT never runs, so ackedGeneration never advances and every
+     * latency recompute would otherwise retain its 128 KiB ring indefinitely.
+     * This path PROVES quiescence first — it waits (bounded) until no
+     * processBlock is in flight (engine-wide RT callback depth) — then
+     * reclaims every retired ring unconditionally and converges the ack to the
+     * current generation.
+     *
+     * Call after stopping/joining the device stream (e.g. from the controller
+     * after AudioDeviceManager::stopStream, and at shutdown). Safe to call
+     * repeatedly; cheap when nothing is pending.
+     */
+    void reclaimRetiredCompensationWhenStopped();
+
+    /**
      * @brief Immediate panic/reset (Double Stop).
      * Clears all buffers and resets plugin states. Main Thread.
      */
@@ -301,6 +320,17 @@ public:
         };
         uint32_t pluginLatencySamples{0};
         uint32_t outputCompensationSamples{0};
+        /// Generation of the currently published compensation descriptor for this
+        /// track's output ring (see TrackCompensationState). Monotonic per publish.
+        uint32_t outputCompensationGeneration{0};
+        /// Highest compensation generation the RT thread has acknowledged
+        /// consuming. Control may not reclaim a retired ring behind this.
+        /// 0 means "no RT acknowledgement observed" (generations start at 1);
+        /// the mirror fallback path reports 0 explicitly, never a stale ack.
+        uint32_t outputCompensationAckedGeneration{0};
+        /// Generations currently held in the retired queue (published but not
+        /// yet acked). Dropping to 0 proves the retirement queue drained.
+        uint32_t outputCompensationRetiredGenerationCount{0};
         /// Engine-wide latency compensation toggle. Per-track enablement is not
         /// implemented, so this is the same value for every track index.
         bool compensationEnabled{false};
@@ -714,6 +744,27 @@ private:
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);
+
+    /**
+     * @brief Prepare/publish a track's PDC compensation ring off the audio thread (#727).
+     *
+     * The only place a compensation buffer is allocated. Publish-replacement
+     * protocol: each call that changes the delay publishes a fresh immutable
+     * descriptor + zeroed 16384-frame ring and retires the previous generation,
+     * which stays alive until RT acknowledges it (PR #730 follow-up). Calls with
+     * an unchanged delay no-op — UNLESS @p ownerTrackId differs from the slot's
+     * stamped owner, in which case the publication is forced: `m_trackState` is
+     * indexed positionally, so a deleted channel shifts later tracks into the
+     * previous occupant's slot, and a same-delay no-op would let RT keep reading
+     * the previous track's ring contents (audible leakage). A fresh zeroed ring
+     * makes the first `delay` frames silence — the same semantics as the v1
+     * delay-change reset. Must be called BEFORE the RT path can act on a new
+     * nonzero delay — publication is atomic, so there is no window where a delay
+     * is visible without its ring.
+     *
+     * Control thread only — never call from processBlock.
+     */
+    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one
@@ -837,6 +888,38 @@ private:
     std::atomic<uint64_t> m_metronomeCountInSamplePos{0};
     std::atomic<uint32_t> m_pendingMetronomeCountInBeats{0};
     std::atomic<bool> m_pendingMetronomeCountInStop{false};
+
+    // Engine-wide realtime callback depth. Incremented on renderGraph entry
+    // (the only place compensation rings are read) and decremented on exit
+    // (RAII, covers all return paths). Control thread, via
+    // reclaimRetiredCompensationWhenStopped(), waits for this to reach 0 to
+    // PROVE no callback can still be reading compensation rings before it
+    // reclaims retired generations that ackedGeneration never advanced past.
+    //
+    // Memory ordering: the guard uses acquire-on-increment / release-on-
+    // decrement so the control thread's acquire-load of 0 synchronizes-with
+    // the releasing callback's entire critical section. Without that pairing,
+    // observing depth == 0 would not order the ring free after the callback's
+    // final ring access, and the reclaim would be a data race. On x86 this is
+    // free; on weaker ISAs it is one acquire and one release per block.
+    std::atomic<uint32_t> m_rtCallbackDepth{0};
+
+    // RAII depth guard for renderGraph; increments on entry, decrements on all
+    // exit paths (including early returns). Acquire/release pairing (see
+    // m_rtCallbackDepth) is what makes the quiescence proof real; do not
+    // weaken to relaxed.
+    class RealtimeCallbackDepthGuard {
+    public:
+        explicit RealtimeCallbackDepthGuard(AudioEngine& engine) noexcept : m_engine(engine) {
+            m_engine.m_rtCallbackDepth.fetch_add(1, std::memory_order_acquire);
+        }
+        ~RealtimeCallbackDepthGuard() noexcept { m_engine.m_rtCallbackDepth.fetch_sub(1, std::memory_order_release); }
+        RealtimeCallbackDepthGuard(const RealtimeCallbackDepthGuard&) = delete;
+        RealtimeCallbackDepthGuard& operator=(const RealtimeCallbackDepthGuard&) = delete;
+
+    private:
+        AudioEngine& m_engine;
+    };
 
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};

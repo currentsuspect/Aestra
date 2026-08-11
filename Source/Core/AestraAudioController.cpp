@@ -435,6 +435,14 @@ bool AestraAudioController::startStream() {
 
 void AestraAudioController::stopStream() {
     if (m_audioManager) m_audioManager->stopStream();
+    // stopStream() joins the health-monitor thread but not necessarily the
+    // device callback thread; a callback can still be mid-block here. The
+    // engine's bounded depth wait handles that: it reclaims retired
+    // compensation rings only once it has PROVEN no renderGraph is in flight.
+    // Their ack counters cannot advance without a live callback.
+    if (m_audioEngine) {
+        m_audioEngine->reclaimRetiredCompensationWhenStopped();
+    }
     m_isAudioRunning = false;
     m_rtTrackManager.store(nullptr, std::memory_order_release);
     m_rtPreviewEngine.store(nullptr, std::memory_order_release);

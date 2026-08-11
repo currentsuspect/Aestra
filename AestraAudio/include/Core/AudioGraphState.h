@@ -127,6 +127,105 @@ struct EdgeDelayState {
     std::unique_ptr<float[]> retiredBuffer;
 };
 
+/**
+ * @brief One immutable compensation-ring publication (PR #730 follow-up).
+ *
+ * This is the coherent snapshot unit: RT acquire-loads the `published`
+ * pointer once per block and reads every field from the single descriptor it
+ * lands on. Separate atomics (like EdgeDelayState's compensationSamples /
+ * bufferPtr / capacityMask) cannot be read as one consistent tuple — a
+ * control-thread publication can interleave the loads and give RT fields from
+ * two generations. A single pointer to an immutable struct removes that class
+ * of hazard entirely.
+ */
+struct CompensationRingDescriptor {
+    CompensationRingDescriptor() = default;
+    CompensationRingDescriptor(const CompensationRingDescriptor&) = delete;
+    CompensationRingDescriptor& operator=(const CompensationRingDescriptor&) = delete;
+    CompensationRingDescriptor(CompensationRingDescriptor&&) = delete;
+    CompensationRingDescriptor& operator=(CompensationRingDescriptor&&) = delete;
+
+    /** @brief Monotonic per-publish counter. RT acks the generation it observed. */
+    uint32_t generation{0};
+    /** @brief Samples of delay to apply; 0 = no compensation (RT gate). */
+    uint32_t delaySamples{0};
+    /** @brief Ring capacity in frames (power of two). */
+    uint32_t capacityFrames{0};
+    /** @brief Stereo-interleaved buffer, capacityFrames * 2 floats. Immutable post-publish. */
+    float* buffer{nullptr};
+    /** @brief Control-owned storage backing @ref buffer. Each generation owns its own
+     *         ring, so a retired generation stays alive (with its ring) until acked. */
+    std::unique_ptr<float[]> ownedBuffer;
+};
+
+/**
+ * @brief Ownership + RT slot for one track's compensation ring.
+ *
+ * The published unit is a single immutable @ref CompensationRingDescriptor
+ * behind one atomic pointer, so RT sees {ring, capacity, delay, generation} as
+ * one consistent tuple (PR #730 follow-up). When control publishes a new
+ * generation the previous one is moved into @ref retired and kept alive until
+ * the RT thread acknowledges a newer generation. This is the buffer retirement
+ * protocol: `publish N -> RT consumes N -> RT acks N -> only then may control
+ * reclaim anything retired behind N`. No buffer is ever cleared or released
+ * that RT could still be reading; "reset" is replacement, never fill_n against
+ * published storage.
+ *
+ * The RT write cursor is deliberately NOT in the descriptor (descriptors are
+ * immutable) and NOT atomic: control never mutates a published ring or its
+ * cursor, so the cursor is RT-owned plain state. Atomics exist only where
+ * ownership crosses threads (published pointer, acked generation).
+ *
+ * NOT copyable / movable (atomic members). Lives behind a unique_ptr.
+ */
+struct TrackCompensationState {
+    TrackCompensationState() = default;
+    TrackCompensationState(const TrackCompensationState&) = delete;
+    TrackCompensationState& operator=(const TrackCompensationState&) = delete;
+    TrackCompensationState(TrackCompensationState&&) = delete;
+    TrackCompensationState& operator=(TrackCompensationState&&) = delete;
+
+    /** @brief Descriptor of the currently published generation. RT acquire-loads per block. */
+    std::atomic<const CompensationRingDescriptor*> published{nullptr};
+    /** @brief Highest generation RT has acknowledged consuming. Control acquire-loads
+     *         before reclaiming retired generations. */
+    std::atomic<uint32_t> ackedGeneration{0};
+
+    /** @brief RT-side write cursor (frames). RT updates it each block; control never
+     *         writes it. Plain, not atomic: single-owner (RT).
+     *
+     * Deliberately lives on the slot (state object) rather than in the
+     * descriptor, so it survives descriptor replacement: when control publishes a
+     * new generation, RT keeps cycling the same cursor into the new ring at the
+     * same phase. Copying the cursor into a fresh descriptor per publish would
+     * both mutate an "immutable" unit and lose the position continuity across
+     * migrations; keeping it slot-owned means a mid-block publication cannot
+     * split-cursor a mixed buffer. Control never touches it, so no atomic fence
+     * is needed. */
+    uint32_t compensationWritePos{0};
+
+    // Control-owned. RT never touches these.
+    /** @brief Monotonic publisher counter; assigned to the next descriptor's generation. */
+    uint32_t nextGeneration{1};
+    /** @brief Stable trackId that owns the published generation (see @ref prepareCompensationRing).
+     *
+     * Control stamps this on every publication. It exists to detect POSITIONAL
+     * slot reuse: `m_trackState` is indexed by graph loop ordinal, so deleting a
+     * channel shifts every later track into the previous occupant's slot. If the
+     * new occupant's delay equals the old occupant's, the no-op gate below would
+     * otherwise keep publishing nothing and RT would keep reading the previous
+     * track's ring contents (audible old-audio leakage). An owner mismatch forces
+     * a fresh zeroed-ring publication even when the delay is unchanged.
+     *
+     * Zero-delay publications ignore ownership: with no ring in use there is no
+     * content to leak, so re-clearing stays cheap. */
+    uint32_t ownerTrackId{0};
+    /** @brief Descriptor of the currently published generation (storage holder). */
+    std::unique_ptr<CompensationRingDescriptor> currentDesc;
+    /** @brief Previous publications, retired until acked (see class comment). */
+    std::vector<std::unique_ptr<CompensationRingDescriptor>> retired;
+};
+
 struct TrackRTState {
     // Optimized: Store smoothed L/R gains directly to avoid per-sample sin/cos
     SmoothedParamD gainL;
@@ -149,19 +248,37 @@ struct TrackRTState {
 
     // === Plugin Delay Compensation ===
     uint32_t pluginLatencySamples{0};        // Total latency from effect chain
-    // Delay to apply for alignment. Zero means "do not delay this track" —
-    // this is the single gate the RT path consults. There is deliberately no
-    // per-track enable flag: one existed, nothing ever wrote it, and being
-    // pinned true is what let a disabled engine keep compensating (#684).
-    // Engine-wide enablement lives in AudioEngine::m_latencyCompensationEnabled
-    // and reaches the RT path by zeroing this value.
-    uint32_t compensationDelaySamples{0};
 
-    // Fixed-size compensation buffer (stereo interleaved)
-    // 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz
-    std::array<float, 32768> compensationBuffer{}; // 16384 frames * 2 channels
-    uint32_t compensationWritePos{0};
-    uint32_t compensationReadPos{0};
+    // Compensation ring (stereo interleaved), allocated ONLY for tracks that
+    // actually carry a nonzero delay: the 128 KiB ring lives inside
+    // CompensationRingDescriptor and is allocated on the FIRST nonzero-delay
+    // publication. The tiny slot below (~200 B) is pre-created on TrackRTState
+    // construction so the shared pointer is immutable for the RT thread.
+    //
+    // This was a std::array<float, 32768> — 128 KiB embedded BY VALUE in every
+    // TrackRTState. m_trackState.reserve(kMaxTracks) therefore asked for a
+    // single 512.8 MiB allocation up front (131,281 B * 4096), which was ~98%
+    // untouched under demand paging until the audio stream's
+    // mlockall(MCL_CURRENT|MCL_FUTURE) faulted every page in and pinned it —
+    // 520 MiB resident and unswappable on a 3.68 GiB machine (#727). Physical
+    // cost is now proportional to the tracks that need compensation and to the
+    // delay they actually require; the 4096 logical track ceiling is unchanged.
+    //
+    // Keeping this struct small also matters for iteration: it dropped from
+    // ~128 KiB to ~200 B.
+    //
+    // The ring + delay are published as an immutable CompensationRingDescriptor
+    // behind an atomic pointer on the slot (see TrackCompensationState): RT
+    // reads {published, capacity, delay, generation} as one consistent tuple,
+    // and generations are retired only after RT acknowledges them.
+    //
+    // The slot itself is pre-created when the TrackRTState is constructed and
+    // NEVER reassigned afterward, so `compensation.get()` is immutable for the
+    // RT thread: the whole 128 KiB ring stays lazy (behind `published`, which
+    // control fills on the first nonzero-delay publication). This removes the
+    // first-use assignment entirely, so control can never write this unique_ptr
+    // while an RT block is reading it (CodeRabbit, PR #730).
+    std::unique_ptr<TrackCompensationState> compensation{std::make_unique<TrackCompensationState>()};
 
     // PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated
     // off-RT by AudioEngine::calculateLatencyCompensation() from
