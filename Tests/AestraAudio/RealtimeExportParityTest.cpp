@@ -311,25 +311,27 @@ bool runCrossSampleRateCase(const SessionConfig& liveCfg, const fs::path& tempRo
 }
 
 // -----------------------------------------------------------------------------
-// Case 4: isolated-track bounce honors clip Speed (playbackRate) — parity
-// with live playback of the same session (#745)
+// Case 4: isolated-track bounce honors clip Speed (playbackRate) and Pitch
+// (pitchSemitones) — parity with live playback of the same session (#745, #746)
 // -----------------------------------------------------------------------------
-bool runIsolatedSpeedParityCase(const SessionConfig& cfg, const fs::path& tempRoot, float speed) {
+bool runIsolatedSpeedParityCase(const SessionConfig& cfg, const fs::path& tempRoot, float speed,
+                                float pitchSemitones = 0.0f) {
     const uint32_t totalFrames = cfg.sampleRate * kSeconds;
 
-    // One-track session with the clip sped up/down. The edit is applied before
-    // engine prepare, so the compiled graph carries playbackRate.
+    // One-track session with the clip sped up/down and/or pitched. The edits
+    // are applied before engine prepare, so the compiled graph carries them.
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
     addAudioTrack(*tm, "SpeedA", makeSine(440.0, 0.30f, totalFrames, cfg.sampleRate), totalFrames, cfg);
     const auto laneId = tm->getPlaylistModel().getLaneId(0);
     const auto* lane = tm->getPlaylistModel().getLane(laneId);
     if (!lane || lane->clips.empty()) {
-        std::cerr << "no clip on lane 0; cannot apply speed\n";
+        std::cerr << "no clip on lane 0; cannot apply edits\n";
         return false;
     }
     ClipEdits edits;
     edits.playbackRate = speed;
+    edits.pitchSemitones = pitchSemitones;
     if (!tm->getPlaylistModel().setClipEdits(lane->clips.front().id, edits)) {
         std::cerr << "setClipEdits failed\n";
         return false;
@@ -376,9 +378,12 @@ bool runIsolatedSpeedParityCase(const SessionConfig& cfg, const fs::path& tempRo
 
     DiffReport r = compareBuffers(rt, iso, cfg.channels, cfg.sampleRate, 1e-6);
     const bool pass = (r.rmsErrorDb <= -120.0) && (r.maxAbsError <= 1e-6);
-    printReport("Isolated_Bounce_Speed" + std::to_string(speed) + "x_vs_Live", r, pass,
-                "isolated bounce at speed " + std::to_string(speed) +
-                    " must equal live playback at the same speed (RMS <= -120 dB, maxAbs <= 1e-6)");
+    const std::string label = "Isolated_Bounce_Speed" + std::to_string(speed) + "x_Pitch" +
+                              std::to_string(pitchSemitones) + "st_vs_Live";
+    printReport(label, r, pass,
+                "isolated bounce at speed " + std::to_string(speed) + " / pitch " +
+                    std::to_string(pitchSemitones) +
+                    " st must equal live playback with the same edits (RMS <= -120 dB, maxAbs <= 1e-6)");
     std::cout << "  live frames: " << realtime.size() / cfg.channels
               << ", isolated bounce frames: " << bounced.size() / cfg.channels << "\n";
     return pass;
@@ -408,6 +413,10 @@ int main() {
     if (!runCrossSampleRateCase(cfg, tempRoot)) ++failures;
     for (float speed : {2.0f, 0.5f}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed)) ++failures;
+    }
+    // Pitch cases (#746): pure pitch, pitch cancelling speed, and interplay.
+    for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, -12.0f}, {0.5f, 7.0f}}) {
+        if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed, pitch)) ++failures;
     }
 
     fs::remove_all(tempRoot, ec);
