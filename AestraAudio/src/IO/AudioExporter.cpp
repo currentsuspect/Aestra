@@ -224,6 +224,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGlobalSamplePos(startSample);
     m_engine.setTransportPlaying(true);
 
+    // Offline render: track/send gains render snapped to target from frame 0
+    // (parity with a warmed live engine and isolated bounces, #745). Restore
+    // on every exit path.
+    m_engine.setOfflineRenderActive(true);
+    struct OfflineRenderGuard {
+        AudioEngine& engine;
+        ~OfflineRenderGuard() { engine.setOfflineRenderActive(false); }
+    } offlineRenderGuard{m_engine};
+
     // Zero the render buffer before the first block so stale DSP state from
     // prior playback cannot bleed into the export render.
     std::fill(m_renderBufferF.begin(), m_renderBufferF.end(), 0.0f);

@@ -207,6 +207,20 @@ public:
     }
     /** @brief Check whether transport playback is active. */
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Mark the engine as rendering an offline export.
+     *
+     * While active, processBlock renders track gains snapped to their targets
+     * instead of ramping over the first offline block. Live playback ramps
+     * gains over one realtime block after a graph compile; the exporter's
+     * 4096-frame block would smear the same ramp over ~8x the frames, leaving
+     * a level bump at the start of a master bounce that an isolated bounce
+     * and warmed live playback do not have (#745). AudioExporter sets this
+     * around its render loop; the audio thread reads it once per block.
+     */
+    void setOfflineRenderActive(bool active) { m_offlineRenderActive.store(active, std::memory_order_relaxed); }
+    bool isOfflineRenderActive() const { return m_offlineRenderActive.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
         auto preparedGraph = graph;
@@ -876,6 +890,7 @@ private:
     std::shared_ptr<ChannelPrepareConfig> m_channelPrepareConfig{std::make_shared<ChannelPrepareConfig>()};
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
+    std::atomic<bool> m_offlineRenderActive{false};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
