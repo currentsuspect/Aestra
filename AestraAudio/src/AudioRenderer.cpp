@@ -207,11 +207,16 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
         const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
         // Mirrors ClipRenderKernel::renderClip: clip Speed (playbackRate) scales
         // the resample ratio. Without this, isolated-track bounces ignored speed
-        // while live playback and full-mix export honored it (#745).
+        // while live playback and full-mix export honored it (#745). Pitch
+        // (pitchSemitones) folds into the same envelope (#746).
         const double playbackRate =
             std::isfinite(clip.playbackRate) ? MixMath::clampD(static_cast<double>(clip.playbackRate), 0.25, 4.0)
                                              : 1.0;
-        const double ratio = (srcRate / outputRate) * playbackRate;
+        const double pitchSemitones = std::isfinite(clip.pitchSemitones)
+                                          ? MixMath::clampD(static_cast<double>(clip.pitchSemitones), -24.0, 24.0)
+                                          : 0.0;
+        const double ratio = (srcRate / outputRate) *
+                             MixMath::clampD(playbackRate * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
         double phase = clip.sampleOffset + static_cast<double>(start - clip.startSample) * ratio;
 
         if (clip.totalFrames > 0) {

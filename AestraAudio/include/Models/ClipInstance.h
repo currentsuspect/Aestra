@@ -71,6 +71,10 @@ struct ClipEdits {
     float pan = 0.0f;
     bool muted = false;
     float playbackRate = 1.0f;
+    /** Musical pitch offset in semitones, independent of Speed. Rendered as
+     *  2^(st/12) folded into the same varispeed ratio as playbackRate; pitch
+     *  up plays faster/shorter like any varispeed (#746). */
+    float pitchSemitones = 0.0f;
     double sourceStart = 0.0;
 
     /** Musical varispeed control used by the Audio Clip Editor. Pitch and
@@ -109,7 +113,8 @@ struct ClipEdits {
     bool operator==(const ClipEdits& other) const {
         return fadeInBeats == other.fadeInBeats && fadeOutBeats == other.fadeOutBeats &&
                gainLinear == other.gainLinear && pan == other.pan && muted == other.muted &&
-               playbackRate == other.playbackRate && sourceStart == other.sourceStart;
+               playbackRate == other.playbackRate && pitchSemitones == other.pitchSemitones &&
+               sourceStart == other.sourceStart;
     }
     bool operator!=(const ClipEdits& other) const { return !(*this == other); }
 };

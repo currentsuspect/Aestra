@@ -503,6 +503,11 @@ public:
                     std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;
                 clipInfo.playbackRate =
                     std::isfinite(clip.edits.playbackRate) ? std::clamp(clip.edits.playbackRate, 0.25f, 4.0f) : 1.0f;
+                clipInfo.pitchSemitones =
+                    std::isfinite(clip.edits.pitchSemitones)
+                        ? std::clamp(clip.edits.pitchSemitones, ClipEdits::kMinPitchSemitones,
+                                     ClipEdits::kMaxPitchSemitones)
+                        : 0.0f;
                 const double fadeInBeats =
                     std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
                                                          : 0.0;
