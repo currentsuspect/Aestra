@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraMath.h"
 #include "ArsenalProcessingContext.h"
 #include "AudioEngine.h"
+#include "Core/MixMath.h"
 #include "DSP/PanLaw.h"
 #include "EffectChain.h"
 #include "Interpolators.h"
@@ -108,7 +109,7 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
         }
 
         // 2. Process Effects (In-Place) -> track.selfBuffer
-        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph);
+        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph, ctx.isOffline);
 
         // 3. Calculate Track Meter Peaks (post-fader)
         if (!ctx.isOffline && track.selfBuffer && snaps && slotMap && track.trackIndex < ctx.graph->tracks.size()) {
@@ -199,7 +200,13 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
         const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
         uint32_t framesToRender = static_cast<uint32_t>(end - start);
         const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
-        const double ratio = srcRate / outputRate;
+        // Mirrors ClipRenderKernel::renderClip: clip Speed (playbackRate) scales
+        // the resample ratio. Without this, isolated-track bounces ignored speed
+        // while live playback and full-mix export honored it (#745).
+        const double playbackRate =
+            std::isfinite(clip.playbackRate) ? MixMath::clampD(static_cast<double>(clip.playbackRate), 0.25, 4.0)
+                                             : 1.0;
+        const double ratio = (srcRate / outputRate) * playbackRate;
         double phase = clip.sampleOffset + static_cast<double>(start - clip.startSample) * ratio;
 
         if (clip.totalFrames > 0) {
@@ -344,7 +351,8 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
 }
 
 void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphState& graphState, uint32_t numFrames,
-                                        uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph) {
+                                        uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph,
+                                        bool snapGains) {
     if (track.trackIndex >= graphState.trackStates.size())
         return;
     TrackRTState& state = graphState.trackStates[track.trackIndex];
@@ -382,8 +390,18 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
-    state.gainL.beginRamp(numFrames);
-    state.gainR.beginRamp(numFrames);
+    if (snapGains) {
+        // Offline bounce: render at the settled target from frame 0. Live
+        // playback ramps 1.0 -> target over one realtime block after a graph
+        // compile; the offline loop uses 4096-frame blocks, so the same ramp
+        // would smear the settle over ~8x the frames and misalign a bounce
+        // with live playback (#745).
+        state.gainL.snap();
+        state.gainR.snap();
+    } else {
+        state.gainL.beginRamp(numFrames);
+        state.gainR.beginRamp(numFrames);
+    }
     double* self = track.selfBuffer + bufferOffset * 2;
     for (uint32_t i = 0; i < numFrames; ++i) {
         self[i * 2] *= state.gainL.next();
