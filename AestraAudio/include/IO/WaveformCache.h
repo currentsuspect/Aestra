@@ -218,6 +218,16 @@ public:
     void getPeaksForRange(uint32_t channel, SampleIndex startSample, SampleIndex endSample, uint32_t numPixels,
                           std::vector<WaveformPeak>& outPeaks) const;
 
+    /**
+     * @brief Get peaks for a source range while preserving fractional pixel boundaries
+     *
+     * Clip previews often map a timeline position to a fractional source frame. Keeping
+     * those boundaries until each pixel is formed prevents adjacent slices and zoom levels
+     * from silently re-binning the same source audio differently.
+     */
+    void getPeaksForRangePrecise(uint32_t channel, double startSample, double endSample, uint32_t numPixels,
+                                 std::vector<WaveformPeak>& outPeaks) const;
+
     /// Get a single peak for quick display
     WaveformPeak getQuickPeak(uint32_t channel, SampleIndex startSample, SampleIndex numSamples) const;
 

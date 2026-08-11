@@ -310,11 +310,11 @@ void AudioClipEditorPanel::buildUI() {
         m_waveformTitleLabel, m_waveformHintLabel,     m_instanceLabel,
         m_toneSectionLabel,   m_timingSectionLabel,    m_gainLabel,
         m_panLabel,           m_fadeInLabel,           m_fadeOutLabel,
-        m_pitchLabel,         m_sourceStartLabel,      m_gainValueLabel,
-        m_panValueLabel,      m_fadeInValueLabel,      m_fadeOutValueLabel,
-        m_pitchValueLabel,    m_sourceStartValueLabel, m_gainSlider,
-        m_panSlider,          m_fadeInSlider,          m_fadeOutSlider,
-        m_pitchSlider,        m_sourceStartSlider,     m_muteButton,
+        m_pitchLabel,         m_speedLabel,            m_sourceStartLabel,      m_gainValueLabel,
+        m_panValueLabel,      m_fadeInValueLabel,      m_fadeOutValueLabel,     m_pitchValueLabel,
+        m_speedValueLabel,    m_sourceStartValueLabel, m_gainSlider,             m_panSlider,
+        m_fadeInSlider,       m_fadeOutSlider,         m_pitchSlider,            m_speedSlider,
+        m_sourceStartSlider,  m_muteButton,
         m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
         m_reverseButton,      m_commitButton};
     for (const auto& child : children) {
@@ -400,7 +400,8 @@ void AudioClipEditorPanel::rebuildWaveform() {
         std::isfinite(m_workingEdits.pitchSemitones)
             ? std::clamp(m_workingEdits.pitchSemitones, ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones)
             : 0.0f;
-    const double varispeed = static_cast<double>(playbackRate) * std::pow(2.0, pitchSemitones / 12.0);
+    const double varispeed =
+        std::clamp(static_cast<double>(playbackRate) * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
     const double outputDurationSeconds = buffer->durationSeconds() / varispeed;
     m_sourceMetaLabel->setText(
         formatFixed(buffer->durationSeconds(), 2) + " s source  •  " + formatFixed(outputDurationSeconds, 2) +

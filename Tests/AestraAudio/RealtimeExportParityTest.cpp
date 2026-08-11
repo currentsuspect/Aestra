@@ -389,6 +389,133 @@ bool runIsolatedSpeedParityCase(const SessionConfig& cfg, const fs::path& tempRo
     return pass;
 }
 
+// -----------------------------------------------------------------------------
+// Case 5: splitting a varispeed clip must not change what the track plays —
+// the two halves spliced together must equal the un-split clip outside the
+// engine's mandatory 128-frame clip-edge fades (kClipEdgeFadeSamples /
+// CLIP_EDGE_FADE_SAMPLES, both render paths apply them at every clip
+// boundary). User report: "slicing pitched clips is not slicing as intended".
+// -----------------------------------------------------------------------------
+bool runSplitVarispeedParityCase(const SessionConfig& cfg, const fs::path& tempRoot, float speed,
+                                 float pitchSemitones, double splitBeat) {
+    // 3 s source: the clip (2 s of timeline at varispeed 2) consumes only the
+    // first 2 s of source, so the right half after a beat-2 split has audible
+    // content — the region the offset bug played at the wrong position.
+    const uint32_t totalFrames = cfg.sampleRate * 3;
+
+    auto buildSplitSession = [&](bool split) -> std::shared_ptr<TrackManager> {
+        auto tm = std::make_shared<TrackManager>();
+        tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+        addAudioTrack(*tm, "SplitVarispeed", makeSine(440.0, 0.30f, totalFrames, cfg.sampleRate), totalFrames, cfg);
+        const auto laneId = tm->getPlaylistModel().getLaneId(0);
+        const auto* lane = tm->getPlaylistModel().getLane(laneId);
+        if (!lane || lane->clips.empty()) {
+            return nullptr;
+        }
+        ClipEdits edits;
+        edits.playbackRate = speed;
+        edits.pitchSemitones = pitchSemitones;
+        if (!tm->getPlaylistModel().setClipEdits(lane->clips.front().id, edits)) {
+            return nullptr;
+        }
+        if (split && !tm->getPlaylistModel().splitClip(lane->clips.front().id, splitBeat).isValid()) {
+            return nullptr;
+        }
+        return tm;
+    };
+
+    const auto whole = buildSplitSession(false);
+    const auto split = buildSplitSession(true);
+    if (!whole || !split) {
+        std::cerr << "split parity session construction failed\n";
+        return false;
+    }
+
+    auto bounceTrack = [&](const std::shared_ptr<TrackManager>& tm, const std::string& name) -> std::vector<float> {
+        AudioEngine engine;
+        prepareEngine(engine, tm, cfg);
+        warmupEngine(engine, cfg);
+        const fs::path outPath = tempRoot / ("parity_" + name + ".wav");
+        std::vector<float> decoded;
+        if (!engine.bounceRangeToWav(0.0, kBeats, outPath.string(), 0)) {
+            return decoded;
+        }
+        uint32_t sr = 0, ch = 0;
+        if (!decodeAudioFile(outPath.string(), decoded, sr, ch) || sr != cfg.sampleRate || ch != cfg.channels) {
+            decoded.clear();
+        }
+        return decoded;
+    };
+
+    const std::vector<float> wholeBounce = bounceTrack(whole, "split_whole");
+    const std::vector<float> splitBounce = bounceTrack(split, "split_halves");
+    if (wholeBounce.empty() || splitBounce.empty()) {
+        std::cerr << "split parity bounce failed\n";
+        return false;
+    }
+
+    const size_t trimStart = static_cast<size_t>(cfg.blockSize) * 4 * cfg.channels;
+    const size_t n = std::min(wholeBounce.size(), splitBounce.size());
+    if (n <= trimStart) {
+        std::cerr << "not enough overlap to compare split parity\n";
+        return false;
+    }
+
+    // Exclude the 128-frame clip-edge fades both render paths apply at the
+    // splice point: the split creates clip edges where the whole clip has
+    // continuous content. Everything else must be bit-identical.
+    const size_t splitFrame = static_cast<size_t>(splitBeat * cfg.sampleRate * 60.0 / cfg.bpm);
+    constexpr uint32_t kEdgeFade = 128;
+    const size_t fadeLo = (splitFrame > kEdgeFade) ? splitFrame - kEdgeFade : 0;
+    const size_t fadeHi = std::min(splitFrame + kEdgeFade, n / cfg.channels);
+
+    auto maskedCompare = [&](const std::vector<float>& a, const std::vector<float>& b) {
+        double sumSq = 0.0;
+        size_t compared = 0;
+        double maxAbs = 0.0;
+        size_t firstMismatch = SIZE_MAX;
+        for (size_t f = trimStart / cfg.channels; f < n / cfg.channels; ++f) {
+            if (f >= fadeLo && f < fadeHi) {
+                continue;
+            }
+            for (uint32_t c = 0; c < cfg.channels; ++c) {
+                const double da = a[f * cfg.channels + c];
+                const double db = b[f * cfg.channels + c];
+                const double err = std::abs(da - db);
+                if (err > maxAbs) {
+                    maxAbs = err;
+                }
+                if (err > 1e-6 && firstMismatch == SIZE_MAX) {
+                    firstMismatch = f;
+                }
+                sumSq += err * err;
+                ++compared;
+            }
+        }
+        const double rms = std::sqrt(sumSq / static_cast<double>(compared));
+        const double rmsDb = 20.0 * std::log10(std::max(rms, 1e-15));
+        return std::make_tuple(rmsDb, maxAbs, firstMismatch, compared);
+    };
+
+    const auto [rmsDb, maxAbs, firstMismatch, compared] =
+        maskedCompare(wholeBounce, splitBounce);
+    const bool pass = (rmsDb <= -120.0) && (maxAbs <= 1e-6);
+    const std::string label = "Split_Splice_Speed" + std::to_string(speed) + "x_Pitch" +
+                              std::to_string(pitchSemitones) + "st_vs_Whole";
+    std::cout << (pass ? "[PASS] " : "[FAIL] ") << label << "  rmsErr=" << rmsDb
+              << " dB  maxAbsErr=" << maxAbs << "  compared=" << compared << " frames";
+    if (!pass) {
+        std::cout << "  firstMismatch=" << firstMismatch << " (" << (firstMismatch / static_cast<double>(cfg.sampleRate))
+                  << " s)";
+    }
+    std::cout << "\n";
+    std::cout << "  (fade zone excluded: frames " << fadeLo << ".." << fadeHi - 1
+              << " around the splice at " << splitFrame << ")\n";
+    std::cout << "  whole bounce frames: " << wholeBounce.size() / cfg.channels
+              << ", split bounce frames: " << splitBounce.size() / cfg.channels << "\n";
+    return pass;
+}
+
 } // namespace
 
 int main() {
@@ -417,6 +544,11 @@ int main() {
     // Pitch cases (#746): pure pitch, pitch cancelling speed, and interplay.
     for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, -12.0f}, {0.5f, 7.0f}}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed, pitch)) ++failures;
+    }
+    // Split cases: splicing the halves must equal the un-split clip, under
+    // pitch varispeed and under speed varispeed (split at beat 2 of 4).
+    for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, 0.0f}}) {
+        if (!runSplitVarispeedParityCase(cfg, tempRoot, speed, pitch, 2.0)) ++failures;
     }
 
     fs::remove_all(tempRoot, ec);

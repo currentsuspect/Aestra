@@ -94,6 +94,19 @@ struct ClipEdits {
         return std::clamp(semitones, kMinPitchSemitones, kMaxPitchSemitones);
     }
 
+    /** Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render
+     *  envelope. Single authority for source-domain offset/duration math in
+     *  split, trim and the editor; mirrors ClipRenderKernel::renderClipInto
+     *  exactly, so editing math always agrees with what the renderer plays
+     *  (#746, split/trim varispeed regression). */
+    float effectiveVarispeed() const noexcept {
+        const float rate = std::isfinite(playbackRate) ? std::clamp(playbackRate, 0.25f, 4.0f) : 1.0f;
+        const float pitch = std::isfinite(pitchSemitones)
+                                ? std::clamp(pitchSemitones, kMinPitchSemitones, kMaxPitchSemitones)
+                                : 0.0f;
+        return std::clamp(rate * std::pow(2.0f, pitch / 12.0f), 0.25f, 4.0f);
+    }
+
     /**
      * Defaults for a newly created audio clip. The value-initialized defaults
      * above intentionally remain unity for legacy project fields and generic

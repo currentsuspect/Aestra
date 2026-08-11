@@ -29,6 +29,7 @@
 #include <charconv>
 #include <cmath>
 #include <chrono>
+#include <limits>
 #include <string_view>
 #include <unordered_map>
 
@@ -539,38 +540,35 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     size_t numChannels = audioData.numChannels;
     size_t totalFrames = audioData.numFrames;
 
-    // sourceStart conversion (project rate -> source rate)
-    SampleIndex sourceOffset = clip.edits.sourceStart;
     double sampleRate = source->getSampleRate();
     double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
     double secondsPerBeat = 60.0 / bpm;
     double clipDurationSeconds = clip.durationBeats * secondsPerBeat;
     const double timelineFrames = std::max(1.0, clipDurationSeconds * sampleRate);
-    const double playbackRate = std::isfinite(clip.edits.playbackRate)
-                                    ? std::clamp(static_cast<double>(clip.edits.playbackRate), 0.25, 4.0)
-                                    : 1.0;
-    const double pitchSemitones = std::isfinite(clip.edits.pitchSemitones)
-                                      ? std::clamp(static_cast<double>(clip.edits.pitchSemitones), -24.0, 24.0)
-                                      : 0.0;
+
+    // Use the same project-rate source start as the runtime snapshot. This is
+    // what keeps a split/trim waveform on the same source region as playback,
+    // including legacy beat-domain clips and instance-level slips.
+    const auto& playlist = m_trackManager->getPlaylistModel();
+    const double projectSampleRate = playlist.getProjectSampleRate();
+    if (!std::isfinite(projectSampleRate) || projectSampleRate <= 0.0) return;
+    const double scaledSourceOffset =
+        static_cast<double>(playlist.getClipSourceStartSamples(clip)) * (sampleRate / projectSampleRate);
+    if (!std::isfinite(scaledSourceOffset) || scaledSourceOffset < 0.0 ||
+        scaledSourceOffset >= static_cast<double>(totalFrames)) {
+        return;
+    }
     // Pitch and speed share the varispeed envelope, matching the render path
     // (ClipRenderKernel) so the preview consumes source frames like the audio.
-    const double varispeed = std::clamp(playbackRate * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
-
-    double projectSampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
-    size_t scaledSourceOffset = static_cast<size_t>(std::round(static_cast<double>(sourceOffset) * (sampleRate / projectSampleRate)));
-    if (scaledSourceOffset >= totalFrames) {
-        scaledSourceOffset = 0;
-    }
+    const double varispeed = static_cast<double>(clip.edits.effectiveVarispeed());
 
     const double visibleOutputStart = static_cast<double>(offsetRatio) * timelineFrames;
     const double visibleOutputEnd = static_cast<double>(offsetRatio + visibleRatio) * timelineFrames;
-    const double exactStart = static_cast<double>(scaledSourceOffset) + visibleOutputStart * varispeed;
-    const double exactEnd = static_cast<double>(scaledSourceOffset) + visibleOutputEnd * varispeed;
-    size_t startFrame = static_cast<size_t>(exactStart);
-    size_t endFrame = static_cast<size_t>(exactEnd);
-    startFrame = std::min(startFrame, totalFrames);
-    endFrame = std::min(endFrame, totalFrames);
-    if (startFrame >= endFrame) return;
+    const double exactStart = scaledSourceOffset + visibleOutputStart * varispeed;
+    const double exactEnd = scaledSourceOffset + visibleOutputEnd * varispeed;
+    const double sourceStart = std::clamp(exactStart, 0.0, static_cast<double>(totalFrames));
+    const double sourceEnd = std::clamp(exactEnd, 0.0, static_cast<double>(totalFrames));
+    if (sourceStart >= sourceEnd) return;
 
     // The clip rectangle stays fixed on the timeline while varispeed changes
     // how quickly source frames are consumed. If the source ends before this
@@ -579,7 +577,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     AestraUI::NUIRect audibleBounds = bounds;
     const double visibleOutputFrames = visibleOutputEnd - visibleOutputStart;
     const double availableOutputEnd =
-        (static_cast<double>(totalFrames) - static_cast<double>(scaledSourceOffset)) / varispeed;
+        (static_cast<double>(totalFrames) - scaledSourceOffset) / varispeed;
     if (visibleOutputFrames > 0.0 && availableOutputEnd < visibleOutputEnd) {
         const double audibleOutputFrames = std::max(0.0, availableOutputEnd - visibleOutputStart);
         audibleBounds.width *= static_cast<float>(std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0));
@@ -587,23 +585,14 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     if (audibleBounds.width <= 0.0f)
         return;
 
-    size_t visibleFrames = endFrame - startFrame;
-    if (visibleFrames == 0) return;
-
     // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
     // lifts it bright + near-opaque so the wave reads boldly over the fill.
     const bool clipSelected = (clip.id == m_selectedClipId);
     const AestraUI::NUIColor clipTint = AestraUI::waveformTintTone(resolveClipDisplayColor(clip), clipSelected);
 
-    const double samplesPerPixel = static_cast<double>(visibleFrames) / static_cast<double>(audibleBounds.width);
-
-    // Deep zoom: fewer source samples than pixels — draw the actual sample
-    // curve with sub-sample positioning instead of a peak envelope
-    if (samplesPerPixel <= 1.0) {
-        drawSampleWaveform(renderer, audibleBounds, audioData, exactStart,
-                           std::min(exactEnd, static_cast<double>(totalFrames)), clipTint);
-        return;
-    }
+    // Keep source-frame coordinates fractional until bins are formed. This makes
+    // the deep and cached paths use identical pixel geometry at every zoom level.
+    const double samplesPerPixel = (sourceEnd - sourceStart) / static_cast<double>(audibleBounds.width);
 
     // One peak column per pixel: filled-strip rendering needs full density,
     // and the mip cache makes per-pixel queries cheap at any zoom
@@ -616,9 +605,9 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
         // Zoomed past the finest mip level: compute peaks directly from the
         // buffer. Bounded work — at most base-mip samples per visible pixel.
-        computeDirectPeaks(audioData, 0, startFrame, endFrame, numBars, m_waveformPeaksL);
+        computeDirectPeaks(audioData, 0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         if (numChannels > 1) {
-            computeDirectPeaks(audioData, 1, startFrame, endFrame, numBars, m_waveformPeaksR);
+            computeDirectPeaks(audioData, 1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
     } else {
         // Normal zoom: precomputed mip peaks only; no per-render scanning
@@ -632,9 +621,9 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
             return;
         }
 
-        waveformCache->getPeaksForRange(0, startFrame, endFrame, numBars, m_waveformPeaksL);
+        waveformCache->getPeaksForRangePrecise(0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         if (numChannels > 1) {
-            waveformCache->getPeaksForRange(1, startFrame, endFrame, numBars, m_waveformPeaksR);
+            waveformCache->getPeaksForRangePrecise(1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
     }
 
@@ -747,109 +736,50 @@ void TrackUIComponent::drawCombinedWaveform(AestraUI::NUIRenderer& renderer, con
 }
 
 void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
-                                          size_t startFrame, size_t endFrame, int numColumns,
+                                          double startFrame, double endFrame, int numColumns,
                                           std::vector<Aestra::Audio::WaveformPeak>& outPeaks) {
     outPeaks.clear();
     if (numColumns <= 0 || buffer.numChannels == 0 || buffer.numFrames == 0) return;
 
-    endFrame = std::min(endFrame, static_cast<size_t>(buffer.numFrames));
+    if (!std::isfinite(startFrame) || !std::isfinite(endFrame)) return;
+    startFrame = std::clamp(startFrame, 0.0, static_cast<double>(buffer.numFrames));
+    endFrame = std::clamp(endFrame, 0.0, static_cast<double>(buffer.numFrames));
     if (startFrame >= endFrame) return;
     channel = std::min(channel, buffer.numChannels - 1);
 
     const float* data = buffer.interleavedData.data();
     const size_t stride = buffer.numChannels;
-    const double framesPerColumn = static_cast<double>(endFrame - startFrame) / static_cast<double>(numColumns);
+    const double framesPerColumn = (endFrame - startFrame) / static_cast<double>(numColumns);
+    const auto readSample = [data, stride, channel](size_t frame) {
+        const float sample = data[frame * stride + channel];
+        return std::isfinite(sample) ? sample : 0.0f;
+    };
 
     outPeaks.reserve(static_cast<size_t>(numColumns));
     for (int col = 0; col < numColumns; ++col) {
-        size_t f0 = startFrame + static_cast<size_t>(static_cast<double>(col) * framesPerColumn);
-        size_t f1 = startFrame + static_cast<size_t>(static_cast<double>(col + 1) * framesPerColumn);
-        f0 = std::min(f0, endFrame - 1);
-        f1 = std::max(std::min(f1, endFrame), f0 + 1);
+        const double pixelStart = startFrame + static_cast<double>(col) * framesPerColumn;
+        const double pixelEnd = startFrame + static_cast<double>(col + 1) * framesPerColumn;
+        size_t f0 = static_cast<size_t>(std::floor(pixelStart));
+        size_t f1 = static_cast<size_t>(std::ceil(pixelEnd));
+        f0 = std::min(f0, static_cast<size_t>(buffer.numFrames) - 1);
+        f1 = std::max(std::min(f1, static_cast<size_t>(buffer.numFrames)), f0 + 1);
 
-        float minVal = data[f0 * stride + channel];
+        float minVal = readSample(f0);
         float maxVal = minVal;
         double sumSq = 0.0;
         for (size_t f = f0; f < f1; ++f) {
-            const float s = data[f * stride + channel];
+            const float s = readSample(f);
             minVal = std::min(minVal, s);
             maxVal = std::max(maxVal, s);
             sumSq += static_cast<double>(s) * s;
         }
 
-        const uint32_t count = static_cast<uint32_t>(f1 - f0);
+        const uint32_t count = static_cast<uint32_t>(
+            std::min<size_t>(f1 - f0, std::numeric_limits<uint32_t>::max()));
         const float rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(count)));
         outPeaks.emplace_back(minVal, maxVal, rms, count);
         outPeaks.back().sanitize();
     }
-}
-
-void TrackUIComponent::drawSampleWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                                          const Aestra::Audio::AudioBufferData& buffer, double startFrame,
-                                          double endFrame, const AestraUI::NUIColor& tint) {
-    const size_t numChannels = buffer.numChannels;
-    if (numChannels == 0 || buffer.numFrames == 0 || endFrame <= startFrame) return;
-    if (bounds.width <= 0.0f || bounds.height <= 0.0f) return;
-
-    const double pixelsPerSample = static_cast<double>(bounds.width) / (endFrame - startFrame);
-
-    const WaveformInk ink = deriveWaveformInk(tint);
-    const AestraUI::NUIColor lineColor = ink.rms.withAlpha(0.92f);
-    const AestraUI::NUIColor& centerLineColor = ink.centerLine;
-
-    long long firstFrame = static_cast<long long>(std::floor(startFrame));
-    long long lastFrame = static_cast<long long>(std::ceil(endFrame));
-    firstFrame = std::max(firstFrame, 0LL);
-    lastFrame = std::min(lastFrame, static_cast<long long>(buffer.numFrames) - 1);
-    if (lastFrame < firstFrame) return;
-
-    const float* data = buffer.interleavedData.data();
-    const size_t stride = numChannels;
-
-    auto drawLane = [&](float laneY, float laneH, int channel) {
-        const float centerY = laneY + laneH * 0.5f;
-        const float halfDrawH = std::max(1.0f, laneH * 0.5f - 2.0f);
-
-        m_waveformTopPts.clear();
-        for (long long f = firstFrame; f <= lastFrame; ++f) {
-            float s;
-            if (channel < 0) {
-                // Combined lane: mean of all channels
-                double acc = 0.0;
-                for (size_t ch = 0; ch < numChannels; ++ch) {
-                    acc += data[static_cast<size_t>(f) * stride + ch];
-                }
-                s = static_cast<float>(acc / static_cast<double>(numChannels));
-            } else {
-                s = data[static_cast<size_t>(f) * stride + static_cast<size_t>(channel)];
-            }
-            if (std::isnan(s) || std::isinf(s)) s = 0.0f;
-            s = std::max(-1.0f, std::min(1.0f, s));
-
-            float px = bounds.x + static_cast<float>((static_cast<double>(f) - startFrame) * pixelsPerSample);
-            px = std::max(bounds.x, std::min(bounds.x + bounds.width, px));
-            m_waveformTopPts.emplace_back(px, centerY - s * halfDrawH);
-        }
-
-        if (m_waveformTopPts.size() >= 2) {
-            renderer.drawPolyline(m_waveformTopPts.data(), static_cast<int>(m_waveformTopPts.size()), 1.5f,
-                                  lineColor);
-        }
-
-        // Sample dots once samples are far enough apart to read individually
-        if (pixelsPerSample >= 6.0) {
-            for (const auto& p : m_waveformTopPts) {
-                renderer.fillRect(AestraUI::NUIRect(p.x - 1.5f, p.y - 1.5f, 3.0f, 3.0f), lineColor);
-            }
-        }
-
-        renderer.drawLine(AestraUI::NUIPoint(bounds.x, centerY), AestraUI::NUIPoint(bounds.x + bounds.width, centerY),
-                          1.0f, centerLineColor);
-    };
-
-    // One combined lane, matching the peak-envelope path. Splitting L/R here
-    // would make the waveform layout jump as zoom crosses the LOD threshold.
-    drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
 }
 
 AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance& clip) const {
@@ -877,7 +807,8 @@ AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance&
 }
 
 void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                            const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
+                                            const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip,
+                                            bool seamLeft, bool seamRight) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
     const float clipRadius = themeManager.getRadius("s");
@@ -926,6 +857,20 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary"));
     renderer.fillRoundedRect(clipBounds, clipRadius, tintFill);
 
+    // Adjacent slices share a timeline edge, but rounded corners and antialiasing
+    // can expose the grid between their independently rendered bodies. Square the
+    // internal sides and overlap by one pixel so a visual split stays gapless.
+    constexpr float kSeamOverlap = 1.0f;
+    const float seamFillWidth = clipRadius + kSeamOverlap;
+    if (seamLeft) {
+        renderer.fillRect({clipBounds.x - kSeamOverlap, clipBounds.y,
+                           seamFillWidth + kSeamOverlap, clipBounds.height}, tintFill);
+    }
+    if (seamRight) {
+        renderer.fillRect({clipBounds.right() - seamFillWidth, clipBounds.y,
+                           seamFillWidth + kSeamOverlap, clipBounds.height}, tintFill);
+    }
+
     AestraUI::NUIColor borderColor = clipBase.lightened(0.10f).withAlpha(clipSelected ? 0.94f : 0.58f);
     float borderWidth = 1.0f;
 
@@ -957,7 +902,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
 
 // Distinct dark header scrim + filename, drawn on top of the full-height waveform.
 void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                            const ClipInstance& clip) {
+                                            const ClipInstance& clip, bool seamLeft, bool seamRight) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float clipRadius = themeManager.getRadius("s");
     constexpr float kClipHeaderHeight = 15.0f;
@@ -971,15 +916,28 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
     }
     const bool clipSelected = (clip.id == m_selectedClipId);
 
-    const AestraUI::NUIRect headerRect(clipBounds.x + 1.0f, clipBounds.y + 1.0f,
-                                       std::max(0.0f, clipBounds.width - 2.0f), kClipHeaderHeight);
+    const float headerLeft = clipBounds.x + (seamLeft ? 0.0f : 1.0f);
+    const float headerRight = clipBounds.right() - (seamRight ? 0.0f : 1.0f);
+    const AestraUI::NUIRect headerRect(headerLeft, clipBounds.y + 1.0f,
+                                       std::max(0.0f, headerRight - headerLeft), kClipHeaderHeight);
     // Own opaque title strip (the waveform lives below it, not behind it), with a
     // divider so the label band reads as its own section.
-    renderer.fillRoundedRect(headerRect, clipRadius - 1.0f,
-                             themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.98f : 0.94f));
+    const auto headerFill = themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.98f : 0.94f);
+    renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, headerFill);
+    constexpr float kSeamOverlap = 1.0f;
+    const float seamFillWidth = clipRadius + kSeamOverlap;
+    if (seamLeft) {
+        renderer.fillRect({clipBounds.x - kSeamOverlap, headerRect.y,
+                           seamFillWidth + kSeamOverlap, headerRect.height}, headerFill);
+    }
+    if (seamRight) {
+        renderer.fillRect({clipBounds.right() - seamFillWidth, headerRect.y,
+                           seamFillWidth + kSeamOverlap, headerRect.height}, headerFill);
+    }
     renderer.drawLine(
-        AestraUI::NUIPoint(clipBounds.x + 2.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
-        AestraUI::NUIPoint(clipBounds.right() - 2.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
+        AestraUI::NUIPoint(clipBounds.x + (seamLeft ? 0.0f : 2.0f), clipBounds.y + kClipHeaderHeight + 1.0f),
+        AestraUI::NUIPoint(clipBounds.right() - (seamRight ? 0.0f : 2.0f),
+                           clipBounds.y + kClipHeaderHeight + 1.0f),
         1.0f, themeManager.getCurrentTheme().textPrimary.withAlpha(0.16f));
 
     const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
@@ -1053,6 +1011,21 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
             float clipWidth = clipEndX - clipStartX;
             
             if (clipWidth > 0) {
+                bool seamLeft = false;
+                bool seamRight = false;
+                if (m_trackManager) {
+                    auto& playlist = m_trackManager->getPlaylistModel();
+                    if (const PlaylistLane* lane = playlist.getLane(m_laneId)) {
+                        constexpr double kSeamToleranceBeats = 1.0e-6;
+                        for (const auto& otherClip : lane->clips) {
+                            if (otherClip.id == clip.id) continue;
+                            seamLeft = seamLeft || std::abs(otherClip.endBeat() - clip.startBeat) <= kSeamToleranceBeats;
+                            seamRight = seamRight || std::abs(clip.endBeat() - otherClip.startBeat) <= kSeamToleranceBeats;
+                            if (seamLeft && seamRight) break;
+                        }
+                    }
+                }
+
                 const AestraUI::NUIRect fullClipBounds(
                     waveformStartX,
                     bounds.y + 2,
@@ -1084,21 +1057,23 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                 if (isPattern) {
                     drawPatternClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
                 } else {
-                    drawSampleClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
+                    drawSampleClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip, seamLeft, seamRight);
                     // The label gets its own reserved strip at the top; the waveform
                     // fills the whole area BELOW it (bold + gained, so it's full, not
                     // squashed under the label).
                     constexpr float kHeaderStripH = 16.0f;
-                    const float waveformPad = 3.0f;
+                    const float waveformPadLeft = seamLeft ? 0.0f : 3.0f;
+                    const float waveformPadRight = seamRight ? 0.0f : 3.0f;
+                    constexpr float waveformPadBottom = 3.0f;
                     const float waveTop = insetClippedClipBounds.y + kHeaderStripH;
                     const AestraUI::NUIRect waveformInsideClip(
-                        insetClippedClipBounds.x + waveformPad,
+                        insetClippedClipBounds.x + waveformPadLeft,
                         waveTop + 1.0f,
-                        std::max(1.0f, insetClippedClipBounds.width - waveformPad * 2.0f),
-                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPad) - (waveTop + 1.0f))
+                        std::max(1.0f, insetClippedClipBounds.width - waveformPadLeft - waveformPadRight),
+                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) - (waveTop + 1.0f))
                     );
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
-                    drawSampleClipHeader(renderer, insetClippedClipBounds, clip);
+                    drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
                 }
                 if (clip.id == m_selectedClipId) {
                     drawPianoRollStyleSelection(renderer, insetClippedClipBounds,
@@ -2328,19 +2303,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             double minStart = 0.0;
                             if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
                                 auto& playlistModel = m_trackManager->getPlaylistModel();
-                                float rate = clip.edits.playbackRate;
-                                if (!std::isfinite(rate) || rate <= 0.0f) {
-                                    rate = 1.0f;
-                                }
-                                rate = std::clamp(rate, 0.25f, 4.0f);
-                                const float pitchSemitones =
-                                    std::isfinite(clip.edits.pitchSemitones)
-                                        ? std::clamp(clip.edits.pitchSemitones, -24.0f, 24.0f)
-                                        : 0.0f;
-                                rate = std::clamp(rate * std::pow(2.0f, pitchSemitones / 12.0f), 0.25f, 4.0f);
                                 const double secondsPerBeat = playlistModel.beatToSeconds(1.0);
+                                const double varispeed = clip.edits.effectiveVarispeed();
                                 minStart = std::max(
-                                    0.0, m_trimOriginalStart - m_trimOriginalSourceOffsetSeconds / (secondsPerBeat * rate));
+                                    0.0, m_trimOriginalStart - m_trimOriginalSourceOffsetSeconds / (secondsPerBeat * varispeed));
                             }
                             double newStart = std::max(minStart, m_trimOriginalStart + deltaBeats);
                             newStart = snapBeatToGrid(newStart); // Apply snap
@@ -2351,7 +2317,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             clip.durationBeats = endBeat - clip.startBeat;
                             if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
                                 clip.durationSeconds =
-                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats);
+                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats) /
+                                    clip.edits.effectiveVarispeed();
                             }
                         } else if (m_trimEdge == TrimEdge::Right) {
                             // Trim right: change end position (duration)
@@ -2361,7 +2328,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             clip.durationBeats = std::max(0.1, newEnd - clip.startBeat);
                             if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
                                 clip.durationSeconds =
-                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats);
+                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats) /
+                                    clip.edits.effectiveVarispeed();
                             }
                         }
                         

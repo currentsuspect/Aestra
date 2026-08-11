@@ -84,15 +84,12 @@ public:
         if (m_originalWasAudio) {
             // The source read offset must never go negative: clamp the start to
             // the source-start beat (start - offset), same formula the UI drag
-            // uses, so the model can never hold an unrenderable offset.
+            // uses, so the model can never hold an unrenderable offset. The
+            // combined Speed/Pitch varispeed is the render authority (#746).
             const double secondsPerBeat = m_model.beatToSeconds(1.0);
-            float rate = clip->edits.playbackRate;
-            if (!std::isfinite(rate) || rate <= 0.0f) {
-                rate = 1.0f;
-            }
-            rate = std::clamp(rate, 0.25f, 4.0f);
+            const double varispeed = static_cast<double>(clip->edits.effectiveVarispeed());
             const double minStart =
-                m_originalStartBeat - m_originalSourceOffsetSeconds / (secondsPerBeat * rate);
+                m_originalStartBeat - m_originalSourceOffsetSeconds / (secondsPerBeat * varispeed);
             if (newStart < minStart) {
                 newStart = minStart;
             }
@@ -100,14 +97,14 @@ public:
                 return; // Clamped start swallowed the trim range - don't apply
             }
 
-            clip->durationSeconds = m_model.beatToSeconds(newEnd - newStart);
+            clip->durationSeconds = m_model.beatToSeconds(newEnd - newStart) / varispeed;
             if (newStart != m_originalStartBeat) {
                 // Left-edge trim: advance the source read position by the same
-                // musical amount (scaled by playback rate so the right edge
-                // stays pinned under varispeed). Right-edge trims leave the
+                // musical amount (scaled by varispeed so the right edge stays
+                // pinned under Speed/Pitch). Right-edge trims leave the
                 // source offset untouched.
                 clip->sourceOffsetSeconds =
-                    m_originalSourceOffsetSeconds + (newStart - m_originalStartBeat) * secondsPerBeat * rate;
+                    m_originalSourceOffsetSeconds + (newStart - m_originalStartBeat) * secondsPerBeat * varispeed;
             }
         }
 

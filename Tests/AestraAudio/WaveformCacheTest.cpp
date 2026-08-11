@@ -187,7 +187,26 @@ bool testVisibleRangeClipping() {
     return true;
 }
 
-// 6. Cache sharing (same source identity -> shared ClipSource cache)
+// 6. Fractional source-frame bins stay source anchored
+bool testPreciseRangeMapping() {
+    const std::vector<float> data = {0.10f, 0.20f, 0.30f, 0.40f, 0.50f, 0.60f};
+    WaveformCache cache;
+    cache.buildFromRaw(data.data(), static_cast<SampleIndex>(data.size()), 1, 1, 1);
+
+    std::vector<WaveformPeak> peaks;
+    cache.getPeaksForRangePrecise(0, 1.25, 5.25, 4, peaks);
+    if (peaks.size() != 4) return fail("precise mapping: expected four peaks");
+    if (!approxEqual(peaks[0].min, 0.20f) || !approxEqual(peaks[0].max, 0.30f))
+        return fail("precise mapping: first pixel reset at fractional start");
+    if (!approxEqual(peaks[1].min, 0.30f) || !approxEqual(peaks[1].max, 0.40f))
+        return fail("precise mapping: second pixel boundary");
+    if (!approxEqual(peaks[3].min, 0.50f) || !approxEqual(peaks[3].max, 0.60f))
+        return fail("precise mapping: final pixel boundary");
+
+    return true;
+}
+
+// 7. Cache sharing (same source identity -> shared ClipSource cache)
 bool testCacheSharing() {
     ClipSource source(ClipSourceID{1}, "Test");
     std::vector<float> data = {0.1f, -0.2f, 0.3f, -0.4f};
@@ -341,6 +360,7 @@ int main() {
     ok &= testLodAggregation();
     ok &= testLodSelection();
     ok &= testVisibleRangeClipping();
+    ok &= testPreciseRangeMapping();
     ok &= testCacheSharing();
     ok &= testSourceRevisionTracksBufferContent();
     ok &= testFailureSafety();

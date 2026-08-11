@@ -1002,7 +1002,11 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 ejs.set("pan", JSON(static_cast<double>(clip.edits.pan)));
                 ejs.set("muted", JSON(clip.edits.muted));
                 ejs.set("playbackRate", JSON(static_cast<double>(clip.edits.playbackRate)));
-                ejs.set("pitchSemitones", JSON(static_cast<double>(clip.edits.pitchSemitones)));
+                const float persistedPitch = std::isfinite(clip.edits.pitchSemitones)
+                                                 ? std::clamp(clip.edits.pitchSemitones, ClipEdits::kMinPitchSemitones,
+                                                              ClipEdits::kMaxPitchSemitones)
+                                                 : 0.0f;
+                ejs.set("pitchSemitones", JSON(static_cast<double>(persistedPitch)));
                 ejs.set("fadeIn", JSON(clip.edits.fadeInBeats));
                 ejs.set("fadeOut", JSON(clip.edits.fadeOutBeats));
                 ejs.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
