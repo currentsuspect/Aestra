@@ -80,7 +80,8 @@ private:
                          AudioEngine& engineRef);
 
     void processTrackEffects(const RenderTrack& track, AudioGraphState& state, uint32_t numFrames,
-                             uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph);
+                             uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph,
+                             bool snapGains);
 };
 
 } // namespace Audio

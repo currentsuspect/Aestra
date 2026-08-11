@@ -144,6 +144,18 @@ int main() {
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
     }
 
+    // Track 0 also sends to master at a non-unity, panned level. This exercises
+    // the send-gain stage in AudioEngine::renderTrack (snapped during offline
+    // render) against the baked send connection gain AudioRenderer uses, so a
+    // regression in either send path fails the master-vs-isolated comparison.
+    if (auto* sendChannel = trackManager->getChannel(0)) {
+        AudioRoute sendToMaster;
+        sendToMaster.targetChannelId = 0xFFFFFFFF; // Master
+        sendToMaster.gain = 0.5f;
+        sendToMaster.pan = 0.3f;
+        sendChannel->addSend(sendToMaster);
+    }
+
     // --- Master bounce ---
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);

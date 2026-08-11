@@ -2592,8 +2592,15 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     }
     state.gainL.setTarget(tL);
     state.gainR.setTarget(tR);
-    state.gainL.beginRamp(numFrames);
-    state.gainR.beginRamp(numFrames);
+    if (m_offlineRenderActive.load(std::memory_order_relaxed)) {
+        // Offline export: render the settled target from frame 0, matching a
+        // warmed live engine and AudioRenderer's isolated-bounce path (#745).
+        state.gainL.snap();
+        state.gainR.snap();
+    } else {
+        state.gainL.beginRamp(numFrames);
+        state.gainR.beginRamp(numFrames);
+    }
 
     const double* trackData = buffer.data();
     double peakTrackL = 0.0;
@@ -2948,8 +2955,13 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                                     static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].setTarget(targetL);
             state.sendGainR[sendIndex].setTarget(targetR);
-            state.sendGainL[sendIndex].beginRamp(numFrames);
-            state.sendGainR[sendIndex].beginRamp(numFrames);
+            if (m_offlineRenderActive.load(std::memory_order_relaxed)) {
+                state.sendGainL[sendIndex].snap();
+                state.sendGainR[sendIndex].snap();
+            } else {
+                state.sendGainL[sendIndex].beginRamp(numFrames);
+                state.sendGainR[sendIndex].beginRamp(numFrames);
+            }
         }
     }
 

@@ -310,6 +310,80 @@ bool runCrossSampleRateCase(const SessionConfig& liveCfg, const fs::path& tempRo
     return pass;
 }
 
+// -----------------------------------------------------------------------------
+// Case 4: isolated-track bounce honors clip Speed (playbackRate) — parity
+// with live playback of the same session (#745)
+// -----------------------------------------------------------------------------
+bool runIsolatedSpeedParityCase(const SessionConfig& cfg, const fs::path& tempRoot, float speed) {
+    const uint32_t totalFrames = cfg.sampleRate * kSeconds;
+
+    // One-track session with the clip sped up/down. The edit is applied before
+    // engine prepare, so the compiled graph carries playbackRate.
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+    addAudioTrack(*tm, "SpeedA", makeSine(440.0, 0.30f, totalFrames, cfg.sampleRate), totalFrames, cfg);
+    const auto laneId = tm->getPlaylistModel().getLaneId(0);
+    const auto* lane = tm->getPlaylistModel().getLane(laneId);
+    if (!lane || lane->clips.empty()) {
+        std::cerr << "no clip on lane 0; cannot apply speed\n";
+        return false;
+    }
+    ClipEdits edits;
+    edits.playbackRate = speed;
+    if (!tm->getPlaylistModel().setClipEdits(lane->clips.front().id, edits)) {
+        std::cerr << "setClipEdits failed\n";
+        return false;
+    }
+
+    // Live render of the sped session.
+    AudioEngine liveEngine;
+    prepareEngine(liveEngine, tm, cfg);
+    warmupEngine(liveEngine, cfg);
+    liveEngine.setTransportPlaying(true);
+    std::vector<float> realtime = renderBlocks(liveEngine, totalFrames, cfg);
+    liveEngine.setTransportPlaying(false);
+
+    // Isolated-track bounce (trackId 0) of the same session.
+    AudioEngine bounceEngine;
+    prepareEngine(bounceEngine, tm, cfg);
+    warmupEngine(bounceEngine, cfg);
+    const fs::path outPath = tempRoot / "parity_speed_isolated.wav";
+    if (!bounceEngine.bounceRangeToWav(0.0, kBeats, outPath.string(), 0)) {
+        std::cerr << "isolated bounceRangeToWav failed for " << outPath << "\n";
+        return false;
+    }
+    std::vector<float> bounced;
+    uint32_t sr = 0, ch = 0;
+    if (!decodeAudioFile(outPath.string(), bounced, sr, ch)) {
+        std::cerr << "failed to decode " << outPath << "\n";
+        return false;
+    }
+    if (sr != cfg.sampleRate || ch != cfg.channels) {
+        std::cerr << "isolated bounce format mismatch: " << sr << " Hz / " << ch << " ch\n";
+        return false;
+    }
+
+    const size_t trimStart = static_cast<size_t>(cfg.blockSize) * 4 * cfg.channels;
+    const size_t n = std::min(realtime.size(), bounced.size());
+    if (n <= trimStart) {
+        std::cerr << "not enough overlap to compare (" << n << " samples)\n";
+        return false;
+    }
+    std::vector<float> rt(realtime.begin() + static_cast<ptrdiff_t>(trimStart),
+                          realtime.begin() + static_cast<ptrdiff_t>(n));
+    std::vector<float> iso(bounced.begin() + static_cast<ptrdiff_t>(trimStart),
+                           bounced.begin() + static_cast<ptrdiff_t>(n));
+
+    DiffReport r = compareBuffers(rt, iso, cfg.channels, cfg.sampleRate, 1e-6);
+    const bool pass = (r.rmsErrorDb <= -120.0) && (r.maxAbsError <= 1e-6);
+    printReport("Isolated_Bounce_Speed" + std::to_string(speed) + "x_vs_Live", r, pass,
+                "isolated bounce at speed " + std::to_string(speed) +
+                    " must equal live playback at the same speed (RMS <= -120 dB, maxAbs <= 1e-6)");
+    std::cout << "  live frames: " << realtime.size() / cfg.channels
+              << ", isolated bounce frames: " << bounced.size() / cfg.channels << "\n";
+    return pass;
+}
+
 } // namespace
 
 int main() {
@@ -332,6 +406,9 @@ int main() {
     if (!runParityCase(tm, cfg, cleanExport)) ++failures;
     if (!runDuckContaminationCase(tm, cfg, cleanExport, tempRoot)) ++failures;
     if (!runCrossSampleRateCase(cfg, tempRoot)) ++failures;
+    for (float speed : {2.0f, 0.5f}) {
+        if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed)) ++failures;
+    }
 
     fs::remove_all(tempRoot, ec);
     std::cout << "\n" << (failures == 0 ? "ALL PASS" : "FAILURES: " + std::to_string(failures)) << "\n";
