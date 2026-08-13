@@ -885,7 +885,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             sjs.set("postFader", JSON(send.postFader));
             sjs.set("mute", JSON(send.mute));
             sjs.set("sidechainOnly", JSON(send.sidechainOnly));
-            sjs.set("sendId", JSON(static_cast<double>(send.sendId)));
+            sjs.set("sendId", JSON(std::to_string(send.sendId)));
             sendsJson.push(sjs);
         }
         routingJson.set("sends", sendsJson);
@@ -936,7 +936,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                     sjs.set("postFader", JSON(send.postFader));
                     sjs.set("mute", JSON(send.mute));
                     sjs.set("sidechainOnly", JSON(send.sidechainOnly));
-                    sjs.set("sendId", JSON(static_cast<double>(send.sendId)));
+                    sjs.set("sendId", JSON(std::to_string(send.sendId)));
                     sendsJson.push(sjs);
                 }
                 routingJson.set("sends", sendsJson);
@@ -1838,11 +1838,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
                             route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
                                                   sends[s]["sidechainOnly"].asBool();
-                            // Stable send identity (Contract D2). Older projects
-                            // lack the key: 0 mints a fresh ID in addSend.
-                            route.sendId = static_cast<uint64_t>(
-                                finiteNumberOr(sends[s], "sendId", 0.0, 0.0,
-                                               static_cast<double>(std::numeric_limits<uint64_t>::max())));
+                            // Stable send identity (Contract D2). Serialized as an
+                            // exact decimal string so ids above 2^53 survive the
+                            // JSON round trip. Legacy numeric values are accepted
+                            // only inside the exact JSON-integer range; anything
+                            // else (or a missing key) is 0, which mints in addSend.
+                            route.sendId = 0;
+                            if (sends[s].has("sendId") && sends[s]["sendId"].isString()) {
+                                try {
+                                    route.sendId = std::stoull(sends[s]["sendId"].asString());
+                                } catch (const std::exception&) {
+                                    route.sendId = 0;
+                                }
+                            } else if (sends[s].has("sendId") && sends[s]["sendId"].isNumber()) {
+                                const double legacyId = sends[s]["sendId"].asNumber();
+                                if (std::isfinite(legacyId) && legacyId >= 0.0 && legacyId <= 9007199254740991.0) {
+                                    route.sendId = static_cast<uint64_t>(legacyId);
+                                }
+                            }
                             channel->addSend(route);
                         }
                     }

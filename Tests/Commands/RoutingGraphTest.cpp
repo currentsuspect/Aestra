@@ -90,6 +90,12 @@ int main() {
     masterSend.pan = -0.2f;
     masterSend.postFader = false;
     drums->addSend(masterSend);
+    // A send id beyond 2^53 - 1 must survive Muse diagnostics exactly (the
+    // stable-id contract is durable; doubles cannot carry it).
+    AudioRoute wideIdSend{};
+    wideIdSend.targetChannelId = bus->getChannelId();
+    wideIdSend.sendId = 9007199254740993ull;
+    drums->addSend(wideIdSend);
     AudioRoute busSidechain{};
     busSidechain.targetChannelId = bus->getChannelId();
     busSidechain.sidechainOnly = true;
@@ -129,7 +135,7 @@ int main() {
               graph["unresolvedRoutes"].size() == 0,
           "resolved project-model topology reports no unresolved routes");
     check(graph["sources"].size() == 2 && graph["destinations"].size() == 3 &&
-              graph["mainRoutes"].size() == 2 && graph["sends"].size() == 2,
+              graph["mainRoutes"].size() == 2 && graph["sends"].size() == 3,
           "graph exposes sources, destinations, main paths, and sends");
 
     JSON* drumsDestination = findByString(graph["destinations"], "nodeId", "mixer:41");
@@ -170,15 +176,23 @@ int main() {
     check(drumsMain != nullptr && (*drumsMain)["resolved"].asBool() &&
               (*drumsMain)["destinationNodeId"].asString() == "mixer:77",
           "main route resolves stable mixer destination");
+    bool wideIdExact = false;
+    for (size_t si = 0; si < graph["sends"].size(); ++si) {
+        if (graph["sends"][si].has("sendId") &&
+            graph["sends"][si]["sendId"].asString() == "9007199254740993") {
+            wideIdExact = true;
+        }
+    }
+    check(wideIdExact, "a send id above 2^53 survives diagnostics exactly");
     JSON& send = graph["sends"][0];
     check(send["destinationNodeId"].asString() == "master" &&
               send["routeType"].asString() == "send" &&
               send["stableIdentityAvailable"].asBool() &&
-              send["sendId"].asNumber() != 0.0 &&
+              !send["sendId"].asString().empty() &&
               !send["positionalIdentityAvailable"].asBool() &&
               !send["postFader"].asBool(),
           "send exposes topology and stable send identity");
-    JSON& sidechain = graph["sends"][1];
+    JSON& sidechain = graph["sends"][2];
     check(sidechain["destinationNodeId"].asString() == "mixer:77" &&
               sidechain["routeType"].asString() == "sidechain_send" &&
               sidechain["sidechainOnly"].asBool(),

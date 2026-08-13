@@ -366,6 +366,8 @@ private:
     bool routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const;
     /** @brief Positional index of a sendId inside a channel's local send list; -1 when absent. */
     int findLocalSendIndex(const ChannelViewModel& ch, uint64_t sendId) const;
+    /** @brief Engine-side route for a sendId; false when the engine no longer holds it. */
+    bool tryGetEngineRoute(const Audio::MixerChannel* mc, uint64_t sendId, Audio::AudioRoute& out) const;
     /** @brief Mirror the engine-minted sendId of the last appended send into the local model. */
     void refreshLocalSendId(ChannelViewModel* ch, const Audio::MixerChannel* mc);
     bool hasRoutePath(uint32_t fromId, uint32_t targetId) const;

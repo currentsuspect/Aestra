@@ -778,14 +778,15 @@ void MixerViewModel::setSendLevel(uint32_t channelId, uint64_t sendId, float lin
 
     // Update Engine through the command seam (undoable)
     if (auto mc = ch->channel) {
+        Audio::AudioRoute route;
+        if (!tryGetEngineRoute(mc, sendId, route)) {
+            return;
+        }
+        route.gain = linearGain;
         if (m_commandHistory && m_trackManager) {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.gain = linearGain;
             m_commandHistory->pushAndExecute(
                 std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendId, route));
         } else {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.gain = linearGain;
             mc->setSend(sendId, route);
         }
         graphDirty.emit();
@@ -822,14 +823,15 @@ void MixerViewModel::setSendDestination(uint32_t channelId, uint64_t sendId, uin
     if (auto mc = ch->channel) {
         // Normalize 0 to 0xFFFFFFFF for engine master
         const uint32_t engineId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+        Audio::AudioRoute route;
+        if (!tryGetEngineRoute(mc, sendId, route)) {
+            return;
+        }
+        route.targetChannelId = engineId;
         if (m_commandHistory && m_trackManager) {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.targetChannelId = engineId;
             m_commandHistory->pushAndExecute(
                 std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendId, route));
         } else {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.targetChannelId = engineId;
             mc->setSend(sendId, route);
         }
 
@@ -847,14 +849,15 @@ void MixerViewModel::setSendPostFader(uint32_t channelId, uint64_t sendId, bool 
     ch->sends[static_cast<size_t>(localIndex)].postFader = postFader;
 
     if (auto mc = ch->channel) {
+        Audio::AudioRoute route;
+        if (!tryGetEngineRoute(mc, sendId, route)) {
+            return;
+        }
+        route.postFader = postFader;
         if (m_commandHistory && m_trackManager) {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.postFader = postFader;
             m_commandHistory->pushAndExecute(
                 std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendId, route));
         } else {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.postFader = postFader;
             mc->setSend(sendId, route);
         }
         graphDirty.emit();
@@ -871,14 +874,15 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, uint64_t sendId, b
     ch->sends[static_cast<size_t>(localIndex)].sidechainOnly = sidechainOnly;
 
     if (auto mc = ch->channel) {
+        Audio::AudioRoute route;
+        if (!tryGetEngineRoute(mc, sendId, route)) {
+            return;
+        }
+        route.sidechainOnly = sidechainOnly;
         if (m_commandHistory && m_trackManager) {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.sidechainOnly = sidechainOnly;
             m_commandHistory->pushAndExecute(
                 std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendId, route));
         } else {
-            auto route = mc->getSends()[static_cast<size_t>(mc->findSendIndex(sendId))];
-            route.sidechainOnly = sidechainOnly;
             mc->setSend(sendId, route);
         }
         graphDirty.emit();
@@ -921,6 +925,22 @@ void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targe
 }
 
 
+// Returns the engine-side route for a sendId, or false when the engine no
+// longer holds it (undo/redo or a rejected command can leave the local
+// mirror ahead of the engine). Callers must never index getSends() with an
+// unchecked findSendIndex result.
+bool MixerViewModel::tryGetEngineRoute(const Audio::MixerChannel* mc, uint64_t sendId, Audio::AudioRoute& out) const {
+    if (!mc || sendId == 0) {
+        return false;
+    }
+    const int engineIndex = mc->findSendIndex(sendId);
+    if (engineIndex < 0) {
+        return false;
+    }
+    out = mc->getSends()[static_cast<size_t>(engineIndex)];
+    return true;
+}
+
 int MixerViewModel::findLocalSendIndex(const ChannelViewModel& ch, uint64_t sendId) const {
     for (size_t i = 0; i < ch.sends.size(); ++i) {
         if (ch.sends[i].sendId == sendId) {
@@ -935,8 +955,22 @@ void MixerViewModel::refreshLocalSendId(ChannelViewModel* ch, const Audio::Mixer
         return;
     }
     const auto engineSends = mc->getSends();
-    if (!engineSends.empty() && !ch->sends.empty()) {
-        ch->sends.back().sendId = engineSends.back().sendId;
+    if (engineSends.empty()) {
+        return;
+    }
+    // Match by identity, not position: the local entry that still has no id
+    // is the one the command just created. A rejected command leaves the
+    // engine list unchanged, so the mirror below also pops the phantom.
+    for (auto& local : ch->sends) {
+        if (local.sendId == 0) {
+            local.sendId = engineSends.back().sendId;
+            break;
+        }
+    }
+    if (ch->sends.size() > engineSends.size()) {
+        // The command was rejected (cycle/master) after the local push: drop
+        // the phantom so the mirror never outlives the engine.
+        ch->sends.resize(engineSends.size());
     }
 }
 

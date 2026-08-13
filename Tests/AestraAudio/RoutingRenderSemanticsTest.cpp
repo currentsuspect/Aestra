@@ -191,8 +191,9 @@ struct Fixture {
     PatternID patternId{};
 
     explicit Fixture(const std::string& tag) {
-        sampleRoot = "/tmp/Aestra_tests/RoutingSemantics_" + tag + "_" +
-                     std::to_string(reinterpret_cast<uintptr_t>(this));
+        sampleRoot = (std::filesystem::temp_directory_path() / "Aestra_tests" /
+                      ("RoutingSemantics_" + tag + "_" + std::to_string(reinterpret_cast<uintptr_t>(this))))
+                         .string();
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path(sampleRoot).parent_path(), ec);
         tm = std::make_shared<TrackManager>();
@@ -299,7 +300,11 @@ void testV1PreFaderSurvivesMute() {
     // Route exists in the compiled topology (audibleDownstream edge).
     {
         AudioGraph graph = AudioGraphBuilder::buildFromTrackManager(*fx.tm);
-        const size_t srcIdx = graph.trackIndexById[fx.src->getChannelId()];
+        const uint32_t srcChannelId = fx.src->getChannelId();
+        require(srcChannelId < graph.trackIndexById.size(), "V1: source id must be in the graph index");
+        const size_t srcIdx = graph.trackIndexById[srcChannelId];
+        require(srcIdx != AudioGraph::kInvalidTrackIndex && srcIdx < graph.audibleDownstream.size(),
+                "V1: source must resolve to a graph track");
         bool found = false;
         for (const size_t dest : graph.audibleDownstream[srcIdx]) {
             if (graph.tracks[dest].trackId == fx.dst->getChannelId()) {

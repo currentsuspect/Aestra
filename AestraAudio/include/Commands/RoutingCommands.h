@@ -190,14 +190,17 @@ public:
             }
         }
         channel->setSend(m_sendId, m_newRoute);
-        if (m_previousRoute.targetChannelId != m_newRoute.targetChannelId) {
+        if (sendTopologyChanged()) {
+            // mute/sidechainOnly/postFader/destination all change the compiled
+            // topology (edges, sidechain buffers, PDC classification) — not
+            // just level/pan. Keep model and graph in step.
             m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
         }
     }
     void undo() override {
         if (auto* channel = m_manager.getChannelById(m_channelId)) {
             channel->setSend(m_sendId, m_previousRoute);
-            if (m_previousRoute.targetChannelId != m_newRoute.targetChannelId) {
+            if (sendTopologyChanged()) {
                 m_manager.requestAudioGraphRebuild(GraphDirtyReason::RoutingChanged);
             }
         }
@@ -209,6 +212,13 @@ public:
     std::string type() const override { return "edit_send"; }
 
 private:
+    bool sendTopologyChanged() const {
+        return m_previousRoute.targetChannelId != m_newRoute.targetChannelId ||
+               m_previousRoute.mute != m_newRoute.mute ||
+               m_previousRoute.sidechainOnly != m_newRoute.sidechainOnly ||
+               m_previousRoute.postFader != m_newRoute.postFader;
+    }
+
     TrackManager& m_manager;
     uint32_t m_channelId;
     uint64_t m_sendId;

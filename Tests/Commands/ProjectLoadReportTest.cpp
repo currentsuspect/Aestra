@@ -191,6 +191,34 @@ int main() {
     check(response["status"].asString() == "validation_error",
           "get_project_load_report rejects arguments");
 
+    // 8b. Wide send ids survive the project round trip exactly (Contract D2:
+    // ids above 2^53 must not be mangled by JSON doubles).
+    {
+        Aestra::Tests::ScopedTempDirectory wideTemp("wide_send_id");
+        auto wideSource = makeTracks();
+        auto* wideChannel = wideSource->addChannelWithId("Wide", 81);
+        auto* wideTarget = wideSource->addChannelWithId("WideTarget", 82);
+        check(wideChannel != nullptr && wideTarget != nullptr, "wide-id fixture channels created");
+        if (wideChannel && wideTarget) {
+            Aestra::Audio::AudioRoute wideSend;
+            wideSend.targetChannelId = wideTarget->getChannelId(); // master sends are illegal (D4)
+            wideSend.sendId = 9007199254740993ull;
+            wideChannel->addSend(wideSend);
+            const std::filesystem::path widePath = wideTemp.path() / "wide.aes";
+            check(ProjectSerializer::save(widePath.string(), wideSource, 120.0, 0.0),
+                  "wide-id project saved");
+            if (std::filesystem::exists(widePath)) {
+                auto wideTracks = makeTracks();
+                auto wideResult = ProjectSerializer::load(widePath.string(), wideTracks);
+                check(wideResult.ok, "wide-id project loads");
+                auto* loadedWide = wideTracks->getChannel(0);
+                check(loadedWide != nullptr && loadedWide->getSends().size() == 1 &&
+                          loadedWide->getSends()[0].sendId == 9007199254740993ull,
+                      "a send id above 2^53 survives the project round trip exactly");
+            }
+        }
+    }
+
     // 9. Routing repair at load (Contract I8/D3/D4): dangling mains reroute to
     // master; dangling sends and sends to master are removed with diagnostics.
     {

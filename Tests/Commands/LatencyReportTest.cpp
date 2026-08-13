@@ -163,7 +163,7 @@ void testBranchCompensationAndSidechainLimitation() {
               "main branch exposes matched solver and RT compensation");
         check((*sendEdge)["solverCompensationSamples"].asNumber() == 0.0 &&
                   (*sendEdge)["appliedCompensationSamples"].asNumber() == 0.0 &&
-                  (*sendEdge)["stableIdentityAvailable"].asBool() && (*sendEdge)["sendId"].asNumber() != 0.0,
+                  (*sendEdge)["stableIdentityAvailable"].asBool() && !(*sendEdge)["sendId"].asString().empty(),
               "send branch exposes stable send identity and applied delay");
     }
 
@@ -182,7 +182,7 @@ void testBranchCompensationAndSidechainLimitation() {
           "sidechain path is explicitly reported as uncompensated");
     check(degraded["uncompensatedPaths"][0]["evidence"]["stableEndpointIdentityAvailable"].asBool() &&
               degraded["uncompensatedPaths"][0]["evidence"]["stableSendIdAvailable"].asBool() &&
-              degraded["uncompensatedPaths"][0]["evidence"]["sendId"].asNumber() != 0.0,
+              !degraded["uncompensatedPaths"][0]["evidence"]["sendId"].asString().empty(),
           "uncompensated sidechain evidence identifies stable endpoints and send identity");
 }
 

@@ -688,7 +688,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 evidence.set("targetMixerChannelId", JSON(static_cast<double>(targetId)));
                 evidence.set("stableSourceIdentityAvailable", JSON(true));
                 evidence.set("stableSendIdAvailable", JSON(sendId != 0));
-                if (sendId != 0) evidence.set("sendId", JSON(static_cast<double>(sendId)));
+                if (sendId != 0) evidence.set("sendId", JSON(std::to_string(sendId)));
 
                 JSON issue = JSON::object();
                 issue.set("issueCode", JSON(issueCode));
@@ -793,7 +793,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     send.set("routeType", JSON(route.sidechainOnly ? "sidechain_send" : "send"));
                     send.set("sourceNodeId", JSON(sourceNodeId));
                     send.set("sourceMixerChannelId", JSON(static_cast<double>(channelId)));
-                    send.set("sendId", JSON(static_cast<double>(route.sendId)));
+                    send.set("sendId", JSON(std::to_string(route.sendId)));
                     send.set("stableIdentityAvailable", JSON(route.sendId != 0));
                     send.set("positionalIdentityAvailable", JSON(false));
                     send.set("targetMixerChannelId",
@@ -809,7 +809,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     send.set("postFader", JSON(route.postFader));
                     send.set("muted", JSON(route.mute));
                     send.set("sidechainOnly", JSON(route.sidechainOnly));
-                    send.set("sendId", JSON(static_cast<double>(route.sendId)));
+                    send.set("sendId", JSON(std::to_string(route.sendId)));
                     sends.push(send);
                     if (!sendResolved) {
                         addUnresolved("unresolved_send_destination",
@@ -886,7 +886,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             identityPolicy.set("units", JSON("stable_id"));
             identityPolicy.set("audioPatterns", JSON("stable_id"));
             identityPolicy.set("pluginSlots", JSON("positional"));
-            identityPolicy.set("sends", JSON("positional"));
+            identityPolicy.set("sends", JSON("stable_id"));
 
             JSON result = JSON::object();
             result.set("status", JSON(unresolvedRoutes.size() > 0 ? "degraded" : "resolved"));
@@ -1190,7 +1190,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     evidence.set("stableEndpointIdentityAvailable", JSON(sourceValid && destinationValid));
                     evidence.set("stableSendIdAvailable", JSON(mappingMatches && !main && sendId != 0));
                     if (mappingMatches && !main && sendId != 0) {
-                        evidence.set("sendId", JSON(static_cast<double>(sendId)));
+                        evidence.set("sendId", JSON(std::to_string(sendId)));
                     }
                     evidence.set("solvedCompensationSamples", JSON(static_cast<double>(solution.compensationSamples)));
                     evidence.set("appliedCompensationAvailable", JSON(appliedAvailable));
@@ -1217,7 +1217,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 edge.set("appliedCompensationSamples", JSON(static_cast<double>(appliedCompensation)));
                 edge.set("stableIdentityAvailable", JSON(mappingMatches && !main && sendId != 0));
                 if (mappingMatches && !main && sendId != 0) {
-                    edge.set("sendId", JSON(static_cast<double>(sendId)));
+                    edge.set("sendId", JSON(std::to_string(sendId)));
                 }
                 edge.set("mismatch", JSON(mismatch));
                 edges.push(edge);
@@ -1229,7 +1229,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     evidence.set("stableEndpointIdentityAvailable", JSON(sourceValid && destinationValid));
                     evidence.set("stableSendIdAvailable", JSON(mappingMatches && !main && sendId != 0));
                     if (mappingMatches && !main && sendId != 0) {
-                        evidence.set("sendId", JSON(static_cast<double>(sendId)));
+                        evidence.set("sendId", JSON(std::to_string(sendId)));
                     }
                     JSON issue = JSON::object();
                     issue.set("issueCode", JSON("sidechain_latency_compensation_unavailable"));

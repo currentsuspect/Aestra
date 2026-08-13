@@ -285,7 +285,7 @@ private:
     std::function<void(uint32_t)> m_onNodeMuteToggle;
     std::function<void(uint32_t)> m_onNodeSoloToggle;
     std::function<void(uint32_t, uint64_t)> m_onRemoveSend;
-    std::function<void(uint32_t, int, float)> m_onEditSendLevel;
+    std::function<void(uint32_t, uint64_t, float)> m_onEditSendLevel;
 };
 
 } // namespace AestraUI
