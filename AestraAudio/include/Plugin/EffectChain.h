@@ -155,7 +155,11 @@ public:
     // on-disk layout changes and add a migration branch in loadState() so older
     // chains keep loading. loadState() reads this byte and dispatches on it rather
     // than hard-rejecting anything != the current version.
-    static constexpr uint8_t kStateFormatVersion = 1;
+    //
+    // v2 (Automation Identity Contract I4/I5): every occupied slot carries its
+    // 8-byte instance id after the hasPlugin flag. v1 payloads (no ids) still
+    // load and mint (migration rule).
+    static constexpr uint8_t kStateFormatVersion = 2;
 
     EffectChain();
     ~EffectChain();

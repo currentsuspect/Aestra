@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <limits>
+#include <unordered_set>
 #include <cmath>
 #include <cstring>
 
@@ -741,6 +742,11 @@ std::vector<uint8_t> EffectChain::saveState() const {
         if (slot.hasMissingPlugin()) {
             state.push_back(1); // Has plugin flag
 
+            // v2: the placeholder's identity travels with it (Contract I6).
+            const uint64_t placeholderId = slot.instanceId;
+            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&placeholderId),
+                         reinterpret_cast<const uint8_t*>(&placeholderId) + sizeof(placeholderId));
+
             uint32_t idLen = static_cast<uint32_t>(slot.missingPluginId.size());
             state.insert(state.end(), reinterpret_cast<const uint8_t*>(&idLen),
                          reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
@@ -765,6 +771,11 @@ std::vector<uint8_t> EffectChain::saveState() const {
         }
 
         state.push_back(1); // Has plugin flag
+
+        // v2: the instance identity travels with the instance (Contract I4).
+        const uint64_t slotInstanceId = slot.instanceId;
+        state.insert(state.end(), reinterpret_cast<const uint8_t*>(&slotInstanceId),
+                     reinterpret_cast<const uint8_t*>(&slotInstanceId) + sizeof(slotInstanceId));
 
         // Save plugin ID
         const auto& info = slot.plugin->getInfo();
@@ -826,8 +837,38 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
     size_t offset = 5;
 
+    std::unordered_set<uint64_t> seenLoadedIds;
+    const auto resolveSlotIdentity = [&](uint64_t wireId, size_t slotIndex) -> uint64_t {
+        if (version >= 2 && wireId != 0) {
+            if (!seenLoadedIds.insert(wireId).second) {
+                // Duplicate id in a v2 payload is corrupt: mint a fresh identity
+                // so the two slots never share one (Contract I5).
+                Aestra::Log::warning("[EffectChain] duplicate instance id " + std::to_string(wireId) +
+                                     " in v2 state on slot " + std::to_string(slotIndex) +
+                                     "; minting a fresh identity");
+                return mintPluginInstanceId();
+            }
+            reserveMintedPluginInstanceId(wireId);
+            return wireId;
+        }
+        if (version >= 2) {
+            Aestra::Log::warning("[EffectChain] v2 state carries no instance id on slot " +
+                                 std::to_string(slotIndex) + "; minting (corrupt payload)");
+        }
+        return mintPluginInstanceId();
+    };
+
     for (size_t i = 0; i < MAX_SLOTS && offset < state.size(); ++i) {
         uint8_t hasPlugin = state[offset++];
+
+        uint64_t wireInstanceId = 0;
+        if (hasPlugin && version >= 2) {
+            if (offset + sizeof(uint64_t) > state.size()) {
+                return false;
+            }
+            std::memcpy(&wireInstanceId, &state[offset], sizeof(wireInstanceId));
+            offset += sizeof(wireInstanceId);
+        }
 
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
@@ -899,12 +940,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
             m_slots[i].plugin = std::move(instance);
             m_slots[i].clearMissingPlugin();
-            // v1 chains predate identity, so there is nothing on the wire to
-            // restore — mint. Reserving would be wrong here for the same reason:
-            // there is no persisted id that a future mint could collide with.
-            // When v2 lands, this is the branch that reads the stored id and
-            // calls reserveMintedPluginInstanceId instead (#667).
-            m_slots[i].instanceId = mintPluginInstanceId();
+            // v2 restores the persisted identity (reserving it against future
+            // mints); v1 predates identity and mints. A v2 payload with a
+            // missing/duplicate id mints with a diagnostic (Contract I5).
+            m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
@@ -923,8 +962,9 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             m_slots[i].missingPluginState = std::move(pluginState);
             // A placeholder is an occupant, so it gets an identity like any
             // other (#647/#667). Automation addressed to a plugin that failed to
-            // load has to survive the round trip exactly as the placeholder does.
-            m_slots[i].instanceId = mintPluginInstanceId();
+            // load has to survive the round trip exactly as the placeholder does
+            // (Contract I6): v2 restores the persisted id, v1 mints.
+            m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
