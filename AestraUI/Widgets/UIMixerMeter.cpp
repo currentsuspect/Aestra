@@ -306,6 +306,10 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     // so the meter reclaims that space and only labels its two bars L / R.
     constexpr float TEXT_HEIGHT = 24.0f;
     constexpr float LR_LABEL_HEIGHT = 11.0f;
+    // Track strips keep TEXT_HEIGHT reserved even when the compact readout is
+    // hidden (idle): reclaiming it on hover would grow the bars by 24 px and
+    // then shrink them again — a geometry jump. Stable meter geometry is the
+    // deliberate tradeoff; the empty band reads as quiet headroom, not layout.
     const float topReserve = m_masterMode ? 0.0f : TEXT_HEIGHT;
     const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
