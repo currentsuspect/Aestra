@@ -180,9 +180,11 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
 
     MixerChannel* src = trackManager->addChannel("src");
     MixerChannel* sink = trackManager->addChannel("sink");
+    MixerChannel* bus = trackManager->addChannel("bus");
     EXPECT_TRUE(src != nullptr);
     EXPECT_TRUE(sink != nullptr);
-    if (!src || !sink) {
+    EXPECT_TRUE(bus != nullptr);
+    if (!src || !sink || !bus) {
         return {};
     }
 
@@ -192,8 +194,10 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
 
     if (send.enabled) {
         src->setMainOutputId(sink->getChannelId()); // Keep the direct path out of the master mix
+        // Sends to master are illegal (Contract D4): route the send into a
+        // bus that feeds master, preserving the measurement path.
         AudioRoute route;
-        route.targetChannelId = kMasterId;
+        route.targetChannelId = bus->getChannelId();
         route.gain = send.gain;
         route.pan = send.pan;
         route.postFader = send.postFader;

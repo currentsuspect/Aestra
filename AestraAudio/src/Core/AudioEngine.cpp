@@ -2691,7 +2691,17 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         }
     }
 
-    if (!muted) {
+    // Send processing (Routing Contract I9/V1/V2):
+    // - The mute gate applies to the main path and POST-fader sends only.
+    //   Pre-fader sends tap before the fader AND the mute gate, so a muted
+    //   source's pre-fader sends (audible and sidechain) keep delivering.
+    // - A sidechain key input follows the SOURCE's solo state: in a solo
+    //   context a non-eligible source's key is silenced.
+    // - Audible sends to a track destination are gated by the DESTINATION's
+    //   eligibility (a soloed destination receives its inputs — the process
+    //   queue already prepared ineligible upstream sources for it). Sends to
+    //   master are illegal (Contract D4) and defensively dropped.
+    {
         // Use pre-allocated member scratch buffer (no heap allocation in RT path).
         m_preparedRoutesScratch.clear();
         const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
@@ -2700,12 +2710,16 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
             if (send.mute) {
                 continue;
             }
-            if (!send.postFader && !hasPreFaderSend) {
+            const bool isPreFader = !send.postFader;
+            if (!isPreFader && muted) {
+                continue;
+            }
+            if (isPreFader && !hasPreFaderSend) {
                 continue;
             }
 
             PreparedSendRoute route;
-            route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
+            route.source = isPreFader ? state.preFaderBuffer.data() : buffer.data();
             route.gainL = &state.sendGainL[sendIndex];
             route.gainR = &state.sendGainR[sendIndex];
             // PDC v2 (P4b.3): look up the per-edge compensation slot for
@@ -2715,6 +2729,10 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 (sendIndex < state.sendEdgeDelays.size()) ? state.sendEdgeDelays[sendIndex].get() : nullptr;
 
             if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
+                // Key input follows the source's solo state (Contract I9/V2).
+                if (!audibleEligible) {
+                    continue;
+                }
                 const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
                 if (scDestSlot != ChannelSlotMap::INVALID_SLOT && scDestSlot < availableTracks &&
                     scDestSlot != trackIdx) {
@@ -2724,13 +2742,8 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 continue;
             }
 
-            if (!audibleEligible) {
-                continue;
-            }
-
+            // Sends to master are illegal (Contract D4); drop defensively.
             if (send.targetChannelId == 0xFFFFFFFFu) {
-                route.dest = masterBuf;
-                m_preparedRoutesScratch.push_back(route);
                 continue;
             }
 
@@ -2738,6 +2751,9 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 continue;
             }
 
+            // Audible send: gate by the DESTINATION's solo eligibility
+            // (Contract I9). An eligible destination receives its inputs even
+            // from ineligible sources; ineligible destinations stay silent.
             const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
             if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
                 sendDestSlot != trackIdx && (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
@@ -3235,14 +3251,9 @@ void AudioEngine::compileGraph() {
                                     sendGainL, sendGainR);
 
             if (send.targetChannelId == 0xFFFFFFFF) {
-                // Route to Master
-                RuntimeConnection toMaster;
-                toMaster.destinationBufferL = m_masterBufferD.data();
-                toMaster.destinationBufferR = m_masterBufferD.data() + 1;
-                toMaster.stride = 2;
-                toMaster.gainL = sendGainL;
-                toMaster.gainR = sendGainR;
-                rt.activeConnections.push_back(toMaster);
+                // Sends to master are illegal (Contract D4); drop for parity
+                // with the live send path.
+                continue;
             } else {
                 if (slotMap) {
                     uint32_t destSlot = slotMap->getSlotIndex(send.targetChannelId);

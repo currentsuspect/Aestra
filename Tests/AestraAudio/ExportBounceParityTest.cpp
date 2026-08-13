@@ -144,24 +144,26 @@ int main() {
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
     }
 
-    // Track 0 also sends to master at a non-unity, panned level. This exercises
+    // Track 0 also sends to a bus at a non-unity, panned level. This exercises
     // the send-gain stage in AudioEngine::renderTrack (snapped during offline
     // render) against the baked send connection gain AudioRenderer uses, so a
     // regression in either send path fails the master-vs-isolated comparison.
+    // (Sends to master are illegal — Contract D4 — so the send targets a bus.)
+    trackManager->addChannel("Track_0_Bus"); // index 3
     if (auto* sendChannel = trackManager->getChannel(0)) {
-        AudioRoute sendToMaster;
-        sendToMaster.targetChannelId = 0xFFFFFFFF; // Master
-        sendToMaster.gain = 0.5f;
-        sendToMaster.pan = 0.3f;
-        sendChannel->addSend(sendToMaster);
+        AudioRoute sendToBus;
+        sendToBus.targetChannelId = trackManager->getChannel(3)->getChannelId();
+        sendToBus.gain = 0.5f;
+        sendToBus.pan = 0.3f;
+        sendChannel->addSend(sendToBus);
     }
 
     // Track 3 is a return track (no clips of its own). Track 0 sends to it at a
     // non-unity, panned level: the isolated bounce must carry that content
     // through the return's strip to master, exactly like the live full-mix path
     // (#761).
-    trackManager->addChannel("Track_3_Return");
-    if (auto* returnChannel = trackManager->getChannel(3)) {
+    trackManager->addChannel("Track_3_Return"); // index 4
+    if (auto* returnChannel = trackManager->getChannel(4)) {
         AudioRoute sendToReturn;
         sendToReturn.targetChannelId = returnChannel->getChannelId();
         sendToReturn.gain = 0.5f;
