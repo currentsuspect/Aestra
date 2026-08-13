@@ -233,6 +233,10 @@ public:
     std::vector<AudioRoute> getSends() const;
     /** @brief Add a send route. */
     void addSend(const AudioRoute& route);
+    /** @brief Insert a send route at a position (undo of removeSend). */
+    void insertSend(int index, const AudioRoute& route);
+    /** @brief Replace one send route in place (undoable edits). */
+    void setSend(int index, const AudioRoute& route);
     /** @brief Replace all send routes from an off-audio-thread snapshot. */
     void replaceSends(const std::vector<AudioRoute>& routes);
     /** @brief Remove a send route by index. */

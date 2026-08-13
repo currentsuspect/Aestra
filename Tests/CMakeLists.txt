@@ -684,6 +684,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
     set_tests_properties(SamplerCutSelfTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RoutingContractTest.cpp")
+    add_executable(RoutingContractTest AestraAudio/RoutingContractTest.cpp)
+    target_link_libraries(RoutingContractTest PRIVATE AestraAudio)
+    target_include_directories(RoutingContractTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RoutingContractTest COMMAND RoutingContractTest)
+    set_tests_properties(RoutingContractTest PROPERTIES LABELS "audio;routing;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
     target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)

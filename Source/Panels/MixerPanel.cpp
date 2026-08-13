@@ -33,6 +33,7 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
             }
         }));
         m_viewModel->setCommandHistory(&m_trackManager->getCommandHistory());
+        m_viewModel->setTrackManager(m_trackManager.get());
     }
     m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");

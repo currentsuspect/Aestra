@@ -107,19 +107,9 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
     }
 
     graph.hasRoutingCycle = graph.topologicalOrder.size() != trackCount;
-    if (graph.hasRoutingCycle) {
-        std::vector<uint8_t> visited(trackCount, 0);
-        for (const size_t index : graph.topologicalOrder) {
-            if (index < trackCount) {
-                visited[index] = 1;
-            }
-        }
-        for (size_t i = 0; i < trackCount; ++i) {
-            if (visited[i] == 0) {
-                graph.topologicalOrder.push_back(i);
-            }
-        }
-    }
+    // Routing Contract D1: a cycle is corruption, not a rendering fallback.
+    // The partial order is left as-is (never appended with leftover nodes);
+    // the publish gate (AudioEngine::setGraph) refuses the snapshot.
 }
 
 AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {

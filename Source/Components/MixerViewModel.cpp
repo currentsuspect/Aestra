@@ -2,6 +2,7 @@
 
 #include "MixerViewModel.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "Commands/RoutingCommands.h"
 #include "AudioDeviceManager.h"
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
@@ -575,7 +576,7 @@ std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestination
         if (!ch) continue;
         if (ch->id == excludeId) continue;
         if (ch->id == 0) continue; // Handled above
-        if (routeWouldCreateCycle(excludeId, ch->id)) continue;
+        if (!canRouteTo(excludeId, ch->id)) continue;
 
         dests.push_back({ch->id, ch->name});
     }
@@ -586,9 +587,6 @@ std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestination
 void MixerViewModel::addSend(uint32_t channelId) {
     auto* ch = getChannelById(channelId);
     if (!ch) return;
-    
-    // Create new SendViewModel
-    ChannelViewModel::SendViewModel send{};
     
     // Auto-select a meaningful destination (Avoid Master if it's already the main Output)
     uint32_t defaultTarget = 0; // Fallback to Master
@@ -605,38 +603,67 @@ void MixerViewModel::addSend(uint32_t channelId) {
         }
     }
 
-    send.targetId = defaultTarget; 
+    Audio::AudioRoute route{};
+    // Map 0 -> 0xFFFFFFFF for engine
+    route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFFu : defaultTarget;
+    route.gain = 0.25f; // -12 dB leaves headroom when adding a parallel path
+    route.sidechainOnly = false;
+
+    // Update Local Model
+    ChannelViewModel::SendViewModel send{};
+    send.targetId = defaultTarget;
     send.targetName = defaultName;
-    send.gain = 0.25f; // -12 dB leaves headroom when adding a parallel path
+    send.gain = 0.25f;
     send.sidechainOnly = false;
     ch->sends.push_back(send);
 
-    // Update Engine
+    // Update Engine through the command seam (undoable, validated)
     if (auto mc = ch->channel) {
-        Audio::AudioRoute route{};
-        // Map 0 -> 0xFFFFFFFF for engine
-        route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFF : defaultTarget; 
-        route.gain = 0.25f;
-        route.sidechainOnly = false;
-        mc->addSend(route);
-        
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(std::make_shared<Audio::AddSendCommand>(*m_trackManager, channelId, route));
+        } else {
+            mc->addSend(route);
+        }
+
         graphDirty.emit();
         projectModified.emit();
     }
 }
 
 void MixerViewModel::addSidechain(uint32_t channelId) {
-    addSend(channelId);
     auto* ch = getChannelById(channelId);
-    if (!ch || ch->sends.empty())
-        return;
+    if (!ch) return;
 
-    const int sendIndex = static_cast<int>(ch->sends.size() - 1);
-    ch->sends.back().gain = 1.0f;
-    ch->sends.back().sidechainOnly = true;
-    if (auto* mc = ch->channel) {
-        mc->setSendLevel(sendIndex, 1.0f);
-        mc->setSendSidechainOnly(sendIndex, true);
+    uint32_t defaultTarget = 0;
+    std::string defaultName = "Master";
+    auto available = getAvailableDestinations(channelId);
+    for (const auto& dest : available) {
+        if (dest.id != 0) {
+            defaultTarget = dest.id;
+            defaultName = dest.name;
+            break;
+        }
+    }
+
+    Audio::AudioRoute route{};
+    route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFFu : defaultTarget;
+    route.gain = 1.0f;
+    route.sidechainOnly = true;
+
+    ChannelViewModel::SendViewModel send{};
+    send.targetId = defaultTarget;
+    send.targetName = defaultName;
+    send.gain = 1.0f;
+    send.sidechainOnly = true;
+    ch->sends.push_back(send);
+
+    if (auto mc = ch->channel) {
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(std::make_shared<Audio::AddSendCommand>(*m_trackManager, channelId, route));
+        } else {
+            mc->addSend(route);
+        }
+
         graphDirty.emit();
         projectModified.emit();
     }
@@ -645,7 +672,7 @@ void MixerViewModel::addSidechain(uint32_t channelId) {
 void MixerViewModel::addSend(uint32_t channelId, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch) return;
-    if (routeWouldCreateCycle(channelId, targetId)) {
+    if (!canRouteTo(channelId, targetId)) {
         m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
         return;
     }
@@ -668,7 +695,11 @@ void MixerViewModel::addSend(uint32_t channelId, uint32_t targetId) {
         route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
         route.gain = 1.0f;
         route.sidechainOnly = false;
-        mc->addSend(route);
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(std::make_shared<Audio::AddSendCommand>(*m_trackManager, channelId, route));
+        } else {
+            mc->addSend(route);
+        }
         graphDirty.emit();
         projectModified.emit();
     }
@@ -702,10 +733,15 @@ void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
     // Update Local Model
     ch->sends.erase(ch->sends.begin() + sendIndex);
 
-    // Update Engine
+    // Update Engine through the command seam (undoable)
     if (auto mc = ch->channel) {
-        mc->removeSend(sendIndex);
-        
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::RemoveSendCommand>(*m_trackManager, channelId, sendIndex));
+        } else {
+            mc->removeSend(sendIndex);
+        }
+
         graphDirty.emit();
         projectModified.emit();
     }
@@ -718,9 +754,16 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
     linearGain = std::isfinite(linearGain) ? std::clamp(linearGain, 0.0f, 4.0f) : 0.0f;
     ch->sends[sendIndex].gain = linearGain;
 
-    // Update Engine
+    // Update Engine through the command seam (undoable)
     if (auto mc = ch->channel) {
-        mc->setSendLevel(sendIndex, linearGain);
+        if (m_commandHistory && m_trackManager) {
+            auto route = mc->getSends()[static_cast<size_t>(sendIndex)];
+            route.gain = linearGain;
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendIndex, route));
+        } else {
+            mc->setSendLevel(sendIndex, linearGain);
+        }
         graphDirty.emit();
         projectModified.emit();
     }
@@ -729,7 +772,7 @@ void MixerViewModel::setSendLevel(uint32_t channelId, int sendIndex, float linea
 void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;
-    if (routeWouldCreateCycle(channelId, targetId)) {
+    if (!canRouteTo(channelId, targetId)) {
         m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
         return;
     }
@@ -745,12 +788,19 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
         ch->sends[sendIndex].targetName = target ? target->name : "Unknown";
     }
 
-    // Update Engine
+    // Update Engine through the command seam (undoable, validated)
     if (auto mc = ch->channel) {
         // Normalize 0 to 0xFFFFFFFF for engine master
-        uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
-        mc->setSendDestination(sendIndex, engineId);
-        
+        const uint32_t engineId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+        if (m_commandHistory && m_trackManager) {
+            auto route = mc->getSends()[static_cast<size_t>(sendIndex)];
+            route.targetChannelId = engineId;
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendIndex, route));
+        } else {
+            mc->setSendDestination(sendIndex, engineId);
+        }
+
         graphDirty.emit();
         projectModified.emit();
     }
@@ -763,7 +813,14 @@ void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool po
     ch->sends[sendIndex].postFader = postFader;
 
     if (auto mc = ch->channel) {
-        mc->setSendPostFader(sendIndex, postFader);
+        if (m_commandHistory && m_trackManager) {
+            auto route = mc->getSends()[static_cast<size_t>(sendIndex)];
+            route.postFader = postFader;
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendIndex, route));
+        } else {
+            mc->setSendPostFader(sendIndex, postFader);
+        }
         graphDirty.emit();
         projectModified.emit();
     }
@@ -776,7 +833,14 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, boo
     ch->sends[sendIndex].sidechainOnly = sidechainOnly;
 
     if (auto mc = ch->channel) {
-        mc->setSendSidechainOnly(sendIndex, sidechainOnly);
+        if (m_commandHistory && m_trackManager) {
+            auto route = mc->getSends()[static_cast<size_t>(sendIndex)];
+            route.sidechainOnly = sidechainOnly;
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::EditSendCommand>(*m_trackManager, channelId, sendIndex, route));
+        } else {
+            mc->setSendSidechainOnly(sendIndex, sidechainOnly);
+        }
         graphDirty.emit();
         projectModified.emit();
     }
@@ -785,7 +849,7 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, boo
 void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targetId) {
     auto* ch = getChannelById(channelId);
     if (!ch || ch->id == 0) return;
-    if (routeWouldCreateCycle(channelId, targetId)) {
+    if (!canRouteTo(channelId, targetId)) {
         m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
         return;
     }
@@ -804,7 +868,13 @@ void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targe
     }
 
     if (auto mc = ch->channel) {
-        mc->setMainOutputId(targetId == 0 ? 0xFFFFFFFFu : targetId);
+        const uint32_t engineId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(
+                std::make_shared<Audio::SetMainOutputCommand>(*m_trackManager, channelId, engineId));
+        } else {
+            mc->setMainOutputId(engineId);
+        }
         graphDirty.emit();
         projectModified.emit();
     }
@@ -841,6 +911,15 @@ std::string MixerViewModel::getRoutingWarning(uint32_t channelId) const {
     if (duplicateDestinations <= 0) return {};
     if (duplicateDestinations == 1) return "Duplicate audible route";
     return std::to_string(duplicateDestinations) + " duplicate audible routes";
+}
+
+bool MixerViewModel::canRouteTo(uint32_t sourceId, uint32_t targetId) const {
+    // Routing Contract D1: TrackManager is the single validation authority.
+    if (m_trackManager) {
+        return m_trackManager->canRouteTo(sourceId, targetId);
+    }
+    // Degraded path (no TrackManager wired): VM-local topology check.
+    return !routeWouldCreateCycle(sourceId, targetId);
 }
 
 bool MixerViewModel::routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const {

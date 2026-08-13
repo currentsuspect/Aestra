@@ -177,6 +177,25 @@ void MixerChannel::addSend(const AudioRoute& route) {
     m_sends.push_back(sanitized);
 }
 
+void MixerChannel::insertSend(int index, const AudioRoute& route) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    AudioRoute sanitized = route;
+    sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
+    sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+    const size_t clampedIndex = std::min(static_cast<size_t>(std::max(index, 0)), m_sends.size());
+    m_sends.insert(m_sends.begin() + static_cast<ptrdiff_t>(clampedIndex), sanitized);
+}
+
+void MixerChannel::setSend(int index, const AudioRoute& route) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+        AudioRoute sanitized = route;
+        sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
+        sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+        m_sends[static_cast<size_t>(index)] = sanitized;
+    }
+}
+
 void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
     m_sends.clear();

@@ -274,6 +274,9 @@ public:
     /** @brief Set CommandHistory for undo/redo on plugin operations. */
     void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
 
+    /** @brief Set the TrackManager used for routing validation and commands. */
+    void setTrackManager(Audio::TrackManager* trackManager) { m_trackManager = trackManager; }
+
     // graphDirty and projectModified are scoped subscription signals for mixer state changes.
 
     struct Destination {
@@ -332,6 +335,9 @@ private:
     /// CommandHistory pointer for undo/redo on plugin operations (optional)
     Audio::CommandHistory* m_commandHistory = nullptr;
 
+    /// TrackManager for routing validation + command construction (optional)
+    Audio::TrackManager* m_trackManager = nullptr;
+
     /**
      * @brief Rebuild id→index map after channel list changes.
      */
@@ -350,6 +356,12 @@ private:
     void smoothMeterChannel(ChannelViewModel& channel,
                             const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
                             double deltaTime);
+    /**
+     * @brief Whether routing source -> target is legal. Delegates to the
+     * TrackManager authority when wired (Routing Contract D1); falls back to
+     * the VM-local topology walk otherwise.
+     */
+    bool canRouteTo(uint32_t sourceId, uint32_t targetId) const;
     bool routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const;
     bool hasRoutePath(uint32_t fromId, uint32_t targetId) const;
 };
