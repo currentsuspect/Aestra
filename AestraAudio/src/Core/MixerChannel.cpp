@@ -169,31 +169,44 @@ std::vector<AudioRoute> MixerChannel::getSends() const {
     return m_sends;
 }
 
-void MixerChannel::addSend(const AudioRoute& route) {
-    std::lock_guard<std::mutex> lock(m_sendMutex);
+namespace {
+AudioRoute sanitizeRoute(const AudioRoute& route) {
     AudioRoute sanitized = route;
     sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
     sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+    return sanitized;
+}
+} // namespace
+
+void MixerChannel::addSend(const AudioRoute& route) {
+    std::lock_guard<std::mutex> lock(m_sendMutex);
+    AudioRoute sanitized = sanitizeRoute(route);
+    if (sanitized.sendId == 0) {
+        sanitized.sendId = m_nextSendId++;
+    }
     m_sends.push_back(sanitized);
 }
 
 void MixerChannel::insertSend(int index, const AudioRoute& route) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
-    AudioRoute sanitized = route;
-    sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
-    sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+    AudioRoute sanitized = sanitizeRoute(route);
+    if (sanitized.sendId == 0) {
+        sanitized.sendId = m_nextSendId++;
+    }
     const size_t clampedIndex = std::min(static_cast<size_t>(std::max(index, 0)), m_sends.size());
     m_sends.insert(m_sends.begin() + static_cast<ptrdiff_t>(clampedIndex), sanitized);
 }
 
-void MixerChannel::setSend(int index, const AudioRoute& route) {
+void MixerChannel::setSend(uint64_t sendId, const AudioRoute& route) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        AudioRoute sanitized = route;
-        sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
-        sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
-        m_sends[static_cast<size_t>(index)] = sanitized;
+    const int index = findSendIndexLocked(sendId);
+    if (index < 0) {
+        return;
     }
+    AudioRoute sanitized = sanitizeRoute(route);
+    // Identity is owned by the channel: the replacement keeps the sendId.
+    sanitized.sendId = m_sends[static_cast<size_t>(index)].sendId;
+    m_sends[static_cast<size_t>(index)] = sanitized;
 }
 
 void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
@@ -201,53 +214,34 @@ void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
     m_sends.clear();
     m_sends.reserve(routes.size());
     for (const auto& route : routes) {
-        AudioRoute sanitized = route;
-        sanitized.gain = std::isfinite(route.gain) ? std::clamp(route.gain, 0.0f, 4.0f) : 0.0f;
-        sanitized.pan = std::isfinite(route.pan) ? std::clamp(route.pan, -1.0f, 1.0f) : 0.0f;
+        AudioRoute sanitized = sanitizeRoute(route);
+        if (sanitized.sendId == 0) {
+            sanitized.sendId = m_nextSendId++;
+        }
         m_sends.push_back(sanitized);
     }
 }
 
-void MixerChannel::removeSend(int index) {
+void MixerChannel::removeSend(uint64_t sendId) {
     std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
+    const int index = findSendIndexLocked(sendId);
+    if (index >= 0) {
         m_sends.erase(m_sends.begin() + index);
     }
 }
 
-void MixerChannel::setSendLevel(int index, float level) {
+int MixerChannel::findSendIndex(uint64_t sendId) const {
     std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].gain = std::isfinite(level) ? std::clamp(level, 0.0f, 4.0f) : 0.0f;
-    }
+    return findSendIndexLocked(sendId);
 }
 
-void MixerChannel::setSendPan(int index, float pan) {
-    std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].pan = std::isfinite(pan) ? std::clamp(pan, -1.0f, 1.0f) : 0.0f;
+int MixerChannel::findSendIndexLocked(uint64_t sendId) const {
+    for (size_t i = 0; i < m_sends.size(); ++i) {
+        if (m_sends[i].sendId == sendId) {
+            return static_cast<int>(i);
+        }
     }
-}
-
-void MixerChannel::setSendDestination(int index, uint32_t destId) {
-    std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].targetChannelId = destId;
-    }
-}
-
-void MixerChannel::setSendPostFader(int index, bool postFader) {
-    std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].postFader = postFader;
-    }
-}
-
-void MixerChannel::setSendSidechainOnly(int index, bool sidechainOnly) {
-    std::lock_guard<std::mutex> lock(m_sendMutex);
-    if (index >= 0 && index < static_cast<int>(m_sends.size())) {
-        m_sends[index].sidechainOnly = sidechainOnly;
-    }
+    return -1;
 }
 
 } // namespace Audio

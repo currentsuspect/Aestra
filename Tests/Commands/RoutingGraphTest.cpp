@@ -173,11 +173,11 @@ int main() {
     JSON& send = graph["sends"][0];
     check(send["destinationNodeId"].asString() == "master" &&
               send["routeType"].asString() == "send" &&
-              send["sendIndex"].asNumber() == 0.0 &&
-              !send["stableIdentityAvailable"].asBool() &&
-              send["positionalIdentityAvailable"].asBool() &&
+              send["stableIdentityAvailable"].asBool() &&
+              send["sendId"].asNumber() != 0.0 &&
+              !send["positionalIdentityAvailable"].asBool() &&
               !send["postFader"].asBool(),
-          "send exposes topology and positional identity");
+          "send exposes topology and stable send identity");
     JSON& sidechain = graph["sends"][1];
     check(sidechain["destinationNodeId"].asString() == "mixer:77" &&
               sidechain["routeType"].asString() == "sidechain_send" &&

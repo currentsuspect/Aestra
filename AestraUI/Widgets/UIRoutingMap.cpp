@@ -175,7 +175,7 @@ void UIRoutingMap::rebuildGraph() {
             edge.targetNodeId = sendTargetId;
             edge.type = send.sidechainOnly ? Edge::SidechainPath : Edge::SendPath;
             edge.sendLevelDb = gainToDb(send.gain);
-            edge.sendIndex = static_cast<int>(s);
+            edge.sendId = send.sendId;
             m_edges.push_back(edge);
         }
     }
@@ -1956,29 +1956,29 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             }
             if (m_hoveredEdgeIdx >= 0) {
                 const Edge& edge = m_edges[m_hoveredEdgeIdx];
-                if (edge.type != Edge::MainPath && edge.sendIndex >= 0) {
+                if (edge.type != Edge::MainPath && edge.sendId != 0) {
                     if (!m_edgeContextMenu) {
                         m_edgeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
                         m_edgeContextMenu->setCloseOnSelection(true);
                     }
                     m_edgeContextMenu->clear();
                     uint32_t srcId = edge.sourceNodeId;
-                    int sIdx = edge.sendIndex;
+                    uint64_t sId = edge.sendId;
                     // Level submenu
                     auto levelMenu = std::make_shared<AestraUI::NUIContextMenu>();
                     static const float kLevelVals[] = {-144.0f, -24.0f, -12.0f, -6.0f, 0.0f, 6.0f};
                     static const char* kLevelLabels[] = {"-inf dB", "-24 dB", "-12 dB", "-6 dB", "0 dB", "+6 dB"};
                     for (size_t li = 0; li < 6; ++li) {
-                        levelMenu->addItem(kLevelLabels[li], [this, srcId, sIdx, li]() {
-                            if (m_onEditSendLevel) m_onEditSendLevel(srcId, sIdx, kLevelVals[li]);
+                        levelMenu->addItem(kLevelLabels[li], [this, srcId, sId, li]() {
+                            if (m_onEditSendLevel) m_onEditSendLevel(srcId, sId, kLevelVals[li]);
                             m_graphDirty = true;
                             repaint();
                         });
                     }
                     m_edgeContextMenu->addSubmenu("Set Level", levelMenu);
                     m_edgeContextMenu->addSeparator();
-                    m_edgeContextMenu->addItem("Delete Send", [this, srcId, sIdx]() {
-                        if (m_onRemoveSend) m_onRemoveSend(srcId, sIdx);
+                    m_edgeContextMenu->addItem("Delete Send", [this, srcId, sId]() {
+                        if (m_onRemoveSend) m_onRemoveSend(srcId, sId);
                         m_graphDirty = true;
                         m_selectedEdgeIdx = -1;
                         repaint();
@@ -2262,11 +2262,10 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
         if (m_selectedEdgeIdx >= 0 && m_selectedEdgeIdx < static_cast<int>(m_edges.size())) {
             const Edge& edge = m_edges[m_selectedEdgeIdx];
-            if (edge.type != Edge::MainPath && edge.sendIndex >= 0) {
+            if (edge.type != Edge::MainPath && edge.sendId != 0) {
                 uint32_t sourceId = edge.sourceNodeId;
-                int sendIdx = edge.sendIndex;
                 if (m_onRemoveSend) {
-                    m_onRemoveSend(sourceId, sendIdx);
+                    m_onRemoveSend(sourceId, edge.sendId);
                     m_graphDirty = true;
                 }
             }

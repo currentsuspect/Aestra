@@ -779,16 +779,9 @@ void AestraContent::setupMixerPanels() {
     m_routingMapPanel->setOnAddSend([this](uint32_t sourceId, uint32_t targetId, bool sidechainOnly) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
-                vm->addSend(sourceId, targetId);
-                // Set sidechain flag on the newly appended send
-                if (sidechainOnly) {
-                    if (auto* ch = vm->getChannelById(sourceId)) {
-                        if (!ch->sends.empty()) {
-                            int newIdx = static_cast<int>(ch->sends.size()) - 1;
-                            vm->setSendSidechainOnly(sourceId, newIdx, true);
-                        }
-                    }
-                }
+                // sidechainOnly is part of the route itself now (Contract D2) —
+                // no post-append positional flip.
+                vm->addSend(sourceId, targetId, sidechainOnly);
             }
         }
     });
@@ -806,18 +799,18 @@ void AestraContent::setupMixerPanels() {
             }
         }
     });
-    m_routingMapPanel->setOnRemoveSend([this](uint32_t channelId, int sendIndex) {
+    m_routingMapPanel->setOnRemoveSend([this](uint32_t channelId, uint64_t sendId) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
-                vm->removeSend(channelId, sendIndex);
+                vm->removeSend(channelId, sendId);
             }
         }
     });
-    m_routingMapPanel->setOnEditSendLevel([this](uint32_t channelId, int sendIndex, float newDb) {
+    m_routingMapPanel->setOnEditSendLevel([this](uint32_t channelId, uint64_t sendId, float newDb) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
                 float linearGain = (newDb <= -144.0f) ? 0.0f : std::pow(10.0f, newDb / 20.0f);
-                vm->setSendLevel(channelId, sendIndex, linearGain);
+                vm->setSendLevel(channelId, sendId, linearGain);
             }
         }
     });

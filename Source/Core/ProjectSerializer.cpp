@@ -885,6 +885,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             sjs.set("postFader", JSON(send.postFader));
             sjs.set("mute", JSON(send.mute));
             sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+            sjs.set("sendId", JSON(static_cast<double>(send.sendId)));
             sendsJson.push(sjs);
         }
         routingJson.set("sends", sendsJson);
@@ -935,6 +936,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                     sjs.set("postFader", JSON(send.postFader));
                     sjs.set("mute", JSON(send.mute));
                     sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+                    sjs.set("sendId", JSON(static_cast<double>(send.sendId)));
                     sendsJson.push(sjs);
                 }
                 routingJson.set("sends", sendsJson);
@@ -1836,6 +1838,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
                             route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
                                                   sends[s]["sidechainOnly"].asBool();
+                            // Stable send identity (Contract D2). Older projects
+                            // lack the key: 0 mints a fresh ID in addSend.
+                            route.sendId = static_cast<uint64_t>(
+                                finiteNumberOr(sends[s], "sendId", 0.0, 0.0,
+                                               static_cast<double>(std::numeric_limits<uint64_t>::max())));
                             channel->addSend(route);
                         }
                     }

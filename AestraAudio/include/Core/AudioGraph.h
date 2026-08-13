@@ -50,6 +50,9 @@ struct AudioRoute {
     bool postFader{true};     // Pre/Post Fader tap
     bool mute{false};         // Mute this specific send
     bool sidechainOnly{false}; // Route exists for sidechain/control input, not audible mix
+    uint64_t sendId{0};       // Stable per-channel send identity (Contract D2).
+                              // Minted by MixerChannel on creation; survives
+                              // index shifts and undo; 0 = unassigned.
 };
 
 /**
