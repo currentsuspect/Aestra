@@ -20,10 +20,10 @@ void UIMixerMeter::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
 
-    // Meter colors from design spec (Aestra Heat Gradient)
-    m_colorGreen = theme.getColor("meterSafe");     // Purple (Bottom)
-    m_colorYellow = theme.getColor("meterWarn");    // Pink (Mid)
-    m_colorRed = theme.getColor("meterCrit");       // Red (Top)
+    // Meter colors are semantic: audio activity, warning, clipping.
+    m_colorGreen = theme.getColor("meterSafe");
+    m_colorYellow = theme.getColor("meterWarn");
+    m_colorRed = theme.getColor("meterCrit");
     // Muted style: monochrome, slightly reduced alpha.
     m_colorGreenDim = m_colorGreen.withSaturation(0.0f).withAlpha(0.55f);
     m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);
@@ -306,6 +306,10 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     // so the meter reclaims that space and only labels its two bars L / R.
     constexpr float TEXT_HEIGHT = 24.0f;
     constexpr float LR_LABEL_HEIGHT = 11.0f;
+    // Track strips keep TEXT_HEIGHT reserved even when the compact readout is
+    // hidden (idle): reclaiming it on hover would grow the bars by 24 px and
+    // then shrink them again — a geometry jump. Stable meter geometry is the
+    // deliberate tradeoff; the empty band reads as quiet headroom, not layout.
     const float topReserve = m_masterMode ? 0.0f : TEXT_HEIGHT;
     const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
@@ -361,12 +365,13 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
             CORR_HEIGHT - 2.0f
         };
         
-        // Color: Red for negative (phase issue), Green/Blue for positive.
-        // Use hardcoded Phase colors to avoid theme confusion (e.g. if 'safe' is purple)
-        NUIColor phaseBad(0.9f, 0.15f, 0.15f); // Red
-        NUIColor phaseGood(0.2f, 0.85f, 0.3f); // Green/Cyan-ish
-        
-        NUIColor barColor = (val < 0.0f) ? phaseBad : phaseGood;
+        // Correlation is also semantic status:
+        // positive/in-phase -> audio color, slight negative -> warning, deep negative -> error.
+        auto& theme = NUIThemeManager::getInstance();
+        const NUIColor phaseGood = theme.getColor("meterSafe");
+        const NUIColor phaseWarn = theme.getColor("warning");
+        const NUIColor phaseBad = theme.getColor("error");
+        NUIColor barColor = (val < -0.25f) ? phaseBad : (val < 0.0f ? phaseWarn : phaseGood);
         if (m_dimmed) barColor = barColor.withSaturation(0.0f).withAlpha(0.6f);
         
         renderer.fillRect(barRect, barColor);
@@ -377,6 +382,12 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     // over "LUFS -13.5" inside a 36 px meter clipped the text, and losing the
     // minus sign turns -13.5 LUFS into a radically different claim.
     if (m_masterMode) {
+        renderChildren(renderer);
+        return;
+    }
+
+    const bool showCompactReadout = isHovered() || m_clipL || m_clipR;
+    if (!showCompactReadout) {
         renderChildren(renderer);
         return;
     }
@@ -440,10 +451,10 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
             m_cachedDbPeak = peak;
             if (peak <= DB_MIN) {
-                m_cachedDbStr = "PK \xE2\x88\x92\xE2\x88\x9E";
+                m_cachedDbStr = "\xE2\x88\x92\xE2\x88\x9E";
             } else {
                 char buf[32];
-                std::snprintf(buf, sizeof(buf), "PK %.1f", peak);
+                std::snprintf(buf, sizeof(buf), "%.1f", peak);
                 m_cachedDbStr = buf;
             }
         }
@@ -464,11 +475,14 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
 
 bool UIMixerMeter::onMouseEvent(const NUIMouseEvent& event)
 {
+    const auto bounds = getBounds();
+    if (event.button == NUIMouseButton::None && !event.cursorCaptured) {
+        setHovered(bounds.contains(event.position));
+    }
+
     // Handle click on clip indicator to clear clip latch
     if (event.pressed &&
         (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right)) {
-        auto bounds = getBounds();
-
         // Check if click is within the meter bounds (anywhere)
         // Improved UX: Allow clicking anywhere on the meter strip to clear clip latch, 
         // not just the tiny indicator at the top.
@@ -482,6 +496,12 @@ bool UIMixerMeter::onMouseEvent(const NUIMouseEvent& event)
     }
 
     return false;
+}
+
+void UIMixerMeter::onMouseLeave()
+{
+    setHovered(false);
+    NUIComponent::onMouseLeave();
 }
 
 } // namespace AestraUI

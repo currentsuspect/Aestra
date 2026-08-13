@@ -181,9 +181,11 @@ int main() {
     engine.postLiveMidiEvent(unitId, kNoteOff, kMiddleC + 7, 0);
     renderBlocks(112, nullptr);
 
-    // ---------------- 5. Pattern one-shots preserve Piano Roll pitch and play
-    // through their natural sample end instead of being gated by the short
-    // visual note length. Looping sampler modes still receive note-offs.
+    // ---------------- 5. Pattern notes preserve Piano Roll pitch and respect
+    // the note gate: every note receives its note-off so the sampler enters
+    // ADSR release at the end of the (possibly short) visual note. Looping
+    // sampler modes receive note-offs too. One-shots are not exempt from the
+    // gate — a Piano Roll note owns it.
     PatternID chordPattern = patternManager.createPattern();
     auto* pattern = patternManager.getPattern(chordPattern);
     require(pattern != nullptr, "Failed to create chord pattern");
@@ -210,8 +212,8 @@ int main() {
     chordScheduler.processAudio(0, sampleRate, &scheduledRoute, 1);
     require(hasMidiEvent(scheduledMidi, kNoteOn, kMiddleC), "Pattern chord lost its root pitch");
     require(hasMidiEvent(scheduledMidi, kNoteOn, kMiddleC + 7), "Pattern chord lost its fifth pitch");
-    require(!hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC), "One-shot root was gated by Piano Roll note length");
-    require(!hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC + 7), "One-shot fifth was gated by Piano Roll note length");
+    require(hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC), "One-shot root lost its Piano Roll note-off");
+    require(hasMidiEvent(scheduledMidi, kNoteOff, kMiddleC + 7), "One-shot fifth lost its Piano Roll note-off");
 
     sampler->setLoopEnabled(true);
     PatternPlaybackEngine loopScheduler(&clock, &patternManager, &unitManager);

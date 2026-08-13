@@ -1,8 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// Cut-self / voice-choke regression: a retriggered note must choke the
-// previous voice of the same note (explicit sampler-level policy), never
-// overlap it, leave different-pitch polyphony alone, and stay disabled for
-// ordinary samples unless the user enables it.
+// Cut-self / voice-choke regression: a retriggered note must choke every
+// previous voice in the sampler (explicit sampler-level policy), never overlap
+// it, and stay disabled for ordinary samples unless the user enables it.
 
 #include "Plugin/SamplerPlugin.h"
 #include "PluginHost.h"
@@ -95,9 +94,11 @@ struct RenderMetrics {
 };
 
 // Renders noteOn(firstNote) at frame 0 and noteOn(secondNote) at
-// retriggerOffset within the retrigger block. cutSelf selects the policy.
+// retriggerOffset within the retrigger block. cutSelf selects the policy;
+// mono selects the mono/legato voice path.
 bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t firstNote,
-                     uint8_t secondNote, int retriggerOffset, RenderMetrics* metrics, std::string* error) {
+                     uint8_t secondNote, int retriggerOffset, RenderMetrics* metrics, std::string* error,
+                     bool mono = false) {
     Plugins::SamplerPlugin sampler;
     if (!sampler.initialize(kSampleRate, kBlockFrames)) {
         *error = "sampler initialize failed";
@@ -109,6 +110,7 @@ bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t
     }
     sampler.setRootMidiNote(60);
     sampler.setMaxVoices(8);
+    sampler.setMonoMode(mono);
     sampler.setEnvelope(0.001f, 1.5f, 0.5f, 0.05f);
     sampler.setCutSelfMode(cutSelf);
     sampler.activate();
@@ -256,19 +258,45 @@ int main() {
         return fail("cut-self must reduce retrigger amplitude vs default overlap");
     }
 
-    // 5. Different pitches stay polyphonic even with cut-self enabled.
-    //    A 440 Hz neighbour's per-frame sine step is ~2x the 220 Hz baseline,
-    //    still far below the choke discontinuity, so 10% of singleMax cleanly
-    //    separates "smooth polyphony" from "choked".
+    // 5. Different pitches are still choked: Cut-Self belongs to the sampler
+    //    voice group, not to one MIDI note. This is the Piano Roll 808 case:
+    //    changing pitch must not allow the prior hit to overlap the next one.
+    //    Use the peak-aligned offset so the hard choke is observable rather
+    //    than hiding it at the sine's zero crossing.
     RenderMetrics differentPitch;
-    if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kInPhaseOffset, &differentPitch, &error)) {
+    if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kChokeOffset, &differentPitch, &error)) {
         return fail("different-pitch render: " + error);
     }
-    if (differentPitch.maxFirstDiff > singleMax * 0.50f) {
-        return fail("cut-self: different-pitch trigger must not choke the playing voice");
+    if (differentPitch.maxFirstDiff <= singleMax * 0.50f) {
+        return fail("cut-self: different-pitch trigger did not choke the playing voice");
+    }
+    if (differentPitch.maxAbs > singleMax * 1.10f) {
+        return fail("cut-self: different-pitch output exceeded single-voice amplitude");
     }
 
-    // 6. State roundtrip + legacy state default.
+    // 6. Mono mode: cut-self still wins over legato. With cut-self OFF a mono
+    //    retrigger glides the held voice (smooth continuation, no restart);
+    //    with cut-self ON the held voice is choked and the note restarts, so
+    //    the retrigger shows the hard choke step and no overlap boost.
+    RenderMetrics monoLegato;
+    if (!renderRetrigger(wavPath, false, kNote, kNote, kChokeOffset, &monoLegato, &error, true)) {
+        return fail("mono legato render: " + error);
+    }
+    if (monoLegato.maxFirstDiff > singleMax * 0.50f) {
+        return fail("mono legato: retrigger must glide, not restart (hard step seen)");
+    }
+    RenderMetrics monoCutSelf;
+    if (!renderRetrigger(wavPath, true, kNote, kNote, kChokeOffset, &monoCutSelf, &error, true)) {
+        return fail("mono cut-self render: " + error);
+    }
+    if (monoCutSelf.maxFirstDiff <= singleMax * 0.50f) {
+        return fail("mono cut-self: retrigger must choke the held voice (no step seen)");
+    }
+    if (monoCutSelf.maxAbs > singleMax * 1.10f) {
+        return fail("mono cut-self: retrigger output exceeded single-voice amplitude");
+    }
+
+    // 7. State roundtrip + legacy state default.
     {
         Plugins::SamplerPlugin writer;
         writer.initialize(kSampleRate, kBlockFrames);

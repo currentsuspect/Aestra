@@ -9,6 +9,10 @@
 
 namespace AestraUI {
 
+// Gap between the minimap (overview) and the ruler — both the layout and the
+// pitch-header geometry must agree on it so the key lane stays aligned.
+constexpr float kMinimapGap = 4.0f;
+
 // =============================================================================
 // PianoRollView (split from NUIPianoRollWidgets.cpp)
 // =============================================================================
@@ -118,11 +122,12 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
 
     const float toolbarH = 50.0f;
     const float minimapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    const float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
     const float rulerH = 28.0f;
     const NUIRect pitchHeader(bounds.x,
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
-                              minimapH + rulerH);
+                              minimapH + minimapGap + rulerH);
     renderer.fillRect(pitchHeader, theme.getColor("backgroundSecondary").darkened(0.025f));
     renderer.drawLine(NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.y),
                       NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.bottom()),
@@ -347,24 +352,27 @@ void PianoRollView::layoutChildren() {
     
     // 1. Scrollbar/Minimap Section (Below Toolbar)
     float miniMapH = m_showLocalMinimap ? 28.0f : 0.0f;
-    
+
     // 2. Ruler Section (Below Minimap if present)
     float rulerH = 28.0f;
-    
-    float topTotalH = toolbarH + miniMapH + rulerH;
-    
+
+    // Gap between minimap (overview) and ruler to visually separate them
+    float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
+
+    float topTotalH = toolbarH + miniMapH + minimapGap + rulerH;
+
     float keyW = std::max(40.0f, m_keyLaneWidth);
     float contentW = std::max(0.0f, b.width - keyW - sbSize);
     float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight); // Subtract control panel
-    
+
     // 1. Minimap (Top)
     m_minimap->setVisible(m_showLocalMinimap);
     if (m_showLocalMinimap) {
         m_minimap->setBounds(NUIRect(b.x + keyW, b.y + toolbarH, contentW, miniMapH));
     }
-    
-    // 2. Ruler
-    m_ruler->setBounds(NUIRect(b.x + keyW, b.y + toolbarH + miniMapH, contentW, rulerH));
+
+    // 2. Ruler (leave a small gap below minimap)
+    m_ruler->setBounds(NUIRect(b.x + keyW, b.y + toolbarH + miniMapH + minimapGap, contentW, rulerH));
     
     // 3. Grid/Notes (Below Ruler)
     NUIRect contentRect(b.x + keyW, b.y + topTotalH, contentW, contentH);

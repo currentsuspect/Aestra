@@ -937,10 +937,10 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     // --- Glow ---
     theme.highlightGlow = theme.primary.withAlpha(0.20f);
 
-    // --- Meters (neon accent palette) ---
-    theme.meterSafe = theme.secondary;
+    // --- Meters (semantic audio palette) ---
+    theme.meterSafe = theme.accentCyan;
     theme.meterWarn = theme.warning;
-    theme.meterCrit = theme.accentMagenta;
+    theme.meterCrit = theme.error;
     theme.meterBackground = NUIColor::fromHex(0x080808, 0.92f);
     theme.meterActive = theme.meterSafe;
     theme.gridMajor = NUIColor::white().withAlpha(0.10f);
@@ -1041,10 +1041,10 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.15f);
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.2f);
 
-    // Meter Colors (Aestra Heat Defaults)
-    theme.meterSafe = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);
-    theme.meterWarn = NUIColor(1.0f, 0.0f, 0.8f, 1.0f);
-    theme.meterCrit = NUIColor(1.0f, 0.2f, 0.4f, 1.0f);
+    // Meter colors follow the same semantics as dark mode.
+    theme.meterSafe = theme.info;
+    theme.meterWarn = theme.warning;
+    theme.meterCrit = theme.error;
     theme.meterBackground = NUIColor(0.88f, 0.88f, 0.89f, 1.0f);
     theme.meterActive = theme.meterSafe;
     theme.gridMajor = NUIColor(0.0f, 0.0f, 0.0f, 0.12f);

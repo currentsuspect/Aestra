@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <map>
 #include <memory>
 
@@ -217,7 +218,16 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     PlaylistLaneID targetLaneId;
     std::shared_ptr<CreateLaneCommand> laneCommand;
     if (laneIndex == static_cast<int>(laneCount)) {
-        laneCommand = std::make_shared<CreateLaneCommand>(playlist, "Track " + std::to_string(laneIndex + 1));
+        // When a new lane is created for a file drop, name it from the sample
+        // rather than "Track N" — the moment a clip lands on a track, the track
+        // should inherit the content name.  MIDI patterns keep the sequential
+        // default until the user renames it.
+        std::string laneName = "Track " + std::to_string(laneIndex + 1);
+        if (data.type == AestraUI::DragDataType::File && !data.filePath.empty()) {
+            namespace fs = std::filesystem;
+            laneName = fs::path(data.filePath).stem().string();
+        }
+        laneCommand = std::make_shared<CreateLaneCommand>(playlist, laneName);
         laneCommand->execute();
         targetLaneId = laneCommand->getLaneId();
         if (!targetLaneId.isValid()) {

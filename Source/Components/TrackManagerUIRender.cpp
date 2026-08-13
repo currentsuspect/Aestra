@@ -265,7 +265,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         // Draw border
         AestraUI::NUIColor borderColor = themeManager.getColor("border");
-        renderer.strokeRect(bounds, 1, borderColor.withAlpha(0.42f));
+        renderer.strokeRect(bounds, 1, borderColor.withAlpha(0.24f));
     }
 
     // Header/Track Count (Static)
@@ -297,7 +297,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
         const float textY = std::round(renderer.calculateTextY(headerBounds, infoFont));
 
-        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textPrimary"));
+        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary").withAlpha(0.55f));
     }
 
     // Render Static Track Content (with Viewport Culling AND Clipping)
@@ -896,7 +896,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto glassBg = themeManager.getColor("recessedPanel");
     auto glassHighlight = themeManager.getColor("textPrimary").withAlpha(0.014f);
 
-    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
+    auto textCol = themeManager.getColor("textSecondary").withAlpha(0.68f);
     auto majorTickCol = themeManager.getColor("gridMajor");
     auto minorTickCol = themeManager.getColor("gridMinor");
 
@@ -925,10 +925,10 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     AestraUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
     renderer.fillRect(highlightRect, glassHighlight);
 
-    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor);
+    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.28f));
     renderer.drawLine(AestraUI::NUIPoint(gridRulerRect.x, gridRulerRect.bottom() - 1.0f),
                       AestraUI::NUIPoint(gridRulerRect.right(), gridRulerRect.bottom() - 1.0f), 1.0f,
-                      AestraUI::NUIColor::white().withAlpha(0.075f));
+                      AestraUI::NUIColor::white().withAlpha(0.035f));
 
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
     renderer.setClipRect(gridRulerRect);
@@ -975,16 +975,16 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Position text to the RIGHT of the grid line with small offset
         float textX = x + 4.0f;
 
-        // Draw text - clip rect handles edge clipping automatically
+        // Draw text - clip rect handles edge clipping automatically (recedes behind clips)
         renderer.drawText(barText, AestraUI::NUIPoint(textX, textY), fontSize,
-                          isMajorBar ? textCol : textCol.withAlpha(0.76f));
+                          isMajorBar ? textCol : textCol.withAlpha(0.60f));
 
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
         float tickHeight = isMajorBar ? rulerBounds.height * 0.58f : rulerBounds.height * 0.24f;
         renderer.drawLine(AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
                           AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height), isMajorBar ? 1.15f : 1.0f,
-                          isMajorBar ? majorTickCol : minorTickCol);
+                          isMajorBar ? majorTickCol.withAlpha(0.65f) : minorTickCol.withAlpha(0.40f));
 
         // Beat ticks within the bar (only if zoomed in enough AND not striding)
         // DOWNBEATS (1, 2, 3, 4) are BRIGHTER and TALLER for visibility
@@ -993,7 +993,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
                 float beatX = x + (beat * m_pixelsPerBeat);
 
                 float beatTickHeight = rulerBounds.height * 0.22f;
-                AestraUI::NUIColor beatTickColor = minorTickCol;
+                AestraUI::NUIColor beatTickColor = minorTickCol.withAlpha(0.35f);
 
                 renderer.drawLine(AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
                                   AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height), 1.0f, beatTickColor);
@@ -1042,8 +1042,9 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     // Dedicated "corner" panel where track controls meet the ruler.
     const AestraUI::NUIRect cornerRect(rulerBounds.x, rulerBounds.y, controlAreaWidth, rulerBounds.height);
     renderer.drawLine(AestraUI::NUIPoint(cornerRect.right(), cornerRect.y),
-                      AestraUI::NUIPoint(cornerRect.right(), cornerRect.bottom()), 1.0f, borderColor.withAlpha(0.82f));
+                      AestraUI::NUIPoint(cornerRect.right(), cornerRect.bottom()), 1.0f, borderColor.withAlpha(0.28f));
 }
+
 // Render loop markers on ruler
 void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     if (!m_loopEnabled)
