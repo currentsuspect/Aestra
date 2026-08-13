@@ -562,13 +562,13 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
 
-        // Cut-self: a new trigger on the same note chokes any previous voice
-        // playing it, so retriggered one-shots (e.g. an 808 in an ordinary
-        // sampler) never overlap. Explicit voice-layer policy — independent
-        // of mono mode, ADSR, and unit type. Different notes stay polyphonic.
+        // Cut-self: a new trigger chokes every previous voice in this sampler,
+        // so retriggered one-shots (e.g. an 808) never overlap in the Piano
+        // Roll when their pitches differ. This is an explicit voice-layer
+        // policy, independent of mono mode, ADSR, and unit type.
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
             for (auto& v : m_voices) {
-                if (v.active && v.note == note) {
+                if (v.active) {
                     v.active = false;
                     v.stage = EnvStage::Off;
                     v.stageTime = 0.0;

@@ -1,8 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// Cut-self / voice-choke regression: a retriggered note must choke the
-// previous voice of the same note (explicit sampler-level policy), never
-// overlap it, leave different-pitch polyphony alone, and stay disabled for
-// ordinary samples unless the user enables it.
+// Cut-self / voice-choke regression: a retriggered note must choke every
+// previous voice in the sampler (explicit sampler-level policy), never overlap
+// it, and stay disabled for ordinary samples unless the user enables it.
 
 #include "Plugin/SamplerPlugin.h"
 #include "PluginHost.h"
@@ -256,16 +255,20 @@ int main() {
         return fail("cut-self must reduce retrigger amplitude vs default overlap");
     }
 
-    // 5. Different pitches stay polyphonic even with cut-self enabled.
-    //    A 440 Hz neighbour's per-frame sine step is ~2x the 220 Hz baseline,
-    //    still far below the choke discontinuity, so 10% of singleMax cleanly
-    //    separates "smooth polyphony" from "choked".
+    // 5. Different pitches are still choked: Cut-Self belongs to the sampler
+    //    voice group, not to one MIDI note. This is the Piano Roll 808 case:
+    //    changing pitch must not allow the prior hit to overlap the next one.
+    //    Use the peak-aligned offset so the hard choke is observable rather
+    //    than hiding it at the sine's zero crossing.
     RenderMetrics differentPitch;
-    if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kInPhaseOffset, &differentPitch, &error)) {
+    if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kChokeOffset, &differentPitch, &error)) {
         return fail("different-pitch render: " + error);
     }
-    if (differentPitch.maxFirstDiff > singleMax * 0.50f) {
-        return fail("cut-self: different-pitch trigger must not choke the playing voice");
+    if (differentPitch.maxFirstDiff <= singleMax * 0.50f) {
+        return fail("cut-self: different-pitch trigger did not choke the playing voice");
+    }
+    if (differentPitch.maxAbs > singleMax * 1.10f) {
+        return fail("cut-self: different-pitch output exceeded single-voice amplitude");
     }
 
     // 6. State roundtrip + legacy state default.
