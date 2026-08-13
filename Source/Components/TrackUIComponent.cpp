@@ -1310,13 +1310,12 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         renderer.fillRectGradient(controlBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
                                   AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.070f),
                                   /*vertical=*/true);
-
-        // Separator Line (Bright Glass Border) between Controls and Timeline
+        // Separator Line between Controls and Timeline (single, quiet boundary)
         renderer.drawLine(
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.y),
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.bottom()),
             1.0f,
-            themeManager.getColor("border").withAlpha(0.48f)
+            themeManager.getColor("borderSubtle").withAlpha(0.24f)
         );
         
         // Lane color strip (identity)
@@ -1411,16 +1410,12 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
-    // Layered control slab with cool depth.
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.22f : 0.12f));
+    // Quiet control slab overlay (recedes so clips stay Level 1).
+    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.12f : 0.04f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
-    renderer.fillRect(highlightRect, themeManager.getColor("textPrimary").withAlpha(0.035f));
-    
-    // Right Border (Separator)
-    AestraUI::NUIRect borderRect(controlAreaBounds.right() - 1.0f, controlAreaBounds.y, 1.0f, controlAreaBounds.height);
-    renderer.fillRect(borderRect, themeManager.getColor("borderSubtle").withAlpha(0.44f));
+    renderer.fillRect(highlightRect, themeManager.getColor("textPrimary").withAlpha(0.025f));
 
     // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
     if (m_channel && !m_channel->isMuted() && m_trackManager) {
@@ -1530,8 +1525,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             stripColor = AestraUI::NUIColor(r, g, b, a > 0.0f ? a : 1.0f);
         }
         
-        const float stripWidth = 3.0f;
-        const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.42f;
+        const float stripWidth = 5.0f;
+        const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.62f;
         // Was 0.86f here against 0.84f in the static pass, so one lane strip had
         // two brightnesses depending on which pass drew it. Both now go through
         // the shared lane-identity restraint the minimap uses.
@@ -1565,14 +1560,6 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     );
 
 
-    // Draw vertical separator between control area and playlist area
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y),
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.y + bounds.height),
-        1.0f,
-        themeManager.getColor("glassBorder").withAlpha(0.46f)
-    );
-
     // Render the track name directly; track control widgets remain hit targets only.
     // Drawing the button widgets here reintroduces bordered/pill artifacts in cached rows.
     if (m_nameLabel) {
@@ -1583,7 +1570,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     if (lane) {
-        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 0.74f : 0.60f);
+        const auto textIdle = themeManager.getColor("textSecondary").withAlpha(isHovered() ? 0.65f : 0.42f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
         const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);
@@ -1690,8 +1677,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
     }
 
-    // Track number marker (left of name): fixed white — no dynamic dimming
-    // (professional, defined feel per owner direction).
+    // Track number marker (left of name): recedes as quiet metadata (Level 4).
     if (m_nameLabel && lane) {
         constexpr float stripWidth = 3.0f;
         uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
@@ -1704,7 +1690,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         renderer.drawText(std::to_string(trackNumber),
                           AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
                           themeManager.getFontSize("xs"),
-                          themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.90f : 0.70f));
+                          themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.58f : 0.36f));
     }
 }
 
@@ -1723,9 +1709,9 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     // Roll, so its infrastructure recedes further while retaining the same
     // bar > beat > subdivision grammar.
     const AestraUI::TimelineGridStyle timelineStyle{
-        0.026f, // bars
-        0.006f, // beats
-        0.002f, // subdivisions
+        0.018f, // bars
+        0.004f, // beats
+        0.0015f, // subdivisions
         0.0f    // no empty-canvas zebra
     };
     AestraUI::renderTimelineGrid(

@@ -629,107 +629,10 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
     if (currentRangeSize_ >= rangeLimitSize_) return; // No thumb needed if content fits
     
     NUIRect thumbRect = getThumbRect();
-    
-    if (style_ == Style::Timeline) {
-        const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
-        // Enhanced modern style thumb with hover feedback on edges
-        NUIColor thumbColor = thumbColor_;
-        bool isThumbHovered = (hoveredPart_ == Part::Thumb);
-        bool isStartEdgeHovered = (hoveredPart_ == Part::ThumbStartEdge);
-        bool isEndEdgeHovered = (hoveredPart_ == Part::ThumbEndEdge);
-        bool isDraggingThumb = (isDragging_ && pressedPart_ == Part::Thumb);
-        bool isDraggingStart = (isDragging_ && pressedPart_ == Part::ThumbStartEdge);
-        bool isDraggingEnd = (isDragging_ && pressedPart_ == Part::ThumbEndEdge);
-        
-        // Adjust thumb color based on overall state
-        if (isDraggingThumb || isDraggingStart || isDraggingEnd) {
-            thumbColor = thumbPressedColor_;
-        } else if (isThumbHovered || isStartEdgeHovered || isEndEdgeHovered) {
-            thumbColor = thumbHoverColor_;
-        }
-        
-        // Main thumb body
-        renderer.fillRoundedRect(thumbRect, theme.radiusS, thumbColor);
-        
-        // Draw enhanced edge handles with hover/active states
-        float handleWidth = 12.0f;  // Match edge detection zone
-        NUIColor handleBaseColor = theme.borderStrong;
-        NUIColor handleHoverColor = theme.primaryHover;
-        NUIColor handleActiveColor = theme.primaryPressed;
-        const NUIColor gripColor = theme.textPrimary.withAlpha(0.50f);
-        
-        if (orientation_ == Orientation::Horizontal) {
-            NUIRect leftHandle(thumbRect.x, thumbRect.y, handleWidth, thumbRect.height);
-            NUIRect rightHandle(thumbRect.x + thumbRect.width - handleWidth, thumbRect.y, handleWidth, thumbRect.height);
-            
-            // Left/Start handle color
-            NUIColor leftColor = handleBaseColor;
-            if (isDraggingStart) {
-                leftColor = handleActiveColor;
-            } else if (isStartEdgeHovered) {
-                leftColor = handleHoverColor;
-            }
-            
-            // Right/End handle color
-            NUIColor rightColor = handleBaseColor;
-            if (isDraggingEnd) {
-                rightColor = handleActiveColor;
-            } else if (isEndEdgeHovered) {
-                rightColor = handleHoverColor;
-            }
-            
-            renderer.fillRoundedRect(leftHandle, 2.0f, leftColor);
-            renderer.fillRoundedRect(rightHandle, 2.0f, rightColor);
-            
-            // Draw vertical grip lines inside handles for visual clarity
-            float lineX = leftHandle.x + handleWidth * 0.5f;
-            float lineTop = leftHandle.y + 4.0f;
-            float lineBottom = leftHandle.y + leftHandle.height - 4.0f;
-            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, gripColor);
-            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, gripColor);
-            
-            lineX = rightHandle.x + handleWidth * 0.5f;
-            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, gripColor);
-            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, gripColor);
-        } else {
-            NUIRect topHandle(thumbRect.x, thumbRect.y, thumbRect.width, handleWidth);
-            NUIRect bottomHandle(thumbRect.x, thumbRect.y + thumbRect.height - handleWidth, thumbRect.width, handleWidth);
-            
-            // Top/Start handle color
-            NUIColor topColor = handleBaseColor;
-            if (isDraggingStart) {
-                topColor = handleActiveColor;
-            } else if (isStartEdgeHovered) {
-                topColor = handleHoverColor;
-            }
-            
-            // Bottom/End handle color
-            NUIColor bottomColor = handleBaseColor;
-            if (isDraggingEnd) {
-                bottomColor = handleActiveColor;
-            } else if (isEndEdgeHovered) {
-                bottomColor = handleHoverColor;
-            }
-            
-            renderer.fillRoundedRect(topHandle, 2.0f, topColor);
-            renderer.fillRoundedRect(bottomHandle, 2.0f, bottomColor);
-            
-            // Draw horizontal grip lines inside handles
-            float lineY = topHandle.y + handleWidth * 0.5f;
-            float lineLeft = topHandle.x + 4.0f;
-            float lineRight = topHandle.x + topHandle.width - 4.0f;
-            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, gripColor);
-            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, gripColor);
-            
-            lineY = bottomHandle.y + handleWidth * 0.5f;
-            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, gripColor);
-            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, gripColor);
-        }
-        
-        return;
-    }
 
-    // Enhanced thumb with translucent effect and smooth animations
+    // Timeline style is handled by drawEnhancedThumb below (flat, inset,
+    // neutral grab handle — no gradient or grip markers). The old Timeline
+    // branch with edge handles was removed so the design change actually runs.
     drawEnhancedThumb(renderer, thumbRect);
 }
 
@@ -1076,7 +979,16 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
 {
     if (trackRect.isEmpty()) return;
 
-    // Track: make end caps read clearly as intentional rounded pills.
+    // Timeline style: neutral, minimal track to avoid visual competition with overview.
+    if (style_ == Style::Timeline) {
+        auto& theme = NUIThemeManager::getInstance();
+        // Use an elevated neutral track (small lightening of panel bg)
+        NUIColor trackBg = theme.getColor("backgroundSecondary").lightened(0.04f);
+        renderer.fillRect(trackRect, trackBg);
+        return;
+    }
+
+    // Track: make end caps read clearly as intentional rounded pills for regular styles.
     const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.16f : 0.06f;
     const NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
     const NUIColor trackTop = trackBase.lightened(0.03f);
@@ -1107,7 +1019,36 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
 
 void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumbRect)
 {
-    // Thumb: subtle gradient based on configured colors
+    if (thumbRect.isEmpty()) return;
+
+    // Timeline style: minimal, flat grab handle (no gradient nor decorative markers)
+    if (style_ == Style::Timeline) {
+        auto& theme = NUIThemeManager::getInstance();
+        NUIRect visualThumb = thumbRect;
+        // Slight inset for nicer touch target
+        const float inset = 2.0f;
+        if (orientation_ == Orientation::Vertical) {
+            visualThumb.x += inset;
+            visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
+        } else {
+            visualThumb.y += inset;
+            visualThumb.height = std::max(0.0f, visualThumb.height - inset * 2.0f);
+        }
+        const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
+
+        // Track-aligned neutral thumb color (no gradient)
+        NUIColor handleCol = theme.getColor("textPrimary").withAlpha(0.72f);
+        // Lighter on hover/pressed
+        if (isPressed_ || isDragging_) handleCol = theme.getColor("accentPrimary").withAlpha(0.72f);
+        else if (hoveredPart_ == Part::Thumb) handleCol = handleCol.withAlpha(0.9f);
+
+        renderer.fillRoundedRect(visualThumb, radius, handleCol);
+        // Subtle border to separate from track
+        renderer.strokeRoundedRect(visualThumb, radius, 1.0f, theme.getColor("border").withAlpha(0.12f));
+        return;
+    }
+
+    // Thumb: subtle gradient based on configured colors for regular styles
     const bool thumbPressed = (isPressed_ && pressedPart_ == Part::Thumb) || (isDragging_ && pressedPart_ == Part::Thumb);
     const bool thumbHot = thumbPressed || (hoveredPart_ == Part::Thumb);
 

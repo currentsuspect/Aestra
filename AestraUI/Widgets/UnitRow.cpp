@@ -648,7 +648,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const float midY = timelineStrip.y + timelineStrip.height * 0.5f;
             const float ampScale = std::max(4.0f, timelineStrip.height * 0.42f);
             const float binWidth = timelineStrip.width / static_cast<float>(m_audioPreviewWaveform.size());
-            const NUIColor waveColor = theme.getColor("primary").withAlpha(0.9f);
+            const NUIColor waveColor = theme.getColor("waveformLine").withAlpha(0.9f);
 
             for (size_t i = 0; i < m_audioPreviewWaveform.size(); ++i) {
                 const float x = timelineStrip.x + static_cast<float>(i) * binWidth;

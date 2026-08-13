@@ -132,7 +132,7 @@ private:
     NUIRect readoutRect() const;
     float dbToY(float db, float trackTop, float trackHeight) const;
     void renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
-                     float trackTop, float trackHeight);
+                     float trackTop, float trackHeight, bool showLabels);
 
     void beginEdit();
     void commitEdit();

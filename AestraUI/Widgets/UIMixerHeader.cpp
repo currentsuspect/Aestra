@@ -87,14 +87,14 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // Safety check for invalid bounds
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    // Background for selection (tint with track color)
-    if (m_selected) {
-        renderer.fillRoundedRect(bounds, 10.0f, m_selectedBg);
-        renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, m_selectedBorder);
-    }
+    // Selection belongs to the strip, not this label. Keeping it out of the
+    // header prevents the selected channel from acquiring a second card and a
+    // second border inside the selected strip.
 
-    // Top Colored Bar (Visual Identity) — pulled from Timeline track color
-    constexpr float TOP_BAR_H = 6.0f;
+    // Track colour is identity, not surface decoration. A narrow marker gives
+    // the eye a fast way to scan channels without turning every nameplate into
+    // a coloured button.
+    constexpr float TOP_BAR_H = 3.0f;
 
     NUIRect topBar{
         std::floor(bounds.x),
@@ -108,14 +108,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
                         : colorFromARGB(m_trackColorArgb);
     trackColor = trackColor.withAlpha(1.0f);
 
-    // Full-width track-color bar
     renderer.fillRect(topBar, trackColor);
-
-    // Subtle background tint across the rest of the header for stronger color identity
-    if (!m_isMaster && m_trackColorArgb != 0) {
-        NUIRect tintRect{bounds.x, bounds.y + TOP_BAR_H, bounds.width, bounds.height - TOP_BAR_H};
-        renderer.fillRoundedRect(tintRect, std::max(0.0f, 10.0f - TOP_BAR_H), trackColor.withAlpha(0.06f));
-    }
 
     // Text area (below the top bar)
     NUIRect textRect{
@@ -125,45 +118,34 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         bounds.height - (TOP_BAR_H + 3.0f)
     };
 
-    const float nameFont = m_isMaster ? 13.0f : 12.5f;
-    const float routeFont = m_isMaster ? 10.0f : 9.5f;
+    const float nameFont = m_isMaster ? 12.0f : 11.5f;
+    const float routeFont = 8.5f;
 
     if (m_isMaster) {
-        // Master strip: eyebrow label + large title, vertically centered as a stack.
-        // The eyebrow ("MAIN BUS") signals this is the global mix bus, not just a strip.
-        constexpr float EYEBROW_H = 10.0f;
-        constexpr float MASTER_NAME_H = 16.0f;
-        constexpr float MASTER_ROUTE_H = 11.0f;
-        constexpr float STACK_GAP = 2.0f;
-
-        const float stackH = EYEBROW_H + STACK_GAP + MASTER_NAME_H +
-                              (m_route.empty() ? 0.0f : STACK_GAP + MASTER_ROUTE_H);
-        const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
-
-        // Eyebrow
-        NUIColor eyebrowColor = trackColor.withAlpha(0.85f);
-        NUIRect eyebrowRect{textRect.x, stackY, textRect.width, EYEBROW_H};
-        renderer.drawTextCentered("MAIN BUS", eyebrowRect, 9.0f, eyebrowColor);
-
-        // Title
-        NUIRect nameRect{textRect.x, stackY + EYEBROW_H + STACK_GAP,
-                          textRect.width, MASTER_NAME_H};
-        renderer.drawTextCentered(m_name, nameRect, 14.0f,
-                                  m_selected ? m_selectedText : m_text);
-
-        // Subtitle
+        // Width and placement already identify the master strip. Avoid a
+        // redundant MAIN BUS / MASTER / Output text stack.
+        constexpr float MASTER_NAME_H = 15.0f;
+        constexpr float MASTER_ROUTE_H = 10.0f;
+        constexpr float STACK_GAP = 1.0f;
+        const float stackH = MASTER_NAME_H +
+                             (m_route.empty() ? 0.0f : STACK_GAP + MASTER_ROUTE_H);
+        const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f);
+        renderer.drawTextCentered(m_name,
+                                  {textRect.x, stackY, textRect.width, MASTER_NAME_H},
+                                  nameFont,
+                                  m_text);
         if (!m_route.empty()) {
             NUIRect routeRect{textRect.x,
-                              stackY + EYEBROW_H + STACK_GAP + MASTER_NAME_H + STACK_GAP,
+                              stackY + MASTER_NAME_H + STACK_GAP,
                               textRect.width, MASTER_ROUTE_H};
             renderer.drawTextCentered(m_route, routeRect, routeFont,
-                                      m_textSecondary.withAlpha(0.88f));
+                                      m_textSecondary.withAlpha(0.62f));
         }
         return;
     }
 
-    constexpr float TRACK_NAME_H = 13.5f;
-    constexpr float TRACK_ROUTE_H = 10.5f;
+    constexpr float TRACK_NAME_H = 13.0f;
+    constexpr float TRACK_ROUTE_H = 9.0f;
     constexpr float TRACK_GAP = 1.5f;
     const float stackH = m_route.empty()
         ? TRACK_NAME_H
@@ -171,14 +153,14 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
 
     NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
-    renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
+    renderer.drawTextCentered(m_name, nameRect, nameFont, m_text);
 
     if (!m_route.empty()) {
         NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};
         renderer.drawTextCentered(m_route,
                                   routeRect,
                                   routeFont,
-                                  m_selected ? m_textSecondary.withAlpha(0.96f) : m_textSecondary.withAlpha(0.88f));
+                                  m_textSecondary.withAlpha(0.64f));
     }
 }
 

@@ -38,14 +38,6 @@ float safeClampMixerScroll(float value, float upper)
     return value;
 }
 
-NUIColor colorFromArgb(uint32_t argb, float alphaScale = 1.0f)
-{
-    const float a = ((argb >> 24) & 0xFF) / 255.0f;
-    const float r = ((argb >> 16) & 0xFF) / 255.0f;
-    const float g = ((argb >> 8) & 0xFF) / 255.0f;
-    const float b = (argb & 0xFF) / 255.0f;
-    return NUIColor(r, g, b, std::clamp(a * alphaScale, 0.0f, 1.0f));
-}
 }
 
 UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
@@ -420,25 +412,16 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
 
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
     const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
-    const float left = bounds.x;
-    const float right = inspectorX - STRIP_SPACING;
-
-    // Draw separators between visible channel strips.
-    for (size_t i = 1; i < m_strips.size(); ++i) {
-        if (!m_strips[i] || !m_strips[i]->isVisible()) continue;
-        const float x = m_strips[i]->getBounds().x - STRIP_SPACING / 2.0f;
-        if (x < left || x > right) continue;
-        renderer.drawLine({x, y1}, {x, y2}, 1.0f, m_separatorColor);
-    }
+    const NUIColor boundaryColor = m_separatorColor.withAlpha(0.62f);
 
     // Draw separator before inspector
     if (m_inspector && m_inspector->isVisible()) {
-        renderer.drawLine({inspectorX - STRIP_SPACING, y1}, {inspectorX - STRIP_SPACING, y2}, 1.0f, m_separatorColor);
+        renderer.drawLine({inspectorX - STRIP_SPACING, y1}, {inspectorX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
     }
 
     // Draw separator before master strip
     if (m_masterStrip && m_masterStrip->isVisible()) {
-        renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, m_separatorColor);
+        renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
     }
 }
 
@@ -468,8 +451,17 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         for (size_t i = 0; i < m_strips.size(); ++i) {
             const auto* channel = m_viewModel ? m_viewModel->getChannelById(m_strips[i]->getChannelId()) : nullptr;
             const bool selected = m_viewModel && m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_strips[i]->getChannelId());
-            const NUIColor stripColor = channel ? colorFromArgb(paletteIndexToARGB(channel->trackColorIndex), selected ? 0.95f : 0.82f)
-                                                : m_separatorColor.withAlpha(0.52f);
+            // The overview is navigation infrastructure, not a second rainbow
+            // track header. Use neutral structure, audio colour for activity,
+            // and purple only for the selected viewport target.
+            const auto& theme = NUIThemeManager::getInstance();
+            const NUIColor structure = theme.getColor("textSecondary").withAlpha(0.28f);
+            const NUIColor stripColor = selected
+                ? theme.getColor("primary").withAlpha(0.88f)
+                : structure;
+            const NUIColor activityColor = selected
+                ? theme.getColor("primary").withAlpha(0.42f)
+                : theme.getColor("meterSafe").withAlpha(0.30f);
 
             const float activityDb = channel ? std::max(channel->smoothedPeakL, channel->smoothedPeakR) : -72.0f;
             const float activityNorm = std::clamp((activityDb + 60.0f) / 60.0f, 0.0f, 1.0f);
@@ -479,7 +471,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
             const float activeH = std::max(1.0f, bodyH * activityNorm);
 
             const NUIRect fullRect(x, minimapRect.y + gap, barW, laneH);
-            renderer.fillRoundedRect(fullRect, 2.5f, m_separatorColor.withAlpha(selected ? 0.24f : 0.14f));
+            renderer.fillRoundedRect(fullRect, 2.5f, m_separatorColor.withAlpha(selected ? 0.20f : 0.10f));
 
             renderer.fillRoundedRect(
                 NUIRect(x, minimapRect.y + gap, barW, capH),
@@ -489,10 +481,10 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
             renderer.fillRoundedRect(
                 NUIRect(x, bodyY + (bodyH - activeH), barW, activeH),
                 2.0f,
-                stripColor.withAlpha(selected ? 0.42f : 0.28f));
+                activityColor);
 
             if (selected) {
-                renderer.strokeRoundedRect(fullRect, 3.0f, 1.0f, stripColor.withAlpha(0.55f));
+                renderer.strokeRoundedRect(fullRect, 3.0f, 1.0f, theme.getColor("primary").withAlpha(0.58f));
             }
             x += perStripW;
         }
@@ -503,8 +495,9 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         const float viewportX = minimapRect.x + gap +
             (maxScroll > 0.0f ? (m_scrollX / maxScroll) * std::max(0.0f, laneW - viewportW) : 0.0f);
         const NUIRect viewportRect(viewportX, minimapRect.y + 1.0f, viewportW, minimapRect.height - 2.0f);
-        renderer.fillRoundedRect(viewportRect, 6.0f, NUIColor(0.72f, 0.76f, 1.0f, 0.10f));
-        renderer.strokeRoundedRect(viewportRect, 6.0f, 1.25f, NUIColor(0.72f, 0.76f, 1.0f, 0.68f));
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+        renderer.fillRoundedRect(viewportRect, 6.0f, accent.withAlpha(0.10f));
+        renderer.strokeRoundedRect(viewportRect, 6.0f, 1.25f, accent.withAlpha(0.60f));
     }
 
     // Separators

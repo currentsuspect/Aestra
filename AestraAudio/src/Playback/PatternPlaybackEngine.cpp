@@ -224,8 +224,6 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
             const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
             const auto sampler = unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
-            const bool runsToSampleEnd = unit && unit->type == UnitType::Sampler && sampler &&
-                                         !sampler->isLoopEnabled();
             const int resolvedMidiNote = isPitchedSampler
                                              ? resolvePitchedSamplerMidiNote(note,
                                                                              sampler ? sampler->getRootMidiNote() : 60)
@@ -233,7 +231,13 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
-            bool suppressNoteOff = runsToSampleEnd;
+            // A one-shot sample may continue to its natural endpoint when no
+            // note gate is present, but a Piano Roll note still owns an ADSR
+            // gate. Always emit its note-off so the sampler can enter release
+            // when the note ends. Pitched-sampler slides are the one explicit
+            // exception because they intentionally hold the voice across the
+            // next step.
+            bool suppressNoteOff = false;
 
             if (isPitchedSampler) {
                 const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);

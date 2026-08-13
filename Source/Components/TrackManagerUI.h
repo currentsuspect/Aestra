@@ -326,7 +326,6 @@ private:
     std::shared_ptr<::AestraUI::TimelineMinimapBar> m_timelineMinimap;
     std::shared_ptr<::AestraUI::NUIIcon> m_addTrackIcon;
     ::AestraUI::NUIRect m_addTrackBounds;
-    bool m_addTrackHovered = false;
 
     // Timeline minimap state (beats-domain)
     ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
@@ -340,6 +339,7 @@ private:
 
     // Tool icons (toolbar)
     std::shared_ptr<::AestraUI::NUIIcon> m_menuIcon; // Menu dropdown icon (down arrow)
+    std::shared_ptr<::AestraUI::NUIButton> m_addTrackBtn;
     std::shared_ptr<::AestraUI::NUIIcon> m_selectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;

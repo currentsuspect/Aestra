@@ -35,6 +35,7 @@ public:
     bool openClip(ClipInstanceID clipId);
     ClipInstanceID getClipId() const { return m_clipId; }
 
+    void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
 

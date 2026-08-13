@@ -31,16 +31,14 @@ namespace {
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
-    // Labelled Peak / LUFS / Gain blocks at the foot of the master strip.
-    // Each block is a label line stacked over a value line; two of them sit in
-    // the meter column, so the band must fit 2 * BLOCK_H exactly or the second
-    // value falls off the bottom of the strip.
+    // Technical master readouts are contextual (meter hover/interaction), not
+    // a permanent dashboard below the signal controls.
     constexpr float MASTER_LABEL_H = 12.0f;
     constexpr float MASTER_VALUE_H = 14.0f;
     constexpr float MASTER_BLOCK_H = MASTER_LABEL_H + MASTER_VALUE_H;  // 26
     // Two stacked blocks plus bottom slack. With only 4px of slack the second
     // value landed on the strip's bottom edge and was not drawn at all.
-    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;  // 66
+    constexpr float MASTER_READOUT_H = 0.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -405,18 +403,18 @@ void UIMixerStrip::setPlatformBridge(NUIPlatformBridge* bridge)
 void UIMixerStrip::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
-    m_selectedTint = theme.getColor("primary").withAlpha(0.022f);
+    // Selection is a navigation state, not a second channel colour. The
+    // inspector and a thin top marker carry it; the strip surface stays calm.
+    m_selectedTint = theme.getColor("primary").withAlpha(0.008f);
     m_selectedOutline = theme.getColor("primary").withAlpha(0.18f);
-    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.18f);
+    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.72f);
     
     // Master: Distinct Dark Glass
     m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
     
-    // Standard Strip: Use Theme Glass Border/Hover for consistency
-    // m_stripBg = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.02f); 
-    // Use theme.glassHover (0.04f) or similar. Let's use a custom weak glass for strips.
-    m_stripBg = theme.getColor("surfaceTertiary").withAlpha(0.58f);
+    // Strips are layered surfaces, not individual floating cards.
+    m_stripBg = theme.getColor("backgroundSecondary").withAlpha(0.88f);
     
     // Master Border
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
@@ -778,20 +776,16 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     const bool selected = m_viewModel && (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
 
-    // Unified "Deep Black" background for ALL strips.
-    // Use Squircle (Rounded Rect) for standard Apple-like look
-    float radius = NUIThemeManager::getInstance().getRadius("m");
-    renderer.fillRoundedRect(bounds, radius, m_stripBg);
+    // Strips form one continuous instrument surface. Gaps and tonal contrast
+    // establish columns; rounded card outlines would fragment the mixer.
+    constexpr float radius = 4.0f;
+    renderer.fillRect(bounds, m_stripBg);
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
     if (m_channelId == 0) {
-        // Subtle accent-tinted vertical gradient for visual hierarchy
-        const NUIColor accent = NUIThemeManager::getInstance().getColor("primary");
-        renderer.fillRoundedRect(bounds, radius,
-                                  accent.withAlpha(0.04f));
-        renderer.fillRectGradient({bounds.x, bounds.y, bounds.width, 90.0f},
-                                   accent.withAlpha(0.10f), accent.withAlpha(0.0f), true);
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_masterBorder);
+        // Master is differentiated by a quiet tonal step and its fixed place,
+        // not by an always-on purple frame.
+        renderer.fillRect(bounds, m_masterBackground);
     }
 
     if (selected) {
@@ -802,7 +796,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         // tinted body and a bright edge the strip is already unmistakable, and
         // the border was what made a selected strip read as a different kind of
         // component rather than the same strip, selected.
-        renderer.fillRoundedRect(bounds, radius, m_selectedTint);
+        renderer.fillRect(bounds, m_selectedTint);
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
     }
 
@@ -869,7 +863,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.92f));
     }
     if (channel && channel->muted) {
-        renderer.fillRoundedRect(getBounds(), radius, m_mutedOverlay);
+        renderer.fillRect(getBounds(), m_mutedOverlay);
     }
 }
 
