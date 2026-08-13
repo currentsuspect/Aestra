@@ -173,12 +173,14 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 
     // Hit area for the whole status cluster (status pill + tier badge). Clicking
     // it opens the membership page, so it must behave like a control, not a
-    // drag surface.
+    // drag surface. Covers the badge whenever it is shown — the status text
+    // only widens the cluster when it also renders.
     m_statusClusterRect = NUIRect{};
-    if (showStatus) {
-        m_statusClusterRect.x = statusX;
+    if (showBadge) {
+        const float clusterX = showStatus ? statusX : badge.x;
+        m_statusClusterRect.x = clusterX;
         m_statusClusterRect.y = badgeY;
-        m_statusClusterRect.width = badge.x - statusX;
+        m_statusClusterRect.width = badge.right() - clusterX;
         m_statusClusterRect.height = badgeH;
     }
 
@@ -443,8 +445,15 @@ Aestra::HitTestResult NUICustomTitleBar::hitTest(const NUIPoint& point) {
     if (isPointInButton(point, minimizeButtonRect_)) return Aestra::HitTestResult::Client;
     if (isPointInButton(point, maximizeButtonRect_)) return Aestra::HitTestResult::Client;
     if (isPointInButton(point, closeButtonRect_)) return Aestra::HitTestResult::Client;
-    
-    // 2. Check Child Components (Menu Bar, Mode Toggle, etc.)
+
+    // 2. Membership status cluster is a control (opens the account page), not
+    //    caption drag surface. Without this, Windows would treat a click here
+    //    as a window drag and swallow the press.
+    if (!m_statusClusterRect.isEmpty() && m_statusClusterRect.contains(point)) {
+        return Aestra::HitTestResult::Client;
+    }
+
+    // 3. Check Child Components (Menu Bar, Mode Toggle, etc.)
     // Recursively check if point hits any interactive child
     const auto& children = getChildren();
     for (auto it = children.rbegin(); it != children.rend(); ++it) {
@@ -453,8 +462,8 @@ Aestra::HitTestResult NUICustomTitleBar::hitTest(const NUIPoint& point) {
             return Aestra::HitTestResult::Client;
         }
     }
-    
-    // 3. Fallback to Caption (Drag area)
+
+    // 4. Fallback to Caption (Drag area)
     return Aestra::HitTestResult::Caption;
 }
 

@@ -49,6 +49,8 @@ void UIMixerFXSummary::setFxCount(int count)
         m_labelText = "+";
     } else {
         m_labelText = "FX " + std::to_string(m_fxCount);
+        // A slot that becomes populated mid-hover no longer offers "Add insert".
+        NUIComponent::hideRemoteTooltip(this);
     }
     requestInvalidate();
 }

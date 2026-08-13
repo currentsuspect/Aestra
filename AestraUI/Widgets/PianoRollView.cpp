@@ -9,6 +9,10 @@
 
 namespace AestraUI {
 
+// Gap between the minimap (overview) and the ruler — both the layout and the
+// pitch-header geometry must agree on it so the key lane stays aligned.
+constexpr float kMinimapGap = 4.0f;
+
 // =============================================================================
 // PianoRollView (split from NUIPianoRollWidgets.cpp)
 // =============================================================================
@@ -118,11 +122,12 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
 
     const float toolbarH = 50.0f;
     const float minimapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    const float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
     const float rulerH = 28.0f;
     const NUIRect pitchHeader(bounds.x,
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
-                              minimapH + rulerH);
+                              minimapH + minimapGap + rulerH);
     renderer.fillRect(pitchHeader, theme.getColor("backgroundSecondary").darkened(0.025f));
     renderer.drawLine(NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.y),
                       NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.bottom()),
@@ -352,7 +357,7 @@ void PianoRollView::layoutChildren() {
     float rulerH = 28.0f;
 
     // Gap between minimap (overview) and ruler to visually separate them
-    float minimapGap = m_showLocalMinimap ? 4.0f : 0.0f;
+    float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
 
     float topTotalH = toolbarH + miniMapH + minimapGap + rulerH;
 

@@ -16,8 +16,9 @@ PianoRollMinimap::PianoRollMinimap()
     : startBeat_(0.0), viewDuration_(1.0), totalDuration_(100.0)
 {
     // Surface tooltip to explain the meaning of the overview visualization.
-    // The gradient/overview encodes clip/notes density across the arrangement.
-    setTooltip("Overview: clip density across arrangement (darker = sparse, brighter = dense)");
+    // It renders notes by pitch across the pattern (no density mapping), plus
+    // the playhead and the visible-range handles.
+    setTooltip("Overview: notes across the piano roll (by pitch)");
 }
 
 float PianoRollMinimap::beatToX(double beat) const {

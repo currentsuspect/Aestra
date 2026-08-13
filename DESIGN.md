@@ -80,9 +80,10 @@ Aestra uses a small semantic vocabulary:
 1. **Neutral** - primary surfaces and structure
 2. **Aestra Accent (purple)** - selection, focus, active interaction intent
 3. **Audio color (single hue)** - meters, waveforms, signal activity
-4. **Warning (amber)**
-5. **Error/clip (red)**
-6. **Track identity colors** - user-assigned identity only
+4. **Warning (amber)** - mute, caution states
+5. **Error/clip (red)** - record/armed, destructive intent, clipping
+6. **Success (green)** - confirmed positive/engaged state (solo, ready, complete)
+7. **Track identity colors** - user-assigned identity only
 
 Hard rule:
 

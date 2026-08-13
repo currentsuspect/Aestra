@@ -520,6 +520,24 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         const float ratio = std::pow(2.0f, (globalSemitones + noteSemitones) / 12.0f);
         const double targetRate = baseRate * ratio;
 
+        // Cut-self: a new trigger chokes every previous voice in this sampler,
+        // so retriggered one-shots (e.g. an 808) never overlap in the Piano
+        // Roll when their pitches differ. This is an explicit voice-layer
+        // policy, independent of mono mode, ADSR, and unit type — it runs
+        // before the mono branch so a mono retrigger chokes the held voice
+        // instead of gliding into it.
+        if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            for (auto& v : m_voices) {
+                if (v.active) {
+                    v.active = false;
+                    v.stage = EnvStage::Off;
+                    v.stageTime = 0.0;
+                    v.currentGain = 0.0f;
+                    v.releaseGain = 0.0f;
+                }
+            }
+        }
+
         if (m_monoMode.load(std::memory_order_relaxed)) {
             double noteStartFrame = 0.0;
             if (currentData && currentData->channels > 0) {
@@ -561,22 +579,6 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         }
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
-
-        // Cut-self: a new trigger chokes every previous voice in this sampler,
-        // so retriggered one-shots (e.g. an 808) never overlap in the Piano
-        // Roll when their pitches differ. This is an explicit voice-layer
-        // policy, independent of mono mode, ADSR, and unit type.
-        if (m_cutSelfMode.load(std::memory_order_relaxed)) {
-            for (auto& v : m_voices) {
-                if (v.active) {
-                    v.active = false;
-                    v.stage = EnvStage::Off;
-                    v.stageTime = 0.0;
-                    v.currentGain = 0.0f;
-                    v.releaseGain = 0.0f;
-                }
-            }
-        }
 
         double noteStartFrame = 0.0;
         if (currentData && currentData->channels > 0) {

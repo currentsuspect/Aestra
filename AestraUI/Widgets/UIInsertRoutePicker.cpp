@@ -248,7 +248,21 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
         renderer.drawTextCentered(number, badge, 11.0f, accent.lightened(0.20f));
         renderer.drawText("OUTPUT", {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 5.0f}, 9.5f,
                           textSecondary.withAlpha(0.78f));
-        renderer.drawText(name, {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 18.0f}, 12.5f, textPrimary);
+        // Long explicit route names must not collide with the chevron: ellipsize
+        // against the space between the name and the arrow.
+        const float nameX = m_triggerBounds.x + 39.0f;
+        const float maxNameWidth = std::max(0.0f, (m_triggerBounds.right() - 17.0f - 8.0f) - nameX);
+        std::string displayName = name;
+        if (maxNameWidth > 0.0f && renderer.measureText(displayName, 12.5f).width > maxNameWidth) {
+            constexpr const char* kEllipsis = "...";
+            const float ellipsisW = renderer.measureText(kEllipsis, 12.5f).width;
+            while (!displayName.empty() &&
+                   renderer.measureText(displayName + kEllipsis, 12.5f).width > maxNameWidth) {
+                displayName.pop_back();
+            }
+            displayName += kEllipsis;
+        }
+        renderer.drawText(displayName, {nameX, m_triggerBounds.y + 18.0f}, 12.5f, textPrimary);
         renderer.drawText(">", {m_triggerBounds.right() - 17.0f, m_triggerBounds.y + 11.0f}, 14.0f,
                           textSecondary);
     } else {
