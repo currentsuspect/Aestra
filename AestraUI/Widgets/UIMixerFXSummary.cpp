@@ -46,9 +46,9 @@ void UIMixerFXSummary::setFxCount(int count)
     if (clamped == m_fxCount) return;
     m_fxCount = clamped;
     if (m_fxCount <= 0) {
-        m_labelText = "Add Insert";
+        m_labelText = "+";
     } else {
-        m_labelText = std::to_string(m_fxCount) + (m_fxCount == 1 ? " Insert" : " Inserts");
+        m_labelText = "FX " + std::to_string(m_fxCount);
     }
     requestInvalidate();
 }
@@ -71,29 +71,34 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
         std::max(1.0f, std::floor(b.height) - 1.0f)
     };
 
+    const bool hasFx = (m_fxCount > 0);
+
     NUIColor bg = m_bg;
-    if (m_pressed) {
+
+    // Repeated empty insert controls must stay quiet. Purple is reserved for
+    // the directly hovered/pressed action, not six persistent invitations.
+    if (!hasFx && (m_hovered || m_pressed)) {
+        bg = m_accent.withAlpha(m_pressed ? 0.14f : 0.08f);
+    } else if (m_pressed) {
         bg = NUIThemeManager::getInstance().getColor("buttonBgActive").withAlpha(0.99f);
     }
     renderer.fillRoundedRect(visualRect, RADIUS, bg);
-    const bool hasFx = (m_fxCount > 0);
-    const NUIColor border = hasFx
-        ? m_accent.withAlpha(m_hovered ? 0.28f : 0.20f)
-        : (m_hovered ? m_borderHover : m_border);
-    // One outline only. The inset bevel stroke that used to sit inside this one
-    // added a second concentric edge to a control that already lives inside a
-    // bordered strip.
-    renderer.strokeRoundedRect(visualRect, RADIUS, 1.0f, border);
+    if (m_hovered || m_pressed || hasFx) {
+        const NUIColor border = hasFx
+            ? m_border.withAlpha(m_hovered ? 0.48f : 0.28f)
+            : m_accent.withAlpha(0.50f);
+        renderer.strokeRoundedRect(visualRect, RADIUS, 1.0f, border);
+    }
 
-    const NUIColor text = hasFx ? m_textPrimary : (m_hovered ? m_textPrimary.withAlpha(0.92f) : m_textSecondary);
+    const NUIColor text = hasFx ? m_textPrimary : m_textSecondary.withAlpha(m_hovered ? 0.96f : 0.72f);
+    if (!hasFx) {
+        renderer.drawTextCentered(m_labelText, visualRect, 15.0f, text);
+        return;
+    }
     const NUIRect chipRect{visualRect.x + 8.0f, visualRect.y + (visualRect.height - 10.0f) * 0.5f, 18.0f, 10.0f};
     renderer.fillRoundedRect(chipRect,
                              CHIP_RADIUS,
-                             hasFx ? m_accent.withAlpha(0.88f) : m_textSecondary.withAlpha(0.30f));
-    renderer.strokeRoundedRect(chipRect,
-                               CHIP_RADIUS,
-                               1.0f,
-                               hasFx ? m_accent.withAlpha(0.36f) : m_border.withAlpha(0.35f));
+                             hasFx ? m_accent.withAlpha(0.88f) : m_accent.withAlpha(0.95f));
 
     float rightInset = 10.0f;
     if (!m_statusText.empty()) {
@@ -102,8 +107,7 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
                                  visualRect.y + (visualRect.height - 16.0f) * 0.5f,
                                  statusW,
                                  16.0f};
-        renderer.fillRoundedRect(statusRect, 8.0f, m_accent.withAlpha(0.14f));
-        renderer.strokeRoundedRect(statusRect, 8.0f, 1.0f, m_accent.withAlpha(0.24f));
+        renderer.fillRoundedRect(statusRect, 8.0f, m_bg.withAlpha(0.85f));
         renderer.drawTextCentered(m_statusText, statusRect, 8.5f, m_accent.withAlpha(0.92f));
         rightInset = (visualRect.right() - statusRect.x) + 6.0f;
     }
@@ -127,6 +131,12 @@ bool UIMixerFXSummary::onMouseEvent(const NUIMouseEvent& event)
         const bool hoveredNow = b.contains(event.position);
         if (hoveredNow != m_hovered) {
             m_hovered = hoveredNow;
+            if (m_hovered && m_fxCount <= 0) {
+                const NUIPoint anchor = localToGlobal({b.center().x, b.bottom() + 8.0f});
+                NUIComponent::showRemoteTooltip("Add insert", anchor, this);
+            } else if (!m_hovered) {
+                NUIComponent::hideRemoteTooltip(this);
+            }
             requestInvalidate();
         }
         return false;

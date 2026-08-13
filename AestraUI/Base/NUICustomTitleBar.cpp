@@ -171,11 +171,34 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     // allows rather than implying that Core is a selectable application mode.
     const bool showStatus = showBadge && statusX > toggleRightEdge + kClusterGuard;
 
+    // Hit area for the whole status cluster (status pill + tier badge). Clicking
+    // it opens the membership page, so it must behave like a control, not a
+    // drag surface.
+    m_statusClusterRect = NUIRect{};
     if (showStatus) {
-        const float sharedBaselineY = std::round(renderer.calculateTextY({statusX, badgeY, statusSize.width, badgeH}, userFont));
-        renderer.drawText(status,
-                          {statusX, sharedBaselineY},
-                          userFont, muted);
+        m_statusClusterRect.x = statusX;
+        m_statusClusterRect.y = badgeY;
+        m_statusClusterRect.width = badge.x - statusX;
+        m_statusClusterRect.height = badgeH;
+    }
+
+    if (showStatus) {
+        // Status text is also rendered as a pill so it reads as a deliberate
+        // status chip rather than ambiguous plain text. The combined cluster
+        // (status + tier badge) makes the account state unmistakable.
+        const float statusPillPad = 10.0f;
+        const float statusPillW = statusSize.width + statusPillPad;
+        const NUIRect statusPill(statusX, badgeY, statusPillW, badgeH);
+        const float statusPillRadius = props.radiusM;
+        const NUIColor statusPillFill = m_statusHovered
+            ? themeManager.getColor("surfaceRaised").withAlpha(0.42f)
+            : themeManager.getColor("surfaceRaised").withAlpha(0.24f);
+        const NUIColor statusPillStroke = m_statusHovered
+            ? themeManager.getColor("borderSubtle").withAlpha(0.55f)
+            : themeManager.getColor("borderSubtle").withAlpha(0.32f);
+        renderer.fillRoundedRect(statusPill, statusPillRadius, statusPillFill);
+        renderer.strokeRoundedRect(statusPill, statusPillRadius, 1.0f, statusPillStroke);
+        renderer.drawTextCentered(status, statusPill, userFont, muted);
     }
 
     if (showBadge) {
@@ -199,6 +222,26 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 
         renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f,
                                   text.withAlpha(membershipVerified_ ? 0.92f : 0.72f));
+    }
+
+    // Render grouped view toggle background so the segmented control reads as
+    // a single unit.
+    {
+        const auto& props = themeManager.getCurrentTheme();
+        const float viewW = static_cast<float>(props.layout.viewToggleWidth);
+        const float viewH = static_cast<float>(props.layout.viewToggleHeight);
+        const float centerX = bounds.x + bounds.width * 0.5f;
+        const float rectW = viewW + 4.0f; // 2px internal padding each side
+        const float rectH = viewH + 4.0f;
+        const float rectX = std::round(centerX - rectW * 0.5f);
+        const float rectY = bounds.y + std::round((height_ - rectH) * 0.5f);
+        NUIRect toggleBg(rectX, rectY, rectW, rectH);
+        const float radius = 6.0f;
+        // Elevated fill to separate from surrounding chrome
+        renderer.fillRoundedRect(toggleBg, radius, themeManager.getColor("backgroundSecondary").withAlpha(0.98f));
+        renderer.strokeRoundedRect(toggleBg, radius, 1.0f, themeManager.getColor("border").withAlpha(0.24f));
+        renderer.drawLine({toggleBg.right() + 16.0f, toggleBg.y}, {toggleBg.right() + 16.0f, toggleBg.bottom()},
+                          1.0f, themeManager.getColor("border").withAlpha(0.24f));
     }
 
     // Render custom children (NUIMenuBar, view toggle, etc.)
@@ -291,7 +334,14 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     
     bool previousExportHover = exportHovered_;
     exportHovered_ = false;
-    
+
+    const bool statusClusterHit = !m_statusClusterRect.isEmpty()
+                                  && m_statusClusterRect.contains(mousePos);
+    if (statusClusterHit != m_statusHovered) {
+        m_statusHovered = statusClusterHit;
+        setDirty(true);
+    }
+
     if (false && isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
         exportHovered_ = true;
     } else if (isPointInButton(mousePos, minimizeButtonRect_)) {
@@ -308,6 +358,11 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        // Membership status cluster opens the account page
+        if (statusClusterHit) {
+            if (onMembershipClicked_) onMembershipClicked_();
+            return true;
+        }
         // Check export button first
         if (false && isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
             if (onExportRequested_) onExportRequested_();

@@ -15,6 +15,9 @@ namespace AestraUI {
 PianoRollMinimap::PianoRollMinimap() 
     : startBeat_(0.0), viewDuration_(1.0), totalDuration_(100.0)
 {
+    // Surface tooltip to explain the meaning of the overview visualization.
+    // The gradient/overview encodes clip/notes density across the arrangement.
+    setTooltip("Overview: clip density across arrangement (darker = sparse, brighter = dense)");
 }
 
 float PianoRollMinimap::beatToX(double beat) const {
@@ -151,6 +154,13 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     NUIRect rightHandle(x1 + w - 6.0f, b.y + 4.0f, handleW, handleH);
     renderer.fillRoundedRect(leftHandle, 2.0f, handleFill);
     renderer.fillRoundedRect(rightHandle, 2.0f, handleFill);
+
+    // Bottom border to anchor the overview visually to the ruler beneath it.
+    // Color-matched to the ruler tick marks (use the theme border with stronger alpha).
+    renderer.drawLine(NUIPoint(b.x + 2.0f, b.bottom() - 1.0f),
+                      NUIPoint(b.right() - 2.0f, b.bottom() - 1.0f),
+                      1.0f,
+                      theme.getColor("border").withAlpha(0.82f));
 }
 
 bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {

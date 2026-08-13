@@ -1076,7 +1076,16 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
 {
     if (trackRect.isEmpty()) return;
 
-    // Track: make end caps read clearly as intentional rounded pills.
+    // Timeline style: neutral, minimal track to avoid visual competition with overview.
+    if (style_ == Style::Timeline) {
+        auto& theme = NUIThemeManager::getInstance();
+        // Use an elevated neutral track (small lightening of panel bg)
+        NUIColor trackBg = theme.getColor("backgroundSecondary").lightened(0.04f);
+        renderer.fillRect(trackRect, trackBg);
+        return;
+    }
+
+    // Track: make end caps read clearly as intentional rounded pills for regular styles.
     const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.16f : 0.06f;
     const NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
     const NUIColor trackTop = trackBase.lightened(0.03f);
@@ -1107,7 +1116,36 @@ void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& track
 
 void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumbRect)
 {
-    // Thumb: subtle gradient based on configured colors
+    if (thumbRect.isEmpty()) return;
+
+    // Timeline style: minimal, flat grab handle (no gradient nor decorative markers)
+    if (style_ == Style::Timeline) {
+        auto& theme = NUIThemeManager::getInstance();
+        NUIRect visualThumb = thumbRect;
+        // Slight inset for nicer touch target
+        const float inset = 2.0f;
+        if (orientation_ == Orientation::Vertical) {
+            visualThumb.x += inset;
+            visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
+        } else {
+            visualThumb.y += inset;
+            visualThumb.height = std::max(0.0f, visualThumb.height - inset * 2.0f);
+        }
+        const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
+
+        // Track-aligned neutral thumb color (no gradient)
+        NUIColor handleCol = theme.getColor("textPrimary").withAlpha(0.72f);
+        // Lighter on hover/pressed
+        if (isPressed_ || isDragging_) handleCol = theme.getColor("accentPrimary").withAlpha(0.72f);
+        else if (hoveredPart_ == Part::Thumb) handleCol = handleCol.withAlpha(0.9f);
+
+        renderer.fillRoundedRect(visualThumb, radius, handleCol);
+        // Subtle border to separate from track
+        renderer.strokeRoundedRect(visualThumb, radius, 1.0f, theme.getColor("border").withAlpha(0.12f));
+        return;
+    }
+
+    // Thumb: subtle gradient based on configured colors for regular styles
     const bool thumbPressed = (isPressed_ && pressedPart_ == Part::Thumb) || (isDragging_ && pressedPart_ == Part::Thumb);
     const bool thumbHot = thumbPressed || (hoveredPart_ == Part::Thumb);
 

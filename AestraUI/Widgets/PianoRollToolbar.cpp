@@ -144,12 +144,15 @@ void PianoRollToolbar::setupUI() {
 
     // 1. Tool Buttons
     m_ptrBtn = std::make_shared<NUIButton>("");
+    m_ptrBtn->setTooltip("Select");
     m_ptrBtn->setOnClick([this](){ setActiveTool(GlobalTool::Pointer); });
 
     m_pencilBtn = std::make_shared<NUIButton>("");
+    m_pencilBtn->setTooltip("Draw");
     m_pencilBtn->setOnClick([this](){ setActiveTool(GlobalTool::Pencil); });
 
     m_eraserBtn = std::make_shared<NUIButton>("");
+    m_eraserBtn->setTooltip("Erase");
     m_eraserBtn->setOnClick([this](){ setActiveTool(GlobalTool::Eraser); });
 
     m_patternDropdown = std::make_shared<NUIDropdown>();
@@ -310,6 +313,11 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     const auto groupBg = themeManager.getColor("backgroundPrimary").withAlpha(0.72f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
     renderer.fillRect(b, toolbarBg);
+    // Top border to visually separate this toolbar from the panel above it
+    renderer.drawLine(NUIPoint(b.x, b.y + 0.5f),
+                      NUIPoint(b.right(), b.y + 0.5f),
+                      1.0f,
+                      themeManager.getColor("divider"));
     renderer.drawLine(NUIPoint(b.x, b.bottom() - 0.5f),
                       NUIPoint(b.right(), b.bottom() - 0.5f),
                       1.0f,

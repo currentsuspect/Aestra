@@ -22,7 +22,7 @@ namespace {
     constexpr float TRACK_RADIUS = 4.0f;
     constexpr float HANDLE_RADIUS = 4.0f;
     constexpr float HANDLE_HEIGHT = 22.0f;  // taller cap: a real grab target
-    constexpr float HANDLE_WIDTH = 36.0f;
+    constexpr float HANDLE_WIDTH = 30.0f;
     constexpr float TRACK_WIDTH = 6.0f;     // was 4 — thin enough to look like a meter
     constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
     constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
@@ -31,7 +31,7 @@ namespace {
 
     // Restrained scale: unity plus a few orientation marks. Unity (0 dB) is the
     // only one that gets emphasis and a label.
-    constexpr float SCALE_TICKS[] = {6.0f, 0.0f, -6.0f, -12.0f, -24.0f, -48.0f};
+    constexpr float SCALE_TICKS[] = {6.0f, 0.0f, -6.0f, -12.0f, -18.0f, -24.0f, -36.0f, -48.0f};
 
 }
 
@@ -127,7 +127,7 @@ float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
 }
 
 void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
-                               float trackTop, float trackHeight)
+                               float trackTop, float trackHeight, bool showLabels)
 {
     // Ticks flank the rail on both sides so the cap never hides the scale.
     constexpr float TICK_LEN = 4.0f;
@@ -135,6 +135,10 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
     const float leftEnd = trackX - TICK_GAP;
     const float rightStart = trackX + trackWidth + TICK_GAP;
 
+    // The scale is structural, not a second readout. Unity is useful orientation
+    // at a glance; the complete dB ladder is revealed for the master strip or
+    // while the musician is directly manipulating this fader.
+    char labelBuf[8];
     for (float db : SCALE_TICKS) {
         if (db > m_maxDb || db < m_minDb) continue;
 
@@ -142,16 +146,28 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
         const float y = dbToY(db, trackTop, trackHeight);
         const float len = unity ? TICK_LEN + 2.0f : TICK_LEN;
         const float thickness = unity ? 2.0f : 1.0f;
-        const NUIColor color = unity ? m_tickUnity : m_tick;
+        const NUIColor color =
+            unity ? m_tickUnity : (showLabels ? m_tick : m_tick.withAlpha(m_tick.a * 0.58f));
 
         renderer.fillRect(NUIRect{leftEnd - len, y - thickness * 0.5f, len, thickness}, color);
         renderer.fillRect(NUIRect{rightStart, y - thickness * 0.5f, len, thickness}, color);
-    }
 
-    // Unity gets a label when there is room for it (master strip / wide layouts).
-    if (m_showScaleLabels && m_maxDb >= 0.0f && m_minDb <= 0.0f) {
-        const float y = dbToY(0.0f, trackTop, trackHeight);
-        renderer.drawText("0", NUIPoint{rightStart + TICK_LEN + 4.0f, y - 5.0f}, 9.0f, m_tickUnity);
+        if (!showLabels && !unity) {
+            continue;
+        }
+
+        const char* label = "0";
+        if (!unity) {
+            std::snprintf(labelBuf, sizeof(labelBuf), "%+d", static_cast<int>(db));
+            label = labelBuf;
+        }
+        const float labelSize = renderer.measureText(label, 7.5f).width;
+        // Right-align labels against the tick so they remain a contextual
+        // measurement aid instead of forming a permanent text column.
+        renderer.drawText(label,
+                          {leftEnd - TICK_LEN - 5.0f - labelSize, y - 3.5f},
+                          unity ? 8.0f : 7.5f,
+                          unity ? m_tickUnity : m_tick.withAlpha(showLabels ? m_tick.a : m_tick.a * 0.72f));
     }
 }
 
@@ -173,7 +189,8 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     NUIRect trackRect{trackX, trackTop, trackWidth, trackHeight};
 
     // 1. Scale first, so the rail and cap sit on top of it.
-    renderScale(renderer, trackX, trackWidth, trackTop, trackHeight);
+    const bool showScaleLabels = m_showScaleLabels || isHovered() || m_dragging;
+    renderScale(renderer, trackX, trackWidth, trackTop, trackHeight, showScaleLabels);
 
     // 2. Track Background (deep recessed slot)
     renderer.fillRoundedRect(trackRect, 3.0f, m_trackBg);
@@ -221,17 +238,22 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
             i == 0 ? gripColor : gripColor.withAlpha(gripColor.a * 0.45f));
     }
 
-    // 5. dB readout at top — click target for exact entry.
+    // 5. dB readout at top. It remains available for exact entry, but recedes
+    //    on ordinary channel strips so the control shape and the adjacent meter
+    //    retain visual priority. The master strip keeps a stronger readout.
     if (m_editing && m_textInput) {
         renderChildren(renderer);
     } else {
-        const float fontSize = 10.5f;
+        const bool valueActive = isHovered() || m_dragging || m_showScaleLabels;
+        const float fontSize = m_showScaleLabels ? 11.0f : 10.0f;
         const NUIRect textRect = readoutRect();
         if (isHovered()) {
             renderer.fillRoundedRect(textRect, 3.0f, m_trackBg.withAlpha(0.55f));
         }
-        renderer.drawTextCentered(m_cachedText, textRect, fontSize,
-                                  isHovered() ? m_text : m_textSecondary);
+        renderer.drawTextCentered(m_cachedText,
+                                  textRect,
+                                  fontSize,
+                                  valueActive ? m_text : m_textSecondary.withAlpha(0.72f));
     }
 
     // 6. Drag Value Tooltip (only while dragging)

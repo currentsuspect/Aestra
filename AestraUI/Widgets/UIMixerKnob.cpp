@@ -13,7 +13,7 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float LABEL_H = 11.0f; // Micro-label below knob cap
+    constexpr float LABEL_H = 8.0f; // Reserved for contextual knob label
 
     constexpr float ARC_START = 135.0f * 3.14159265f / 180.0f; // 7 o'clock
     constexpr float ARC_END = 405.0f * 3.14159265f / 180.0f;   // 5 o'clock (wrapping)
@@ -247,10 +247,10 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     // White pointer for contrast
     renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
 
-    // 5. Micro-label below knob
-    if (LABEL_H > 0.0f) {
+    // 5. Context label: hidden by default to reduce persistent text.
+    if (LABEL_H > 0.0f && hovered) {
         NUIRect labelRect{b.x, b.y + knobAreaH, b.width, LABEL_H};
-        renderer.drawTextCentered(label(), labelRect, 9.5f, m_textSecondary.withAlpha(0.7f));
+        renderer.drawTextCentered(label(), labelRect, 8.0f, m_textSecondary.withAlpha(0.74f));
     }
 
     if (m_dragging) {
@@ -272,13 +272,30 @@ UIMixerKnob::~UIMixerKnob() {
     }
 }
 
+void UIMixerKnob::onMouseLeave()
+{
+    setHovered(false);
+    if (!m_dragging) {
+        NUIComponent::hideRemoteTooltip(this);
+    }
+    NUIComponent::onMouseLeave();
+}
+
 bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
 
     const auto b = getBounds();
     if (!event.cursorCaptured) {
-        setHovered(b.contains(event.position));
+        const bool hovered = b.contains(event.position);
+        setHovered(hovered);
+        if (!m_dragging && event.button == NUIMouseButton::None) {
+            if (hovered) {
+                updateGlobalTooltip();
+            } else {
+                NUIComponent::hideRemoteTooltip(this);
+            }
+        }
     }
     if (!b.contains(event.position) && !m_dragging) return false;
 

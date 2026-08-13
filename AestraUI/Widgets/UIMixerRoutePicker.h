@@ -35,6 +35,7 @@ public:
     void setSelectedRoute(uint32_t routeId);
     uint32_t getSelectedRoute() const { return m_selectedRouteId; }
     void setTriggerBounds(const NUIRect& bounds);
+    void setCompactChipStyle(bool compact) { m_compactChipStyle = compact; repaint(); }
     void setOnRouteSelected(std::function<void(uint32_t)> callback) { m_onRouteSelected = std::move(callback); }
 
     void setSearchQuery(const std::string& query);
@@ -64,6 +65,7 @@ private:
     int m_firstVisible{0};
     int m_hoveredVisibleRow{-1};
     bool m_open{false};
+    bool m_compactChipStyle{false};
 
     std::shared_ptr<NUITextInput> m_searchInput;
     std::function<void(uint32_t)> m_onRouteSelected;

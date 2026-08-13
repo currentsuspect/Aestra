@@ -229,21 +229,35 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
     const auto textPrimary = theme.getColor("textPrimary");
     const auto textSecondary = theme.getColor("textSecondary");
     const auto border = theme.getColor("borderSubtle");
-    const auto triggerBackground = theme.getColor("surfaceRaised").withAlpha(0.94f);
-    const auto accent = theme.getColor("secondary");
+    const auto triggerBackground = m_compactChipStyle
+                                       ? theme.getColor("surfaceTertiary")
+                                       : theme.getColor("surfaceRaised").withAlpha(0.94f);
+    const auto accent = m_compactChipStyle ? theme.getColor("accentPrimary") : theme.getColor("secondary");
 
-    renderer.fillRoundedRect(m_triggerBounds, 6.0f,
+    renderer.fillRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
                              isHovered() ? triggerBackground.lightened(0.05f) : triggerBackground);
-    renderer.strokeRoundedRect(m_triggerBounds, 6.0f, m_open ? 1.5f : 1.0f, m_open ? accent.withAlpha(0.9f) : border);
+    renderer.strokeRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
+                               m_open ? 1.5f : 1.0f, m_open ? accent.withAlpha(0.9f) : border);
 
     const Route* selected = selectedRoute();
     const std::string number = selected ? routeNumberLabel(*selected) : "M";
     const std::string name = selected ? selected->name : "Master";
-    const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
-    renderer.fillRoundedRect(badge, 4.0f, accent.withAlpha(0.17f));
-    renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
-    renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
-    renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
+    if (m_compactChipStyle) {
+        const NUIRect badge{m_triggerBounds.x + 8.0f, m_triggerBounds.y + 8.0f, 22.0f, 22.0f};
+        renderer.fillRoundedRect(badge, 6.0f, accent.withAlpha(0.16f));
+        renderer.drawTextCentered(number, badge, 11.0f, accent.lightened(0.20f));
+        renderer.drawText("OUTPUT", {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 5.0f}, 9.5f,
+                          textSecondary.withAlpha(0.78f));
+        renderer.drawText(name, {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 18.0f}, 12.5f, textPrimary);
+        renderer.drawText(">", {m_triggerBounds.right() - 17.0f, m_triggerBounds.y + 11.0f}, 14.0f,
+                          textSecondary);
+    } else {
+        const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
+        renderer.fillRoundedRect(badge, 4.0f, accent.withAlpha(0.17f));
+        renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
+        renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
+        renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
+    }
 
     if (!m_open) {
         setDirty(false);

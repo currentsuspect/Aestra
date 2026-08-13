@@ -22,7 +22,7 @@ namespace {
     constexpr float TAB_H = 28.0f;
     constexpr float TAB_RADIUS = 12.0f;
     constexpr float SECTION_GAP = 10.0f;
-    constexpr float HEADER_H = 80.0f;
+    constexpr float HEADER_H = 54.0f;
     constexpr float INSERT_SUMMARY_H = 28.0f;
     constexpr float ROW_H = 28.0f;
     constexpr float ROW_RADIUS = 12.0f;
@@ -273,10 +273,10 @@ void UIMixerInspector::onResize(int width, int height)
     const auto b = getBounds();
     const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
     if (m_effectRack) {
-        // Inserts tab: tuck the rack directly under the "INSERTS" section header
-        // + divider (headerBaseY+16 line, ~+20 from contentRect top) so the
-        // header reads as the list's title rather than a floating card.
-        const float topPad = (m_activeTab == Tab::Inserts) ? 28.0f : 10.0f;
+        // The active tab already names the content. Start the rack directly
+        // below the channel identity instead of repeating INSERTS + a count +
+        // another add control before the actual first slot.
+        const float topPad = (m_activeTab == Tab::Inserts) ? 0.0f : 10.0f;
         float rackH = std::max(0.0f, b.height - contentTop - topPad - PAD);
         m_effectRack->setBounds(b.x + PAD, b.y + contentTop + topPad, b.width - PAD * 2.0f, rackH);
     }
@@ -472,8 +472,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
     renderer.fillRect(b, m_bg);
 
-    // Left separator line (container draws outer separators too; keep this subtle).
-    renderer.drawLine({b.x, b.y}, {b.x, b.bottom()}, 1.0f, m_border);
+    // The inspector is a distinct functional region, so it earns one quiet
+    // boundary. Individual cards inside it should not repeat that boundary.
+    renderer.drawLine({b.x, b.y}, {b.x, b.bottom()}, 1.0f, m_border.withAlpha(0.55f));
 
     const auto* channel = m_viewModel ? m_viewModel->getSelectedChannel() : nullptr;
     updateHeaderCache(channel);
@@ -504,36 +505,22 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         for (auto& widget : m_sendWidgets) {
             widget->setVisible(false);
         }
-        const float emptyCardH = 160.0f;
-        const float emptyTop = contentRect.y + 8.0f;
-        const float emptyBottom = contentRect.bottom() - 54.0f;
-        const float availableH = std::max(0.0f, emptyBottom - emptyTop);
-        const NUIRect emptyCard{
-            contentRect.x,
-            std::round(emptyTop + std::max(0.0f, (availableH - emptyCardH) * 0.20f)),
-            contentRect.width,
-            std::min(emptyCardH, availableH)
-        };
-        renderer.fillRoundedRect(emptyCard, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
-        renderer.strokeRoundedRect(emptyCard, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.42f));
-
-        const NUIRect stateChip{emptyCard.center().x - 34.0f, emptyCard.y + 18.0f, 68.0f, 18.0f};
-        renderer.fillRoundedRect(stateChip, 9.0f, m_bg.withAlpha(0.34f));
-        renderer.strokeRoundedRect(stateChip, 9.0f, 1.0f, accent.withAlpha(0.20f));
-        renderer.drawTextCentered("INSPECTOR", stateChip, 9.0f, m_textSecondary.withAlpha(0.90f));
-        renderer.drawTextCentered("Select an Insert", {emptyCard.x + 18.0f, stateChip.bottom() + 16.0f, emptyCard.width - 36.0f, 18.0f},
-                                  13.0f, m_text.withAlpha(0.95f));
-        renderer.drawTextCentered("Choose a mixer insert to inspect",
-                                  {emptyCard.x + 24.0f, stateChip.bottom() + 38.0f, emptyCard.width - 48.0f, 14.0f},
-                                  10.0f, m_textSecondary.withAlpha(0.86f));
-        renderer.drawTextCentered("Inserts, Sends, and I/O.",
-                                  {emptyCard.x + 24.0f, stateChip.bottom() + 52.0f, emptyCard.width - 48.0f, 14.0f},
-                                  10.0f, m_textSecondary.withAlpha(0.86f));
+        const float emptyY = contentRect.y + std::max(24.0f, contentRect.height * 0.22f);
+        renderer.drawTextCentered("Select a mixer channel",
+                                  {contentRect.x, emptyY, contentRect.width, 18.0f},
+                                  12.0f,
+                                  m_textSecondary.withAlpha(0.78f));
+        renderer.drawTextCentered("to inspect its inserts, sends, and input",
+                                  {contentRect.x, emptyY + 18.0f, contentRect.width, 14.0f},
+                                  9.5f,
+                                  m_textSecondary.withAlpha(0.48f));
         return;
     }
 
-    renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.70f));
-    renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.50f));
+    // A quiet elevated header identifies the selected channel without boxing
+    // it off from the inspector. The channel colour, not a purple border, is
+    // the identity cue here.
+    renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.52f));
 
     NUIColor titleAccent = accent;
     if (channel && channel->trackColorIndex >= 0) {
@@ -549,96 +536,25 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     // in the mixer inspector, and the master reads as MASTER and is visually
     // distinct. The swatch gives this spot a real job: it ties the inspector to
     // the selected strip's colour.
-    const float swatchSize = 12.0f;
+    const float swatchSize = 4.0f;
     // Vertically centre the swatch on the title's optical middle. drawText places
     // by glyph-top and the atlas renders a touch lower, so the swatch sits ~4px
     // below the title top to line up with the text centre rather than its cap.
-    const NUIRect swatch{headerRect.x + 12.0f, headerRect.y + 18.0f, swatchSize, swatchSize};
-    renderer.fillRoundedRect(swatch, 4.0f, titleAccent.withAlpha(0.92f));
-    renderer.strokeRoundedRect(swatch, 4.0f, 1.0f, NUIColor::white().withAlpha(0.10f));
+    const NUIRect swatch{headerRect.x + 12.0f, headerRect.y + 12.0f, swatchSize, headerRect.height - 24.0f};
+    renderer.fillRoundedRect(swatch, 2.0f, titleAccent.withAlpha(0.90f));
 
-    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 30.0f, headerRect.y + 13.0f}, 13.5f, m_text);
+    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 26.0f, headerRect.y + 11.0f}, 13.0f, m_text);
     if (!m_cachedHeaderSubtitle.empty()) {
-        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 12.0f, headerRect.y + 34.0f}, 11.0f, m_textSecondary.withAlpha(0.95f));
-    }
-    {
-        // Signal-flow breadcrumb: dim inactive steps, accent the active one,
-        // separate with chevron glyph. No pill background → reads as info, not tabs.
-        const char* flowSteps[4];
-        int flowCount = 0;
-        int activeIdx = -1;
-        switch (m_activeTab) {
-            case Tab::Inserts:
-                flowSteps[flowCount++] = "INPUT";
-                flowSteps[flowCount++] = "TRIM";
-                flowSteps[flowCount++] = "INSERTS"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "OUTPUT";
-                break;
-            case Tab::Sends:
-                flowSteps[flowCount++] = "INSERTS";
-                flowSteps[flowCount++] = "SENDS"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "FADER";
-                flowSteps[flowCount++] = "OUTPUT";
-                break;
-            case Tab::IO:
-                flowSteps[flowCount++] = "INPUT"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "MONITOR";
-                flowSteps[flowCount++] = "RECORD";
-                break;
-        }
-
-        float cursorX = headerRect.x + 10.0f;
-        const float baselineY = headerRect.y + 62.0f;
-        const float stepFont = 9.0f;
-
-        for (int i = 0; i < flowCount; ++i) {
-            const std::string step = flowSteps[i];
-            const bool active = (i == activeIdx);
-            // Active step follows the channel's own colour and carries a short
-            // underline "you are here" marker; inactive steps recede.
-            const NUIColor stepColor = active ? titleAccent.withAlpha(0.98f)
-                                              : m_textSecondary.withAlpha(0.50f);
-            renderer.drawText(step, {cursorX, baselineY}, stepFont, stepColor);
-            const float textW = renderer.measureText(step, stepFont).width;
-            if (active) {
-                renderer.fillRect({cursorX, baselineY + 13.0f, textW, 1.5f},
-                                  titleAccent.withAlpha(0.90f));
-            }
-            cursorX += textW + 7.0f;
-
-            if (i < flowCount - 1) {
-                renderer.drawText("›", {cursorX, baselineY}, stepFont,
-                                  m_textSecondary.withAlpha(0.35f));
-                cursorX += renderer.measureText("›", stepFont).width + 7.0f;
-            }
-        }
+        renderer.drawText(m_cachedHeaderSubtitle,
+                          {headerRect.x + 26.0f, headerRect.y + 29.0f},
+                          10.0f,
+                          m_textSecondary.withAlpha(0.70f));
     }
 
     // Content
     if (m_activeTab == Tab::Inserts) {
-        const int fxCount = channel->fxCount;
-        char buf[64];
-        if (fxCount <= 0) {
-            std::snprintf(buf, sizeof(buf), "No inserts loaded");
-        } else {
-            std::snprintf(buf, sizeof(buf), "%d insert%s active", fxCount, fxCount == 1 ? "" : "s");
-        }
-        // Section header for the rack below — a plain eyebrow + count with a
-        // hairline divider (no boxed card), so it clearly titles the slot list
-        // rather than floating as a separate compartment above it.
-        const float headerBaseY = contentRect.y + 4.0f;
-        renderer.drawText("INSERTS",
-                          {contentRect.x + 2.0f, headerBaseY},
-                          9.0f, m_textSecondary.withAlpha(0.72f));
-        const float countW = renderer.measureText(buf, 9.5f).width;
-        renderer.drawText(buf,
-                          {contentRect.x + contentRect.width - countW - 2.0f, headerBaseY},
-                          9.5f, m_textSecondary.withAlpha(0.85f));
-        renderer.fillRect({contentRect.x + 2.0f, headerBaseY + 16.0f, contentRect.width - 4.0f, 1.0f},
-                          m_border.withAlpha(0.45f));
-
-        // Rack is rendered by renderChildren() if visible, tucked right under
-        // the divider (see onResize topPad for the Inserts tab).
+        // The tab and the first rack row provide all necessary context. Do not
+        // spend permanent text on an empty-state count or duplicate heading.
     } else if (m_activeTab == Tab::Sends) {
         const int sendCount = static_cast<int>(m_sendWidgets.size());
         const std::string routingWarning = m_viewModel ? m_viewModel->getRoutingWarning(channel->id) : std::string();
@@ -797,11 +713,12 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
              const float fillWidth = std::clamp(channel->inputPeak, 0.0f, 1.0f) * meterRect.width;
              if (fillWidth > 1.0f) {
+                 auto& theme = NUIThemeManager::getInstance();
                  const NUIColor meterColor = (channel->inputPeak >= 0.95f)
-                     ? NUIColor::fromHex(0xffd95f5f)
+                     ? theme.getColor("error")
                      : (channel->inputPeak >= 0.75f)
-                        ? NUIColor::fromHex(0xffd7b45f)
-                        : NUIColor::fromHex(0xff46d1c9);
+                        ? theme.getColor("warning")
+                        : theme.getColor("meterSafe");
                  renderer.fillRoundedRect({meterRect.x, meterRect.y, fillWidth, meterRect.height}, 6.0f, meterColor.withAlpha(0.95f));
              }
 

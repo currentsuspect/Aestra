@@ -155,7 +155,9 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     constexpr float headerH = HEADER_BAR_HEIGHT;
 
     const float headerY = bounds.y + CONTENT_TOP_PAD;
-    renderer.fillRect({bounds.x, headerY, bounds.width, headerH}, Colors::panelTop());
+    const auto& theme = NUIThemeManager::getInstance();
+    // Use an elevated background for the library header so it reads as a self-contained group
+    renderer.fillRect({bounds.x, headerY, bounds.width, headerH}, theme.getColor("backgroundSecondary"));
     renderer.drawLine({bounds.x, headerY + headerH}, {bounds.right(), headerY + headerH}, 1.0f, Colors::divider());
 
     // Title, with a muted count once a scan has populated the list.
@@ -812,12 +814,8 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
-    // Background contrast groups the rack; it sits inside the inspector's own
-    // border, and each slot carries its own, so a third concentric outline here
-    // was pure nesting.
-    renderer.fillRoundedRect(bounds, theme.radiusL, Colors::panelBackground().withAlpha(0.94f));
-    renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, theme.layout.standardControlHeight},
-                             theme.radiusL, Colors::panelTop().withAlpha(0.62f));
+    // The inspector already provides the surface. The rack contributes only
+    // actual insert rows, avoiding another nested panel around an empty list.
 
     // Enable clipping
     renderer.setClipRect(bounds);
@@ -825,20 +823,6 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     const int visible = visibleSlotCount();
     for (int i = 0; i < visible; ++i) {
         renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
-    }
-
-    // Deliberate empty state. Collapsing the rack to a single add row left a
-    // large blank region that read as unfinished rather than as "nothing here
-    // yet"; one quiet line under the add row names the state without
-    // reintroducing the column of dead slot outlines.
-    if (lastPopulatedSlot() < 0 && !m_isDraggingReorder) {
-        const float messageY = bounds.y + 8.0f + SLOT_HEIGHT - m_scrollOffset + 14.0f;
-        if (messageY < bounds.bottom() - 12.0f) {
-            renderer.drawTextCentered("No effects on this channel",
-                                      {bounds.x, messageY, bounds.width, 14.0f},
-                                      theme.fontSizeMicro,
-                                      Colors::textDisabled().withAlpha(0.55f));
-        }
     }
 
     renderer.clearClipRect();
