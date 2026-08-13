@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -192,6 +193,8 @@ struct Fixture {
     explicit Fixture(const std::string& tag) {
         sampleRoot = "/tmp/Aestra_tests/RoutingSemantics_" + tag + "_" +
                      std::to_string(reinterpret_cast<uintptr_t>(this));
+        std::error_code ec;
+        std::filesystem::create_directories(std::filesystem::path(sampleRoot).parent_path(), ec);
         tm = std::make_shared<TrackManager>();
         tm->setOutputSampleRate(static_cast<double>(kSampleRate));
         tm->getPlaylistModel().setBPM(120.0);
