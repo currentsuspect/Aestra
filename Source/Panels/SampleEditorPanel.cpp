@@ -434,7 +434,7 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     // Center line
     float centerY = b.y + b.height * 0.5f;
     renderer.drawLine(NUIPoint(b.x, centerY), NUIPoint(b.x + b.width, centerY),
-                      0.5f, theme.getColor("secondary").withAlpha(0.18f));
+                      0.5f, theme.getColor("waveformLine").withAlpha(0.18f));
 
     if (m_waveformData.empty()) {
         renderer.clearClipRect();
@@ -451,9 +451,11 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     size_t totalPairs = m_waveformData.size() / 2;
     float pixelsPerSample = b.width / (viewEnd - viewStart);
 
-    // Draw waveform
-    NUIColor waveCol = theme.getColor("secondary").withAlpha(0.86f);
-    NUIColor waveColNeg = theme.getColor("secondary").withAlpha(0.58f);
+    // Draw waveform. The signal renders in the audio hue (same language as
+    // the transport scope and the meters); loop handles below stay accent
+    // because they are interactive controls, not signal.
+    NUIColor waveCol = theme.getColor("waveformLine").withAlpha(0.86f);
+    NUIColor waveColNeg = theme.getColor("waveformLine").withAlpha(0.58f);
 
     for (size_t i = 0; i < totalPairs; ++i) {
         float normX = static_cast<float>(i) / static_cast<float>(totalPairs);

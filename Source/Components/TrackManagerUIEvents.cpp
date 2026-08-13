@@ -72,6 +72,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     updateToolbarHover(event);
 
+    if (m_addTrackBtn && m_addTrackBtn->onMouseEvent(event)) {
+        return true;
+    }
+
     if (handleContextMenuMouse(event)) {
         return true;
     }
@@ -242,7 +246,6 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
     if (!event.cursorCaptured) {
         // Update toolbar hover states
         bool oldMenuHovered = m_menuHovered;
-        bool oldAddHovered = m_addTrackHovered;
         bool oldSelectHovered = m_selectToolHovered;
         bool oldSplitHovered = m_splitToolHovered;
         bool oldMultiSelectHovered = m_multiSelectToolHovered;
@@ -250,7 +253,6 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         bool oldFollowHovered = m_followPlayheadHovered;
 
         m_menuHovered = m_menuIconBounds.contains(event.position);
-        m_addTrackHovered = m_addTrackBounds.contains(event.position);
         m_selectToolHovered = m_selectToolBounds.contains(event.position);
         m_splitToolHovered = m_splitToolBounds.contains(event.position);
         m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
@@ -258,17 +260,15 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
 
         // Toolbar Tooltips
-        bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
+        bool anyToolbarHovered = m_menuHovered || m_selectToolHovered || m_splitToolHovered ||
                                  m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered;
-        bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
+        bool anyOldHovered = oldMenuHovered || oldSelectHovered || oldSplitHovered ||
                              oldMultiSelectHovered || oldPaintHovered || oldFollowHovered;
 
         if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
             std::string tooltipText;
             if (m_menuHovered && !oldMenuHovered)
                 tooltipText = "Menu";
-            else if (m_addTrackHovered && !oldAddHovered)
-                tooltipText = "Add Track";
             else if (m_selectToolHovered && !oldSelectHovered)
                 tooltipText = "Select Tool";
             else if (m_splitToolHovered && !oldSplitHovered)
@@ -287,7 +287,7 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         }
 
         // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
-        if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
+        if (m_menuHovered != oldMenuHovered ||
             m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
             m_multiSelectToolHovered != oldMultiSelectHovered || m_paintToolHovered != oldPaintHovered ||
             m_followPlayheadHovered != oldFollowHovered) {

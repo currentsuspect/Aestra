@@ -43,7 +43,7 @@ constexpr float BROWSER_SEARCH_ROW_H = 34.0f;
 constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 30.0f;
-constexpr float BROWSER_LIST_HEADER_H = 58.0f;
+constexpr float BROWSER_LIST_HEADER_H = 34.0f;
 constexpr float BROWSER_LIST_ROW_H = 30.0f;
 
 static std::string getSettingsPath() {
@@ -412,8 +412,8 @@ FileBrowser::FileBrowser()
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
     searchInput_->setPadding(6.0f);
     searchInput_->setBorderRadius(5.0f);
-    searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("border"));
+    searchInput_->setBackgroundColor(themeManager.getColor("backgroundPrimary"));
+    searchInput_->setBorderColor(themeManager.getColor("borderSubtle").withAlpha(0.62f));
     searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
     searchInput_->setBorderWidth(1.0f);
 
@@ -896,14 +896,14 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H, listW,
                           std::max(0.0f, contentH - BROWSER_LIST_HEADER_H - previewH));
-    const float chromeY = layout.listHeader.y + 3.0f;
+    const float chromeY = layout.listHeader.y + 5.0f;
     layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
     layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
     layout.upButton = NUIRect(layout.forwardButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
+    layout.sortButton = NUIRect(layout.listHeader.right() - 27.0f, chromeY, 22.0f, 24.0f);
+    layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
     layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
-                               std::max(0.0f, layout.listHeader.right() - layout.upButton.right() - 14.0f), 24.0f);
-    layout.sortButton = NUIRect(layout.listHeader.right() - 31.0f, layout.listHeader.y + 31.0f, 26.0f, 23.0f);
-    layout.filterButton = NUIRect(layout.sortButton.x - 29.0f, layout.sortButton.y, 26.0f, 23.0f);
+                               std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
     layout.searchActionButton = NUIRect(layout.searchBar.right() - 30.0f, layout.searchBar.y + 4.0f, 26.0f, 26.0f);
     layout.navWidth = navW;
     return layout;
@@ -970,7 +970,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.07f);
+    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.05f);
     const NUIColor divider = themeManager.getColor("divider");
     const bool compact = layout.navWidth < 112.0f;
 
@@ -978,14 +978,15 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     renderer.setClipRect(layout.navPane);
     renderer.drawLine({layout.navPane.right(), layout.navPane.y},
                       {layout.navPane.right(), layout.navPane.bottom()},
-                      1.0f, divider);
+                      1.0f, divider.withAlpha(0.58f));
 
-    // Left header matches right listHeader exactly in height and structure
+    // One shared, compact navigation row. The browser no longer spends a full
+    // second row on item counts and duplicate structural rules.
     const float navHeaderH = BROWSER_LIST_HEADER_H;
     const NUIRect navHeader(layout.navPane.x, layout.navPane.y, layout.navPane.width, navHeaderH);
     renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
-                      1.0f, themeManager.getColor("border")); // matches list header bottom rule → continuous line
+                      1.0f, themeManager.getColor("border").withAlpha(0.42f));
 
     // Folder name at top (like breadcrumb on the right)
     const auto& themeProps = themeManager.getCurrentTheme();
@@ -1011,12 +1012,6 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                                NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 8.5f))},
                           8.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
     }
-
-    // Inner divider — aligned with the list header's inner rule (listHeader.y + 29)
-    // so the two form one continuous line across the browser.
-    renderer.drawLine({navHeader.x, navHeader.y + 29.0f},
-                      {navHeader.right(), navHeader.y + 29.0f},
-                      1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
     // Scrollable content region below the fixed folder-name header. Short
     // windows keep the tail rows reachable without moving the header. Start at the
@@ -1290,11 +1285,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     const NUIColor headerBg = themeManager.getColor("backgroundSecondary").darkened(0.03f);
-    const NUIColor border = themeManager.getColor("border").withAlpha(0.40f);
+    const NUIColor border = themeManager.getColor("border").withAlpha(0.38f);
     const NUIColor text = themeManager.getColor("textPrimary");
     const NUIColor muted = themeManager.getColor("textSecondary");
     const NUIColor accent = themeManager.getColor("accentPrimary");
-    const auto& view = getActiveView();
     renderer.fillRect(layout.listHeader, headerBg);
 
     const auto& themeProps = themeManager.getCurrentTheme();
@@ -1331,26 +1325,9 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       {layout.pathLabel.x, std::round(renderer.calculateTextY(layout.pathLabel, themeProps.fontSizeS))},
                       themeProps.fontSizeS, text.withAlpha(0.88f));
 
-    renderer.drawLine({layout.listHeader.x, layout.listHeader.y + 29.0f},
-                      {layout.listHeader.right(), layout.listHeader.y + 29.0f},
-                      1.0f, border.withAlpha(0.65f));
     renderer.drawLine({layout.listHeader.x, layout.listHeader.bottom()},
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
-    std::string status;
-    if (selectedIndices_.size() > 1) {
-        status = std::to_string(selectedIndices_.size()) + " selected";
-    } else {
-        status = std::to_string(view.size()) + (view.size() == 1 ? " item" : " items");
-        const std::string filterLabel = getQuickFilterLabel();
-        if (filterLabel != "All") status += "  ·  " + filterLabel;
-        if (!activeTagFilter_.empty()) status += "  ·  " + activeTagFilter_;
-    }
-    const NUIRect statusRect(layout.listHeader.x + 10.0f, layout.listHeader.y + 31.0f,
-                             std::max(0.0f, layout.filterButton.x - layout.listHeader.x - 14.0f), 23.0f);
-    renderer.drawText(ellipsizeEnd(renderer, status, themeProps.fontSizeXS, statusRect.width),
-                      {statusRect.x, std::round(renderer.calculateTextY(statusRect, themeProps.fontSizeXS))},
-                      themeProps.fontSizeXS, muted.withAlpha(0.66f));
 
     const bool filterActive = isFilterActive();
     const NUIColor controlColor = filterActive ? accent.withAlpha(0.94f) : muted.withAlpha(0.62f);
@@ -1668,8 +1645,8 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBounds(browserLayout.search);
 
         searchInput_->setTextColor(textColor_);
-        searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-        searchInput_->setBorderColor(themeManager.getColor("border"));
+        searchInput_->setBackgroundColor(themeManager.getColor("backgroundPrimary"));
+        searchInput_->setBorderColor(themeManager.getColor("borderSubtle").withAlpha(0.62f));
         searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(6.0f);
@@ -3072,12 +3049,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     renderer.setClipRect(listClip);
 
-    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.12f);
+    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.04f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
     const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(previewPanelVisible_ ? 0.0f
                                                                                                        : 0.065f);
     const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.035f);
-    const NUIColor gridLine = themeManager.getColor("gridMinor").withAlpha(0.10f);
+    const NUIColor gridLine = themeManager.getColor("gridMinor").withAlpha(0.045f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
