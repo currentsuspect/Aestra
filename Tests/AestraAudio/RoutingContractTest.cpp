@@ -5,6 +5,7 @@
 // survive index shifts, removal, and undo; a cyclic snapshot is marked
 // corrupt by the compiler and never appended with leftover nodes.
 
+#include "Commands/AddChannelCommand.h"
 #include "Commands/RoutingCommands.h"
 #include "Core/AudioGraph.h"
 #include "Core/MixerChannel.h"
@@ -284,6 +285,112 @@ int runSendIdentityTests(Aestra::Audio::TrackManager& tm) {
     return 0;
 }
 
+int runMasterLegalityTests(Aestra::Audio::TrackManager& tm) {
+    auto* a = tm.addChannelWithId("A", 401);
+    auto* b = tm.addChannelWithId("B", 402);
+    require(a && b, "channel creation failed");
+    auto& history = tm.getCommandHistory();
+
+    // D4: sends to master (engine-space spelling) are rejected, mutate nothing,
+    // and record no undo entry.
+    {
+        Aestra::Audio::AudioRoute toMaster;
+        toMaster.targetChannelId = kMaster;
+        auto cmd = std::make_shared<Aestra::Audio::AddSendCommand>(tm, 401, toMaster);
+        history.pushAndExecute(cmd);
+        require(a->getSends().empty(), "send to master must be rejected");
+        history.undo();
+        require(a->getSends().empty(), "rejected master send must not create an undo entry");
+    }
+
+    // D4: editing a send's destination to master is rejected.
+    {
+        Aestra::Audio::AudioRoute ok;
+        ok.targetChannelId = 402;
+        history.pushAndExecute(std::make_shared<Aestra::Audio::AddSendCommand>(tm, 401, ok));
+        const uint64_t id = a->getSends()[0].sendId;
+        auto toMaster = a->getSends()[0];
+        toMaster.targetChannelId = kMaster;
+        history.pushAndExecute(std::make_shared<Aestra::Audio::EditSendCommand>(tm, 401, id, toMaster));
+        require(a->getSends()[0].targetChannelId == 402, "send edit to master must be rejected");
+        require(a->getSends()[0].sendId == id, "rejected edit must leave the send untouched");
+        history.undo();
+        require(a->getSends().empty(), "clean unwind after rejected edit");
+    }
+
+    // D4: master cannot be a routing source.
+    {
+        auto cmd = std::make_shared<Aestra::Audio::SetMainOutputCommand>(tm, kMaster, 402);
+        history.pushAndExecute(cmd);
+        require(b->getMainOutputId() == kMaster, "master must never be rerouted");
+        history.undo();
+        require(b->getMainOutputId() == kMaster, "rejected master reroute must not create an undo entry");
+    }
+
+    // mainOutput -> master stays the normal terminal route (both spellings).
+    {
+        auto cmd = std::make_shared<Aestra::Audio::SetMainOutputCommand>(tm, 401, kMaster);
+        history.pushAndExecute(cmd);
+        require(a->getMainOutputId() == kMaster, "main to engine-space master must apply");
+        history.undo();
+        history.redo();
+        require(a->getMainOutputId() == kMaster, "main to master must round-trip");
+        history.undo();
+    }
+    require(tm.canRouteTo(401, 0), "model-space master remains a legal main target");
+
+    std::cout << "master legality cases passed\n";
+    return 0;
+}
+
+int runChannelDeletionRoutingTests(Aestra::Audio::TrackManager& tm) {
+    auto* a = tm.addChannelWithId("A", 501);
+    require(a != nullptr, "channel creation failed");
+    auto& history = tm.getCommandHistory();
+
+    history.pushAndExecute(std::make_shared<Aestra::Audio::AddChannelCommand>(tm, "B"));
+    require(tm.getChannelCount() == 2, "channel B added");
+    auto* b = tm.getChannel(1);
+    require(b != nullptr, "channel B resolved");
+    const uint32_t bId = b->getChannelId();
+
+    // Route A -> B (main + send).
+    history.pushAndExecute(std::make_shared<Aestra::Audio::SetMainOutputCommand>(tm, 501, bId));
+    Aestra::Audio::AudioRoute send;
+    send.targetChannelId = bId;
+    history.pushAndExecute(std::make_shared<Aestra::Audio::AddSendCommand>(tm, 501, send));
+    const uint64_t sendId = a->getSends()[0].sendId;
+
+    // Undo the add: B vanishes and I8 applies atomically — no dangling routes.
+    history.undo(); // add send
+    history.undo(); // main
+    history.undo(); // add channel
+    require(tm.getChannelById(bId) == nullptr, "undo of add channel must detach B");
+    require(a->getMainOutputId() == kMaster, "undo of add channel must reroute main to master");
+    require(a->getSends().empty(), "undo of add channel must remove sends to it");
+
+    // Redo: B returns and the routes round-trip with the same send id.
+    history.redo();
+    require(tm.getChannelById(bId) != nullptr, "redo must reinsert B");
+    history.redo();
+    require(a->getMainOutputId() == bId, "redo must restore the main route");
+    history.redo();
+    const auto restored = a->getSends();
+    require(restored.size() == 1 && restored[0].targetChannelId == bId,
+            "redo must restore the send");
+    require(restored[0].sendId == sendId, "redo must restore the same send identity");
+
+    // Unwind.
+    history.undo();
+    history.undo();
+    history.undo();
+    require(a->getMainOutputId() == kMaster && a->getSends().empty(),
+            "full unwind returns to the pre-add routing state");
+
+    std::cout << "channel deletion routing cases passed\n";
+    return 0;
+}
+
 int runSnapshotCycleTests() {
     // Compiler marks a cyclic snapshot corrupt; it never appends leftover nodes.
     Aestra::Audio::AudioGraph graph;
@@ -338,6 +445,18 @@ int main() {
     {
         Aestra::Audio::TrackManager tm;
         if (int rc = runSendIdentityTests(tm); rc != 0) {
+            return rc;
+        }
+    }
+    {
+        Aestra::Audio::TrackManager tm;
+        if (int rc = runMasterLegalityTests(tm); rc != 0) {
+            return rc;
+        }
+    }
+    {
+        Aestra::Audio::TrackManager tm;
+        if (int rc = runChannelDeletionRoutingTests(tm); rc != 0) {
             return rc;
         }
     }

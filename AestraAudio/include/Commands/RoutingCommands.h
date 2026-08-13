@@ -11,6 +11,10 @@
 namespace Aestra {
 namespace Audio {
 
+// Engine-space master constant (Contract: 0 = model space, 0xFFFFFFFF = engine
+// space; both name the same terminal sink).
+constexpr uint32_t kMasterId = 0xFFFFFFFFu;
+
 /**
  * @brief Undoable reroute of a track's main output (Routing Contract D5/D1).
  *
@@ -69,6 +73,9 @@ public:
         MixerChannel* channel = m_manager.getChannelById(m_channelId);
         if (!channel) {
             throw std::runtime_error("AddSend: channel no longer exists");
+        }
+        if (m_route.targetChannelId == kMasterId) {
+            throw std::runtime_error("AddSend: sends to master are illegal (Contract D4)");
         }
         if (!m_manager.canRouteTo(m_channelId, m_route.targetChannelId)) {
             throw std::runtime_error("AddSend: routing loop or illegal destination");
@@ -174,9 +181,13 @@ public:
             throw std::runtime_error("EditSend: send no longer exists");
         }
         m_previousRoute = channel->getSends()[static_cast<size_t>(sendIndex)];
-        if (m_previousRoute.targetChannelId != m_newRoute.targetChannelId &&
-            !m_manager.canRouteTo(m_channelId, m_newRoute.targetChannelId)) {
-            throw std::runtime_error("EditSend: routing loop or illegal destination");
+        if (m_previousRoute.targetChannelId != m_newRoute.targetChannelId) {
+            if (m_newRoute.targetChannelId == kMasterId) {
+                throw std::runtime_error("EditSend: sends to master are illegal (Contract D4)");
+            }
+            if (!m_manager.canRouteTo(m_channelId, m_newRoute.targetChannelId)) {
+                throw std::runtime_error("EditSend: routing loop or illegal destination");
+            }
         }
         channel->setSend(m_sendId, m_newRoute);
         if (m_previousRoute.targetChannelId != m_newRoute.targetChannelId) {

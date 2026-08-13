@@ -527,40 +527,44 @@ void testUnresolvedRouteTargetNonFatal() {
     auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(testProject.string(), trackManager);
 
-    // Load must succeed — unresolved sends must not cause errors.
+    // Load must succeed — routing repair must not cause errors.
     assert(result.ok);
 
-    // Verify the channel was created and has the sends (both the
-    // unresolvable and the resolvable master send).
+    // Verify the channel was created. Both sends are illegal under the
+    // routing contract and are repaired at load: the send to nonexistent
+    // channel 99 is a dangling route (D3) and the send to master (targetId 0)
+    // is forbidden (D4). Neither survives; both are diagnosed.
     assert(trackManager->getChannelCount() == 1);
     auto* channel = trackManager->getChannel(0);
     assert(channel != nullptr);
 
     const auto sends = channel->getSends();
-    assert(sends.size() == 2);
+    assert(sends.empty());
 
-    // The unresolvable send to channel 99 is preserved in the channel
-    // but silently ignored by the audio runtime (INVALID_SLOT check).
-    // ProjectSerializer logs a warning for unresolved send targets during load.
-    bool foundUnresolvable = false;
-    bool foundMaster = false;
-    for (const auto& send : sends) {
-        if (send.targetChannelId == 99) {
-            foundUnresolvable = true;
-        }
-        if (send.targetChannelId == 0xFFFFFFFFu) {
-            foundMaster = true;
+    bool danglingDiagnosed = false;
+    bool masterDiagnosed = false;
+    if (result.report) {
+        for (const auto& issue : result.report->issues) {
+            if (issue.category == "routing") {
+                if (issue.message.find("which does not exist") != std::string::npos) {
+                    danglingDiagnosed = true;
+                }
+                if (issue.message.find("sends to master are illegal") != std::string::npos) {
+                    masterDiagnosed = true;
+                }
+            }
         }
     }
-    assert(foundUnresolvable);
-    assert(foundMaster);
+    assert(danglingDiagnosed);
+    assert(masterDiagnosed);
 
-    // Verify that saving and reloading preserves the routing (no data loss).
+    // Verify that saving and reloading stays clean (no resurrected bad routes).
     std::string saved = ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
     assert(!saved.empty());
-    assert(saved.find("\"targetId\": 99") != std::string::npos || saved.find("\"targetId\":99") != std::string::npos);
+    assert(saved.find("\"targetId\": 99") == std::string::npos &&
+           saved.find("\"targetId\":99") == std::string::npos);
 
-    // Load the re-saved project and verify routing is still preserved.
+    // Load the re-saved project and verify routing is still clean.
     std::filesystem::path testProject2 = testDir / "project2.aes";
     std::ofstream out2(testProject2);
     out2 << saved;
@@ -572,13 +576,12 @@ void testUnresolvedRouteTargetNonFatal() {
 
     auto* channel2 = trackManager2->getChannel(0);
     assert(channel2 != nullptr);
-    const auto sends2 = channel2->getSends();
-    assert(sends2.size() == 2);
+    assert(channel2->getSends().empty());
 
     // Verify the mainOutputId is stable after round-trip
     assert(channel2->getMainOutputId() == channel->getMainOutputId());
 
-    std::cout << "[PASS] Unresolved send routing targets are non-fatal" << std::endl;
+    std::cout << "[PASS] Unresolved and master send routes are repaired at load (non-fatal)" << std::endl;
 }
 
 void testV1FixtureMigratesToCurrentVersion() {
@@ -941,7 +944,7 @@ void testProjectLoadWarningsAreBounded() {
         if (entry.message.find("Send from '") != std::string::npos) {
             ++sendWarnings;
         }
-        if (entry.message.find("Additional unresolved send route warnings suppressed") != std::string::npos) {
+        if (entry.message.find("Additional routing repair warnings suppressed") != std::string::npos) {
             ++suppressedWarnings;
         }
     }

@@ -603,10 +603,15 @@ void MixerViewModel::addSend(uint32_t channelId) {
             break;
         }
     }
+    // Contract D4: sends to master are illegal. No non-master destination
+    // means no send — do not fall back to a master edge.
+    if (defaultTarget == 0) {
+        m_blockedRoutingWarnings[channelId] = "No send destinations available";
+        return;
+    }
 
     Audio::AudioRoute route{};
-    // Map 0 -> 0xFFFFFFFF for engine
-    route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFFu : defaultTarget;
+    route.targetChannelId = defaultTarget;
     route.gain = 0.25f; // -12 dB leaves headroom when adding a parallel path
     route.sidechainOnly = false;
 
@@ -646,9 +651,14 @@ void MixerViewModel::addSidechain(uint32_t channelId) {
             break;
         }
     }
+    // Contract D4: sends (incl. sidechain) to master are illegal.
+    if (defaultTarget == 0) {
+        m_blockedRoutingWarnings[channelId] = "No send destinations available";
+        return;
+    }
 
     Audio::AudioRoute route{};
-    route.targetChannelId = (defaultTarget == 0) ? 0xFFFFFFFFu : defaultTarget;
+    route.targetChannelId = defaultTarget;
     route.gain = 1.0f;
     route.sidechainOnly = true;
 
@@ -675,6 +685,10 @@ void MixerViewModel::addSidechain(uint32_t channelId) {
 void MixerViewModel::addSend(uint32_t channelId, uint32_t targetId, bool sidechainOnly) {
     auto* ch = getChannelById(channelId);
     if (!ch) return;
+    if (targetId == 0) {
+        m_blockedRoutingWarnings[channelId] = "Sends to master are not allowed";
+        return;
+    }
     if (!canRouteTo(channelId, targetId)) {
         m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
         return;
@@ -784,6 +798,10 @@ void MixerViewModel::setSendDestination(uint32_t channelId, uint64_t sendId, uin
     if (!ch) return;
     const int localIndex = findLocalSendIndex(*ch, sendId);
     if (localIndex < 0) return;
+    if (targetId == 0) {
+        m_blockedRoutingWarnings[channelId] = "Sends to master are not allowed";
+        return;
+    }
     if (!canRouteTo(channelId, targetId)) {
         m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
         return;

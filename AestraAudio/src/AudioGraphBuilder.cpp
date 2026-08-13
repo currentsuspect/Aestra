@@ -46,6 +46,7 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
         return AudioGraph::kInvalidTrackIndex;
     };
 
+    size_t droppedEdgeCount = 0;
     auto addEdge = [&](size_t sourceIndex, uint32_t targetTrackId, bool sidechainOnly) {
         constexpr uint32_t kMasterOutputId = 0xFFFFFFFFu;
         if (targetTrackId == kMasterOutputId) {
@@ -54,6 +55,10 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
 
         const size_t targetIndex = findTrackIndex(targetTrackId);
         if (targetIndex == AudioGraph::kInvalidTrackIndex || targetIndex == sourceIndex) {
+            // Contract D3: with mutation-time and load-time validation this is
+            // corruption, not normal behavior. Count it and report once so a
+            // dangling model cannot silently render as a dropped route.
+            ++droppedEdgeCount;
             return;
         }
 
@@ -110,6 +115,10 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
     // Routing Contract D1: a cycle is corruption, not a rendering fallback.
     // The partial order is left as-is (never appended with leftover nodes);
     // the publish gate (AudioEngine::setGraph) refuses the snapshot.
+    if (droppedEdgeCount > 0) {
+        Aestra::Log::warning("[AudioGraph] dropped " + std::to_string(droppedEdgeCount) +
+                             " route(s) with missing or self destinations (corrupt model)");
+    }
 }
 
 AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {
