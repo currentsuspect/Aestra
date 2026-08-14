@@ -129,6 +129,18 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                 const auto* slot = chain.getSlot(i);
                 auto& vm = m_master->inserts[i];
                 const bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
+                if (vm.pendingRemoval && !hasPlugin) {
+                    // Engine confirmed the removal — clear the optimistic flag
+                    // (same state machine as channel inserts; without this,
+                    // delete -> re-add on Master left the slot stuck in the
+                    // pending-removal state and the re-added plugin invisible).
+                    vm.pendingRemoval = false;
+                }
+                if (vm.pendingRemoval && hasPlugin) {
+                    // Re-added before the engine confirmed the removal: the
+                    // chain is authoritative — show the live plugin.
+                    vm.pendingRemoval = false;
+                }
                 if (hasPlugin) {
                     ++fxCount;
                     vm.isEmpty = false;
@@ -354,9 +366,18 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                               vm.isEmpty = true;
                               vm.name.clear();
                           } else {
-                              // Still waiting for engine, force empty UI
-                              vm.isEmpty = true;
-                              vm.name.clear(); // Optional: show "Removing..."
+                              // A plugin occupied this slot again — either the
+                              // user re-added before the engine confirmed the
+                              // removal, or the removal failed. The chain is
+                              // authoritative: show the live plugin instead of
+                              // pinning "Removing..." forever (delete -> re-add
+                              // used to leave the insert area stuck red).
+                              vm.pendingRemoval = false;
+                              vm.isEmpty = false;
+                              vm.name = slot->plugin->getInfo().name;
+                              if (vm.name.empty()) vm.name = "Plugin";
+                              vm.bypassed = slot->bypassed.load();
+                              vm.mix = slot->dryWetMix.load();
                           }
                     } else {
                         // Normal Sync
