@@ -2034,6 +2034,9 @@ AudioEngine::~AudioEngine() {
                 ch->setEffectChainLatencyCallback(nullptr);
             }
         }
+        if (auto* master = trackMgr->getMasterChannel()) {
+            master->setEffectChainLatencyCallback(nullptr);
+        }
     }
     stopLoudnessWorker();
     delete m_unitManagerSnapshot.load(std::memory_order_relaxed);
@@ -3890,7 +3893,14 @@ void AudioEngine::calculateLatencyCompensation() {
     {
         LatencyGraph::Node masterNode;
         masterNode.channelId = kMasterSentinelId;
-        masterNode.intrinsicLatency = 0; // P9 (G6) will populate from master FX.
+        // P9 (G6): the Master strip is a plugin host; its insert-chain latency
+        // delays every path uniformly, so it cancels out of per-track and
+        // per-edge compensation but must surface in project/monitoring
+        // latency. (Device output latency remains parked at the solver.)
+        masterNode.intrinsicLatency = 0;
+        if (auto* master = trackManager->getMasterChannel()) {
+            masterNode.intrinsicLatency = master->getEffectChain().getTotalLatency();
+        }
         masterNode.muted = false;
         masterNode.domain = LatencyDomain::FullyCompensated;
         graph.nodes.push_back(masterNode);
