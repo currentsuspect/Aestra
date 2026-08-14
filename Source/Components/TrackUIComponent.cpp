@@ -2097,6 +2097,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     win->setMouseCapture(false);
                 }
             }
+            // The drag mutated the curve in the model: rebuild the audio
+            // graph so playback follows the edit, and mark the project dirty.
+            if (m_trackManager) {
+                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                m_trackManager->markModified();
+            }
             return true;
         }
     }
@@ -2110,7 +2116,21 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto& playlist = m_trackManager->getPlaylistModel();
             auto lane = playlist.getLane(m_laneId);
 
-            if (lane && !lane->automationCurves.empty()) {
+            if (lane) {
+                if (lane->automationCurves.empty()) {
+                    // First point on an empty lane: create the default Volume
+                    // curve bound to this lane's paired mixer channel (the
+                    // same lane-index -> channel pairing the serializer uses).
+                    // defaultValue 1.0 keeps an empty curve neutral — the old
+                    // default of 0.0 silenced the channel until a point was
+                    // added.
+                    AutomationCurve curve("Volume", AutomationTarget::Volume);
+                    curve.setDefaultValue(1.0f);
+                    if (const auto* ch = m_trackManager->getChannel(static_cast<size_t>(lane->index))) {
+                        curve.mixerChannelId = ch->getChannelId();
+                    }
+                    lane->automationCurves.push_back(std::move(curve));
+                }
                 auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
 
                 // Right Click -> Delete Point
@@ -2125,6 +2145,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             setDirty(true);
                             repaint();
                             if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
+                            if (m_trackManager) {
+                                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                                m_trackManager->markModified();
+                            }
                             return true;
                         }
                     }
@@ -2167,6 +2191,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         setDirty(true);
                         repaint(); // Immediate update
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
+                        if (m_trackManager) {
+                            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                            m_trackManager->markModified();
+                        }
                         
                         // Start dragging the new point
                         auto& pts = curve.getPoints();
@@ -2659,12 +2687,6 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
     
     // Automation Area bounds (exclude controls)
     AestraUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
-    
-    // For now, if no curves exist, let's create a default volume curve for testing (DELEEME LATER)
-    if (lane->automationCurves.empty()) {
-        // Just for demo purposes in this task
-        // lane->automationCurves.push_back(AutomationCurve("Volume"));
-    }
 
     for (const auto& curve : lane->automationCurves) {
         if (!curve.isVisible()) continue;

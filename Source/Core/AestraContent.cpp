@@ -3418,20 +3418,6 @@ void AestraContent::addDemoTracks() {
             // Cycle the shared track palette so the lane strip matches the
             // name ink and mixer tint derived from the same index.
             lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
-
-            if (i == 1) {
-                AutomationCurve vol("Volume", AutomationTarget::Volume);
-                if (const auto* channel = m_trackManager->getChannel(static_cast<size_t>(i - 1))) {
-                    vol.mixerChannelId = channel->getChannelId();
-                }
-                vol.setDefaultValue(0.8);
-                double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Demo values
-                vol.addPoint(0.0, 0.5, samplesPerBeat, 0.5f);
-                vol.addPoint(4.0, 1.0, samplesPerBeat, 0.5f);
-                vol.addPoint(8.0, 0.2, samplesPerBeat, 0.5f);
-                vol.addPoint(12.0, 0.8, samplesPerBeat, 0.5f);
-                lane->automationCurves.push_back(vol);
-            }
         }
     }
 
