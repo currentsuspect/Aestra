@@ -33,7 +33,7 @@ v1.0.0                  — initial public release
 
 ### v0.7.0-alpha — Routing, Automation & Hosting Milestone (Aug 2026)
 
-331 PRs merged (#624–#771). The milestone's story is coherence: routing and gain staging are correct end to end, automation targets the instance it was drawn for, the Master channel is a real plugin host whose latency sits in the compensation graph, and the piano roll grew from an editor into a workflow.
+331 PRs merged (#624–#771). The milestone's story is coherence: routing and gain staging are correct end to end, automation lanes are actually automatable, the Master channel is a real plugin host whose latency sits in the compensation graph, and the piano roll grew from an editor into a workflow.
 
 **Routing & Mixing** — Unity gain law across live, export, isolated bounce, audition, and monitoring; single-store fader/pan; routing command seam with cycle rejection and stable send IDs; Master as a plugin host with chain latency in the PDC graph; master clips obey the live solo gate (isolation contract pinned both ways).
 

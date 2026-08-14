@@ -171,7 +171,7 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ## v0.7.0-alpha — Routing, Automation & Hosting Milestone (2026-08-16)
 
-331 PRs merged (#624–#771). The story of this milestone is coherence: routing and gain staging are correct end to end, automation targets the instance it was drawn for, the Master channel is a real plugin host whose latency sits in the compensation graph, and the piano roll grew from an editor into a workflow.
+331 PRs merged (#624–#771). The story of this milestone is coherence: routing and gain staging are correct end to end, automation lanes are actually automatable, the Master channel is a real plugin host whose latency sits in the compensation graph, and the piano roll grew from an editor into a workflow.
 
 > **Versions, clarified.** `v0.7.0-alpha` is the *application release version*. It is unrelated to `ProjectSerializer::PROJECT_VERSION_CURRENT` (the project/file format version, currently 3): the format version changes only when the `.aes` format itself changes, never on a release bump.
 
@@ -185,7 +185,15 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ### Automation
 
-- Automation targets the instance it was drawn for, never the slot it occupied — chain reordering keeps curves bound to their plugin.
+- Plugin instances carry permanent identities in the chain state (#667 slice 1), so automation and saved state
+  survive chain edits without aliasing.
+- Automation lanes are actually automatable: the first click on an empty lane creates a neutral Volume
+  curve bound to the lane's channel, and edits rebuild the audio graph and mark the project dirty.
+- Leftover demo automation removed from the default project and from previously saved projects.
+
+> Cut-time gate: instance-targeted automation (curves address the plugin instance rather than the slot)
+> is #766, still open at this writing. If it merges before the cut, restore the stronger claim; if not,
+> the entry above is the accurate one.
 - Empty lanes are automatable: the first click creates a neutral Volume curve bound to the lane's channel; edits rebuild the audio graph and mark the project dirty.
 - Leftover demo automation removed from the default project and from previously saved projects.
 
