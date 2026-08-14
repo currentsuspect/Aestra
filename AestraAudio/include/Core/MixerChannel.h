@@ -231,22 +231,24 @@ public:
 
     /** @brief Get a copy of the current send list. Thread-safe: caller must not be RT. */
     std::vector<AudioRoute> getSends() const;
-    /** @brief Add a send route. */
+    /**
+     * @brief Add a send route. Mints a stable sendId when the route carries
+     * none (0); a caller-supplied nonzero sendId is preserved (undo restore).
+     */
     void addSend(const AudioRoute& route);
+    /** @brief Insert a send route at a position (undo of removeSend). Preserves the route's sendId. */
+    void insertSend(int index, const AudioRoute& route);
+    /**
+     * @brief Replace the send with the given stable sendId. The replacement
+     * keeps the existing sendId (identity is owned by the channel).
+     */
+    void setSend(uint64_t sendId, const AudioRoute& route);
     /** @brief Replace all send routes from an off-audio-thread snapshot. */
     void replaceSends(const std::vector<AudioRoute>& routes);
-    /** @brief Remove a send route by index. */
-    void removeSend(int index);
-    /** @brief Update send level by index. */
-    void setSendLevel(int index, float level);
-    /** @brief Update send pan by index. */
-    void setSendPan(int index, float pan);
-    /** @brief Update send destination by index. */
-    void setSendDestination(int index, uint32_t destId);
-    /** @brief Update send pre/post fader mode by index. */
-    void setSendPostFader(int index, bool postFader);
-    /** @brief Update send audible/sidechain-only mode by index. */
-    void setSendSidechainOnly(int index, bool sidechainOnly);
+    /** @brief Remove the send with the given stable sendId. */
+    void removeSend(uint64_t sendId);
+    /** @brief Positional lookup for a stable sendId; -1 when absent. */
+    int findSendIndex(uint64_t sendId) const;
 
     /** @brief Set the effect chain snapshot for RT-safe processing (deprecated - snapshots are now owned by EffectChain). */
     void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
@@ -309,6 +311,9 @@ private:
     // Aux Sends / Direct Outs
     mutable std::mutex m_sendMutex;
     std::vector<AudioRoute> m_sends;
+    uint64_t m_nextSendId{1}; // Monotonic sendId mint (never reused within a channel)
+    /** @brief Positional lookup for a stable sendId; -1 when absent. Caller must hold m_sendMutex. */
+    int findSendIndexLocked(uint64_t sendId) const;
 
     void notifyInputMonitoringStateChanged() {
         std::function<void()> cb;

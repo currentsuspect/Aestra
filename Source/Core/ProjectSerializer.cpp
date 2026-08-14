@@ -885,6 +885,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             sjs.set("postFader", JSON(send.postFader));
             sjs.set("mute", JSON(send.mute));
             sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+            sjs.set("sendId", JSON(std::to_string(send.sendId)));
             sendsJson.push(sjs);
         }
         routingJson.set("sends", sendsJson);
@@ -935,6 +936,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                     sjs.set("postFader", JSON(send.postFader));
                     sjs.set("mute", JSON(send.mute));
                     sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+                    sjs.set("sendId", JSON(std::to_string(send.sendId)));
                     sendsJson.push(sjs);
                 }
                 routingJson.set("sends", sendsJson);
@@ -1836,6 +1838,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
                             route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
                                                   sends[s]["sidechainOnly"].asBool();
+                            // Stable send identity (Contract D2). Serialized as an
+                            // exact decimal string so ids above 2^53 survive the
+                            // JSON round trip. Legacy numeric values are accepted
+                            // only inside the exact JSON-integer range; anything
+                            // else (or a missing key) is 0, which mints in addSend.
+                            route.sendId = 0;
+                            if (sends[s].has("sendId") && sends[s]["sendId"].isString()) {
+                                try {
+                                    route.sendId = std::stoull(sends[s]["sendId"].asString());
+                                } catch (const std::exception&) {
+                                    route.sendId = 0;
+                                }
+                            } else if (sends[s].has("sendId") && sends[s]["sendId"].isNumber()) {
+                                const double legacyId = sends[s]["sendId"].asNumber();
+                                if (std::isfinite(legacyId) && legacyId >= 0.0 && legacyId <= 9007199254740991.0) {
+                                    route.sendId = static_cast<uint64_t>(legacyId);
+                                }
+                            }
                             channel->addSend(route);
                         }
                     }
@@ -2218,9 +2238,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             trackManager->getPatternManager().validateMixerChannels(mixerChannelIds);
         }
 
-        // PHASE 7: Validate send routing targets.
-        // Unresolved sends are non-fatal — the audio runtime silently ignores them
-        // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
+        // PHASE 7: Validate routing against the loaded channel set (Contract
+        // I8/I10/D3/D4). Unresolved destinations are repaired, never silently
+        // dropped later: mains reroute to master, dangling sends are removed,
+        // and sends to master (illegal since D4) are removed. Every repair
+        // produces a diagnostic.
         {
             std::unordered_set<uint32_t> validChannelIds;
             validChannelIds.insert(0xFFFFFFFFu); // master
@@ -2229,18 +2251,49 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     validChannelIds.insert(ch->getChannelId());
                 }
             }
+            auto reportRoutingIssue = [&](const std::string& message, uint64_t objectId) {
+                warningLimiter.warning(ProjectLoadWarningCategory::SendRoute, message,
+                                       "[ProjectLoad] Additional routing repair warnings suppressed.");
+                if (!result.report) {
+                    result.report = std::make_unique<ProjectLoadReport>();
+                }
+                result.report->issues.push_back({LoadIssueSeverity::Warning, "routing", message, objectId, {}, {}});
+            };
+
             for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
                 auto* channel = trackManager->getChannel(ci);
                 if (!channel) continue;
+
+                // Main output: dangling destinations fail safe to master.
+                const uint32_t mainOutput = channel->getMainOutputId();
+                if (mainOutput != 0xFFFFFFFFu && !validChannelIds.count(mainOutput)) {
+                    channel->setMainOutputId(0xFFFFFFFFu);
+                    reportRoutingIssue("[ProjectLoad] Main output of '" + channel->getName() +
+                                           "' targets channel ID " + std::to_string(mainOutput) +
+                                           " which does not exist; rerouted to Master.",
+                                       channel->getChannelId());
+                }
+
+                // Sends: dangling targets and sends to master are removed.
+                std::vector<AudioRoute> keptSends;
                 for (const auto& send : channel->getSends()) {
-                    if (!validChannelIds.count(send.targetChannelId)) {
-                        warningLimiter.warning(
-                            ProjectLoadWarningCategory::SendRoute,
-                            "[ProjectLoad] Send from '" + channel->getName() +
-                                "' targets channel ID " + std::to_string(send.targetChannelId) +
-                                " which does not exist; send will be silent.",
-                            "[ProjectLoad] Additional unresolved send route warnings suppressed.");
+                    if (send.targetChannelId == 0xFFFFFFFFu) {
+                        reportRoutingIssue("[ProjectLoad] Send from '" + channel->getName() +
+                                               "' targets Master; sends to master are illegal and were removed.",
+                                           channel->getChannelId());
+                        continue;
                     }
+                    if (!validChannelIds.count(send.targetChannelId)) {
+                        reportRoutingIssue("[ProjectLoad] Send from '" + channel->getName() +
+                                               "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                               " which does not exist; send was removed.",
+                                           channel->getChannelId());
+                        continue;
+                    }
+                    keptSends.push_back(send);
+                }
+                if (keptSends.size() != channel->getSends().size()) {
+                    channel->replaceSends(keptSends);
                 }
             }
         }

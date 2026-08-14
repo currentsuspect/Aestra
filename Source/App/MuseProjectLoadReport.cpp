@@ -10,6 +10,7 @@ const char* issueCode(const LoadIssue& issue) {
     if (issue.category == "integrity") return "integrity_mismatch";
     if (issue.category == "clip") return "missing_pattern_reference";
     if (issue.category == "unit") return "missing_unit_reference";
+    if (issue.category == "routing") return "routing_repaired";
     return "project_load_issue";
 }
 

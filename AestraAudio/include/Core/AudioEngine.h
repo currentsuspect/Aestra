@@ -225,6 +225,13 @@ public:
     void setGraph(const AudioGraph& graph) {
         auto preparedGraph = graph;
         finalizeAudioGraphRouting(preparedGraph);
+        // Routing Contract D1: a cyclic snapshot is corruption, not a
+        // rendering fallback. Refuse to publish it and keep the last valid
+        // graph so the audio thread never interprets an invalid topology.
+        if (preparedGraph.hasRoutingCycle) {
+            Aestra::Log::error("[AudioEngine] setGraph refused: routing cycle in snapshot; keeping previous graph");
+            return;
+        }
         prepareTrackStateForGraph(preparedGraph);
         m_state.swapGraph(preparedGraph);
         compileGraph();

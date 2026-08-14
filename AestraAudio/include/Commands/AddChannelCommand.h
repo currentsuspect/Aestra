@@ -42,10 +42,17 @@ public:
      * routed to the old one — and leave every command that captured a
      * `MixerChannel&` to it dangling, so add / set volume / undo / undo / redo /
      * redo wrote through freed memory.
+     *
+     * Routing Contract I8/D3: before detaching, every route pointing at this
+     * channel is captured and then resolved — mains reroute to master, sends
+     * to it are removed — so no dangling route can exist while the channel is
+     * gone. Redo restores the captured routes (round trip).
      */
     void undo() override {
         if (!m_executed) return;
         size_t index = 0;
+        captureRoutesToChannel();
+        m_manager.resetMixerRoutingDestination(m_createdChannelId);
         if (auto detached = m_manager.detachChannelById(m_createdChannelId, index)) {
             m_detached = std::move(detached);
             m_detachedIndex = index;
@@ -60,6 +67,7 @@ public:
         if (m_executed) return;
         if (m_detached) {
             if (m_manager.reinsertChannel(m_detached, m_detachedIndex)) {
+                restoreRoutesToChannel();
                 m_executed = true;
             }
             // A failed reinsert leaves m_detached intact, so a later redo can
@@ -91,6 +99,47 @@ public:
     bool changesProjectState() const override { return true; }
 
 private:
+    struct RouteSnapshot {
+        uint32_t sourceChannelId{0};
+        uint32_t mainOutputId{0};
+        std::vector<AudioRoute> sends;
+    };
+
+    void captureRoutesToChannel() {
+        if (m_routesCaptured || m_createdChannelId == 0) {
+            return;
+        }
+        for (const auto& channel : m_manager.getChannelsSnapshot()) {
+            if (!channel || channel->getChannelId() == m_createdChannelId) {
+                continue;
+            }
+            const auto sends = channel->getSends();
+            const bool routesToChannel = channel->getMainOutputId() == m_createdChannelId ||
+                                         std::any_of(sends.begin(), sends.end(), [this](const AudioRoute& route) {
+                                             return route.targetChannelId == m_createdChannelId;
+                                         });
+            if (routesToChannel) {
+                m_routes.push_back({channel->getChannelId(), channel->getMainOutputId(), sends});
+            }
+        }
+        m_routesCaptured = true;
+    }
+
+    void restoreRoutesToChannel() {
+        for (const auto& routeSnapshot : m_routes) {
+            if (auto* channel = m_manager.getChannelById(routeSnapshot.sourceChannelId)) {
+                if (routeSnapshot.mainOutputId == m_createdChannelId) {
+                    channel->setMainOutputId(routeSnapshot.mainOutputId);
+                }
+                if (!routeSnapshot.sends.empty()) {
+                    channel->replaceSends(routeSnapshot.sends);
+                }
+            }
+        }
+        m_routes.clear();
+        m_routesCaptured = false;
+    }
+
     TrackManager& m_manager;
     std::string m_name;
     bool m_executed = false;
@@ -98,6 +147,8 @@ private:
     /** The channel itself while undone, so redo restores it rather than a copy (#611). */
     std::unique_ptr<MixerChannel> m_detached;
     size_t m_detachedIndex = 0;
+    std::vector<RouteSnapshot> m_routes;
+    bool m_routesCaptured = false;
 };
 
 } // namespace Audio

@@ -93,6 +93,7 @@ struct ChannelViewModel {
     bool suppressClipRelatchR{false};        ///< Ignore re-latch until clip drops once
     
     struct SendViewModel {
+        uint64_t sendId{0};         // Stable identity (Contract D2); never an index
         uint32_t targetId{0};
         std::string targetName;
         float gain{1.0f};           // Linear gain
@@ -274,6 +275,9 @@ public:
     /** @brief Set CommandHistory for undo/redo on plugin operations. */
     void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
 
+    /** @brief Set the TrackManager used for routing validation and commands. */
+    void setTrackManager(Audio::TrackManager* trackManager) { m_trackManager = trackManager; }
+
     // graphDirty and projectModified are scoped subscription signals for mixer state changes.
 
     struct Destination {
@@ -285,12 +289,12 @@ public:
     // Send Management
     void addSend(uint32_t channelId);
     void addSidechain(uint32_t channelId);
-    void addSend(uint32_t channelId, uint32_t targetId);
-    void removeSend(uint32_t channelId, int sendIndex);
-    void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
-    void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
-    void setSendPostFader(uint32_t channelId, int sendIndex, bool postFader);
-    void setSendSidechainOnly(uint32_t channelId, int sendIndex, bool sidechainOnly);
+    void addSend(uint32_t channelId, uint32_t targetId, bool sidechainOnly = false);
+    void removeSend(uint32_t channelId, uint64_t sendId);
+    void setSendLevel(uint32_t channelId, uint64_t sendId, float linearGain);
+    void setSendDestination(uint32_t channelId, uint64_t sendId, uint32_t targetId);
+    void setSendPostFader(uint32_t channelId, uint64_t sendId, bool postFader);
+    void setSendSidechainOnly(uint32_t channelId, uint64_t sendId, bool sidechainOnly);
     void setMainOutputDestination(uint32_t channelId, uint32_t targetId);
     std::string getRoutingWarning(uint32_t channelId) const;
 
@@ -332,6 +336,9 @@ private:
     /// CommandHistory pointer for undo/redo on plugin operations (optional)
     Audio::CommandHistory* m_commandHistory = nullptr;
 
+    /// TrackManager for routing validation + command construction (optional)
+    Audio::TrackManager* m_trackManager = nullptr;
+
     /**
      * @brief Rebuild id→index map after channel list changes.
      */
@@ -350,7 +357,19 @@ private:
     void smoothMeterChannel(ChannelViewModel& channel,
                             const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
                             double deltaTime);
+    /**
+     * @brief Whether routing source -> target is legal. Delegates to the
+     * TrackManager authority when wired (Routing Contract D1); falls back to
+     * the VM-local topology walk otherwise.
+     */
+    bool canRouteTo(uint32_t sourceId, uint32_t targetId) const;
     bool routeWouldCreateCycle(uint32_t sourceId, uint32_t targetId) const;
+    /** @brief Positional index of a sendId inside a channel's local send list; -1 when absent. */
+    int findLocalSendIndex(const ChannelViewModel& ch, uint64_t sendId) const;
+    /** @brief Engine-side route for a sendId; false when the engine no longer holds it. */
+    bool tryGetEngineRoute(const Audio::MixerChannel* mc, uint64_t sendId, Audio::AudioRoute& out) const;
+    /** @brief Mirror the engine-minted sendId of the last appended send into the local model. */
+    void refreshLocalSendId(ChannelViewModel* ch, const Audio::MixerChannel* mc);
     bool hasRoutePath(uint32_t fromId, uint32_t targetId) const;
 };
 

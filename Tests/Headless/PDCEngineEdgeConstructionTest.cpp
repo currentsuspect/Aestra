@@ -374,7 +374,10 @@ void testApplyPassClearsStaleSendDelays() {
     EXPECT_EQ(first.sendEdgeDelays[0].compensationSamples, 0u);
 
     // Remove the send and recompute. The slot's compensation must go to zero.
-    trackC->removeSend(0);
+    const auto trackCSends = trackC->getSends();
+    if (!trackCSends.empty()) {
+        trackC->removeSend(trackCSends[0].sendId);
+    }
     fx.engine.calculateLatencyCompensation();
     const auto second = fx.engine.getTrackEdgeDelaySnapshot(0);
     EXPECT_TRUE(second.valid);

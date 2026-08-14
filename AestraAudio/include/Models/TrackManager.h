@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <unordered_set>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -337,6 +338,63 @@ public:
     const MixerChannel* getChannelById(uint32_t channelId) const {
         const size_t index = findChannelIndexById(channelId);
         return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /**
+     * @brief Whether routing source -> target is legal (Routing Contract D1).
+     *
+     * Rejects self-routes and audible cycles before any mutation commits, and
+     * rejects dangling destinations. Master is a terminal sink: always a legal
+     * target, never a source. Only audible edges are followed (main outputs +
+     * unmuted non-sidechain sends) — sidechain edges cannot form audible
+     * cycles, so they do not participate.
+     */
+    bool canRouteTo(uint32_t sourceId, uint32_t targetId) const {
+        // Master has two spellings: user/model space (0, MASTER_MIXER_CHANNEL_ID)
+        // and engine space (0xFFFFFFFF). Both are the same terminal sink.
+        constexpr uint32_t kEngineMaster = 0xFFFFFFFFu;
+        if (sourceId == MASTER_MIXER_CHANNEL_ID || sourceId == kEngineMaster) {
+            return false;
+        }
+        if (targetId == MASTER_MIXER_CHANNEL_ID || targetId == kEngineMaster) {
+            return true;
+        }
+        if (sourceId == targetId) {
+            return false;
+        }
+        if (!getChannelById(sourceId) || !getChannelById(targetId)) {
+            return false;
+        }
+
+        std::vector<uint32_t> stack{targetId};
+        std::unordered_set<uint32_t> visited;
+        while (!stack.empty()) {
+            const uint32_t current = stack.back();
+            stack.pop_back();
+            if (current == sourceId) {
+                return false;
+            }
+            if (!visited.insert(current).second) {
+                continue;
+            }
+            const MixerChannel* channel = getChannelById(current);
+            if (!channel) {
+                continue;
+            }
+            const uint32_t mainOutput = channel->getMainOutputId();
+            if (mainOutput != kEngineMaster) {
+                stack.push_back(mainOutput);
+            }
+            for (const auto& send : channel->getSends()) {
+                if (send.mute || send.sidechainOnly) {
+                    continue;
+                }
+                if (send.targetChannelId != kEngineMaster) {
+                    stack.push_back(send.targetChannelId);
+                }
+            }
+        }
+        return true;
     }
 
     /** Route an audio source pattern independently from Playlist placement. */
