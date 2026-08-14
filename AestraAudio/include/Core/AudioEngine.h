@@ -640,6 +640,18 @@ public:
     void setTrackManager(std::shared_ptr<TrackManager> trackManager) {
         if (auto previous = m_trackManager.lock()) {
             previous->setChannelPrepareCallback(nullptr);
+            // Release latency-change callbacks captured from the previous
+            // manager: a later chain mutation on it must not solve PDC
+            // against the new manager (or a destroyed engine). The
+            // destructor only clears the current manager's callbacks.
+            for (size_t i = 0; i < previous->getChannelCount(); ++i) {
+                if (auto* channel = previous->getChannel(i)) {
+                    channel->setEffectChainLatencyCallback(nullptr);
+                }
+            }
+            if (auto* master = previous->getMasterChannel()) {
+                master->setEffectChainLatencyCallback(nullptr);
+            }
         }
         m_trackManager = std::move(trackManager);
         if (auto current = m_trackManager.lock()) {
