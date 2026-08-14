@@ -244,6 +244,10 @@ private:
     bool m_isDraggingVolumeFader = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
+    // Point position at drag start; a release that never moved the point
+    // (simple click-select) must not dirty the project or rebuild the graph.
+    double m_dragStartBeat = -1.0;
+    float m_dragStartValue = -1.0f;
     AestraUI::NUIPoint m_lastAutomationMousePos;
 
     // Optimization

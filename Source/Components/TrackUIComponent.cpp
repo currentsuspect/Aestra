@@ -2097,9 +2097,29 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     win->setMouseCapture(false);
                 }
             }
-            // The drag mutated the curve in the model: rebuild the audio
-            // graph so playback follows the edit, and mark the project dirty.
-            if (m_trackManager) {
+            // If the drag actually moved the point, rebuild the audio graph so
+            // playback follows the edit, and mark the project dirty. A plain
+            // click-select (no movement) must not dirty the project. A moved
+            // point no longer occupies its drag-start position (the drag
+            // handler re-sorts, so identity is by position, not index).
+            bool moved = false;
+            if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+                if (!lane->automationCurves.empty() && m_dragStartBeat >= 0.0) {
+                    const auto& pts = lane->automationCurves[0].getPoints();
+                    bool stillAtStart = false;
+                    for (const auto& pt : pts) {
+                        if (std::abs(pt.beat - m_dragStartBeat) < 1e-9 &&
+                            std::abs(pt.value - m_dragStartValue) < 1e-9f) {
+                            stillAtStart = true;
+                            break;
+                        }
+                    }
+                    moved = !stillAtStart;
+                }
+            }
+            m_dragStartBeat = -1.0;
+            m_dragStartValue = -1.0f;
+            if (moved && m_trackManager) {
                 m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                 m_trackManager->markModified();
             }
@@ -2172,6 +2192,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_isDraggingPoint = true;
                         m_draggedPointIndex = hitIndex;
                         m_draggedCurveIndex = 0;
+                        m_dragStartBeat = curve.getPoints()[static_cast<size_t>(hitIndex)].beat;
+                        m_dragStartValue = curve.getPoints()[static_cast<size_t>(hitIndex)].value;
                         
                         // Capture mouse
                         if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
@@ -2203,6 +2225,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 m_isDraggingPoint = true;
                                 m_draggedPointIndex = i;
                                 m_draggedCurveIndex = 0;
+                                m_dragStartBeat = pts[static_cast<size_t>(i)].beat;
+                                m_dragStartValue = pts[static_cast<size_t>(i)].value;
                                 
                                 // Capture mouse
                                 if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {

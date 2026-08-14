@@ -1246,10 +1246,11 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // BEFORE the master fader and safety limiter — matching the channel
     // convention (inserts precede the fader) and keeping the limiter as the
     // final safety net. The no-plugins path is untouched: this block is
-    // skipped when the chain has no active slots.
+    // skipped when the chain has no active slots. Uses the graph captured at
+    // the top of processBlock (not a fresh read) so the master chain always
+    // matches the generation the tracks rendered with.
     {
-        const auto& activeGraph = m_state.activeGraphRead().get();
-        const auto& masterSnap = activeGraph.masterEffectChainSnapshot;
+        const auto& masterSnap = graph.masterEffectChainSnapshot;
         if (masterSnap && masterSnap->getActiveSlotCount() > 0) {
             if (m_pluginBufferF.size() >= static_cast<size_t>(numFrames) * 2 &&
                 m_dryBuffer.size() >= static_cast<size_t>(numFrames) * 2) {

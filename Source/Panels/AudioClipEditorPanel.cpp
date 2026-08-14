@@ -29,11 +29,13 @@ namespace Audio {
 
 namespace {
 constexpr float kMinPanelWidth = 660.0f;
-// Minimum height that keeps the waveform region usable: the controls card
-// starts at bottom - kControlsCardHeight - 8 - 14 and the waveform top is at
-// y + 130, so a 64px waveform needs height >= 458. 460 leaves ~66px and
+// Minimum height that keeps the waveform region usable. The layout runs on
+// the surface (panel height minus the 28px WindowPanel title bar); the
+// controls card starts at surfaceBottom - kControlsCardHeight - 8 - 14 and
+// the waveform top is at surfaceY + 130, so a 64px waveform needs a surface
+// of 458px, i.e. a panel of 486px. 490 leaves ~96px of waveform and
 // guarantees the card can never overlap the waveform (triage 2026-08-14).
-constexpr float kMinPanelHeight = 460.0f;
+constexpr float kMinPanelHeight = 490.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
 constexpr float kControlsCardHeight = 242.0f;
@@ -728,7 +730,10 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const float available = (bounds.right() - pad - resetWidth) - actionX;
     const float scale = totalRequired > 0.0f ? std::clamp(available / totalRequired, 0.0f, 1.0f) : 1.0f;
     const auto placeAction = [&](const std::shared_ptr<NUIButton>& button, float width) {
-        const float w = std::max(40.0f, width * scale);
+        // No width floor: the proportional shrink keeps the row inside the
+        // available band at every panel width (a floor here would overflow
+        // into the Reset button when the panel is forced very narrow).
+        const float w = width * scale;
         button->setBounds({actionX, actionY, w, actionH});
         actionX += w + buttonGap * scale;
     };

@@ -86,6 +86,16 @@ void testAudioClipEditorLayout() {
         }
     }
 
+    // At the 490px minimum (surface = panel - 28px title bar) the waveform
+    // must be visible and at least 64px tall.
+    {
+        AudioClipEditorPanel panel(tm);
+        panel.setBounds({0.0f, 0.0f, 700.0f, 490.0f});
+        const NUIRect wf = waveformBounds(panel);
+        expect(!wf.isEmpty(), "waveform hidden at the 490px minimum height");
+        expect(wf.height >= 64.0f, "waveform shorter than 64px at the 490px minimum");
+    }
+
     // At 500px tall the waveform must be visible and at least 64px tall.
     {
         AudioClipEditorPanel panel(tm);
