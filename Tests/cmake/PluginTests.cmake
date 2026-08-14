@@ -261,4 +261,4 @@ target_include_directories(MasterEffectChainTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Tests
 )
 add_test(NAME MasterEffectChainTest COMMAND MasterEffectChainTest)
-set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence")
+set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence;contract:plugins")
