@@ -113,6 +113,36 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                m_master->faderGainDb,
                                m_master->pan,
                                m_master->trimDb);
+
+        // Master strip is a plugin host like any other channel (triage
+        // 2026-08-14): wire the engine-side Master MixerChannel so the
+        // existing insert paths (add/remove/bypass/mix/ordering) work
+        // unchanged, and sync its insert slots into the view model.
+        if (auto* masterChannel = trackManager.getMasterChannel()) {
+            m_master->channel = masterChannel;
+            if (m_master->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
+                m_master->inserts.resize(Audio::EffectChain::MAX_SLOTS);
+            }
+            auto& chain = masterChannel->getEffectChain();
+            int fxCount = 0;
+            for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
+                const auto* slot = chain.getSlot(i);
+                auto& vm = m_master->inserts[i];
+                const bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
+                if (hasPlugin) {
+                    ++fxCount;
+                    vm.isEmpty = false;
+                    vm.name = slot->plugin->getInfo().name;
+                    if (vm.name.empty()) vm.name = "Plugin";
+                    vm.bypassed = slot->bypassed.load();
+                    vm.mix = slot->dryWetMix.load();
+                } else {
+                    vm.isEmpty = true;
+                    vm.name.clear();
+                }
+            }
+            m_master->fxCount = fxCount;
+        }
     }
 
     // Build set of current track IDs for quick lookup

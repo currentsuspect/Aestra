@@ -486,6 +486,19 @@ namespace {
         }
     }
 
+    if (root.has("master")) {
+        if (!root["master"].isObject()) {
+            error = "Invalid project file: master entry must be an object";
+            return false;
+        }
+        if (root["master"].has("effectChainStateHex") &&
+            (!root["master"]["effectChainStateHex"].isString() ||
+             root["master"]["effectChainStateHex"].asString().size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES)) {
+            error = "Invalid project file: master effect chain state is too large";
+            return false;
+        }
+    }
+
         const JSON& lanes = root["lanes"];
         for (size_t i = 0; i < lanes.size(); ++i) {
             if (!lanes[i].isObject()) {
@@ -898,6 +911,17 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         mixerChannelsJson.push(mjs);
     }
     root.set("mixerChannels", mixerChannelsJson);
+
+    // 2b. Save the Master strip (a plugin host like any other channel, but a
+    // terminal sink: no routing, no lane, just its insert chain).
+    if (const auto* master = trackManager->getMasterChannel()) {
+        JSON masterJson = JSON::object();
+        const auto masterChainState = master->getEffectChain().saveState();
+        if (!masterChainState.empty()) {
+            masterJson.set("effectChainStateHex", JSON(bytesToHex(masterChainState)));
+        }
+        root.set("master", masterJson);
+    }
 
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
@@ -1874,6 +1898,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     }
                     for (auto& id : missingIds) {
                         result.missingPlugins.push_back({std::move(id), channelName});
+                    }
+                }
+            }
+        }
+
+        // 4b. Restore the Master strip's insert chain (absent in older
+        // projects: loaders must ignore a missing master node).
+        if (auto* master = trackManager->getMasterChannel()) {
+            if (root.has("master") && root["master"].isObject()) {
+                const JSON& masterJson = root["master"];
+                auto& pluginManager = PluginManager::getInstance();
+                auto& masterChain = master->getEffectChain();
+                masterChain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+                if (masterJson.has("effectChainStateHex") && masterJson["effectChainStateHex"].isString()) {
+                    const auto effectState = hexToBytes(masterJson["effectChainStateHex"].asString());
+                    std::vector<std::string> missingIds;
+                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &missingIds)) {
+                        warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
+                                               "[ProjectLoad] Failed to restore Master effect chain",
+                                               "[ProjectLoad] Additional Master effect-chain warnings suppressed.");
+                    }
+                    for (auto& id : missingIds) {
+                        result.missingPlugins.push_back({std::move(id), "Master"});
                     }
                 }
             }

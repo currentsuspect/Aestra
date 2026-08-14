@@ -1240,6 +1240,34 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
     m_dcRemovalPrevOn = dcRemovalOn;
 
+    // Master insert chain (Master-as-plugin-host): the Master strip owns a
+    // real effect chain; its snapshot rides the graph (immutable once
+    // published, like channel chains). Processed on the summed master buffer
+    // BEFORE the master fader and safety limiter — matching the channel
+    // convention (inserts precede the fader) and keeping the limiter as the
+    // final safety net. The no-plugins path is untouched: this block is
+    // skipped when the chain has no active slots.
+    {
+        const auto& activeGraph = m_state.activeGraphRead().get();
+        const auto& masterSnap = activeGraph.masterEffectChainSnapshot;
+        if (masterSnap && masterSnap->getActiveSlotCount() > 0) {
+            if (m_pluginBufferF.size() >= static_cast<size_t>(numFrames) * 2 &&
+                m_dryBuffer.size() >= static_cast<size_t>(numFrames) * 2) {
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    m_pluginBufferF[i] = static_cast<float>(m_masterBufferD[i * 2]);
+                    m_pluginBufferF[static_cast<size_t>(numFrames) + i] =
+                        static_cast<float>(m_masterBufferD[i * 2 + 1]);
+                }
+                float* channels[2] = {m_pluginBufferF.data(), m_pluginBufferF.data() + numFrames};
+                masterSnap->process(channels, 2, numFrames, nullptr, 0, m_dryBuffer.data());
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    m_masterBufferD[i * 2] = static_cast<double>(m_pluginBufferF[i]);
+                    m_masterBufferD[i * 2 + 1] = static_cast<double>(m_pluginBufferF[static_cast<size_t>(numFrames) + i]);
+                }
+            }
+        }
+    }
+
     // Signal integrity counters (local, then atomic update at end)
     uint32_t nanCount = 0;
     uint32_t clipCount = 0;
@@ -1804,6 +1832,10 @@ bool AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
                 channel->prepareProcessingBuffers(maxBlockSize);
                 channel->getEffectChain().prepare(sampleRate, maxBlockSize);
             }
+        }
+        if (auto* master = trackMgr->getMasterChannel()) {
+            master->prepareProcessingBuffers(maxBlockSize);
+            master->getEffectChain().prepare(sampleRate, maxBlockSize);
         }
     }
 

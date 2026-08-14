@@ -81,6 +81,12 @@ public:
         m_continuousParams = std::make_shared<ContinuousParamBuffer>();
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         m_playlistModel.setPatternManager(&m_patternManager);
+        // Master strip: a real MixerChannel (id 0) so Master hosts an insert
+        // chain like any other strip. Deliberately NOT in m_channels — Master
+        // must stay out of the slot map, routing topology, and graph tracks
+        // (terminal-sink contract). Its chain snapshot rides the graph via
+        // AudioGraph::masterEffectChainSnapshot.
+        m_masterChannel = std::make_unique<MixerChannel>("Master", 0);
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
@@ -92,6 +98,18 @@ public:
         // that happens to own the wiring fails to initialise.
         m_commandHistory.addOnStateChanged([this]() { markModified(); });
     }
+
+    /**
+     * @brief Access the Master strip's mixer channel (id 0).
+     *
+     * Master is a valid plugin host like any other strip, but it is not a
+     * routable track: it never appears in the slot map, routing topology, or
+     * graph tracks. Returns nullptr only before construction completes.
+     */
+    MixerChannel* getMasterChannel() { return m_masterChannel.get(); }
+    /** @brief Const access to the Master strip's mixer channel (UI sync uses
+     * the same mutable-pointer pattern as getChannelsSnapshot()). */
+    MixerChannel* getMasterChannel() const { return m_masterChannel.get(); }
 
     /**
      * @brief Get the number of channels
@@ -1806,6 +1824,7 @@ private:
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
+    std::unique_ptr<MixerChannel> m_masterChannel;
     uint32_t m_nextChannelId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;

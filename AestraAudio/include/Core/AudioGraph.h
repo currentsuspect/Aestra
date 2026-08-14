@@ -84,6 +84,10 @@ struct AudioGraph {
     std::vector<TrackRenderState> tracks;
     /** Audio clips whose source routes directly to Master. */
     std::vector<ClipRenderState> masterClips;
+    /** Master strip insert chain snapshot (processed on the summed master
+     * buffer before the master fader and safety limiter). Immutable once the
+     * graph is published, like channel chain snapshots. */
+    std::shared_ptr<const EffectChainSnapshot> masterEffectChainSnapshot;
     bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.

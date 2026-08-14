@@ -157,6 +157,8 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
         graph.tracks.push_back(std::move(trackState));
     }
     graph.anySolo = anySoloFound;
+    graph.masterEffectChainSnapshot =
+        trackManager.getMasterChannel() ? trackManager.getMasterChannel()->getEffectChainSnapshot() : nullptr;
 
     // Populate clips from PlaylistModel
     const auto& playlist = trackManager.getPlaylistModel();
