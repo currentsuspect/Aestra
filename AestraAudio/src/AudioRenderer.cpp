@@ -380,8 +380,13 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
                 // Same gain staging as the live path: the fader is
                 // track.volume, trim lives in the continuous slot. The
                 // continuous faderDb/panParam are display mirrors only.
-                const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-                volTarget *= dbToLinearD(trimDbClamped);
+                // clampD passes NaN through (both comparisons are false), so
+                // reject a non-finite trim before it reaches the gain;
+                // treat it as neutral (no trim).
+                if (std::isfinite(trimDb)) {
+                    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+                    volTarget *= dbToLinearD(trimDbClamped);
+                }
             }
         }
 

@@ -503,7 +503,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap)); // never exceed the step advance (triage 2026-08-14)
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
@@ -556,7 +557,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         std::vector<NUIPoint> slidePoints;
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap)); // never exceed the step advance (triage 2026-08-14)
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }

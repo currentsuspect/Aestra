@@ -1219,6 +1219,14 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
+        // The Master strip survives channel clears (it is not a routable
+        // track), but its insert chain is project state: loading a project
+        // without a master node (or with an empty one) must not keep the
+        // previous project's Master plugins active, or they would be saved
+        // into the new project.
+        if (m_masterChannel) {
+            m_masterChannel->getEffectChain().clear();
+        }
         m_nextChannelId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {

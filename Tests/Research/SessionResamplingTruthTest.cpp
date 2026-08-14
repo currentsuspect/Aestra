@@ -320,10 +320,10 @@ ControlBaseline runControlCase(AR::CheckSession& t) {
     std::printf("[MEASURE] control 1kHz gain=%.9f (pan-law expect %.9f), sinad=%.1f dB, dc=%.3e\n", gain,
                 expectedGain, fit.sinadDb, dc);
 
-    // Gain gate 1e-4: the session applies exactly the equal-power center pan gain
-    // (measured 0.707106754 vs expected 0.707106769; SampleRateBufferTruthTest
-    // independently measured the impulse amplitude exact to 1e-6).
-    t.expectNear("control: net session gain == pan-law center gain", gain, expectedGain, 1e-4);
+    // Gain gate 1e-4: the session applies exactly the unity centre gain
+    // (SampleRateBufferTruthTest independently measured the impulse amplitude
+    // exact to 1e-6).
+    t.expectNear("control: net session gain == centre gain", gain, expectedGain, 1e-4);
     // Same-rate clips take the direct-copy branch (AudioEngine.cpp:2112,
     // |ratio-1| < 1e-9): no interpolation, so the residual measures only
     // engine-added noise. Gate 120 dB (measured 153.9 dB — the float-quantization

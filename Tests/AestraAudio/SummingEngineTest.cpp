@@ -109,7 +109,7 @@ int main() {
 
     // Compute mathematical expectation:
     // N × sin(2πft) × 10^(-20/20) × panLawGain
-    // Pan law: at center (pan=0), fastPanGainsD gives cos(π/4)=sin(π/4)=√2/2 per channel.
+    // Pan law: at center (pan=0), fastStereoBalanceGainsD gives unity per channel.
     constexpr double kPanLawCenterGain = 1.0; // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
     std::vector<double> expected(static_cast<size_t>(kTotalFrames) * kChannels, 0.0);
     for (uint32_t i = 0; i < kTotalFrames; ++i) {

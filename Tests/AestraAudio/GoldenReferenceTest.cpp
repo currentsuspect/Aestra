@@ -139,7 +139,7 @@ AnalysisResult runSignalTest(const std::string& label, const std::vector<float>&
     engine.setTransportPlaying(false);
 
     // Trim startup transient (gainL ramp + fade-in) and clip-edge fade-out (128 samples)
-    // Also apply pan-law gain: engine applies cos(π/4) to centered mono signals.
+    // Also apply pan-law gain: engine applies the stereo-balance law (unity at centre).
     constexpr size_t kTrimStart = static_cast<size_t>(kBlockSize) * kChannels;
     constexpr size_t kTrimEnd = static_cast<size_t>(256) * kChannels; // covers CLIP_EDGE_FADE_SAMPLES
     AnalysisResult result;

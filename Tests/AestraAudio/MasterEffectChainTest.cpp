@@ -25,10 +25,12 @@
 #include "Plugin/InternalPluginRegistry.h"
 #include "Plugin/PluginManager.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -339,6 +341,16 @@ void testMasterChainPersistence() {
     require(tm3->getMasterChannel() != nullptr, "getMasterChannel() null on legacy load");
     require(tm3->getMasterChannel()->getEffectChain().getActiveSlotCount() == 0,
             "legacy load must leave the master chain empty");
+
+    // Load-A/load-B reset: loading a project without a master node into a
+    // manager that already carries Master plugins must clear the previous
+    // project's chain (clearAllChannels resets it), not retain and re-save it.
+    {
+        ProjectSerializer::LoadResult reloadResult = ProjectSerializer::load(legacyPath.string(), tm2);
+        require(reloadResult.ok, "load-B (no master node) over load-A failed");
+        require(tm2->getMasterChannel()->getEffectChain().getActiveSlotCount() == 0,
+                "load-B kept the previous project's master plugins");
+    }
 }
 
 } // namespace

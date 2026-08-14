@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -184,7 +185,11 @@ void testMasterDirectMatchesChannelRouted() {
 
 int main() {
     std::printf("=== RoutingMasterDirectParityTest (routing/gain BUG-3 triage 2026-08-14) ===\n");
-    testMasterDirectMatchesChannelRouted();
+    try {
+        testMasterDirectMatchesChannelRouted();
+    } catch (const std::exception& e) {
+        reportFailure("fixture setup", e.what());
+    }
 
     if (g_failures == 0) {
         std::printf("=== RoutingMasterDirectParityTest: all checks passed ===\n");

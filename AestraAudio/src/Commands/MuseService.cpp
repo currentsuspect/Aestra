@@ -702,8 +702,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             master.set("destinationType", JSON("master"));
             master.set("mixerChannelId", JSON(0.0));
             master.set("stableIdentityAvailable", JSON(true));
-            master.set("insertChainAvailable", JSON(true));
             if (auto* masterChannel = m_trackManager->getMasterChannel()) {
+                master.set("insertChainAvailable", JSON(true));
                 const auto& masterChain = masterChannel->getEffectChain();
                 JSON pluginSlots = JSON::array();
                 for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
@@ -741,6 +741,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 insertChain.set("stableSlotIdentityAvailable", JSON(false));
                 insertChain.set("slots", pluginSlots);
                 master.set("insertChain", insertChain);
+            } else {
+                master.set("insertChainAvailable", JSON(false));
             }
             destinations.push(master);
 

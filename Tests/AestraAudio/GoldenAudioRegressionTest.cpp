@@ -79,7 +79,7 @@ bool runSilenceCase() {
 // Case 2: single impulse through the master path — exact position + amplitude
 // -----------------------------------------------------------------------------
 // The impulse is placed past the first block so the transport fade-in has
-// completed. Expectation models the engine's centre pan law (cos(π/4)).
+// completed. Expectation models the engine's centre pan law (stereo-balance: unity at centre).
 // A wrong sample rate, a shifted render, or a master-gain change moves or
 // scales the impulse and fails with the exact frame in the report.
 bool runImpulseCase() {
@@ -166,10 +166,12 @@ bool runMultiTrackMixCase() {
     // and pan lives on the channel too; the continuous buffer's fader/pan are
     // display mirrors. Trim remains in the continuous slot. Drive the channel
     // stores exactly like the UI's fader/pan commands do.
+    const auto faderDbToLinear = [](float faderDb) {
+        return faderDb <= -90.0f ? 0.0f : std::pow(10.0f, faderDb / 20.0f);
+    };
     for (int t = 0; t < 3; ++t) {
         if (auto* ch = tm->getChannel(static_cast<size_t>(t))) {
-            const float linearVol = specs[t].faderDb <= -90.0f ? 0.0f : std::pow(10.0f, specs[t].faderDb / 20.0f);
-            ch->setVolume(linearVol);
+            ch->setVolume(faderDbToLinear(specs[t].faderDb));
             ch->setPan(specs[t].pan);
         }
     }
@@ -196,7 +198,7 @@ bool runMultiTrackMixCase() {
     // applied a second -3.01 dB centre law to already-stereo content).
     std::vector<float> expected(static_cast<size_t>(totalFrames) * 2, 0.0f);
     for (const auto& s : specs) {
-        const double gain = std::pow(10.0, static_cast<double>(s.faderDb) / 20.0);
+        const double gain = static_cast<double>(faderDbToLinear(s.faderDb));
         double gL = 0.0, gR = 0.0;
         PanLaw::stereoBalance(static_cast<double>(s.pan), gain, gL, gR);
         for (uint32_t i = 0; i < totalFrames; ++i) {

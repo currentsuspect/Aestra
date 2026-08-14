@@ -2087,38 +2087,35 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // This ensures release is processed even when mouse has moved far outside bounds
     if (m_playlistMode == PlaylistMode::Automation && m_isDraggingPoint) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            // Compare the dragged point against its drag-start value BEFORE
+            // the index is cleared. A plain click-select (no movement) must
+            // not dirty the project; a real move must rebuild the graph so
+            // playback follows the edit.
+            bool moved = false;
+            if (m_trackManager && m_dragStartBeat >= 0.0 && m_draggedPointIndex >= 0) {
+                if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+                    if (!lane->automationCurves.empty()) {
+                        const auto& pts = lane->automationCurves[0].getPoints();
+                        if (m_draggedPointIndex < static_cast<int>(pts.size())) {
+                            const auto& pt = pts[static_cast<size_t>(m_draggedPointIndex)];
+                            moved = std::abs(pt.beat - m_dragStartBeat) >= 1e-9 ||
+                                    std::abs(pt.value - m_dragStartValue) >= 1e-9f;
+                        }
+                    }
+                }
+            }
             m_isDraggingPoint = false;
             m_draggedPointIndex = -1;
             m_draggedCurveIndex = -1;
-            
+            m_dragStartBeat = -1.0;
+            m_dragStartValue = -1.0f;
+
             // Release mouse capture
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (auto win = parentMgr->getPlatformWindow()) {
                     win->setMouseCapture(false);
                 }
             }
-            // If the drag actually moved the point, rebuild the audio graph so
-            // playback follows the edit, and mark the project dirty. A plain
-            // click-select (no movement) must not dirty the project. A moved
-            // point no longer occupies its drag-start position (the drag
-            // handler re-sorts, so identity is by position, not index).
-            bool moved = false;
-            if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
-                if (!lane->automationCurves.empty() && m_dragStartBeat >= 0.0) {
-                    const auto& pts = lane->automationCurves[0].getPoints();
-                    bool stillAtStart = false;
-                    for (const auto& pt : pts) {
-                        if (std::abs(pt.beat - m_dragStartBeat) < 1e-9 &&
-                            std::abs(pt.value - m_dragStartValue) < 1e-9f) {
-                            stillAtStart = true;
-                            break;
-                        }
-                    }
-                    moved = !stillAtStart;
-                }
-            }
-            m_dragStartBeat = -1.0;
-            m_dragStartValue = -1.0f;
             if (moved && m_trackManager) {
                 m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                 m_trackManager->markModified();
@@ -2137,19 +2134,26 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto lane = playlist.getLane(m_laneId);
 
             if (lane) {
-                if (lane->automationCurves.empty()) {
+                const bool isPressEvent = event.pressed &&
+                                          (event.button == AestraUI::NUIMouseButton::Left ||
+                                           event.button == AestraUI::NUIMouseButton::Right);
+                if (isPressEvent && lane->automationCurves.empty()) {
                     // First point on an empty lane: create the default Volume
                     // curve bound to this lane's paired mixer channel (the
                     // same lane-index -> channel pairing the serializer uses).
                     // defaultValue 1.0 keeps an empty curve neutral — the old
                     // default of 0.0 silenced the channel until a point was
-                    // added.
+                    // added. Press-only: pointer moves (hover) must not
+                    // insert a curve into the project model.
                     AutomationCurve curve("Volume", AutomationTarget::Volume);
                     curve.setDefaultValue(1.0f);
                     if (const auto* ch = m_trackManager->getChannel(static_cast<size_t>(lane->index))) {
                         curve.mixerChannelId = ch->getChannelId();
                     }
                     lane->automationCurves.push_back(std::move(curve));
+                }
+                if (lane->automationCurves.empty()) {
+                    return true;
                 }
                 auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
 

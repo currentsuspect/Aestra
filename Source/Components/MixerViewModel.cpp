@@ -113,11 +113,16 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                m_master->faderGainDb,
                                m_master->pan,
                                m_master->trimDb);
+    }
 
+    if (m_master) {
         // Master strip is a plugin host like any other channel (triage
         // 2026-08-14): wire the engine-side Master MixerChannel so the
         // existing insert paths (add/remove/bypass/mix/ordering) work
-        // unchanged, and sync its insert slots into the view model.
+        // unchanged, and sync its insert slots into the view model. Hoisted
+        // out of the continuous-params guard: insert-chain sync does not read
+        // continuous params, and gating on them left master unwired (and
+        // master inserts silently no-oping) whenever the buffer was absent.
         if (auto* masterChannel = trackManager.getMasterChannel()) {
             m_master->channel = masterChannel;
             if (m_master->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
@@ -129,18 +134,11 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                 const auto* slot = chain.getSlot(i);
                 auto& vm = m_master->inserts[i];
                 const bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
-                if (vm.pendingRemoval && !hasPlugin) {
-                    // Engine confirmed the removal — clear the optimistic flag
-                    // (same state machine as channel inserts; without this,
-                    // delete -> re-add on Master left the slot stuck in the
-                    // pending-removal state and the re-added plugin invisible).
-                    vm.pendingRemoval = false;
-                }
-                if (vm.pendingRemoval && hasPlugin) {
-                    // Re-added before the engine confirmed the removal: the
-                    // chain is authoritative — show the live plugin.
-                    vm.pendingRemoval = false;
-                }
+                // The chain is authoritative either way: the engine either
+                // confirmed the removal (no plugin) or a plugin occupies the
+                // slot again (re-add before confirmation, or a failed
+                // removal). Clear the optimistic flag and show the live state.
+                vm.pendingRemoval = false;
                 if (hasPlugin) {
                     ++fxCount;
                     vm.isEmpty = false;

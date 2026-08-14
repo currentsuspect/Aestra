@@ -1265,6 +1265,12 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                     m_masterBufferD[i * 2] = static_cast<double>(m_pluginBufferF[i]);
                     m_masterBufferD[i * 2 + 1] = static_cast<double>(m_pluginBufferF[static_cast<size_t>(numFrames) + i]);
                 }
+            } else {
+                // Reserved scratch is smaller than this block (should not
+                // happen: setBufferConfig sizes to maxBufferFrames). Count it
+                // so a silently skipped master chain is visible in telemetry
+                // instead of disappearing without a trace.
+                m_telemetry.incrementOverruns();
             }
         }
     }
@@ -2928,12 +2934,17 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
     // stores, which squared every non-unity fader position and summed pan
     // twice (e.g. UI -6 dB became -12 dB actual). The continuous buffer keeps
     // its role for the master strip (slot 127) and for UI display sync.
-    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-    const double gain = dbToLinearD(trimDbClamped);
+    // clampD passes NaN through (both comparisons are false), so a non-finite
+    // trim from the continuous slot must be rejected before it reaches the
+    // gain; treat it as neutral (no trim).
+    double gain = 1.0;
+    if (std::isfinite(trimDb)) {
+        const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+        gain = dbToLinearD(trimDbClamped);
+    }
 
     double volTarget = static_cast<double>(track.volume) * gain;
     double panTarget = clampD(static_cast<double>(track.pan), -1.0, 1.0);
-
     // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
     // interpolates on point beats directly, so tempo changes and UI point
     // drags (which edit beats) stay musically aligned.

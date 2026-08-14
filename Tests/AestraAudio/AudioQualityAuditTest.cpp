@@ -206,7 +206,7 @@ static void testDistortionNull() {
     for (auto& t : tests) {
         double ampLin = std::pow(10.0, t.ampDb / 20.0);
         // Build a reference sine with the expected pan-law scaling
-        // (cos(pi/4) per channel at center pan)
+        // (stereo-balance: unity per channel at center pan)
         constexpr double kPanLawCenterGain = 1.0; // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
         double refAmp = ampLin * kPanLawCenterGain;
 
