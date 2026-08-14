@@ -81,6 +81,12 @@ public:
         m_continuousParams = std::make_shared<ContinuousParamBuffer>();
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         m_playlistModel.setPatternManager(&m_patternManager);
+        // Master strip: a real MixerChannel (id 0) so Master hosts an insert
+        // chain like any other strip. Deliberately NOT in m_channels — Master
+        // must stay out of the slot map, routing topology, and graph tracks
+        // (terminal-sink contract). Its chain snapshot rides the graph via
+        // AudioGraph::masterEffectChainSnapshot.
+        m_masterChannel = std::make_unique<MixerChannel>("Master", 0);
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
@@ -92,6 +98,18 @@ public:
         // that happens to own the wiring fails to initialise.
         m_commandHistory.addOnStateChanged([this]() { markModified(); });
     }
+
+    /**
+     * @brief Access the Master strip's mixer channel (id 0).
+     *
+     * Master is a valid plugin host like any other strip, but it is not a
+     * routable track: it never appears in the slot map, routing topology, or
+     * graph tracks. Returns nullptr only before construction completes.
+     */
+    MixerChannel* getMasterChannel() { return m_masterChannel.get(); }
+    /** @brief Const access to the Master strip's mixer channel (UI sync uses
+     * the same mutable-pointer pattern as getChannelsSnapshot()). */
+    MixerChannel* getMasterChannel() const { return m_masterChannel.get(); }
 
     /**
      * @brief Get the number of channels
@@ -863,7 +881,11 @@ public:
             return;
         }
 
-        const float monitorMixScale = PanLaw::kEqualPowerCenterGain / static_cast<float>(monitoredCount);
+        // Unity centre gain per monitored input: the main path (strips) uses
+        // the stereo-balance law since the strip pan-law fix (2026-08-14), and
+        // the audition/preview parity contract keeps every listening surface
+        // at the same reference level. Only the N-input normalization remains.
+        const float monitorMixScale = 1.0f / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
@@ -1197,6 +1219,14 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
+        // The Master strip survives channel clears (it is not a routable
+        // track), but its insert chain is project state: loading a project
+        // without a master node (or with an empty one) must not keep the
+        // previous project's Master plugins active, or they would be saved
+        // into the new project.
+        if (m_masterChannel) {
+            m_masterChannel->getEffectChain().clear();
+        }
         m_nextChannelId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {
@@ -1806,6 +1836,7 @@ private:
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
+    std::unique_ptr<MixerChannel> m_masterChannel;
     uint32_t m_nextChannelId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;

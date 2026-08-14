@@ -503,7 +503,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
@@ -556,7 +557,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         std::vector<NUIPoint> slidePoints;
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
@@ -1310,7 +1312,10 @@ void UnitRow::layoutNameLabel() {
     auto bounds = getBounds();
     float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
-    float labelWidth = std::max(56.0f, controlWidth - 206.0f);
+    // No 56px floor: at controlWidth 220 the floor pushed the label 38px past
+    // the route pill (which starts at controlWidth - 148). The label shrinks
+    // with the row and ellipsizes in UnitNameLabel (triage 2026-08-14).
+    float labelWidth = std::max(16.0f, controlWidth - 206.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
 }
 

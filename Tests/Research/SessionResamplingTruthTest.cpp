@@ -83,6 +83,10 @@ namespace Interp = Aestra::Audio::Interpolators;
 namespace {
 
 constexpr double kAmp = 0.5;
+// Session centre gain: the strips use the stereo-balance law (unity at
+// centre) since the strip pan-law fix (2026-08-14); was
+// PanLaw::kEqualPowerCenterGain.
+constexpr double kSessionCenterGain = 1.0;
 constexpr double kToneHz = 1000.0;
 constexpr double kClipSeconds = 1.5;
 // Analysis window skips the head (transport start + clip edge fade of 128 project
@@ -307,7 +311,7 @@ ControlBaseline runControlCase(AR::CheckSession& t) {
 
     const uint32_t winEnd = clipFrames - kWinSkip;
     const AR::ToneFit fit = AR::fitTone(out, 0, kToneHz, kWinSkip, winEnd);
-    const double expectedGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const double expectedGain = kSessionCenterGain;
     const double gain = fit.amplitude / kAmp;
     // DC from the tone fit's constant term: a windowed arithmetic mean of a sine leaks
     // the truncated partial cycle (~5e-6 for this window), which is a measurement
@@ -316,10 +320,10 @@ ControlBaseline runControlCase(AR::CheckSession& t) {
     std::printf("[MEASURE] control 1kHz gain=%.9f (pan-law expect %.9f), sinad=%.1f dB, dc=%.3e\n", gain,
                 expectedGain, fit.sinadDb, dc);
 
-    // Gain gate 1e-4: the session applies exactly the equal-power center pan gain
-    // (measured 0.707106754 vs expected 0.707106769; SampleRateBufferTruthTest
-    // independently measured the impulse amplitude exact to 1e-6).
-    t.expectNear("control: net session gain == pan-law center gain", gain, expectedGain, 1e-4);
+    // Gain gate 1e-4: the session applies exactly the unity centre gain
+    // (SampleRateBufferTruthTest independently measured the impulse amplitude
+    // exact to 1e-6).
+    t.expectNear("control: net session gain == centre gain", gain, expectedGain, 1e-4);
     // Same-rate clips take the direct-copy branch (AudioEngine.cpp:2112,
     // |ratio-1| < 1e-9): no interpolation, so the residual measures only
     // engine-added noise. Gate 120 dB (measured 153.9 dB — the float-quantization
@@ -341,7 +345,7 @@ ControlBaseline runControlCase(AR::CheckSession& t) {
 // chain neither blocks nor shifts it.
 void runDcCases(AR::CheckSession& t) {
     std::printf("\n--- DC through the full session chain ---\n");
-    const double expected = kAmp * static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const double expected = kAmp * kSessionCenterGain;
     for (uint32_t srcRate : {48000u, 44100u}) {
         GA::SessionConfig cfg;
         cfg.sampleRate = 48000;
@@ -374,7 +378,7 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
     const uint32_t srcFrames = static_cast<uint32_t>(kClipSeconds * p.srcRate);
     const uint32_t outClipFrames = static_cast<uint32_t>(kClipSeconds * p.sessionRate);
     const uint32_t winEnd = outClipFrames - kWinSkip;
-    const double panGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const double panGain = kSessionCenterGain;
 
     // ---- 1 kHz: gain vs control, SINAD through the whole engine ----
     {
@@ -512,7 +516,7 @@ void runFallbackTransitionCase(AR::CheckSession& t) {
     const uint32_t outClipFrames = static_cast<uint32_t>(kClipSeconds * 44100);
     const AR::Signal clip = AR::makeSine(48000, srcFrames, 23000.0, kAmp);
     auto tm = buildSession("fallback", clip, cfg, /*waitForPrefilters=*/false);
-    const double panGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const double panGain = kSessionCenterGain;
     const uint32_t winEnd = outClipFrames - kWinSkip;
 
     // First-ever graph build: enqueues the job and renders with the ORIGINAL buffer.
@@ -585,7 +589,7 @@ void runImpulseCases(AR::CheckSession& t) {
         AR::Signal expected = resampleViaInterpolator(Interp::Sinc64Interpolator::interpolate,
                                                       prefilterReplica(clip, ip.sessionRate), ip.sessionRate);
         for (float& v : expected.samples) {
-            v = static_cast<float>(static_cast<double>(v) * PanLaw::kEqualPowerCenterGain);
+            v = static_cast<float>(static_cast<double>(v) * kSessionCenterGain);
         }
         const AR::Signal outWin = window(out, kWinSkip, outClipFrames - kWinSkip);
         const AR::Signal expWin = window(expected, kWinSkip, outClipFrames - kWinSkip);
@@ -653,8 +657,8 @@ void runIsolatedBounceCase(AR::CheckSession& t, const fs::path& tempRoot) {
                 "(unified legacy Sinc64Interpolator; pre-2E bounce measured 87.8 dB)\n",
                 fit.sinadDb, fullFit.sinadDb);
     t.expect("isolated bounce: output is present and level-true (fit amplitude)",
-             std::abs(AR::toDb(fit.amplitude / (kAmp * PanLaw::kEqualPowerCenterGain))) < 0.1,
-             "ampDb=" + std::to_string(AR::toDb(fit.amplitude / (kAmp * PanLaw::kEqualPowerCenterGain))));
+             std::abs(AR::toDb(fit.amplitude / (kAmp * kSessionCenterGain))) < 0.1,
+             "ampDb=" + std::to_string(AR::toDb(fit.amplitude / (kAmp * kSessionCenterGain))));
     // UNIFIED (Phase 2E): the bounce must deliver mainline-class quality, not the
     // pre-unification Turbo floor (was 87.8 dB; mainline measured 146.5-153.9 dB).
     t.expect("isolated bounce: 1 kHz residual SINAD > 140 dB (mainline kernel)", fit.sinadDb > 140.0,
@@ -743,7 +747,7 @@ void runExportParityCases(AR::CheckSession& t, const fs::path& tempRoot) {
 
         // The artifact level in the exported FILE (what the user's bounced audio
         // actually contains). Must match the realtime measurement to 0.1 dB.
-        const double panGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+        const double panGain = kSessionCenterGain;
         const double exArtifact =
             AR::toDb(AR::toneAmplitude(exported, 0, p.artifactHz, kWinSkip, winEnd) / (kAmp * panGain));
         const double rtArtifact =
@@ -827,12 +831,13 @@ void runPreviewCases(AR::CheckSession& t, const fs::path& tempRoot) {
         // Skip the preview fade-in, measure the steady interior.
         const uint32_t winStart = 4800;
         const uint32_t winEnd = out.frames() - 256;
-        // dBc reference: the DELIVERED input level. PreviewEngine applies
-        // gain(0 dB) * PanLaw::kEqualPowerCenterGain (PreviewEngine.cpp:292), so a
-        // full-level probe arrives at kAmp * 0.7071. Normalizing by the measured
-        // primary instead would inflate the image figure by Cubic's own HF droop
-        // (~5 dB at 21 kHz) and stop matching Phase 1's dBc-vs-input convention.
-        const double deliveredAmp = kAmp * static_cast<double>(PanLaw::kEqualPowerCenterGain);
+        // dBc reference: the DELIVERED input level. PreviewEngine applies the
+        // unit centre gain (stereo-balance law since the strip pan-law fix,
+        // PreviewEngine.cpp), so a full-level probe arrives at kAmp. Normalizing
+        // by the measured primary instead would inflate the image figure by
+        // Cubic's own HF droop (~5 dB at 21 kHz) and stop matching Phase 1's
+        // dBc-vs-input convention.
+        const double deliveredAmp = kAmp * kSessionCenterGain;
         const double primaryHz = c.downsampling ? c.artifactHz : c.probeHz;
         const double primaryAmp = AR::toneAmplitude(out, 0, primaryHz, winStart, winEnd);
         const double artifactAmp = AR::toneAmplitude(out, 0, c.artifactHz, winStart, winEnd);
@@ -1018,7 +1023,7 @@ void runEngineDefaultContrast(AR::CheckSession& t) {
     auto tm = buildSession("cubicContrast", clip, cfg);
     const AR::Signal out =
         renderSessionRealtime(tm, cfg, outClipFrames + 4800, Interp::InterpolationQuality::Cubic);
-    const double panGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const double panGain = kSessionCenterGain;
     const double artifactDbc =
         AR::toDb(AR::toneAmplitude(out, 0, p.artifactHz, kWinSkip, outClipFrames - kWinSkip) / (kAmp * panGain));
     std::printf("[MEASURE] session Cubic 44.1->48 image at %.0f Hz = %.2f dBc (isolated Phase-1: -7.2 dBc, "

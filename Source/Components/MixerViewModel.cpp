@@ -115,6 +115,46 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                m_master->trimDb);
     }
 
+    if (m_master) {
+        // Master strip is a plugin host like any other channel (triage
+        // 2026-08-14): wire the engine-side Master MixerChannel so the
+        // existing insert paths (add/remove/bypass/mix/ordering) work
+        // unchanged, and sync its insert slots into the view model. Hoisted
+        // out of the continuous-params guard: insert-chain sync does not read
+        // continuous params, and gating on them left master unwired (and
+        // master inserts silently no-oping) whenever the buffer was absent.
+        if (auto* masterChannel = trackManager.getMasterChannel()) {
+            m_master->channel = masterChannel;
+            if (m_master->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
+                m_master->inserts.resize(Audio::EffectChain::MAX_SLOTS);
+            }
+            auto& chain = masterChannel->getEffectChain();
+            int fxCount = 0;
+            for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
+                const auto* slot = chain.getSlot(i);
+                auto& vm = m_master->inserts[i];
+                const bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
+                // The chain is authoritative either way: the engine either
+                // confirmed the removal (no plugin) or a plugin occupies the
+                // slot again (re-add before confirmation, or a failed
+                // removal). Clear the optimistic flag and show the live state.
+                vm.pendingRemoval = false;
+                if (hasPlugin) {
+                    ++fxCount;
+                    vm.isEmpty = false;
+                    vm.name = slot->plugin->getInfo().name;
+                    if (vm.name.empty()) vm.name = "Plugin";
+                    vm.bypassed = slot->bypassed.load();
+                    vm.mix = slot->dryWetMix.load();
+                } else {
+                    vm.isEmpty = true;
+                    vm.name.clear();
+                }
+            }
+            m_master->fxCount = fxCount;
+        }
+    }
+
     // Build set of current track IDs for quick lookup
     std::unordered_map<uint32_t, size_t> existingIds;
     
@@ -324,9 +364,18 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                               vm.isEmpty = true;
                               vm.name.clear();
                           } else {
-                              // Still waiting for engine, force empty UI
-                              vm.isEmpty = true;
-                              vm.name.clear(); // Optional: show "Removing..."
+                              // A plugin occupied this slot again — either the
+                              // user re-added before the engine confirmed the
+                              // removal, or the removal failed. The chain is
+                              // authoritative: show the live plugin instead of
+                              // pinning "Removing..." forever (delete -> re-add
+                              // used to leave the insert area stuck red).
+                              vm.pendingRemoval = false;
+                              vm.isEmpty = false;
+                              vm.name = slot->plugin->getInfo().name;
+                              if (vm.name.empty()) vm.name = "Plugin";
+                              vm.bypassed = slot->bypassed.load();
+                              vm.mix = slot->dryWetMix.load();
                           }
                     } else {
                         // Normal Sync

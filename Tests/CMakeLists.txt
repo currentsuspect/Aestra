@@ -1834,6 +1834,36 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Panel resize/layout regression (triage 2026-08-14): audio clip editor
+# waveform/card overlap + slider widths, Arsenal row label bounds.
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(PanelResizeLayoutTest
+        AestraUI/PanelResizeLayoutTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
+    )
+    target_link_libraries(PanelResizeLayoutTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PanelResizeLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PanelResizeLayoutTest COMMAND PanelResizeLayoutTest)
+    set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+else()
+    message(STATUS "PanelResizeLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # Floating panels must only raise themselves on presses inside their bounds:
 # the overlay forwards every press to every visible panel, so a transport-bar
 # click must not pop panels to the front (the Arsenal-mode double-stop bug).

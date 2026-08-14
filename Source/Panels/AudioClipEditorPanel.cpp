@@ -29,7 +29,13 @@ namespace Audio {
 
 namespace {
 constexpr float kMinPanelWidth = 660.0f;
-constexpr float kMinPanelHeight = 540.0f;
+// Minimum height that keeps the waveform region usable. The layout runs on
+// the surface (panel height minus the 28px WindowPanel title bar); the
+// controls card starts at surfaceBottom - kControlsCardHeight - 8 - 14 and
+// the waveform top is at surfaceY + 130, so a 64px waveform needs a surface
+// of 458px, i.e. a panel of 486px. 490 leaves ~96px of waveform and
+// guarantees the card can never overlap the waveform (triage 2026-08-14).
+constexpr float kMinPanelHeight = 490.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
 constexpr float kControlsCardHeight = 242.0f;
@@ -696,19 +702,40 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const float waveformSectionTop = bounds.y + 108.0f;
     const float waveformTop = waveformSectionTop + 22.0f;
     const float waveformBottom = controlsTop - 14.0f;
-    const float waveformHeight = std::max(64.0f, waveformBottom - waveformTop);
-    m_waveform->setBounds({bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, waveformHeight});
+    // Never let the waveform grow into the controls card: clamp to zero and
+    // hide it below the 64px usability floor instead (triage 2026-08-14).
+    // The old max(64, ...) painted the waveform over the card's top edge.
+    const float waveformHeight = std::max(0.0f, waveformBottom - waveformTop);
+    const bool waveformUsable = waveformHeight >= 64.0f;
+    m_waveform->setVisible(waveformUsable);
+    if (waveformUsable) {
+        m_waveform->setBounds({bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, waveformHeight});
+    } else {
+        m_waveform->setBounds({});
+    }
     m_waveformTitleLabel->setBounds({bounds.x + pad + 9.0f, waveformSectionTop, 110.0f, 14.0f});
     m_waveformHintLabel->setBounds({bounds.x + pad, waveformSectionTop, contentWidth - 4.0f, 14.0f});
 
-    m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, contentWidth, 14.0f});
+    m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, 96.0f, 14.0f});
     const float buttonGap = 6.0f;
     const float actionY = controlsTop + 8.0f;
     const float actionH = 26.0f;
-    float actionX = bounds.x + pad;
+    // The CLIP ACTIONS label owns the first 96px; the action row starts after
+    // it and shrinks proportionally when the panel is narrow, instead of the
+    // old fixed-width row that collided below ~574px (triage 2026-08-14).
+    const float resetWidth = 104.0f;
+    float actionX = bounds.x + pad + 104.0f;
+    float totalRequired = buttonGap * 4.0f + 78.0f + 78.0f + 78.0f + 88.0f +
+                          (m_makeUniqueButton->isVisible() ? 92.0f : 0.0f);
+    const float available = (bounds.right() - pad - resetWidth) - actionX;
+    const float scale = totalRequired > 0.0f ? std::clamp(available / totalRequired, 0.0f, 1.0f) : 1.0f;
     const auto placeAction = [&](const std::shared_ptr<NUIButton>& button, float width) {
-        button->setBounds({actionX, actionY, width, actionH});
-        actionX += width + buttonGap;
+        // No width floor: the proportional shrink keeps the row inside the
+        // available band at every panel width (a floor here would overflow
+        // into the Reset button when the panel is forced very narrow).
+        const float w = width * scale;
+        button->setBounds({actionX, actionY, w, actionH});
+        actionX += w + buttonGap * scale;
     };
     placeAction(m_reverseButton, 78.0f);
     placeAction(m_commitButton, 78.0f);
@@ -716,14 +743,15 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     placeAction(m_muteButton, 88.0f);
     if (m_makeUniqueButton->isVisible())
         placeAction(m_makeUniqueButton, 92.0f);
-    const float resetWidth = 104.0f;
     m_resetButton->setBounds({bounds.right() - pad - resetWidth, actionY, resetWidth, actionH});
 
     const float columnGap = 30.0f;
     const float columnWidth = (contentWidth - columnGap) * 0.5f;
     const float labelWidth = 58.0f;
     const float valueWidth = 116.0f;
-    const float sliderWidth = columnWidth - labelWidth - valueWidth - 18.0f;
+    // Floor at zero: a negative slider width produced inverted bounds that
+    // rendered as malformed controls on narrow panels (triage 2026-08-14).
+    const float sliderWidth = std::max(0.0f, columnWidth - labelWidth - valueWidth - 18.0f);
     const auto layoutControl = [&](float x, float y, const auto& label, const auto& slider, const auto& value) {
         label->setBounds({x, y + 5.0f, labelWidth, 16.0f});
         slider->setBounds({x + labelWidth, y, sliderWidth, 24.0f});

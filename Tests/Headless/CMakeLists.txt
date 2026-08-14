@@ -409,6 +409,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
     )
 endif()
 
+# Master-direct vs channel-routed level parity (triage 2026-08-14)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingMasterDirectParityTest.cpp")
+    add_executable(RoutingMasterDirectParityTest RoutingMasterDirectParityTest.cpp)
+    target_link_libraries(RoutingMasterDirectParityTest PRIVATE AestraAudio)
+    target_include_directories(RoutingMasterDirectParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME RoutingMasterDirectParityTest COMMAND RoutingMasterDirectParityTest)
+    set_tests_properties(RoutingMasterDirectParityTest PROPERTIES
+        LABELS "headless;routing;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC disable-clears-compensation regression (#684)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
     add_executable(PDCDisableClearsCompensationTest PDCDisableClearsCompensationTest.cpp)

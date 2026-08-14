@@ -1067,7 +1067,7 @@ void AestraContent::setupArsenalPanels() {
         setDirty(true);
     });
     m_audioClipEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
-    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 430.0f);
+    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 490.0f);
     m_audioClipEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         m_sampleEditorRect = clampRectToAllowed(proposed, computeAllowedRectForPanels());
         if (m_audioClipEditorPanel)
@@ -1816,7 +1816,7 @@ void AestraContent::onResize(int width, int height) {
         (m_audioClipEditorPanel && m_audioClipEditorPanel->isVisible())) {
         if (m_sampleEditorRect.x == 0.0f && m_sampleEditorRect.y == 0.0f) {
             m_sampleEditorRect.width = std::min(700.0f, allowed.width);
-            m_sampleEditorRect.height = std::min(430.0f, allowed.height);
+            m_sampleEditorRect.height = std::min(500.0f, allowed.height);
             m_sampleEditorRect.x = allowed.x + (allowed.width - m_sampleEditorRect.width) * 0.5f;
             m_sampleEditorRect.y = allowed.y + (allowed.height - m_sampleEditorRect.height) * 0.5f;
         }
@@ -3418,20 +3418,6 @@ void AestraContent::addDemoTracks() {
             // Cycle the shared track palette so the lane strip matches the
             // name ink and mixer tint derived from the same index.
             lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
-
-            if (i == 1) {
-                AutomationCurve vol("Volume", AutomationTarget::Volume);
-                if (const auto* channel = m_trackManager->getChannel(static_cast<size_t>(i - 1))) {
-                    vol.mixerChannelId = channel->getChannelId();
-                }
-                vol.setDefaultValue(0.8);
-                double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Demo values
-                vol.addPoint(0.0, 0.5, samplesPerBeat, 0.5f);
-                vol.addPoint(4.0, 1.0, samplesPerBeat, 0.5f);
-                vol.addPoint(8.0, 0.2, samplesPerBeat, 0.5f);
-                vol.addPoint(12.0, 0.8, samplesPerBeat, 0.5f);
-                lane->automationCurves.push_back(vol);
-            }
         }
     }
 

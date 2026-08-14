@@ -235,9 +235,9 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
     return captured;
 }
 
-// Render a source through N centred mixer destinations before Master. The
-// first channel still uses the source pan law; every destination is balancing
-// an already-stereo route and must not add another centre attenuation.
+// Render a source through N centred mixer destinations before Master. Every
+// strip uses the stereo-balance law: an already-stereo route must not add a
+// centre attenuation at any hop, so hop count cannot change the level.
 std::vector<float> renderMainChain(size_t destinationCount) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));

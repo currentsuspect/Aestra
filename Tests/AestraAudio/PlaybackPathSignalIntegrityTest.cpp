@@ -28,7 +28,7 @@ constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kFrames = 4096;
 constexpr uint32_t kBlockFrames = 2048;
-constexpr float kCenterPanLawGain = Aestra::Audio::PanLaw::kEqualPowerCenterGain;
+constexpr float kCenterPanLawGain = 1.0f; // stereo-balance law: unity at centre (strip pan-law fix 2026-08-14)
 
 void writeUint32(std::ofstream& out, uint32_t value) {
     out.put(static_cast<char>(value & 0xFF));
@@ -152,7 +152,11 @@ void previewMatchesCenteredTrackGainBelowLimiter(const fs::path& path, float dec
 
 void previewLimiterChangesBoostedHotMaterialButAuditionBypassDoesNot(const fs::path& path, float decodedSample) {
     const float audition = renderAuditionAverageTail(path);
-    const float preview = renderPreviewAverageTail(path, 3.0f);
+    // Preview gain is unity at centre since the strip pan-law fix
+    // (2026-08-14), so the old "+3 dB boost" scenario (10^(3/20) * 0.7071 =
+    // ~1.0 effective level) is now exactly 0 dB — same effective input, same
+    // limiter engagement.
+    const float preview = renderPreviewAverageTail(path, 0.0f);
 
     assert(std::abs(audition - decodedSample * kCenterPanLawGain) < 2.0e-4f);
     assert(preview > 0.85f);

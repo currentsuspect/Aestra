@@ -125,7 +125,7 @@ void UIRoutingMap::rebuildGraph() {
         masterNode.type = Node::Master;
         masterNode.label = "MASTER";
         masterNode.color = 0xFF808080;
-        masterNode.insertCount = 0;
+        masterNode.insertCount = master->fxCount;
         m_nodes.push_back(masterNode);
     }
 

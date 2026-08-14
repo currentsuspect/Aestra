@@ -135,7 +135,18 @@ void drawArsenalChip(AestraUI::NUIRenderer& renderer,
     const float chipRadius = AestraUI::NUIThemeManager::getInstance().getCurrentTheme().radiusS + 1.0f;
     renderer.fillRoundedRect(rect, chipRadius, fill);
     renderer.strokeRoundedRect(rect, chipRadius, 1.0f, stroke);
-    renderer.drawTextCentered(text, rect, fontSize, textColor);
+    // Truncate long labels (e.g. "16 Steps · Pitched" in a 62px chip) instead
+    // of letting the text bleed outside the chip (triage 2026-08-14).
+    std::string fitted = text;
+    const float maxWidth = std::max(8.0f, rect.width - 8.0f);
+    if (renderer.measureText(fitted, fontSize).width > maxWidth) {
+        constexpr const char* ellipsis = "...";
+        while (!fitted.empty() && renderer.measureText(fitted + ellipsis, fontSize).width > maxWidth) {
+            fitted.pop_back();
+        }
+        fitted = fitted.empty() ? ellipsis : fitted + ellipsis;
+    }
+    renderer.drawTextCentered(fitted, rect, fontSize, textColor);
 }
 } // namespace
 
@@ -662,11 +673,18 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     }
 
     const float textX = iconX + 28.0f;
-    renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS,
-                      theme.getColor("textPrimary").withAlpha(0.96f));
-    if (!selectedName.empty()) {
-        renderer.drawText(selectedName, {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
-                          theme.getColor("textSecondary").withAlpha(0.70f));
+    // Clip the name band at the FIT/ADD controls so long names cannot bleed
+    // underneath them when the panel is narrow (triage 2026-08-14).
+    const float textMaxX = m_fitToggleRect.width > 0.0f ? m_fitToggleRect.x - 8.0f : m_commandHeaderRect.right() - 8.0f;
+    if (textMaxX > textX) {
+        renderer.setClipRect({textX, m_commandHeaderRect.y + 8.0f, textMaxX - textX, 36.0f});
+        renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS,
+                          theme.getColor("textPrimary").withAlpha(0.96f));
+        if (!selectedName.empty()) {
+            renderer.drawText(selectedName, {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
+                              theme.getColor("textSecondary").withAlpha(0.70f));
+        }
+        renderer.clearClipRect();
     }
 
     // View toggle: reflects current mode (accent = Fit, muted = Scroll).

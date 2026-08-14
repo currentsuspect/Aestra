@@ -702,7 +702,48 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             master.set("destinationType", JSON("master"));
             master.set("mixerChannelId", JSON(0.0));
             master.set("stableIdentityAvailable", JSON(true));
-            master.set("insertChainAvailable", JSON(false));
+            if (auto* masterChannel = m_trackManager->getMasterChannel()) {
+                master.set("insertChainAvailable", JSON(true));
+                const auto& masterChain = masterChannel->getEffectChain();
+                JSON pluginSlots = JSON::array();
+                for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
+                    JSON position = JSON::object();
+                    position.set("mixerChannelId", JSON(0.0));
+                    position.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+
+                    JSON slot = JSON::object();
+                    slot.set("slotIndex", JSON(static_cast<double>(slotIndex)));
+                    slot.set("stableIdentityAvailable", JSON(false));
+                    slot.set("positionalIdentityAvailable", JSON(true));
+                    slot.set("position", position);
+
+                    if (auto plugin = masterChain.getPlugin(slotIndex)) {
+                        slot.set("state", JSON("active"));
+                        slot.set("pluginId", JSON(plugin->getInfo().id));
+                        slot.set("pluginName", JSON(plugin->getInfo().name));
+                        slot.set("bypassed", JSON(masterChain.isSlotBypassed(slotIndex)));
+                    } else {
+                        const std::string missingPluginId = masterChain.getMissingPluginId(slotIndex);
+                        if (!missingPluginId.empty()) {
+                            slot.set("state", JSON("missing_plugin_placeholder"));
+                            slot.set("pluginId", JSON(missingPluginId));
+                            slot.set("placeholderPreserved", JSON(true));
+                        } else {
+                            slot.set("state", JSON("empty"));
+                        }
+                    }
+                    pluginSlots.push(slot);
+                }
+
+                JSON insertChain = JSON::object();
+                insertChain.set("slotCount", JSON(static_cast<double>(EffectChain::MAX_SLOTS)));
+                insertChain.set("identityKind", JSON("positional"));
+                insertChain.set("stableSlotIdentityAvailable", JSON(false));
+                insertChain.set("slots", pluginSlots);
+                master.set("insertChain", insertChain);
+            } else {
+                master.set("insertChainAvailable", JSON(false));
+            }
             destinations.push(master);
 
             for (size_t channelIndex = 0; channelIndex < channels.size(); ++channelIndex) {

@@ -2087,15 +2087,38 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // This ensures release is processed even when mouse has moved far outside bounds
     if (m_playlistMode == PlaylistMode::Automation && m_isDraggingPoint) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            // Compare the dragged point against its drag-start value BEFORE
+            // the index is cleared. A plain click-select (no movement) must
+            // not dirty the project; a real move must rebuild the graph so
+            // playback follows the edit.
+            bool moved = false;
+            if (m_trackManager && m_dragStartBeat >= 0.0 && m_draggedPointIndex >= 0) {
+                if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+                    if (!lane->automationCurves.empty()) {
+                        const auto& pts = lane->automationCurves[0].getPoints();
+                        if (m_draggedPointIndex < static_cast<int>(pts.size())) {
+                            const auto& pt = pts[static_cast<size_t>(m_draggedPointIndex)];
+                            moved = std::abs(pt.beat - m_dragStartBeat) >= 1e-9 ||
+                                    std::abs(pt.value - m_dragStartValue) >= 1e-9f;
+                        }
+                    }
+                }
+            }
             m_isDraggingPoint = false;
             m_draggedPointIndex = -1;
             m_draggedCurveIndex = -1;
-            
+            m_dragStartBeat = -1.0;
+            m_dragStartValue = -1.0f;
+
             // Release mouse capture
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                 if (auto win = parentMgr->getPlatformWindow()) {
                     win->setMouseCapture(false);
                 }
+            }
+            if (moved && m_trackManager) {
+                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                m_trackManager->markModified();
             }
             return true;
         }
@@ -2110,7 +2133,29 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto& playlist = m_trackManager->getPlaylistModel();
             auto lane = playlist.getLane(m_laneId);
 
-            if (lane && !lane->automationCurves.empty()) {
+            if (lane) {
+                // Left-press only: right-click is the delete gesture, and a
+                // right-click on empty space must not mutate the model.
+                const bool isLeftPress =
+                    event.pressed && event.button == AestraUI::NUIMouseButton::Left;
+                if (isLeftPress && lane->automationCurves.empty()) {
+                    // First point on an empty lane: create the default Volume
+                    // curve bound to this lane's paired mixer channel (the
+                    // same lane-index -> channel pairing the serializer uses).
+                    // defaultValue 1.0 keeps an empty curve neutral — the old
+                    // default of 0.0 silenced the channel until a point was
+                    // added. Press-only: pointer moves (hover) must not
+                    // insert a curve into the project model.
+                    AutomationCurve curve("Volume", AutomationTarget::Volume);
+                    curve.setDefaultValue(1.0f);
+                    if (const auto* ch = m_trackManager->getChannel(static_cast<size_t>(lane->index))) {
+                        curve.mixerChannelId = ch->getChannelId();
+                    }
+                    lane->automationCurves.push_back(std::move(curve));
+                }
+                if (lane->automationCurves.empty()) {
+                    return true;
+                }
                 auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
 
                 // Right Click -> Delete Point
@@ -2125,6 +2170,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             setDirty(true);
                             repaint();
                             if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
+                            if (m_trackManager) {
+                                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                                m_trackManager->markModified();
+                            }
                             return true;
                         }
                     }
@@ -2148,6 +2197,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_isDraggingPoint = true;
                         m_draggedPointIndex = hitIndex;
                         m_draggedCurveIndex = 0;
+                        m_dragStartBeat = curve.getPoints()[static_cast<size_t>(hitIndex)].beat;
+                        m_dragStartValue = curve.getPoints()[static_cast<size_t>(hitIndex)].value;
                         
                         // Capture mouse
                         if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
@@ -2167,6 +2218,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         setDirty(true);
                         repaint(); // Immediate update
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
+                        if (m_trackManager) {
+                            m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                            m_trackManager->markModified();
+                        }
                         
                         // Start dragging the new point
                         auto& pts = curve.getPoints();
@@ -2175,6 +2230,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 m_isDraggingPoint = true;
                                 m_draggedPointIndex = i;
                                 m_draggedCurveIndex = 0;
+                                m_dragStartBeat = pts[static_cast<size_t>(i)].beat;
+                                m_dragStartValue = pts[static_cast<size_t>(i)].value;
                                 
                                 // Capture mouse
                                 if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
@@ -2659,12 +2716,6 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
     
     // Automation Area bounds (exclude controls)
     AestraUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
-    
-    // For now, if no curves exist, let's create a default volume curve for testing (DELEEME LATER)
-    if (lane->automationCurves.empty()) {
-        // Just for demo purposes in this task
-        // lane->automationCurves.push_back(AutomationCurve("Volume"));
-    }
 
     for (const auto& curve : lane->automationCurves) {
         if (!curve.isVisible()) continue;

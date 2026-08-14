@@ -511,8 +511,10 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
 
     // Match the main engine's centered-track reference gain. Audition is a
     // separate listening surface, but bypass should not be louder than placing
-    // the same file on a default centered track.
-    const float outputGain = m_volume.load(std::memory_order_relaxed) * PanLaw::kEqualPowerCenterGain;
+    // the same file on a default centered track. The strips use the
+    // stereo-balance law (unity at centre, strip pan-law fix 2026-08-14), so
+    // the old equal-power centre factor is gone.
+    const float outputGain = m_volume.load(std::memory_order_relaxed);
     if (outputGain != 1.0f) {
         for (uint32_t i = 0; i < numFrames * numChannels; ++i) {
             output[i] *= outputGain;
