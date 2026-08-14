@@ -2134,10 +2134,11 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto lane = playlist.getLane(m_laneId);
 
             if (lane) {
-                const bool isPressEvent = event.pressed &&
-                                          (event.button == AestraUI::NUIMouseButton::Left ||
-                                           event.button == AestraUI::NUIMouseButton::Right);
-                if (isPressEvent && lane->automationCurves.empty()) {
+                // Left-press only: right-click is the delete gesture, and a
+                // right-click on empty space must not mutate the model.
+                const bool isLeftPress =
+                    event.pressed && event.button == AestraUI::NUIMouseButton::Left;
+                if (isLeftPress && lane->automationCurves.empty()) {
                     // First point on an empty lane: create the default Volume
                     // curve bound to this lane's paired mixer channel (the
                     // same lane-index -> channel pairing the serializer uses).

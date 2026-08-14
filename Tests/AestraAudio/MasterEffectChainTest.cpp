@@ -204,6 +204,7 @@ std::vector<float> render(const std::shared_ptr<TrackManager>& tm, uint32_t bloc
         engine.setChannelSlotMap(slotMap);
     }
     engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm));
+    require(engine.initialize(), "AudioEngine::initialize failed");
     engine.setSafetyLimiterEnabled(false);
     engine.setTransportPlaying(true);
 

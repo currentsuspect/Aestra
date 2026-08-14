@@ -3348,6 +3348,11 @@ void AudioEngine::panic() {
                 channel->resetEffectChain();
             }
         }
+        // The Master strip hosts plugins too — a panic must reset them
+        // alongside every channel chain.
+        if (auto* master = trackMgr->getMasterChannel()) {
+            master->resetEffectChain();
+        }
     }
 
     // 3. [FIX] Reset all Arsenal unit samplers (kill playing voices)
