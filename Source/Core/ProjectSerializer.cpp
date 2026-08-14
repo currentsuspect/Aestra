@@ -981,10 +981,12 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
-                    // Plugin-parameter address (older builds ignore unknown keys;
-                    // loads without them default to slot 0 / param 0).
+                    // Plugin-parameter address. instanceId is the authoritative
+                    // decimal-string identity (Automation Identity Contract);
+                    // slot stays for older-build compatibility and v1 readers.
                     cj.set("slot", JSON(static_cast<double>(curve.effectSlot)));
                     cj.set("paramId", JSON(static_cast<double>(curve.paramId)));
+                    cj.set("instanceId", JSON(std::to_string(curve.deviceInstanceId)));
                 }
 
                 JSON ptsJson = JSON::array();
@@ -2126,6 +2128,31 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             // slot to the effect-chain size, paramId defensively.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
                             curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
+                            // Automation Identity Contract: a v2 curve carries
+                            // its exact instance id. A v1 curve (no key)
+                            // migrates exactly once: the slot's minted instance
+                            // id, resolved against the already-loaded chains.
+                            // Empty slots yield 0 — the curve is preserved as
+                            // dangling (diagnostic), never re-pointed.
+                            if (aj[a].has("instanceId") && aj[a]["instanceId"].isString()) {
+                                try {
+                                    curve.deviceInstanceId = std::stoull(aj[a]["instanceId"].asString());
+                                } catch (const std::exception&) {
+                                    curve.deviceInstanceId = 0;
+                                }
+                            } else if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
+                                if (auto* targetChannel = trackManager->getChannelById(curve.mixerChannelId)) {
+                                    curve.deviceInstanceId =
+                                        targetChannel->getEffectChain().getSlotInstanceId(curve.effectSlot);
+                                }
+                                if (curve.deviceInstanceId == 0) {
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' targets an empty insert slot; preserved as dangling.",
+                                        "[ProjectLoad] Additional dangling automation curve warnings suppressed.");
+                                }
+                            }
 
                             if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
                             const JSON& pts = aj[a]["points"];

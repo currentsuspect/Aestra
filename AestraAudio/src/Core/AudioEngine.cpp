@@ -2983,12 +2983,20 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                 // and manual edits share one smoother and never cascade into
                 // double-smoothing. Every internal effect honors this (Drift
                 // was the last to gain per-sample Mix/Pitch smoothing).
-                if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
-                    const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
-                    if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
-                        const float value = curve.getValueAtBeat(currentBeat);
-                        if (std::isfinite(value)) {
-                            slot.plugin->setParameter(curve.paramId, value);
+                // Automation Identity Contract: resolve by instance id, never
+                // by slot position. A curve whose instance is gone (dangling)
+                // is skipped — it is never re-pointed at whatever now occupies
+                // a slot.
+                if (track.effectChainSnapshot && curve.deviceInstanceId != 0) {
+                    const size_t slotIndex =
+                        track.effectChainSnapshot->findSlotByInstanceId(curve.deviceInstanceId);
+                    if (slotIndex < EffectChainSnapshot::MAX_SLOTS) {
+                        const auto& slot = track.effectChainSnapshot->slot(slotIndex);
+                        if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
+                            const float value = curve.getValueAtBeat(currentBeat);
+                            if (std::isfinite(value)) {
+                                slot.plugin->setParameter(curve.paramId, value);
+                            }
                         }
                     }
                 }

@@ -642,6 +642,7 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
             continue;
         }
 
+
         float dryWet = slot.dryWetMix;
 
         const PluginInfo& pluginInfo = plugin->getInfo();
