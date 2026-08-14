@@ -2519,8 +2519,7 @@ float AudioEngine::processTrackEffects(const TrackRenderState& track, uint32_t t
 
 void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t trackIdx, uint32_t slot, TrackRTState& state,
                                    std::vector<double>& buffer, const RenderContext& ctx, double volTarget,
-                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible,
-                                   bool receivesAudibleRoute) {
+                                   double panTarget, float trackSidechainPeak, bool muted, bool audibleEligible) {
     // Verbatim output stage moved out of renderTrack(): plugin-delay
     // compensation, routing to master/destination + sends (with the peak/RMS
     // accumulation interleaved in the mix loop), and the meter snapshot write.
@@ -2584,12 +2583,14 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     }
 
     // Route post-fader output to the selected main destination and any audible sends.
+    // Pan law: stereoBalance, always. equalPower (-3 dB per leg at centre) is the
+    // law for placing a MONO source in a stereo field; applying it to the strip
+    // attenuated already-stereo content by -3.01 dB and made a channel's own
+    // level depend on whether it happens to receive an audible route (the old
+    // receivesAudibleRoute conditional). Direct-to-Master clips never passed a
+    // strip, so channel-routed music was quieter than Master-routed music.
     double tL, tR;
-    if (receivesAudibleRoute) {
-        fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
-    } else {
-        fastPanGainsD(panTarget, volTarget, tL, tR);
-    }
+    fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
     state.gainL.setTarget(tL);
     state.gainR.setTarget(tR);
     if (m_offlineRenderActive.load(std::memory_order_relaxed)) {
@@ -2887,12 +2888,18 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
         }
     }
 
-    const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
+    // Gain staging: the channel strip is driven by track.volume (the mixer
+    // fader, written by SetVolumeCommand/undo and the project loader) and the
+    // trim knob (continuous slot). The continuous faderDb/panParam mirrors are
+    // deliberately NOT multiplied here — one UI gesture used to write both
+    // stores, which squared every non-unity fader position and summed pan
+    // twice (e.g. UI -6 dB became -12 dB actual). The continuous buffer keeps
+    // its role for the master strip (slot 127) and for UI display sync.
     const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-    const double gain = dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+    const double gain = dbToLinearD(trimDbClamped);
 
     double volTarget = static_cast<double>(track.volume) * gain;
-    double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
+    double panTarget = clampD(static_cast<double>(track.pan), -1.0, 1.0);
 
     // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
     // interpolates on point beats directly, so tempo changes and UI point
@@ -3004,10 +3011,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     // Output stage (PDC + routing/sends + metering) — verbatim extraction,
     // see mixAndMeterTrack() directly above.
-    const bool receivesAudibleRoute =
-        orderedIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[orderedIndex].empty();
     mixAndMeterTrack(track, trackIdx, slot, state, buffer, ctx, volTarget, panTarget, trackSidechainPeak, muted,
-                     audibleEligible, receivesAudibleRoute);
+                     audibleEligible);
 }
 
 void AudioEngine::prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId) {

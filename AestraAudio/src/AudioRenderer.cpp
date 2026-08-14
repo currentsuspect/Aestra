@@ -377,21 +377,20 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
                 float panParam = 0.0f;
                 float trimDb = 0.0f;
                 continuous->read(slot, faderDb, panParam, trimDb);
-                const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
+                // Same gain staging as the live path: the fader is
+                // track.volume, trim lives in the continuous slot. The
+                // continuous faderDb/panParam are display mirrors only.
                 const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-                volTarget *= dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
-                panTarget = clampD(panTarget + static_cast<double>(panParam), -1.0, 1.0);
+                volTarget *= dbToLinearD(trimDbClamped);
             }
         }
 
+        // stereoBalance, always: equalPower would attenuate stereo content by
+        // -3.01 dB at centre and make a channel's own level depend on whether
+        // it receives an audible route. Matches the live path and the
+        // direct-to-Master reference (which applies no strip pan law).
         double gainL, gainR;
-        const bool receivesAudibleRoute =
-            track.trackIndex < graph.audibleIncoming.size() && !graph.audibleIncoming[track.trackIndex].empty();
-        if (receivesAudibleRoute) {
-            fastStereoBalanceGainsD(panTarget, volTarget, gainL, gainR);
-        } else {
-            fastPanGainsD(panTarget, volTarget, gainL, gainR);
-        }
+        fastStereoBalanceGainsD(panTarget, volTarget, gainL, gainR);
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
