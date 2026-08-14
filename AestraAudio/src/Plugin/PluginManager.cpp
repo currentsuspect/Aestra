@@ -187,6 +187,14 @@ PluginInstancePtr PluginManager::createInstance(const PluginInfo& info) {
 PluginInstancePtr PluginManager::createInstanceById(const std::string& pluginId) {
     const PluginInfo* info = findPlugin(pluginId);
     if (!info) {
+        // Internal plugins are registered with the InternalPluginRegistry, which
+        // is the authority for their availability. A project may reference one
+        // registered after the last scan (tests, dynamically added built-ins),
+        // so fall back to the registry directly — still gated by availability.
+        auto& registry = InternalPluginRegistry::instance();
+        if (registry.isRegisteredPlugin(pluginId) && registry.isPluginAvailable(pluginId)) {
+            return registry.createInstance(pluginId);
+        }
         return nullptr;
     }
     return createInstance(*info);
