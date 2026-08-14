@@ -28,9 +28,9 @@ Paths that are covered by tests and verified end to end:
 Aestra also exposes a **scriptable control surface** — see [Muse](#muse-the-control-surface) below.
 
 > **A note on documentation currency.** The narrative documents below lag the code by
-> some margin: the roadmap describes repo state as of January 2026, and `CHANGELOG.md`
-> stops at v0.4.0-alpha in May. Several hundred commits have landed since. Until they are
-> refreshed, `git log` and the test suite are the honest sources, and this section is
+> some margin: the roadmap describes repo state as of January 2026. `CHANGELOG.md` is
+> current through the v0.7.0-alpha milestone, and where a document and the code
+> disagree, `git log` and the test suite are the honest sources — this section is
 > written from them rather than from the documents.
 
 - [docs/technical/testing_ci.md](docs/technical/testing_ci.md) — CI posture and test lanes
