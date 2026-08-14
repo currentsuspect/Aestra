@@ -665,6 +665,12 @@ public:
                     channel->setEffectChainLatencyCallback([this]() { calculateLatencyCompensation(); });
                 }
             }
+            // The Master strip hosts plugins too: its chain latency feeds the
+            // PDC graph (P9/G6), so chain mutations must re-solve.
+            if (auto* master = current->getMasterChannel()) {
+                prepareChannel(*master);
+                master->setEffectChainLatencyCallback([this]() { calculateLatencyCompensation(); });
+            }
             calculateLatencyCompensation();
         }
     }

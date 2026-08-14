@@ -197,7 +197,9 @@ SolvedLatencyTopology solveLatency(const LatencyGraph& graph) {
     }
 
     topology.projectAlignmentLatency = maxAlignment;
-    // P9 (G6) will add master FX + device output to monitoring latency.
+    // P9 (G6): master-FX latency reaches this value through the master node's
+    // intrinsic latency (uniform across all paths). Device output latency
+    // remains parked here as the outstanding P9 piece.
     topology.monitoringLatency = maxAlignment;
 
     return topology;
