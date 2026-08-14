@@ -128,6 +128,47 @@ double rmsRange(const std::vector<float>& interleaved, size_t firstFrame, size_t
     return std::sqrt(sumSq / static_cast<double>(endSample - firstSample));
 }
 
+// Isolated-bounce contract, live half (2026-08-14): solo determines which
+// track content is audible in the live mix, and the master stage obeys the
+// active solo gate like master-routed units. Master clips have no soloable
+// owner (mixerChannelId 0 = Master, never soloed), so ANY active solo
+// silences them. The bounce half (master stage excluded from isolated-track
+// bounce) is pinned in RealtimeExportParityTest.
+void testMasterClipsRespectSolo() {
+    std::printf("[RoutingMasterDirectParityTest] master-routed clips obey the live solo gate...\n");
+    GoldenAudio::SessionConfig cfg;
+    const uint32_t totalFrames = cfg.sampleRate * kSeconds;
+    const std::vector<float> tone = makeTone(totalFrames, cfg.sampleRate);
+
+    // Baseline: no solo -> the master clip is audible.
+    const std::vector<float> noSolo = render(buildSession(0, tone, totalFrames, cfg), cfg);
+    const double noSoloRms = rmsRange(noSolo, static_cast<size_t>(cfg.blockSize) * 4,
+                                      static_cast<size_t>(totalFrames) - 256, cfg.channels);
+    EXPECT_TRUE(noSoloRms > 1e-4);
+    if (noSoloRms <= 1e-4) {
+        return;
+    }
+
+    // Another track soloed -> the master clip must be silent (the soloed
+    // track has no clips, so the whole output is silent).
+    auto soloSession = buildSession(0, tone, totalFrames, cfg);
+    auto* soloChannel = soloSession->getChannel(0);
+    EXPECT_TRUE(soloChannel != nullptr);
+    if (!soloChannel) {
+        return;
+    }
+    soloChannel->setSolo(true);
+    const std::vector<float> soloOut = render(soloSession, cfg);
+    const double soloRms = rmsRange(soloOut, static_cast<size_t>(cfg.blockSize) * 4,
+                                    static_cast<size_t>(totalFrames) - 256, cfg.channels);
+    EXPECT_TRUE(soloRms < 1e-5);
+    if (soloRms >= 1e-5) {
+        return;
+    }
+
+    std::printf("[RoutingMasterDirectParityTest] PASS: no-solo rms=%.6f, soloed rms=%.6f\n", noSoloRms, soloRms);
+}
+
 void testMasterDirectMatchesChannelRouted() {
     std::printf("[RoutingMasterDirectParityTest] master-direct clip == channel-routed clip at unity...\n");
     GoldenAudio::SessionConfig cfg;
@@ -187,6 +228,7 @@ int main() {
     std::printf("=== RoutingMasterDirectParityTest (routing/gain BUG-3 triage 2026-08-14) ===\n");
     try {
         testMasterDirectMatchesChannelRouted();
+        testMasterClipsRespectSolo();
     } catch (const std::exception& e) {
         reportFailure("fixture setup", e.what());
     }

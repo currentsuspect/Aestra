@@ -516,6 +516,100 @@ bool runSplitVarispeedParityCase(const SessionConfig& cfg, const fs::path& tempR
     return pass;
 }
 
+// -----------------------------------------------------------------------------
+// Case 6: isolated-track bounce excludes the master stage entirely
+// (isolated-bounce contract, 2026-08-14). A master-routed clip (997 Hz) and a
+// channel clip (440 Hz) share the session; bouncing the channel in isolation
+// must deliver the 440 Hz tone and NOT the 997 Hz master content.
+// -----------------------------------------------------------------------------
+bool runIsolatedBounceExcludesMasterClips(const SessionConfig& cfg, const fs::path& tempRoot) {
+    constexpr double kMasterToneHz = 997.0;
+    constexpr double kChannelToneHz = 440.0;
+    const uint32_t totalFrames = cfg.sampleRate * kSeconds;
+
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+
+    // Channel clip: 440 Hz sine via the standard harness (routes to channel 1).
+    addAudioTrack(*tm, "ChannelA", makeSine(kChannelToneHz, 0.30f, totalFrames, cfg.sampleRate), totalFrames, cfg);
+
+    // Master clip: same construction but the pattern targets mixerChannelId 0.
+    {
+        auto buffer = std::make_shared<AudioBufferData>();
+        buffer->sampleRate = cfg.sampleRate;
+        buffer->numChannels = cfg.channels;
+        buffer->numFrames = totalFrames;
+        buffer->interleavedData = makeSine(kMasterToneHz, 0.25f, totalFrames, cfg.sampleRate);
+
+        const std::string path =
+            (std::filesystem::temp_directory_path() / "aestra_rt_export_parity_master_clip.wav").string();
+        ClipSourceID sourceId = tm->getSourceManager().createRecordedSource(path, "MasterClip", buffer);
+
+        AudioSlicePayload payload;
+        payload.audioSourceId = sourceId;
+        payload.durationSeconds = static_cast<double>(totalFrames) / cfg.sampleRate;
+        payload.slices.push_back({0.0, payload.durationSeconds, 0.0, static_cast<double>(totalFrames)});
+
+        PlaylistLaneID laneId = tm->getPlaylistModel().createLane("MasterLane");
+        const double durationBeats = payload.durationSeconds * (static_cast<double>(cfg.bpm) / 60.0);
+        PatternID patternId = tm->getPatternManager().createAudioPattern("MasterClip", durationBeats, payload);
+        tm->getPatternManager().setPatternMixerChannel(patternId, 0);
+        const ClipInstanceID clipId = tm->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, durationBeats);
+        if (!tm->getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+            std::cerr << "setClipEdits (master clip) failed\n";
+            return false;
+        }
+    }
+
+    // Isolated-track bounce of the channel (trackId 0).
+    AudioEngine bounceEngine;
+    prepareEngine(bounceEngine, tm, cfg);
+    warmupEngine(bounceEngine, cfg);
+    const fs::path outPath = tempRoot / "parity_isolated_excludes_master.wav";
+    if (!bounceEngine.bounceRangeToWav(0.0, kBeats, outPath.string(), 0)) {
+        std::cerr << "isolated bounceRangeToWav failed\n";
+        return false;
+    }
+    std::vector<float> bounced;
+    uint32_t sr = 0, ch = 0;
+    if (!decodeAudioFile(outPath.string(), bounced, sr, ch)) {
+        std::cerr << "failed to decode isolated bounce\n";
+        return false;
+    }
+    if (sr != cfg.sampleRate || ch != cfg.channels) {
+        std::cerr << "isolated bounce format mismatch\n";
+        return false;
+    }
+
+    // Steady-region correlation with each tone: amplitude estimate via
+    // sine/cosine projection (both tones are separable by construction).
+    const size_t firstFrame = static_cast<size_t>(cfg.blockSize) * 4;
+    const size_t endFrame = static_cast<size_t>(totalFrames) - 256;
+    const auto toneAmplitude = [&](double freq) {
+        double sinAcc = 0.0, cosAcc = 0.0;
+        for (size_t n = firstFrame; n < endFrame; ++n) {
+            const double phase = kTau * freq * static_cast<double>(n) / sr;
+            const double s = static_cast<double>(bounced[n * 2]);
+            sinAcc += s * std::sin(phase);
+            cosAcc += s * std::cos(phase);
+        }
+        const double count = static_cast<double>(endFrame - firstFrame);
+        return 2.0 * std::sqrt(sinAcc * sinAcc + cosAcc * cosAcc) / count;
+    };
+
+    const double channelAmp = toneAmplitude(kChannelToneHz);
+    const double masterAmp = toneAmplitude(kMasterToneHz);
+    const bool pass = channelAmp > 0.15 && masterAmp < 0.005;
+    std::cout << (pass ? "[PASS]" : "[FAIL]") << " Isolated_Bounce_Excludes_MasterClips"
+              << " channel440=" << channelAmp << " master997=" << masterAmp << "\n";
+    if (!pass) {
+        std::cerr << "  contract: isolated bounce renders only the selected track's stage;"
+                     " master content must be absent\n";
+    }
+    return pass;
+}
+
+
 } // namespace
 
 int main() {
@@ -541,6 +635,7 @@ int main() {
     for (float speed : {2.0f, 0.5f}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed)) ++failures;
     }
+    if (!runIsolatedBounceExcludesMasterClips(cfg, tempRoot)) ++failures;
     // Pitch cases (#746): pure pitch, pitch cancelling speed, and interplay.
     for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, -12.0f}, {0.5f, 7.0f}}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed, pitch)) ++failures;
