@@ -1067,7 +1067,7 @@ void AestraContent::setupArsenalPanels() {
         setDirty(true);
     });
     m_audioClipEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
-    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 430.0f);
+    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 460.0f);
     m_audioClipEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         m_sampleEditorRect = clampRectToAllowed(proposed, computeAllowedRectForPanels());
         if (m_audioClipEditorPanel)
@@ -1816,7 +1816,7 @@ void AestraContent::onResize(int width, int height) {
         (m_audioClipEditorPanel && m_audioClipEditorPanel->isVisible())) {
         if (m_sampleEditorRect.x == 0.0f && m_sampleEditorRect.y == 0.0f) {
             m_sampleEditorRect.width = std::min(700.0f, allowed.width);
-            m_sampleEditorRect.height = std::min(430.0f, allowed.height);
+            m_sampleEditorRect.height = std::min(470.0f, allowed.height);
             m_sampleEditorRect.x = allowed.x + (allowed.width - m_sampleEditorRect.width) * 0.5f;
             m_sampleEditorRect.y = allowed.y + (allowed.height - m_sampleEditorRect.height) * 0.5f;
         }
