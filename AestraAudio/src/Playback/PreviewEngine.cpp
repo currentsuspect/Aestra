@@ -305,7 +305,10 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
-    const float effectiveGain = gain * PanLaw::kEqualPowerCenterGain;
+    // Unity at centre: the mixer strips use the stereo-balance law (strip
+    // pan-law fix 2026-08-14), so a preview must not add the old -3.01 dB
+    // equal-power centre factor — preview and project playback now agree.
+    const float effectiveGain = gain;
     float blockPreviewPeak = 0.0f;
 
     uint32_t i = 0;

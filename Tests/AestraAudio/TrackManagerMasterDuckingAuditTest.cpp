@@ -276,7 +276,7 @@ int main() {
     engine.setPreviewEngine(nullptr);
     engine.setTransportPlaying(false);
 
-    const float expectedCenteredTrackPeak = kTrackSample * 0.70710678118f;
+    const float expectedCenteredTrackPeak = kTrackSample; // stereo-balance law: unity at centre (strip pan-law fix 2026-08-14)
     const float inactivePreviewMasterRatio = inactivePreviewReadout.masterPeak / std::max(baseline.masterPeak, 1.0e-9f);
     const float silentPreviewMasterRatio = silentPreviewReadout.masterPeak / std::max(baseline.masterPeak, 1.0e-9f);
     const float settledMasterRatio = settledDucked.masterPeak / std::max(baseline.masterPeak, 1.0e-9f);

@@ -207,7 +207,7 @@ static void testDistortionNull() {
         double ampLin = std::pow(10.0, t.ampDb / 20.0);
         // Build a reference sine with the expected pan-law scaling
         // (cos(pi/4) per channel at center pan)
-        constexpr double kPanLawCenterGain = 0.7071067811865476;
+        constexpr double kPanLawCenterGain = 1.0; // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
         double refAmp = ampLin * kPanLawCenterGain;
 
         std::vector<float> output = renderSine(
@@ -252,7 +252,7 @@ static void testFrequencyResponse() {
     const double testFreqs[] = {20.0, 100.0, 440.0, 1000.0, 5000.0,
                                 10000.0, 16000.0, 20000.0};
     const double refAmp = 0.5; // -6 dBFS
-    constexpr double kPanLawCenterGain = 0.7071067811865476;
+    constexpr double kPanLawCenterGain = 1.0; // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
     double expectedRmsDb = 10.0 * std::log10(
         (refAmp * kPanLawCenterGain) * (refAmp * kPanLawCenterGain) / 2.0);
 
