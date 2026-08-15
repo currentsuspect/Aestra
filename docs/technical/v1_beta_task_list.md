@@ -174,18 +174,19 @@ Completed since early January:
 
 **Done means:** basic per-track/per-lane mix controls exist and export matches playback.
 
-- `[P0][G-001]` Per-lane or per-track volume control (clear mapping to engine).
-- `[P0][G-002]` Pan control.
-- `[P0][G-003]` Mute/solo with correct precedence (solo overrides mute rules).
-- `[P0][G-004]` Master fader and a safety limiter/clip guard stage for Beta.
-- `[P0][G-005]` Metering: stable RMS/peak meters with smoothing; no UI stutter.
-- `[P1][G-006]` Track naming + color persistence.
+- `[x][P0][G-001]` Per-lane/per-track volume wired to the mixer fader and the graph (PR #767). ✅
+- `[x][P0][G-002]` Pan control on strips; single-store pan staging (#767). ✅
+- `[x][P0][G-003]` Mute/solo precedence enforced in the render graph (solo overrides mute) (#765). ✅
+- `[x][P0][G-004]` Master fader (continuous slot) + safety limiter with cubic-Hermite knee (v0.6.0). ✅
+- `[x][P0][G-005]` Stable peak/RMS metering with smoothing; K-weight true-peak (v0.6.0). ✅
+- `[x][P1][G-006]` Track naming and palette color persist across save/load (#767). ✅
 - `[P1][G-007]` Basic routing policy documented (even if it’s “no sends for Beta”).
-- `[P0][G-008]` Core routing primitives: master send on/off, subgroup-only output, FX sends, sidechain-only sends, and explicit pre/post send behavior.
-- `[P0][G-009]` Routing visibility: inspector or mini-matrix must show source, audible destinations, master-send state, send mode, and sidechain-only state with no hidden routing assumptions.
-- `[P0][G-010]` Routing safety rules: detect duplicate audible routes, prevent feedback loops, and warn on ambiguous routing states before they become trust-breaking mix bugs.
+- `[x][P0][G-008]` Routing command seam: main output, subgroup output, FX sends, sidechain-only sends, pre/post fader, stable send IDs (#765). ✅
+- `[x][P0][G-009]` UIRoutingMap mini-matrix shows destinations, master-send state, send mode, sidechain-only (#765). ✅
+- `[x][P0][G-010]` Mutation-time cycle rejection and duplicate-route detection in the routing command seam (#765). ✅
 - `[P0][G-011]` Solo/mute/cue semantics locked: define solo-in-place vs cue behavior and keep it consistent through groups, returns, sends, and sidechain paths.
 - `[P0][G-012]` PDC for routing graph: sends, buses, sidechains, master FX, recording, and export all remain aligned under high-latency plugins.
+  - Status: per-edge compensation + master-FX latency in the PDC graph done (PRs #730, #769); export parity proven by RealtimeExportParityTest. Recording-path alignment still pending.
 - `[P0][G-013]` Internal print/export respects routing: bus print, internal recording, stem export, and project reopen all preserve the same routing graph and audible result.
 - `[P1][G-014]` Mono/stereo routing discipline: mono sources, stereo tracks, returns, panning, polarity, and collapse/summing behave predictably even if full multichannel routing is deferred.
 - `[P1][G-015]` One-click routing actions: create bus from selection, create FX return, route selected to bus only, and sidechain selected to target.
