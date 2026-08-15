@@ -191,7 +191,8 @@ struct Rendered {
 // that insert, sets the playlist BPM to `renderBpm`, and renders `beats` beats.
 // An optional extra effect is inserted at chain slot 1 (after the generator).
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
-                              std::shared_ptr<IPluginInstance> slot1Fx = nullptr) {
+                              std::shared_ptr<IPluginInstance> slot1Fx = nullptr,
+                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
@@ -211,6 +212,9 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     lane->automationCurves = curves;
     for (auto& curve : lane->automationCurves) {
         curve.mixerChannelId = src->getChannelId();
+        if (fixup) {
+            fixup(curve, *src);
+        }
     }
 
     AudioEngine engine;
@@ -351,13 +355,15 @@ int main() {
     {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
-        param.effectSlot = 1;
         param.paramId = 0;
         param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(2.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
-        const auto r =
-            renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal));
+        const auto r = renderWithAutomation(
+            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
+            });
         require(!r.hasInvalid, "param: output contains NaN/Inf");
         const double loud = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double mid = rmsWindow(r.left, 2.9, 3.1, 120.0);
@@ -374,11 +380,14 @@ int main() {
     {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
-        param.effectSlot = 1;
         param.paramId = 0;
         param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
-        const auto r = renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3));
+        const auto r = renderWithAutomation(
+            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
+            });
         require(!r.hasInvalid, "guard: output contains NaN/Inf");
         const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);

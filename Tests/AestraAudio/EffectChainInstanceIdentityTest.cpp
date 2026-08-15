@@ -363,27 +363,146 @@ std::vector<uint8_t> serializeChainWithOccupantInSlotZero() {
     return chain.saveState();
 }
 
-void testLoadMintsIdentityForRestoredSlots() {
-    // Before this, loadState never touched instanceId, so every plugin in a
-    // freshly opened project came back with identity 0 — i.e. unaddressable, and
-    // indistinguishable from an empty slot to findSlotByInstanceId.
+// --- v2 serialization (Automation Identity Contract I4/I5/I6/I9) ------------
+
+/// Build a raw chain-state blob by hand so tests can pin version-specific
+/// behavior (v1 = no ids, v2 = ids) without depending on saveState's current
+/// version. Empty slots are hasPlugin=0; occupied slots carry pluginId +
+/// bypass + dryWet + empty plugin state.
+std::vector<uint8_t> buildChainBlob(uint8_t version,
+                                    const std::vector<std::pair<uint64_t, std::string>>& occupiedSlots) {
+    std::vector<uint8_t> state{'N', 'E', 'C', version, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+    const auto put = [&state](const void* data, size_t n) {
+        const auto* bytes = static_cast<const uint8_t*>(data);
+        state.insert(state.end(), bytes, bytes + n);
+    };
+    size_t cursor = 0;
+    for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+        if (cursor < occupiedSlots.size() && occupiedSlots[cursor].first == 0 && false) {
+            // unreachable; kept for clarity of the loop shape
+        }
+        // occupiedSlots entries are indexed by slot position
+        if (slot < occupiedSlots.size()) {
+            const auto& [instanceId, pluginId] = occupiedSlots[slot];
+            state.push_back(1);
+            if (version >= 2) {
+                put(&instanceId, sizeof(instanceId));
+            }
+            const uint32_t idLen = static_cast<uint32_t>(pluginId.size());
+            put(&idLen, sizeof(idLen));
+            state.insert(state.end(), pluginId.begin(), pluginId.end());
+            const uint8_t bypass = 0;
+            state.push_back(bypass);
+            const float dryWet = 1.0f;
+            put(&dryWet, sizeof(dryWet));
+            const uint32_t stateLen = 0;
+            put(&stateLen, sizeof(stateLen));
+        } else {
+            state.push_back(0);
+        }
+    }
+    return state;
+}
+
+void testSaveLoadRoundTripPreservesIdentity() {
+    // v2: the identity travels with the instance (Contract I4/I9). A save/load
+    // cycle must restore the exact ids — the serialization gap D2 taught us to
+    // look for. (v1 minted; v2 must not.)
     EffectChain source;
     source.insertPlugin(0, makePlugin("aestra.test.identity.unregistered.a"));
     source.insertPlugin(3, makePlugin("aestra.test.identity.unregistered.b"));
+    const uint64_t idA = source.getSlotInstanceId(0);
+    const uint64_t idB = source.getSlotInstanceId(3);
+    check(source.saveState()[3] == EffectChain::kStateFormatVersion,
+          "saved state carries the current format version (v2)");
     const std::vector<uint8_t> blob = source.saveState();
 
     EffectChain restored;
     std::vector<std::string> missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
-          "the serialized chain loads");
+          "the v2 chain loads");
+    check(restored.getSlotInstanceId(0) == idA,
+          "round trip preserves the first instance identity exactly");
+    check(restored.getSlotInstanceId(3) == idB,
+          "round trip preserves the second instance identity exactly");
+    check(restored.findSlotByInstanceId(idA) == 0 && restored.findSlotByInstanceId(idB) == 3,
+          "restored identities resolve to their slots");
+}
 
+void testV1StateStillLoadsAndMints() {
+    // v1 payloads predate identity: they load and mint (migration rule I5).
+    const std::vector<uint8_t> blob = buildChainBlob(
+        1, {{0, "aestra.test.identity.unregistered.a"}, {0, "aestra.test.identity.unregistered.b"}});
+    EffectChain restored;
+    std::vector<std::string> missing;
+    check(restored.loadState(blob, PluginManager::getInstance(), &missing),
+          "a v1 chain still loads");
     const uint64_t a = restored.getSlotInstanceId(0);
-    const uint64_t b = restored.getSlotInstanceId(3);
-    check(a != 0, "a restored occupant has an identity");
-    check(b != 0, "every restored occupant has one, not just the first");
-    check(a != b, "restored occupants get distinct identities");
-    check(restored.findSlotByInstanceId(a) == 0, "a restored identity resolves to its slot");
-    check(restored.findSlotByInstanceId(b) == 3, "and so does the second");
+    const uint64_t b = restored.getSlotInstanceId(1);
+    check(a != 0 && b != 0, "v1 occupants mint identities");
+    check(a != b, "v1 occupants mint distinct identities");
+}
+
+void testV2MissingIdMintsFresh() {
+    // A v2 payload with id 0 on an occupied slot is corrupt: mint with a
+    // diagnostic rather than leaving the slot unaddressable (Contract I5).
+    const std::vector<uint8_t> blob =
+        buildChainBlob(2, {{0, "aestra.test.identity.unregistered.a"}});
+    EffectChain restored;
+    std::vector<std::string> missing;
+    check(restored.loadState(blob, PluginManager::getInstance(), &missing),
+          "a v2 chain with a missing id still loads");
+    check(restored.getSlotInstanceId(0) != 0, "the corrupt slot mints a fresh identity");
+}
+
+void testV2DuplicateIdMintsFresh() {
+    // Two slots sharing one id is corrupt: the duplicate mints so lookups can
+    // never be ambiguous (Contract I5).
+    const std::vector<uint8_t> blob = buildChainBlob(
+        2, {{42, "aestra.test.identity.unregistered.a"}, {42, "aestra.test.identity.unregistered.b"}});
+    EffectChain restored;
+    std::vector<std::string> missing;
+    check(restored.loadState(blob, PluginManager::getInstance(), &missing),
+          "a v2 chain with a duplicate id still loads");
+    check(restored.getSlotInstanceId(0) != restored.getSlotInstanceId(1),
+          "the duplicate slot mints a distinct identity");
+    check(restored.getSlotInstanceId(0) == 42, "the first occupant keeps its id");
+}
+
+void testPlaceholderIdentitySurvivesRoundTrip() {
+    // A placeholder is an occupant with an identity (Contract I6). Saving a
+    // chain with a missing-plugin placeholder and reloading must restore the
+    // SAME id, so automation addressed to the failed plugin survives.
+    const std::vector<uint8_t> blob = buildChainBlob(
+        2, {{77, "aestra.test.identity.does.not.exist"}});
+    EffectChain first;
+    std::vector<std::string> missing;
+    check(first.loadState(blob, PluginManager::getInstance(), &missing),
+          "the placeholder chain loads");
+    check(first.getSlotInstanceId(0) == 77, "the placeholder restored its wire id");
+
+    const std::vector<uint8_t> resaved = first.saveState();
+    EffectChain second;
+    std::vector<std::string> missing2;
+    check(second.loadState(resaved, PluginManager::getInstance(), &missing2),
+          "the resaved placeholder chain loads");
+    check(second.getSlotInstanceId(0) == 77,
+          "placeholder identity survives a full save/load cycle");
+}
+
+void testLoadedIdsAreReservedAgainstFutureMints() {
+    // Ids restored from a v2 payload must be reserved so a mint later in the
+    // session can never collide with them (I5 + the #528 guard pattern).
+    const std::vector<uint8_t> blob = buildChainBlob(
+        2, {{9000, "aestra.test.identity.unregistered.a"}});
+    EffectChain restored;
+    std::vector<std::string> missing;
+    check(restored.loadState(blob, PluginManager::getInstance(), &missing),
+          "the v2 chain loads");
+
+    restored.insertPlugin(1, makePlugin("aestra.test.identity.unregistered.b"));
+    check(restored.getSlotInstanceId(1) > 9000,
+          "a mint after loading v2 ids never collides with a restored id");
 }
 
 void testLoadClearsIdentityOnSerializedEmptySlots() {
@@ -601,7 +720,12 @@ int main() {
     testMintNeverReturnsZero();
     testResetPreservesIdentities();
     testSnapshotCarriesIdentity();
-    testLoadMintsIdentityForRestoredSlots();
+    testSaveLoadRoundTripPreservesIdentity();
+    testV1StateStillLoadsAndMints();
+    testV2MissingIdMintsFresh();
+    testV2DuplicateIdMintsFresh();
+    testPlaceholderIdentitySurvivesRoundTrip();
+    testLoadedIdsAreReservedAgainstFutureMints();
     testLoadClearsIdentityOnSerializedEmptySlots();
     testUndoOfRemoveRestoresTheSameIdentity();
     testRedoOfAddKeepsTheOriginalIdentity();

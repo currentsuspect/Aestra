@@ -41,6 +41,7 @@ void check(bool condition, const std::string& what) {
 
 struct SlotRecord {
     bool present = false;
+    uint64_t instanceId = 0; // v2 wire identity
     std::string id;
     bool bypassed = false;
     float dryWet = 1.0f;
@@ -63,6 +64,7 @@ std::vector<uint8_t> buildBlob(const std::vector<SlotRecord>& slots) {
             continue;
         }
         out.push_back(1);
+        appendRaw(out, s.instanceId); // v2: identity travels with the instance
         appendRaw(out, static_cast<uint32_t>(s.id.size()));
         out.insert(out.end(), s.id.begin(), s.id.end());
         out.push_back(s.bypassed ? 1 : 0);
@@ -90,6 +92,12 @@ bool parseBlob(const std::vector<uint8_t>& blob, std::vector<SlotRecord>& out) {
 
         SlotRecord r;
         r.present = true;
+        // v2: skip/read the 8-byte instance id.
+        if (blob[3] >= 2) {
+            if (off + sizeof(uint64_t) > blob.size()) return false;
+            std::memcpy(&r.instanceId, &blob[off], sizeof(uint64_t));
+            off += sizeof(uint64_t);
+        }
         uint32_t idLen = 0;
         if (off + sizeof(idLen) > blob.size()) return false;
         std::memcpy(&idLen, &blob[off], sizeof(idLen));
@@ -134,9 +142,9 @@ int main() {
     // The core invariant: a chain of unavailable plugins survives load/save.
     // ---------------------------------------------------------------------
     std::vector<SlotRecord> original(EffectChain::MAX_SLOTS);
-    original[0] = {true, kMissingA, true, 0.375f, bytes({0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01})};
-    original[3] = {true, kMissingB, false, 1.0f, bytes({0x11, 0x22})};
-    original[7] = {true, kMissingA, false, 0.0f, {}}; // empty opaque state is legal
+    original[0] = {true, 1234, kMissingA, true, 0.375f, bytes({0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01})};
+    original[3] = {true, 5678, kMissingB, false, 1.0f, bytes({0x11, 0x22})};
+    original[7] = {true, 9012, kMissingA, false, 0.0f, {}}; // empty opaque state is legal
 
     const std::vector<uint8_t> blob0 = buildBlob(original);
 
@@ -230,7 +238,7 @@ int main() {
         EffectChain chain;
         chain.prepare(48000.0, 512);
         std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
-        recs[0] = {true, kMissingA, false, 1.0f, bytes({0x01})};
+        recs[0] = {true, 0, kMissingA, false, 1.0f, bytes({0x01})};
         check(chain.loadState(buildBlob(recs), manager()), "occupancy: loadState ok");
 
         check(!chain.isSlotEmpty(0), "a placeholder slot does not report itself free");
@@ -249,8 +257,8 @@ int main() {
         EffectChain chain;
         chain.prepare(48000.0, 512);
         std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
-        recs[0] = {true, kMissingA, false, 1.0f, bytes({0xAA})};
-        recs[1] = {true, kMissingB, false, 1.0f, bytes({0xBB})};
+        recs[0] = {true, 0, kMissingA, false, 1.0f, bytes({0xAA})};
+        recs[1] = {true, 0, kMissingB, false, 1.0f, bytes({0xBB})};
         check(chain.loadState(buildBlob(recs), manager()), "mixed: loadState ok");
         check(chain.getMissingPluginCount() == 2, "mixed: two placeholders to start");
 

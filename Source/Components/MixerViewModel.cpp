@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "MixerViewModel.h"
+#include "Commands/EffectCommands.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "Commands/RoutingCommands.h"
 #include "AudioDeviceManager.h"
@@ -1172,30 +1173,39 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
     
     if (fromSlot == toSlot) return;
 
+    // Validate the source BEFORE touching the view model: MovePluginCommand
+    // rejects empty sources (including missing-plugin placeholders, which are
+    // occupied but not movable). Swapping the local inserts first would leave
+    // the view model changed while the engine move is refused.
+    if (fromSlot < 0 || fromSlot >= (int)ch->inserts.size()) return;
+    const auto& sourceVm = ch->inserts[fromSlot];
+    if (sourceVm.isEmpty) return;
+    if (auto mc = ch->channel) {
+        if (mc->getEffectChain().getSlot(static_cast<size_t>(fromSlot)) == nullptr ||
+            mc->getEffectChain().getSlot(static_cast<size_t>(fromSlot))->isEmpty()) {
+            return;
+        }
+    }
+
     // Update Local (Swap/Move)
     std::swap(ch->inserts[fromSlot], ch->inserts[toSlot]);
 
-    // Update Engine
+    // Update Engine through the command seam (undoable; identities travel with
+    // the instances — automation never retargets on reorder).
     if (auto mc = ch->channel) {
-        auto& chain = mc->getEffectChain();
-        const auto* targetSlotPtr = chain.getSlot(toSlot);
-        
-        // Since we already swapped locally, we assume engine handles it.
-        // We check target slot state *before* logic if possible, but weak ptr makes it tricky.
-        // Let's assume we want to swap if target has plugin, move if empty.
-        
-        // However, EffectChain API is locked.
-        // If we call movePlugin(from, to) and it fails (occupied), we should try swapPlugins.
-        // But checking `isEmpty()` first is safer.
-        
-        bool targetEmpty = (!targetSlotPtr || targetSlotPtr->isEmpty());
-        
-        if (targetEmpty) {
-            chain.movePlugin(fromSlot, toSlot);
+        if (m_commandHistory && m_trackManager) {
+            m_commandHistory->pushAndExecute(std::make_shared<Audio::MovePluginCommand>(
+                *m_trackManager, *mc, static_cast<size_t>(fromSlot), static_cast<size_t>(toSlot)));
         } else {
-            chain.swapPlugins(fromSlot, toSlot);
+            auto& chain = mc->getEffectChain();
+            const auto* targetSlotPtr = chain.getSlot(toSlot);
+            const bool targetEmpty = (!targetSlotPtr || targetSlotPtr->isEmpty());
+            if (targetEmpty) {
+                chain.movePlugin(fromSlot, toSlot);
+            } else {
+                chain.swapPlugins(fromSlot, toSlot);
+            }
         }
-        
         graphDirty.emit();
         projectModified.emit();
     }

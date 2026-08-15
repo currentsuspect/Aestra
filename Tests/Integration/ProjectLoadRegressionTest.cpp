@@ -14,6 +14,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -887,6 +889,127 @@ void testTrackColorIndexRoundtrip() {
     std::cout << "[PASS] trackColorIndex survives save/load roundtrip" << std::endl;
 }
 
+
+// Automation Identity Contract migration: a v1 project (curve carries only a
+// positional slot) gets its curves re-targeted to the chain's MINTED instance
+// ids exactly once at load. The saved v2 project carries the instanceId key;
+// a second load restores it directly (no re-migration, no drift).
+void testV1AutomationCurveMigratesToInstanceId() {
+    std::cout << "[TEST] v1 automation curve migrates to instance identity..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"v1_automation_migration"};
+    const auto testDir = tempDirScope.path();
+    const std::filesystem::path testProject = testDir / "v1_migration.aes";
+
+    // A v1 chain-state blob: one occupied slot (unknown plugin id -> placeholder
+    // with a minted identity on load), no instance ids on the wire.
+    std::vector<uint8_t> blob{'N', 'E', 'C', 1, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+    const auto put = [&blob](const void* data, size_t n) {
+        const auto* bytes = static_cast<const uint8_t*>(data);
+        blob.insert(blob.end(), bytes, bytes + n);
+    };
+    blob.push_back(1); // slot 0 occupied
+    const std::string pluginId = "aestra.test.v1.missing.plugin";
+    const uint32_t idLen = static_cast<uint32_t>(pluginId.size());
+    put(&idLen, sizeof(idLen));
+    blob.insert(blob.end(), pluginId.begin(), pluginId.end());
+    const uint8_t bypass = 0;
+    blob.push_back(bypass);
+    const float dryWet = 1.0f;
+    put(&dryWet, sizeof(dryWet));
+    const uint32_t stateLen = 0;
+    put(&stateLen, sizeof(stateLen));
+    for (size_t s = 1; s < EffectChain::MAX_SLOTS; ++s) {
+        blob.push_back(0);
+    }
+    std::string chainHex;
+    {
+        std::ostringstream hex;
+        for (uint8_t b : blob) {
+            hex << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+        }
+        chainHex = hex.str();
+    }
+
+    const std::string projectJson = std::string(R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "mixerChannels": [{
+            "id": 41,
+            "name": "Track 1",
+            "color": "4294967295",
+            "volume": 1.0,
+            "pan": 0.0,
+            "routing": {"mainOutputId": 0},
+            "effectChainStateHex": ")" + chainHex + R"("
+        }],
+        "lanes": [{
+            "name": "Lane 1",
+            "color": "4294967295",
+            "volume": 1.0,
+            "pan": 0.0,
+            "clips": [],
+            "automation": [{
+                "param": "cutoff",
+                "targetEnum": 255,
+                "mixerChannelId": 41,
+                "default": 0.7,
+                "slot": 0,
+                "paramId": 17,
+                "points": [{"b": 0.0, "v": 0.33, "c": 0.5}]
+            }]
+        }],
+        "arsenal": {"nextId": 1, "units": []}
+    })");
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+
+    auto* channel = trackManager->getChannel(0);
+    assert(channel != nullptr);
+    const uint64_t mintedId = channel->getEffectChain().getSlotInstanceId(0);
+    assert(mintedId != 0);
+
+    auto* lane = trackManager->getPlaylistModel().getLane(
+        trackManager->getPlaylistModel().getLaneIDs()[0]);
+    assert(lane != nullptr && lane->automationCurves.size() == 1);
+    const uint64_t migratedId = lane->automationCurves[0].deviceInstanceId;
+    assert(migratedId == mintedId);
+    assert(lane->automationCurves[0].paramId == 17);
+    assert(lane->automationCurves[0].effectSlot == 0);
+
+    // Save (v2) and reload: the instanceId key is on the wire now, so the
+    // second load restores the SAME id without re-migrating.
+    const std::string saved =
+        ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
+    assert(saved.find("instanceId") != std::string::npos);
+
+    const std::filesystem::path testProject2 = testDir / "v2_migration.aes";
+    std::ofstream out2(testProject2);
+    out2 << saved;
+    out2.close();
+
+    auto trackManager2 = std::make_shared<TrackManager>();
+    auto result2 = ProjectSerializer::load(testProject2.string(), trackManager2);
+    assert(result2.ok);
+    auto* channel2 = trackManager2->getChannel(0);
+    auto* lane2 = trackManager2->getPlaylistModel().getLane(
+        trackManager2->getPlaylistModel().getLaneIDs()[0]);
+    assert(channel2 != nullptr && lane2 != nullptr);
+    assert(lane2->automationCurves[0].deviceInstanceId == migratedId);
+    assert(channel2->getEffectChain().getSlotInstanceId(0) == mintedId);
+
+    std::cout << "[PASS] v1 automation curve migrates to instance identity exactly once" << std::endl;
+}
+
 void testProjectLoadWarningsAreBounded() {
     std::cout << "[TEST] Project load warnings are bounded..." << std::endl;
 
@@ -973,6 +1096,7 @@ int main() {
     testMixerLaneStateNumbersClampBeforeCast();
     testTrackColorIndexRoundtrip();
     testProjectLoadWarningsAreBounded();
+    testV1AutomationCurveMigratesToInstanceId();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;

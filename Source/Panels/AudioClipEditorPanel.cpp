@@ -257,6 +257,7 @@ void AudioClipEditorPanel::buildUI() {
     m_fadeInValueLabel = makeLabel("0.00 beats", 11.5f);
     m_fadeOutValueLabel = makeLabel("0.00 beats", 11.5f);
     m_pitchValueLabel = makeLabel("0.0 st  •  1.00x", 11.5f);
+    m_speedValueLabel = makeLabel("1.00x", 11.5f);
     m_sourceStartValueLabel = makeLabel("0.000 s", 11.5f);
     m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 11.0f);
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
@@ -271,6 +272,7 @@ void AudioClipEditorPanel::buildUI() {
     m_fadeOutSlider = makeSlider("Fade out", 0.0, 4.0, 0.0);
     m_pitchSlider = makeSlider("Clip pitch (varispeed)", ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones,
                                0.0, true);
+    m_speedSlider = makeSlider("Speed", 0.25, 4.0, 1.0);
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);

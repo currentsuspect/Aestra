@@ -74,6 +74,30 @@ add_test(NAME TestTempDirectoryStressTest COMMAND TestTempDirectoryStressTest)
 set_tests_properties(TestTempDirectoryStressTest PROPERTIES LABELS "support;infrastructure;contract:core")
 
 # Project RoundTrip Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AutomationLifecycleTest.cpp")
+    add_executable(AutomationLifecycleTest
+        Integration/AutomationLifecycleTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(AutomationLifecycleTest PRIVATE AestraAudio)
+    target_include_directories(AutomationLifecycleTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME AutomationLifecycleTest COMMAND AutomationLifecycleTest)
+    set_tests_properties(AutomationLifecycleTest PROPERTIES LABELS "integration;automation;serialization;contract:durability")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     add_executable(ProjectRoundTripTest
         Integration/ProjectRoundTripTest.cpp

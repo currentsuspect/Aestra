@@ -58,11 +58,15 @@ struct AutomationCurve {
     float defaultValue{0.0f};
 
     // Plugin-parameter addressing — meaningful only when target == Custom.
-    // effectSlot indexes the lane's channel effect chain; paramId is the
-    // plugin's stable parameter id (stability guaranteed per AGENTS.md §19).
+    // deviceInstanceId is the semantic target (Automation Identity Contract):
+    // which plugin instance, resolved through the chain snapshot's
+    // findSlotByInstanceId. effectSlot is LEGACY — kept only for v1 project
+    // migration and older-build compatibility; it never participates in
+    // resolution. paramId is the plugin's stable parameter id (AGENTS.md §19).
     // The engine applies Custom curves to Internal-format plugins only:
     // their parameter storage is atomic, so per-block setParameter from the
     // render thread is RT-safe; third-party formats need host param queues.
+    uint64_t deviceInstanceId{0};
     uint32_t effectSlot{0};
     uint32_t paramId{0};
 
