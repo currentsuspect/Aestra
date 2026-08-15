@@ -2403,7 +2403,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // Sources routed to Master bypass mixer inserts but still share the same
     // transport, clip-edit, resampling, and safety path as insert-routed clips.
-    renderClips(graph.masterClips, masterBuf, ctx, srcActiveThisBlock);
+    // Solo gate (isolated-bounce contract, 2026-08-14): solo determines which
+    // track content is audible in the live mix, and the master stage obeys the
+    // active solo gate exactly like master-routed units. Master clips have no
+    // soloable owner (mixerChannelId 0 = Master, which is never soloed), so any
+    // active solo silences them. Isolated-track bounce excludes the master
+    // stage entirely by design — this gate is live-path only.
+    if (!ctx.anySolo) {
+        renderClips(graph.masterClips, masterBuf, ctx, srcActiveThisBlock);
+    }
 
     if (unitSnapshot) {
         for (const auto& unit : unitSnapshot->units) {
