@@ -241,10 +241,12 @@ public:
             return;
         }
         auto& chain = m_channel.getEffectChain();
-        if (m_usedSwap) {
-            chain.swapPlugins(m_toSlot, m_fromSlot);
-        } else {
-            chain.movePlugin(m_toSlot, m_fromSlot);
+        // A refused revert must not leave the history believing the reorder
+        // was undone while the chain still holds the moved layout.
+        const bool reverted = m_usedSwap ? chain.swapPlugins(m_toSlot, m_fromSlot)
+                                         : chain.movePlugin(m_toSlot, m_fromSlot);
+        if (!reverted) {
+            throw std::runtime_error("MovePlugin: undo refused by the chain");
         }
         m_executed = false;
         m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);

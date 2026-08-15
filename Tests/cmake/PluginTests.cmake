@@ -255,3 +255,21 @@ target_include_directories(AutomationIdentityResolutionTest PRIVATE
 )
 add_test(NAME AutomationIdentityResolutionTest COMMAND AutomationIdentityResolutionTest)
 
+# Master strip is a plugin host like any other channel (triage 2026-08-14):
+# processing on the summed master buffer + save/load roundtrip + old-project
+# compatibility.
+add_executable(MasterEffectChainTest
+    AestraAudio/MasterEffectChainTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(MasterEffectChainTest PRIVATE AestraAudio)
+target_include_directories(MasterEffectChainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME MasterEffectChainTest COMMAND MasterEffectChainTest)
+set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence;contract:plugins")
+

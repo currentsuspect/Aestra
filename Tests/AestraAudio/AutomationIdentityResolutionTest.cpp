@@ -146,6 +146,7 @@ struct Fixture {
     MixerChannel* src{nullptr};
     AudioEngine engine;
     AutomationCurve curve;
+    const AutomationCurve* laneCurve{nullptr}; // the lane's COPY (what renders)
     uint64_t gainId{0};
     uint64_t inertId{0};
 
@@ -176,6 +177,7 @@ struct Fixture {
         require(lane != nullptr, "lane created");
         lane->automationCurves.push_back(curve);
         lane->automationCurves.back().mixerChannelId = src->getChannelId();
+        laneCurve = &lane->automationCurves.back();
     }
 
     // Baseline render WITHOUT any automation: a flat constant tone rules out
@@ -284,8 +286,11 @@ void testRemoveTargetLeavesCurveDangling() {
     require(fx.src->getEffectChain().removePlugin(1) != nullptr, "gain plugin removed");
     fx.startEngine();
     fx.renderExpectNoFade("remove");
-    // The curve still names the removed instance — never re-pointed.
-    require(fx.curve.deviceInstanceId == fx.gainId, "removed target keeps its identity");
+    // The lane's curve (what actually renders) still names the removed
+    // instance — never re-pointed. Assert on the lane copy, not the fixture's
+    // own member, which nothing mutates.
+    require(fx.laneCurve != nullptr && fx.laneCurve->deviceInstanceId == fx.gainId,
+            "removed target keeps its identity");
 }
 
 void testPlaceholderTargetStaysAttached() {

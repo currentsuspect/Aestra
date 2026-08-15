@@ -16,7 +16,6 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <unistd.h>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -898,9 +897,8 @@ void testTrackColorIndexRoundtrip() {
 void testV1AutomationCurveMigratesToInstanceId() {
     std::cout << "[TEST] v1 automation curve migrates to instance identity..." << std::endl;
 
-    auto testDir = std::filesystem::temp_directory_path() /
-                   ("aestra_v1_automation_migration_" + std::to_string(::getpid()));
-    std::filesystem::create_directories(testDir);
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"v1_automation_migration"};
+    const auto testDir = tempDirScope.path();
     const std::filesystem::path testProject = testDir / "v1_migration.aes";
 
     // A v1 chain-state blob: one occupied slot (unknown plugin id -> placeholder

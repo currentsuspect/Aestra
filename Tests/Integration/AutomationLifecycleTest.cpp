@@ -19,6 +19,7 @@
 #include "Plugin/PluginHost.h"
 #include "Plugin/PluginManager.h"
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,7 +29,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
 using namespace Aestra;
@@ -306,9 +306,8 @@ int main() {
     // Stage 4: save -> load. (trackId, deviceInstanceId, parameterId) must be
     // exact; the chain restores live (registered) plugins with their ids.
     // =========================================================================
-    const auto tempRoot = std::filesystem::temp_directory_path() /
-                          ("aestra_automation_lifecycle_" + std::to_string(::getpid()));
-    std::filesystem::create_directories(tempRoot);
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"automation_lifecycle"};
+    const auto tempRoot = tempDirScope.path();
     const auto projectPath = tempRoot / "lifecycle.aes";
     require(ProjectSerializer::save(projectPath.string(), tm, 120.0, 0.0), "stage4: save");
 

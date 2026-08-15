@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -2135,10 +2136,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             // Empty slots yield 0 — the curve is preserved as
                             // dangling (diagnostic), never re-pointed.
                             if (aj[a].has("instanceId") && aj[a]["instanceId"].isString()) {
-                                try {
-                                    curve.deviceInstanceId = std::stoull(aj[a]["instanceId"].asString());
-                                } catch (const std::exception&) {
-                                    curve.deviceInstanceId = 0;
+                                // Untrusted input: digits-only parse. std::stoull
+                                // would accept "-1" (wraps to UINT64_MAX, which the
+                                // chain refuses by design) and "12abc" (trailing
+                                // junk silently attaching the curve to id 12).
+                                const std::string rawId = aj[a]["instanceId"].asString();
+                                const bool digitsOnly =
+                                    !rawId.empty() &&
+                                    std::all_of(rawId.begin(), rawId.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+                                if (digitsOnly) {
+                                    curve.deviceInstanceId = std::stoull(rawId);
+                                    if (curve.deviceInstanceId == std::numeric_limits<uint64_t>::max()) {
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::AutomationTarget,
+                                            "[ProjectLoad] Automation curve '" + param +
+                                                "' carries the reserved max instance id; preserved as dangling.",
+                                            "[ProjectLoad] Additional reserved-instance-id warnings suppressed.");
+                                        curve.deviceInstanceId = 0;
+                                    }
+                                } else {
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' carries a malformed instance id; preserved as dangling.",
+                                        "[ProjectLoad] Additional malformed instance-id warnings suppressed.");
                                 }
                             } else if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                                 if (auto* targetChannel = trackManager->getChannelById(curve.mixerChannelId)) {

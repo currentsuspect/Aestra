@@ -1173,6 +1173,20 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
     
     if (fromSlot == toSlot) return;
 
+    // Validate the source BEFORE touching the view model: MovePluginCommand
+    // rejects empty sources (including missing-plugin placeholders, which are
+    // occupied but not movable). Swapping the local inserts first would leave
+    // the view model changed while the engine move is refused.
+    if (fromSlot < 0 || fromSlot >= (int)ch->inserts.size()) return;
+    const auto& sourceVm = ch->inserts[fromSlot];
+    if (sourceVm.isEmpty) return;
+    if (auto mc = ch->channel) {
+        if (mc->getEffectChain().getSlot(static_cast<size_t>(fromSlot)) == nullptr ||
+            mc->getEffectChain().getSlot(static_cast<size_t>(fromSlot))->isEmpty()) {
+            return;
+        }
+    }
+
     // Update Local (Swap/Move)
     std::swap(ch->inserts[fromSlot], ch->inserts[toSlot]);
 

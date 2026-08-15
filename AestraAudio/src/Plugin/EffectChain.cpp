@@ -841,13 +841,25 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
     std::unordered_set<uint64_t> seenLoadedIds;
     const auto resolveSlotIdentity = [&](uint64_t wireId, size_t slotIndex) -> uint64_t {
         if (version >= 2 && wireId != 0) {
+            // UINT64_MAX is the sentinel reserveMintedPluginInstanceId refuses
+            // by design; a payload carrying it is corrupt, same as a duplicate.
+            if (wireId == std::numeric_limits<uint64_t>::max()) {
+                Aestra::Log::warning("[EffectChain] reserved instance id " + std::to_string(wireId) +
+                                     " in v2 state on slot " + std::to_string(slotIndex) +
+                                     "; minting a fresh identity");
+                const uint64_t fresh = mintPluginInstanceId();
+                seenLoadedIds.insert(fresh);
+                return fresh;
+            }
             if (!seenLoadedIds.insert(wireId).second) {
                 // Duplicate id in a v2 payload is corrupt: mint a fresh identity
                 // so the two slots never share one (Contract I5).
                 Aestra::Log::warning("[EffectChain] duplicate instance id " + std::to_string(wireId) +
                                      " in v2 state on slot " + std::to_string(slotIndex) +
                                      "; minting a fresh identity");
-                return mintPluginInstanceId();
+                const uint64_t fresh = mintPluginInstanceId();
+                seenLoadedIds.insert(fresh);
+                return fresh;
             }
             reserveMintedPluginInstanceId(wireId);
             return wireId;
@@ -856,7 +868,9 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             Aestra::Log::warning("[EffectChain] v2 state carries no instance id on slot " +
                                  std::to_string(slotIndex) + "; minting (corrupt payload)");
         }
-        return mintPluginInstanceId();
+        const uint64_t fresh = mintPluginInstanceId();
+        seenLoadedIds.insert(fresh);
+        return fresh;
     };
 
     for (size_t i = 0; i < MAX_SLOTS && offset < state.size(); ++i) {
