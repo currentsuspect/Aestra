@@ -144,11 +144,22 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                     vm.isEmpty = false;
                     vm.name = slot->plugin->getInfo().name;
                     if (vm.name.empty()) vm.name = "Plugin";
-                    vm.bypassed = slot->bypassed.load();
+                    // Same optimistic-bypass contract as channel inserts: a UI
+                    // bypass toggle is preserved until the engine confirms it,
+                    // so the strip does not flicker for one sync cycle.
+                    const bool engineBypassed = slot->bypassed.load();
+                    if (vm.bypassDirty) {
+                        if (vm.bypassed == engineBypassed) {
+                            vm.bypassDirty = false;
+                        }
+                    } else {
+                        vm.bypassed = engineBypassed;
+                    }
                     vm.mix = slot->dryWetMix.load();
                 } else {
                     vm.isEmpty = true;
                     vm.name.clear();
+                    vm.bypassDirty = false;
                 }
             }
             m_master->fxCount = fxCount;
