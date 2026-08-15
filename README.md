@@ -13,8 +13,9 @@
 
 Aestra is on a public `0.x` pre-beta line. The roadmap target is **v1 Beta in December 2026**.
 
-As of July 2026 the repo is in active engineering mode rather than release-polish mode.
-Paths that are covered by tests and verified end to end:
+As of the v0.7.0-alpha milestone (August 2026) the repo is in active engineering
+mode rather than release-polish mode. Paths that are covered by tests and verified
+end to end:
 
 - Built-in plugin discovery through the normal manager/factory path
 - `Aestra Rumble` instantiation, state save/restore, and project round-trips
@@ -23,6 +24,14 @@ Paths that are covered by tests and verified end to end:
 - Offline render of a pattern or an arranged timeline to WAV
 - Out-of-process plugin hosting on POSIX, including CLAP note-port dialect negotiation
 - Hardware MIDI input, and automation that reaches the audio path
+- Routing and gain staging: a signal routed through any mixer channel keeps its level,
+  and live playback, offline export, isolated bounce, audition preview, and input
+  monitoring share one gain law
+- The Master channel as a plugin host, with insert chains processed on the master bus
+  and their latency fed into the plugin-delay-compensation graph
+- Automation lanes: automatable end to end, with edits reaching the audio path
+- The isolation contract: solo governs the live mix, and isolated-track bounce renders
+  only the selected track's stage
 - Project and plugin persistence coverage in the confidence suite
 
 Aestra also exposes a **scriptable control surface** — see [Muse](#muse-the-control-surface) below.
@@ -124,7 +133,7 @@ There is also a helper script:
 ./scripts/run-confidence-suite.sh
 ```
 
-A full local configure registers around 190 tests, including the security suite under
+A full local configure registers 250 tests, including the security suite under
 `tests/security`.
 
 **What CI compiles, and where**, since this is easy to assume wrongly:
