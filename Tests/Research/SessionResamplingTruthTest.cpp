@@ -1037,6 +1037,64 @@ void runEngineDefaultContrast(AR::CheckSession& t) {
 
 } // namespace
 
+// =============================================================================
+// Case 3c: clip Pitch (semitones) — 2^(st/12) folds into the varispeed ratio (#746)
+// =============================================================================
+void runPitchVarispeedCase(AR::CheckSession& t) {
+    std::printf("\n--- clip pitch (semitones): folds into the varispeed ratio ---\n");
+    GA::SessionConfig cfg;
+    cfg.sampleRate = 48000;
+    const uint32_t srcRate = 48000; // same-rate session: pure varispeed, no SRC interference
+    const uint32_t srcFrames = static_cast<uint32_t>(kClipSeconds * srcRate);
+    const AR::Signal clip = AR::makeSine(srcRate, srcFrames, kToneHz, kAmp);
+
+    const auto applyEdits = [](const std::shared_ptr<TrackManager>& tm, const ClipEdits& edits) {
+        const auto laneId = tm->getPlaylistModel().getLaneId(0);
+        const auto* lane = tm->getPlaylistModel().getLane(laneId);
+        if (!lane || lane->clips.empty())
+            return false;
+        return tm->getPlaylistModel().setClipEdits(lane->clips.front().id, edits);
+    };
+
+    // Split invariance: pitch +12 st at speed 1x must render identically to
+    // pitch 0 at speed 2x — the same varispeed ratio drives the same phase math.
+    auto tmPitch = buildSession("pitch12", clip, cfg);
+    ClipEdits pitchEdits;
+    pitchEdits.pitchSemitones = 12.0f;
+    if (t.expect("pitch: setClipEdits(pitch +12) succeeds", applyEdits(tmPitch, pitchEdits))) {
+        const AR::Signal pitched = renderSessionRealtime(tmPitch, cfg, srcFrames * 2 + 4800,
+                                                         Interp::InterpolationQuality::Sinc64);
+
+        auto tmSpeed = buildSession("speed2x", clip, cfg);
+        ClipEdits speedEdits;
+        speedEdits.playbackRate = 2.0f;
+        if (t.expect("pitch: setClipEdits(speed 2x) succeeds", applyEdits(tmSpeed, speedEdits))) {
+            const AR::Signal sped = renderSessionRealtime(tmSpeed, cfg, srcFrames * 2 + 4800,
+                                                          Interp::InterpolationQuality::Sinc64);
+            const size_t n = std::min(pitched.samples.size(), sped.samples.size());
+            const AR::Signal pWin = window(pitched, kWinSkip, n - kWinSkip);
+            const AR::Signal sWin = window(sped, kWinSkip, n - kWinSkip);
+            const AR::DiffReport d = AR::diff(pWin, sWin, 1e-4);
+            std::printf("[MEASURE] pitch+12st vs speed2x: maxErr=%.3e rmsErr=%.1f dB\n", d.maxAbsError, d.rmsErrorDb);
+            t.expect("pitch: +12 st at 1x nulls against 0 st at 2x (same varispeed ratio)",
+                     d.rmsErrorDb < -120.0 && d.maxAbsError < 1e-6,
+                     "rmsErrDb=" + std::to_string(d.rmsErrorDb) + " maxAbs=" + std::to_string(d.maxAbsError));
+        }
+
+        // The pitched tone lands one octave up: 2000 Hz present, 1000 Hz gone.
+        // The clip plays 2x faster, so the audible content spans 0.75 s.
+        const uint32_t pitchEnd =
+            std::min<uint32_t>(static_cast<uint32_t>(pitched.samples.size()) - kWinSkip, 30000u);
+        const double expectedAmp = kAmp * static_cast<double>(PanLaw::kEqualPowerCenterGain);
+        const double amp2k = AR::toneAmplitude(pitched, 0, 2000.0, kWinSkip, pitchEnd);
+        const double amp1k = AR::toneAmplitude(pitched, 0, kToneHz, kWinSkip, pitchEnd);
+        std::printf("[MEASURE] pitch+12st: amp@2k=%.4f (expect ~%.4f), amp@1k=%.2e\n", amp2k, expectedAmp, amp1k);
+        t.expect("pitch: +12 st moves the tone from 1 kHz to 2 kHz",
+                 amp2k > 0.9 * expectedAmp && amp1k < 0.1 * expectedAmp,
+                 "amp2k=" + std::to_string(amp2k) + " amp1k=" + std::to_string(amp1k));
+    }
+}
+
 int main() {
     std::printf("============================================================\n");
     std::printf("  Aestra Audio Research Bench — Session Resampling Truth\n");
@@ -1055,6 +1113,7 @@ int main() {
     }
     runFallbackTransitionCase(t);
     runImpulseCases(t);
+    runPitchVarispeedCase(t);
     runIsolatedBounceCase(t, tempRoot);
     runExportParityCases(t, tempRoot);
     runPreviewCases(t, tempRoot);

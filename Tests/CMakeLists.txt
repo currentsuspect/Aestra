@@ -1336,6 +1336,19 @@ target_include_directories(RealtimeExportParityTest PRIVATE
 add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
 set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier;contract:audio" TIMEOUT 180)
 
+# Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
+# (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
+add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
+target_link_libraries(PlaylistSplitVarispeedTest PRIVATE AestraAudio)
+target_include_directories(PlaylistSplitVarispeedTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PlaylistSplitVarispeedTest COMMAND PlaylistSplitVarispeedTest)
+set_tests_properties(PlaylistSplitVarispeedTest PROPERTIES LABELS "audio;model;split;trim;varispeed;contract:audio" TIMEOUT 60)
+
 # RT Allocation Trap — overrides operator new/delete in the test binary and
 # renders a session; asserts ZERO steady-state heap activity on the audio
 # callback path (thread marked by ScopedRealtimeAudioThread in processBlock).

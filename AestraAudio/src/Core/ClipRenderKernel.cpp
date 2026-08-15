@@ -40,6 +40,7 @@ ClipRenderState makeClipRenderState(const ClipRuntimeInfo& clipInfo, double proj
     clip.gain = clipInfo.gainLinear;
     clip.pan = clipInfo.pan;
     clip.playbackRate = clipInfo.playbackRate;
+    clip.pitchSemitones = clipInfo.pitchSemitones;
     clip.fadeInSamples = clipInfo.fadeInSamples;
     clip.fadeOutSamples = clipInfo.fadeOutSamples;
     return clip;
@@ -84,7 +85,15 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
         const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
         const double playbackRate =
             std::isfinite(clip.playbackRate) ? MixMath::clampD(static_cast<double>(clip.playbackRate), 0.25, 4.0) : 1.0;
-        const double ratio = (srcRate / outputRate) * playbackRate;
+        // Pitch folds into the same varispeed envelope as Speed: 2^(st/12)
+        // multiplies the rate, and the combined factor stays bounded by the
+        // existing 0.25..4.0 clamp so phase advancement stays bounded (#746).
+        const double pitchSemitones = std::isfinite(clip.pitchSemitones)
+                                          ? MixMath::clampD(static_cast<double>(clip.pitchSemitones), -24.0, 24.0)
+                                          : 0.0;
+        const double varispeed =
+            MixMath::clampD(playbackRate * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
+        const double ratio = (srcRate / outputRate) * varispeed;
 
         // Source position
         const double outputFrameOffset = static_cast<double>(start - clip.startSample);

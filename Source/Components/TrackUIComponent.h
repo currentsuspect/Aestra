@@ -309,22 +309,20 @@ private:
                               const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels,
                               const AestraUI::NUIColor& tint);
 
-    // Deep-zoom helpers: render finer than the peak cache's base mip level.
-    // Both read bounded sample ranges directly from the (immutable) source buffer.
-    void drawSampleWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                            const Aestra::Audio::AudioBufferData& buffer, double startFrame, double endFrame,
-                            const AestraUI::NUIColor& tint);
+    // Deep-zoom helper: render finer than the peak cache's base mip level using the
+    // same fractional source-frame bins as the cached path.
     static void computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
-                                   size_t startFrame, size_t endFrame, int numColumns,
+                                   double startFrame, double endFrame, int numColumns,
                                    std::vector<Aestra::Audio::WaveformPeak>& outPeaks);
 
     // Sample clip container
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
     void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+                                const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip,
+                                bool seamLeft, bool seamRight);
     // Header scrim + label, drawn AFTER the waveform so it stays readable over it.
     void drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                              const ClipInstance& clip);
+                              const ClipInstance& clip, bool seamLeft, bool seamRight);
 
     // Pattern clip rendering
     void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
