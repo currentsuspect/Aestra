@@ -1375,29 +1375,14 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
     renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
-    renderer.fillRect(browserLayout.searchBar, themeManager.getColor("backgroundSecondary").darkened(0.02f));
+    // Search row sits ON the surface (DESIGN.md rule 4: no recessed dark
+    // well); the single quiet divider below it explains the boundary.
     renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
                       {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
-                      1.0f, themeManager.getColor("border").withAlpha(0.52f));
+                      1.0f, themeManager.getColor("border").withAlpha(0.30f));
 
-    const auto& themeProps = themeManager.getCurrentTheme();
-    const float cornerRadius = themeProps.radiusM;
-
-    NUIRect topClip = fileBrowserBounds;
-    topClip.height -= cornerRadius;
-    renderer.setClipRect(topClip);
-    renderer.strokeRoundedRect(fileBrowserBounds, cornerRadius, 1.0f, borderColor_);
-    renderer.clearClipRect();
-
-    NUIRect bottomClip = fileBrowserBounds;
-    bottomClip.y = fileBrowserBounds.bottom() - cornerRadius;
-    bottomClip.height = cornerRadius;
-    renderer.setClipRect(bottomClip);
-
-    renderer.drawLine(NUIPoint(fileBrowserBounds.x, bottomClip.y), NUIPoint(fileBrowserBounds.x, bottomClip.bottom()), 1.0f, borderColor_);
-    renderer.drawLine(NUIPoint(fileBrowserBounds.right(), bottomClip.y), NUIPoint(fileBrowserBounds.right(), bottomClip.bottom()), 1.0f, borderColor_);
-
-    renderer.clearClipRect();
+    // Flat square border — the curved grey top treatment is gone (0.7.0 triage).
+    renderer.strokeRect(fileBrowserBounds, 1.0f, borderColor_);
 
     renderNavigationPane(renderer, browserLayout);
     renderListHeader(renderer, browserLayout);
