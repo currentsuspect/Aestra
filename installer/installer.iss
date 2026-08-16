@@ -6,7 +6,7 @@
 ; =========================================================
 
 #define MyAppName        "Aestra"
-#define MyAppVersion     "1.1.0"
+#define MyAppVersion     "0.7.0"
 #define MyAppPublisher   "Aestra Studios"
 #define MyAppURL         "https://Aestra-daw.com"
 #define MyAppExeName     "AestraDAW.exe"
