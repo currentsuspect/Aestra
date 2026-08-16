@@ -3199,8 +3199,15 @@ void AestraContent::pauseFromCurrentFocus() {
     }
 
     if (focus == ViewFocus::Arsenal) {
-        // In Arsenal one-shot workflow, pause should hard-cut active sample voices.
-        stopFromCurrentFocus(true);
+        // In Arsenal one-shot workflow, pause hard-cuts active sample voices
+        // while preserving the playhead: play() resumes from the stored
+        // position instead of beat zero.
+        if (m_trackManager) {
+            m_trackManager->pauseArsenalPlayback();
+        }
+        if (m_audioEngine) {
+            m_audioEngine->panic();
+        }
         return;
     }
 

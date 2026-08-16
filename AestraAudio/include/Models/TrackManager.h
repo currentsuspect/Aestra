@@ -1071,6 +1071,23 @@ public:
     }
 
     /**
+     * @brief Pause Arsenal/pattern playback: hard-cut voices while preserving
+     *        the playhead for resume.
+     *
+     * A plain stop() returns the transport to the stored cue (play start), so
+     * pausing through stop would make play() restart from the old cue instead
+     * of the paused position. Move the cue to the CURRENT position BEFORE the
+     * stop command goes out — the audio thread's drain is authoritative, so a
+     * UI-side store after the fact would race it (same rule as the hard-stop
+     * rewind). playPatternInArsenal() then resumes from the stored playhead.
+     */
+    void pauseArsenalPlayback() {
+        const double pausedPosition = m_position.load(std::memory_order_relaxed);
+        m_playStartPosition.store(pausedPosition, std::memory_order_relaxed);
+        stopArsenalPlayback(true);
+    }
+
+    /**
      * @brief Access the undo/redo command history.
      * @return Mutable command history instance.
      */
