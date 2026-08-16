@@ -758,6 +758,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTes
     set_tests_properties(PatternPlaybackTempoChangeTest PROPERTIES LABELS "audio;transport;pattern;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternSliceSchedulingTest.cpp")
+    add_executable(PatternSliceSchedulingTest AestraAudio/PatternSliceSchedulingTest.cpp)
+    target_link_libraries(PatternSliceSchedulingTest PRIVATE AestraAudio)
+    target_include_directories(PatternSliceSchedulingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternSliceSchedulingTest COMMAND PatternSliceSchedulingTest)
+    set_tests_properties(PatternSliceSchedulingTest PROPERTIES LABELS "audio;pattern;regression;contract:audio")
+endif()
+
 # Sinc Interpolator Benchmark
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore)
