@@ -78,6 +78,7 @@ namespace {
         DroppedClip,
         SendRoute,
         ClipTiming,
+        LegacyDemoAutomation,
         Count
     };
 
@@ -2187,7 +2188,43 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             lane->automationCurves.push_back(curve);
                         }
                     }
-    
+
+                    // Migration: the pre-2026-08-14 demo automation curve
+                    // (addDemoTracks-era) — channel 1 Volume, default 0.8,
+                    // exactly the four points 0.5/1.0/0.2/0.8 at beats
+                    // 0/4/8/12 — is dropped on load so projects saved before
+                    // the demo-automation removal self-heal instead of
+                    // silently automating channel 1 on every playback.
+                    // Exact-shape match only: a real user curve is never
+                    // touched unless it matches all characteristics.
+                    if (!lane->automationCurves.empty()) {
+                        auto& curve = lane->automationCurves.back();
+                        const bool legacyDemoShape =
+                            curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Volume &&
+                            curve.mixerChannelId == 1 && std::abs(curve.getDefaultValue() - 0.8f) < 1e-3f &&
+                            curve.getPoints().size() == 4;
+                        if (legacyDemoShape) {
+                            constexpr double kDemoBeats[4] = {0.0, 4.0, 8.0, 12.0};
+                            constexpr double kDemoValues[4] = {0.5, 1.0, 0.2, 0.8};
+                            bool shapeMatches = true;
+                            for (size_t i = 0; i < 4; ++i) {
+                                const auto& pt = curve.getPoints()[i];
+                                if (std::abs(pt.beat - kDemoBeats[i]) > 1e-3 ||
+                                    std::abs(static_cast<double>(pt.value) - kDemoValues[i]) > 1e-3) {
+                                    shapeMatches = false;
+                                    break;
+                                }
+                            }
+                            if (shapeMatches) {
+                                lane->automationCurves.pop_back();
+                                warningLimiter.warning(
+                                    ProjectLoadWarningCategory::LegacyDemoAutomation,
+                                    "[ProjectLoad] Dropped the legacy demo automation curve on channel 1 "
+                                    "(pre-0.7.0 demo data).",
+                                    "[ProjectLoad] Additional legacy demo automation drops suppressed.");
+                            }
+                        }
+                    }
                     if (lj[i].has("clips")) {
                         const JSON& cj = lj[i]["clips"];
     #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
