@@ -153,7 +153,7 @@ void UIMixerPanel::refreshChannels()
 
             if (std::abs(newGain - oldGain) > 0.0001f) {
                 m_trackManager->getCommandHistory().pushAndExecute(
-                    std::make_shared<Aestra::Audio::SetVolumeCommand>(*mixerChannel, newGain));
+                    std::make_shared<Aestra::Audio::SetVolumeCommand>(*m_trackManager, *mixerChannel, newGain));
                 Aestra::Log::info("[UIMixerPanel] Fader cmd: " + std::to_string(newDb) + " dB");
             }
         };
@@ -185,7 +185,7 @@ void UIMixerPanel::refreshChannels()
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<Aestra::Audio::SetPanCommand>(*mixerChannel, pan));
+                std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
         };
 
         m_strips.push_back(strip);

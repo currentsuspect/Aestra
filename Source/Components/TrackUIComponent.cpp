@@ -335,7 +335,7 @@ double TrackUIComponent::snapBeatToGrid(double beat) const {
 void TrackUIComponent::onVolumeChanged(float volume) {
     if (m_channel && m_trackManager) {
         m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetVolumeCommand>(*m_channel, volume));
+            std::make_shared<SetVolumeCommand>(*m_trackManager, *m_channel, volume));
         Log::info("Lane " + m_laneId.toString() + " volume: " + std::to_string(volume));
     }
 }
@@ -343,7 +343,7 @@ void TrackUIComponent::onVolumeChanged(float volume) {
 void TrackUIComponent::onPanChanged(float pan) {
     if (m_channel && m_trackManager) {
         m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<SetPanCommand>(*m_channel, pan));
+            std::make_shared<SetPanCommand>(*m_trackManager, *m_channel, pan));
         Log::info("Lane " + m_laneId.toString() + " pan: " + std::to_string(pan));
     }
 }
@@ -1978,7 +1978,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     m_volumeKnobValue = newValue;
                     if (m_channel && m_trackManager) {
                         m_trackManager->getCommandHistory().pushAndExecute(
-                            std::make_shared<Aestra::Audio::SetVolumeCommand>(*m_channel, newValue));
+                            std::make_shared<Aestra::Audio::SetVolumeCommand>(*m_trackManager, *m_channel, newValue));
                     }
                     // Show tooltip at knob position
                     int pct = static_cast<int>(std::round(newValue * 100.0f));

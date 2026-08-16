@@ -32,7 +32,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
             // Don't set volume manually — let the command do it
             if (std::abs(newVol - oldVol) > 0.0001f) {
                 m_trackManager->getCommandHistory().pushAndExecute(
-                    std::make_shared<SetVolumeCommand>(*m_track, newVol));
+                    std::make_shared<SetVolumeCommand>(*m_trackManager, *m_track, newVol));
                 Aestra::Log::info("[MixerView] Vol cmd: " + std::to_string(oldVol) + " -> " + std::to_string(newVol));
             }
         }
@@ -48,7 +48,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
             float oldPan = m_track->getPan();
             if (std::abs(newPan - oldPan) > 0.0001f) {
                 m_trackManager->getCommandHistory().pushAndExecute(
-                    std::make_shared<SetPanCommand>(*m_track, newPan));
+                    std::make_shared<SetPanCommand>(*m_trackManager, *m_track, newPan));
             }
         }
     });

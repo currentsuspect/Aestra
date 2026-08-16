@@ -89,8 +89,8 @@ int main() {
 
     // Give the doomed track state that only lives in the object, so a
     // re-created replacement would be detectably different.
-    history.pushAndExecute(std::make_shared<SetVolumeCommand>(*victim, 0.25f));
-    history.pushAndExecute(std::make_shared<SetPanCommand>(*victim, -0.5f));
+    history.pushAndExecute(std::make_shared<SetVolumeCommand>(manager, *victim, 0.25f));
+    history.pushAndExecute(std::make_shared<SetPanCommand>(manager, *victim, -0.5f));
     check(almostEqual(victim->getVolume(), 0.25f), "fixture: volume applied");
     check(almostEqual(victim->getPan(), -0.5f), "fixture: pan applied");
 
@@ -193,7 +193,7 @@ int main() {
         check(channel != nullptr, "add created a channel");
         const uint32_t addedId = channel->getChannelId();
 
-        addHistory.pushAndExecute(std::make_shared<SetVolumeCommand>(*channel, 0.4f));
+        addHistory.pushAndExecute(std::make_shared<SetVolumeCommand>(added, *channel, 0.4f));
         check(almostEqual(channel->getVolume(), 0.4f), "volume applied to the added channel");
 
         check(addHistory.undo(), "undo of the volume change");
