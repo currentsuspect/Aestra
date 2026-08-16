@@ -209,7 +209,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        masterNode.type = Node::Master;</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        masterNode.label = <span class="stringliteral">&quot;MASTER&quot;</span>;</div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        masterNode.color = 0xFF808080;</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        masterNode.insertCount = 0;</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        masterNode.insertCount = master-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a54529f5e87be09d07f040ab4e8f3e9ed">fxCount</a>;</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        m_nodes.push_back(masterNode);</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    }</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
@@ -259,7 +259,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>            edge.targetNodeId = sendTargetId;</div>
 <div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>            edge.type = send.sidechainOnly ? Edge::SidechainPath : Edge::SendPath;</div>
 <div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>            edge.sendLevelDb = gainToDb(send.gain);</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            edge.sendIndex = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(s);</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            edge.sendId = send.sendId;</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>            m_edges.push_back(edge);</div>
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>        }</div>
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    }</div>
@@ -2042,29 +2042,29 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01956" name="l01956"></a><span class="lineno"> 1956</span>            }</div>
 <div class="line"><a id="l01957" name="l01957"></a><span class="lineno"> 1957</span>            <span class="keywordflow">if</span> (m_hoveredEdgeIdx &gt;= 0) {</div>
 <div class="line"><a id="l01958" name="l01958"></a><span class="lineno"> 1958</span>                <span class="keyword">const</span> Edge&amp; edge = m_edges[m_hoveredEdgeIdx];</div>
-<div class="line"><a id="l01959" name="l01959"></a><span class="lineno"> 1959</span>                <span class="keywordflow">if</span> (edge.type != Edge::MainPath &amp;&amp; edge.sendIndex &gt;= 0) {</div>
+<div class="line"><a id="l01959" name="l01959"></a><span class="lineno"> 1959</span>                <span class="keywordflow">if</span> (edge.type != Edge::MainPath &amp;&amp; edge.sendId != 0) {</div>
 <div class="line"><a id="l01960" name="l01960"></a><span class="lineno"> 1960</span>                    <span class="keywordflow">if</span> (!m_edgeContextMenu) {</div>
 <div class="line"><a id="l01961" name="l01961"></a><span class="lineno"> 1961</span>                        m_edgeContextMenu = std::make_shared&lt;AestraUI::NUIContextMenu&gt;();</div>
 <div class="line"><a id="l01962" name="l01962"></a><span class="lineno"> 1962</span>                        m_edgeContextMenu-&gt;setCloseOnSelection(<span class="keyword">true</span>);</div>
 <div class="line"><a id="l01963" name="l01963"></a><span class="lineno"> 1963</span>                    }</div>
 <div class="line"><a id="l01964" name="l01964"></a><span class="lineno"> 1964</span>                    m_edgeContextMenu-&gt;clear();</div>
 <div class="line"><a id="l01965" name="l01965"></a><span class="lineno"> 1965</span>                    uint32_t srcId = edge.sourceNodeId;</div>
-<div class="line"><a id="l01966" name="l01966"></a><span class="lineno"> 1966</span>                    <span class="keywordtype">int</span> sIdx = edge.sendIndex;</div>
+<div class="line"><a id="l01966" name="l01966"></a><span class="lineno"> 1966</span>                    uint64_t sId = edge.sendId;</div>
 <div class="line"><a id="l01967" name="l01967"></a><span class="lineno"> 1967</span>                    <span class="comment">// Level submenu</span></div>
 <div class="line"><a id="l01968" name="l01968"></a><span class="lineno"> 1968</span>                    <span class="keyword">auto</span> levelMenu = std::make_shared&lt;AestraUI::NUIContextMenu&gt;();</div>
 <div class="line"><a id="l01969" name="l01969"></a><span class="lineno"> 1969</span>                    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">float</span> kLevelVals[] = {-144.0f, -24.0f, -12.0f, -6.0f, 0.0f, 6.0f};</div>
 <div class="line"><a id="l01970" name="l01970"></a><span class="lineno"> 1970</span>                    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span>* kLevelLabels[] = {<span class="stringliteral">&quot;-inf dB&quot;</span>, <span class="stringliteral">&quot;-24 dB&quot;</span>, <span class="stringliteral">&quot;-12 dB&quot;</span>, <span class="stringliteral">&quot;-6 dB&quot;</span>, <span class="stringliteral">&quot;0 dB&quot;</span>, <span class="stringliteral">&quot;+6 dB&quot;</span>};</div>
 <div class="line"><a id="l01971" name="l01971"></a><span class="lineno"> 1971</span>                    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> li = 0; li &lt; 6; ++li) {</div>
-<div class="line"><a id="l01972" name="l01972"></a><span class="lineno"> 1972</span>                        levelMenu-&gt;addItem(kLevelLabels[li], [<span class="keyword">this</span>, srcId, sIdx, li]() {</div>
-<div class="line"><a id="l01973" name="l01973"></a><span class="lineno"> 1973</span>                            <span class="keywordflow">if</span> (m_onEditSendLevel) m_onEditSendLevel(srcId, sIdx, kLevelVals[li]);</div>
+<div class="line"><a id="l01972" name="l01972"></a><span class="lineno"> 1972</span>                        levelMenu-&gt;addItem(kLevelLabels[li], [<span class="keyword">this</span>, srcId, sId, li]() {</div>
+<div class="line"><a id="l01973" name="l01973"></a><span class="lineno"> 1973</span>                            <span class="keywordflow">if</span> (m_onEditSendLevel) m_onEditSendLevel(srcId, sId, kLevelVals[li]);</div>
 <div class="line"><a id="l01974" name="l01974"></a><span class="lineno"> 1974</span>                            m_graphDirty = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l01975" name="l01975"></a><span class="lineno"> 1975</span>                            repaint();</div>
 <div class="line"><a id="l01976" name="l01976"></a><span class="lineno"> 1976</span>                        });</div>
 <div class="line"><a id="l01977" name="l01977"></a><span class="lineno"> 1977</span>                    }</div>
 <div class="line"><a id="l01978" name="l01978"></a><span class="lineno"> 1978</span>                    m_edgeContextMenu-&gt;addSubmenu(<span class="stringliteral">&quot;Set Level&quot;</span>, levelMenu);</div>
 <div class="line"><a id="l01979" name="l01979"></a><span class="lineno"> 1979</span>                    m_edgeContextMenu-&gt;addSeparator();</div>
-<div class="line"><a id="l01980" name="l01980"></a><span class="lineno"> 1980</span>                    m_edgeContextMenu-&gt;addItem(<span class="stringliteral">&quot;Delete Send&quot;</span>, [<span class="keyword">this</span>, srcId, sIdx]() {</div>
-<div class="line"><a id="l01981" name="l01981"></a><span class="lineno"> 1981</span>                        <span class="keywordflow">if</span> (m_onRemoveSend) m_onRemoveSend(srcId, sIdx);</div>
+<div class="line"><a id="l01980" name="l01980"></a><span class="lineno"> 1980</span>                    m_edgeContextMenu-&gt;addItem(<span class="stringliteral">&quot;Delete Send&quot;</span>, [<span class="keyword">this</span>, srcId, sId]() {</div>
+<div class="line"><a id="l01981" name="l01981"></a><span class="lineno"> 1981</span>                        <span class="keywordflow">if</span> (m_onRemoveSend) m_onRemoveSend(srcId, sId);</div>
 <div class="line"><a id="l01982" name="l01982"></a><span class="lineno"> 1982</span>                        m_graphDirty = <span class="keyword">true</span>;</div>
 <div class="line"><a id="l01983" name="l01983"></a><span class="lineno"> 1983</span>                        m_selectedEdgeIdx = -1;</div>
 <div class="line"><a id="l01984" name="l01984"></a><span class="lineno"> 1984</span>                        repaint();</div>
@@ -2348,449 +2348,448 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02262" name="l02262"></a><span class="lineno"> 2262</span>    <span class="keywordflow">if</span> (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {</div>
 <div class="line"><a id="l02263" name="l02263"></a><span class="lineno"> 2263</span>        <span class="keywordflow">if</span> (m_selectedEdgeIdx &gt;= 0 &amp;&amp; m_selectedEdgeIdx &lt; <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(m_edges.size())) {</div>
 <div class="line"><a id="l02264" name="l02264"></a><span class="lineno"> 2264</span>            <span class="keyword">const</span> Edge&amp; edge = m_edges[m_selectedEdgeIdx];</div>
-<div class="line"><a id="l02265" name="l02265"></a><span class="lineno"> 2265</span>            <span class="keywordflow">if</span> (edge.type != Edge::MainPath &amp;&amp; edge.sendIndex &gt;= 0) {</div>
+<div class="line"><a id="l02265" name="l02265"></a><span class="lineno"> 2265</span>            <span class="keywordflow">if</span> (edge.type != Edge::MainPath &amp;&amp; edge.sendId != 0) {</div>
 <div class="line"><a id="l02266" name="l02266"></a><span class="lineno"> 2266</span>                uint32_t sourceId = edge.sourceNodeId;</div>
-<div class="line"><a id="l02267" name="l02267"></a><span class="lineno"> 2267</span>                <span class="keywordtype">int</span> sendIdx = edge.sendIndex;</div>
-<div class="line"><a id="l02268" name="l02268"></a><span class="lineno"> 2268</span>                <span class="keywordflow">if</span> (m_onRemoveSend) {</div>
-<div class="line"><a id="l02269" name="l02269"></a><span class="lineno"> 2269</span>                    m_onRemoveSend(sourceId, sendIdx);</div>
-<div class="line"><a id="l02270" name="l02270"></a><span class="lineno"> 2270</span>                    m_graphDirty = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l02271" name="l02271"></a><span class="lineno"> 2271</span>                }</div>
-<div class="line"><a id="l02272" name="l02272"></a><span class="lineno"> 2272</span>            }</div>
-<div class="line"><a id="l02273" name="l02273"></a><span class="lineno"> 2273</span>            m_selectedEdgeIdx = -1;</div>
-<div class="line"><a id="l02274" name="l02274"></a><span class="lineno"> 2274</span>            repaint();</div>
-<div class="line"><a id="l02275" name="l02275"></a><span class="lineno"> 2275</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l02276" name="l02276"></a><span class="lineno"> 2276</span>        }</div>
-<div class="line"><a id="l02277" name="l02277"></a><span class="lineno"> 2277</span>    }</div>
-<div class="line"><a id="l02278" name="l02278"></a><span class="lineno"> 2278</span>    <span class="keywordflow">if</span> (event.keyCode == NUIKeyCode::Escape) {</div>
-<div class="line"><a id="l02279" name="l02279"></a><span class="lineno"> 2279</span>        <span class="keywordflow">if</span> (m_searchFocused) {</div>
-<div class="line"><a id="l02280" name="l02280"></a><span class="lineno"> 2280</span>            m_searchQuery.clear();</div>
-<div class="line"><a id="l02281" name="l02281"></a><span class="lineno"> 2281</span>            m_searchFocused = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l02282" name="l02282"></a><span class="lineno"> 2282</span>            m_searchActive = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l02283" name="l02283"></a><span class="lineno"> 2283</span>            repaint();</div>
-<div class="line"><a id="l02284" name="l02284"></a><span class="lineno"> 2284</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l02285" name="l02285"></a><span class="lineno"> 2285</span>        }</div>
-<div class="line"><a id="l02286" name="l02286"></a><span class="lineno"> 2286</span>        <span class="keywordflow">if</span> (m_selectedEdgeIdx &gt;= 0) {</div>
-<div class="line"><a id="l02287" name="l02287"></a><span class="lineno"> 2287</span>            m_selectedEdgeIdx = -1;</div>
-<div class="line"><a id="l02288" name="l02288"></a><span class="lineno"> 2288</span>            repaint();</div>
-<div class="line"><a id="l02289" name="l02289"></a><span class="lineno"> 2289</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l02290" name="l02290"></a><span class="lineno"> 2290</span>        }</div>
-<div class="line"><a id="l02291" name="l02291"></a><span class="lineno"> 2291</span>        <span class="keywordflow">if</span> (m_mode == Mode::FullPanel &amp;&amp; m_onCollapse) {</div>
-<div class="line"><a id="l02292" name="l02292"></a><span class="lineno"> 2292</span>            m_onCollapse();</div>
-<div class="line"><a id="l02293" name="l02293"></a><span class="lineno"> 2293</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l02294" name="l02294"></a><span class="lineno"> 2294</span>        }</div>
-<div class="line"><a id="l02295" name="l02295"></a><span class="lineno"> 2295</span>    }</div>
-<div class="line"><a id="l02296" name="l02296"></a><span class="lineno"> 2296</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l02297" name="l02297"></a><span class="lineno"> 2297</span>}</div>
-<div class="line"><a id="l02298" name="l02298"></a><span class="lineno"> 2298</span> </div>
-<div class="line"><a id="l02299" name="l02299"></a><span class="lineno"> 2299</span><span class="keywordtype">void</span> UIRoutingMap::drawLivePulse(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIPoint&amp; a, <span class="keyword">const</span> NUIPoint&amp; b, <span class="keywordtype">float</span> peakDb) {</div>
-<div class="line"><a id="l02300" name="l02300"></a><span class="lineno"> 2300</span>    <span class="comment">// Number of pulses scales with signal level; louder = more dots</span></div>
-<div class="line"><a id="l02301" name="l02301"></a><span class="lineno"> 2301</span>    <span class="keywordtype">float</span> normalized = std::clamp((peakDb + 60.0f) / 60.0f, 0.0f, 1.0f);</div>
-<div class="line"><a id="l02302" name="l02302"></a><span class="lineno"> 2302</span>    <span class="keywordtype">int</span> pulseCount = std::max(1, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(normalized * 4.0f));</div>
-<div class="line"><a id="l02303" name="l02303"></a><span class="lineno"> 2303</span>    <span class="keywordtype">float</span> speed = 0.4f + normalized * 1.2f; <span class="comment">// faster when loud</span></div>
-<div class="line"><a id="l02304" name="l02304"></a><span class="lineno"> 2304</span> </div>
-<div class="line"><a id="l02305" name="l02305"></a><span class="lineno"> 2305</span>    <span class="keywordtype">float</span> dx = std::abs(b.x - a.x);</div>
-<div class="line"><a id="l02306" name="l02306"></a><span class="lineno"> 2306</span>    <span class="keywordtype">float</span> cp1x = a.x + dx * 0.5f;</div>
-<div class="line"><a id="l02307" name="l02307"></a><span class="lineno"> 2307</span>    <span class="keywordtype">float</span> cp1y = a.y;</div>
-<div class="line"><a id="l02308" name="l02308"></a><span class="lineno"> 2308</span>    <span class="keywordtype">float</span> cp2x = b.x - dx * 0.5f;</div>
-<div class="line"><a id="l02309" name="l02309"></a><span class="lineno"> 2309</span>    <span class="keywordtype">float</span> cp2y = b.y;</div>
-<div class="line"><a id="l02310" name="l02310"></a><span class="lineno"> 2310</span> </div>
-<div class="line"><a id="l02311" name="l02311"></a><span class="lineno"> 2311</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> p = 0; p &lt; pulseCount; ++p) {</div>
-<div class="line"><a id="l02312" name="l02312"></a><span class="lineno"> 2312</span>        <span class="keywordtype">float</span> phase = m_livePulsePhase * speed + <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(p) / pulseCount;</div>
-<div class="line"><a id="l02313" name="l02313"></a><span class="lineno"> 2313</span>        phase = phase - std::floor(phase);</div>
-<div class="line"><a id="l02314" name="l02314"></a><span class="lineno"> 2314</span> </div>
-<div class="line"><a id="l02315" name="l02315"></a><span class="lineno"> 2315</span>        <span class="keywordtype">float</span> t = phase;</div>
-<div class="line"><a id="l02316" name="l02316"></a><span class="lineno"> 2316</span>        <span class="keywordtype">float</span> u = 1.0f - t;</div>
-<div class="line"><a id="l02317" name="l02317"></a><span class="lineno"> 2317</span>        <span class="keywordtype">float</span> tt = t * t;</div>
-<div class="line"><a id="l02318" name="l02318"></a><span class="lineno"> 2318</span>        <span class="keywordtype">float</span> uu = u * u;</div>
-<div class="line"><a id="l02319" name="l02319"></a><span class="lineno"> 2319</span>        <span class="keywordtype">float</span> x = uu * u * a.x + 3.0f * uu * t * cp1x + 3.0f * u * tt * cp2x + tt * t * b.x;</div>
-<div class="line"><a id="l02320" name="l02320"></a><span class="lineno"> 2320</span>        <span class="keywordtype">float</span> y = uu * u * a.y + 3.0f * uu * t * cp1y + 3.0f * u * tt * cp2y + tt * t * b.y;</div>
-<div class="line"><a id="l02321" name="l02321"></a><span class="lineno"> 2321</span> </div>
-<div class="line"><a id="l02322" name="l02322"></a><span class="lineno"> 2322</span>        <span class="comment">// Color shifts from accent (purple) toward warning (orange) as signal gets hot</span></div>
-<div class="line"><a id="l02323" name="l02323"></a><span class="lineno"> 2323</span>        NUIColor pulseColor = m_accent;</div>
-<div class="line"><a id="l02324" name="l02324"></a><span class="lineno"> 2324</span>        <span class="keywordflow">if</span> (peakDb &gt; -6.0f) {</div>
-<div class="line"><a id="l02325" name="l02325"></a><span class="lineno"> 2325</span>            <span class="keywordtype">float</span> hotness = std::clamp((peakDb + 6.0f) / 6.0f, 0.0f, 1.0f);</div>
-<div class="line"><a id="l02326" name="l02326"></a><span class="lineno"> 2326</span>            pulseColor = NUIColor(</div>
-<div class="line"><a id="l02327" name="l02327"></a><span class="lineno"> 2327</span>                m_accent.r + (m_warning.r - m_accent.r) * hotness,</div>
-<div class="line"><a id="l02328" name="l02328"></a><span class="lineno"> 2328</span>                m_accent.g + (m_warning.g - m_accent.g) * hotness,</div>
-<div class="line"><a id="l02329" name="l02329"></a><span class="lineno"> 2329</span>                m_accent.b + (m_warning.b - m_accent.b) * hotness,</div>
-<div class="line"><a id="l02330" name="l02330"></a><span class="lineno"> 2330</span>                0.92f</div>
-<div class="line"><a id="l02331" name="l02331"></a><span class="lineno"> 2331</span>            );</div>
-<div class="line"><a id="l02332" name="l02332"></a><span class="lineno"> 2332</span>        }</div>
-<div class="line"><a id="l02333" name="l02333"></a><span class="lineno"> 2333</span>        <span class="comment">// Fade out near start/end of travel for smooth appearance</span></div>
-<div class="line"><a id="l02334" name="l02334"></a><span class="lineno"> 2334</span>        <span class="keywordtype">float</span> fade = 1.0f;</div>
-<div class="line"><a id="l02335" name="l02335"></a><span class="lineno"> 2335</span>        <span class="keywordflow">if</span> (t &lt; 0.15f) fade = t / 0.15f;</div>
-<div class="line"><a id="l02336" name="l02336"></a><span class="lineno"> 2336</span>        <span class="keywordflow">if</span> (t &gt; 0.85f) fade = (1.0f - t) / 0.15f;</div>
-<div class="line"><a id="l02337" name="l02337"></a><span class="lineno"> 2337</span> </div>
-<div class="line"><a id="l02338" name="l02338"></a><span class="lineno"> 2338</span>        <span class="keywordtype">float</span> radius = 2.5f + normalized * 2.0f;</div>
-<div class="line"><a id="l02339" name="l02339"></a><span class="lineno"> 2339</span>        renderer.fillCircle({x, y}, radius, pulseColor.withAlpha(0.85f * fade));</div>
-<div class="line"><a id="l02340" name="l02340"></a><span class="lineno"> 2340</span>    }</div>
-<div class="line"><a id="l02341" name="l02341"></a><span class="lineno"> 2341</span>}</div>
-<div class="line"><a id="l02342" name="l02342"></a><span class="lineno"> 2342</span> </div>
-<div class="line"><a id="l02343" name="l02343"></a><span class="lineno"> 2343</span><span class="keywordtype">void</span> UIRoutingMap::drawSendLevelLabel(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIPoint&amp; a, <span class="keyword">const</span> NUIPoint&amp; b, <span class="keywordtype">float</span> sendLevelDb) {</div>
-<div class="line"><a id="l02344" name="l02344"></a><span class="lineno"> 2344</span>    <span class="keywordtype">float</span> mx = (a.x + b.x) * 0.5f;</div>
-<div class="line"><a id="l02345" name="l02345"></a><span class="lineno"> 2345</span>    <span class="keywordtype">float</span> my = (a.y + b.y) * 0.5f;</div>
-<div class="line"><a id="l02346" name="l02346"></a><span class="lineno"> 2346</span>    <span class="keywordtype">char</span> buf[32];</div>
-<div class="line"><a id="l02347" name="l02347"></a><span class="lineno"> 2347</span>    std::snprintf(buf, <span class="keyword">sizeof</span>(buf), <span class="stringliteral">&quot;%.1f dB&quot;</span>, sendLevelDb);</div>
-<div class="line"><a id="l02348" name="l02348"></a><span class="lineno"> 2348</span>    <span class="keywordtype">float</span> fontSize = 9.0f;</div>
-<div class="line"><a id="l02349" name="l02349"></a><span class="lineno"> 2349</span>    <span class="keywordtype">float</span> textW = renderer.measureText(buf, fontSize).width;</div>
-<div class="line"><a id="l02350" name="l02350"></a><span class="lineno"> 2350</span>    <span class="keywordtype">float</span> textH = fontSize + 2.0f;</div>
-<div class="line"><a id="l02351" name="l02351"></a><span class="lineno"> 2351</span>    NUIRect bg{mx - textW * 0.5f - 3.0f, my - textH * 0.5f, textW + 6.0f, textH};</div>
-<div class="line"><a id="l02352" name="l02352"></a><span class="lineno"> 2352</span>    renderer.fillRoundedRect(bg, 3.0f, m_bgSecondary.withAlpha(0.85f));</div>
-<div class="line"><a id="l02353" name="l02353"></a><span class="lineno"> 2353</span>    renderer.strokeRoundedRect(bg, 3.0f, 0.5f, m_borderSecondary.withAlpha(0.4f));</div>
-<div class="line"><a id="l02354" name="l02354"></a><span class="lineno"> 2354</span>    renderer.drawTextCentered(buf, bg, fontSize, m_textSecondary.withAlpha(0.85f));</div>
-<div class="line"><a id="l02355" name="l02355"></a><span class="lineno"> 2355</span>}</div>
-<div class="line"><a id="l02356" name="l02356"></a><span class="lineno"> 2356</span> </div>
-<div class="line"><a id="l02357" name="l02357"></a><span class="lineno"> 2357</span>NUIColor UIRoutingMap::resolveInsertColor(<span class="keyword">const</span> std::string&amp; name)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l02358" name="l02358"></a><span class="lineno"> 2358</span>    <span class="keyword">auto</span>&amp; tm = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l02359" name="l02359"></a><span class="lineno"> 2359</span>    std::string low;</div>
-<div class="line"><a id="l02360" name="l02360"></a><span class="lineno"> 2360</span>    low.reserve(name.size());</div>
-<div class="line"><a id="l02361" name="l02361"></a><span class="lineno"> 2361</span>    <span class="keywordflow">for</span> (<span class="keywordtype">char</span> c : name) low.push_back(static_cast&lt;char&gt;(<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::tolower(static_cast&lt;unsigned char&gt;(c))));</div>
-<div class="line"><a id="l02362" name="l02362"></a><span class="lineno"> 2362</span> </div>
-<div class="line"><a id="l02363" name="l02363"></a><span class="lineno"> 2363</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;eq&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;filter&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02364" name="l02364"></a><span class="lineno"> 2364</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentCyan&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02365" name="l02365"></a><span class="lineno"> 2365</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;comp&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;limit&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02366" name="l02366"></a><span class="lineno"> 2366</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentAmber&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02367" name="l02367"></a><span class="lineno"> 2367</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;reverb&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;delay&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02368" name="l02368"></a><span class="lineno"> 2368</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;info&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02369" name="l02369"></a><span class="lineno"> 2369</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;dist&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;sat&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;drive&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02370" name="l02370"></a><span class="lineno"> 2370</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentRed&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02371" name="l02371"></a><span class="lineno"> 2371</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;chorus&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;flang&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;phaser&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02372" name="l02372"></a><span class="lineno"> 2372</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentLime&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02373" name="l02373"></a><span class="lineno"> 2373</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;sampler&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;sample&quot;</span>) != std::string::npos)</div>
-<div class="line"><a id="l02374" name="l02374"></a><span class="lineno"> 2374</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;warning&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02375" name="l02375"></a><span class="lineno"> 2375</span>    <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentPrimary&quot;</span>).withAlpha(0.92f);</div>
-<div class="line"><a id="l02376" name="l02376"></a><span class="lineno"> 2376</span>}</div>
-<div class="line"><a id="l02377" name="l02377"></a><span class="lineno"> 2377</span> </div>
-<div class="line"><a id="l02378" name="l02378"></a><span class="lineno"> 2378</span><span class="keywordtype">void</span> UIRoutingMap::drawInsertDots(NUIRenderer&amp; renderer, <span class="keyword">const</span> Node&amp; node, <span class="keywordtype">float</span> nx, <span class="keywordtype">float</span> ny, <span class="keywordtype">float</span> nw, <span class="keywordtype">float</span> nh) {</div>
-<div class="line"><a id="l02379" name="l02379"></a><span class="lineno"> 2379</span>    (void)nw;</div>
-<div class="line"><a id="l02380" name="l02380"></a><span class="lineno"> 2380</span>    <span class="keywordtype">float</span> dotR = 3.0f;</div>
-<div class="line"><a id="l02381" name="l02381"></a><span class="lineno"> 2381</span>    <span class="keywordtype">float</span> gap = 6.0f;</div>
-<div class="line"><a id="l02382" name="l02382"></a><span class="lineno"> 2382</span>    <span class="keywordtype">float</span> startX = nx + 14.0f;</div>
-<div class="line"><a id="l02383" name="l02383"></a><span class="lineno"> 2383</span>    <span class="keywordtype">float</span> startY = ny + nh - dotR * 2.0f - 10.0f;</div>
-<div class="line"><a id="l02384" name="l02384"></a><span class="lineno"> 2384</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; node.insertNames.size(); ++i) {</div>
-<div class="line"><a id="l02385" name="l02385"></a><span class="lineno"> 2385</span>        NUIColor col = resolveInsertColor(node.insertNames[i]);</div>
-<div class="line"><a id="l02386" name="l02386"></a><span class="lineno"> 2386</span>        renderer.fillCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, col);</div>
-<div class="line"><a id="l02387" name="l02387"></a><span class="lineno"> 2387</span>        renderer.strokeCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, 0.5f, m_text.withAlpha(0.25f));</div>
-<div class="line"><a id="l02388" name="l02388"></a><span class="lineno"> 2388</span>    }</div>
-<div class="line"><a id="l02389" name="l02389"></a><span class="lineno"> 2389</span>}</div>
-<div class="line"><a id="l02390" name="l02390"></a><span class="lineno"> 2390</span> </div>
-<div class="line"><a id="l02391" name="l02391"></a><span class="lineno"> 2391</span><span class="keywordtype">int</span> UIRoutingMap::hitTestInputPort(<span class="keyword">const</span> NUIPoint&amp; p)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l02392" name="l02392"></a><span class="lineno"> 2392</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_nodes.size(); ++i) {</div>
-<div class="line"><a id="l02393" name="l02393"></a><span class="lineno"> 2393</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; node = m_nodes[i];</div>
-<div class="line"><a id="l02394" name="l02394"></a><span class="lineno"> 2394</span>        <span class="keywordtype">float</span> nx, ny, nh;</div>
-<div class="line"><a id="l02395" name="l02395"></a><span class="lineno"> 2395</span>        <span class="keywordtype">float</span> scale;</div>
-<div class="line"><a id="l02396" name="l02396"></a><span class="lineno"> 2396</span>        <span class="keywordflow">if</span> (m_mode == Mode::FullPanel) {</div>
-<div class="line"><a id="l02397" name="l02397"></a><span class="lineno"> 2397</span>            NUIRect bounds = getBounds();</div>
-<div class="line"><a id="l02398" name="l02398"></a><span class="lineno"> 2398</span>            <span class="keywordtype">float</span> canvasY = bounds.y + 44.0f;</div>
-<div class="line"><a id="l02399" name="l02399"></a><span class="lineno"> 2399</span>            nx = bounds.x + node.x * m_zoom + m_cameraX;</div>
-<div class="line"><a id="l02400" name="l02400"></a><span class="lineno"> 2400</span>            ny = canvasY + node.y * m_zoom + m_cameraY;</div>
-<div class="line"><a id="l02401" name="l02401"></a><span class="lineno"> 2401</span>            nh = node.h * m_zoom;</div>
-<div class="line"><a id="l02402" name="l02402"></a><span class="lineno"> 2402</span>            scale = m_zoom;</div>
-<div class="line"><a id="l02403" name="l02403"></a><span class="lineno"> 2403</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l02404" name="l02404"></a><span class="lineno"> 2404</span>            nx = m_minimapOffsetX + (node.x - m_minimapCenterX) * m_minimapScale;</div>
-<div class="line"><a id="l02405" name="l02405"></a><span class="lineno"> 2405</span>            ny = m_minimapOffsetY + (node.y - m_minimapCenterY) * m_minimapScale;</div>
-<div class="line"><a id="l02406" name="l02406"></a><span class="lineno"> 2406</span>            nh = node.h * m_minimapScale;</div>
-<div class="line"><a id="l02407" name="l02407"></a><span class="lineno"> 2407</span>            scale = m_minimapScale;</div>
-<div class="line"><a id="l02408" name="l02408"></a><span class="lineno"> 2408</span>        }</div>
-<div class="line"><a id="l02409" name="l02409"></a><span class="lineno"> 2409</span>        <span class="keywordtype">float</span> portCx = nx;</div>
-<div class="line"><a id="l02410" name="l02410"></a><span class="lineno"> 2410</span>        <span class="keywordtype">float</span> portCy = ny + nh * 0.5f;</div>
-<div class="line"><a id="l02411" name="l02411"></a><span class="lineno"> 2411</span>        <span class="keywordtype">float</span> portR = std::max(3.5f, kPortRadius * scale);</div>
-<div class="line"><a id="l02412" name="l02412"></a><span class="lineno"> 2412</span>        <span class="keywordtype">float</span> dx = p.x - portCx;</div>
-<div class="line"><a id="l02413" name="l02413"></a><span class="lineno"> 2413</span>        <span class="keywordtype">float</span> dy = p.y - portCy;</div>
-<div class="line"><a id="l02414" name="l02414"></a><span class="lineno"> 2414</span>        <span class="keywordflow">if</span> (dx * dx + dy * dy &lt;= portR * portR + 16.0f) {</div>
-<div class="line"><a id="l02415" name="l02415"></a><span class="lineno"> 2415</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l02416" name="l02416"></a><span class="lineno"> 2416</span>        }</div>
-<div class="line"><a id="l02417" name="l02417"></a><span class="lineno"> 2417</span>    }</div>
-<div class="line"><a id="l02418" name="l02418"></a><span class="lineno"> 2418</span>    <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l02419" name="l02419"></a><span class="lineno"> 2419</span>}</div>
-<div class="line"><a id="l02420" name="l02420"></a><span class="lineno"> 2420</span> </div>
-<div class="line"><a id="l02421" name="l02421"></a><span class="lineno"> 2421</span><span class="keywordtype">void</span> UIRoutingMap::renderMiniOverview(NUIRenderer&amp; renderer) {</div>
-<div class="line"><a id="l02422" name="l02422"></a><span class="lineno"> 2422</span>    <span class="keywordflow">if</span> (m_mode != Mode::FullPanel) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02423" name="l02423"></a><span class="lineno"> 2423</span>    <span class="keywordflow">if</span> (m_worldMaxX &lt;= m_worldMinX || m_worldMaxY &lt;= m_worldMinY) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02424" name="l02424"></a><span class="lineno"> 2424</span> </div>
-<div class="line"><a id="l02425" name="l02425"></a><span class="lineno"> 2425</span>    NUIRect bounds = getBounds();</div>
-<div class="line"><a id="l02426" name="l02426"></a><span class="lineno"> 2426</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFullTitleBarH = 44.0f;</div>
-<div class="line"><a id="l02427" name="l02427"></a><span class="lineno"> 2427</span>    <span class="keywordtype">float</span> canvasY = bounds.y + kFullTitleBarH;</div>
-<div class="line"><a id="l02428" name="l02428"></a><span class="lineno"> 2428</span> </div>
-<div class="line"><a id="l02429" name="l02429"></a><span class="lineno"> 2429</span>    <span class="comment">// Inset dimensions</span></div>
-<div class="line"><a id="l02430" name="l02430"></a><span class="lineno"> 2430</span>    <span class="keywordtype">float</span> insetW = 140.0f;</div>
-<div class="line"><a id="l02431" name="l02431"></a><span class="lineno"> 2431</span>    <span class="keywordtype">float</span> insetH = 100.0f;</div>
-<div class="line"><a id="l02432" name="l02432"></a><span class="lineno"> 2432</span>    <span class="keywordtype">float</span> insetX = bounds.right() - insetW - 12.0f;</div>
-<div class="line"><a id="l02433" name="l02433"></a><span class="lineno"> 2433</span>    <span class="keywordtype">float</span> insetY = bounds.bottom() - insetH - 12.0f;</div>
-<div class="line"><a id="l02434" name="l02434"></a><span class="lineno"> 2434</span> </div>
-<div class="line"><a id="l02435" name="l02435"></a><span class="lineno"> 2435</span>    <span class="comment">// Avoid overlapping the collapse button area</span></div>
-<div class="line"><a id="l02436" name="l02436"></a><span class="lineno"> 2436</span>    <span class="keywordflow">if</span> (insetY &lt; bounds.y + kFullTitleBarH + 30.0f) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02437" name="l02437"></a><span class="lineno"> 2437</span> </div>
-<div class="line"><a id="l02438" name="l02438"></a><span class="lineno"> 2438</span>    <span class="comment">// Compute scale to fit world bounds into inset</span></div>
-<div class="line"><a id="l02439" name="l02439"></a><span class="lineno"> 2439</span>    <span class="keywordtype">float</span> worldW = m_worldMaxX - m_worldMinX + kTrackNodeW;</div>
-<div class="line"><a id="l02440" name="l02440"></a><span class="lineno"> 2440</span>    <span class="keywordtype">float</span> worldH = m_worldMaxY - m_worldMinY + kTrackNodeH;</div>
-<div class="line"><a id="l02441" name="l02441"></a><span class="lineno"> 2441</span>    <span class="keywordtype">float</span> scaleX = insetW / worldW;</div>
-<div class="line"><a id="l02442" name="l02442"></a><span class="lineno"> 2442</span>    <span class="keywordtype">float</span> scaleY = insetH / worldH;</div>
-<div class="line"><a id="l02443" name="l02443"></a><span class="lineno"> 2443</span>    <span class="keywordtype">float</span> scale = std::min(scaleX, scaleY) * 0.92f;</div>
-<div class="line"><a id="l02444" name="l02444"></a><span class="lineno"> 2444</span> </div>
-<div class="line"><a id="l02445" name="l02445"></a><span class="lineno"> 2445</span>    <span class="keywordtype">float</span> offsetX = insetX + insetW * 0.5f - (m_worldMinX + worldW * 0.5f) * scale;</div>
-<div class="line"><a id="l02446" name="l02446"></a><span class="lineno"> 2446</span>    <span class="keywordtype">float</span> offsetY = insetY + insetH * 0.5f - (m_worldMinY + worldH * 0.5f) * scale;</div>
-<div class="line"><a id="l02447" name="l02447"></a><span class="lineno"> 2447</span> </div>
-<div class="line"><a id="l02448" name="l02448"></a><span class="lineno"> 2448</span>    <span class="comment">// Background</span></div>
-<div class="line"><a id="l02449" name="l02449"></a><span class="lineno"> 2449</span>    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, m_bgSecondary.withAlpha(0.92f));</div>
-<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span>    renderer.strokeRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, 1.0f, m_border.withAlpha(0.35f));</div>
-<div class="line"><a id="l02451" name="l02451"></a><span class="lineno"> 2451</span> </div>
-<div class="line"><a id="l02452" name="l02452"></a><span class="lineno"> 2452</span>    <span class="comment">// Draw all edges as thin faint lines</span></div>
-<div class="line"><a id="l02453" name="l02453"></a><span class="lineno"> 2453</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; edge : m_edges) {</div>
-<div class="line"><a id="l02454" name="l02454"></a><span class="lineno"> 2454</span>        <span class="keyword">const</span> Node* src = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l02455" name="l02455"></a><span class="lineno"> 2455</span>        <span class="keyword">const</span> Node* dst = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l02456" name="l02456"></a><span class="lineno"> 2456</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; n : m_nodes) {</div>
-<div class="line"><a id="l02457" name="l02457"></a><span class="lineno"> 2457</span>            <span class="keywordflow">if</span> (n.id == edge.sourceNodeId) src = &amp;n;</div>
-<div class="line"><a id="l02458" name="l02458"></a><span class="lineno"> 2458</span>            <span class="keywordflow">if</span> (n.id == edge.targetNodeId) dst = &amp;n;</div>
-<div class="line"><a id="l02459" name="l02459"></a><span class="lineno"> 2459</span>        }</div>
-<div class="line"><a id="l02460" name="l02460"></a><span class="lineno"> 2460</span>        <span class="keywordflow">if</span> (!src || !dst) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l02461" name="l02461"></a><span class="lineno"> 2461</span>        <span class="keywordtype">float</span> sx = offsetX + (src-&gt;x + src-&gt;outputX) * scale;</div>
-<div class="line"><a id="l02462" name="l02462"></a><span class="lineno"> 2462</span>        <span class="keywordtype">float</span> sy = offsetY + (src-&gt;y + src-&gt;outputY) * scale;</div>
-<div class="line"><a id="l02463" name="l02463"></a><span class="lineno"> 2463</span>        <span class="keywordtype">float</span> dx_ = offsetX + (dst-&gt;x + dst-&gt;inputX) * scale;</div>
-<div class="line"><a id="l02464" name="l02464"></a><span class="lineno"> 2464</span>        <span class="keywordtype">float</span> dy_ = offsetY + edgeTargetY(edge, *dst) * scale;</div>
-<div class="line"><a id="l02465" name="l02465"></a><span class="lineno"> 2465</span>        NUIColor col = m_textSecondary.withAlpha(0.25f);</div>
-<div class="line"><a id="l02466" name="l02466"></a><span class="lineno"> 2466</span>        <span class="keywordflow">if</span> (edge.type == Edge::SendPath) col = m_textInfo.withAlpha(0.30f);</div>
-<div class="line"><a id="l02467" name="l02467"></a><span class="lineno"> 2467</span>        <span class="keywordflow">if</span> (edge.type == Edge::SidechainPath) col = m_warning.withAlpha(0.30f);</div>
-<div class="line"><a id="l02468" name="l02468"></a><span class="lineno"> 2468</span>        drawBezier(renderer, {sx, sy}, {dx_, dy_}, 0.5f, col, edge.type != Edge::MainPath);</div>
-<div class="line"><a id="l02469" name="l02469"></a><span class="lineno"> 2469</span>    }</div>
-<div class="line"><a id="l02470" name="l02470"></a><span class="lineno"> 2470</span> </div>
-<div class="line"><a id="l02471" name="l02471"></a><span class="lineno"> 2471</span>    <span class="comment">// Draw all nodes as tiny rects</span></div>
-<div class="line"><a id="l02472" name="l02472"></a><span class="lineno"> 2472</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; node : m_nodes) {</div>
-<div class="line"><a id="l02473" name="l02473"></a><span class="lineno"> 2473</span>        <span class="keywordtype">float</span> nx = offsetX + node.x * scale;</div>
-<div class="line"><a id="l02474" name="l02474"></a><span class="lineno"> 2474</span>        <span class="keywordtype">float</span> ny = offsetY + node.y * scale;</div>
-<div class="line"><a id="l02475" name="l02475"></a><span class="lineno"> 2475</span>        <span class="keywordtype">float</span> nw = node.w * scale;</div>
-<div class="line"><a id="l02476" name="l02476"></a><span class="lineno"> 2476</span>        <span class="keywordtype">float</span> nh = node.h * scale;</div>
-<div class="line"><a id="l02477" name="l02477"></a><span class="lineno"> 2477</span>        NUIColor fill = m_bgTertiary.withAlpha(0.85f);</div>
-<div class="line"><a id="l02478" name="l02478"></a><span class="lineno"> 2478</span>        <span class="keywordflow">if</span> (node.type == Node::Master) fill = m_accent.withAlpha(0.24f);</div>
-<div class="line"><a id="l02479" name="l02479"></a><span class="lineno"> 2479</span>        renderer.fillRoundedRect({nx, ny, nw, nh}, 2.0f, fill);</div>
-<div class="line"><a id="l02480" name="l02480"></a><span class="lineno"> 2480</span>        renderer.strokeRoundedRect({nx, ny, nw, nh}, 2.0f, 0.5f, m_border.withAlpha(0.4f));</div>
-<div class="line"><a id="l02481" name="l02481"></a><span class="lineno"> 2481</span>    }</div>
-<div class="line"><a id="l02482" name="l02482"></a><span class="lineno"> 2482</span> </div>
-<div class="line"><a id="l02483" name="l02483"></a><span class="lineno"> 2483</span>    <span class="comment">// Viewport rectangle overlay</span></div>
-<div class="line"><a id="l02484" name="l02484"></a><span class="lineno"> 2484</span>    <span class="keywordtype">float</span> vpX = offsetX + (-m_cameraX / m_zoom) * scale;</div>
-<div class="line"><a id="l02485" name="l02485"></a><span class="lineno"> 2485</span>    <span class="keywordtype">float</span> vpY = offsetY + (-(canvasY - bounds.y - kFullTitleBarH + m_cameraY) / m_zoom) * scale;</div>
-<div class="line"><a id="l02486" name="l02486"></a><span class="lineno"> 2486</span>    <span class="keywordtype">float</span> vpW = (bounds.width / m_zoom) * scale;</div>
-<div class="line"><a id="l02487" name="l02487"></a><span class="lineno"> 2487</span>    <span class="keywordtype">float</span> vpH = ((bounds.height - kFullTitleBarH) / m_zoom) * scale;</div>
-<div class="line"><a id="l02488" name="l02488"></a><span class="lineno"> 2488</span>    renderer.strokeRoundedRect({vpX, vpY, vpW, vpH}, 3.0f, 1.5f, m_accent.withAlpha(0.75f));</div>
-<div class="line"><a id="l02489" name="l02489"></a><span class="lineno"> 2489</span>}</div>
-<div class="line"><a id="l02490" name="l02490"></a><span class="lineno"> 2490</span> </div>
-<div class="line"><a id="l02491" name="l02491"></a><span class="lineno"> 2491</span><span class="keywordtype">void</span> UIRoutingMap::renderInspector(NUIRenderer&amp; renderer) {</div>
-<div class="line"><a id="l02492" name="l02492"></a><span class="lineno"> 2492</span>    <span class="keywordflow">if</span> (m_mode != Mode::FullPanel) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02493" name="l02493"></a><span class="lineno"> 2493</span>    <span class="keywordflow">if</span> (!m_inspectorVisible || m_inspectorNodeIdx &lt; 0 || m_inspectorNodeIdx &gt;= <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(m_nodes.size())) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02494" name="l02494"></a><span class="lineno"> 2494</span>    <span class="keywordflow">if</span> (!m_viewModel) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02495" name="l02495"></a><span class="lineno"> 2495</span> </div>
-<div class="line"><a id="l02496" name="l02496"></a><span class="lineno"> 2496</span>    <span class="keyword">const</span> Node&amp; node = m_nodes[m_inspectorNodeIdx];</div>
-<div class="line"><a id="l02497" name="l02497"></a><span class="lineno"> 2497</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d81/structAestra_1_1ChannelViewModel.html">Aestra::ChannelViewModel</a>* ch = m_viewModel-&gt;getChannelById(node.id);</div>
-<div class="line"><a id="l02498" name="l02498"></a><span class="lineno"> 2498</span>    <span class="keywordflow">if</span> (!ch &amp;&amp; node.id == 0) ch = m_viewModel-&gt;getMaster();</div>
-<div class="line"><a id="l02499" name="l02499"></a><span class="lineno"> 2499</span>    <span class="keywordflow">if</span> (!ch) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l02500" name="l02500"></a><span class="lineno"> 2500</span> </div>
-<div class="line"><a id="l02501" name="l02501"></a><span class="lineno"> 2501</span>    NUIRect bounds = getBounds();</div>
-<div class="line"><a id="l02502" name="l02502"></a><span class="lineno"> 2502</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFullTitleBarH = 44.0f;</div>
-<div class="line"><a id="l02503" name="l02503"></a><span class="lineno"> 2503</span>    <span class="keywordtype">float</span> canvasY = bounds.y + kFullTitleBarH;</div>
-<div class="line"><a id="l02504" name="l02504"></a><span class="lineno"> 2504</span> </div>
-<div class="line"><a id="l02505" name="l02505"></a><span class="lineno"> 2505</span>    <span class="comment">// Compute screen position of the clicked node so we can anchor the inspector near it</span></div>
-<div class="line"><a id="l02506" name="l02506"></a><span class="lineno"> 2506</span>    <span class="keywordtype">float</span> nodeScreenX = bounds.x + node.x * m_zoom + m_cameraX;</div>
-<div class="line"><a id="l02507" name="l02507"></a><span class="lineno"> 2507</span>    <span class="keywordtype">float</span> nodeScreenY = canvasY + node.y * m_zoom + m_cameraY;</div>
-<div class="line"><a id="l02508" name="l02508"></a><span class="lineno"> 2508</span>    <span class="keywordtype">float</span> nodeScreenW = node.w * m_zoom;</div>
-<div class="line"><a id="l02509" name="l02509"></a><span class="lineno"> 2509</span>    <span class="keywordtype">float</span> nodeScreenH = node.h * m_zoom;</div>
-<div class="line"><a id="l02510" name="l02510"></a><span class="lineno"> 2510</span> </div>
-<div class="line"><a id="l02511" name="l02511"></a><span class="lineno"> 2511</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kInspectorW = 240.0f;</div>
-<div class="line"><a id="l02512" name="l02512"></a><span class="lineno"> 2512</span>    <span class="keywordtype">float</span> insetX = nodeScreenX + nodeScreenW + 16.0f; <span class="comment">// default: float to the right</span></div>
-<div class="line"><a id="l02513" name="l02513"></a><span class="lineno"> 2513</span>    <span class="keywordtype">float</span> insetY = nodeScreenY;</div>
-<div class="line"><a id="l02514" name="l02514"></a><span class="lineno"> 2514</span>    <span class="comment">// If it would overflow the right edge, flip to the left of the node</span></div>
-<div class="line"><a id="l02515" name="l02515"></a><span class="lineno"> 2515</span>    <span class="keywordflow">if</span> (insetX + kInspectorW &gt; bounds.x + bounds.width - 12.0f) {</div>
-<div class="line"><a id="l02516" name="l02516"></a><span class="lineno"> 2516</span>        insetX = nodeScreenX - kInspectorW - 16.0f;</div>
-<div class="line"><a id="l02517" name="l02517"></a><span class="lineno"> 2517</span>    }</div>
-<div class="line"><a id="l02518" name="l02518"></a><span class="lineno"> 2518</span>    <span class="comment">// Clamp vertically within canvas</span></div>
-<div class="line"><a id="l02519" name="l02519"></a><span class="lineno"> 2519</span>    <span class="keywordtype">float</span> maxInsetH = 420.0f;</div>
-<div class="line"><a id="l02520" name="l02520"></a><span class="lineno"> 2520</span>    <span class="keywordtype">float</span> insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
-<div class="line"><a id="l02521" name="l02521"></a><span class="lineno"> 2521</span>    <span class="keywordflow">if</span> (insetY &lt; canvasY + 8.0f) {</div>
-<div class="line"><a id="l02522" name="l02522"></a><span class="lineno"> 2522</span>        insetY = canvasY + 8.0f;</div>
-<div class="line"><a id="l02523" name="l02523"></a><span class="lineno"> 2523</span>        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
-<div class="line"><a id="l02524" name="l02524"></a><span class="lineno"> 2524</span>    }</div>
-<div class="line"><a id="l02525" name="l02525"></a><span class="lineno"> 2525</span>    <span class="keywordflow">if</span> (insetH &lt; 140.0f) {</div>
-<div class="line"><a id="l02526" name="l02526"></a><span class="lineno"> 2526</span>        insetY = canvasY + 8.0f;</div>
-<div class="line"><a id="l02527" name="l02527"></a><span class="lineno"> 2527</span>        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
-<div class="line"><a id="l02528" name="l02528"></a><span class="lineno"> 2528</span>    }</div>
-<div class="line"><a id="l02529" name="l02529"></a><span class="lineno"> 2529</span>    <span class="comment">// Clamp horizontally</span></div>
-<div class="line"><a id="l02530" name="l02530"></a><span class="lineno"> 2530</span>    <span class="keywordflow">if</span> (insetX &lt; bounds.x + 8.0f) insetX = bounds.x + 8.0f;</div>
-<div class="line"><a id="l02531" name="l02531"></a><span class="lineno"> 2531</span>    <span class="keywordflow">if</span> (insetX + kInspectorW &gt; bounds.right() - 8.0f) insetX = bounds.right() - kInspectorW - 8.0f;</div>
-<div class="line"><a id="l02532" name="l02532"></a><span class="lineno"> 2532</span> </div>
-<div class="line"><a id="l02533" name="l02533"></a><span class="lineno"> 2533</span>    <span class="comment">// Remember panel rect for hit testing</span></div>
-<div class="line"><a id="l02534" name="l02534"></a><span class="lineno"> 2534</span>    m_inspectorPanelRect = NUIRect{insetX, insetY, kInspectorW, insetH};</div>
-<div class="line"><a id="l02535" name="l02535"></a><span class="lineno"> 2535</span> </div>
-<div class="line"><a id="l02536" name="l02536"></a><span class="lineno"> 2536</span>    <span class="comment">// Background</span></div>
-<div class="line"><a id="l02537" name="l02537"></a><span class="lineno"> 2537</span>    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, m_bgSecondary.withAlpha(0.96f));</div>
-<div class="line"><a id="l02538" name="l02538"></a><span class="lineno"> 2538</span>    renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));</div>
-<div class="line"><a id="l02539" name="l02539"></a><span class="lineno"> 2539</span> </div>
-<div class="line"><a id="l02540" name="l02540"></a><span class="lineno"> 2540</span>    <span class="comment">// Clip content to panel interior (scrollable area)</span></div>
-<div class="line"><a id="l02541" name="l02541"></a><span class="lineno"> 2541</span>    renderer.setClipRect(NUIRect{insetX + 2.0f, insetY + 6.0f, kInspectorW - 4.0f, insetH - 12.0f});</div>
-<div class="line"><a id="l02542" name="l02542"></a><span class="lineno"> 2542</span> </div>
-<div class="line"><a id="l02543" name="l02543"></a><span class="lineno"> 2543</span>    <span class="keywordtype">float</span> y = insetY + 14.0f - m_inspectorScrollY;</div>
-<div class="line"><a id="l02544" name="l02544"></a><span class="lineno"> 2544</span>    <span class="keywordtype">float</span> left = insetX + 12.0f;</div>
-<div class="line"><a id="l02545" name="l02545"></a><span class="lineno"> 2545</span>    <span class="keywordtype">float</span> right = insetX + kInspectorW - 12.0f;</div>
-<div class="line"><a id="l02546" name="l02546"></a><span class="lineno"> 2546</span>    <span class="keywordtype">float</span> textW = right - left;</div>
-<div class="line"><a id="l02547" name="l02547"></a><span class="lineno"> 2547</span> </div>
-<div class="line"><a id="l02548" name="l02548"></a><span class="lineno"> 2548</span>    <span class="comment">// Color strip at top</span></div>
-<div class="line"><a id="l02549" name="l02549"></a><span class="lineno"> 2549</span>    NUIColor stripColor(((node.color &gt;&gt; 16) &amp; 0xFF) / 255.0f,</div>
-<div class="line"><a id="l02550" name="l02550"></a><span class="lineno"> 2550</span>                        ((node.color &gt;&gt; 8) &amp; 0xFF) / 255.0f,</div>
-<div class="line"><a id="l02551" name="l02551"></a><span class="lineno"> 2551</span>                        (node.color &amp; 0xFF) / 255.0f,</div>
-<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>                        ((node.color &gt;&gt; 24) &amp; 0xFF) / 255.0f);</div>
-<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span>    renderer.fillRoundedRect({insetX + 1.0f, insetY + 1.0f, kInspectorW - 2.0f, 4.0f}, 3.0f, stripColor);</div>
-<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span> </div>
-<div class="line"><a id="l02555" name="l02555"></a><span class="lineno"> 2555</span>    <span class="comment">// Header: name + type</span></div>
-<div class="line"><a id="l02556" name="l02556"></a><span class="lineno"> 2556</span>    {</div>
-<div class="line"><a id="l02557" name="l02557"></a><span class="lineno"> 2557</span>        std::string typeLabel = (node.type == Node::Master) ? <span class="stringliteral">&quot;MASTER BUS&quot;</span> : <span class="stringliteral">&quot;TRACK&quot;</span>;</div>
-<div class="line"><a id="l02558" name="l02558"></a><span class="lineno"> 2558</span>        renderer.drawText(typeLabel, {left, y}, 10.0f, m_textSecondary.withAlpha(0.7f));</div>
-<div class="line"><a id="l02559" name="l02559"></a><span class="lineno"> 2559</span>        <span class="keywordtype">float</span> typeW = renderer.measureText(typeLabel, 10.0f).width;</div>
-<div class="line"><a id="l02560" name="l02560"></a><span class="lineno"> 2560</span>        std::string name = fitLabel(renderer, ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a4bbf13ed13a18c12cba5c241e592881c">name</a>.empty() ? node.label : ch-&gt;name, 13.0f, textW - typeW - 10.0f);</div>
-<div class="line"><a id="l02561" name="l02561"></a><span class="lineno"> 2561</span>        renderer.drawText(name, {left + typeW + 8.0f, y - 1.0f}, 13.0f, m_text.withAlpha(0.95f));</div>
-<div class="line"><a id="l02562" name="l02562"></a><span class="lineno"> 2562</span>        y += 24.0f;</div>
-<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span>    }</div>
-<div class="line"><a id="l02564" name="l02564"></a><span class="lineno"> 2564</span> </div>
-<div class="line"><a id="l02565" name="l02565"></a><span class="lineno"> 2565</span>    <span class="comment">// M/S badges inline</span></div>
-<div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>    <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b">muted</a> || ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ae56679348f674073bb59236b0d476eb3">soloed</a>) {</div>
-<div class="line"><a id="l02567" name="l02567"></a><span class="lineno"> 2567</span>        <span class="keywordtype">float</span> badgeX = left;</div>
-<div class="line"><a id="l02568" name="l02568"></a><span class="lineno"> 2568</span>        <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ae56679348f674073bb59236b0d476eb3">soloed</a>) {</div>
-<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>            NUIRect bRect{badgeX, y, 20.0f, 18.0f};</div>
-<div class="line"><a id="l02570" name="l02570"></a><span class="lineno"> 2570</span>            renderer.fillRoundedRect(bRect, 4.0f, m_warning.withAlpha(0.85f));</div>
-<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span>            renderer.drawTextCentered(<span class="stringliteral">&quot;S&quot;</span>, bRect, 10.0f, NUIColor::black());</div>
-<div class="line"><a id="l02572" name="l02572"></a><span class="lineno"> 2572</span>            badgeX += 26.0f;</div>
-<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span>        }</div>
-<div class="line"><a id="l02574" name="l02574"></a><span class="lineno"> 2574</span>        <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b">muted</a>) {</div>
-<div class="line"><a id="l02575" name="l02575"></a><span class="lineno"> 2575</span>            NUIRect bRect{badgeX, y, 20.0f, 18.0f};</div>
-<div class="line"><a id="l02576" name="l02576"></a><span class="lineno"> 2576</span>            renderer.fillRoundedRect(bRect, 4.0f, m_error.withAlpha(0.85f));</div>
-<div class="line"><a id="l02577" name="l02577"></a><span class="lineno"> 2577</span>            renderer.drawTextCentered(<span class="stringliteral">&quot;M&quot;</span>, bRect, 10.0f, NUIColor::white());</div>
-<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>        }</div>
-<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>        y += 24.0f;</div>
-<div class="line"><a id="l02580" name="l02580"></a><span class="lineno"> 2580</span>    }</div>
-<div class="line"><a id="l02581" name="l02581"></a><span class="lineno"> 2581</span> </div>
-<div class="line"><a id="l02582" name="l02582"></a><span class="lineno"> 2582</span>    <span class="comment">// Routing warning</span></div>
-<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>    <span class="keywordflow">if</span> (node.hasRoutingWarning) {</div>
-<div class="line"><a id="l02584" name="l02584"></a><span class="lineno"> 2584</span>        std::string warn = m_viewModel-&gt;getRoutingWarning(node.id);</div>
-<div class="line"><a id="l02585" name="l02585"></a><span class="lineno"> 2585</span>        renderer.fillRoundedRect({left, y, textW, 20.0f}, 4.0f, m_warning.withAlpha(0.18f));</div>
-<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>        renderer.strokeRoundedRect({left, y, textW, 20.0f}, 4.0f, 1.0f, m_warning.withAlpha(0.5f));</div>
-<div class="line"><a id="l02587" name="l02587"></a><span class="lineno"> 2587</span>        std::string wtext = fitLabel(renderer, warn, 10.0f, textW - 8.0f);</div>
-<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>        renderer.drawText(wtext, {left + 6.0f, y + 3.0f}, 10.0f, m_warning.withAlpha(0.9f));</div>
-<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>        y += 28.0f;</div>
-<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span>    }</div>
-<div class="line"><a id="l02591" name="l02591"></a><span class="lineno"> 2591</span> </div>
-<div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span>    <span class="comment">// Divider</span></div>
-<div class="line"><a id="l02593" name="l02593"></a><span class="lineno"> 2593</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
-<div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span>    y += 10.0f;</div>
-<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span> </div>
-<div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span>    <span class="comment">// === MAIN OUTPUT ===</span></div>
-<div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>    renderer.drawText(<span class="stringliteral">&quot;Main Output&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
-<div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span>    y += 14.0f;</div>
-<div class="line"><a id="l02599" name="l02599"></a><span class="lineno"> 2599</span>    {</div>
-<div class="line"><a id="l02600" name="l02600"></a><span class="lineno"> 2600</span>        std::string destName = ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ad89e1191da78216a823310d5cdb9f349">routeName</a>.empty() ? <span class="stringliteral">&quot;Master&quot;</span> : ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ad89e1191da78216a823310d5cdb9f349">routeName</a>;</div>
-<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"> 2601</span>        renderer.drawText(destName, {left + 8.0f, y}, 12.0f, m_text.withAlpha(0.85f));</div>
-<div class="line"><a id="l02602" name="l02602"></a><span class="lineno"> 2602</span>        <span class="keywordflow">if</span> (!ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a1d349c32f499adcf71a3eca124720a11">masterSendEnabled</a>) {</div>
-<div class="line"><a id="l02603" name="l02603"></a><span class="lineno"> 2603</span>            <span class="keywordtype">float</span> dnw = renderer.measureText(destName, 12.0f).width;</div>
-<div class="line"><a id="l02604" name="l02604"></a><span class="lineno"> 2604</span>            renderer.drawText(<span class="stringliteral">&quot;(bypassed)&quot;</span>, {left + 8.0f + dnw + 6.0f, y}, 10.0f, m_warning.withAlpha(0.75f));</div>
-<div class="line"><a id="l02605" name="l02605"></a><span class="lineno"> 2605</span>        }</div>
-<div class="line"><a id="l02606" name="l02606"></a><span class="lineno"> 2606</span>        y += 20.0f;</div>
-<div class="line"><a id="l02607" name="l02607"></a><span class="lineno"> 2607</span>    }</div>
-<div class="line"><a id="l02608" name="l02608"></a><span class="lineno"> 2608</span> </div>
-<div class="line"><a id="l02609" name="l02609"></a><span class="lineno"> 2609</span>    <span class="comment">// Divider</span></div>
-<div class="line"><a id="l02610" name="l02610"></a><span class="lineno"> 2610</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
-<div class="line"><a id="l02611" name="l02611"></a><span class="lineno"> 2611</span>    y += 10.0f;</div>
-<div class="line"><a id="l02612" name="l02612"></a><span class="lineno"> 2612</span> </div>
-<div class="line"><a id="l02613" name="l02613"></a><span class="lineno"> 2613</span>    <span class="comment">// === INSERT CHAIN ===</span></div>
-<div class="line"><a id="l02614" name="l02614"></a><span class="lineno"> 2614</span>    renderer.drawText(<span class="stringliteral">&quot;Insert Chain&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
-<div class="line"><a id="l02615" name="l02615"></a><span class="lineno"> 2615</span>    y += 16.0f;</div>
-<div class="line"><a id="l02616" name="l02616"></a><span class="lineno"> 2616</span>    <span class="comment">// Count filled inserts</span></div>
-<div class="line"><a id="l02617" name="l02617"></a><span class="lineno"> 2617</span>    <span class="keywordtype">size_t</span> filledInserts = 0;</div>
-<div class="line"><a id="l02618" name="l02618"></a><span class="lineno"> 2618</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; in : ch-&gt;inserts) if (!in.isEmpty) ++filledInserts;</div>
-<div class="line"><a id="l02619" name="l02619"></a><span class="lineno"> 2619</span>    <span class="keywordflow">if</span> (filledInserts == 0) {</div>
-<div class="line"><a id="l02620" name="l02620"></a><span class="lineno"> 2620</span>        renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));</div>
-<div class="line"><a id="l02621" name="l02621"></a><span class="lineno"> 2621</span>        renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_accent.withAlpha(0.4f));</div>
-<div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;+ Add plugin&quot;</span>, {left + 8.0f, y, textW - 16.0f, 22.0f}, 11.0f, m_accent.withAlpha(0.75f));</div>
-<div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>        y += 28.0f;</div>
-<div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;inserts.size(); ++i) {</div>
-<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; insert = ch-&gt;inserts[i];</div>
-<div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span>            <span class="keywordflow">if</span> (insert.isEmpty) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>            NUIColor slotBg = insert.bypassed ? m_bgSecondary.withAlpha(0.35f) : m_bgSecondary.withAlpha(0.55f);</div>
-<div class="line"><a id="l02629" name="l02629"></a><span class="lineno"> 2629</span>            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, slotBg);</div>
-<div class="line"><a id="l02630" name="l02630"></a><span class="lineno"> 2630</span>            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, 0.5f,</div>
-<div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>                                       insert.bypassed ? m_border.withAlpha(0.3f) : m_accent.withAlpha(0.45f));</div>
-<div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>            std::string slotLabel = fitLabel(renderer, insert.name, 11.0f, textW - 50.0f);</div>
-<div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>            renderer.drawText(slotLabel, {left + 14.0f, y + 3.0f}, 11.0f,</div>
-<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>                              insert.bypassed ? m_textSecondary.withAlpha(0.5f) : m_text.withAlpha(0.88f));</div>
-<div class="line"><a id="l02635" name="l02635"></a><span class="lineno"> 2635</span>            <span class="keywordflow">if</span> (insert.bypassed) {</div>
-<div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span>                <span class="keywordtype">float</span> slw = renderer.measureText(slotLabel, 11.0f).width;</div>
-<div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>                renderer.drawText(<span class="stringliteral">&quot;bypass&quot;</span>, {left + 14.0f + slw + 6.0f, y + 4.0f}, 9.0f, m_warning.withAlpha(0.65f));</div>
-<div class="line"><a id="l02638" name="l02638"></a><span class="lineno"> 2638</span>            }</div>
-<div class="line"><a id="l02639" name="l02639"></a><span class="lineno"> 2639</span>            <span class="keywordflow">if</span> (insert.mix &lt; 0.99f) {</div>
-<div class="line"><a id="l02640" name="l02640"></a><span class="lineno"> 2640</span>                <span class="keywordtype">char</span> mixBuf[16];</div>
-<div class="line"><a id="l02641" name="l02641"></a><span class="lineno"> 2641</span>                std::snprintf(mixBuf, <span class="keyword">sizeof</span>(mixBuf), <span class="stringliteral">&quot;%.0f%%&quot;</span>, insert.mix * 100.0f);</div>
-<div class="line"><a id="l02642" name="l02642"></a><span class="lineno"> 2642</span>                <span class="keywordtype">float</span> mixW = renderer.measureText(mixBuf, 9.0f).width;</div>
-<div class="line"><a id="l02643" name="l02643"></a><span class="lineno"> 2643</span>                renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));</div>
-<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>            }</div>
-<div class="line"><a id="l02645" name="l02645"></a><span class="lineno"> 2645</span>            y += 24.0f;</div>
-<div class="line"><a id="l02646" name="l02646"></a><span class="lineno"> 2646</span>        }</div>
-<div class="line"><a id="l02647" name="l02647"></a><span class="lineno"> 2647</span>    }</div>
-<div class="line"><a id="l02648" name="l02648"></a><span class="lineno"> 2648</span> </div>
-<div class="line"><a id="l02649" name="l02649"></a><span class="lineno"> 2649</span>    <span class="comment">// Divider</span></div>
-<div class="line"><a id="l02650" name="l02650"></a><span class="lineno"> 2650</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
-<div class="line"><a id="l02651" name="l02651"></a><span class="lineno"> 2651</span>    y += 10.0f;</div>
-<div class="line"><a id="l02652" name="l02652"></a><span class="lineno"> 2652</span> </div>
-<div class="line"><a id="l02653" name="l02653"></a><span class="lineno"> 2653</span>    <span class="comment">// === SENDS ===</span></div>
-<div class="line"><a id="l02654" name="l02654"></a><span class="lineno"> 2654</span>    renderer.drawText(<span class="stringliteral">&quot;Sends&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
-<div class="line"><a id="l02655" name="l02655"></a><span class="lineno"> 2655</span>    y += 16.0f;</div>
-<div class="line"><a id="l02656" name="l02656"></a><span class="lineno"> 2656</span>    <span class="keywordflow">if</span> (ch-&gt;sends.empty()) {</div>
-<div class="line"><a id="l02657" name="l02657"></a><span class="lineno"> 2657</span>        renderer.drawText(<span class="stringliteral">&quot;No sends&quot;</span>, {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));</div>
-<div class="line"><a id="l02658" name="l02658"></a><span class="lineno"> 2658</span>        y += 18.0f;</div>
-<div class="line"><a id="l02659" name="l02659"></a><span class="lineno"> 2659</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l02660" name="l02660"></a><span class="lineno"> 2660</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;sends.size(); ++i) {</div>
-<div class="line"><a id="l02661" name="l02661"></a><span class="lineno"> 2661</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; send = ch-&gt;sends[i];</div>
-<div class="line"><a id="l02662" name="l02662"></a><span class="lineno"> 2662</span>            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));</div>
-<div class="line"><a id="l02663" name="l02663"></a><span class="lineno"> 2663</span>            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_border.withAlpha(0.25f));</div>
-<div class="line"><a id="l02664" name="l02664"></a><span class="lineno"> 2664</span> </div>
-<div class="line"><a id="l02665" name="l02665"></a><span class="lineno"> 2665</span>            std::string dest = send.targetName.empty() ? <span class="stringliteral">&quot;?&quot;</span> : send.targetName;</div>
-<div class="line"><a id="l02666" name="l02666"></a><span class="lineno"> 2666</span>            std::string sendLabel = fitLabel(renderer, dest, 11.0f, textW - 80.0f);</div>
-<div class="line"><a id="l02667" name="l02667"></a><span class="lineno"> 2667</span>            renderer.drawText(sendLabel, {left + 14.0f, y + 4.0f}, 11.0f, m_text.withAlpha(0.85f));</div>
-<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span> </div>
-<div class="line"><a id="l02669" name="l02669"></a><span class="lineno"> 2669</span>            <span class="keywordtype">float</span> metaX = left + 14.0f;</div>
-<div class="line"><a id="l02670" name="l02670"></a><span class="lineno"> 2670</span>            <span class="keywordtype">float</span> metaY = y + 14.0f;</div>
-<div class="line"><a id="l02671" name="l02671"></a><span class="lineno"> 2671</span>            <span class="keywordtype">float</span> sendDb = gainToDb(send.gain);</div>
-<div class="line"><a id="l02672" name="l02672"></a><span class="lineno"> 2672</span>            <span class="keywordtype">char</span> dbBuf[16];</div>
-<div class="line"><a id="l02673" name="l02673"></a><span class="lineno"> 2673</span>            std::snprintf(dbBuf, <span class="keyword">sizeof</span>(dbBuf), <span class="stringliteral">&quot;%.1f dB&quot;</span>, sendDb);</div>
-<div class="line"><a id="l02674" name="l02674"></a><span class="lineno"> 2674</span>            renderer.drawText(dbBuf, {metaX, metaY}, 9.0f, m_textInfo.withAlpha(0.7f));</div>
-<div class="line"><a id="l02675" name="l02675"></a><span class="lineno"> 2675</span>            metaX += renderer.measureText(dbBuf, 9.0f).width + 8.0f;</div>
-<div class="line"><a id="l02676" name="l02676"></a><span class="lineno"> 2676</span> </div>
-<div class="line"><a id="l02677" name="l02677"></a><span class="lineno"> 2677</span>            <span class="keywordflow">if</span> (send.sidechainOnly) {</div>
-<div class="line"><a id="l02678" name="l02678"></a><span class="lineno"> 2678</span>                renderer.drawText(<span class="stringliteral">&quot;sidechain&quot;</span>, {metaX, metaY}, 9.0f, m_warning.withAlpha(0.75f));</div>
-<div class="line"><a id="l02679" name="l02679"></a><span class="lineno"> 2679</span>                metaX += renderer.measureText(<span class="stringliteral">&quot;sidechain&quot;</span>, 9.0f).width + 8.0f;</div>
-<div class="line"><a id="l02680" name="l02680"></a><span class="lineno"> 2680</span>            }</div>
-<div class="line"><a id="l02681" name="l02681"></a><span class="lineno"> 2681</span>            <span class="keywordflow">if</span> (!send.postFader) {</div>
-<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span>                renderer.drawText(<span class="stringliteral">&quot;pre&quot;</span>, {metaX, metaY}, 9.0f, m_textSecondary.withAlpha(0.7f));</div>
-<div class="line"><a id="l02683" name="l02683"></a><span class="lineno"> 2683</span>                metaX += renderer.measureText(<span class="stringliteral">&quot;pre&quot;</span>, 9.0f).width + 8.0f;</div>
-<div class="line"><a id="l02684" name="l02684"></a><span class="lineno"> 2684</span>            }</div>
-<div class="line"><a id="l02685" name="l02685"></a><span class="lineno"> 2685</span>            <span class="keywordflow">if</span> (send.muted) {</div>
-<div class="line"><a id="l02686" name="l02686"></a><span class="lineno"> 2686</span>                renderer.drawText(<span class="stringliteral">&quot;muted&quot;</span>, {metaX, metaY}, 9.0f, m_error.withAlpha(0.75f));</div>
-<div class="line"><a id="l02687" name="l02687"></a><span class="lineno"> 2687</span>            }</div>
-<div class="line"><a id="l02688" name="l02688"></a><span class="lineno"> 2688</span> </div>
-<div class="line"><a id="l02689" name="l02689"></a><span class="lineno"> 2689</span>            y += 28.0f;</div>
-<div class="line"><a id="l02690" name="l02690"></a><span class="lineno"> 2690</span>        }</div>
-<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span>    }</div>
-<div class="line"><a id="l02692" name="l02692"></a><span class="lineno"> 2692</span> </div>
-<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span>    <span class="comment">// Clear clip so close button and scroll shadow render outside the content area</span></div>
-<div class="line"><a id="l02694" name="l02694"></a><span class="lineno"> 2694</span>    renderer.clearClipRect();</div>
-<div class="line"><a id="l02695" name="l02695"></a><span class="lineno"> 2695</span> </div>
-<div class="line"><a id="l02696" name="l02696"></a><span class="lineno"> 2696</span>    <span class="comment">// Close button (top-right of panel)</span></div>
-<div class="line"><a id="l02697" name="l02697"></a><span class="lineno"> 2697</span>    m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 26.0f, insetY + 8.0f, 18.0f, 18.0f};</div>
-<div class="line"><a id="l02698" name="l02698"></a><span class="lineno"> 2698</span>    renderer.fillRoundedRect(m_inspectorCloseRect, 5.0f,</div>
-<div class="line"><a id="l02699" name="l02699"></a><span class="lineno"> 2699</span>                             m_inspectorCloseHovered ? m_warning.withAlpha(0.45f)</div>
-<div class="line"><a id="l02700" name="l02700"></a><span class="lineno"> 2700</span>                                                      : m_bgTertiary.withAlpha(0.4f));</div>
-<div class="line"><a id="l02701" name="l02701"></a><span class="lineno"> 2701</span>    renderer.drawTextCentered(<span class="stringliteral">&quot;x&quot;</span>, m_inspectorCloseRect, 12.0f, m_textSecondary.withAlpha(0.85f));</div>
-<div class="line"><a id="l02702" name="l02702"></a><span class="lineno"> 2702</span>}</div>
-<div class="line"><a id="l02703" name="l02703"></a><span class="lineno"> 2703</span> </div>
-<div class="line"><a id="l02704" name="l02704"></a><span class="lineno"> 2704</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l02267" name="l02267"></a><span class="lineno"> 2267</span>                <span class="keywordflow">if</span> (m_onRemoveSend) {</div>
+<div class="line"><a id="l02268" name="l02268"></a><span class="lineno"> 2268</span>                    m_onRemoveSend(sourceId, edge.sendId);</div>
+<div class="line"><a id="l02269" name="l02269"></a><span class="lineno"> 2269</span>                    m_graphDirty = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l02270" name="l02270"></a><span class="lineno"> 2270</span>                }</div>
+<div class="line"><a id="l02271" name="l02271"></a><span class="lineno"> 2271</span>            }</div>
+<div class="line"><a id="l02272" name="l02272"></a><span class="lineno"> 2272</span>            m_selectedEdgeIdx = -1;</div>
+<div class="line"><a id="l02273" name="l02273"></a><span class="lineno"> 2273</span>            repaint();</div>
+<div class="line"><a id="l02274" name="l02274"></a><span class="lineno"> 2274</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l02275" name="l02275"></a><span class="lineno"> 2275</span>        }</div>
+<div class="line"><a id="l02276" name="l02276"></a><span class="lineno"> 2276</span>    }</div>
+<div class="line"><a id="l02277" name="l02277"></a><span class="lineno"> 2277</span>    <span class="keywordflow">if</span> (event.keyCode == NUIKeyCode::Escape) {</div>
+<div class="line"><a id="l02278" name="l02278"></a><span class="lineno"> 2278</span>        <span class="keywordflow">if</span> (m_searchFocused) {</div>
+<div class="line"><a id="l02279" name="l02279"></a><span class="lineno"> 2279</span>            m_searchQuery.clear();</div>
+<div class="line"><a id="l02280" name="l02280"></a><span class="lineno"> 2280</span>            m_searchFocused = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l02281" name="l02281"></a><span class="lineno"> 2281</span>            m_searchActive = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l02282" name="l02282"></a><span class="lineno"> 2282</span>            repaint();</div>
+<div class="line"><a id="l02283" name="l02283"></a><span class="lineno"> 2283</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l02284" name="l02284"></a><span class="lineno"> 2284</span>        }</div>
+<div class="line"><a id="l02285" name="l02285"></a><span class="lineno"> 2285</span>        <span class="keywordflow">if</span> (m_selectedEdgeIdx &gt;= 0) {</div>
+<div class="line"><a id="l02286" name="l02286"></a><span class="lineno"> 2286</span>            m_selectedEdgeIdx = -1;</div>
+<div class="line"><a id="l02287" name="l02287"></a><span class="lineno"> 2287</span>            repaint();</div>
+<div class="line"><a id="l02288" name="l02288"></a><span class="lineno"> 2288</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l02289" name="l02289"></a><span class="lineno"> 2289</span>        }</div>
+<div class="line"><a id="l02290" name="l02290"></a><span class="lineno"> 2290</span>        <span class="keywordflow">if</span> (m_mode == Mode::FullPanel &amp;&amp; m_onCollapse) {</div>
+<div class="line"><a id="l02291" name="l02291"></a><span class="lineno"> 2291</span>            m_onCollapse();</div>
+<div class="line"><a id="l02292" name="l02292"></a><span class="lineno"> 2292</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l02293" name="l02293"></a><span class="lineno"> 2293</span>        }</div>
+<div class="line"><a id="l02294" name="l02294"></a><span class="lineno"> 2294</span>    }</div>
+<div class="line"><a id="l02295" name="l02295"></a><span class="lineno"> 2295</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l02296" name="l02296"></a><span class="lineno"> 2296</span>}</div>
+<div class="line"><a id="l02297" name="l02297"></a><span class="lineno"> 2297</span> </div>
+<div class="line"><a id="l02298" name="l02298"></a><span class="lineno"> 2298</span><span class="keywordtype">void</span> UIRoutingMap::drawLivePulse(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIPoint&amp; a, <span class="keyword">const</span> NUIPoint&amp; b, <span class="keywordtype">float</span> peakDb) {</div>
+<div class="line"><a id="l02299" name="l02299"></a><span class="lineno"> 2299</span>    <span class="comment">// Number of pulses scales with signal level; louder = more dots</span></div>
+<div class="line"><a id="l02300" name="l02300"></a><span class="lineno"> 2300</span>    <span class="keywordtype">float</span> normalized = std::clamp((peakDb + 60.0f) / 60.0f, 0.0f, 1.0f);</div>
+<div class="line"><a id="l02301" name="l02301"></a><span class="lineno"> 2301</span>    <span class="keywordtype">int</span> pulseCount = std::max(1, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(normalized * 4.0f));</div>
+<div class="line"><a id="l02302" name="l02302"></a><span class="lineno"> 2302</span>    <span class="keywordtype">float</span> speed = 0.4f + normalized * 1.2f; <span class="comment">// faster when loud</span></div>
+<div class="line"><a id="l02303" name="l02303"></a><span class="lineno"> 2303</span> </div>
+<div class="line"><a id="l02304" name="l02304"></a><span class="lineno"> 2304</span>    <span class="keywordtype">float</span> dx = std::abs(b.x - a.x);</div>
+<div class="line"><a id="l02305" name="l02305"></a><span class="lineno"> 2305</span>    <span class="keywordtype">float</span> cp1x = a.x + dx * 0.5f;</div>
+<div class="line"><a id="l02306" name="l02306"></a><span class="lineno"> 2306</span>    <span class="keywordtype">float</span> cp1y = a.y;</div>
+<div class="line"><a id="l02307" name="l02307"></a><span class="lineno"> 2307</span>    <span class="keywordtype">float</span> cp2x = b.x - dx * 0.5f;</div>
+<div class="line"><a id="l02308" name="l02308"></a><span class="lineno"> 2308</span>    <span class="keywordtype">float</span> cp2y = b.y;</div>
+<div class="line"><a id="l02309" name="l02309"></a><span class="lineno"> 2309</span> </div>
+<div class="line"><a id="l02310" name="l02310"></a><span class="lineno"> 2310</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> p = 0; p &lt; pulseCount; ++p) {</div>
+<div class="line"><a id="l02311" name="l02311"></a><span class="lineno"> 2311</span>        <span class="keywordtype">float</span> phase = m_livePulsePhase * speed + <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(p) / pulseCount;</div>
+<div class="line"><a id="l02312" name="l02312"></a><span class="lineno"> 2312</span>        phase = phase - std::floor(phase);</div>
+<div class="line"><a id="l02313" name="l02313"></a><span class="lineno"> 2313</span> </div>
+<div class="line"><a id="l02314" name="l02314"></a><span class="lineno"> 2314</span>        <span class="keywordtype">float</span> t = phase;</div>
+<div class="line"><a id="l02315" name="l02315"></a><span class="lineno"> 2315</span>        <span class="keywordtype">float</span> u = 1.0f - t;</div>
+<div class="line"><a id="l02316" name="l02316"></a><span class="lineno"> 2316</span>        <span class="keywordtype">float</span> tt = t * t;</div>
+<div class="line"><a id="l02317" name="l02317"></a><span class="lineno"> 2317</span>        <span class="keywordtype">float</span> uu = u * u;</div>
+<div class="line"><a id="l02318" name="l02318"></a><span class="lineno"> 2318</span>        <span class="keywordtype">float</span> x = uu * u * a.x + 3.0f * uu * t * cp1x + 3.0f * u * tt * cp2x + tt * t * b.x;</div>
+<div class="line"><a id="l02319" name="l02319"></a><span class="lineno"> 2319</span>        <span class="keywordtype">float</span> y = uu * u * a.y + 3.0f * uu * t * cp1y + 3.0f * u * tt * cp2y + tt * t * b.y;</div>
+<div class="line"><a id="l02320" name="l02320"></a><span class="lineno"> 2320</span> </div>
+<div class="line"><a id="l02321" name="l02321"></a><span class="lineno"> 2321</span>        <span class="comment">// Color shifts from accent (purple) toward warning (orange) as signal gets hot</span></div>
+<div class="line"><a id="l02322" name="l02322"></a><span class="lineno"> 2322</span>        NUIColor pulseColor = m_accent;</div>
+<div class="line"><a id="l02323" name="l02323"></a><span class="lineno"> 2323</span>        <span class="keywordflow">if</span> (peakDb &gt; -6.0f) {</div>
+<div class="line"><a id="l02324" name="l02324"></a><span class="lineno"> 2324</span>            <span class="keywordtype">float</span> hotness = std::clamp((peakDb + 6.0f) / 6.0f, 0.0f, 1.0f);</div>
+<div class="line"><a id="l02325" name="l02325"></a><span class="lineno"> 2325</span>            pulseColor = NUIColor(</div>
+<div class="line"><a id="l02326" name="l02326"></a><span class="lineno"> 2326</span>                m_accent.r + (m_warning.r - m_accent.r) * hotness,</div>
+<div class="line"><a id="l02327" name="l02327"></a><span class="lineno"> 2327</span>                m_accent.g + (m_warning.g - m_accent.g) * hotness,</div>
+<div class="line"><a id="l02328" name="l02328"></a><span class="lineno"> 2328</span>                m_accent.b + (m_warning.b - m_accent.b) * hotness,</div>
+<div class="line"><a id="l02329" name="l02329"></a><span class="lineno"> 2329</span>                0.92f</div>
+<div class="line"><a id="l02330" name="l02330"></a><span class="lineno"> 2330</span>            );</div>
+<div class="line"><a id="l02331" name="l02331"></a><span class="lineno"> 2331</span>        }</div>
+<div class="line"><a id="l02332" name="l02332"></a><span class="lineno"> 2332</span>        <span class="comment">// Fade out near start/end of travel for smooth appearance</span></div>
+<div class="line"><a id="l02333" name="l02333"></a><span class="lineno"> 2333</span>        <span class="keywordtype">float</span> fade = 1.0f;</div>
+<div class="line"><a id="l02334" name="l02334"></a><span class="lineno"> 2334</span>        <span class="keywordflow">if</span> (t &lt; 0.15f) fade = t / 0.15f;</div>
+<div class="line"><a id="l02335" name="l02335"></a><span class="lineno"> 2335</span>        <span class="keywordflow">if</span> (t &gt; 0.85f) fade = (1.0f - t) / 0.15f;</div>
+<div class="line"><a id="l02336" name="l02336"></a><span class="lineno"> 2336</span> </div>
+<div class="line"><a id="l02337" name="l02337"></a><span class="lineno"> 2337</span>        <span class="keywordtype">float</span> radius = 2.5f + normalized * 2.0f;</div>
+<div class="line"><a id="l02338" name="l02338"></a><span class="lineno"> 2338</span>        renderer.fillCircle({x, y}, radius, pulseColor.withAlpha(0.85f * fade));</div>
+<div class="line"><a id="l02339" name="l02339"></a><span class="lineno"> 2339</span>    }</div>
+<div class="line"><a id="l02340" name="l02340"></a><span class="lineno"> 2340</span>}</div>
+<div class="line"><a id="l02341" name="l02341"></a><span class="lineno"> 2341</span> </div>
+<div class="line"><a id="l02342" name="l02342"></a><span class="lineno"> 2342</span><span class="keywordtype">void</span> UIRoutingMap::drawSendLevelLabel(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIPoint&amp; a, <span class="keyword">const</span> NUIPoint&amp; b, <span class="keywordtype">float</span> sendLevelDb) {</div>
+<div class="line"><a id="l02343" name="l02343"></a><span class="lineno"> 2343</span>    <span class="keywordtype">float</span> mx = (a.x + b.x) * 0.5f;</div>
+<div class="line"><a id="l02344" name="l02344"></a><span class="lineno"> 2344</span>    <span class="keywordtype">float</span> my = (a.y + b.y) * 0.5f;</div>
+<div class="line"><a id="l02345" name="l02345"></a><span class="lineno"> 2345</span>    <span class="keywordtype">char</span> buf[32];</div>
+<div class="line"><a id="l02346" name="l02346"></a><span class="lineno"> 2346</span>    std::snprintf(buf, <span class="keyword">sizeof</span>(buf), <span class="stringliteral">&quot;%.1f dB&quot;</span>, sendLevelDb);</div>
+<div class="line"><a id="l02347" name="l02347"></a><span class="lineno"> 2347</span>    <span class="keywordtype">float</span> fontSize = 9.0f;</div>
+<div class="line"><a id="l02348" name="l02348"></a><span class="lineno"> 2348</span>    <span class="keywordtype">float</span> textW = renderer.measureText(buf, fontSize).width;</div>
+<div class="line"><a id="l02349" name="l02349"></a><span class="lineno"> 2349</span>    <span class="keywordtype">float</span> textH = fontSize + 2.0f;</div>
+<div class="line"><a id="l02350" name="l02350"></a><span class="lineno"> 2350</span>    NUIRect bg{mx - textW * 0.5f - 3.0f, my - textH * 0.5f, textW + 6.0f, textH};</div>
+<div class="line"><a id="l02351" name="l02351"></a><span class="lineno"> 2351</span>    renderer.fillRoundedRect(bg, 3.0f, m_bgSecondary.withAlpha(0.85f));</div>
+<div class="line"><a id="l02352" name="l02352"></a><span class="lineno"> 2352</span>    renderer.strokeRoundedRect(bg, 3.0f, 0.5f, m_borderSecondary.withAlpha(0.4f));</div>
+<div class="line"><a id="l02353" name="l02353"></a><span class="lineno"> 2353</span>    renderer.drawTextCentered(buf, bg, fontSize, m_textSecondary.withAlpha(0.85f));</div>
+<div class="line"><a id="l02354" name="l02354"></a><span class="lineno"> 2354</span>}</div>
+<div class="line"><a id="l02355" name="l02355"></a><span class="lineno"> 2355</span> </div>
+<div class="line"><a id="l02356" name="l02356"></a><span class="lineno"> 2356</span>NUIColor UIRoutingMap::resolveInsertColor(<span class="keyword">const</span> std::string&amp; name)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l02357" name="l02357"></a><span class="lineno"> 2357</span>    <span class="keyword">auto</span>&amp; tm = NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l02358" name="l02358"></a><span class="lineno"> 2358</span>    std::string low;</div>
+<div class="line"><a id="l02359" name="l02359"></a><span class="lineno"> 2359</span>    low.reserve(name.size());</div>
+<div class="line"><a id="l02360" name="l02360"></a><span class="lineno"> 2360</span>    <span class="keywordflow">for</span> (<span class="keywordtype">char</span> c : name) low.push_back(static_cast&lt;char&gt;(<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::tolower(static_cast&lt;unsigned char&gt;(c))));</div>
+<div class="line"><a id="l02361" name="l02361"></a><span class="lineno"> 2361</span> </div>
+<div class="line"><a id="l02362" name="l02362"></a><span class="lineno"> 2362</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;eq&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;filter&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02363" name="l02363"></a><span class="lineno"> 2363</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentCyan&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02364" name="l02364"></a><span class="lineno"> 2364</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;comp&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;limit&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02365" name="l02365"></a><span class="lineno"> 2365</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentAmber&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02366" name="l02366"></a><span class="lineno"> 2366</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;reverb&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;delay&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02367" name="l02367"></a><span class="lineno"> 2367</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;info&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02368" name="l02368"></a><span class="lineno"> 2368</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;dist&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;sat&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;drive&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02369" name="l02369"></a><span class="lineno"> 2369</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentRed&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02370" name="l02370"></a><span class="lineno"> 2370</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;chorus&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;flang&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;phaser&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02371" name="l02371"></a><span class="lineno"> 2371</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentLime&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02372" name="l02372"></a><span class="lineno"> 2372</span>    <span class="keywordflow">if</span> (low.find(<span class="stringliteral">&quot;sampler&quot;</span>) != std::string::npos || low.find(<span class="stringliteral">&quot;sample&quot;</span>) != std::string::npos)</div>
+<div class="line"><a id="l02373" name="l02373"></a><span class="lineno"> 2373</span>        <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;warning&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02374" name="l02374"></a><span class="lineno"> 2374</span>    <span class="keywordflow">return</span> tm.getColor(<span class="stringliteral">&quot;accentPrimary&quot;</span>).withAlpha(0.92f);</div>
+<div class="line"><a id="l02375" name="l02375"></a><span class="lineno"> 2375</span>}</div>
+<div class="line"><a id="l02376" name="l02376"></a><span class="lineno"> 2376</span> </div>
+<div class="line"><a id="l02377" name="l02377"></a><span class="lineno"> 2377</span><span class="keywordtype">void</span> UIRoutingMap::drawInsertDots(NUIRenderer&amp; renderer, <span class="keyword">const</span> Node&amp; node, <span class="keywordtype">float</span> nx, <span class="keywordtype">float</span> ny, <span class="keywordtype">float</span> nw, <span class="keywordtype">float</span> nh) {</div>
+<div class="line"><a id="l02378" name="l02378"></a><span class="lineno"> 2378</span>    (void)nw;</div>
+<div class="line"><a id="l02379" name="l02379"></a><span class="lineno"> 2379</span>    <span class="keywordtype">float</span> dotR = 3.0f;</div>
+<div class="line"><a id="l02380" name="l02380"></a><span class="lineno"> 2380</span>    <span class="keywordtype">float</span> gap = 6.0f;</div>
+<div class="line"><a id="l02381" name="l02381"></a><span class="lineno"> 2381</span>    <span class="keywordtype">float</span> startX = nx + 14.0f;</div>
+<div class="line"><a id="l02382" name="l02382"></a><span class="lineno"> 2382</span>    <span class="keywordtype">float</span> startY = ny + nh - dotR * 2.0f - 10.0f;</div>
+<div class="line"><a id="l02383" name="l02383"></a><span class="lineno"> 2383</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; node.insertNames.size(); ++i) {</div>
+<div class="line"><a id="l02384" name="l02384"></a><span class="lineno"> 2384</span>        NUIColor col = resolveInsertColor(node.insertNames[i]);</div>
+<div class="line"><a id="l02385" name="l02385"></a><span class="lineno"> 2385</span>        renderer.fillCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, col);</div>
+<div class="line"><a id="l02386" name="l02386"></a><span class="lineno"> 2386</span>        renderer.strokeCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, 0.5f, m_text.withAlpha(0.25f));</div>
+<div class="line"><a id="l02387" name="l02387"></a><span class="lineno"> 2387</span>    }</div>
+<div class="line"><a id="l02388" name="l02388"></a><span class="lineno"> 2388</span>}</div>
+<div class="line"><a id="l02389" name="l02389"></a><span class="lineno"> 2389</span> </div>
+<div class="line"><a id="l02390" name="l02390"></a><span class="lineno"> 2390</span><span class="keywordtype">int</span> UIRoutingMap::hitTestInputPort(<span class="keyword">const</span> NUIPoint&amp; p)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l02391" name="l02391"></a><span class="lineno"> 2391</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_nodes.size(); ++i) {</div>
+<div class="line"><a id="l02392" name="l02392"></a><span class="lineno"> 2392</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; node = m_nodes[i];</div>
+<div class="line"><a id="l02393" name="l02393"></a><span class="lineno"> 2393</span>        <span class="keywordtype">float</span> nx, ny, nh;</div>
+<div class="line"><a id="l02394" name="l02394"></a><span class="lineno"> 2394</span>        <span class="keywordtype">float</span> scale;</div>
+<div class="line"><a id="l02395" name="l02395"></a><span class="lineno"> 2395</span>        <span class="keywordflow">if</span> (m_mode == Mode::FullPanel) {</div>
+<div class="line"><a id="l02396" name="l02396"></a><span class="lineno"> 2396</span>            NUIRect bounds = getBounds();</div>
+<div class="line"><a id="l02397" name="l02397"></a><span class="lineno"> 2397</span>            <span class="keywordtype">float</span> canvasY = bounds.y + 44.0f;</div>
+<div class="line"><a id="l02398" name="l02398"></a><span class="lineno"> 2398</span>            nx = bounds.x + node.x * m_zoom + m_cameraX;</div>
+<div class="line"><a id="l02399" name="l02399"></a><span class="lineno"> 2399</span>            ny = canvasY + node.y * m_zoom + m_cameraY;</div>
+<div class="line"><a id="l02400" name="l02400"></a><span class="lineno"> 2400</span>            nh = node.h * m_zoom;</div>
+<div class="line"><a id="l02401" name="l02401"></a><span class="lineno"> 2401</span>            scale = m_zoom;</div>
+<div class="line"><a id="l02402" name="l02402"></a><span class="lineno"> 2402</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l02403" name="l02403"></a><span class="lineno"> 2403</span>            nx = m_minimapOffsetX + (node.x - m_minimapCenterX) * m_minimapScale;</div>
+<div class="line"><a id="l02404" name="l02404"></a><span class="lineno"> 2404</span>            ny = m_minimapOffsetY + (node.y - m_minimapCenterY) * m_minimapScale;</div>
+<div class="line"><a id="l02405" name="l02405"></a><span class="lineno"> 2405</span>            nh = node.h * m_minimapScale;</div>
+<div class="line"><a id="l02406" name="l02406"></a><span class="lineno"> 2406</span>            scale = m_minimapScale;</div>
+<div class="line"><a id="l02407" name="l02407"></a><span class="lineno"> 2407</span>        }</div>
+<div class="line"><a id="l02408" name="l02408"></a><span class="lineno"> 2408</span>        <span class="keywordtype">float</span> portCx = nx;</div>
+<div class="line"><a id="l02409" name="l02409"></a><span class="lineno"> 2409</span>        <span class="keywordtype">float</span> portCy = ny + nh * 0.5f;</div>
+<div class="line"><a id="l02410" name="l02410"></a><span class="lineno"> 2410</span>        <span class="keywordtype">float</span> portR = std::max(3.5f, kPortRadius * scale);</div>
+<div class="line"><a id="l02411" name="l02411"></a><span class="lineno"> 2411</span>        <span class="keywordtype">float</span> dx = p.x - portCx;</div>
+<div class="line"><a id="l02412" name="l02412"></a><span class="lineno"> 2412</span>        <span class="keywordtype">float</span> dy = p.y - portCy;</div>
+<div class="line"><a id="l02413" name="l02413"></a><span class="lineno"> 2413</span>        <span class="keywordflow">if</span> (dx * dx + dy * dy &lt;= portR * portR + 16.0f) {</div>
+<div class="line"><a id="l02414" name="l02414"></a><span class="lineno"> 2414</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l02415" name="l02415"></a><span class="lineno"> 2415</span>        }</div>
+<div class="line"><a id="l02416" name="l02416"></a><span class="lineno"> 2416</span>    }</div>
+<div class="line"><a id="l02417" name="l02417"></a><span class="lineno"> 2417</span>    <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l02418" name="l02418"></a><span class="lineno"> 2418</span>}</div>
+<div class="line"><a id="l02419" name="l02419"></a><span class="lineno"> 2419</span> </div>
+<div class="line"><a id="l02420" name="l02420"></a><span class="lineno"> 2420</span><span class="keywordtype">void</span> UIRoutingMap::renderMiniOverview(NUIRenderer&amp; renderer) {</div>
+<div class="line"><a id="l02421" name="l02421"></a><span class="lineno"> 2421</span>    <span class="keywordflow">if</span> (m_mode != Mode::FullPanel) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02422" name="l02422"></a><span class="lineno"> 2422</span>    <span class="keywordflow">if</span> (m_worldMaxX &lt;= m_worldMinX || m_worldMaxY &lt;= m_worldMinY) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02423" name="l02423"></a><span class="lineno"> 2423</span> </div>
+<div class="line"><a id="l02424" name="l02424"></a><span class="lineno"> 2424</span>    NUIRect bounds = getBounds();</div>
+<div class="line"><a id="l02425" name="l02425"></a><span class="lineno"> 2425</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFullTitleBarH = 44.0f;</div>
+<div class="line"><a id="l02426" name="l02426"></a><span class="lineno"> 2426</span>    <span class="keywordtype">float</span> canvasY = bounds.y + kFullTitleBarH;</div>
+<div class="line"><a id="l02427" name="l02427"></a><span class="lineno"> 2427</span> </div>
+<div class="line"><a id="l02428" name="l02428"></a><span class="lineno"> 2428</span>    <span class="comment">// Inset dimensions</span></div>
+<div class="line"><a id="l02429" name="l02429"></a><span class="lineno"> 2429</span>    <span class="keywordtype">float</span> insetW = 140.0f;</div>
+<div class="line"><a id="l02430" name="l02430"></a><span class="lineno"> 2430</span>    <span class="keywordtype">float</span> insetH = 100.0f;</div>
+<div class="line"><a id="l02431" name="l02431"></a><span class="lineno"> 2431</span>    <span class="keywordtype">float</span> insetX = bounds.right() - insetW - 12.0f;</div>
+<div class="line"><a id="l02432" name="l02432"></a><span class="lineno"> 2432</span>    <span class="keywordtype">float</span> insetY = bounds.bottom() - insetH - 12.0f;</div>
+<div class="line"><a id="l02433" name="l02433"></a><span class="lineno"> 2433</span> </div>
+<div class="line"><a id="l02434" name="l02434"></a><span class="lineno"> 2434</span>    <span class="comment">// Avoid overlapping the collapse button area</span></div>
+<div class="line"><a id="l02435" name="l02435"></a><span class="lineno"> 2435</span>    <span class="keywordflow">if</span> (insetY &lt; bounds.y + kFullTitleBarH + 30.0f) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02436" name="l02436"></a><span class="lineno"> 2436</span> </div>
+<div class="line"><a id="l02437" name="l02437"></a><span class="lineno"> 2437</span>    <span class="comment">// Compute scale to fit world bounds into inset</span></div>
+<div class="line"><a id="l02438" name="l02438"></a><span class="lineno"> 2438</span>    <span class="keywordtype">float</span> worldW = m_worldMaxX - m_worldMinX + kTrackNodeW;</div>
+<div class="line"><a id="l02439" name="l02439"></a><span class="lineno"> 2439</span>    <span class="keywordtype">float</span> worldH = m_worldMaxY - m_worldMinY + kTrackNodeH;</div>
+<div class="line"><a id="l02440" name="l02440"></a><span class="lineno"> 2440</span>    <span class="keywordtype">float</span> scaleX = insetW / worldW;</div>
+<div class="line"><a id="l02441" name="l02441"></a><span class="lineno"> 2441</span>    <span class="keywordtype">float</span> scaleY = insetH / worldH;</div>
+<div class="line"><a id="l02442" name="l02442"></a><span class="lineno"> 2442</span>    <span class="keywordtype">float</span> scale = std::min(scaleX, scaleY) * 0.92f;</div>
+<div class="line"><a id="l02443" name="l02443"></a><span class="lineno"> 2443</span> </div>
+<div class="line"><a id="l02444" name="l02444"></a><span class="lineno"> 2444</span>    <span class="keywordtype">float</span> offsetX = insetX + insetW * 0.5f - (m_worldMinX + worldW * 0.5f) * scale;</div>
+<div class="line"><a id="l02445" name="l02445"></a><span class="lineno"> 2445</span>    <span class="keywordtype">float</span> offsetY = insetY + insetH * 0.5f - (m_worldMinY + worldH * 0.5f) * scale;</div>
+<div class="line"><a id="l02446" name="l02446"></a><span class="lineno"> 2446</span> </div>
+<div class="line"><a id="l02447" name="l02447"></a><span class="lineno"> 2447</span>    <span class="comment">// Background</span></div>
+<div class="line"><a id="l02448" name="l02448"></a><span class="lineno"> 2448</span>    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, m_bgSecondary.withAlpha(0.92f));</div>
+<div class="line"><a id="l02449" name="l02449"></a><span class="lineno"> 2449</span>    renderer.strokeRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, 1.0f, m_border.withAlpha(0.35f));</div>
+<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span> </div>
+<div class="line"><a id="l02451" name="l02451"></a><span class="lineno"> 2451</span>    <span class="comment">// Draw all edges as thin faint lines</span></div>
+<div class="line"><a id="l02452" name="l02452"></a><span class="lineno"> 2452</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; edge : m_edges) {</div>
+<div class="line"><a id="l02453" name="l02453"></a><span class="lineno"> 2453</span>        <span class="keyword">const</span> Node* src = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l02454" name="l02454"></a><span class="lineno"> 2454</span>        <span class="keyword">const</span> Node* dst = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l02455" name="l02455"></a><span class="lineno"> 2455</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; n : m_nodes) {</div>
+<div class="line"><a id="l02456" name="l02456"></a><span class="lineno"> 2456</span>            <span class="keywordflow">if</span> (n.id == edge.sourceNodeId) src = &amp;n;</div>
+<div class="line"><a id="l02457" name="l02457"></a><span class="lineno"> 2457</span>            <span class="keywordflow">if</span> (n.id == edge.targetNodeId) dst = &amp;n;</div>
+<div class="line"><a id="l02458" name="l02458"></a><span class="lineno"> 2458</span>        }</div>
+<div class="line"><a id="l02459" name="l02459"></a><span class="lineno"> 2459</span>        <span class="keywordflow">if</span> (!src || !dst) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l02460" name="l02460"></a><span class="lineno"> 2460</span>        <span class="keywordtype">float</span> sx = offsetX + (src-&gt;x + src-&gt;outputX) * scale;</div>
+<div class="line"><a id="l02461" name="l02461"></a><span class="lineno"> 2461</span>        <span class="keywordtype">float</span> sy = offsetY + (src-&gt;y + src-&gt;outputY) * scale;</div>
+<div class="line"><a id="l02462" name="l02462"></a><span class="lineno"> 2462</span>        <span class="keywordtype">float</span> dx_ = offsetX + (dst-&gt;x + dst-&gt;inputX) * scale;</div>
+<div class="line"><a id="l02463" name="l02463"></a><span class="lineno"> 2463</span>        <span class="keywordtype">float</span> dy_ = offsetY + edgeTargetY(edge, *dst) * scale;</div>
+<div class="line"><a id="l02464" name="l02464"></a><span class="lineno"> 2464</span>        NUIColor col = m_textSecondary.withAlpha(0.25f);</div>
+<div class="line"><a id="l02465" name="l02465"></a><span class="lineno"> 2465</span>        <span class="keywordflow">if</span> (edge.type == Edge::SendPath) col = m_textInfo.withAlpha(0.30f);</div>
+<div class="line"><a id="l02466" name="l02466"></a><span class="lineno"> 2466</span>        <span class="keywordflow">if</span> (edge.type == Edge::SidechainPath) col = m_warning.withAlpha(0.30f);</div>
+<div class="line"><a id="l02467" name="l02467"></a><span class="lineno"> 2467</span>        drawBezier(renderer, {sx, sy}, {dx_, dy_}, 0.5f, col, edge.type != Edge::MainPath);</div>
+<div class="line"><a id="l02468" name="l02468"></a><span class="lineno"> 2468</span>    }</div>
+<div class="line"><a id="l02469" name="l02469"></a><span class="lineno"> 2469</span> </div>
+<div class="line"><a id="l02470" name="l02470"></a><span class="lineno"> 2470</span>    <span class="comment">// Draw all nodes as tiny rects</span></div>
+<div class="line"><a id="l02471" name="l02471"></a><span class="lineno"> 2471</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; node : m_nodes) {</div>
+<div class="line"><a id="l02472" name="l02472"></a><span class="lineno"> 2472</span>        <span class="keywordtype">float</span> nx = offsetX + node.x * scale;</div>
+<div class="line"><a id="l02473" name="l02473"></a><span class="lineno"> 2473</span>        <span class="keywordtype">float</span> ny = offsetY + node.y * scale;</div>
+<div class="line"><a id="l02474" name="l02474"></a><span class="lineno"> 2474</span>        <span class="keywordtype">float</span> nw = node.w * scale;</div>
+<div class="line"><a id="l02475" name="l02475"></a><span class="lineno"> 2475</span>        <span class="keywordtype">float</span> nh = node.h * scale;</div>
+<div class="line"><a id="l02476" name="l02476"></a><span class="lineno"> 2476</span>        NUIColor fill = m_bgTertiary.withAlpha(0.85f);</div>
+<div class="line"><a id="l02477" name="l02477"></a><span class="lineno"> 2477</span>        <span class="keywordflow">if</span> (node.type == Node::Master) fill = m_accent.withAlpha(0.24f);</div>
+<div class="line"><a id="l02478" name="l02478"></a><span class="lineno"> 2478</span>        renderer.fillRoundedRect({nx, ny, nw, nh}, 2.0f, fill);</div>
+<div class="line"><a id="l02479" name="l02479"></a><span class="lineno"> 2479</span>        renderer.strokeRoundedRect({nx, ny, nw, nh}, 2.0f, 0.5f, m_border.withAlpha(0.4f));</div>
+<div class="line"><a id="l02480" name="l02480"></a><span class="lineno"> 2480</span>    }</div>
+<div class="line"><a id="l02481" name="l02481"></a><span class="lineno"> 2481</span> </div>
+<div class="line"><a id="l02482" name="l02482"></a><span class="lineno"> 2482</span>    <span class="comment">// Viewport rectangle overlay</span></div>
+<div class="line"><a id="l02483" name="l02483"></a><span class="lineno"> 2483</span>    <span class="keywordtype">float</span> vpX = offsetX + (-m_cameraX / m_zoom) * scale;</div>
+<div class="line"><a id="l02484" name="l02484"></a><span class="lineno"> 2484</span>    <span class="keywordtype">float</span> vpY = offsetY + (-(canvasY - bounds.y - kFullTitleBarH + m_cameraY) / m_zoom) * scale;</div>
+<div class="line"><a id="l02485" name="l02485"></a><span class="lineno"> 2485</span>    <span class="keywordtype">float</span> vpW = (bounds.width / m_zoom) * scale;</div>
+<div class="line"><a id="l02486" name="l02486"></a><span class="lineno"> 2486</span>    <span class="keywordtype">float</span> vpH = ((bounds.height - kFullTitleBarH) / m_zoom) * scale;</div>
+<div class="line"><a id="l02487" name="l02487"></a><span class="lineno"> 2487</span>    renderer.strokeRoundedRect({vpX, vpY, vpW, vpH}, 3.0f, 1.5f, m_accent.withAlpha(0.75f));</div>
+<div class="line"><a id="l02488" name="l02488"></a><span class="lineno"> 2488</span>}</div>
+<div class="line"><a id="l02489" name="l02489"></a><span class="lineno"> 2489</span> </div>
+<div class="line"><a id="l02490" name="l02490"></a><span class="lineno"> 2490</span><span class="keywordtype">void</span> UIRoutingMap::renderInspector(NUIRenderer&amp; renderer) {</div>
+<div class="line"><a id="l02491" name="l02491"></a><span class="lineno"> 2491</span>    <span class="keywordflow">if</span> (m_mode != Mode::FullPanel) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02492" name="l02492"></a><span class="lineno"> 2492</span>    <span class="keywordflow">if</span> (!m_inspectorVisible || m_inspectorNodeIdx &lt; 0 || m_inspectorNodeIdx &gt;= <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(m_nodes.size())) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02493" name="l02493"></a><span class="lineno"> 2493</span>    <span class="keywordflow">if</span> (!m_viewModel) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02494" name="l02494"></a><span class="lineno"> 2494</span> </div>
+<div class="line"><a id="l02495" name="l02495"></a><span class="lineno"> 2495</span>    <span class="keyword">const</span> Node&amp; node = m_nodes[m_inspectorNodeIdx];</div>
+<div class="line"><a id="l02496" name="l02496"></a><span class="lineno"> 2496</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d81/structAestra_1_1ChannelViewModel.html">Aestra::ChannelViewModel</a>* ch = m_viewModel-&gt;getChannelById(node.id);</div>
+<div class="line"><a id="l02497" name="l02497"></a><span class="lineno"> 2497</span>    <span class="keywordflow">if</span> (!ch &amp;&amp; node.id == 0) ch = m_viewModel-&gt;getMaster();</div>
+<div class="line"><a id="l02498" name="l02498"></a><span class="lineno"> 2498</span>    <span class="keywordflow">if</span> (!ch) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l02499" name="l02499"></a><span class="lineno"> 2499</span> </div>
+<div class="line"><a id="l02500" name="l02500"></a><span class="lineno"> 2500</span>    NUIRect bounds = getBounds();</div>
+<div class="line"><a id="l02501" name="l02501"></a><span class="lineno"> 2501</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFullTitleBarH = 44.0f;</div>
+<div class="line"><a id="l02502" name="l02502"></a><span class="lineno"> 2502</span>    <span class="keywordtype">float</span> canvasY = bounds.y + kFullTitleBarH;</div>
+<div class="line"><a id="l02503" name="l02503"></a><span class="lineno"> 2503</span> </div>
+<div class="line"><a id="l02504" name="l02504"></a><span class="lineno"> 2504</span>    <span class="comment">// Compute screen position of the clicked node so we can anchor the inspector near it</span></div>
+<div class="line"><a id="l02505" name="l02505"></a><span class="lineno"> 2505</span>    <span class="keywordtype">float</span> nodeScreenX = bounds.x + node.x * m_zoom + m_cameraX;</div>
+<div class="line"><a id="l02506" name="l02506"></a><span class="lineno"> 2506</span>    <span class="keywordtype">float</span> nodeScreenY = canvasY + node.y * m_zoom + m_cameraY;</div>
+<div class="line"><a id="l02507" name="l02507"></a><span class="lineno"> 2507</span>    <span class="keywordtype">float</span> nodeScreenW = node.w * m_zoom;</div>
+<div class="line"><a id="l02508" name="l02508"></a><span class="lineno"> 2508</span>    <span class="keywordtype">float</span> nodeScreenH = node.h * m_zoom;</div>
+<div class="line"><a id="l02509" name="l02509"></a><span class="lineno"> 2509</span> </div>
+<div class="line"><a id="l02510" name="l02510"></a><span class="lineno"> 2510</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kInspectorW = 240.0f;</div>
+<div class="line"><a id="l02511" name="l02511"></a><span class="lineno"> 2511</span>    <span class="keywordtype">float</span> insetX = nodeScreenX + nodeScreenW + 16.0f; <span class="comment">// default: float to the right</span></div>
+<div class="line"><a id="l02512" name="l02512"></a><span class="lineno"> 2512</span>    <span class="keywordtype">float</span> insetY = nodeScreenY;</div>
+<div class="line"><a id="l02513" name="l02513"></a><span class="lineno"> 2513</span>    <span class="comment">// If it would overflow the right edge, flip to the left of the node</span></div>
+<div class="line"><a id="l02514" name="l02514"></a><span class="lineno"> 2514</span>    <span class="keywordflow">if</span> (insetX + kInspectorW &gt; bounds.x + bounds.width - 12.0f) {</div>
+<div class="line"><a id="l02515" name="l02515"></a><span class="lineno"> 2515</span>        insetX = nodeScreenX - kInspectorW - 16.0f;</div>
+<div class="line"><a id="l02516" name="l02516"></a><span class="lineno"> 2516</span>    }</div>
+<div class="line"><a id="l02517" name="l02517"></a><span class="lineno"> 2517</span>    <span class="comment">// Clamp vertically within canvas</span></div>
+<div class="line"><a id="l02518" name="l02518"></a><span class="lineno"> 2518</span>    <span class="keywordtype">float</span> maxInsetH = 420.0f;</div>
+<div class="line"><a id="l02519" name="l02519"></a><span class="lineno"> 2519</span>    <span class="keywordtype">float</span> insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
+<div class="line"><a id="l02520" name="l02520"></a><span class="lineno"> 2520</span>    <span class="keywordflow">if</span> (insetY &lt; canvasY + 8.0f) {</div>
+<div class="line"><a id="l02521" name="l02521"></a><span class="lineno"> 2521</span>        insetY = canvasY + 8.0f;</div>
+<div class="line"><a id="l02522" name="l02522"></a><span class="lineno"> 2522</span>        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
+<div class="line"><a id="l02523" name="l02523"></a><span class="lineno"> 2523</span>    }</div>
+<div class="line"><a id="l02524" name="l02524"></a><span class="lineno"> 2524</span>    <span class="keywordflow">if</span> (insetH &lt; 140.0f) {</div>
+<div class="line"><a id="l02525" name="l02525"></a><span class="lineno"> 2525</span>        insetY = canvasY + 8.0f;</div>
+<div class="line"><a id="l02526" name="l02526"></a><span class="lineno"> 2526</span>        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);</div>
+<div class="line"><a id="l02527" name="l02527"></a><span class="lineno"> 2527</span>    }</div>
+<div class="line"><a id="l02528" name="l02528"></a><span class="lineno"> 2528</span>    <span class="comment">// Clamp horizontally</span></div>
+<div class="line"><a id="l02529" name="l02529"></a><span class="lineno"> 2529</span>    <span class="keywordflow">if</span> (insetX &lt; bounds.x + 8.0f) insetX = bounds.x + 8.0f;</div>
+<div class="line"><a id="l02530" name="l02530"></a><span class="lineno"> 2530</span>    <span class="keywordflow">if</span> (insetX + kInspectorW &gt; bounds.right() - 8.0f) insetX = bounds.right() - kInspectorW - 8.0f;</div>
+<div class="line"><a id="l02531" name="l02531"></a><span class="lineno"> 2531</span> </div>
+<div class="line"><a id="l02532" name="l02532"></a><span class="lineno"> 2532</span>    <span class="comment">// Remember panel rect for hit testing</span></div>
+<div class="line"><a id="l02533" name="l02533"></a><span class="lineno"> 2533</span>    m_inspectorPanelRect = NUIRect{insetX, insetY, kInspectorW, insetH};</div>
+<div class="line"><a id="l02534" name="l02534"></a><span class="lineno"> 2534</span> </div>
+<div class="line"><a id="l02535" name="l02535"></a><span class="lineno"> 2535</span>    <span class="comment">// Background</span></div>
+<div class="line"><a id="l02536" name="l02536"></a><span class="lineno"> 2536</span>    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, m_bgSecondary.withAlpha(0.96f));</div>
+<div class="line"><a id="l02537" name="l02537"></a><span class="lineno"> 2537</span>    renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));</div>
+<div class="line"><a id="l02538" name="l02538"></a><span class="lineno"> 2538</span> </div>
+<div class="line"><a id="l02539" name="l02539"></a><span class="lineno"> 2539</span>    <span class="comment">// Clip content to panel interior (scrollable area)</span></div>
+<div class="line"><a id="l02540" name="l02540"></a><span class="lineno"> 2540</span>    renderer.setClipRect(NUIRect{insetX + 2.0f, insetY + 6.0f, kInspectorW - 4.0f, insetH - 12.0f});</div>
+<div class="line"><a id="l02541" name="l02541"></a><span class="lineno"> 2541</span> </div>
+<div class="line"><a id="l02542" name="l02542"></a><span class="lineno"> 2542</span>    <span class="keywordtype">float</span> y = insetY + 14.0f - m_inspectorScrollY;</div>
+<div class="line"><a id="l02543" name="l02543"></a><span class="lineno"> 2543</span>    <span class="keywordtype">float</span> left = insetX + 12.0f;</div>
+<div class="line"><a id="l02544" name="l02544"></a><span class="lineno"> 2544</span>    <span class="keywordtype">float</span> right = insetX + kInspectorW - 12.0f;</div>
+<div class="line"><a id="l02545" name="l02545"></a><span class="lineno"> 2545</span>    <span class="keywordtype">float</span> textW = right - left;</div>
+<div class="line"><a id="l02546" name="l02546"></a><span class="lineno"> 2546</span> </div>
+<div class="line"><a id="l02547" name="l02547"></a><span class="lineno"> 2547</span>    <span class="comment">// Color strip at top</span></div>
+<div class="line"><a id="l02548" name="l02548"></a><span class="lineno"> 2548</span>    NUIColor stripColor(((node.color &gt;&gt; 16) &amp; 0xFF) / 255.0f,</div>
+<div class="line"><a id="l02549" name="l02549"></a><span class="lineno"> 2549</span>                        ((node.color &gt;&gt; 8) &amp; 0xFF) / 255.0f,</div>
+<div class="line"><a id="l02550" name="l02550"></a><span class="lineno"> 2550</span>                        (node.color &amp; 0xFF) / 255.0f,</div>
+<div class="line"><a id="l02551" name="l02551"></a><span class="lineno"> 2551</span>                        ((node.color &gt;&gt; 24) &amp; 0xFF) / 255.0f);</div>
+<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>    renderer.fillRoundedRect({insetX + 1.0f, insetY + 1.0f, kInspectorW - 2.0f, 4.0f}, 3.0f, stripColor);</div>
+<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span> </div>
+<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span>    <span class="comment">// Header: name + type</span></div>
+<div class="line"><a id="l02555" name="l02555"></a><span class="lineno"> 2555</span>    {</div>
+<div class="line"><a id="l02556" name="l02556"></a><span class="lineno"> 2556</span>        std::string typeLabel = (node.type == Node::Master) ? <span class="stringliteral">&quot;MASTER BUS&quot;</span> : <span class="stringliteral">&quot;TRACK&quot;</span>;</div>
+<div class="line"><a id="l02557" name="l02557"></a><span class="lineno"> 2557</span>        renderer.drawText(typeLabel, {left, y}, 10.0f, m_textSecondary.withAlpha(0.7f));</div>
+<div class="line"><a id="l02558" name="l02558"></a><span class="lineno"> 2558</span>        <span class="keywordtype">float</span> typeW = renderer.measureText(typeLabel, 10.0f).width;</div>
+<div class="line"><a id="l02559" name="l02559"></a><span class="lineno"> 2559</span>        std::string name = fitLabel(renderer, ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a4bbf13ed13a18c12cba5c241e592881c">name</a>.empty() ? node.label : ch-&gt;name, 13.0f, textW - typeW - 10.0f);</div>
+<div class="line"><a id="l02560" name="l02560"></a><span class="lineno"> 2560</span>        renderer.drawText(name, {left + typeW + 8.0f, y - 1.0f}, 13.0f, m_text.withAlpha(0.95f));</div>
+<div class="line"><a id="l02561" name="l02561"></a><span class="lineno"> 2561</span>        y += 24.0f;</div>
+<div class="line"><a id="l02562" name="l02562"></a><span class="lineno"> 2562</span>    }</div>
+<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span> </div>
+<div class="line"><a id="l02564" name="l02564"></a><span class="lineno"> 2564</span>    <span class="comment">// M/S badges inline</span></div>
+<div class="line"><a id="l02565" name="l02565"></a><span class="lineno"> 2565</span>    <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b">muted</a> || ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ae56679348f674073bb59236b0d476eb3">soloed</a>) {</div>
+<div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>        <span class="keywordtype">float</span> badgeX = left;</div>
+<div class="line"><a id="l02567" name="l02567"></a><span class="lineno"> 2567</span>        <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ae56679348f674073bb59236b0d476eb3">soloed</a>) {</div>
+<div class="line"><a id="l02568" name="l02568"></a><span class="lineno"> 2568</span>            NUIRect bRect{badgeX, y, 20.0f, 18.0f};</div>
+<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>            renderer.fillRoundedRect(bRect, 4.0f, m_warning.withAlpha(0.85f));</div>
+<div class="line"><a id="l02570" name="l02570"></a><span class="lineno"> 2570</span>            renderer.drawTextCentered(<span class="stringliteral">&quot;S&quot;</span>, bRect, 10.0f, NUIColor::black());</div>
+<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span>            badgeX += 26.0f;</div>
+<div class="line"><a id="l02572" name="l02572"></a><span class="lineno"> 2572</span>        }</div>
+<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span>        <span class="keywordflow">if</span> (ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b">muted</a>) {</div>
+<div class="line"><a id="l02574" name="l02574"></a><span class="lineno"> 2574</span>            NUIRect bRect{badgeX, y, 20.0f, 18.0f};</div>
+<div class="line"><a id="l02575" name="l02575"></a><span class="lineno"> 2575</span>            renderer.fillRoundedRect(bRect, 4.0f, m_error.withAlpha(0.85f));</div>
+<div class="line"><a id="l02576" name="l02576"></a><span class="lineno"> 2576</span>            renderer.drawTextCentered(<span class="stringliteral">&quot;M&quot;</span>, bRect, 10.0f, NUIColor::white());</div>
+<div class="line"><a id="l02577" name="l02577"></a><span class="lineno"> 2577</span>        }</div>
+<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>        y += 24.0f;</div>
+<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>    }</div>
+<div class="line"><a id="l02580" name="l02580"></a><span class="lineno"> 2580</span> </div>
+<div class="line"><a id="l02581" name="l02581"></a><span class="lineno"> 2581</span>    <span class="comment">// Routing warning</span></div>
+<div class="line"><a id="l02582" name="l02582"></a><span class="lineno"> 2582</span>    <span class="keywordflow">if</span> (node.hasRoutingWarning) {</div>
+<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>        std::string warn = m_viewModel-&gt;getRoutingWarning(node.id);</div>
+<div class="line"><a id="l02584" name="l02584"></a><span class="lineno"> 2584</span>        renderer.fillRoundedRect({left, y, textW, 20.0f}, 4.0f, m_warning.withAlpha(0.18f));</div>
+<div class="line"><a id="l02585" name="l02585"></a><span class="lineno"> 2585</span>        renderer.strokeRoundedRect({left, y, textW, 20.0f}, 4.0f, 1.0f, m_warning.withAlpha(0.5f));</div>
+<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>        std::string wtext = fitLabel(renderer, warn, 10.0f, textW - 8.0f);</div>
+<div class="line"><a id="l02587" name="l02587"></a><span class="lineno"> 2587</span>        renderer.drawText(wtext, {left + 6.0f, y + 3.0f}, 10.0f, m_warning.withAlpha(0.9f));</div>
+<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>        y += 28.0f;</div>
+<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>    }</div>
+<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span> </div>
+<div class="line"><a id="l02591" name="l02591"></a><span class="lineno"> 2591</span>    <span class="comment">// Divider</span></div>
+<div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
+<div class="line"><a id="l02593" name="l02593"></a><span class="lineno"> 2593</span>    y += 10.0f;</div>
+<div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span> </div>
+<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    <span class="comment">// === MAIN OUTPUT ===</span></div>
+<div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span>    renderer.drawText(<span class="stringliteral">&quot;Main Output&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
+<div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>    y += 14.0f;</div>
+<div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span>    {</div>
+<div class="line"><a id="l02599" name="l02599"></a><span class="lineno"> 2599</span>        std::string destName = ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ad89e1191da78216a823310d5cdb9f349">routeName</a>.empty() ? <span class="stringliteral">&quot;Master&quot;</span> : ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ad89e1191da78216a823310d5cdb9f349">routeName</a>;</div>
+<div class="line"><a id="l02600" name="l02600"></a><span class="lineno"> 2600</span>        renderer.drawText(destName, {left + 8.0f, y}, 12.0f, m_text.withAlpha(0.85f));</div>
+<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"> 2601</span>        <span class="keywordflow">if</span> (!ch-&gt;<a class="code hl_variable" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a1d349c32f499adcf71a3eca124720a11">masterSendEnabled</a>) {</div>
+<div class="line"><a id="l02602" name="l02602"></a><span class="lineno"> 2602</span>            <span class="keywordtype">float</span> dnw = renderer.measureText(destName, 12.0f).width;</div>
+<div class="line"><a id="l02603" name="l02603"></a><span class="lineno"> 2603</span>            renderer.drawText(<span class="stringliteral">&quot;(bypassed)&quot;</span>, {left + 8.0f + dnw + 6.0f, y}, 10.0f, m_warning.withAlpha(0.75f));</div>
+<div class="line"><a id="l02604" name="l02604"></a><span class="lineno"> 2604</span>        }</div>
+<div class="line"><a id="l02605" name="l02605"></a><span class="lineno"> 2605</span>        y += 20.0f;</div>
+<div class="line"><a id="l02606" name="l02606"></a><span class="lineno"> 2606</span>    }</div>
+<div class="line"><a id="l02607" name="l02607"></a><span class="lineno"> 2607</span> </div>
+<div class="line"><a id="l02608" name="l02608"></a><span class="lineno"> 2608</span>    <span class="comment">// Divider</span></div>
+<div class="line"><a id="l02609" name="l02609"></a><span class="lineno"> 2609</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
+<div class="line"><a id="l02610" name="l02610"></a><span class="lineno"> 2610</span>    y += 10.0f;</div>
+<div class="line"><a id="l02611" name="l02611"></a><span class="lineno"> 2611</span> </div>
+<div class="line"><a id="l02612" name="l02612"></a><span class="lineno"> 2612</span>    <span class="comment">// === INSERT CHAIN ===</span></div>
+<div class="line"><a id="l02613" name="l02613"></a><span class="lineno"> 2613</span>    renderer.drawText(<span class="stringliteral">&quot;Insert Chain&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
+<div class="line"><a id="l02614" name="l02614"></a><span class="lineno"> 2614</span>    y += 16.0f;</div>
+<div class="line"><a id="l02615" name="l02615"></a><span class="lineno"> 2615</span>    <span class="comment">// Count filled inserts</span></div>
+<div class="line"><a id="l02616" name="l02616"></a><span class="lineno"> 2616</span>    <span class="keywordtype">size_t</span> filledInserts = 0;</div>
+<div class="line"><a id="l02617" name="l02617"></a><span class="lineno"> 2617</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; in : ch-&gt;inserts) if (!in.isEmpty) ++filledInserts;</div>
+<div class="line"><a id="l02618" name="l02618"></a><span class="lineno"> 2618</span>    <span class="keywordflow">if</span> (filledInserts == 0) {</div>
+<div class="line"><a id="l02619" name="l02619"></a><span class="lineno"> 2619</span>        renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));</div>
+<div class="line"><a id="l02620" name="l02620"></a><span class="lineno"> 2620</span>        renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_accent.withAlpha(0.4f));</div>
+<div class="line"><a id="l02621" name="l02621"></a><span class="lineno"> 2621</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;+ Add plugin&quot;</span>, {left + 8.0f, y, textW - 16.0f, 22.0f}, 11.0f, m_accent.withAlpha(0.75f));</div>
+<div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>        y += 28.0f;</div>
+<div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;inserts.size(); ++i) {</div>
+<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; insert = ch-&gt;inserts[i];</div>
+<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>            <span class="keywordflow">if</span> (insert.isEmpty) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span>            NUIColor slotBg = insert.bypassed ? m_bgSecondary.withAlpha(0.35f) : m_bgSecondary.withAlpha(0.55f);</div>
+<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, slotBg);</div>
+<div class="line"><a id="l02629" name="l02629"></a><span class="lineno"> 2629</span>            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, 0.5f,</div>
+<div class="line"><a id="l02630" name="l02630"></a><span class="lineno"> 2630</span>                                       insert.bypassed ? m_border.withAlpha(0.3f) : m_accent.withAlpha(0.45f));</div>
+<div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>            std::string slotLabel = fitLabel(renderer, insert.name, 11.0f, textW - 50.0f);</div>
+<div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>            renderer.drawText(slotLabel, {left + 14.0f, y + 3.0f}, 11.0f,</div>
+<div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>                              insert.bypassed ? m_textSecondary.withAlpha(0.5f) : m_text.withAlpha(0.88f));</div>
+<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>            <span class="keywordflow">if</span> (insert.bypassed) {</div>
+<div class="line"><a id="l02635" name="l02635"></a><span class="lineno"> 2635</span>                <span class="keywordtype">float</span> slw = renderer.measureText(slotLabel, 11.0f).width;</div>
+<div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span>                renderer.drawText(<span class="stringliteral">&quot;bypass&quot;</span>, {left + 14.0f + slw + 6.0f, y + 4.0f}, 9.0f, m_warning.withAlpha(0.65f));</div>
+<div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>            }</div>
+<div class="line"><a id="l02638" name="l02638"></a><span class="lineno"> 2638</span>            <span class="keywordflow">if</span> (insert.mix &lt; 0.99f) {</div>
+<div class="line"><a id="l02639" name="l02639"></a><span class="lineno"> 2639</span>                <span class="keywordtype">char</span> mixBuf[16];</div>
+<div class="line"><a id="l02640" name="l02640"></a><span class="lineno"> 2640</span>                std::snprintf(mixBuf, <span class="keyword">sizeof</span>(mixBuf), <span class="stringliteral">&quot;%.0f%%&quot;</span>, insert.mix * 100.0f);</div>
+<div class="line"><a id="l02641" name="l02641"></a><span class="lineno"> 2641</span>                <span class="keywordtype">float</span> mixW = renderer.measureText(mixBuf, 9.0f).width;</div>
+<div class="line"><a id="l02642" name="l02642"></a><span class="lineno"> 2642</span>                renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));</div>
+<div class="line"><a id="l02643" name="l02643"></a><span class="lineno"> 2643</span>            }</div>
+<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>            y += 24.0f;</div>
+<div class="line"><a id="l02645" name="l02645"></a><span class="lineno"> 2645</span>        }</div>
+<div class="line"><a id="l02646" name="l02646"></a><span class="lineno"> 2646</span>    }</div>
+<div class="line"><a id="l02647" name="l02647"></a><span class="lineno"> 2647</span> </div>
+<div class="line"><a id="l02648" name="l02648"></a><span class="lineno"> 2648</span>    <span class="comment">// Divider</span></div>
+<div class="line"><a id="l02649" name="l02649"></a><span class="lineno"> 2649</span>    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));</div>
+<div class="line"><a id="l02650" name="l02650"></a><span class="lineno"> 2650</span>    y += 10.0f;</div>
+<div class="line"><a id="l02651" name="l02651"></a><span class="lineno"> 2651</span> </div>
+<div class="line"><a id="l02652" name="l02652"></a><span class="lineno"> 2652</span>    <span class="comment">// === SENDS ===</span></div>
+<div class="line"><a id="l02653" name="l02653"></a><span class="lineno"> 2653</span>    renderer.drawText(<span class="stringliteral">&quot;Sends&quot;</span>, {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));</div>
+<div class="line"><a id="l02654" name="l02654"></a><span class="lineno"> 2654</span>    y += 16.0f;</div>
+<div class="line"><a id="l02655" name="l02655"></a><span class="lineno"> 2655</span>    <span class="keywordflow">if</span> (ch-&gt;sends.empty()) {</div>
+<div class="line"><a id="l02656" name="l02656"></a><span class="lineno"> 2656</span>        renderer.drawText(<span class="stringliteral">&quot;No sends&quot;</span>, {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));</div>
+<div class="line"><a id="l02657" name="l02657"></a><span class="lineno"> 2657</span>        y += 18.0f;</div>
+<div class="line"><a id="l02658" name="l02658"></a><span class="lineno"> 2658</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l02659" name="l02659"></a><span class="lineno"> 2659</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;sends.size(); ++i) {</div>
+<div class="line"><a id="l02660" name="l02660"></a><span class="lineno"> 2660</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; send = ch-&gt;sends[i];</div>
+<div class="line"><a id="l02661" name="l02661"></a><span class="lineno"> 2661</span>            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));</div>
+<div class="line"><a id="l02662" name="l02662"></a><span class="lineno"> 2662</span>            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_border.withAlpha(0.25f));</div>
+<div class="line"><a id="l02663" name="l02663"></a><span class="lineno"> 2663</span> </div>
+<div class="line"><a id="l02664" name="l02664"></a><span class="lineno"> 2664</span>            std::string dest = send.targetName.empty() ? <span class="stringliteral">&quot;?&quot;</span> : send.targetName;</div>
+<div class="line"><a id="l02665" name="l02665"></a><span class="lineno"> 2665</span>            std::string sendLabel = fitLabel(renderer, dest, 11.0f, textW - 80.0f);</div>
+<div class="line"><a id="l02666" name="l02666"></a><span class="lineno"> 2666</span>            renderer.drawText(sendLabel, {left + 14.0f, y + 4.0f}, 11.0f, m_text.withAlpha(0.85f));</div>
+<div class="line"><a id="l02667" name="l02667"></a><span class="lineno"> 2667</span> </div>
+<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span>            <span class="keywordtype">float</span> metaX = left + 14.0f;</div>
+<div class="line"><a id="l02669" name="l02669"></a><span class="lineno"> 2669</span>            <span class="keywordtype">float</span> metaY = y + 14.0f;</div>
+<div class="line"><a id="l02670" name="l02670"></a><span class="lineno"> 2670</span>            <span class="keywordtype">float</span> sendDb = gainToDb(send.gain);</div>
+<div class="line"><a id="l02671" name="l02671"></a><span class="lineno"> 2671</span>            <span class="keywordtype">char</span> dbBuf[16];</div>
+<div class="line"><a id="l02672" name="l02672"></a><span class="lineno"> 2672</span>            std::snprintf(dbBuf, <span class="keyword">sizeof</span>(dbBuf), <span class="stringliteral">&quot;%.1f dB&quot;</span>, sendDb);</div>
+<div class="line"><a id="l02673" name="l02673"></a><span class="lineno"> 2673</span>            renderer.drawText(dbBuf, {metaX, metaY}, 9.0f, m_textInfo.withAlpha(0.7f));</div>
+<div class="line"><a id="l02674" name="l02674"></a><span class="lineno"> 2674</span>            metaX += renderer.measureText(dbBuf, 9.0f).width + 8.0f;</div>
+<div class="line"><a id="l02675" name="l02675"></a><span class="lineno"> 2675</span> </div>
+<div class="line"><a id="l02676" name="l02676"></a><span class="lineno"> 2676</span>            <span class="keywordflow">if</span> (send.sidechainOnly) {</div>
+<div class="line"><a id="l02677" name="l02677"></a><span class="lineno"> 2677</span>                renderer.drawText(<span class="stringliteral">&quot;sidechain&quot;</span>, {metaX, metaY}, 9.0f, m_warning.withAlpha(0.75f));</div>
+<div class="line"><a id="l02678" name="l02678"></a><span class="lineno"> 2678</span>                metaX += renderer.measureText(<span class="stringliteral">&quot;sidechain&quot;</span>, 9.0f).width + 8.0f;</div>
+<div class="line"><a id="l02679" name="l02679"></a><span class="lineno"> 2679</span>            }</div>
+<div class="line"><a id="l02680" name="l02680"></a><span class="lineno"> 2680</span>            <span class="keywordflow">if</span> (!send.postFader) {</div>
+<div class="line"><a id="l02681" name="l02681"></a><span class="lineno"> 2681</span>                renderer.drawText(<span class="stringliteral">&quot;pre&quot;</span>, {metaX, metaY}, 9.0f, m_textSecondary.withAlpha(0.7f));</div>
+<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span>                metaX += renderer.measureText(<span class="stringliteral">&quot;pre&quot;</span>, 9.0f).width + 8.0f;</div>
+<div class="line"><a id="l02683" name="l02683"></a><span class="lineno"> 2683</span>            }</div>
+<div class="line"><a id="l02684" name="l02684"></a><span class="lineno"> 2684</span>            <span class="keywordflow">if</span> (send.muted) {</div>
+<div class="line"><a id="l02685" name="l02685"></a><span class="lineno"> 2685</span>                renderer.drawText(<span class="stringliteral">&quot;muted&quot;</span>, {metaX, metaY}, 9.0f, m_error.withAlpha(0.75f));</div>
+<div class="line"><a id="l02686" name="l02686"></a><span class="lineno"> 2686</span>            }</div>
+<div class="line"><a id="l02687" name="l02687"></a><span class="lineno"> 2687</span> </div>
+<div class="line"><a id="l02688" name="l02688"></a><span class="lineno"> 2688</span>            y += 28.0f;</div>
+<div class="line"><a id="l02689" name="l02689"></a><span class="lineno"> 2689</span>        }</div>
+<div class="line"><a id="l02690" name="l02690"></a><span class="lineno"> 2690</span>    }</div>
+<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span> </div>
+<div class="line"><a id="l02692" name="l02692"></a><span class="lineno"> 2692</span>    <span class="comment">// Clear clip so close button and scroll shadow render outside the content area</span></div>
+<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span>    renderer.clearClipRect();</div>
+<div class="line"><a id="l02694" name="l02694"></a><span class="lineno"> 2694</span> </div>
+<div class="line"><a id="l02695" name="l02695"></a><span class="lineno"> 2695</span>    <span class="comment">// Close button (top-right of panel)</span></div>
+<div class="line"><a id="l02696" name="l02696"></a><span class="lineno"> 2696</span>    m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 26.0f, insetY + 8.0f, 18.0f, 18.0f};</div>
+<div class="line"><a id="l02697" name="l02697"></a><span class="lineno"> 2697</span>    renderer.fillRoundedRect(m_inspectorCloseRect, 5.0f,</div>
+<div class="line"><a id="l02698" name="l02698"></a><span class="lineno"> 2698</span>                             m_inspectorCloseHovered ? m_warning.withAlpha(0.45f)</div>
+<div class="line"><a id="l02699" name="l02699"></a><span class="lineno"> 2699</span>                                                      : m_bgTertiary.withAlpha(0.4f));</div>
+<div class="line"><a id="l02700" name="l02700"></a><span class="lineno"> 2700</span>    renderer.drawTextCentered(<span class="stringliteral">&quot;x&quot;</span>, m_inspectorCloseRect, 12.0f, m_textSecondary.withAlpha(0.85f));</div>
+<div class="line"><a id="l02701" name="l02701"></a><span class="lineno"> 2701</span>}</div>
+<div class="line"><a id="l02702" name="l02702"></a><span class="lineno"> 2702</span> </div>
+<div class="line"><a id="l02703" name="l02703"></a><span class="lineno"> 2703</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00045">NUIComponent.h:45</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00022">NUIRenderer.h:22</a></div></div>
-<div class="ttc" id="aclassAestra_1_1MixerViewModel_html"><div class="ttname"><a href="../../d3/d51/classAestra_1_1MixerViewModel.html">Aestra::MixerViewModel</a></div><div class="ttdoc">UI state manager for the mixer panel.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd1/MixerViewModel_8h_source.html#l00143">MixerViewModel.h:143</a></div></div>
+<div class="ttc" id="aclassAestra_1_1MixerViewModel_html"><div class="ttname"><a href="../../d3/d51/classAestra_1_1MixerViewModel.html">Aestra::MixerViewModel</a></div><div class="ttdoc">UI state manager for the mixer panel.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd1/MixerViewModel_8h_source.html#l00144">MixerViewModel.h:144</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 <div class="ttc" id="astructAestra_1_1ChannelViewModel_html"><div class="ttname"><a href="../../d4/d81/structAestra_1_1ChannelViewModel.html">Aestra::ChannelViewModel</a></div><div class="ttdoc">Per-channel UI state for the mixer.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd1/MixerViewModel_8h_source.html#l00034">MixerViewModel.h:34</a></div></div>
 <div class="ttc" id="astructAestra_1_1ChannelViewModel_html_a1d349c32f499adcf71a3eca124720a11"><div class="ttname"><a href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a1d349c32f499adcf71a3eca124720a11">Aestra::ChannelViewModel::masterSendEnabled</a></div><div class="ttdeci">bool masterSendEnabled</div><div class="ttdoc">True when audible main path reaches master directly.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dd1/MixerViewModel_8h_source.html#l00044">MixerViewModel.h:44</a></div></div>

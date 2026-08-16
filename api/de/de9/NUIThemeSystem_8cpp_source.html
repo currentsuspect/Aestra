@@ -1021,10 +1021,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>    <span class="comment">// --- Glow ---</span></div>
 <div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    theme.highlightGlow = theme.primary.withAlpha(0.20f);</div>
 <div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> </div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>    <span class="comment">// --- Meters (neon accent palette) ---</span></div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    theme.meterSafe = theme.secondary;</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>    <span class="comment">// --- Meters (semantic audio palette) ---</span></div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    theme.meterSafe = theme.accentCyan;</div>
 <div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    theme.meterWarn = theme.warning;</div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    theme.meterCrit = theme.accentMagenta;</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    theme.meterCrit = theme.error;</div>
 <div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    theme.meterBackground = NUIColor::fromHex(0x080808, 0.92f);</div>
 <div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    theme.meterActive = theme.meterSafe;</div>
 <div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    theme.gridMajor = NUIColor::white().withAlpha(0.10f);</div>
@@ -1125,10 +1125,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>    theme.shadowL = NUIThemeProperties::Shadow(0, 8, 16, 0, NUIColor::black(), 0.15f);</div>
 <div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>    theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.2f);</div>
 <div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span> </div>
-<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>    <span class="comment">// Meter Colors (Aestra Heat Defaults)</span></div>
-<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>    theme.meterSafe = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);</div>
-<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    theme.meterWarn = NUIColor(1.0f, 0.0f, 0.8f, 1.0f);</div>
-<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>    theme.meterCrit = NUIColor(1.0f, 0.2f, 0.4f, 1.0f);</div>
+<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>    <span class="comment">// Meter colors follow the same semantics as dark mode.</span></div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>    theme.meterSafe = theme.info;</div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    theme.meterWarn = theme.warning;</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>    theme.meterCrit = theme.error;</div>
 <div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>    theme.meterBackground = NUIColor(0.88f, 0.88f, 0.89f, 1.0f);</div>
 <div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>    theme.meterActive = theme.meterSafe;</div>
 <div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>    theme.gridMajor = NUIColor(0.0f, 0.0f, 0.0f, 0.12f);</div>

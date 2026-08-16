@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::SetMainOutputCommand::execute" name="Aestra::Audio::SetMainOutputCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,127,220,167"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="268,69,476,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,124,267,110,268,115,204,129"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="524,5,732,45"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="139,124,196,87,231,69,267,55,328,39,391,29,510,20,511,26,392,34,329,44,269,60,233,74,199,92,142,129"/>
+<area shape="rect" id="Node000004" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a4eaa8ccdd051c3f5c8d56f58ce8193fb" title="Get the primary output destination identifier." alt="" coords="525,133,731,173"/>
+<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="220,145,511,149,511,154,220,151"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="268,184,476,224"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="204,164,268,178,267,184,203,169"/>
+<area shape="rect" id="Node000007" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ab54ca09fd219de23fa5a33a732ee995e" title="Set the primary output destination identifier." alt="" coords="269,248,475,288"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="146,165,202,199,269,234,287,241,285,246,267,238,199,204,143,169"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="452,67,534,46,535,51,453,72"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="453,107,535,127,534,133,452,112"/>
+<area shape="rect" id="Node000005" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a8d71d598a1c2a2cfac6df269776ee594" title="Get a copy of the current send list." alt="" coords="525,69,731,109"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="476,87,511,87,511,92,476,92"/>
+</map>

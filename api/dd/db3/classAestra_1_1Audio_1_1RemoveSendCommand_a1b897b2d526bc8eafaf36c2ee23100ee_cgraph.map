@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::RemoveSendCommand::redo" name="Aestra::Audio::RemoveSendCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,133,208,173"/>
+<area shape="rect" id="Node000002" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a6babc85a621218163a01fdc6e19c7740" title="Execute the command (first time)" alt="" coords="256,133,459,173"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="208,151,242,151,242,156,208,156"/>
+<area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a10f7a504ea3bba99081df5d67b618040" title="Positional lookup for a stable sendId; &#45;1 when absent." alt="" coords="507,5,714,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="383,131,438,93,505,55,522,48,524,53,508,60,441,98,386,136"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="507,69,715,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="437,131,517,110,518,115,438,136"/>
+<area shape="rect" id="Node000005" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a8d71d598a1c2a2cfac6df269776ee594" title="Get a copy of the current send list." alt="" coords="507,133,714,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="459,151,494,151,494,156,459,156"/>
+<area shape="rect" id="Node000006" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a8052061d1ca743786d95a5a9de34f96e" title="Remove the send with the given stable sendId." alt="" coords="507,197,714,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="438,171,518,191,517,197,437,176"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="507,261,715,301"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="386,171,441,209,508,247,524,254,522,259,505,252,438,214,383,176"/>
+</map>

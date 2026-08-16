@@ -1,44 +1,50 @@
 <map id="Aestra::Audio::MixerChannel::getEffectChain" name="Aestra::Audio::MixerChannel::getEffectChain">
-<area shape="rect" id="Node000001" title="Access the insert&#45;effect chain." alt="" coords="552,413,759,453"/>
+<area shape="rect" id="Node000001" title="Access the insert&#45;effect chain." alt="" coords="552,477,759,517"/>
 <area shape="rect" id="Node000002" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#a794e34f0289c458918b257cc9e07e358" title="Execute the command (first time)" alt="" coords="295,5,474,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="648,400,636,329,610,237,591,188,567,141,538,97,502,59,473,42,476,37,506,55,542,94,572,138,596,186,615,235,641,328,653,399"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="650,464,642,381,632,329,619,272,600,214,575,158,542,105,502,59,473,41,476,37,506,55,547,102,579,155,605,213,624,271,638,328,647,381,655,463"/>
 <area shape="rect" id="Node000004" href="$de/dcd/classAestra_1_1Audio_1_1RemoveEffectCommand.html#a84a3366f335a742afafdf918ec5d6759" title="Execute the command (first time)" alt="" coords="281,69,489,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="645,400,629,341,601,265,583,226,560,189,533,154,502,123,484,112,487,107,506,119,537,150,564,186,587,224,606,263,634,339,650,399"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="648,464,636,393,610,301,591,252,567,205,538,161,502,123,486,112,489,107,506,119,542,158,572,202,596,250,615,299,641,392,653,463"/>
 <area shape="rect" id="Node000006" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a3db908d65982c10891f49a41c1e9f8d7" title="Execute the command (first time)" alt="" coords="287,133,482,173"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="641,401,621,353,592,295,552,237,529,210,502,187,481,175,484,170,506,183,533,207,557,234,597,293,626,351,646,399"/>
-<area shape="rect" id="Node000008" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#abd5f5c1a70cbf91fa71f6712f6cfb229" title="Execute the command (first time)" alt="" coords="293,197,476,237"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="634,403,612,367,582,326,545,286,503,252,475,238,477,233,505,247,549,282,586,323,616,364,639,400"/>
-<area shape="rect" id="Node000010" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#ad4103b850b318e867b2c150932bbe6d7" title="Execute the command (first time)" alt="" coords="279,261,490,301"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="623,406,570,359,537,336,503,316,475,304,477,299,505,311,540,331,573,355,627,402"/>
-<area shape="rect" id="Node000012" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="285,325,485,365"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="590,411,503,380,464,368,465,363,505,375,592,406"/>
-<area shape="rect" id="Node000014" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="265,413,504,453"/>
-<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="538,436,504,436,504,431,538,431"/>
-<area shape="rect" id="Node000015" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="291,477,479,517"/>
-<area shape="poly" id="edge15_Node000001_Node000015" title=" " alt="" coords="557,459,470,480,469,475,556,454"/>
-<area shape="rect" id="Node000017" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#af15265d98a2401649a20b830f7916acf" title="Undo the command." alt="" coords="295,541,474,581"/>
-<area shape="poly" id="edge17_Node000001_Node000017" title=" " alt="" coords="618,464,566,499,505,532,473,544,471,539,503,527,563,494,615,459"/>
-<area shape="rect" id="Node000018" href="$de/dcd/classAestra_1_1Audio_1_1RemoveEffectCommand.html#a040908696d6c4220326334887faa02e1" title="Undo the command." alt="" coords="281,605,489,645"/>
-<area shape="poly" id="edge18_Node000001_Node000018" title=" " alt="" coords="635,466,581,532,545,566,505,596,481,608,478,603,503,591,542,562,577,528,631,463"/>
-<area shape="rect" id="Node000019" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#ad2d2eaeeabad423eb6152ad65ff9972d" title="Undo the command." alt="" coords="297,669,473,709"/>
-<area shape="poly" id="edge19_Node000001_Node000019" title=" " alt="" coords="643,467,623,511,593,563,554,615,506,660,474,676,472,671,502,655,550,612,588,560,618,509,639,465"/>
-<area shape="rect" id="Node000020" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#a31b8869ba1984f43a80ac18aedfe2a6d" title="Undo the command." alt="" coords="293,733,476,773"/>
-<area shape="poly" id="edge20_Node000001_Node000020" title=" " alt="" coords="649,468,631,523,603,593,561,663,535,695,506,723,478,740,475,735,502,719,532,692,557,660,598,590,626,522,644,466"/>
-<area shape="rect" id="Node000021" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#a1040b59218a9c9720ba5164d434396e9" title="Undo the command." alt="" coords="279,797,490,837"/>
-<area shape="poly" id="edge21_Node000001_Node000021" title=" " alt="" coords="652,468,639,535,612,621,593,667,569,711,540,752,506,787,488,799,485,795,502,783,536,748,565,708,588,664,607,619,633,534,647,467"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="645,464,629,405,601,329,583,290,560,253,533,218,502,187,481,174,484,169,506,183,537,214,564,250,587,288,606,327,634,403,650,463"/>
+<area shape="rect" id="Node000008" href="$de/d68/classAestra_1_1Audio_1_1MovePluginCommand.html#a0dffee538c0ccfd0405d805dfd103e5b" title="Execute the command (first time)" alt="" coords="288,197,481,237"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="641,465,621,417,592,359,552,301,529,274,502,251,480,239,483,234,506,247,533,271,557,298,597,357,626,415,646,463"/>
+<area shape="rect" id="Node000010" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#abd5f5c1a70cbf91fa71f6712f6cfb229" title="Execute the command (first time)" alt="" coords="293,261,476,301"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="634,467,612,431,582,390,545,350,503,316,475,302,477,297,505,311,549,346,586,387,616,428,639,464"/>
+<area shape="rect" id="Node000012" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#ad4103b850b318e867b2c150932bbe6d7" title="Execute the command (first time)" alt="" coords="279,325,490,365"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="623,470,570,423,537,400,503,380,475,368,477,363,505,375,540,395,573,419,627,466"/>
+<area shape="rect" id="Node000014" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="285,389,485,429"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="590,475,503,444,464,432,465,427,505,439,592,470"/>
+<area shape="rect" id="Node000016" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="265,477,504,517"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="538,500,504,500,504,495,538,495"/>
+<area shape="rect" id="Node000017" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="291,541,479,581"/>
+<area shape="poly" id="edge17_Node000001_Node000017" title=" " alt="" coords="557,523,470,544,469,539,556,518"/>
+<area shape="rect" id="Node000019" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#af15265d98a2401649a20b830f7916acf" title="Undo the command." alt="" coords="295,605,474,645"/>
+<area shape="poly" id="edge19_Node000001_Node000019" title=" " alt="" coords="618,528,566,563,505,596,473,608,471,603,503,591,563,558,615,523"/>
+<area shape="rect" id="Node000020" href="$de/dcd/classAestra_1_1Audio_1_1RemoveEffectCommand.html#a040908696d6c4220326334887faa02e1" title="Undo the command." alt="" coords="281,669,489,709"/>
+<area shape="poly" id="edge20_Node000001_Node000020" title=" " alt="" coords="635,530,581,596,545,630,505,660,481,672,478,667,503,655,542,626,577,592,631,527"/>
+<area shape="rect" id="Node000021" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#ad2d2eaeeabad423eb6152ad65ff9972d" title="Undo the command." alt="" coords="297,733,473,773"/>
+<area shape="poly" id="edge21_Node000001_Node000021" title=" " alt="" coords="643,531,623,575,593,627,554,679,506,724,474,740,472,735,502,719,550,676,588,624,618,573,639,529"/>
+<area shape="rect" id="Node000022" href="$de/d68/classAestra_1_1Audio_1_1MovePluginCommand.html#afc17a46b92652488d722de689fda2aaa" title="Undo the command." alt="" coords="288,797,481,837"/>
+<area shape="poly" id="edge22_Node000001_Node000022" title=" " alt="" coords="649,532,631,587,603,657,561,727,535,759,506,787,483,801,480,797,502,783,532,756,557,724,598,654,626,586,644,530"/>
+<area shape="rect" id="Node000023" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#a31b8869ba1984f43a80ac18aedfe2a6d" title="Undo the command." alt="" coords="293,861,476,901"/>
+<area shape="poly" id="edge23_Node000001_Node000023" title=" " alt="" coords="652,532,639,599,612,685,593,731,569,775,540,816,506,851,477,869,475,864,502,847,536,812,565,772,588,728,607,683,633,598,647,531"/>
+<area shape="rect" id="Node000024" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#a1040b59218a9c9720ba5164d434396e9" title="Undo the command." alt="" coords="279,925,490,965"/>
+<area shape="poly" id="edge24_Node000001_Node000024" title=" " alt="" coords="655,531,645,610,621,713,602,768,577,822,545,872,506,915,489,927,486,923,502,911,541,868,572,819,597,766,616,712,640,609,649,531"/>
 <area shape="rect" id="Node000003" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#adb7102e0c05225d1ddfb286e882aaf1a" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="22,5,201,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="281,28,201,28,201,23,281,23"/>
 <area shape="rect" id="Node000005" href="$de/dcd/classAestra_1_1Audio_1_1RemoveEffectCommand.html#a777f755fe76c5eed24cb72ca4498f717" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="7,69,215,109"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="267,92,216,92,216,87,267,87"/>
 <area shape="rect" id="Node000007" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a432e4bf7538aea50531284f1eb1a5257" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="24,133,199,173"/>
 <area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="274,156,199,156,199,151,274,151"/>
-<area shape="rect" id="Node000009" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#aa7240f0b05e1610788d79c874847d148" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="20,197,203,237"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="280,220,203,220,203,215,280,215"/>
-<area shape="rect" id="Node000011" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#adbe1f47b96a9e9c970a036268a67959f" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="6,261,217,301"/>
-<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="266,284,217,284,217,279,266,279"/>
-<area shape="rect" id="Node000013" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="14,325,209,365"/>
-<area shape="poly" id="edge12_Node000012_Node000013" title=" " alt="" coords="271,348,209,348,209,343,271,343"/>
-<area shape="poly" id="edge14_Node000014_Node000014" title=" " alt="" coords="431,402,415,395,385,392,359,394,343,399,337,405,340,412,335,414,332,404,340,394,358,389,385,387,416,389,433,397"/>
-<area shape="rect" id="Node000016" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,477,217,517"/>
-<area shape="poly" id="edge16_Node000015_Node000016" title=" " alt="" coords="277,500,217,500,217,495,277,495"/>
+<area shape="rect" id="Node000009" href="$de/d68/classAestra_1_1Audio_1_1MovePluginCommand.html#aa984d4ede6a1437956db4f09352a9408" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="15,197,208,237"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="274,220,208,220,208,215,274,215"/>
+<area shape="rect" id="Node000011" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#aa7240f0b05e1610788d79c874847d148" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="20,261,203,301"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="280,284,203,284,203,279,280,279"/>
+<area shape="rect" id="Node000013" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#adbe1f47b96a9e9c970a036268a67959f" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="6,325,217,365"/>
+<area shape="poly" id="edge12_Node000012_Node000013" title=" " alt="" coords="266,348,217,348,217,343,266,343"/>
+<area shape="rect" id="Node000015" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="14,389,209,429"/>
+<area shape="poly" id="edge14_Node000014_Node000015" title=" " alt="" coords="271,412,209,412,209,407,271,407"/>
+<area shape="poly" id="edge16_Node000016_Node000016" title=" " alt="" coords="431,466,415,459,385,456,359,458,343,463,337,469,340,476,335,478,332,468,340,458,358,453,385,451,416,453,433,461"/>
+<area shape="rect" id="Node000018" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,541,217,581"/>
+<area shape="poly" id="edge18_Node000017_Node000018" title=" " alt="" coords="277,564,217,564,217,559,277,559"/>
 </map>

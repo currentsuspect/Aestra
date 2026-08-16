@@ -1,25 +1,27 @@
 <map id="Aestra::Audio::AudioEngine::setPatternPlaybackMode" name="Aestra::Audio::AudioEngine::setPatternPlaybackMode">
-<area shape="rect" id="Node000001" title="Enable or disable Arsenal pattern playback mode." alt="" coords="768,133,967,173"/>
-<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="504,5,704,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="828,127,778,92,719,60,688,48,690,43,721,55,780,88,831,123"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a341b0c3f718815e12a4a49ddb0674819" title="Start playback based on the current focus mode." alt="" coords="488,69,720,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="771,133,686,112,687,107,772,127"/>
-<area shape="rect" id="Node000005" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae5851e1275e34b693d6bc2aa8efb9ba7" title="Persist the currently edited notes back to the pattern manager." alt="" coords="515,133,693,173"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="754,156,694,156,694,151,754,151"/>
-<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="232,195,440,235"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="771,179,720,188,574,204,440,213,440,208,573,199,720,183,770,174"/>
-<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="498,254,710,279"/>
-<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="823,183,775,209,721,234,656,256,654,251,719,230,772,204,820,178"/>
-<area shape="rect" id="Node000003" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="239,5,433,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="490,28,434,28,434,23,490,23"/>
+<area shape="rect" id="Node000001" title="Enable or disable Arsenal pattern playback mode." alt="" coords="800,133,999,173"/>
+<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="536,5,736,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="860,127,810,92,751,60,720,48,722,43,753,55,812,88,863,123"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a341b0c3f718815e12a4a49ddb0674819" title="Start playback based on the current focus mode." alt="" coords="520,69,752,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="803,133,718,112,719,107,804,127"/>
+<area shape="rect" id="Node000005" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae5851e1275e34b693d6bc2aa8efb9ba7" title="Persist the currently edited notes back to the pattern manager." alt="" coords="547,133,725,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="786,156,726,156,726,151,786,151"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="248,195,456,235"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="804,179,752,188,597,205,456,214,456,208,597,200,752,183,803,174"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="530,259,742,285"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="854,182,753,234,680,262,678,257,751,230,852,178"/>
+<area shape="rect" id="Node000003" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="255,5,449,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="522,28,450,28,450,23,522,23"/>
 <area shape="rect" id="Node000006" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae66c8a1f925037421cdb8bd97449bc7c" title="Create the piano&#45;roll editor bound to the shared track manager." alt="" coords="5,103,184,143"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="511,133,440,121,382,117,336,117,232,121,184,122,184,117,232,116,336,112,382,112,440,116,512,128"/>
-<area shape="rect" id="Node000007" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ad54d0aa6ab8faf7e98408cf3ef5aa773" title="Set the default unit assigned to newly created notes." alt="" coords="247,131,425,171"/>
-<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="501,155,426,154,426,149,501,150"/>
-<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="233,141,184,136,185,130,233,136"/>
-<area shape="poly" id="edge11_Node000009_Node000008" title=" " alt="" coords="524,254,439,237,440,232,525,249"/>
-<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="236,259,436,285"/>
-<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="484,272,436,273,436,267,484,266"/>
-<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="239,309,433,349"/>
-<area shape="poly" id="edge12_Node000009_Node000011" title=" " alt="" coords="536,285,423,312,422,307,535,280"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="543,133,472,121,405,116,352,117,232,121,184,122,184,117,232,116,352,111,405,111,472,116,544,128"/>
+<area shape="rect" id="Node000007" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ad54d0aa6ab8faf7e98408cf3ef5aa773" title="Set the default unit assigned to newly created notes." alt="" coords="263,131,441,171"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="533,155,442,154,442,149,533,150"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="248,142,184,135,184,130,249,137"/>
+<area shape="poly" id="edge12_Node000009_Node000008" title=" " alt="" coords="558,259,451,237,452,232,559,254"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="252,259,452,285"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="516,275,452,275,452,269,516,269"/>
+<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="232,309,472,349"/>
+<area shape="poly" id="edge11_Node000009_Node000011" title=" " alt="" coords="559,290,452,312,451,307,558,285"/>
+<area shape="rect" id="Node000012" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="255,373,449,413"/>
+<area shape="poly" id="edge13_Node000009_Node000012" title=" " alt="" coords="605,295,545,329,473,364,439,376,437,371,471,359,542,325,602,290"/>
 </map>

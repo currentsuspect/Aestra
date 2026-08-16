@@ -1,21 +1,50 @@
 <map id="Aestra::Audio::TrackManager::getChannelById" name="Aestra::Audio::TrackManager::getChannelById">
-<area shape="rect" id="Node000001" title="Find a mixer channel by stable ID." alt="" coords="804,133,1012,173"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a08ac8fbac914dbab6fc60ca7c8fc58a7" title="Add a channel while restoring a persisted stable identity." alt="" coords="541,53,749,93"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="828,132,711,96,712,91,829,127"/>
-<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4d54a269442ca4263c5bed22e8d0ef64" title="Route an audio source pattern independently from Playlist placement." alt="" coords="533,133,756,173"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="790,156,756,156,756,151,790,151"/>
-<area shape="rect" id="Node000010" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="547,197,742,237"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="813,179,728,200,727,195,811,174"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="263,37,471,77"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="527,69,471,66,471,61,527,64"/>
-<area shape="rect" id="Node000004" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4439b06fc72f0560a8277aed0e34eda9" title="Add the channel if the command has not been executed yet." alt="" coords="5,5,200,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="248,46,200,40,200,34,249,40"/>
-<area shape="rect" id="Node000005" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo." alt="" coords="5,69,200,109"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="249,74,200,80,200,75,248,69"/>
-<area shape="rect" id="Node000007" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a8dda8e69e7f016b4c164faaa39f8dd99" title="Execute the command (first time)" alt="" coords="248,101,485,141"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="520,142,485,138,486,132,520,136"/>
-<area shape="rect" id="Node000008" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a80109cb1b71b1d2c214809c2d2454e5a" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="256,165,477,205"/>
-<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="520,170,478,175,477,170,520,165"/>
-<area shape="rect" id="Node000009" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#ae97dcd11075ce2847a6fd66e7d573fad" title="Undo the command." alt="" coords="256,229,477,269"/>
-<area shape="poly" id="edge8_Node000006_Node000009" title=" " alt="" coords="552,180,535,188,511,204,487,220,455,232,453,227,484,215,508,199,532,183,550,175"/>
+<area shape="rect" id="Node000001" title="Find a mixer channel by stable ID." alt="" coords="873,380,1081,420"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a08ac8fbac914dbab6fc60ca7c8fc58a7" title="Add a channel while restoring a persisted stable identity." alt="" coords="601,68,809,108"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="964,368,946,315,917,251,876,185,851,155,824,129,793,111,796,106,827,125,855,152,880,182,921,249,951,313,969,366"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="601,183,809,223"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="952,370,898,306,863,273,824,244,786,225,788,220,827,239,866,269,902,303,956,367"/>
+<area shape="rect" id="Node000007" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a03204a262d4571e5b1141320d550756d" title="Execute the command (first time)" alt="" coords="308,135,523,175"/>
+<area shape="poly" id="edge12_Node000001_Node000007" title=" " alt="" coords="963,368,944,321,915,267,875,214,851,191,824,173,787,156,748,143,667,130,586,130,515,137,514,132,586,125,667,125,749,138,789,151,827,168,854,187,879,210,919,264,949,319,968,366"/>
+<area shape="rect" id="Node000009" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#a4eaa9dd33e7dc8be649ddd105408771f" title="Execute the command (first time)" alt="" coords="295,200,536,240"/>
+<area shape="poly" id="edge13_Node000001_Node000009" title=" " alt="" coords="941,374,888,335,824,301,752,276,677,256,536,233,537,228,678,251,753,271,826,296,891,331,944,369"/>
+<area shape="rect" id="Node000011" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a4e26b3619d093ab5cb6f82ce53fb148c" title="Execute the command (first time)" alt="" coords="295,267,536,307"/>
+<area shape="poly" id="edge16_Node000001_Node000011" title=" " alt="" coords="924,376,876,356,825,339,751,322,676,309,536,295,537,290,676,304,752,317,826,333,878,351,926,371"/>
+<area shape="rect" id="Node000013" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a6babc85a621218163a01fdc6e19c7740" title="Execute the command (first time)" alt="" coords="603,348,806,388"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="859,389,806,383,807,377,860,384"/>
+<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4d54a269442ca4263c5bed22e8d0ef64" title="Route an audio source pattern independently from Playlist placement." alt="" coords="593,412,816,452"/>
+<area shape="poly" id="edge17_Node000001_Node000015" title=" " alt="" coords="860,416,817,422,816,416,859,411"/>
+<area shape="rect" id="Node000019" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="607,476,802,516"/>
+<area shape="poly" id="edge21_Node000001_Node000019" title=" " alt="" coords="922,428,826,467,788,478,787,473,824,461,920,423"/>
+<area shape="rect" id="Node000020" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a95055243abe421693bb0e7081ba57714" title="Undo the command." alt="" coords="597,540,812,580"/>
+<area shape="poly" id="edge22_Node000001_Node000020" title=" " alt="" coords="950,432,896,482,863,508,827,530,799,542,796,538,824,526,860,504,893,478,947,428"/>
+<area shape="rect" id="Node000021" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#ad88ff0fbb47e816593e327a8fb733ec5" title="Undo the command." alt="" coords="584,604,825,644"/>
+<area shape="poly" id="edge23_Node000001_Node000021" title=" " alt="" coords="961,434,939,471,909,515,871,558,827,594,804,606,802,602,824,590,867,554,905,511,935,468,957,431"/>
+<area shape="rect" id="Node000022" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#aa486a126b7efb2d78542af7417c10ce8" title="Undo the command." alt="" coords="603,668,806,708"/>
+<area shape="poly" id="edge24_Node000001_Node000022" title=" " alt="" coords="968,434,949,484,920,544,879,606,855,634,827,658,807,670,805,666,824,654,851,630,875,603,915,542,944,482,963,432"/>
+<area shape="rect" id="Node000023" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a770147f512b6ef18bed33343b80e1932" title="Undo the command." alt="" coords="584,732,825,772"/>
+<area shape="poly" id="edge25_Node000001_Node000023" title=" " alt="" coords="973,434,957,496,929,574,910,614,887,654,859,690,827,722,809,734,806,730,824,718,855,687,882,651,905,612,924,572,952,494,967,433"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="311,68,519,108"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="587,91,520,91,520,85,587,85"/>
+<area shape="rect" id="Node000004" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4439b06fc72f0560a8277aed0e34eda9" title="Add the channel if the command has not been executed yet." alt="" coords="29,69,223,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="298,91,224,92,224,86,298,86"/>
+<area shape="rect" id="Node000005" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo." alt="" coords="29,5,223,45"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="309,68,218,48,220,43,310,62"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="586,186,523,175,523,170,587,181"/>
+<area shape="poly" id="edge8_Node000006_Node000009" title=" " alt="" coords="587,212,536,215,536,210,587,207"/>
+<area shape="poly" id="edge10_Node000006_Node000011" title=" " alt="" coords="623,229,537,255,487,269,485,264,535,249,621,224"/>
+<area shape="rect" id="Node000008" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a3d74877f75793de023535d75e9887ef7" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="19,135,233,175"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="294,157,233,157,233,152,294,152"/>
+<area shape="rect" id="Node000010" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#a6e0a6e323a4ea8c9eb2f1d7788676c42" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,200,247,240"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="281,223,247,223,247,217,281,217"/>
+<area shape="rect" id="Node000012" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a00463bbb3bdf85217a261001d5996610" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,267,247,307"/>
+<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="281,289,247,289,247,284,281,284"/>
+<area shape="rect" id="Node000014" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a1b897b2d526bc8eafaf36c2ee23100ee" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="314,336,517,376"/>
+<area shape="poly" id="edge15_Node000013_Node000014" title=" " alt="" coords="589,366,517,363,517,358,590,361"/>
+<area shape="rect" id="Node000016" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a8dda8e69e7f016b4c164faaa39f8dd99" title="Execute the command (first time)" alt="" coords="297,400,534,440"/>
+<area shape="poly" id="edge18_Node000015_Node000016" title=" " alt="" coords="579,429,534,428,534,422,580,424"/>
+<area shape="rect" id="Node000017" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#a80109cb1b71b1d2c214809c2d2454e5a" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="305,464,526,504"/>
+<area shape="poly" id="edge19_Node000015_Node000017" title=" " alt="" coords="580,457,527,467,526,461,579,452"/>
+<area shape="rect" id="Node000018" href="$d3/dfe/classAestra_1_1Audio_1_1SetAudioPatternMixerChannelCommand.html#ae97dcd11075ce2847a6fd66e7d573fad" title="Undo the command." alt="" coords="305,528,526,568"/>
+<area shape="poly" id="edge20_Node000015_Node000018" title=" " alt="" coords="597,460,586,466,571,478,562,491,553,505,537,518,513,530,511,525,535,514,549,502,558,489,567,475,582,462,594,455"/>
 </map>

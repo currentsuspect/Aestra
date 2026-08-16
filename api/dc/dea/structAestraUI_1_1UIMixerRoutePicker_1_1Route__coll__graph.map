@@ -1,0 +1,11 @@
+<map id="AestraUI::UIMixerRoutePicker::Route" name="AestraUI::UIMixerRoutePicker::Route">
+<area shape="rect" id="Node000001" title=" " alt="" coords="33,197,247,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,80,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="51,133,58,153,70,172,99,195,96,199,66,175,54,155,46,135"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="121,95,159,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="143,134,143,197,137,197,137,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="235,95,322,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="275,134,266,156,251,175,233,189,213,200,211,195,230,185,247,171,261,153,270,132"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="209,5,348,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="281,59,281,94,276,94,276,59"/>
+</map>

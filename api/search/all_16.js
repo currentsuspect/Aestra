@@ -23,6 +23,10 @@ var searchData=
   ['windowstate_20',['WindowState',['../dc/d36/structAestraWindowManager_1_1WindowState.html',1,'AestraWindowManager']]],
   ['wirefloatingpanel_21',['wireFloatingPanel',['../db/d60/classAestraContent.html#a96fb8097d6143d45d2d6ce3b65949b6f',1,'AestraContent']]],
   ['wireheadlessengine_22',['wireHeadlessEngine',['../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65',1,'Aestra::Audio::MuseService']]],
-  ['write_23',['write',['../d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#acdc4186abf4e4594e8d229c1997ba982',1,'Aestra::Audio::AudioRingBuffer']]],
-  ['writepos_24',['writepos',['../d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html#a6c19b31343bba05b6a9e982ee5d6711d',1,'Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::EdgeSlotSnapshot::writePos'],['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a4d2b14baf443d71bda8bc5c911b79de4',1,'Aestra::Audio::EdgeDelayState::writePos']]]
+  ['workspacefocus_2eh_23',['WorkspaceFocus.h',['../d3/d28/WorkspaceFocus_8h.html',1,'']]],
+  ['workspacefocusname_24',['workspaceFocusName',['../d3/d28/WorkspaceFocus_8h.html#a6171d0d9d1c444e554c3acf066913db3',1,'WorkspaceFocusModel']]],
+  ['workspacepanelvisibility_25',['WorkspacePanelVisibility',['../d6/d1d/structWorkspaceFocusModel_1_1WorkspacePanelVisibility.html',1,'WorkspaceFocusModel']]],
+  ['workspacetransitionkind_26',['WorkspaceTransitionKind',['../d3/d28/WorkspaceFocus_8h.html#a0a028bd36b241d2107826a0c7b980b3e',1,'WorkspaceFocusModel']]],
+  ['write_27',['write',['../d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#acdc4186abf4e4594e8d229c1997ba982',1,'Aestra::Audio::AudioRingBuffer']]],
+  ['writepos_28',['writepos',['../d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html#a6c19b31343bba05b6a9e982ee5d6711d',1,'Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::EdgeSlotSnapshot::writePos'],['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a4d2b14baf443d71bda8bc5c911b79de4',1,'Aestra::Audio::EdgeDelayState::writePos']]]
 ];

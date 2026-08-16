@@ -94,219 +94,220 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;integrity&quot;</span>) <span class="keywordflow">return</span> <span class="stringliteral">&quot;integrity_mismatch&quot;</span>;</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;clip&quot;</span>) <span class="keywordflow">return</span> <span class="stringliteral">&quot;missing_pattern_reference&quot;</span>;</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;unit&quot;</span>) <span class="keywordflow">return</span> <span class="stringliteral">&quot;missing_unit_reference&quot;</span>;</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;project_load_issue&quot;</span>;</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>}</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>JSON globalEvidence() {</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    JSON evidence = JSON::object();</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;none&quot;</span>));</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    <span class="keywordflow">return</span> evidence;</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>}</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>JSON issueEvidence(<span class="keyword">const</span> LoadIssue&amp; issue) {</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keywordflow">if</span> (issue.objectId == 0) {</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>        <span class="keywordflow">return</span> globalEvidence();</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    }</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    JSON evidence = JSON::object();</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">true</span>));</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;stable_id&quot;</span>));</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    evidence.set(<span class="stringliteral">&quot;objectId&quot;</span>, JSON(std::to_string(issue.objectId)));</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordflow">if</span> (!issue.referenceId.empty()) evidence.set(<span class="stringliteral">&quot;referenceId&quot;</span>, JSON(issue.referenceId));</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordflow">if</span> (!issue.context.empty()) evidence.set(<span class="stringliteral">&quot;context&quot;</span>, JSON(issue.context));</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordflow">return</span> evidence;</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>}</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>JSON assetEvidence(<span class="keyword">const</span> std::string&amp; path) {</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    JSON evidence = JSON::object();</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;asset_path&quot;</span>));</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    evidence.set(<span class="stringliteral">&quot;assetPath&quot;</span>, JSON(path));</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordflow">return</span> evidence;</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>}</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>JSON pluginEvidence(<span class="keyword">const</span> std::string&amp; location) {</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    JSON evidence = JSON::object();</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;owner_label&quot;</span>));</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    evidence.set(<span class="stringliteral">&quot;ownerLabel&quot;</span>, JSON(location));</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordflow">return</span> evidence;</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>}</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>JSON makeIssueEntry(<span class="keyword">const</span> <span class="keywordtype">char</span>* code, <span class="keyword">const</span> std::string&amp; message, <span class="keyword">const</span> JSON&amp; evidence) {</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    JSON entry = JSON::object();</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    entry.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(code));</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    entry.set(<span class="stringliteral">&quot;message&quot;</span>, JSON(message));</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    entry.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordflow">return</span> entry;</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>}</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="keyword">const</span> <span class="keywordtype">char</span>* integrityName(<a class="code hl_enumeration" href="../../d0/d4b/classProjectSerializer.html#a2efc2e03f6c36944463cea9acaae84bb">ProjectSerializer::LoadIntegrity</a> integrity) {</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="keywordflow">switch</span> (integrity) {</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Unchecked: <span class="keywordflow">return</span> <span class="stringliteral">&quot;unchecked&quot;</span>;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Verified: <span class="keywordflow">return</span> <span class="stringliteral">&quot;verified&quot;</span>;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Mismatch: <span class="keywordflow">return</span> <span class="stringliteral">&quot;mismatch&quot;</span>;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    }</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;unchecked&quot;</span>;</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>}</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span> </div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span><span class="keyword">const</span> <span class="keywordtype">char</span>* migrationName(MigrationOutcome outcome) {</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordflow">switch</span> (outcome) {</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordflow">case</span> MigrationOutcome::None: <span class="keywordflow">return</span> <span class="stringliteral">&quot;none&quot;</span>;</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keywordflow">case</span> MigrationOutcome::Transformed: <span class="keywordflow">return</span> <span class="stringliteral">&quot;transformed&quot;</span>;</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordflow">case</span> MigrationOutcome::Failed: <span class="keywordflow">return</span> <span class="stringliteral">&quot;failed&quot;</span>;</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    }</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;none&quot;</span>;</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>}</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="keyword">const</span> <span class="keywordtype">char</span>* originName(MuseProjectLoadOrigin origin) {</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keywordflow">switch</span> (origin) {</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Canonical: <span class="keywordflow">return</span> <span class="stringliteral">&quot;canonical&quot;</span>;</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Recovery: <span class="keywordflow">return</span> <span class="stringliteral">&quot;recovery&quot;</span>;</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Snapshot: <span class="keywordflow">return</span> <span class="stringliteral">&quot;snapshot&quot;</span>;</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    }</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;canonical&quot;</span>;</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>}</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span><span class="keyword">const</span> <span class="keywordtype">char</span>* recoveryName(MuseProjectLoadOrigin origin, <span class="keywordtype">bool</span> ok) {</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keywordflow">switch</span> (origin) {</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Canonical: <span class="keywordflow">return</span> <span class="stringliteral">&quot;not_attempted&quot;</span>;</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Recovery: <span class="keywordflow">return</span> ok ? <span class="stringliteral">&quot;recovered&quot;</span> : <span class="stringliteral">&quot;recovery_failed&quot;</span>;</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Snapshot: <span class="keywordflow">return</span> ok ? <span class="stringliteral">&quot;snapshot_restored&quot;</span> : <span class="stringliteral">&quot;snapshot_restore_failed&quot;</span>;</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    }</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;not_attempted&quot;</span>;</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>}</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="keywordtype">bool</span> isDegraded(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a>&amp; result, MuseProjectLoadOrigin origin) {</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordflow">return</span> result.schemaVersionAdvanced() ||</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>           result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">migrationOutcome</a> != MigrationOutcome::None ||</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>           origin == MuseProjectLoadOrigin::Recovery ||</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>           result.integrity == ProjectSerializer::LoadIntegrity::Mismatch ||</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>           !result.missingAssets.empty() || !result.missingPlugins.empty() ||</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>           (result.report &amp;&amp; !result.report-&gt;issues.empty());</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>}</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>} <span class="comment">// namespace</span></div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>JSON makeMuseProjectLoadReport(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a>&amp; result,</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>                               MuseProjectLoadOrigin origin) {</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    JSON warnings = JSON::array();</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    JSON errors = JSON::array();</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    JSON missingPlugins = JSON::array();</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    JSON missingAssets = JSON::array();</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    JSON unrestoredState = JSON::array();</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span> </div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">if</span> (!result.ok) {</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        errors.push(makeIssueEntry(<span class="stringliteral">&quot;project_load_failed&quot;</span>, result.errorMessage, globalEvidence()));</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keywordflow">if</span> (result.report) {</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; issue : result.report-&gt;issues) {</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>            JSON entry = makeIssueEntry(issueCode(issue), issue.message, issueEvidence(issue));</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            entry.set(<span class="stringliteral">&quot;category&quot;</span>, JSON(issue.category));</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>            <span class="keywordflow">if</span> (issue.severity == LoadIssueSeverity::Error) {</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>                errors.push(entry);</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>                warnings.push(entry);</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>            }</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>            <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;clip&quot;</span> || issue.category == <span class="stringliteral">&quot;unit&quot;</span>) {</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>                JSON unrestored = JSON::object();</div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>                unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(issueCode(issue)));</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>                unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>,</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>                               JSON(issue.category == <span class="stringliteral">&quot;clip&quot;</span> ? <span class="stringliteral">&quot;pattern_reference&quot;</span> : <span class="stringliteral">&quot;unit_reference&quot;</span>));</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>                unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>                unrestored.set(<span class="stringliteral">&quot;referencePreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>                unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, issueEvidence(issue));</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                unrestoredState.push(unrestored);</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>            }</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>        }</div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>    }</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span> </div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; plugin : result.missingPlugins) {</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>        <span class="keyword">const</span> JSON evidence = pluginEvidence(plugin.location);</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span> </div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        JSON missing = JSON::object();</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>        missing.set(<span class="stringliteral">&quot;pluginId&quot;</span>, JSON(plugin.pluginId));</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        missing.set(<span class="stringliteral">&quot;location&quot;</span>, JSON(plugin.location));</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        missing.set(<span class="stringliteral">&quot;placeholderPreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        missing.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>));</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        missing.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        missingPlugins.push(missing);</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        warnings.push(makeIssueEntry(</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>            <span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>,</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>            <span class="stringliteral">&quot;Plugin could not be instantiated; its stored slot and opaque state were preserved&quot;</span>,</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>            evidence));</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        JSON unrestored = JSON::object();</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>));</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>, JSON(<span class="stringliteral">&quot;plugin_instance&quot;</span>));</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        unrestored.set(<span class="stringliteral">&quot;placeholderPreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>        unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        unrestoredState.push(unrestored);</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    }</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span> </div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; path : result.missingAssets) {</div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        <span class="keyword">const</span> JSON evidence = assetEvidence(path);</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span> </div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        JSON missing = JSON::object();</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        missing.set(<span class="stringliteral">&quot;path&quot;</span>, JSON(path));</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        missing.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>));</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        missing.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        missingAssets.push(missing);</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        warnings.push(makeIssueEntry(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>,</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>                                     <span class="stringliteral">&quot;Audio asset was missing or unreadable during project load&quot;</span>,</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>                                     evidence));</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        JSON unrestored = JSON::object();</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>));</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>, JSON(<span class="stringliteral">&quot;audio_asset_content&quot;</span>));</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        unrestoredState.push(unrestored);</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    }</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>    JSON format = JSON::object();</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    format.set(<span class="stringliteral">&quot;encounteredVersion&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.sourceSchemaVersion)));</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    format.set(<span class="stringliteral">&quot;resultingVersion&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.resultingSchemaVersion)));</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span> </div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    JSON migration = JSON::object();</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    migration.set(<span class="stringliteral">&quot;state&quot;</span>, JSON(migrationName(result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">migrationOutcome</a>)));</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    migration.set(<span class="stringliteral">&quot;schemaVersionAdvanced&quot;</span>, JSON(result.schemaVersionAdvanced()));</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    migration.set(<span class="stringliteral">&quot;legacyAudioPatternsSplit&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a4d5d20e7cf39b7cada525aa1354f0727">legacyAudioPatternsSplit</a>)));</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    JSON recovery = JSON::object();</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    recovery.set(<span class="stringliteral">&quot;state&quot;</span>, JSON(recoveryName(origin, result.ok)));</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    recovery.set(<span class="stringliteral">&quot;loadOrigin&quot;</span>, JSON(originName(origin)));</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span> </div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    JSON report = JSON::object();</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    report.set(<span class="stringliteral">&quot;status&quot;</span>, JSON(!result.ok ? <span class="stringliteral">&quot;failed&quot;</span> : isDegraded(result, origin) ? <span class="stringliteral">&quot;degraded&quot;</span> : <span class="stringliteral">&quot;clean&quot;</span>));</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    report.set(<span class="stringliteral">&quot;observed&quot;</span>, JSON(<span class="keyword">true</span>));</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    report.set(<span class="stringliteral">&quot;format&quot;</span>, format);</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    report.set(<span class="stringliteral">&quot;migration&quot;</span>, migration);</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    report.set(<span class="stringliteral">&quot;recovery&quot;</span>, recovery);</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    report.set(<span class="stringliteral">&quot;integrity&quot;</span>, JSON(integrityName(result.integrity)));</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    report.set(<span class="stringliteral">&quot;missingPlugins&quot;</span>, missingPlugins);</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    report.set(<span class="stringliteral">&quot;missingAssets&quot;</span>, missingAssets);</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    report.set(<span class="stringliteral">&quot;unrestoredState&quot;</span>, unrestoredState);</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    report.set(<span class="stringliteral">&quot;warnings&quot;</span>, warnings);</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    report.set(<span class="stringliteral">&quot;errors&quot;</span>, errors);</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="keywordflow">return</span> report;</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>}</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassProjectSerializer_html_a2efc2e03f6c36944463cea9acaae84bb"><div class="ttname"><a href="../../d0/d4b/classProjectSerializer.html#a2efc2e03f6c36944463cea9acaae84bb">ProjectSerializer::LoadIntegrity</a></div><div class="ttdeci">LoadIntegrity</div><div class="ttdoc">Content-integrity verdict for a loaded project file (#263).</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00083">ProjectSerializer.h:83</a></div></div>
-<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00099">ProjectSerializer.h:99</a></div></div>
-<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html_a4d5d20e7cf39b7cada525aa1354f0727"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a4d5d20e7cf39b7cada525aa1354f0727">ProjectSerializer::LoadResult::legacyAudioPatternsSplit</a></div><div class="ttdeci">size_t legacyAudioPatternsSplit</div><div class="ttdoc">Pre-v3 audio patterns the loader had to split into one pattern per destination channel.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00112">ProjectSerializer.h:112</a></div></div>
-<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html_a9c756c371b1fb4730b37b14f08bc31c8"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">ProjectSerializer::LoadResult::migrationOutcome</a></div><div class="ttdeci">Aestra::MigrationOutcome migrationOutcome</div><div class="ttdoc">Combined verdict: migration functions AND loader-side interpretation.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00107">ProjectSerializer.h:107</a></div></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;routing&quot;</span>) <span class="keywordflow">return</span> <span class="stringliteral">&quot;routing_repaired&quot;</span>;</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;project_load_issue&quot;</span>;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>}</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>JSON globalEvidence() {</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    JSON evidence = JSON::object();</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;none&quot;</span>));</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    <span class="keywordflow">return</span> evidence;</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>}</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>JSON issueEvidence(<span class="keyword">const</span> LoadIssue&amp; issue) {</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">if</span> (issue.objectId == 0) {</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keywordflow">return</span> globalEvidence();</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    }</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    JSON evidence = JSON::object();</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">true</span>));</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;stable_id&quot;</span>));</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    evidence.set(<span class="stringliteral">&quot;objectId&quot;</span>, JSON(std::to_string(issue.objectId)));</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordflow">if</span> (!issue.referenceId.empty()) evidence.set(<span class="stringliteral">&quot;referenceId&quot;</span>, JSON(issue.referenceId));</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordflow">if</span> (!issue.context.empty()) evidence.set(<span class="stringliteral">&quot;context&quot;</span>, JSON(issue.context));</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordflow">return</span> evidence;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>}</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>JSON assetEvidence(<span class="keyword">const</span> std::string&amp; path) {</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    JSON evidence = JSON::object();</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;asset_path&quot;</span>));</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    evidence.set(<span class="stringliteral">&quot;assetPath&quot;</span>, JSON(path));</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordflow">return</span> evidence;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>}</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>JSON pluginEvidence(<span class="keyword">const</span> std::string&amp; location) {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    JSON evidence = JSON::object();</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    evidence.set(<span class="stringliteral">&quot;stableIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    evidence.set(<span class="stringliteral">&quot;positionalIdentityAvailable&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    evidence.set(<span class="stringliteral">&quot;identityKind&quot;</span>, JSON(<span class="stringliteral">&quot;owner_label&quot;</span>));</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    evidence.set(<span class="stringliteral">&quot;ownerLabel&quot;</span>, JSON(location));</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordflow">return</span> evidence;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>JSON makeIssueEntry(<span class="keyword">const</span> <span class="keywordtype">char</span>* code, <span class="keyword">const</span> std::string&amp; message, <span class="keyword">const</span> JSON&amp; evidence) {</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    JSON entry = JSON::object();</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    entry.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(code));</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    entry.set(<span class="stringliteral">&quot;message&quot;</span>, JSON(message));</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    entry.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">return</span> entry;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>}</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="keyword">const</span> <span class="keywordtype">char</span>* integrityName(<a class="code hl_enumeration" href="../../d0/d4b/classProjectSerializer.html#a2efc2e03f6c36944463cea9acaae84bb">ProjectSerializer::LoadIntegrity</a> integrity) {</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keywordflow">switch</span> (integrity) {</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Unchecked: <span class="keywordflow">return</span> <span class="stringliteral">&quot;unchecked&quot;</span>;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Verified: <span class="keywordflow">return</span> <span class="stringliteral">&quot;verified&quot;</span>;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keywordflow">case</span> ProjectSerializer::LoadIntegrity::Mismatch: <span class="keywordflow">return</span> <span class="stringliteral">&quot;mismatch&quot;</span>;</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    }</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;unchecked&quot;</span>;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>}</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="keyword">const</span> <span class="keywordtype">char</span>* migrationName(MigrationOutcome outcome) {</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordflow">switch</span> (outcome) {</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keywordflow">case</span> MigrationOutcome::None: <span class="keywordflow">return</span> <span class="stringliteral">&quot;none&quot;</span>;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordflow">case</span> MigrationOutcome::Transformed: <span class="keywordflow">return</span> <span class="stringliteral">&quot;transformed&quot;</span>;</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="keywordflow">case</span> MigrationOutcome::Failed: <span class="keywordflow">return</span> <span class="stringliteral">&quot;failed&quot;</span>;</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    }</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;none&quot;</span>;</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>}</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="keyword">const</span> <span class="keywordtype">char</span>* originName(MuseProjectLoadOrigin origin) {</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordflow">switch</span> (origin) {</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Canonical: <span class="keywordflow">return</span> <span class="stringliteral">&quot;canonical&quot;</span>;</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Recovery: <span class="keywordflow">return</span> <span class="stringliteral">&quot;recovery&quot;</span>;</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Snapshot: <span class="keywordflow">return</span> <span class="stringliteral">&quot;snapshot&quot;</span>;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    }</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;canonical&quot;</span>;</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>}</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span> </div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="keyword">const</span> <span class="keywordtype">char</span>* recoveryName(MuseProjectLoadOrigin origin, <span class="keywordtype">bool</span> ok) {</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keywordflow">switch</span> (origin) {</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Canonical: <span class="keywordflow">return</span> <span class="stringliteral">&quot;not_attempted&quot;</span>;</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Recovery: <span class="keywordflow">return</span> ok ? <span class="stringliteral">&quot;recovered&quot;</span> : <span class="stringliteral">&quot;recovery_failed&quot;</span>;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="keywordflow">case</span> MuseProjectLoadOrigin::Snapshot: <span class="keywordflow">return</span> ok ? <span class="stringliteral">&quot;snapshot_restored&quot;</span> : <span class="stringliteral">&quot;snapshot_restore_failed&quot;</span>;</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    }</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordflow">return</span> <span class="stringliteral">&quot;not_attempted&quot;</span>;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>}</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="keywordtype">bool</span> isDegraded(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a>&amp; result, MuseProjectLoadOrigin origin) {</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordflow">return</span> result.schemaVersionAdvanced() ||</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>           result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">migrationOutcome</a> != MigrationOutcome::None ||</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>           origin == MuseProjectLoadOrigin::Recovery ||</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>           result.integrity == ProjectSerializer::LoadIntegrity::Mismatch ||</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>           !result.missingAssets.empty() || !result.missingPlugins.empty() ||</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>           (result.report &amp;&amp; !result.report-&gt;issues.empty());</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>}</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>} <span class="comment">// namespace</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> </div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>JSON makeMuseProjectLoadReport(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a>&amp; result,</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>                               MuseProjectLoadOrigin origin) {</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    JSON warnings = JSON::array();</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    JSON errors = JSON::array();</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    JSON missingPlugins = JSON::array();</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    JSON missingAssets = JSON::array();</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    JSON unrestoredState = JSON::array();</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="keywordflow">if</span> (!result.ok) {</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        errors.push(makeIssueEntry(<span class="stringliteral">&quot;project_load_failed&quot;</span>, result.errorMessage, globalEvidence()));</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    }</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <span class="keywordflow">if</span> (result.report) {</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; issue : result.report-&gt;issues) {</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            JSON entry = makeIssueEntry(issueCode(issue), issue.message, issueEvidence(issue));</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>            entry.set(<span class="stringliteral">&quot;category&quot;</span>, JSON(issue.category));</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>            <span class="keywordflow">if</span> (issue.severity == LoadIssueSeverity::Error) {</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>                errors.push(entry);</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>                warnings.push(entry);</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>            }</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>            <span class="keywordflow">if</span> (issue.category == <span class="stringliteral">&quot;clip&quot;</span> || issue.category == <span class="stringliteral">&quot;unit&quot;</span>) {</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>                JSON unrestored = JSON::object();</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>                unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(issueCode(issue)));</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>                unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>,</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>                               JSON(issue.category == <span class="stringliteral">&quot;clip&quot;</span> ? <span class="stringliteral">&quot;pattern_reference&quot;</span> : <span class="stringliteral">&quot;unit_reference&quot;</span>));</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>                unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>                unrestored.set(<span class="stringliteral">&quot;referencePreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, issueEvidence(issue));</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>                unrestoredState.push(unrestored);</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>            }</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>        }</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>    }</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; plugin : result.missingPlugins) {</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>        <span class="keyword">const</span> JSON evidence = pluginEvidence(plugin.location);</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>        JSON missing = JSON::object();</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        missing.set(<span class="stringliteral">&quot;pluginId&quot;</span>, JSON(plugin.pluginId));</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        missing.set(<span class="stringliteral">&quot;location&quot;</span>, JSON(plugin.location));</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        missing.set(<span class="stringliteral">&quot;placeholderPreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        missing.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>));</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        missing.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        missingPlugins.push(missing);</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        warnings.push(makeIssueEntry(</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>            <span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>,</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>            <span class="stringliteral">&quot;Plugin could not be instantiated; its stored slot and opaque state were preserved&quot;</span>,</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>            evidence));</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        JSON unrestored = JSON::object();</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>        unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_plugin_placeholder&quot;</span>));</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>, JSON(<span class="stringliteral">&quot;plugin_instance&quot;</span>));</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>        unrestored.set(<span class="stringliteral">&quot;placeholderPreserved&quot;</span>, JSON(<span class="keyword">true</span>));</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        unrestoredState.push(unrestored);</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    }</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; path : result.missingAssets) {</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        <span class="keyword">const</span> JSON evidence = assetEvidence(path);</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        JSON missing = JSON::object();</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        missing.set(<span class="stringliteral">&quot;path&quot;</span>, JSON(path));</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        missing.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>));</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        missing.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>        missingAssets.push(missing);</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span> </div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>        warnings.push(makeIssueEntry(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>,</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>                                     <span class="stringliteral">&quot;Audio asset was missing or unreadable during project load&quot;</span>,</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>                                     evidence));</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        JSON unrestored = JSON::object();</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        unrestored.set(<span class="stringliteral">&quot;issueCode&quot;</span>, JSON(<span class="stringliteral">&quot;missing_or_unreadable_asset&quot;</span>));</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        unrestored.set(<span class="stringliteral">&quot;stateKind&quot;</span>, JSON(<span class="stringliteral">&quot;audio_asset_content&quot;</span>));</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        unrestored.set(<span class="stringliteral">&quot;restored&quot;</span>, JSON(<span class="keyword">false</span>));</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        unrestored.set(<span class="stringliteral">&quot;evidence&quot;</span>, evidence);</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        unrestoredState.push(unrestored);</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    }</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span> </div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    JSON format = JSON::object();</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    format.set(<span class="stringliteral">&quot;encounteredVersion&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.sourceSchemaVersion)));</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    format.set(<span class="stringliteral">&quot;resultingVersion&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.resultingSchemaVersion)));</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span> </div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    JSON migration = JSON::object();</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    migration.set(<span class="stringliteral">&quot;state&quot;</span>, JSON(migrationName(result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">migrationOutcome</a>)));</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    migration.set(<span class="stringliteral">&quot;schemaVersionAdvanced&quot;</span>, JSON(result.schemaVersionAdvanced()));</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    migration.set(<span class="stringliteral">&quot;legacyAudioPatternsSplit&quot;</span>, JSON(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(result.<a class="code hl_variable" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a4d5d20e7cf39b7cada525aa1354f0727">legacyAudioPatternsSplit</a>)));</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    JSON recovery = JSON::object();</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    recovery.set(<span class="stringliteral">&quot;state&quot;</span>, JSON(recoveryName(origin, result.ok)));</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    recovery.set(<span class="stringliteral">&quot;loadOrigin&quot;</span>, JSON(originName(origin)));</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    JSON report = JSON::object();</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    report.set(<span class="stringliteral">&quot;status&quot;</span>, JSON(!result.ok ? <span class="stringliteral">&quot;failed&quot;</span> : isDegraded(result, origin) ? <span class="stringliteral">&quot;degraded&quot;</span> : <span class="stringliteral">&quot;clean&quot;</span>));</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    report.set(<span class="stringliteral">&quot;observed&quot;</span>, JSON(<span class="keyword">true</span>));</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    report.set(<span class="stringliteral">&quot;format&quot;</span>, format);</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    report.set(<span class="stringliteral">&quot;migration&quot;</span>, migration);</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    report.set(<span class="stringliteral">&quot;recovery&quot;</span>, recovery);</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    report.set(<span class="stringliteral">&quot;integrity&quot;</span>, JSON(integrityName(result.integrity)));</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    report.set(<span class="stringliteral">&quot;missingPlugins&quot;</span>, missingPlugins);</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    report.set(<span class="stringliteral">&quot;missingAssets&quot;</span>, missingAssets);</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    report.set(<span class="stringliteral">&quot;unrestoredState&quot;</span>, unrestoredState);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    report.set(<span class="stringliteral">&quot;warnings&quot;</span>, warnings);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    report.set(<span class="stringliteral">&quot;errors&quot;</span>, errors);</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    <span class="keywordflow">return</span> report;</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>}</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span> </div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassProjectSerializer_html_a2efc2e03f6c36944463cea9acaae84bb"><div class="ttname"><a href="../../d0/d4b/classProjectSerializer.html#a2efc2e03f6c36944463cea9acaae84bb">ProjectSerializer::LoadIntegrity</a></div><div class="ttdeci">LoadIntegrity</div><div class="ttdoc">Content-integrity verdict for a loaded project file (#263).</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00096">ProjectSerializer.h:96</a></div></div>
+<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00112">ProjectSerializer.h:112</a></div></div>
+<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html_a4d5d20e7cf39b7cada525aa1354f0727"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a4d5d20e7cf39b7cada525aa1354f0727">ProjectSerializer::LoadResult::legacyAudioPatternsSplit</a></div><div class="ttdeci">size_t legacyAudioPatternsSplit</div><div class="ttdoc">Pre-v3 audio patterns the loader had to split into one pattern per destination channel.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00125">ProjectSerializer.h:125</a></div></div>
+<div class="ttc" id="astructProjectSerializer_1_1LoadResult_html_a9c756c371b1fb4730b37b14f08bc31c8"><div class="ttname"><a href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html#a9c756c371b1fb4730b37b14f08bc31c8">ProjectSerializer::LoadResult::migrationOutcome</a></div><div class="ttdeci">Aestra::MigrationOutcome migrationOutcome</div><div class="ttdoc">Combined verdict: migration functions AND loader-side interpretation.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d69/ProjectSerializer_8h_source.html#l00120">ProjectSerializer.h:120</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -1,0 +1,5 @@
+<map id="AestraUI::PianoRollToolbar::setHarmonyContext" name="AestraUI::PianoRollToolbar::setHarmonyContext">
+<area shape="rect" id="Node000001" title="Set the harmony context without treating the update as a user edit." alt="" coords="256,5,451,45"/>
+<area shape="rect" id="Node000002" href="$dc/d8a/classAestraUI_1_1PianoRollToolbar.html#a970b821c3d45824a60211d24b2f69f94" title="Apply a user&#45;originated harmony edit and notify the owning panel." alt="" coords="5,5,208,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="243,28,208,28,208,23,243,23"/>
+</map>

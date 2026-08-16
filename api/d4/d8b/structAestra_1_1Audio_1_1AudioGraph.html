@@ -101,6 +101,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a61d3d4298e57aed0e73fca99dca855f7" id="r_a61d3d4298e57aed0e73fca99dca855f7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">ClipRenderState</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a61d3d4298e57aed0e73fca99dca855f7">masterClips</a></td></tr>
 <tr class="memdesc:a61d3d4298e57aed0e73fca99dca855f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio clips whose source routes directly to Master.  <br /></td></tr>
 <tr class="separator:a61d3d4298e57aed0e73fca99dca855f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24d5e5f78e4b437e0c2a57c7ad55c927" id="r_a24d5e5f78e4b437e0c2a57c7ad55c927"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; const <a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">EffectChainSnapshot</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a24d5e5f78e4b437e0c2a57c7ad55c927">masterEffectChainSnapshot</a></td></tr>
+<tr class="memdesc:a24d5e5f78e4b437e0c2a57c7ad55c927"><td class="mdescLeft">&#160;</td><td class="mdescRight">Master strip insert chain snapshot (processed on the summed master buffer before the master fader and safety limiter).  <br /></td></tr>
+<tr class="separator:a24d5e5f78e4b437e0c2a57c7ad55c927"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76289e1d3e51ec5d4486e505224dd5a9" id="r_a76289e1d3e51ec5d4486e505224dd5a9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a76289e1d3e51ec5d4486e505224dd5a9">anySolo</a> {false}</td></tr>
 <tr class="separator:a76289e1d3e51ec5d4486e505224dd5a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1c421ad411b26e178dc64da60aab1898" id="r_a1c421ad411b26e178dc64da60aab1898"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a1c421ad411b26e178dc64da60aab1898">timelineEndSample</a> {0}</td></tr>
@@ -130,7 +133,7 @@ Static Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Immutable graph snapshot consumed by the audio thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00078">78</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00082">82</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a76289e1d3e51ec5d4486e505224dd5a9" name="a76289e1d3e51ec5d4486e505224dd5a9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a76289e1d3e51ec5d4486e505224dd5a9">&#9670;&#160;</a></span>anySolo</h2>
@@ -144,7 +147,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00084">84</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00092">92</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -160,7 +163,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00092">92</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00100">100</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -176,7 +179,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00093">93</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00101">101</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -192,7 +195,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00088">88</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00096">96</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -208,7 +211,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00097">97</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00105">105</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -232,7 +235,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00079">79</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00083">83</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -250,9 +253,30 @@ Static Public Attributes</h2></td></tr>
 
 <p>Audio clips whose source routes directly to Master. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00083">83</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00087">87</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00125">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
+
+</div>
+</div>
+<a id="a24d5e5f78e4b437e0c2a57c7ad55c927" name="a24d5e5f78e4b437e0c2a57c7ad55c927"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24d5e5f78e4b437e0c2a57c7ad55c927">&#9670;&#160;</a></span>masterEffectChainSnapshot</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;const <a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">EffectChainSnapshot</a>&gt; Aestra::Audio::AudioGraph::masterEffectChainSnapshot</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Master strip insert chain snapshot (processed on the summed master buffer before the master fader and safety limiter). </p>
+<p>Immutable once the graph is published, like channel chain snapshots. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00091">91</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>, and <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00850">Aestra::Audio::AudioEngine::processBlock()</a>.</p>
 
 </div>
 </div>
@@ -268,7 +292,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00094">94</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00102">102</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -284,7 +308,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00087">87</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00095">95</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -300,7 +324,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00095">95</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00103">103</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -316,7 +340,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00096">96</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00104">104</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -332,7 +356,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00091">91</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00099">99</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -348,7 +372,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00081">81</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00085">85</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::EditSendCommand::redo" name="Aestra::Audio::EditSendCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,156,247,196"/>
+<area shape="rect" id="Node000002" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a4e26b3619d093ab5cb6f82ce53fb148c" title="Execute the command (first time)" alt="" coords="295,156,536,196"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="247,173,281,173,281,179,247,179"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="584,69,792,109"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="478,153,610,111,612,116,480,158"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="840,5,1048,45"/>
+<area shape="poly" id="edge7_Node000002_Node000004" title=" " alt="" coords="436,154,498,102,539,76,583,55,644,37,707,26,769,20,826,18,826,23,769,25,708,31,645,42,585,60,541,80,501,107,439,158"/>
+<area shape="rect" id="Node000006" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a8d71d598a1c2a2cfac6df269776ee594" title="Get a copy of the current send list." alt="" coords="841,133,1047,173"/>
+<area shape="poly" id="edge8_Node000002_Node000006" title=" " alt="" coords="536,168,827,156,827,161,536,174"/>
+<area shape="rect" id="Node000007" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a10f7a504ea3bba99081df5d67b618040" title="Positional lookup for a stable sendId; &#45;1 when absent." alt="" coords="585,184,791,224"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="537,186,571,189,571,195,536,191"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="584,248,792,288"/>
+<area shape="poly" id="edge9_Node000002_Node000008" title=" " alt="" coords="472,194,585,233,609,241,607,246,583,239,470,199"/>
+<area shape="rect" id="Node000009" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a3f06f52249e5bd9285bd63bd43430ec3" title="Replace the send with the given stable sendId." alt="" coords="585,312,791,352"/>
+<area shape="poly" id="edge10_Node000002_Node000009" title=" " alt="" coords="441,194,503,245,543,273,585,298,601,305,598,310,583,302,540,278,500,250,437,198"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="768,67,850,46,851,51,769,72"/>
+<area shape="rect" id="Node000005" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a4eaa8ccdd051c3f5c8d56f58ce8193fb" title="Get the primary output destination identifier." alt="" coords="841,69,1047,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="792,87,827,87,827,92,792,92"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="769,107,851,127,850,133,768,112"/>
+</map>

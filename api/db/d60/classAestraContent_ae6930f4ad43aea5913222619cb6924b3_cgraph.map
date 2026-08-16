@@ -1,21 +1,20 @@
 <map id="AestraContent::setArsenalPanelVisible" name="AestraContent::setArsenalPanelVisible">
-<area shape="rect" id="Node000001" title="Explicitly show or hide the Arsenal panel." alt="" coords="5,120,197,160"/>
+<area shape="rect" id="Node000001" title="Explicitly show or hide the Arsenal panel." alt="" coords="5,88,197,128"/>
 <area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="557,5,749,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="129,118,181,86,244,59,321,40,399,29,475,22,543,20,543,26,475,28,400,34,322,45,246,64,184,91,132,122"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,85,194,69,245,55,322,41,400,32,543,24,543,29,401,37,323,47,246,60,196,74,150,90"/>
 <area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab127c5e597ccf0ba3ec1f5b63e113b15" title="Compute the rectangle panels are allowed to occupy." alt="" coords="537,120,769,160"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="198,137,523,137,523,143,198,143"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="841,157,1080,182"/>
-<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="198,147,346,159,512,169,653,172,793,169,827,169,827,174,793,175,653,177,512,175,345,165,197,152"/>
-<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="263,74,446,99"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="196,117,280,100,281,105,197,123"/>
-<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a7c4ca59b1871c922b297e25471a89727" title="Synchronize overlay state into owned child views." alt="" coords="245,235,464,261"/>
-<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="137,158,188,186,246,214,290,229,289,234,244,218,185,191,134,162"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="769,148,828,154,827,159,769,154"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="867,77,1055,117"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="769,121,852,110,853,115,769,127"/>
-<area shape="poly" id="edge7_Node000006_Node000002" title=" " alt="" coords="417,71,542,45,543,50,418,77"/>
-<area shape="poly" id="edge8_Node000006_Node000003" title=" " alt="" coords="427,97,528,115,527,120,426,102"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="198,111,523,130,523,135,197,116"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="263,70,446,95"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="197,96,249,91,250,96,198,101"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a7c4ca59b1871c922b297e25471a89727" title="Synchronize overlay state into owned child views." alt="" coords="245,171,464,197"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="168,126,246,149,298,165,296,170,245,155,166,131"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="841,127,1080,153"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="769,137,827,137,827,143,769,143"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="867,63,1055,103"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="760,117,852,100,853,105,761,123"/>
+<area shape="poly" id="edge6_Node000006_Node000002" title=" " alt="" coords="421,67,542,44,543,49,422,73"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="422,93,535,115,534,120,421,98"/>
 <area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#ace0d73e7c0b8d912331716f8ff4eb1ee" title="Compute the maximized overlay rectangle." alt="" coords="512,70,793,95"/>
-<area shape="poly" id="edge9_Node000006_Node000007" title=" " alt="" coords="446,83,498,82,498,87,446,88"/>
-<area shape="poly" id="edge10_Node000007_Node000005" title=" " alt="" coords="794,87,853,90,853,95,794,92"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="446,80,498,80,498,85,446,85"/>
+<area shape="poly" id="edge9_Node000007_Node000005" title=" " alt="" coords="794,80,853,80,853,85,794,85"/>
 </map>

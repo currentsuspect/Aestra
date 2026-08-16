@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SetMainOutputCommand" name="Aestra::Audio::SetMainOutputCommand">
+<area shape="rect" id="Node000001" title="Undoable reroute of a track&#39;s main output (Routing Contract D5/D1)." alt="" coords="5,79,220,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="19,5,207,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,44,115,79,110,79,110,44"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::rewindScheduledInstances" name="Aestra::Audio::PatternPlaybackEngine::rewindScheduledInstances">
+<area shape="rect" id="Node000001" title="Rewind queued events and all scheduled instances." alt="" coords="261,5,508,45"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6fb4ec85fe6d89ceb031d1add145dbe6" title="Rewind the Arsenal scheduler before arming a pattern for playback." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

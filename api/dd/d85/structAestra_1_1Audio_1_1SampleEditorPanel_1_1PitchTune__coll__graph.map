@@ -1,7 +1,7 @@
 <map id="Aestra::Audio::SampleEditorPanel::PitchTune" name="Aestra::Audio::SampleEditorPanel::PitchTune">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,209,133"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="49,5,88,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="69,44,72,68,88,92,84,95,68,70,63,45"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="122,5,173,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="140,44,118,94,113,92,135,42"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,108,209,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,5,69,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="48,44,48,64,54,83,62,95,74,106,71,110,58,99,49,85,43,65,43,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="141,5,191,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="159,45,139,85,124,109,119,106,134,83,154,42"/>
 </map>

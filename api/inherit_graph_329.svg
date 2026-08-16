@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d0/d77/structAestra_1_1MuseAgent_1_1ToolDefinition.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html" target="_top" xlink:title="Blocking JSONL client for a Muse socket (live app or MuseRepl –port).">
 <polygon fill="white" stroke="#666666" points="115,-30 0,-30 0,0 115,0 115,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::MuseAgent::</text>
-<text text-anchor="middle" x="57.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ToolDefinition</text>
+<text text-anchor="middle" x="57.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">MuseSocketClient</text>
 </a>
 </g>
 </g>

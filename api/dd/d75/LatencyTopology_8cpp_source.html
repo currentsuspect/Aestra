@@ -281,14 +281,16 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    }</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span> </div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    topology.projectAlignmentLatency = maxAlignment;</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="comment">// P9 (G6) will add master FX + device output to monitoring latency.</span></div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    topology.monitoringLatency = maxAlignment;</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="keywordflow">return</span> topology;</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>}</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span> </div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="comment">// P9 (G6): master-FX latency reaches this value through the master node&#39;s</span></div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    <span class="comment">// intrinsic latency (uniform across all paths). Device output latency</span></div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    <span class="comment">// remains parked here as the outstanding P9 piece.</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    topology.monitoringLatency = maxAlignment;</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span> </div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="keywordflow">return</span> topology;</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>}</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span> </div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1SolvedLatencyTopology_html_af90daec66a3d6ddf6d32646996bd388b"><div class="ttname"><a href="../../da/dff/structAestra_1_1Audio_1_1SolvedLatencyTopology.html#af90daec66a3d6ddf6d32646996bd388b">Aestra::Audio::SolvedLatencyTopology::generation</a></div><div class="ttdeci">uint64_t generation</div><div class="ttdoc">Mirrors LatencyGraph::generation.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d2d/LatencyTopology_8h_source.html#l00134">LatencyTopology.h:134</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

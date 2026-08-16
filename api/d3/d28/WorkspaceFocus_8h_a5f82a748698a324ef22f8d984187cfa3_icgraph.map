@@ -1,0 +1,13 @@
+<map id="WorkspaceFocusModel::classifyTransition" name="WorkspaceFocusModel::classifyTransition">
+<area shape="rect" id="Node000001" title="Classify a current&lt;&#45;&gt;previous focus pair." alt="" coords="284,117,455,157"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="412,106,397,99,369,96,345,98,331,103,326,109,328,116,323,118,320,108,328,98,344,93,369,91,398,94,414,101"/>
+<area shape="rect" id="Node000002" href="$d3/d28/WorkspaceFocus_8h.html#a7c38b0493fbc2b0c9d9a94d2b6e21778" title="True when either side of the transition is Audition." alt="" coords="35,29,206,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="311,114,235,84,198,72,199,67,237,79,313,109"/>
+<area shape="rect" id="Node000003" href="$d3/d28/WorkspaceFocus_8h.html#ab8db738e8012352f88e9ddd6e7c92b1f" title="True for ordinary (pure&#45;visibility) transitions." alt="" coords="5,117,236,157"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="270,140,236,140,236,135,270,135"/>
+<area shape="rect" id="Node000004" href="$d3/d28/WorkspaceFocus_8h.html#aca306b877d91709032959756166502fd" title="True when either side of the transition is RoutingMap." alt="" coords="29,205,212,245"/>
+<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="300,165,179,208,177,203,298,160"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="163,18,148,11,121,8,97,10,82,15,77,21,80,28,75,30,72,20,79,10,96,5,121,3,149,6,165,13"/>
+<area shape="poly" id="edge5_Node000003_Node000003" title=" " alt="" coords="163,106,148,99,121,96,97,98,82,103,77,109,80,116,75,118,72,108,79,98,96,93,121,91,149,94,165,101"/>
+<area shape="poly" id="edge7_Node000004_Node000004" title=" " alt="" coords="163,194,148,187,121,184,97,186,82,191,77,197,80,204,75,206,72,196,79,186,96,181,121,179,149,182,165,189"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="WorkspaceFocusModel::isRoutingMapTransition" name="WorkspaceFocusModel::isRoutingMapTransition">
+<area shape="rect" id="Node000001" title="True when either side of the transition is RoutingMap." alt="" coords="5,29,188,69"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="55,30,52,20,59,10,74,5,97,3,123,6,137,13,135,18,121,11,97,8,75,10,62,15,57,21,60,28"/>
+<area shape="rect" id="Node000002" href="$d3/d28/WorkspaceFocus_8h.html#a5f82a748698a324ef22f8d984187cfa3" title="Classify a current&lt;&#45;&gt;previous focus pair." alt="" coords="236,29,407,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,47,222,47,222,52,188,52"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="279,30,277,20,284,10,299,5,321,3,347,6,362,13,359,18,346,11,321,8,300,10,287,15,282,21,285,28"/>
+</map>

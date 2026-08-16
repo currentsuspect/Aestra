@@ -1,21 +1,21 @@
 <map id="ProjectSerializer::UIState" name="ProjectSerializer::UIState">
-<area shape="rect" id="Node000001" title=" " alt="" coords="113,461,249,501"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="109,476,245,516"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,95,56,120"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="27,134,20,174,15,225,18,280,32,334,55,374,87,408,120,437,151,459,148,463,117,441,83,412,51,377,27,336,12,281,10,224,14,173,22,133"/>
-<area shape="rect" id="Node000006" href="$dc/d2f/structProjectSerializer_1_1PanelState.html" title=" " alt="" coords="219,241,355,281"/>
-<area shape="poly" id="edge8_Node000006_Node000002" title=" " alt="" coords="42,131,66,175,84,197,104,215,131,230,160,241,219,254,218,259,159,246,129,235,101,220,80,201,62,178,38,134"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="139,95,226,120"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="184,134,180,335,183,461,178,461,175,335,179,134"/>
-<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="198,131,253,216,272,239,267,243,249,219,194,134"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="113,5,252,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="185,59,185,94,180,94,180,59"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="277,359,489,399"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="334,407,220,464,218,459,332,402"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="338,287,355,304,372,331,381,358,376,359,367,333,351,307,334,291"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="253,95,320,120"/>
-<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="289,133,289,241,284,241,284,133"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="414,249,543,274"/>
-<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="471,288,459,312,442,336,415,360,412,356,438,333,454,310,466,286"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="459,95,498,120"/>
-<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="481,134,481,248,476,248,476,134"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="27,134,19,176,14,231,17,291,22,320,32,348,55,388,85,423,118,451,148,473,145,478,115,456,81,426,50,391,27,350,17,322,12,291,9,231,14,176,22,133"/>
+<area shape="rect" id="Node000006" href="$dc/d2f/structProjectSerializer_1_1PanelState.html" title=" " alt="" coords="215,241,351,281"/>
+<area shape="poly" id="edge8_Node000006_Node000002" title=" " alt="" coords="42,132,64,175,80,197,100,215,127,231,156,242,215,254,214,259,155,247,125,235,97,219,76,201,60,178,37,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="135,95,222,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="180,134,176,349,179,476,174,476,171,349,175,134"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="194,131,249,216,268,239,263,243,245,219,190,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="109,5,248,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="181,59,181,94,176,94,176,59"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="273,373,485,413"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="330,422,216,478,214,474,328,417"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="335,287,351,304,370,339,379,372,373,374,365,341,347,307,331,291"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="249,95,316,120"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="285,133,285,241,280,241,280,133"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="410,249,539,274"/>
+<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="471,288,460,320,442,351,415,375,412,371,438,348,455,317,466,287"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="455,95,494,120"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="477,134,477,248,472,248,472,134"/>
 </map>

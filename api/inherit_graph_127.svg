@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d1/db3/structAestra_1_1Audio_1_1HeadlessMusicGenerator_1_1PatternData.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d9/d8c/structAestra_1_1Audio_1_1HeadlessMusicGenerator_1_1ClipPlacement.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="161,-30 0,-30 0,0 161,0 161,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::HeadlessMusic</text>
-<text text-anchor="middle" x="80.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Generator::PatternData</text>
+<text text-anchor="middle" x="80.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Generator::ClipPlacement</text>
 </a>
 </g>
 </g>

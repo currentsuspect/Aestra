@@ -1,35 +1,35 @@
 <map id="Aestra::Audio::TrackManager::markModified" name="Aestra::Audio::TrackManager::markModified">
-<area shape="rect" id="Node000001" title="Mark the project as modified." alt="" coords="571,341,779,381"/>
-<area shape="rect" id="Node000002" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a807cae773d69b41d42093fd6a040a6e5" title="Execute the command (first time)" alt="" coords="307,5,503,60"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="662,329,644,274,616,205,575,135,550,103,521,75,501,61,504,57,524,71,554,100,579,132,620,203,649,272,667,327"/>
-<area shape="rect" id="Node000004" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#a44e6b2875e6ff530970e26582b7d3351" title="Execute the command (first time)" alt="" coords="306,85,503,125"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="658,329,637,285,607,234,568,182,521,139,501,127,504,123,524,135,572,179,612,231,642,283,663,327"/>
-<area shape="rect" id="Node000006" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#a1d1e3d589894c6d11eb2352055c9421e" title="Execute the command (first time)" alt="" coords="295,149,514,189"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="650,331,597,266,561,232,521,203,497,191,500,186,524,198,564,228,600,262,654,328"/>
-<area shape="rect" id="Node000008" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="305,213,505,253"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="634,335,582,300,522,267,490,255,492,250,524,262,585,295,637,330"/>
-<area shape="rect" id="Node000010" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a619d59586f8cb342ded7bb6e0078ebf0" title="Execute the command (first time)" alt="" coords="304,277,505,317"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="576,340,489,319,490,314,577,335"/>
-<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#acb294c03eb11bcff3fb70166a307b235" title="Construct a track manager and wire its internal playback helpers." alt="" coords="301,341,509,381"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="557,363,509,363,509,358,557,358"/>
-<area shape="rect" id="Node000013" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#aef7774fe56b406d46842a05ed55aab60" title="Undo the command." alt="" coords="287,405,523,445"/>
-<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="577,387,490,407,489,402,576,381"/>
-<area shape="rect" id="Node000014" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#a38f7af986a64941e29626566fe5b0e4e" title="Undo the command." alt="" coords="306,469,503,509"/>
-<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="637,391,585,426,524,459,492,471,490,466,522,454,582,422,634,387"/>
-<area shape="rect" id="Node000015" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#a3abd336cb0d3b55af3962d59df267b33" title="Undo the command." alt="" coords="305,533,505,573"/>
-<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="654,393,600,459,564,494,524,523,500,535,497,530,521,518,561,489,597,455,650,390"/>
-<area shape="rect" id="Node000016" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a08716ecaa1091866d9147b3811752a30" title="Undo the command." alt="" coords="305,597,505,637"/>
-<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="663,395,642,438,612,490,572,543,524,587,504,599,501,594,521,583,568,539,607,487,637,436,658,392"/>
-<area shape="rect" id="Node000017" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a06d659cbbb775984a31d25b2aa39a291" title="Undo the command." alt="" coords="304,661,505,701"/>
-<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="668,395,650,451,622,520,580,590,554,623,524,651,505,663,502,658,521,647,550,619,576,587,617,517,645,449,663,393"/>
-<area shape="rect" id="Node000003" href="$db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,13,239,53"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="293,35,239,35,239,30,293,30"/>
-<area shape="rect" id="Node000005" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#ac2ebe21599a2f467d3ad8a8d31422530" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="23,85,221,125"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="292,107,221,107,221,102,292,102"/>
-<area shape="rect" id="Node000007" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#aeaa21058704fb2d2b27bf3763bb05982" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="23,149,221,189"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="281,171,221,171,221,166,281,166"/>
-<area shape="rect" id="Node000009" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="22,213,222,253"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="291,235,222,235,222,230,291,230"/>
-<area shape="rect" id="Node000011" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a608dc40a7dbc4550f6652ab0fcf5a8ce" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="21,277,223,317"/>
-<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="290,299,223,299,223,294,290,294"/>
+<area shape="rect" id="Node000001" title="Mark the project as modified." alt="" coords="675,341,883,381"/>
+<area shape="rect" id="Node000002" href="$dc/d69/classAestra_1_1Audio_1_1AssignUnitToFirstFreeMixerChannelCommand.html#a0fa700eff7056ba76c458e93154b2abf" title="Execute the command (first time)" alt="" coords="359,5,607,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="767,328,749,273,721,204,680,134,654,102,625,75,605,62,608,57,628,71,658,99,684,131,726,202,754,271,772,326"/>
+<area shape="rect" id="Node000004" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#a44e6b2875e6ff530970e26582b7d3351" title="Execute the command (first time)" alt="" coords="384,85,581,125"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="762,329,742,285,712,233,673,182,650,159,625,139,604,127,580,119,582,114,606,122,628,134,654,155,677,178,716,230,747,282,767,327"/>
+<area shape="rect" id="Node000006" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#a1d1e3d589894c6d11eb2352055c9421e" title="Execute the command (first time)" alt="" coords="373,149,592,189"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="755,331,701,265,665,231,625,203,591,188,593,183,628,198,669,227,705,261,759,328"/>
+<area shape="rect" id="Node000008" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="383,213,583,253"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="739,334,687,299,626,267,582,253,584,248,628,262,690,295,742,330"/>
+<area shape="rect" id="Node000010" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a619d59586f8cb342ded7bb6e0078ebf0" title="Execute the command (first time)" alt="" coords="382,277,583,317"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="671,340,575,319,576,314,673,335"/>
+<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#acb294c03eb11bcff3fb70166a307b235" title="Construct a track manager and wire its internal playback helpers." alt="" coords="379,341,587,381"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="661,363,587,363,587,358,661,358"/>
+<area shape="rect" id="Node000013" href="$dc/d69/classAestra_1_1Audio_1_1AssignUnitToFirstFreeMixerChannelCommand.html#af7573c2f535923468ee503a5128f3072" title="Undo the command." alt="" coords="339,405,627,445"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="673,386,576,407,575,402,671,381"/>
+<area shape="rect" id="Node000014" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#a38f7af986a64941e29626566fe5b0e4e" title="Undo the command." alt="" coords="384,469,581,509"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="742,391,690,427,628,459,582,474,581,469,626,454,687,422,739,387"/>
+<area shape="rect" id="Node000015" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#a3abd336cb0d3b55af3962d59df267b33" title="Undo the command." alt="" coords="383,533,583,573"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="759,394,705,460,669,494,628,523,584,541,582,536,625,518,665,490,701,456,755,390"/>
+<area shape="rect" id="Node000016" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a08716ecaa1091866d9147b3811752a30" title="Undo the command." alt="" coords="383,597,583,637"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="767,395,747,439,716,491,677,543,654,567,628,587,584,607,582,602,625,582,650,563,673,540,712,488,742,436,762,393"/>
+<area shape="rect" id="Node000017" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a06d659cbbb775984a31d25b2aa39a291" title="Undo the command." alt="" coords="382,661,583,701"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="772,395,755,451,727,521,685,591,659,623,628,651,607,664,584,673,582,668,605,659,625,647,655,620,681,588,722,518,750,449,767,393"/>
+<area shape="rect" id="Node000003" href="$dc/d69/classAestra_1_1Audio_1_1AssignUnitToFirstFreeMixerChannelCommand.html#a5df5800218e3c097352ae354b3884541" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,13,291,53"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="345,35,291,35,291,30,345,30"/>
+<area shape="rect" id="Node000005" href="$da/d62/classAestra_1_1Audio_1_1ImportAudioClipCommand.html#ac2ebe21599a2f467d3ad8a8d31422530" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="49,85,247,125"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="371,107,247,107,247,102,371,102"/>
+<area shape="rect" id="Node000007" href="$df/dcd/classAestra_1_1Audio_1_1MakeAudioClipUniqueCommand.html#aeaa21058704fb2d2b27bf3763bb05982" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="49,149,247,189"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="360,171,247,171,247,166,360,166"/>
+<area shape="rect" id="Node000009" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="48,213,248,253"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="369,235,248,235,248,230,369,230"/>
+<area shape="rect" id="Node000011" href="$d8/d86/classAestra_1_1Audio_1_1SetUnitMixerChannelCommand.html#a608dc40a7dbc4550f6652ab0fcf5a8ce" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="47,277,249,317"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="368,299,249,299,249,294,368,294"/>
 </map>

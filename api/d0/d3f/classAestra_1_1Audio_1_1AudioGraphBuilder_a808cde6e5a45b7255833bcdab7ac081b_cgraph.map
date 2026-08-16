@@ -1,17 +1,21 @@
 <map id="Aestra::Audio::AudioGraphBuilder::buildFromTrackManager" name="Aestra::Audio::AudioGraphBuilder::buildFromTrackManager">
-<area shape="rect" id="Node000001" title="Build a render graph from the current TrackManager state." alt="" coords="5,293,237,333"/>
+<area shape="rect" id="Node000001" title="Build a render graph from the current TrackManager state." alt="" coords="5,357,237,397"/>
 <area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="285,133,493,173"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="141,291,202,238,242,209,284,183,299,176,301,181,287,188,245,213,206,242,145,295"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="132,356,156,319,190,273,233,225,284,183,294,177,297,182,287,188,237,228,194,276,160,322,136,359"/>
 <area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="285,197,493,237"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="170,291,284,247,307,239,309,244,286,252,172,296"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="141,355,202,302,242,273,284,247,299,240,301,245,287,252,245,277,206,306,145,359"/>
 <area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073" title="Get the number of channels." alt="" coords="285,261,493,301"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="237,297,272,293,272,298,238,302"/>
-<area shape="rect" id="Node000010" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="285,325,493,365"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="238,325,272,329,272,334,237,330"/>
-<area shape="rect" id="Node000011" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="285,389,493,429"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="172,331,286,375,309,383,307,388,284,380,170,336"/>
-<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="285,453,493,493"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="145,331,206,385,245,414,287,439,301,446,299,451,284,444,242,418,202,389,141,335"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="170,355,284,311,307,303,309,308,286,316,172,360"/>
+<area shape="rect" id="Node000010" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5" title="Get the current effect chain snapshot (Pass 3: returns canonical snapshot from EffectChain)." alt="" coords="286,325,493,365"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="237,361,272,357,273,362,238,366"/>
+<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" title="Access the Master strip&#39;s mixer channel (id 0)." alt="" coords="285,389,493,429"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="238,389,272,393,272,398,237,394"/>
+<area shape="rect" id="Node000013" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="285,453,493,493"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="172,395,286,439,309,447,307,452,284,444,170,400"/>
+<area shape="rect" id="Node000014" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="285,517,493,557"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="145,395,206,449,245,478,287,503,301,510,299,515,284,508,242,482,202,453,141,399"/>
+<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="285,581,493,621"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="136,396,160,433,194,479,237,526,287,567,297,573,294,578,284,572,233,530,190,482,156,436,132,399"/>
 <area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a968a7b802dbe9dc8d54b3f251778674a" title="Get all source IDs." alt="" coords="541,5,760,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="416,131,471,93,540,55,558,48,560,52,542,60,474,97,419,135"/>
 <area shape="rect" id="Node000004" href="$df/dff/classAestra_1_1Audio_1_1ClipSource.html#a8410af642639615e40f590ab8d1516a3" title="Filtered copy valid for targetRate and the CURRENT buffer content, or null." alt="" coords="557,69,744,109"/>
@@ -22,4 +26,6 @@
 <area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="472,171,556,191,555,197,471,176"/>
 <area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="547,261,755,301"/>
 <area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="474,171,495,183,511,200,520,216,528,232,543,247,552,253,549,257,540,251,523,235,515,219,507,203,492,187,471,176"/>
+<area shape="rect" id="Node000011" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#acff38b783a5eab59f511dbc4791ba397" title="Get the current published snapshot." alt="" coords="555,325,746,365"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="493,343,542,343,542,348,493,348"/>
 </map>

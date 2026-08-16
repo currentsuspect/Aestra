@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::MixerChannel::findSendIndex" name="Aestra::Audio::MixerChannel::findSendIndex">
+<area shape="rect" id="Node000001" title="Positional lookup for a stable sendId; &#45;1 when absent." alt="" coords="584,37,791,77"/>
+<area shape="rect" id="Node000002" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a6babc85a621218163a01fdc6e19c7740" title="Execute the command (first time)" alt="" coords="314,5,517,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="570,46,517,40,517,35,571,41"/>
+<area shape="rect" id="Node000004" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a4e26b3619d093ab5cb6f82ce53fb148c" title="Execute the command (first time)" alt="" coords="295,69,536,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="571,74,537,78,536,72,570,68"/>
+<area shape="rect" id="Node000003" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a1b897b2d526bc8eafaf36c2ee23100ee" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="25,5,227,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="300,28,228,28,228,23,300,23"/>
+<area shape="rect" id="Node000005" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a00463bbb3bdf85217a261001d5996610" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,247,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="281,92,247,92,247,87,281,87"/>
+</map>

@@ -116,6 +116,9 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:ad6ddd40d6a2f0c65f1c5ed4e71c8cea6" id="r_ad6ddd40d6a2f0c65f1c5ed4e71c8cea6"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#ad6ddd40d6a2f0c65f1c5ed4e71c8cea6">reverseInPlace</a> (<a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &amp;buffer)</td></tr>
 <tr class="memdesc:ad6ddd40d6a2f0c65f1c5ed4e71c8cea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reverse <code>buffer</code> in place, keeping channel interleaving intact.  <br /></td></tr>
 <tr class="separator:ad6ddd40d6a2f0c65f1c5ed4e71c8cea6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a324152178afd28e12e7963a134af821b" id="r_a324152178afd28e12e7963a134af821b"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#a324152178afd28e12e7963a134af821b">applyPlaybackRate</a> (<a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &amp;buffer, float playbackRate)</td></tr>
+<tr class="memdesc:a324152178afd28e12e7963a134af821b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bake varispeed playback into <code>buffer</code> using cubic interpolation.  <br /></td></tr>
+<tr class="separator:a324152178afd28e12e7963a134af821b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab7c985eebb5e46169baddceaaad520a5" id="r_ab7c985eebb5e46169baddceaaad520a5"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#ab7c985eebb5e46169baddceaaad520a5">applyGain</a> (<a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &amp;buffer, float gainLinear)</td></tr>
 <tr class="memdesc:ab7c985eebb5e46169baddceaaad520a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale every sample by <code>gainLinear</code>.  <br /></td></tr>
 <tr class="separator:ab7c985eebb5e46169baddceaaad520a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -217,7 +220,7 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p>Apply linear fade-in/fade-out ramps measured in frames. </p>
 <p>Overlapping ramps (fadeIn + fadeOut longer than the buffer) are each clamped so the two never multiply into an unintended notch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00177">177</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00224">224</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -267,7 +270,7 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p>Scale every sample by <code>gainLinear</code>. </p>
 <p>Non-finite gains are ignored. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00168">168</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00215">215</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -276,6 +279,56 @@ transform them, and hand back a new source that stands on its own", so the file 
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_ab7c985eebb5e46169baddceaaad520a5_icgraph.svg" width="482" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a324152178afd28e12e7963a134af821b" name="a324152178afd28e12e7963a134af821b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a324152178afd28e12e7963a134af821b">&#9670;&#160;</a></span>applyPlaybackRate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ClipRenderService::applyPlaybackRate </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &amp;&#160;</td>
+          <td class="paramname"><em>buffer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>playbackRate</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Bake varispeed playback into <code>buffer</code> using cubic interpolation. </p>
+<p>The output keeps the source sample rate but changes frame count, matching the default live clip interpolator. Invalid rates are treated as unity. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00168">168</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_a324152178afd28e12e7963a134af821b_icgraph.svg" width="496" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -328,23 +381,23 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p>The file lands next to the project's other rendered material under <code>renderDirectory</code>. <code>baseName</code> is only a hint: the final filename is uniquified so two bounces of the same clip never collide.</p>
 <dl class="section return"><dt>Returns</dt><dd>An invalid result if the buffer is unusable or the write failed; no source or pattern is registered in that case. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00319">319</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00366">366</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00060">Aestra::Audio::PatternManager::createAudioPattern()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00092">Aestra::Audio::SourceManager::createRecordedSource()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00139">Aestra::Audio::PatternManager::setPatternMixerChannel()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_a4f02b217619f2c540dfc913686497f77_cgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
-</div>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_a4f02b217619f2c540dfc913686497f77_cgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_a4f02b217619f2c540dfc913686497f77_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -396,11 +449,11 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00114">114</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_ab2265a8632b5bcf3f9e5221b82ef71dd_icgraph.svg" width="482" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -432,7 +485,7 @@ transform them, and hand back a new source that stands on its own", so the file 
 
 <p>Peak absolute sample value, or 0 for an empty buffer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00225">225</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00272">272</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,18 +530,18 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, and <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">Aestra::Audio::SourceManager::getSource()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_adbc6b59ea80b9b1efca3eb534d66ef27_cgraph.svg" width="475" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_adbc6b59ea80b9b1efca3eb534d66ef27_cgraph.svg" width="475" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_adbc6b59ea80b9b1efca3eb534d66ef27_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -523,11 +576,11 @@ transform them, and hand back a new source that stands on its own", so the file 
 <p class="definition">Definition at line <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00145">145</a> of file <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html">ClipRenderService.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>.</p>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService_ad6ddd40d6a2f0c65f1c5ed4e71c8cea6_icgraph.svg" width="454" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 

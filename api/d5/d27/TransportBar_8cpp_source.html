@@ -123,12 +123,12 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="comment">// the view is called Arsenal everywhere else in the product, so nothing here</span></div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="comment">// invents a second name for it.</span></div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment">// 11px matches the renderer&#39;s small-text floor, so the size layout assumes is</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="comment">// the size that actually renders.</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_FONT_SIZE = 11.0f;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_ICON_SIZE = 14.0f;</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_ICON_GAP = 6.0f;</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_PAD_X = 9.0f;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment">// Micro label tier for DAW-specific transport concepts: the label carries the</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="comment">// meaning and the icon reinforces it, so the word stays below label size.</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_FONT_SIZE = 9.5f;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_ICON_SIZE = 13.0f;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_ICON_GAP = 5.0f;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> TRANSPORT_LABEL_PAD_X = 7.0f;</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="comment">// layoutComponents runs without a renderer, so label widths are estimated</span></div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="comment">// rather than measured. Estimate high: the label is left-aligned after the</span></div>
@@ -809,304 +809,305 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);</div>
 <div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span> </div>
 <div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>    <span class="comment">// --- View Toggles (Right) ---</span></div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    <span class="comment">// All icon-only: faders, a channel rack and a keyboard are vocabulary a</span></div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="comment">// producer already has. Tooltips confirm rather than translate.</span></div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>}</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span> </div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span><span class="comment">// SECTION: Layout</span></div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span><span class="comment">// ... (Previous code)</span></div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span> </div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span><span class="keywordtype">void</span> TransportBar::setRightReservedWidth(<span class="keywordtype">float</span> width) {</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    <span class="keywordflow">if</span> (m_rightReservedWidth == width) {</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>    }</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    m_rightReservedWidth = width;</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    layoutComponents();</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>}</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span> </div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span><span class="keywordtype">void</span> TransportBar::layoutComponents() {</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds = getBounds();</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span> </div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    <span class="comment">// Get layout dimensions from theme</span></div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <span class="keyword">auto</span>&amp; themeManager = AestraUI::NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keyword">const</span> <span class="keyword">auto</span>&amp; layout = themeManager.getLayoutDimensions();</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span> </div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    <span class="comment">// Use configurable dimensions - OVERRIDE for Compact Mode</span></div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    <span class="keywordtype">float</span> buttonSize = TRANSPORT_BUTTON_SIZE;</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> primaryButtonScale = 1.0f;</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> primaryButtonSize = buttonSize * primaryButtonScale;</div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    <span class="keywordtype">float</span> spacing = TRANSPORT_BUTTON_SPACING;</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span> </div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>    <span class="comment">// --- Layout Logic: Center-Out Calculation ---</span></div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>    <span class="comment">// We calculate the required width first to center the island perfectly</span></div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    </div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    <span class="comment">// Group 1: Transport (Play, Stop, Rec)</span></div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    <span class="keywordtype">float</span> group1Width = (buttonSize * 3) + (spacing * 2);</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>    </div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>    <span class="comment">// Group 2: Extras (COUNT IN, WAIT, LOOP RECORD, metronome) — labelled controls</span></div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>    <span class="comment">// size to their word, so this is no longer 4 uniform squares.</span></div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    <span class="keywordtype">float</span> group2Width = transportExtrasWidth();</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span> </div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>    <span class="comment">// Group 3: Info Display (Center)</span></div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    <span class="comment">// Compact Info: 180px instead of 220px -&gt; reduce to 160px for tighter packing?</span></div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <span class="comment">// Let&#39;s check TransportInfoContainer first, but for now allow 170.</span></div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>    <span class="comment">// Group 3: Info Display (Center)</span></div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>    <span class="comment">// Expanded Info: 220px to accommodate children</span></div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    <span class="keywordtype">float</span> infoWidth = TRANSPORT_INFO_WIDTH;</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    </div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    <span class="comment">// Group 4: Views (MIX, RACK, piano roll) - 3 controls</span></div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="keywordtype">float</span> group4Width = transportViewsWidth();</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span> </div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    <span class="comment">// Which secondary groups fit? (hide extras first, then views — see helper)</span></div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    <span class="comment">// The visualizers overlay the right of this row, so the island only owns the</span></div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="comment">// width left of them.</span></div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>    <span class="keyword">const</span> TransportLayoutTier tier = transportTierFor(availWidth);</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span> </div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="comment">// Total Content Width — clusters set apart by a surface gap, extras tucked</span></div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    <span class="comment">// tight to the transport buttons (one cluster). Order: transport, (extras),</span></div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    <span class="comment">// info, (views).</span></div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    <span class="keywordtype">float</span> totalContentWidth = group1Width</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        + TRANSPORT_SURFACE_GAP + infoWidth</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>    <span class="keywordtype">float</span> islandPadding = TRANSPORT_ISLAND_PADDING;</div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <span class="keywordtype">float</span> islandWidth = totalContentWidth + (islandPadding * 2.0f);</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>    </div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>    <span class="comment">// Clamp to window width</span></div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>    <span class="keywordflow">if</span> (islandWidth &gt; bounds.width - 20.0f) {</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>        islandWidth = bounds.width - 20.0f;</div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>    }</div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span> </div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);</div>
-<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> visualCenterBiasY = 0.0f;</div>
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>    <span class="keywordtype">float</span> islandX = std::round((bounds.width - islandWidth) * 0.5f);</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    <span class="keywordtype">float</span> islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);</div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span> </div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>    <span class="comment">// Stay centred on the window while there&#39;s room, but never slide under the</span></div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    <span class="comment">// visualizers — with labelled controls the island is wide enough that a</span></div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="comment">// plain centre would put the rightmost view button beneath the scope.</span></div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="keywordflow">if</span> (m_rightReservedWidth &gt; 0.0f) {</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rightLimit = bounds.width - m_rightReservedWidth;</div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        <span class="keywordflow">if</span> (islandX + islandWidth &gt; rightLimit) {</div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));</div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        }</div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>    }</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span> </div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>    <span class="comment">// Check min width/fallback</span></div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>    <span class="keywordflow">if</span> (bounds.width &lt; islandWidth) {</div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>        islandX = 0;</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>        islandWidth = bounds.width;</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>    }</div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span> </div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>    <span class="keywordtype">float</span> centerOffsetY = std::round(islandY + (islandHeight - buttonSize) * 0.5f);</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span> </div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>    <span class="comment">// --- Placement ---</span></div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>    <span class="keywordtype">float</span> xCursor = islandX + islandPadding;</div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span> </div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>    <span class="comment">// Group 1: Transport</span></div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placePrimaryButton = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keywordtype">float</span> x) {</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> grow = 0.5f * (primaryButtonSize - buttonSize);</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        button-&gt;setBounds(NUIAbsolute(bounds, x - grow, centerOffsetY - grow, primaryButtonSize, primaryButtonSize));</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>    };</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span> </div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>    placePrimaryButton(m_playButton, xCursor);</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>    xCursor += buttonSize + spacing;</div>
-<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>    </div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    placePrimaryButton(m_stopButton, xCursor);</div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>    xCursor += buttonSize + spacing;</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>    </div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    placePrimaryButton(m_recordButton, xCursor);</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    <span class="comment">// Tight gap to the extras (same Transport cluster); if extras are collapsed,</span></div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    <span class="comment">// it&#39;s a full surface gap onward to the musical-state cluster.</span></div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    xCursor += buttonSize + (tier.showExtras ? TRANSPORT_INTRA_GAP : TRANSPORT_SURFACE_GAP);</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span> </div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    <span class="comment">// Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so</span></div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    <span class="comment">// the buttons neither render nor take clicks when collapsed.</span></div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>    <span class="comment">// A null label means icon-only, so the control stays square; otherwise it is</span></div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    <span class="comment">// as wide as its word. The hitbox is the full labelled width, so the word is</span></div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    <span class="comment">// clickable, not just the glyph.</span></div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placeExtra = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keyword">const</span> <span class="keywordtype">char</span>* label) {</div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        button-&gt;setVisible(tier.showExtras);</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        <span class="keywordflow">if</span> (tier.showExtras) {</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> w = label ? transportLabeledWidth(label) : buttonSize;</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>            button-&gt;setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));</div>
-<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>            xCursor += w + spacing;</div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>        }</div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>    };</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>    placeExtra(m_countInButton, TRANSPORT_LABEL_COUNT_IN);</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>    placeExtra(m_waitButton, TRANSPORT_LABEL_WAIT);</div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>    placeExtra(m_loopRecordButton, TRANSPORT_LABEL_LOOP_REC);</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    placeExtra(m_metronomeButton, <span class="keyword">nullptr</span>);</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>    <span class="keywordflow">if</span> (tier.showExtras) {</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        <span class="comment">// Last extra added a trailing button spacing; swap it for the surface gap</span></div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        <span class="comment">// that sets the Transport cluster apart from the musical-state cluster.</span></div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        xCursor += -spacing + TRANSPORT_SURFACE_GAP;</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    }</div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span> </div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>    <span class="comment">// Group 3: Info Container (always shown)</span></div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>    <span class="keywordflow">if</span> (m_infoContainer) {</div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>        m_infoContainer-&gt;setBounds(NUIAbsolute(bounds, xCursor, islandY, infoWidth, islandHeight));</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>    }</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    xCursor += infoWidth;</div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span> </div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    <span class="comment">// Group 4: Views — hidden first on the narrowest windows.</span></div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placeView = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keyword">const</span> <span class="keywordtype">char</span>* label, <span class="keywordtype">bool</span> advance) {</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>        button-&gt;setVisible(tier.showViews);</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        <span class="keywordflow">if</span> (tier.showViews) {</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> w = label ? transportLabeledWidth(label) : buttonSize;</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>            button-&gt;setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));</div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>            <span class="keywordflow">if</span> (advance) xCursor += w + spacing;</div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>        }</div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    };</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    <span class="keywordflow">if</span> (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; <span class="comment">// surface gap before the view cluster</span></div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    placeView(m_mixerButton, <span class="keyword">nullptr</span>, <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    placeView(m_sequencerButton, <span class="keyword">nullptr</span>, <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    placeView(m_pianoRollButton, <span class="keyword">nullptr</span>, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span> </div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="keywordflow">if</span> (m_musicalTypingLabel) {</div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> statusWidth = 82.0f;</div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> statusHeight = 24.0f;</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> statusX = islandX + islandWidth + 10.0f;</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> hasRoom = statusX + statusWidth &lt;= bounds.width - 8.0f - m_rightReservedWidth;</div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>        m_musicalTypingLabel-&gt;setVisible(hasRoom);</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>        <span class="keywordflow">if</span> (hasRoom) {</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>            m_musicalTypingLabel-&gt;setBounds(NUIAbsolute(</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>                bounds, statusX, islandY + (islandHeight - statusHeight) * 0.5f, statusWidth, statusHeight));</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        }</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>    }</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span> </div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    <span class="comment">// Pass dimensions to Render via Theme or member not possible easily here without state.</span></div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>    <span class="comment">// We relying on onRender duplicating the math or us storing it?</span></div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>    <span class="comment">// Let&#39;s update onRender to match these hardcoded compaction values.</span></div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>}</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span> </div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span><span class="keywordtype">void</span> TransportBar::onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a>&amp; renderer) {</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    AESTRA_ZONE(<span class="stringliteral">&quot;Transport_Render&quot;</span>);</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds = getBounds();</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <span class="keyword">auto</span>&amp; themeManager = AestraUI::NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    <span class="comment">// 1. Clear background (Void/Transparent)</span></div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="comment">// renderer.fillRect(bounds, themeManager.getColor(&quot;backgroundPrimary&quot;)); // REMOVE: Occludes FileBrowser if Z-Ordered on top</span></div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span> </div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    <span class="comment">// 2. Re-Calculate Island Geometry (Match layoutComponents logic)</span></div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    <span class="comment">// Workspace switches are repeated, space-constrained controls. Their</span></div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="comment">// established glyphs plus tooltips communicate more cleanly than a second</span></div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    <span class="comment">// row of six-pixel abbreviations.</span></div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>}</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span><span class="comment">// SECTION: Layout</span></div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span> </div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span><span class="comment">// ... (Previous code)</span></div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span> </div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span><span class="keywordtype">void</span> TransportBar::setRightReservedWidth(<span class="keywordtype">float</span> width) {</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>    <span class="keywordflow">if</span> (m_rightReservedWidth == width) {</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    }</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    m_rightReservedWidth = width;</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    layoutComponents();</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>}</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span> </div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span><span class="keywordtype">void</span> TransportBar::layoutComponents() {</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds = getBounds();</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span> </div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <span class="comment">// Get layout dimensions from theme</span></div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keyword">auto</span>&amp; themeManager = AestraUI::NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>    <span class="keyword">const</span> <span class="keyword">auto</span>&amp; layout = themeManager.getLayoutDimensions();</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span> </div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    <span class="comment">// Use configurable dimensions - OVERRIDE for Compact Mode</span></div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    <span class="keywordtype">float</span> buttonSize = TRANSPORT_BUTTON_SIZE;</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> primaryButtonScale = 1.0f;</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> primaryButtonSize = buttonSize * primaryButtonScale;</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    <span class="keywordtype">float</span> spacing = TRANSPORT_BUTTON_SPACING;</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span> </div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>    <span class="comment">// --- Layout Logic: Center-Out Calculation ---</span></div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    <span class="comment">// We calculate the required width first to center the island perfectly</span></div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    </div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    <span class="comment">// Group 1: Transport (Play, Stop, Rec)</span></div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>    <span class="keywordtype">float</span> group1Width = (buttonSize * 3) + (spacing * 2);</div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>    </div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>    <span class="comment">// Group 2: Extras (COUNT IN, WAIT, LOOP RECORD, metronome) — labelled controls</span></div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    <span class="comment">// size to their word, so this is no longer 4 uniform squares.</span></div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    <span class="keywordtype">float</span> group2Width = transportExtrasWidth();</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span> </div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    <span class="comment">// Group 3: Info Display (Center)</span></div>
+<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <span class="comment">// Compact Info: 180px instead of 220px -&gt; reduce to 160px for tighter packing?</span></div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>    <span class="comment">// Let&#39;s check TransportInfoContainer first, but for now allow 170.</span></div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>    <span class="comment">// Group 3: Info Display (Center)</span></div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    <span class="comment">// Expanded Info: 220px to accommodate children</span></div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    <span class="keywordtype">float</span> infoWidth = TRANSPORT_INFO_WIDTH;</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    </div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="comment">// Group 4: Views (MIX, RACK, piano roll) - 3 controls</span></div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    <span class="keywordtype">float</span> group4Width = transportViewsWidth();</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span> </div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    <span class="comment">// Which secondary groups fit? (hide extras first, then views — see helper)</span></div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="comment">// The visualizers overlay the right of this row, so the island only owns the</span></div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>    <span class="comment">// width left of them.</span></div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);</div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    <span class="keyword">const</span> TransportLayoutTier tier = transportTierFor(availWidth);</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span> </div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    <span class="comment">// Total Content Width — clusters set apart by a surface gap, extras tucked</span></div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    <span class="comment">// tight to the transport buttons (one cluster). Order: transport, (extras),</span></div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    <span class="comment">// info, (views).</span></div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    <span class="keywordtype">float</span> totalContentWidth = group1Width</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)</div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        + TRANSPORT_SURFACE_GAP + infoWidth</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);</div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <span class="keywordtype">float</span> islandPadding = TRANSPORT_ISLAND_PADDING;</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>    <span class="keywordtype">float</span> islandWidth = totalContentWidth + (islandPadding * 2.0f);</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>    </div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>    <span class="comment">// Clamp to window width</span></div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>    <span class="keywordflow">if</span> (islandWidth &gt; bounds.width - 20.0f) {</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>        islandWidth = bounds.width - 20.0f;</div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>    }</div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span> </div>
+<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);</div>
+<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> visualCenterBiasY = 0.0f;</div>
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    <span class="keywordtype">float</span> islandX = std::round((bounds.width - islandWidth) * 0.5f);</div>
+<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    <span class="keywordtype">float</span> islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);</div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span> </div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    <span class="comment">// Stay centred on the window while there&#39;s room, but never slide under the</span></div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="comment">// visualizers — with labelled controls the island is wide enough that a</span></div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="comment">// plain centre would put the rightmost view button beneath the scope.</span></div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>    <span class="keywordflow">if</span> (m_rightReservedWidth &gt; 0.0f) {</div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rightLimit = bounds.width - m_rightReservedWidth;</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>        <span class="keywordflow">if</span> (islandX + islandWidth &gt; rightLimit) {</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>        }</div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>    }</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span> </div>
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>    <span class="comment">// Check min width/fallback</span></div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>    <span class="keywordflow">if</span> (bounds.width &lt; islandWidth) {</div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>        islandX = 0;</div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>        islandWidth = bounds.width;</div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>    }</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span> </div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>    <span class="keywordtype">float</span> centerOffsetY = std::round(islandY + (islandHeight - buttonSize) * 0.5f);</div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span> </div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>    <span class="comment">// --- Placement ---</span></div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>    <span class="keywordtype">float</span> xCursor = islandX + islandPadding;</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span> </div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>    <span class="comment">// Group 1: Transport</span></div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placePrimaryButton = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keywordtype">float</span> x) {</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> grow = 0.5f * (primaryButtonSize - buttonSize);</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        button-&gt;setBounds(NUIAbsolute(bounds, x - grow, centerOffsetY - grow, primaryButtonSize, primaryButtonSize));</div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>    };</div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span> </div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>    placePrimaryButton(m_playButton, xCursor);</div>
+<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>    xCursor += buttonSize + spacing;</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    </div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>    placePrimaryButton(m_stopButton, xCursor);</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>    xCursor += buttonSize + spacing;</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    </div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    placePrimaryButton(m_recordButton, xCursor);</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    <span class="comment">// Tight gap to the extras (same Transport cluster); if extras are collapsed,</span></div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    <span class="comment">// it&#39;s a full surface gap onward to the musical-state cluster.</span></div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>    xCursor += buttonSize + (tier.showExtras ? TRANSPORT_INTRA_GAP : TRANSPORT_SURFACE_GAP);</div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span> </div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    <span class="comment">// Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so</span></div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>    <span class="comment">// the buttons neither render nor take clicks when collapsed.</span></div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    <span class="comment">// A null label means icon-only, so the control stays square; otherwise it is</span></div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    <span class="comment">// as wide as its word. The hitbox is the full labelled width, so the word is</span></div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    <span class="comment">// clickable, not just the glyph.</span></div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placeExtra = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keyword">const</span> <span class="keywordtype">char</span>* label) {</div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        button-&gt;setVisible(tier.showExtras);</div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        <span class="keywordflow">if</span> (tier.showExtras) {</div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> w = label ? transportLabeledWidth(label) : buttonSize;</div>
+<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>            button-&gt;setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));</div>
+<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>            xCursor += w + spacing;</div>
+<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>        }</div>
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>    };</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>    placeExtra(m_countInButton, TRANSPORT_LABEL_COUNT_IN);</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>    placeExtra(m_waitButton, TRANSPORT_LABEL_WAIT);</div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    placeExtra(m_loopRecordButton, TRANSPORT_LABEL_LOOP_REC);</div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>    placeExtra(m_metronomeButton, <span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    <span class="keywordflow">if</span> (tier.showExtras) {</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        <span class="comment">// Last extra added a trailing button spacing; swap it for the surface gap</span></div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        <span class="comment">// that sets the Transport cluster apart from the musical-state cluster.</span></div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>        xCursor += -spacing + TRANSPORT_SURFACE_GAP;</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>    }</div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span> </div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>    <span class="comment">// Group 3: Info Container (always shown)</span></div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    <span class="keywordflow">if</span> (m_infoContainer) {</div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>        m_infoContainer-&gt;setBounds(NUIAbsolute(bounds, xCursor, islandY, infoWidth, islandHeight));</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    }</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>    xCursor += infoWidth;</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span> </div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    <span class="comment">// Group 4: Views — hidden first on the narrowest windows.</span></div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <span class="keyword">const</span> <span class="keyword">auto</span> placeView = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button, <span class="keyword">const</span> <span class="keywordtype">char</span>* label, <span class="keywordtype">bool</span> advance) {</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>        <span class="keywordflow">if</span> (!button) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        button-&gt;setVisible(tier.showViews);</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>        <span class="keywordflow">if</span> (tier.showViews) {</div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> w = label ? transportLabeledWidth(label) : buttonSize;</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>            button-&gt;setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));</div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>            <span class="keywordflow">if</span> (advance) xCursor += w + spacing;</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        }</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    };</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    <span class="keywordflow">if</span> (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; <span class="comment">// surface gap before the view cluster</span></div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    placeView(m_mixerButton, <span class="keyword">nullptr</span>, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    placeView(m_sequencerButton, <span class="keyword">nullptr</span>, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    placeView(m_pianoRollButton, <span class="keyword">nullptr</span>, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span> </div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keywordflow">if</span> (m_musicalTypingLabel) {</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> statusWidth = 82.0f;</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>        <span class="keyword">constexpr</span> <span class="keywordtype">float</span> statusHeight = 24.0f;</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> statusX = islandX + islandWidth + 10.0f;</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> hasRoom = statusX + statusWidth &lt;= bounds.width - 8.0f - m_rightReservedWidth;</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>        m_musicalTypingLabel-&gt;setVisible(hasRoom);</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        <span class="keywordflow">if</span> (hasRoom) {</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>            m_musicalTypingLabel-&gt;setBounds(NUIAbsolute(</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>                bounds, statusX, islandY + (islandHeight - statusHeight) * 0.5f, statusWidth, statusHeight));</div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        }</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    }</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span> </div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>    <span class="comment">// Pass dimensions to Render via Theme or member not possible easily here without state.</span></div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>    <span class="comment">// We relying on onRender duplicating the math or us storing it?</span></div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>    <span class="comment">// Let&#39;s update onRender to match these hardcoded compaction values.</span></div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>}</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span> </div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span><span class="keywordtype">void</span> TransportBar::onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a>&amp; renderer) {</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    AESTRA_ZONE(<span class="stringliteral">&quot;Transport_Render&quot;</span>);</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds = getBounds();</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    <span class="keyword">auto</span>&amp; themeManager = AestraUI::NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span> </div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="comment">// 1. Clear background (Void/Transparent)</span></div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    <span class="comment">// renderer.fillRect(bounds, themeManager.getColor(&quot;backgroundPrimary&quot;)); // REMOVE: Occludes FileBrowser if Z-Ordered on top</span></div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span> </div>
 <div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="comment">// 2. Re-Calculate Island Geometry (Match layoutComponents logic)</span></div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    <span class="comment">// Compact Values (Relaxed per user request: &quot;space would have done the trick&quot;)</span></div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    <span class="keywordtype">float</span> buttonSize = TRANSPORT_BUTTON_SIZE;</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    <span class="keywordtype">float</span> spacing = TRANSPORT_BUTTON_SPACING;</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="keywordtype">float</span> group1Width = (buttonSize * 3) + (spacing * 2);</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    <span class="keywordtype">float</span> group2Width = transportExtrasWidth();</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    <span class="keywordtype">float</span> infoWidth = TRANSPORT_INFO_WIDTH;</div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    <span class="keywordtype">float</span> group4Width = transportViewsWidth();</div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span> </div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>    <span class="comment">// Must mirror layoutComponents: same available width, same collapse tier.</span></div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);</div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>    <span class="keyword">const</span> TransportLayoutTier tier = transportTierFor(availWidth);</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span> </div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    <span class="keywordtype">float</span> totalContentWidth = group1Width</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)</div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>        + TRANSPORT_SURFACE_GAP + infoWidth</div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);</div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>    <span class="keywordtype">float</span> islandPadding = TRANSPORT_ISLAND_PADDING;</div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    <span class="keywordtype">float</span> islandWidth = totalContentWidth + (islandPadding * 2.0f);</div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    </div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    <span class="keywordflow">if</span> (islandWidth &gt; bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;</div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    </div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);</div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> visualCenterBiasY = -1.0f;</div>
-<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>    <span class="keywordtype">float</span> islandX = std::round((bounds.width - islandWidth) * 0.5f);</div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordtype">float</span> islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);</div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span> </div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>    <span class="comment">// Mirrors layoutComponents: keep the island clear of the visualizers.</span></div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <span class="keywordflow">if</span> (m_rightReservedWidth &gt; 0.0f) {</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rightLimit = bounds.width - m_rightReservedWidth;</div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>        <span class="keywordflow">if</span> (islandX + islandWidth &gt; rightLimit) {</div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));</div>
-<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        }</div>
-<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    }</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span> </div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    <span class="keywordflow">if</span> (bounds.width &lt; islandWidth) {</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>        islandX = 0;</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        islandWidth = bounds.width;</div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>    }</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span> </div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);</div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span> </div>
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(bounds, themeManager.getColor(<span class="stringliteral">&quot;backgroundSecondary&quot;</span>));</div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f,</div>
-<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>                      themeManager.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.025f));</div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({bounds.x, bounds.bottom() - 1.0f},</div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>                      {bounds.right(), bounds.bottom() - 1.0f},</div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>                      1.0f,</div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>                      themeManager.getColor(<span class="stringliteral">&quot;border&quot;</span>).withAlpha(0.30f));</div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    </div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    <span class="comment">// No per-group shells or separators: the toolbar reads as one purpose-built</span></div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    <span class="comment">// instrument, with the transport / musical-state / workspace surfaces set</span></div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <span class="comment">// apart by spacing (in layoutComponents) rather than boxes and borders.</span></div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>    (void)islandRect;</div>
-<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span> </div>
-<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>    renderChildren(renderer);</div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>    renderButtonIcons(renderer);</div>
-<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>}</div>
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span> </div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span><span class="keywordtype">void</span> TransportBar::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
-<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>    <span class="comment">// Don&#39;t reset bounds here - parent has already set the correct position</span></div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    <span class="comment">// Just update the size while preserving x,y position</span></div>
-<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> currentBounds = getBounds();</div>
-<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(currentBounds.x, currentBounds.y, width, height));</div>
-<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>    layoutComponents();</div>
-<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>    AestraUI::NUIComponent::onResize(width, height);</div>
-<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>}</div>
-<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span> </div>
-<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span><span class="keywordtype">bool</span> TransportBar::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
-<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>    <span class="comment">// Standard event dispatch to children (respects Z-order: Buttons are on Top)</span></div>
-<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> handled = AestraUI::NUIComponent::onMouseEvent(event);</div>
-<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    <span class="keywordflow">if</span> (!getBounds().contains(event.position)) {</div>
-<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>        <span class="keywordflow">return</span> handled;</div>
-<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    }</div>
-<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span> </div>
-<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>    <span class="keyword">const</span> <span class="keyword">auto</span> updateTooltipForButton = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button,</div>
-<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>                                            <span class="keyword">const</span> <span class="keywordtype">char</span>* text) -&gt; <span class="keywordtype">bool</span> {</div>
-<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>        <span class="keywordflow">return</span> button &amp;&amp; button-&gt;isVisible() &amp;&amp; button-&gt;getBounds().contains(event.position)</div>
-<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>            &amp;&amp; button-&gt;isEnabled() &amp;&amp; text &amp;&amp; text[0] != <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>    };</div>
-<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span> </div>
-<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span>    <span class="keyword">const</span> std::pair&lt;std::shared_ptr&lt;AestraUI::NUIButton&gt;, <span class="keyword">const</span> <span class="keywordtype">char</span>*&gt; tooltipButtons[] = {</div>
-<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>        {m_playButton, <span class="stringliteral">&quot;Play / Pause&quot;</span>},</div>
-<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>        {m_stopButton, <span class="stringliteral">&quot;Stop&quot;</span>},</div>
-<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>        {m_recordButton, <span class="stringliteral">&quot;Record&quot;</span>},</div>
-<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        {m_metronomeButton, <span class="stringliteral">&quot;Metronome&quot;</span>},</div>
-<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        <span class="comment">// Labelled controls: the word on the button already says what it is, so</span></div>
-<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        <span class="comment">// the tooltip confirms and adds the shortcut instead of translating.</span></div>
-<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>        {m_countInButton, <span class="stringliteral">&quot;Count in&quot;</span>},</div>
-<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span>        {m_waitButton, <span class="stringliteral">&quot;Wait for Input&quot;</span>},</div>
-<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>        {m_loopRecordButton, <span class="stringliteral">&quot;Loop Record&quot;</span>},</div>
-<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>        {m_mixerButton, <span class="stringliteral">&quot;Mixer (F3)&quot;</span>},</div>
-<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        {m_sequencerButton, <span class="stringliteral">&quot;Arsenal (F6)&quot;</span>},</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        {m_pianoRollButton, <span class="stringliteral">&quot;Piano Roll (F7)&quot;</span>}</div>
-<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    };</div>
-<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span> </div>
-<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; [button, text] : tooltipButtons) {</div>
-<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>        <span class="keywordflow">if</span> (updateTooltipForButton(button, text)) {</div>
-<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>            AestraUI::NUIComponent::showRemoteTooltip(text, event.position, <span class="keyword">this</span>);</div>
-<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>            <span class="keywordflow">return</span> handled;</div>
-<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>        }</div>
-<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>    }</div>
-<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span> </div>
-<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>    AestraUI::NUIComponent::hideRemoteTooltip(<span class="keyword">this</span>);</div>
-<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>    <span class="keywordflow">return</span> handled;</div>
-<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>}</div>
-<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span> </div>
-<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    <span class="comment">// 2. Re-Calculate Island Geometry (Match layoutComponents logic)</span></div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    <span class="comment">// Compact Values (Relaxed per user request: &quot;space would have done the trick&quot;)</span></div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    <span class="keywordtype">float</span> buttonSize = TRANSPORT_BUTTON_SIZE;</div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="keywordtype">float</span> spacing = TRANSPORT_BUTTON_SPACING;</div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    <span class="keywordtype">float</span> group1Width = (buttonSize * 3) + (spacing * 2);</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    <span class="keywordtype">float</span> group2Width = transportExtrasWidth();</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    <span class="keywordtype">float</span> infoWidth = TRANSPORT_INFO_WIDTH;</div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>    <span class="keywordtype">float</span> group4Width = transportViewsWidth();</div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span> </div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="comment">// Must mirror layoutComponents: same available width, same collapse tier.</span></div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);</div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>    <span class="keyword">const</span> TransportLayoutTier tier = transportTierFor(availWidth);</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span> </div>
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>    <span class="keywordtype">float</span> totalContentWidth = group1Width</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)</div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        + TRANSPORT_SURFACE_GAP + infoWidth</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    <span class="keywordtype">float</span> islandPadding = TRANSPORT_ISLAND_PADDING;</div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    <span class="keywordtype">float</span> islandWidth = totalContentWidth + (islandPadding * 2.0f);</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    </div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    <span class="keywordflow">if</span> (islandWidth &gt; bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;</div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    </div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);</div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> visualCenterBiasY = -1.0f;</div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordtype">float</span> islandX = std::round((bounds.width - islandWidth) * 0.5f);</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    <span class="keywordtype">float</span> islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span> </div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <span class="comment">// Mirrors layoutComponents: keep the island clear of the visualizers.</span></div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    <span class="keywordflow">if</span> (m_rightReservedWidth &gt; 0.0f) {</div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rightLimit = bounds.width - m_rightReservedWidth;</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>        <span class="keywordflow">if</span> (islandX + islandWidth &gt; rightLimit) {</div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));</div>
+<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>        }</div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>    }</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span> </div>
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>    <span class="keywordflow">if</span> (bounds.width &lt; islandWidth) {</div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        islandX = 0;</div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        islandWidth = bounds.width;</div>
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>    }</div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);</div>
+<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span> </div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(bounds, themeManager.getColor(<span class="stringliteral">&quot;backgroundSecondary&quot;</span>));</div>
+<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f,</div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>                      themeManager.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.025f));</div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({bounds.x, bounds.bottom() - 1.0f},</div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>                      {bounds.right(), bounds.bottom() - 1.0f},</div>
+<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>                      1.0f,</div>
+<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>                      themeManager.getColor(<span class="stringliteral">&quot;border&quot;</span>).withAlpha(0.30f));</div>
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    </div>
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    <span class="comment">// No per-group shells or separators: the toolbar reads as one purpose-built</span></div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <span class="comment">// instrument, with the transport / musical-state / workspace surfaces set</span></div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>    <span class="comment">// apart by spacing (in layoutComponents) rather than boxes and borders.</span></div>
+<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>    (void)islandRect;</div>
+<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span> </div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>    renderChildren(renderer);</div>
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>    renderButtonIcons(renderer);</div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>}</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span> </div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span><span class="keywordtype">void</span> TransportBar::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    <span class="comment">// Don&#39;t reset bounds here - parent has already set the correct position</span></div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>    <span class="comment">// Just update the size while preserving x,y position</span></div>
+<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> currentBounds = getBounds();</div>
+<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>    setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(currentBounds.x, currentBounds.y, width, height));</div>
+<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>    layoutComponents();</div>
+<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>    AestraUI::NUIComponent::onResize(width, height);</div>
+<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>}</div>
+<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span> </div>
+<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span><span class="keywordtype">bool</span> TransportBar::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
+<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>    <span class="comment">// Standard event dispatch to children (respects Z-order: Buttons are on Top)</span></div>
+<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> handled = AestraUI::NUIComponent::onMouseEvent(event);</div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>    <span class="keywordflow">if</span> (!getBounds().contains(event.position)) {</div>
+<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>        <span class="keywordflow">return</span> handled;</div>
+<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>    }</div>
+<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span> </div>
+<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>    <span class="keyword">const</span> <span class="keyword">auto</span> updateTooltipForButton = [&amp;](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIButton&gt;&amp; button,</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>                                            <span class="keyword">const</span> <span class="keywordtype">char</span>* text) -&gt; <span class="keywordtype">bool</span> {</div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>        <span class="keywordflow">return</span> button &amp;&amp; button-&gt;isVisible() &amp;&amp; button-&gt;getBounds().contains(event.position)</div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>            &amp;&amp; button-&gt;isEnabled() &amp;&amp; text &amp;&amp; text[0] != <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>    };</div>
+<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span> </div>
+<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>    <span class="keyword">const</span> std::pair&lt;std::shared_ptr&lt;AestraUI::NUIButton&gt;, <span class="keyword">const</span> <span class="keywordtype">char</span>*&gt; tooltipButtons[] = {</div>
+<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>        {m_playButton, <span class="stringliteral">&quot;Play / Pause&quot;</span>},</div>
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>        {m_stopButton, <span class="stringliteral">&quot;Stop&quot;</span>},</div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        {m_recordButton, <span class="stringliteral">&quot;Record&quot;</span>},</div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        {m_metronomeButton, <span class="stringliteral">&quot;Metronome&quot;</span>},</div>
+<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        <span class="comment">// Labelled controls: the word on the button already says what it is, so</span></div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>        <span class="comment">// the tooltip confirms and adds the shortcut instead of translating.</span></div>
+<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span>        {m_countInButton, <span class="stringliteral">&quot;Count in&quot;</span>},</div>
+<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>        {m_waitButton, <span class="stringliteral">&quot;Wait for Input&quot;</span>},</div>
+<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>        {m_loopRecordButton, <span class="stringliteral">&quot;Loop Record&quot;</span>},</div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        {m_mixerButton, <span class="stringliteral">&quot;Mixer (F3)&quot;</span>},</div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        {m_sequencerButton, <span class="stringliteral">&quot;Arsenal (F6)&quot;</span>},</div>
+<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>        {m_pianoRollButton, <span class="stringliteral">&quot;Piano Roll (F7)&quot;</span>}</div>
+<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    };</div>
+<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span> </div>
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; [button, text] : tooltipButtons) {</div>
+<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>        <span class="keywordflow">if</span> (updateTooltipForButton(button, text)) {</div>
+<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>            AestraUI::NUIComponent::showRemoteTooltip(text, event.position, <span class="keyword">this</span>);</div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>            <span class="keywordflow">return</span> handled;</div>
+<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>        }</div>
+<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>    }</div>
+<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span> </div>
+<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>    AestraUI::NUIComponent::hideRemoteTooltip(<span class="keyword">this</span>);</div>
+<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>    <span class="keywordflow">return</span> handled;</div>
+<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>}</div>
+<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aTransportBar_8h_html"><div class="ttname"><a href="../../d3/df6/TransportBar_8h.html">TransportBar.h</a></div><div class="ttdoc">Transport bar component for Aestra.</div></div>
 <div class="ttc" id="aTransportBar_8h_html_a12df7c150b09f8ba4a3ddcba78d9064c"><div class="ttname"><a href="../../d3/df6/TransportBar_8h.html#a12df7c150b09f8ba4a3ddcba78d9064c">Aestra::TransportState</a></div><div class="ttdeci">TransportState</div><div class="ttdoc">Transport state.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/df6/TransportBar_8h_source.html#l00034">TransportBar.h:34</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00022">NUIRenderer.h:22</a></div></div>

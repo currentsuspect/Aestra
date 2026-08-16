@@ -1,19 +1,19 @@
 <map id="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot" name="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot">
-<area shape="rect" id="Node000001" title="PDC v2 (P4b.2): per&#45;track per&#45;edge compensation snapshot for tests and tooling." alt="" coords="1113,99,1312,139"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,59,80,85"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,59,104,57,179,55,253,57,381,55,489,48,674,33,763,29,858,31,965,42,1090,64,1135,78,1176,96,1174,101,1133,83,1089,69,964,47,857,37,763,34,674,38,490,54,381,60,253,63,179,60,104,63,94,64"/>
-<area shape="rect" id="Node000004" href="$d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html" title=" " alt="" coords="277,121,476,175"/>
-<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="77,89,105,101,179,118,278,133,277,138,178,123,103,107,75,94"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="793,79,844,105"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="858,92,1113,109,1113,115,858,97"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="490,142,916,128,1113,120,1113,126,916,133,490,147"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="721,192,916,261"/>
-<area shape="poly" id="edge7_Node000006_Node000004" title=" " alt="" coords="490,173,500,175,599,191,698,205,721,209,721,214,697,211,598,197,500,180,489,178"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="13,138,73,163"/>
-<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="86,148,253,147,277,146,277,152,253,152,86,153"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="929,211,1008,196,1088,175,1134,157,1175,136,1177,141,1136,162,1090,180,1010,201,930,216"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="312,241,441,266"/>
-<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="455,255,570,256,697,249,721,246,722,251,698,255,570,262,455,260"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="23,241,62,266"/>
-<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="76,251,312,251,312,256,76,256"/>
+<area shape="rect" id="Node000001" title="PDC v2 (P4b.2): per&#45;track per&#45;edge compensation snapshot for tests and tooling." alt="" coords="1172,161,1371,201"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,122,80,147"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,121,104,120,179,117,253,120,390,117,506,110,704,94,799,89,900,92,1014,103,1149,127,1194,141,1234,159,1232,164,1192,146,1147,132,1014,108,900,97,799,95,704,99,506,116,390,123,253,125,179,123,104,125,94,127"/>
+<area shape="rect" id="Node000004" href="$d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html" title=" " alt="" coords="277,183,476,238"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="77,152,105,164,179,180,278,196,277,201,178,186,103,169,75,157"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="852,142,903,167"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="917,155,1172,172,1172,177,917,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="490,205,975,191,1172,183,1172,188,975,196,490,210"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="780,255,975,324"/>
+<area shape="poly" id="edge7_Node000006_Node000004" title=" " alt="" coords="490,235,500,237,628,254,756,268,780,271,779,277,756,273,627,260,500,243,489,241"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="13,201,73,226"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="86,210,253,209,277,209,277,214,253,215,86,216"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="988,273,1067,259,1147,237,1193,219,1234,199,1236,204,1195,224,1149,243,1068,264,989,279"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="312,303,441,329"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="455,318,595,320,676,318,756,312,780,309,780,314,756,317,676,323,595,325,455,323"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="23,303,62,329"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="76,313,312,313,312,319,76,319"/>
 </map>

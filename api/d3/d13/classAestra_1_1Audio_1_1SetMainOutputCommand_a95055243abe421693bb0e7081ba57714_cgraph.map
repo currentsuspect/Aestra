@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SetMainOutputCommand::undo" name="Aestra::Audio::SetMainOutputCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,37,220,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Find a mixer channel by stable ID." alt="" coords="268,5,476,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,41,254,37,255,42,221,47"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="268,69,476,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="221,68,255,72,254,77,220,73"/>
+</map>

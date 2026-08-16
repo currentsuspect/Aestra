@@ -135,6 +135,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0b23ef894457773b89d8e8535a47e04c" id="r_a0b23ef894457773b89d8e8535a47e04c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a0b23ef894457773b89d8e8535a47e04c">getPeaksForRange</a> (uint32_t channel, SampleIndex startSample, SampleIndex endSample, uint32_t numPixels, std::vector&lt; <a class="el" href="../../d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html">WaveformPeak</a> &gt; &amp;outPeaks) const</td></tr>
 <tr class="memdesc:a0b23ef894457773b89d8e8535a47e04c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get peaks for drawing a range at specified zoom.  <br /></td></tr>
 <tr class="separator:a0b23ef894457773b89d8e8535a47e04c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d9f2bc6cd5a553c22e4d20b47093cbd" id="r_a4d9f2bc6cd5a553c22e4d20b47093cbd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a4d9f2bc6cd5a553c22e4d20b47093cbd">getPeaksForRangePrecise</a> (uint32_t channel, double startSample, double endSample, uint32_t numPixels, std::vector&lt; <a class="el" href="../../d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html">WaveformPeak</a> &gt; &amp;outPeaks) const</td></tr>
+<tr class="memdesc:a4d9f2bc6cd5a553c22e4d20b47093cbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get peaks for a source range while preserving fractional pixel boundaries.  <br /></td></tr>
+<tr class="separator:a4d9f2bc6cd5a553c22e4d20b47093cbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a002f9e75679c04a2b910673828c27e65" id="r_a002f9e75679c04a2b910673828c27e65"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html">WaveformPeak</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a002f9e75679c04a2b910673828c27e65">getQuickPeak</a> (uint32_t channel, SampleIndex startSample, SampleIndex numSamples) const</td></tr>
 <tr class="memdesc:a002f9e75679c04a2b910673828c27e65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a single peak for quick display.  <br /></td></tr>
 <tr class="separator:a002f9e75679c04a2b910673828c27e65"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -301,7 +304,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Clear all cached data. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00204">204</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00218">218</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
 
 </div>
 </div>
@@ -344,7 +347,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Get memory usage in bytes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00212">212</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00226">226</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
 
 </div>
 </div>
@@ -465,13 +468,82 @@ Static Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00141">141</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00106">Aestra::Audio::WaveformMipLevel::getPeakRange()</a>, and <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00070">Aestra::Audio::WaveformMipLevel::samplesPerPeak</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00147">getPeaksForRangePrecise()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache_a0b23ef894457773b89d8e8535a47e04c_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a4d9f2bc6cd5a553c22e4d20b47093cbd" name="a4d9f2bc6cd5a553c22e4d20b47093cbd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d9f2bc6cd5a553c22e4d20b47093cbd">&#9670;&#160;</a></span>getPeaksForRangePrecise()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::WaveformCache::getPeaksForRangePrecise </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>channel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>startSample</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>endSample</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>numPixels</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="../../d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html">WaveformPeak</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>outPeaks</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get peaks for a source range while preserving fractional pixel boundaries. </p>
+<p>Clip previews often map a timeline position to a fractional source frame. Keeping those boundaries until each pixel is formed prevents adjacent slices and zoom levels from silently re-binning the same source audio differently. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00147">147</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00106">Aestra::Audio::WaveformMipLevel::getPeakRange()</a>, and <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00070">Aestra::Audio::WaveformMipLevel::samplesPerPeak</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00141">getPeaksForRange()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache_a4d9f2bc6cd5a553c22e4d20b47093cbd_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache_a4d9f2bc6cd5a553c22e4d20b47093cbd_icgraph.svg" width="507" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -510,14 +582,14 @@ Static Public Attributes</h2></td></tr>
 
 <p>Get a single peak for quick display. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00184">184</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00198">198</a> of file <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html">WaveformCache.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00106">Aestra::Audio::WaveformMipLevel::getPeakRange()</a>, and <a class="el" href="../../d6/d9a/WaveformCache_8h_source.html#l00070">Aestra::Audio::WaveformMipLevel::samplesPerPeak</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache_a002f9e75679c04a2b910673828c27e65_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 

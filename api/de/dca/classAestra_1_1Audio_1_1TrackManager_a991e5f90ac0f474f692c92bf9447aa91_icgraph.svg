@@ -46,9 +46,9 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 558;
+var viewWidth = 636;
 var viewHeight = 146;
-var sectionId = 'dynsection-34';
+var sectionId = 'dynsection-37';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -58,20 +58,20 @@ var sectionId = 'dynsection-34';
 <g id="Node000001" class="node">
 <title>Node1</title>
 <g id="a_Node000001"><a xlink:title="Put a detached channel back where it came from.">
-<polygon fill="#999999" stroke="#666666" points="550,-78 394,-78 394,-48 550,-48 550,-78"/>
-<text text-anchor="start" x="402" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="472" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::reinsertChannel</text>
+<polygon fill="#999999" stroke="#666666" points="628,-78 472,-78 472,-48 628,-48 628,-78"/>
+<text text-anchor="start" x="480" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="550" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::reinsertChannel</text>
 </a>
 </g>
 </g>
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a807cae773d69b41d42093fd6a040a6e5" target="_top" xlink:title="Execute the command (first time)">
-<polygon fill="white" stroke="#666666" points="358,-137.5 211,-137.5 211,-96.5 358,-96.5 358,-137.5"/>
-<text text-anchor="start" x="219" y="-125.5" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AssignUnit</text>
-<text text-anchor="start" x="219" y="-114.5" font-family="Helvetica,sans-Serif" font-size="10.00">ToFirstFreeInsertCommand</text>
-<text text-anchor="middle" x="284.5" y="-103.5" font-family="Helvetica,sans-Serif" font-size="10.00">::execute</text>
+<g id="a_Node000002"><a xlink:href="../../dc/d69/classAestra_1_1Audio_1_1AssignUnitToFirstFreeMixerChannelCommand.html#a0fa700eff7056ba76c458e93154b2abf" target="_top" xlink:title="Execute the command (first time)">
+<polygon fill="white" stroke="#666666" points="436,-137.5 250,-137.5 250,-96.5 436,-96.5 436,-137.5"/>
+<text text-anchor="start" x="258" y="-125.5" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AssignUnit</text>
+<text text-anchor="start" x="258" y="-114.5" font-family="Helvetica,sans-Serif" font-size="10.00">ToFirstFreeMixerChannelCommand</text>
+<text text-anchor="middle" x="343" y="-103.5" font-family="Helvetica,sans-Serif" font-size="10.00">::execute</text>
 </a>
 </g>
 </g>
@@ -79,8 +79,8 @@ var sectionId = 'dynsection-34';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node1&#45;&gt;Node2</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M409.44,-80.92C392.31,-85.91 373.56,-91.36 355.96,-96.49"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="410.7,-84.2 419.33,-78.04 408.75,-77.48 410.7,-84.2"/>
+<path fill="none" stroke="#63b8ff" d="M482.03,-80.64C462.81,-85.7 441.68,-91.27 421.86,-96.49"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="483.12,-83.97 491.9,-78.04 481.33,-77.2 483.12,-83.97"/>
 </a>
 </g>
 </g>
@@ -88,9 +88,9 @@ var sectionId = 'dynsection-34';
 <g id="Node000004" class="node">
 <title>Node4</title>
 <g id="a_Node000004"><a xlink:href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" target="_top" xlink:title="Put the same channel back after an undo.">
-<polygon fill="white" stroke="#666666" points="357.5,-78 211.5,-78 211.5,-48 357.5,-48 357.5,-78"/>
-<text text-anchor="start" x="219.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AddChannel</text>
-<text text-anchor="middle" x="284.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Command::redo</text>
+<polygon fill="white" stroke="#666666" points="416,-78 270,-78 270,-48 416,-48 416,-78"/>
+<text text-anchor="start" x="278" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AddChannel</text>
+<text text-anchor="middle" x="343" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Command::redo</text>
 </a>
 </g>
 </g>
@@ -98,8 +98,8 @@ var sectionId = 'dynsection-34';
 <g id="edge3_Node000001_Node000004" class="edge">
 <title>Node1&#45;&gt;Node4</title>
 <g id="a_edge3_Node000001_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M383.71,-63C374.96,-63 366.14,-63 357.56,-63"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="383.94,-66.5 393.94,-63 383.94,-59.5 383.94,-66.5"/>
+<path fill="none" stroke="#63b8ff" d="M461.41,-63C446.28,-63 430.72,-63 416.07,-63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="461.79,-66.5 471.79,-63 461.79,-59.5 461.79,-66.5"/>
 </a>
 </g>
 </g>
@@ -107,9 +107,9 @@ var sectionId = 'dynsection-34';
 <g id="Node000005" class="node">
 <title>Node5</title>
 <g id="a_Node000005"><a xlink:href="../../da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" target="_top" xlink:title="Undo the command.">
-<polygon fill="white" stroke="#666666" points="357.5,-30 211.5,-30 211.5,0 357.5,0 357.5,-30"/>
-<text text-anchor="start" x="219.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DeleteTrack</text>
-<text text-anchor="middle" x="284.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Command::undo</text>
+<polygon fill="white" stroke="#666666" points="416,-30 270,-30 270,0 416,0 416,-30"/>
+<text text-anchor="start" x="278" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DeleteTrack</text>
+<text text-anchor="middle" x="343" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Command::undo</text>
 </a>
 </g>
 </g>
@@ -117,18 +117,18 @@ var sectionId = 'dynsection-34';
 <g id="edge4_Node000001_Node000005" class="edge">
 <title>Node1&#45;&gt;Node5</title>
 <g id="a_edge4_Node000001_Node000005"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M403.06,-45.42C383.51,-40.36 362.37,-34.89 343.48,-30"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="402.26,-48.83 412.82,-47.94 404.01,-42.05 402.26,-48.83"/>
+<path fill="none" stroke="#63b8ff" d="M474.81,-45.63C452.95,-40.51 429.23,-34.96 408.07,-30"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="474.16,-49.07 484.7,-47.94 475.76,-42.26 474.16,-49.07"/>
 </a>
 </g>
 </g>
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../db/d18/classAestra_1_1Audio_1_1AssignUnitToFirstFreeInsertCommand.html#a598139d4d44990310a5a47266484aa4b" target="_top" xlink:title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe...">
-<polygon fill="white" stroke="#666666" points="175,-132 0,-132 0,-102 175,-102 175,-132"/>
+<g id="a_Node000003"><a xlink:href="../../dc/d69/classAestra_1_1Audio_1_1AssignUnitToFirstFreeMixerChannelCommand.html#a5df5800218e3c097352ae354b3884541" target="_top" xlink:title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe...">
+<polygon fill="white" stroke="#666666" points="214,-132 0,-132 0,-102 214,-102 214,-132"/>
 <text text-anchor="start" x="8" y="-120" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AssignUnit</text>
-<text text-anchor="middle" x="87.5" y="-109" font-family="Helvetica,sans-Serif" font-size="10.00">ToFirstFreeInsertCommand::redo</text>
+<text text-anchor="middle" x="107" y="-109" font-family="Helvetica,sans-Serif" font-size="10.00">ToFirstFreeMixerChannelCommand::redo</text>
 </a>
 </g>
 </g>
@@ -136,8 +136,8 @@ var sectionId = 'dynsection-34';
 <g id="edge2_Node000002_Node000003" class="edge">
 <title>Node2&#45;&gt;Node3</title>
 <g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M200.64,-117C192.16,-117 183.52,-117 175.01,-117"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="200.89,-120.5 210.89,-117 200.89,-113.5 200.89,-120.5"/>
+<path fill="none" stroke="#63b8ff" d="M239.57,-117C231.09,-117 222.51,-117 214.01,-117"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="239.85,-120.5 249.85,-117 239.85,-113.5 239.85,-120.5"/>
 </a>
 </g>
 </g>

@@ -1,9 +1,9 @@
 <map id="Aestra::Audio::ClipEdits" name="Aestra::Audio::ClipEdits">
-<area shape="rect" id="Node000001" title="Clip edits (user modifications to clip content)" alt="" coords="63,152,238,177"/>
+<area shape="rect" id="Node000001" title="Clip edits (user modifications to clip content)" alt="" coords="111,196,286,221"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="33,44,38,86,46,107,58,126,74,140,94,150,92,154,72,144,54,130,41,110,33,87,27,45"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="125,5,176,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="153,45,153,152,148,152,148,45"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="200,5,267,31"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="234,45,225,86,217,109,205,130,191,143,176,154,173,150,188,139,201,126,212,107,220,85,229,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="30,44,28,73,31,107,40,141,58,170,83,183,122,193,121,199,81,188,54,174,35,143,26,108,23,73,25,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="173,5,224,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="201,45,201,196,196,196,196,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="248,5,315,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="285,45,278,106,269,141,253,174,240,187,225,198,222,194,237,183,248,170,264,139,273,105,279,44"/>
 </map>

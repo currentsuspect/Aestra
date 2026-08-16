@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::MixerChannel::getSends" name="Aestra::Audio::MixerChannel::getSends">
+<area shape="rect" id="Node000001" title="Get a copy of the current send list." alt="" coords="840,103,1047,143"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="584,72,792,112"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="826,111,792,107,792,102,827,106"/>
+<area shape="rect" id="Node000005" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#a4eaa9dd33e7dc8be649ddd105408771f" title="Execute the command (first time)" alt="" coords="295,5,536,45"/>
+<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="890,99,843,79,791,63,727,49,660,40,536,30,536,24,661,34,728,44,793,57,845,74,892,94"/>
+<area shape="rect" id="Node000007" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a4e26b3619d093ab5cb6f82ce53fb148c" title="Execute the command (first time)" alt="" coords="295,133,536,173"/>
+<area shape="poly" id="edge11_Node000001_Node000007" title=" " alt="" coords="826,132,537,149,536,144,826,127"/>
+<area shape="rect" id="Node000009" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a6babc85a621218163a01fdc6e19c7740" title="Execute the command (first time)" alt="" coords="587,191,789,231"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="872,150,748,193,746,188,870,145"/>
+<area shape="rect" id="Node000003" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a03204a262d4571e5b1141320d550756d" title="Execute the command (first time)" alt="" coords="308,69,523,109"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="570,94,523,93,523,88,570,88"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="592,71,497,48,499,43,593,66"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="586,118,505,136,504,131,584,112"/>
+<area shape="rect" id="Node000004" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a3d74877f75793de023535d75e9887ef7" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="19,69,233,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="294,92,233,92,233,87,294,87"/>
+<area shape="rect" id="Node000006" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#a6e0a6e323a4ea8c9eb2f1d7788676c42" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,247,45"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="281,28,247,28,247,23,281,23"/>
+<area shape="rect" id="Node000008" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a00463bbb3bdf85217a261001d5996610" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,133,247,173"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="281,156,247,156,247,151,281,151"/>
+<area shape="rect" id="Node000010" href="$dd/db3/classAestra_1_1Audio_1_1RemoveSendCommand.html#a1b897b2d526bc8eafaf36c2ee23100ee" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="314,197,517,237"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="573,216,517,218,517,212,573,211"/>
+</map>

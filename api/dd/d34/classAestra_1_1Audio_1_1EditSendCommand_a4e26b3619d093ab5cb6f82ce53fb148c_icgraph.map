@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EditSendCommand::execute" name="Aestra::Audio::EditSendCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="295,5,536,45"/>
+<area shape="rect" id="Node000002" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a00463bbb3bdf85217a261001d5996610" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,247,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="281,28,247,28,247,23,281,23"/>
+</map>

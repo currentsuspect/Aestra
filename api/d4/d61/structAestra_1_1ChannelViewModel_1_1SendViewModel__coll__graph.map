@@ -1,13 +1,15 @@
 <map id="Aestra::ChannelViewModel::SendViewModel" name="Aestra::ChannelViewModel::SendViewModel">
-<area shape="rect" id="Node000001" title=" " alt="" coords="96,212,293,252"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="129,212,327,252"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,95,80,120"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,132,59,160,77,186,94,199,113,209,111,214,91,204,73,190,54,163,44,134"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="105,95,191,120"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="142,133,137,160,142,187,151,199,163,210,159,214,147,203,138,189,132,160,136,132"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="79,5,217,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="151,59,151,94,145,94,145,59"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="227,95,277,120"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="247,134,225,189,211,213,206,210,220,187,242,132"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="301,95,352,120"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="319,134,303,162,280,190,244,214,241,210,277,186,299,159,314,131"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="55,132,71,160,95,186,116,199,140,210,137,214,114,204,92,190,67,163,50,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="104,95,179,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,134,153,160,166,186,192,210,189,214,162,190,148,162,141,135"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="203,95,290,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="236,134,232,145,228,180,229,212,223,212,222,180,227,143,231,132"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="177,5,316,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="249,59,249,94,244,94,244,59"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="316,95,367,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="340,134,331,163,314,190,299,204,281,214,278,210,295,199,310,186,326,160,335,133"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="391,95,441,120"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="411,134,396,163,374,190,352,204,328,215,326,210,349,200,370,186,392,160,406,132"/>
 </map>

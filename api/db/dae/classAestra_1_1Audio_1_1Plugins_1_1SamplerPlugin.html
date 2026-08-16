@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../dc/d4b/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::Plugins::SamplerPlugin Class Reference</div></div>
@@ -96,6 +97,14 @@ $(function() {
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d5/df5/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin__coll__graph.svg" width="227" height="124"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a9397a413f57a1b065e7dfbdd1336b16d" id="r_a9397a413f57a1b065e7dfbdd1336b16d"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>LoopMode</b> : int { <b>OneShot</b> = 0
+, <b>Forward</b> = 1
+, <b>PingPong</b> = 2
+ }</td></tr>
+<tr class="separator:a9397a413f57a1b065e7dfbdd1336b16d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a6d787a428248cd2631b0706f8d26e806" id="r_a6d787a428248cd2631b0706f8d26e806"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a6d787a428248cd2631b0706f8d26e806">initialize</a> (double sampleRate, uint32_t maxBlockSize) override</td></tr>
@@ -190,6 +199,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:afc03d6a1ab73eb1a38727ac43e519fa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68f95c70fee8bb8e3cbb1e7f40f492d5" id="r_a68f95c70fee8bb8e3cbb1e7f40f492d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a68f95c70fee8bb8e3cbb1e7f40f492d5">setSampleWindow</a> (float startNorm, float endNorm) noexcept</td></tr>
 <tr class="separator:a68f95c70fee8bb8e3cbb1e7f40f492d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab063225bfa1ee70aefa0f9352409a61b" id="r_ab063225bfa1ee70aefa0f9352409a61b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#ab063225bfa1ee70aefa0f9352409a61b">setLoopMode</a> (LoopMode mode) noexcept</td></tr>
+<tr class="separator:ab063225bfa1ee70aefa0f9352409a61b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acea93957504fbfa8d9cda759263d4001" id="r_acea93957504fbfa8d9cda759263d4001"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#acea93957504fbfa8d9cda759263d4001">setLoopEnabled</a> (bool enabled) noexcept</td></tr>
 <tr class="separator:acea93957504fbfa8d9cda759263d4001"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a701784da9f0fc7a2cb4c45f2863b9a3c" id="r_a701784da9f0fc7a2cb4c45f2863b9a3c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a701784da9f0fc7a2cb4c45f2863b9a3c">setMaxVoices</a> (int maxVoices) noexcept</td></tr>
@@ -198,6 +209,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a9267321e4b6bd56c809878c1f5128341"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a52dd7c010397d404e6fc19e77183db79" id="r_a52dd7c010397d404e6fc19e77183db79"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a52dd7c010397d404e6fc19e77183db79">setMonoMode</a> (bool mono) noexcept</td></tr>
 <tr class="separator:a52dd7c010397d404e6fc19e77183db79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d317d9c395954a60dd1793b7ea87345" id="r_a7d317d9c395954a60dd1793b7ea87345"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a7d317d9c395954a60dd1793b7ea87345">setCutSelfMode</a> (bool cutSelf) noexcept</td></tr>
+<tr class="separator:a7d317d9c395954a60dd1793b7ea87345"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4fe5f5315144589b43d5db13b3bbfba6" id="r_a4fe5f5315144589b43d5db13b3bbfba6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a4fe5f5315144589b43d5db13b3bbfba6">setGlideTimeMs</a> (float glideTimeMs) noexcept</td></tr>
 <tr class="separator:a4fe5f5315144589b43d5db13b3bbfba6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a639fceaa4008cf0196dce176e8e1e36e" id="r_a639fceaa4008cf0196dce176e8e1e36e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a639fceaa4008cf0196dce176e8e1e36e">normalizeSample</a> (float targetPeak=0.95f)</td></tr>
@@ -212,6 +225,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a405d72061f64c9f71cf1eac46c7df2d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ae4fefc15219cb67ff21bad3dabce43" id="r_a3ae4fefc15219cb67ff21bad3dabce43"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a3ae4fefc15219cb67ff21bad3dabce43">getLoopEndNorm</a> () const noexcept</td></tr>
 <tr class="separator:a3ae4fefc15219cb67ff21bad3dabce43"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab6ee383f5b3e87ca7adcd656ec9af31" id="r_aab6ee383f5b3e87ca7adcd656ec9af31"><td class="memItemLeft" align="right" valign="top">LoopMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#aab6ee383f5b3e87ca7adcd656ec9af31">getLoopMode</a> () const noexcept</td></tr>
+<tr class="separator:aab6ee383f5b3e87ca7adcd656ec9af31"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad70d64b48e7848caf1a66394bcd217b" id="r_aad70d64b48e7848caf1a66394bcd217b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#aad70d64b48e7848caf1a66394bcd217b">isLoopEnabled</a> () const noexcept</td></tr>
 <tr class="separator:aad70d64b48e7848caf1a66394bcd217b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d52aeaabb2c8fe9e0adfd9dd80eff2a" id="r_a6d52aeaabb2c8fe9e0adfd9dd80eff2a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a6d52aeaabb2c8fe9e0adfd9dd80eff2a">getMaxVoices</a> () const noexcept</td></tr>
@@ -220,6 +235,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aa5712b4567d7c29b52c1d28d2e659d60"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d94e3d8f766eaa949037978afba1708" id="r_a8d94e3d8f766eaa949037978afba1708"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a8d94e3d8f766eaa949037978afba1708">isMonoMode</a> () const noexcept</td></tr>
 <tr class="separator:a8d94e3d8f766eaa949037978afba1708"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae0ea680ab7e2fa88b1f6d6e56d7a0d1f" id="r_ae0ea680ab7e2fa88b1f6d6e56d7a0d1f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#ae0ea680ab7e2fa88b1f6d6e56d7a0d1f">isCutSelfMode</a> () const noexcept</td></tr>
+<tr class="separator:ae0ea680ab7e2fa88b1f6d6e56d7a0d1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e9ac9a2e33628be5d875462c017e32a" id="r_a9e9ac9a2e33628be5d875462c017e32a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a9e9ac9a2e33628be5d875462c017e32a">getGlideTimeMs</a> () const noexcept</td></tr>
 <tr class="separator:a9e9ac9a2e33628be5d875462c017e32a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a514077f50d2e9f96da85b7d6f691011d" id="r_a514077f50d2e9f96da85b7d6f691011d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a514077f50d2e9f96da85b7d6f691011d">getAttack</a> () const noexcept</td></tr>
@@ -236,7 +253,32 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
 <p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00018">18</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<a id="a9397a413f57a1b065e7dfbdd1336b16d" name="a9397a413f57a1b065e7dfbdd1336b16d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9397a413f57a1b065e7dfbdd1336b16d">&#9670;&#160;</a></span>LoopMode</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class Aestra::Audio::Plugins::SamplerPlugin::LoopMode : int</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00021">21</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aec7445189b3150159fbcbc0cdd06b1f0" name="aec7445189b3150159fbcbc0cdd06b1f0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aec7445189b3150159fbcbc0cdd06b1f0">&#9670;&#160;</a></span>SamplerPlugin()</h2>
 
@@ -284,7 +326,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00129">129</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00148">148</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -315,7 +357,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00044">44</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00047">47</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -346,7 +388,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00135">135</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00154">154</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -373,7 +415,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00083">83</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00090">90</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -400,7 +442,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00108">108</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00116">116</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -427,7 +469,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00084">84</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00091">91</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -459,7 +501,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00046">46</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00049">49</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -486,7 +528,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00113">113</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00121">121</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -513,7 +555,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00082">82</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00089">89</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -544,7 +586,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00139">139</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00158">158</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -575,7 +617,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00050">50</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00053">53</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -602,7 +644,34 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00077">77</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00082">82</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+
+</div>
+</div>
+<a id="aab6ee383f5b3e87ca7adcd656ec9af31" name="aab6ee383f5b3e87ca7adcd656ec9af31"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab6ee383f5b3e87ca7adcd656ec9af31">&#9670;&#160;</a></span>getLoopMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">SamplerPlugin::LoopMode Aestra::Audio::Plugins::SamplerPlugin::getLoopMode </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00125">125</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -629,7 +698,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00076">76</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00081">81</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -656,7 +725,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00079">79</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00085">85</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -695,7 +764,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a50146239d3ee44ece1f7ce021a7d9ab7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00638">638</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00709">709</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -726,7 +795,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d28828563a9f99c2e25d8fd3df742a9">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00634">634</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00705">705</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -765,7 +834,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00649">649</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00720">720</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -796,7 +865,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4556ebedc550a3946d87bb73b7981dae">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00619">619</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00690">690</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -823,7 +892,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00086">86</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00093">93</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -850,7 +919,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00080">80</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00086">86</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -877,7 +946,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00085">85</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00092">92</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -908,7 +977,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00051">51</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00054">54</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -939,7 +1008,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00053">53</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00056">56</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -970,7 +1039,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00042">42</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00045">45</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1020,7 +1089,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00117">117</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00136">136</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1051,7 +1120,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00028">28</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00031">31</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1082,7 +1151,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00055">55</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00058">58</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1113,7 +1182,34 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00056">56</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00059">59</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+
+</div>
+</div>
+<a id="ae0ea680ab7e2fa88b1f6d6e56d7a0d1f" name="ae0ea680ab7e2fa88b1f6d6e56d7a0d1f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae0ea680ab7e2fa88b1f6d6e56d7a0d1f">&#9670;&#160;</a></span>isCutSelfMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::Plugins::SamplerPlugin::isCutSelfMode </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00088">88</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1144,7 +1240,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00045">45</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00048">48</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1171,7 +1267,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00078">78</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00084">84</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1198,7 +1294,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00081">81</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00087">87</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1218,7 +1314,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00145">145</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00164">164</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1260,7 +1356,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00161">161</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00180">180</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1299,7 +1395,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a364b42104ca80c8d86d71a69372c6b93">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00690">690</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00766">766</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1319,7 +1415,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00197">197</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00216">216</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1358,7 +1454,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00043">43</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00046">46</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1447,7 +1543,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00248">248</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00267">267</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1474,7 +1570,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00089">89</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00096">96</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1505,7 +1601,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00054">54</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00057">57</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1555,7 +1651,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00047">47</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00050">50</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1574,7 +1670,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00222">222</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00241">241</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1606,7 +1702,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c7d2dc9a6e2ccb6f56202a0fdbeab5c">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00660">660</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00731">731</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1635,6 +1731,34 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00072">72</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7d317d9c395954a60dd1793b7ea87345" name="a7d317d9c395954a60dd1793b7ea87345"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d317d9c395954a60dd1793b7ea87345">&#9670;&#160;</a></span>setCutSelfMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::Plugins::SamplerPlugin::setCutSelfMode </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>cutSelf</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00108">108</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1740,7 +1864,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00104">104</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00112">112</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1758,6 +1882,34 @@ Public Member Functions</h2></td></tr>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>enabled</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00092">92</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab063225bfa1ee70aefa0f9352409a61b" name="ab063225bfa1ee70aefa0f9352409a61b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab063225bfa1ee70aefa0f9352409a61b">&#9670;&#160;</a></span>setLoopMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::Plugins::SamplerPlugin::setLoopMode </td>
+          <td>(</td>
+          <td class="paramtype">LoopMode&#160;</td>
+          <td class="paramname"><em>mode</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1796,7 +1948,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00092">92</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00096">96</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1824,7 +1976,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00100">100</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00104">104</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1873,7 +2025,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aad11d079af48a8b2492ad744ca1b1b89">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00644">644</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00715">715</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1901,7 +2053,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00096">96</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00100">100</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>
@@ -1929,7 +2081,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00061">61</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html#l00064">64</a> of file <a class="el" href="../../d3/d76/SamplerPlugin_8h_source.html">SamplerPlugin.h</a>.</p>
 
 </div>
 </div>
@@ -1998,7 +2150,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00122">122</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html#l00141">141</a> of file <a class="el" href="../../dc/d93/SamplerPlugin_8cpp_source.html">SamplerPlugin.cpp</a>.</p>
 
 </div>
 </div>

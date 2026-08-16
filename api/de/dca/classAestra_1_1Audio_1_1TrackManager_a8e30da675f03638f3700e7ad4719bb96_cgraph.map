@@ -1,5 +1,5 @@
 <map id="Aestra::Audio::TrackManager::play" name="Aestra::Audio::TrackManager::play">
 <area shape="rect" id="Node000001" title="Start transport playback from the current UI position." alt="" coords="5,5,213,45"/>
-<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a701ba0087e3623b00b365aeff4df839b" title="Flush queued events and rewind active instances." alt="" coords="261,5,484,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,23,247,23,247,28,214,28"/>
+<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="261,5,496,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,23,247,23,247,28,213,28"/>
 </map>

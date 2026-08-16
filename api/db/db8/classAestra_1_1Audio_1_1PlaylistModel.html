@@ -162,6 +162,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9ff176b37e38e80db51e298f112c9fa3" id="r_a9ff176b37e38e80db51e298f112c9fa3"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">getProjectSampleRate</a> () const</td></tr>
 <tr class="memdesc:a9ff176b37e38e80db51e298f112c9fa3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the project sample rate.  <br /></td></tr>
 <tr class="separator:a9ff176b37e38e80db51e298f112c9fa3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae55ce24458c23ebaf4808c0f551eacd4" id="r_ae55ce24458c23ebaf4808c0f551eacd4"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">getClipSourceStartSamples</a> (const <a class="el" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a> &amp;clip) const</td></tr>
+<tr class="memdesc:ae55ce24458c23ebaf4808c0f551eacd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve a clip's source start in project-rate samples.  <br /></td></tr>
+<tr class="separator:ae55ce24458c23ebaf4808c0f551eacd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ade6021686aeb8e7ea94e2517219a2338" id="r_ade6021686aeb8e7ea94e2517219a2338"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">setProjectSampleRate</a> (double rate)</td></tr>
 <tr class="memdesc:ade6021686aeb8e7ea94e2517219a2338"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the project sample rate.  <br /></td></tr>
 <tr class="separator:ade6021686aeb8e7ea94e2517219a2338"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -332,9 +335,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Add a clip from a pattern. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00663">663</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00687">687</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00076">Aestra::Audio::ClipEdits::forNewAudioClip()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00115">Aestra::Audio::ClipEdits::forNewAudioClip()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -369,7 +372,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00617">617</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00641">641</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -417,15 +420,15 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Runtime snapshot (nullptr if empty) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00452">452</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00457">457</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00046">Aestra::Audio::PlaylistLane::automationCurves</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00033">Aestra::Audio::PlaylistLane::clips</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">Aestra::Audio::SourceManager::getSource()</a>, <a class="el" href="../../df/dda/PlaylistRuntimeSnapshot_8h_source.html#l00041">Aestra::Audio::ClipRuntimeInfo::mixerChannelId</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00040">Aestra::Audio::PlaylistLane::muted</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00042">Aestra::Audio::PlaylistLane::solo</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00046">Aestra::Audio::PlaylistLane::automationCurves</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00033">Aestra::Audio::PlaylistLane::clips</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00570">getClipSourceStartSamples()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../dc/d22/SourceManager_8h_source.html#l00116">Aestra::Audio::SourceManager::getSource()</a>, <a class="el" href="../../df/dda/PlaylistRuntimeSnapshot_8h_source.html#l00042">Aestra::Audio::ClipRuntimeInfo::mixerChannelId</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00040">Aestra::Audio::PlaylistLane::muted</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00042">Aestra::Audio::PlaylistLane::solo</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ab1aa3e02093843cdf71d966a0d0ec2a6_cgraph.svg" width="484" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ab1aa3e02093843cdf71d966a0d0ec2a6_cgraph.svg" width="484" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -455,7 +458,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Clear all lanes and clips. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00787">787</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00811">811</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -483,7 +486,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00710">710</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00734">734</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -581,13 +584,13 @@ Public Member Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00027">Aestra::Audio::PlaylistLane::id</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00031">Aestra::Audio::PlaylistLane::index</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00029">Aestra::Audio::PlaylistLane::name</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00084">createLane()</a>, and <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00020">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00084">createLane()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-4-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_a336f4425c8210367a25c7b3659202ffb_icgraph.svg" width="100%" height="398"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_a336f4425c8210367a25c7b3659202ffb_icgraph.svg" width="470" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -663,7 +666,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get BPM. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00615">615</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00639">639</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -705,13 +708,53 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00197">197</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d00/DuplicateClipCommand_8h_source.html#l00030">Aestra::Audio::DuplicateClipCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d1/da4/MoveClipCommand_8h_source.html#l00046">Aestra::Audio::MoveClipCommand::execute()</a>, <a class="el" href="../../d5/d3e/RemoveClipCommand_8h_source.html#l00018">Aestra::Audio::RemoveClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00022">Aestra::Audio::SetClipEditsCommand::execute()</a>, <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00029">Aestra::Audio::TrimClipCommand::execute()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00314">setClipStartBeat()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>, and <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00056">Aestra::Audio::TrimClipCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d00/DuplicateClipCommand_8h_source.html#l00030">Aestra::Audio::DuplicateClipCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d1/da4/MoveClipCommand_8h_source.html#l00046">Aestra::Audio::MoveClipCommand::execute()</a>, <a class="el" href="../../d5/d3e/RemoveClipCommand_8h_source.html#l00018">Aestra::Audio::RemoveClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00022">Aestra::Audio::SetClipEditsCommand::execute()</a>, <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00055">Aestra::Audio::TrimClipCommand::execute()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00314">setClipStartBeat()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>, and <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00117">Aestra::Audio::TrimClipCommand::undo()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_a451289f1d5433a3c8793fb18b649b8fb_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ae55ce24458c23ebaf4808c0f551eacd4" name="ae55ce24458c23ebaf4808c0f551eacd4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae55ce24458c23ebaf4808c0f551eacd4">&#9670;&#160;</a></span>getClipSourceStartSamples()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::PlaylistModel::getClipSourceStartSamples </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a> &amp;&#160;</td>
+          <td class="paramname"><em>clip</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve a clip's source start in project-rate samples. </p>
+<p>This is shared by the live renderer and the timeline waveform preview so split/trim offsets cannot make audio and visuals start at different source positions. The legacy beat-domain offset remains the fallback for older clips that do not have canonical audio duration metadata. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00570">570</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00457">buildRuntimeSnapshot()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ae55ce24458c23ebaf4808c0f551eacd4_icgraph.svg" width="471" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -782,11 +825,11 @@ Public Member Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00130">130</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ac7bf8357c38fed0864cb609623bed1bb_icgraph.svg" width="503" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -818,14 +861,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Get lane ID by index. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00652">652</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00676">676</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00164">Aestra::Audio::CommandRegistry::initialize()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ae281a5a791e75389bf62885d939f1866_icgraph.svg" width="503" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -856,7 +899,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get all lane IDs. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00700">700</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00724">724</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -885,14 +928,14 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the project sample rate. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00567">567</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00558">558</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00112">Aestra::Audio::ReverseAudioClipCommand::renderBuffer()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_a9ff176b37e38e80db51e298f112c9fa3_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -921,7 +964,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00633">633</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00657">657</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -978,7 +1021,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00628">628</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00652">652</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1072,11 +1115,11 @@ Public Member Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00328">328</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/da4/MoveClipCommand_8h_source.html#l00046">Aestra::Audio::MoveClipCommand::execute()</a>, <a class="el" href="../../d1/da4/MoveClipCommand_8h_source.html#l00074">Aestra::Audio::MoveClipCommand::redo()</a>, and <a class="el" href="../../d1/da4/MoveClipCommand_8h_source.html#l00064">Aestra::Audio::MoveClipCommand::undo()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_ae79b3ac4edb3fcde6109d26c664490e1_icgraph.svg" width="510" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1117,11 +1160,11 @@ Public Member Functions</h2></td></tr>
 <p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00173">173</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d5/d3e/RemoveClipCommand_8h_source.html#l00018">Aestra::Audio::RemoveClipCommand::execute()</a>, <a class="el" href="../../d5/d3e/RemoveClipCommand_8h_source.html#l00046">Aestra::Audio::RemoveClipCommand::redo()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00079">Aestra::Audio::ArrangePatternCommand::undo()</a>, <a class="el" href="../../db/d00/DuplicateClipCommand_8h_source.html#l00060">Aestra::Audio::DuplicateClipCommand::undo()</a>, and <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_af44a50346cebfd76b853283bacc24818_icgraph.svg" width="479" height="307"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1160,16 +1203,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if removed, false if not found </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00758">758</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../dc/d34/AssignUnitToFirstFreeInsertCommand_8h_source.html#l00054">Aestra::Audio::AssignUnitToFirstFreeInsertCommand::undo()</a>.</p>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel_a0b8f8f8ad7f9daaf83c218b6c611dfb8_icgraph.svg" width="500" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00782">782</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1196,7 +1230,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00751">751</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00775">775</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1224,7 +1258,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00624">624</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00648">648</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1254,7 +1288,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set BPM. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00581">581</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00605">605</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1282,7 +1316,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00442">442</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00447">447</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
 </div>
 </div>
@@ -1514,9 +1548,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set pattern manager reference. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00647">647</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00671">671</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00079">Aestra::Audio::TrackManager::TrackManager()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00080">Aestra::Audio::TrackManager::TrackManager()</a>.</p>
 <div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-17-summary" class="dynsummary" style="display:block;">
@@ -1553,9 +1587,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the project sample rate. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00574">574</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00598">598</a> of file <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html">PlaylistModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00399">Aestra::Audio::TrackManager::setOutputSampleRate()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00475">Aestra::Audio::TrackManager::setOutputSampleRate()</a>.</p>
 <div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-18-summary" class="dynsummary" style="display:block;">

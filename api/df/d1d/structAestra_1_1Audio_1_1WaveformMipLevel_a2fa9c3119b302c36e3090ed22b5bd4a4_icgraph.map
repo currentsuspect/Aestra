@@ -1,11 +1,13 @@
 <map id="Aestra::Audio::WaveformMipLevel::getPeak" name="Aestra::Audio::WaveformMipLevel::getPeak">
-<area shape="rect" id="Node000001" title="Get peak at index for channel." alt="" coords="533,37,741,77"/>
-<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#ae75aaf1ccc70ee7abd5b2982e92c59c2" title="Get interpolated peak at fractional index (advisory: interpolation of min/max is not physically meani..." alt="" coords="277,5,485,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="520,45,485,41,486,36,520,40"/>
-<area shape="rect" id="Node000003" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a0d898191af243ee635b386e65d0f9cd1" title="Get peaks for a range, merged." alt="" coords="277,69,485,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="520,75,486,79,485,74,520,69"/>
-<area shape="rect" id="Node000004" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a0b23ef894457773b89d8e8535a47e04c" title="Get peaks for drawing a range at specified zoom." alt="" coords="5,37,229,77"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="264,78,229,74,230,68,264,72"/>
-<area shape="rect" id="Node000005" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a002f9e75679c04a2b910673828c27e65" title="Get a single peak for quick display." alt="" coords="5,101,229,141"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="264,106,230,110,229,105,264,101"/>
+<area shape="rect" id="Node000001" title="Get peak at index for channel." alt="" coords="805,37,1013,77"/>
+<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#ae75aaf1ccc70ee7abd5b2982e92c59c2" title="Get interpolated peak at fractional index (advisory: interpolation of min/max is not physically meani..." alt="" coords="549,5,757,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="792,45,757,41,758,36,792,40"/>
+<area shape="rect" id="Node000003" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a0d898191af243ee635b386e65d0f9cd1" title="Get peaks for a range, merged." alt="" coords="549,69,757,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="792,75,758,79,757,74,792,69"/>
+<area shape="rect" id="Node000004" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a4d9f2bc6cd5a553c22e4d20b47093cbd" title="Get peaks for a source range while preserving fractional pixel boundaries." alt="" coords="277,37,501,77"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="536,78,501,74,502,68,536,72"/>
+<area shape="rect" id="Node000006" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a002f9e75679c04a2b910673828c27e65" title="Get a single peak for quick display." alt="" coords="277,101,501,141"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="536,106,502,110,501,105,536,101"/>
+<area shape="rect" id="Node000005" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a0b23ef894457773b89d8e8535a47e04c" title="Get peaks for drawing a range at specified zoom." alt="" coords="5,37,229,77"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="264,60,229,60,229,55,264,55"/>
 </map>

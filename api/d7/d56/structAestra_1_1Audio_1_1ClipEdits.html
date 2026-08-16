@@ -78,6 +78,7 @@ $(function() {
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../d5/d44/structAestra_1_1Audio_1_1ClipEdits-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::ClipEdits Struct Reference</div></div>
 </div><!--header-->
@@ -92,11 +93,14 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de2/structAestra_1_1Audio_1_1ClipEdits__coll__graph.svg" width="314" height="183"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de2/structAestra_1_1Audio_1_1ClipEdits__coll__graph.svg" width="366" height="227"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a11adbc682b20b39cdbbdba80ac21e840" id="r_a11adbc682b20b39cdbbdba80ac21e840"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a11adbc682b20b39cdbbdba80ac21e840">effectiveVarispeed</a> () const noexcept</td></tr>
+<tr class="memdesc:a11adbc682b20b39cdbbdba80ac21e840"><td class="mdescLeft">&#160;</td><td class="mdescRight">Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render envelope.  <br /></td></tr>
+<tr class="separator:a11adbc682b20b39cdbbdba80ac21e840"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e118bf48df59106a0a24e5c7eafb561" id="r_a1e118bf48df59106a0a24e5c7eafb561"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a1e118bf48df59106a0a24e5c7eafb561">operator==</a> (const <a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html">ClipEdits</a> &amp;other) const</td></tr>
 <tr class="memdesc:a1e118bf48df59106a0a24e5c7eafb561"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compares every field.  <br /></td></tr>
 <tr class="separator:a1e118bf48df59106a0a24e5c7eafb561"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -105,6 +109,11 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a31f074c9e70bf532f46fc8a68fab7f87" id="r_a31f074c9e70bf532f46fc8a68fab7f87"><td class="memItemLeft" align="right" valign="top">static float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a31f074c9e70bf532f46fc8a68fab7f87">playbackRateFromSemitones</a> (float semitones) noexcept</td></tr>
+<tr class="memdesc:a31f074c9e70bf532f46fc8a68fab7f87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Musical varispeed control used by the Audio Clip Editor.  <br /></td></tr>
+<tr class="separator:a31f074c9e70bf532f46fc8a68fab7f87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4576fea8b292c7c3237097083a62080" id="r_ad4576fea8b292c7c3237097083a62080"><td class="memItemLeft" align="right" valign="top">static float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#ad4576fea8b292c7c3237097083a62080">semitonesFromPlaybackRate</a> (float playbackRate) noexcept</td></tr>
+<tr class="separator:ad4576fea8b292c7c3237097083a62080"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a75714600a82dab3bed3d9d497cc6ec89" id="r_a75714600a82dab3bed3d9d497cc6ec89"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html">ClipEdits</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a75714600a82dab3bed3d9d497cc6ec89">forNewAudioClip</a> ()</td></tr>
 <tr class="memdesc:a75714600a82dab3bed3d9d497cc6ec89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defaults for a newly created audio clip.  <br /></td></tr>
 <tr class="separator:a75714600a82dab3bed3d9d497cc6ec89"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -124,14 +133,56 @@ Public Attributes</h2></td></tr>
 <tr class="separator:adec40bf9931b309e4cb7cbf9e7120cee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a276751f2e7d94aee8ebbfa5ba9e40d5d" id="r_a276751f2e7d94aee8ebbfa5ba9e40d5d"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a276751f2e7d94aee8ebbfa5ba9e40d5d">playbackRate</a> = 1.0f</td></tr>
 <tr class="separator:a276751f2e7d94aee8ebbfa5ba9e40d5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b5f366bd2d6a9bf3d3548ca66c6cb86" id="r_a9b5f366bd2d6a9bf3d3548ca66c6cb86"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a9b5f366bd2d6a9bf3d3548ca66c6cb86">pitchSemitones</a> = 0.0f</td></tr>
+<tr class="memdesc:a9b5f366bd2d6a9bf3d3548ca66c6cb86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Musical pitch offset in semitones, independent of Speed.  <br /></td></tr>
+<tr class="separator:a9b5f366bd2d6a9bf3d3548ca66c6cb86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a873e4dd18757b9ddff0ec79aeb25c9dd" id="r_a873e4dd18757b9ddff0ec79aeb25c9dd"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a873e4dd18757b9ddff0ec79aeb25c9dd">sourceStart</a> = 0.0</td></tr>
 <tr class="separator:a873e4dd18757b9ddff0ec79aeb25c9dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:aee0f6e4e78ee0adf4753218fb1761b52" id="r_aee0f6e4e78ee0adf4753218fb1761b52"><td class="memItemLeft" align="right" valign="top">static constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#aee0f6e4e78ee0adf4753218fb1761b52">kMinPitchSemitones</a> = -24.0f</td></tr>
+<tr class="separator:aee0f6e4e78ee0adf4753218fb1761b52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affd5ed2d2612465c61e0b9d259a8ec01" id="r_affd5ed2d2612465c61e0b9d259a8ec01"><td class="memItemLeft" align="right" valign="top">static constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#affd5ed2d2612465c61e0b9d259a8ec01">kMaxPitchSemitones</a> = 24.0f</td></tr>
+<tr class="separator:affd5ed2d2612465c61e0b9d259a8ec01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Clip edits (user modifications to clip content) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00060">60</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00062">62</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a11adbc682b20b39cdbbdba80ac21e840" name="a11adbc682b20b39cdbbdba80ac21e840"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a11adbc682b20b39cdbbdba80ac21e840">&#9670;&#160;</a></span>effectiveVarispeed()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::ClipEdits::effectiveVarispeed </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render envelope. </p>
+<p>Single authority for source-domain offset/duration math in split, trim and the editor; mirrors ClipRenderKernel::renderClipInto exactly, so editing math always agrees with what the renderer plays (#746, split/trim varispeed regression). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00102">102</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00077">pitchSemitones</a>.</p>
+
+</div>
+</div>
 <a id="a75714600a82dab3bed3d9d497cc6ec89" name="a75714600a82dab3bed3d9d497cc6ec89"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a75714600a82dab3bed3d9d497cc6ec89">&#9670;&#160;</a></span>forNewAudioClip()</h2>
 
@@ -158,11 +209,11 @@ Public Attributes</h2></td></tr>
 <p>Defaults for a newly created audio clip. </p>
 <p>The value-initialized defaults above intentionally remain unity for legacy project fields and generic clip construction, so loading an older project cannot change its mix. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00076">76</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00115">115</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00065">gainLinear</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00070">gainLinear</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00663">Aestra::Audio::PlaylistModel::addClipFromPattern()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03638">AestraContent::loadSampleIntoSelectedTrack()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00687">Aestra::Audio::PlaylistModel::addClipFromPattern()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00026">Aestra::Audio::ImportAudioClipCommand::execute()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03702">AestraContent::loadSampleIntoSelectedTrack()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -197,7 +248,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00092">92</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00132">132</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -228,9 +279,68 @@ Public Attributes</h2></td></tr>
 <p>Compares every field. </p>
 <p>Callers deciding whether an edit needs persisting must not hand-pick fields: a check that named only gain and the fades silently dropped any other baked change. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00087">87</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00126">126</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00065">gainLinear</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00070">gainLinear</a>, and <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00077">pitchSemitones</a>.</p>
+
+</div>
+</div>
+<a id="a31f074c9e70bf532f46fc8a68fab7f87" name="a31f074c9e70bf532f46fc8a68fab7f87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31f074c9e70bf532f46fc8a68fab7f87">&#9670;&#160;</a></span>playbackRateFromSemitones()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static float Aestra::Audio::ClipEdits::playbackRateFromSemitones </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>semitones</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Musical varispeed control used by the Audio Clip Editor. </p>
+<p>Pitch and duration move together because playbackRate is the render authority; this does not claim independent time-stretching. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00083">83</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+</div>
+</div>
+<a id="ad4576fea8b292c7c3237097083a62080" name="ad4576fea8b292c7c3237097083a62080"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4576fea8b292c7c3237097083a62080">&#9670;&#160;</a></span>semitonesFromPlaybackRate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static float Aestra::Audio::ClipEdits::semitonesFromPlaybackRate </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>playbackRate</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00090">90</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -247,7 +357,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00061">61</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00066">66</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -263,7 +373,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00062">62</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00067">67</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -282,9 +392,57 @@ Public Attributes</h2></td></tr>
 <p>Clip level, linear. </p>
 <p>The only gain field: the render path, the editor display and the serializer all read this one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00065">65</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00070">70</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00163">Aestra::Audio::CommitAudioClipEditsCommand::adjustEditsAfterRender()</a>, <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00076">forNewAudioClip()</a>, <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00087">operator==()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00167">Aestra::Audio::CommitAudioClipEditsCommand::adjustEditsAfterRender()</a>, <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00115">forNewAudioClip()</a>, <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00126">operator==()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00130">Aestra::Audio::CommitAudioClipEditsCommand::renderBuffer()</a>.</p>
+
+</div>
+</div>
+<a id="affd5ed2d2612465c61e0b9d259a8ec01" name="affd5ed2d2612465c61e0b9d259a8ec01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#affd5ed2d2612465c61e0b9d259a8ec01">&#9670;&#160;</a></span>kMaxPitchSemitones</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr float Aestra::Audio::ClipEdits::kMaxPitchSemitones = 24.0f</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00064">64</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+</div>
+</div>
+<a id="aee0f6e4e78ee0adf4753218fb1761b52" name="aee0f6e4e78ee0adf4753218fb1761b52"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aee0f6e4e78ee0adf4753218fb1761b52">&#9670;&#160;</a></span>kMinPitchSemitones</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr float Aestra::Audio::ClipEdits::kMinPitchSemitones = -24.0f</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00063">63</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -300,7 +458,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00067">67</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00072">72</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -316,7 +474,28 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00066">66</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00071">71</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+</div>
+</div>
+<a id="a9b5f366bd2d6a9bf3d3548ca66c6cb86" name="a9b5f366bd2d6a9bf3d3548ca66c6cb86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9b5f366bd2d6a9bf3d3548ca66c6cb86">&#9670;&#160;</a></span>pitchSemitones</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::ClipEdits::pitchSemitones = 0.0f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Musical pitch offset in semitones, independent of Speed. </p>
+<p>Rendered as 2^(st/12) folded into the same varispeed ratio as playbackRate; pitch up plays faster/shorter like any varispeed (#746). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00077">77</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00102">effectiveVarispeed()</a>, and <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00126">operator==()</a>.</p>
 
 </div>
 </div>
@@ -332,7 +511,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00068">68</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00073">73</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>
@@ -348,7 +527,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00069">69</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00078">78</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
 
 </div>
 </div>

@@ -1,3 +1,7 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html" title="Blocking JSONL client for a Muse socket (live app or MuseRepl –port)." alt="" coords="5,5,159,45"/>
+<area shape="rect" id="Node000000" href="$d8/d99/classAestra_1_1MuseAgent_1_1ModelProvider.html" title=" " alt="" coords="5,37,159,77"/>
+<area shape="rect" id="Node000001" href="$d2/d6b/classAestra_1_1MuseAgent_1_1AnthropicProvider.html" title="Adapter for the Anthropic Messages API (BYOK performance tier)." alt="" coords="217,5,371,45"/>
+<area shape="poly" id="edge91_Node000000_Node000001" title=" " alt="" coords="172,41,217,34,218,40,173,46"/>
+<area shape="rect" id="Node000002" href="$d6/de9/classAestra_1_1MuseAgent_1_1OpenAICompatProvider.html" title="Adapter for OpenAI&#45;compatible chat&#45;completions endpoints." alt="" coords="207,69,381,109"/>
+<area shape="poly" id="edge92_Node000000_Node000002" title=" " alt="" coords="173,68,207,74,206,79,172,74"/>
 </map>

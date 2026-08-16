@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 622;
+var viewWidth = 819;
 var viewHeight = 145;
 var sectionId = 'dynsection-1';
 </script>
@@ -57,18 +57,18 @@ var sectionId = 'dynsection-1';
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Search&#45;first mixer destination picker.">
-<polygon fill="#999999" stroke="#666666" points="614,-72.5 453,-72.5 453,-53.5 614,-53.5 614,-72.5"/>
-<text text-anchor="middle" x="533.5" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIInsertRoutePicker</text>
+<g id="a_Node000001"><a xlink:title="Compatibility wrapper for code written before mixer destinations were named consistently.">
+<polygon fill="#999999" stroke="#666666" points="811,-72.5 650,-72.5 650,-53.5 811,-53.5 811,-72.5"/>
+<text text-anchor="middle" x="730.5" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIInsertRoutePicker</text>
 </a>
 </g>
 </g>
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../db/d1a/classAestraUI_1_1NUIComponent.html" target="_top" xlink:title="Base class for all UI components in the Aestra UI framework.">
-<polygon fill="white" stroke="#666666" points="416,-72.5 277,-72.5 277,-53.5 416,-53.5 416,-72.5"/>
-<text text-anchor="middle" x="346.5" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::NUIComponent</text>
+<g id="a_Node000002"><a xlink:href="../../de/d10/classAestraUI_1_1UIMixerRoutePicker.html" target="_top" xlink:title="Search&#45;first mixer destination picker.">
+<polygon fill="white" stroke="#666666" points="613,-72.5 453,-72.5 453,-53.5 613,-53.5 613,-72.5"/>
+<text text-anchor="middle" x="533" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIMixerRoutePicker</text>
 </a>
 </g>
 </g>
@@ -76,18 +76,17 @@ var sectionId = 'dynsection-1';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node2&#45;&gt;Node1</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M426.3,-63C435.06,-63 443.98,-63 452.75,-63"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="426.12,-59.5 416.12,-63 426.12,-66.5 426.12,-59.5"/>
+<path fill="none" stroke="#63b8ff" d="M623.49,-63C632.28,-63 641.15,-63 649.83,-63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="623.24,-59.5 613.24,-63 623.24,-66.5 623.24,-59.5"/>
 </a>
 </g>
 </g>
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:title=" ">
-<polygon fill="white" stroke="#bfbfbf" points="165,-137 0,-137 0,-107 165,-107 165,-137"/>
-<text text-anchor="start" x="8" y="-125" font-family="Helvetica,sans-Serif" font-size="10.00">std::enable_shared</text>
-<text text-anchor="middle" x="82.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">_from_this&lt; NUIComponent &gt;</text>
+<g id="a_Node000003"><a xlink:href="../../db/d1a/classAestraUI_1_1NUIComponent.html" target="_top" xlink:title="Base class for all UI components in the Aestra UI framework.">
+<polygon fill="white" stroke="#666666" points="416,-72.5 277,-72.5 277,-53.5 416,-53.5 416,-72.5"/>
+<text text-anchor="middle" x="346.5" y="-60.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::NUIComponent</text>
 </a>
 </g>
 </g>
@@ -95,8 +94,8 @@ var sectionId = 'dynsection-1';
 <g id="edge2_Node000002_Node000003" class="edge">
 <title>Node3&#45;&gt;Node2</title>
 <g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M175.42,-121.58C202.73,-119.62 232.43,-115.63 259,-108 286.33,-100.15 315.04,-83.22 331.55,-72.51"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="174.84,-118.11 165.09,-122.24 175.29,-125.1 174.84,-118.11"/>
+<path fill="none" stroke="#63b8ff" d="M426.43,-63C435.23,-63 444.19,-63 452.98,-63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="426.2,-59.5 416.2,-63 426.2,-66.5 426.2,-59.5"/>
 </a>
 </g>
 </g>
@@ -104,16 +103,35 @@ var sectionId = 'dynsection-1';
 <g id="Node000004" class="node">
 <title>Node4</title>
 <g id="a_Node000004"><a xlink:title=" ">
+<polygon fill="white" stroke="#bfbfbf" points="165,-137 0,-137 0,-107 165,-107 165,-137"/>
+<text text-anchor="start" x="8" y="-125" font-family="Helvetica,sans-Serif" font-size="10.00">std::enable_shared</text>
+<text text-anchor="middle" x="82.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">_from_this&lt; NUIComponent &gt;</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node3 -->
+<g id="edge3_Node000003_Node000004" class="edge">
+<title>Node4&#45;&gt;Node3</title>
+<g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M175.42,-121.58C202.73,-119.62 232.43,-115.63 259,-108 286.33,-100.15 315.04,-83.22 331.55,-72.51"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.84,-118.11 165.09,-122.24 175.29,-125.1 174.84,-118.11"/>
+</a>
+</g>
+</g>
+<!-- Node5 -->
+<g id="Node000005" class="node">
+<title>Node5</title>
+<g id="a_Node000005"><a xlink:title=" ">
 <polygon fill="white" stroke="#bfbfbf" points="142.5,-78 22.5,-78 22.5,-48 142.5,-48 142.5,-78"/>
 <text text-anchor="start" x="30.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">function&lt; void(const</text>
 <text text-anchor="middle" x="82.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00"> NUIMouseEvent &amp;)&gt;</text>
 </a>
 </g>
 </g>
-<!-- Node4&#45;&gt;Node2 -->
-<g id="edge3_Node000002_Node000004" class="edge">
-<title>Node4&#45;&gt;Node2</title>
-<g id="a_edge3_Node000002_Node000004"><a xlink:title=" ">
+<!-- Node5&#45;&gt;Node3 -->
+<g id="edge4_Node000003_Node000005" class="edge">
+<title>Node5&#45;&gt;Node3</title>
+<g id="a_edge4_Node000003_Node000005"><a xlink:title=" ">
 <path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M152.68,-63C191.04,-63 238.58,-63 276.86,-63"/>
 <polygon fill="#9a32cd" stroke="#9a32cd" points="152.62,-59.5 142.62,-63 152.62,-66.5 152.62,-59.5"/>
 </a>
@@ -123,20 +141,20 @@ var sectionId = 'dynsection-1';
 <text text-anchor="middle" x="221" y="-77" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">onMouseUp</text>
 <text text-anchor="middle" x="221" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">onMouseWheel</text>
 </g>
-<!-- Node5 -->
-<g id="Node000005" class="node">
-<title>Node5</title>
-<g id="a_Node000005"><a xlink:title=" ">
+<!-- Node6 -->
+<g id="Node000006" class="node">
+<title>Node6</title>
+<g id="a_Node000006"><a xlink:title=" ">
 <polygon fill="white" stroke="#bfbfbf" points="142,-30 23,-30 23,0 142,0 142,-30"/>
 <text text-anchor="start" x="31" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">function&lt; void(const</text>
 <text text-anchor="middle" x="82.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00"> NUIKeyEvent &amp;)&gt;</text>
 </a>
 </g>
 </g>
-<!-- Node5&#45;&gt;Node2 -->
-<g id="edge4_Node000002_Node000005" class="edge">
-<title>Node5&#45;&gt;Node2</title>
-<g id="a_edge4_Node000002_Node000005"><a xlink:title=" ">
+<!-- Node6&#45;&gt;Node3 -->
+<g id="edge5_Node000003_Node000006" class="edge">
+<title>Node6&#45;&gt;Node3</title>
+<g id="a_edge5_Node000003_Node000006"><a xlink:title=" ">
 <path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M152.33,-20.94C184.88,-24.43 224.16,-29.64 259,-37 279.1,-41.25 301.28,-47.96 318.15,-53.5"/>
 <polygon fill="#9a32cd" stroke="#9a32cd" points="152.32,-17.42 142.01,-19.86 151.59,-24.38 152.32,-17.42"/>
 </a>

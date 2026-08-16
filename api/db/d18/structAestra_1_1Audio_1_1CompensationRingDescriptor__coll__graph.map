@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::CompensationRingDescriptor" name="Aestra::Audio::CompensationRingDescriptor">
+<area shape="rect" id="Node000001" title="One immutable compensation&#45;ring publication (PR #730 follow&#45;up)." alt="" coords="65,299,276,339"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,80,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,220,37,248,40,261,46,273,59,286,74,296,71,301,55,290,42,276,35,263,32,248,34,220"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="161,93,212,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="187,133,175,299,169,298,182,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="237,181,421,207"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="219,123,311,179,309,183,216,128"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="305,217,197,300,194,296,302,213"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="251,93,408,119"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="332,133,332,181,327,181,327,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="310,5,349,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="332,45,332,93,327,93,327,45"/>
+</map>

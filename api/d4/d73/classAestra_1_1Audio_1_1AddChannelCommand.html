@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../d6/d7c/classAestra_1_1Audio_1_1AddChannelCommand-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::AddChannelCommand Class Reference</div></div>
@@ -215,7 +216,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00091">91</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00099">99</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -248,7 +249,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00029">29</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00120">Aestra::Audio::TrackManager::addChannel()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00139">Aestra::Audio::TrackManager::addChannel()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -287,7 +288,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#ae3e1f451745928e912757c133d949589">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00081">81</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00089">89</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -319,7 +320,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00086">86</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00094">94</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -350,9 +351,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a4fd53fa4b883ba1b1b6535d49fb9e381">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00059">59</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00066">66</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00120">Aestra::Audio::TrackManager::addChannel()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00299">Aestra::Audio::TrackManager::reinsertChannel()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00139">Aestra::Audio::TrackManager::addChannel()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00318">Aestra::Audio::TrackManager::reinsertChannel()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -387,19 +388,20 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Detach the channel created by this command, keeping it alive. </p>
-<p>The mirror of the delete case (#611). Destroying it here and building a fresh one in <a class="el" href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo.">redo()</a> would give the channel a new id — orphaning anything routed to the old one — and leave every command that captured a <code><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html" title="Mixer Channel - Dedicated routing and DSP entity (v3.0)">MixerChannel</a>&amp;</code> to it dangling, so add / set volume / undo / undo / redo / redo wrote through freed memory. </p>
+<p>The mirror of the delete case (#611). Destroying it here and building a fresh one in <a class="el" href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Put the same channel back after an undo.">redo()</a> would give the channel a new id — orphaning anything routed to the old one — and leave every command that captured a <code><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html" title="Mixer Channel - Dedicated routing and DSP entity (v3.0)">MixerChannel</a>&amp;</code> to it dangling, so add / set volume / undo / undo / redo / redo wrote through freed memory.</p>
+<p>Routing Contract I8/D3: before detaching, every route pointing at this channel is captured and then resolved — mains reroute to master, sends to it are removed — so no dangling route can exist while the channel is gone. Redo restores the captured routes (round trip). </p>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a7328063595af865922e82ba6feaaf5c3">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00046">46</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00051">51</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00260">Aestra::Audio::TrackManager::detachChannelById()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00279">Aestra::Audio::TrackManager::detachChannelById()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00240">Aestra::Audio::TrackManager::resetMixerRoutingDestination()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-4-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand_a0bda96730f0e11fe92e2eb30bfc833fb_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand_a0bda96730f0e11fe92e2eb30bfc833fb_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>

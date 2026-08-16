@@ -6,5 +6,6 @@ var searchData=
   ['widetoutf8_3',['wideToUtf8',['../d4/dc5/PathUtils_8h.html#a4c65b3de74449ae15e1654f2684f79d9',1,'Aestra::Audio']]],
   ['wirefloatingpanel_4',['wireFloatingPanel',['../db/d60/classAestraContent.html#a96fb8097d6143d45d2d6ce3b65949b6f',1,'AestraContent']]],
   ['wireheadlessengine_5',['wireHeadlessEngine',['../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65',1,'Aestra::Audio::MuseService']]],
-  ['write_6',['write',['../d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#acdc4186abf4e4594e8d229c1997ba982',1,'Aestra::Audio::AudioRingBuffer']]]
+  ['workspacefocusname_6',['workspaceFocusName',['../d3/d28/WorkspaceFocus_8h.html#a6171d0d9d1c444e554c3acf066913db3',1,'WorkspaceFocusModel']]],
+  ['write_7',['write',['../d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#acdc4186abf4e4594e8d229c1997ba982',1,'Aestra::Audio::AudioRingBuffer']]]
 ];

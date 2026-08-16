@@ -9,5 +9,6 @@ var searchData=
   ['kpcm16scale_6',['kPcm16Scale',['../d0/d8a/AudioExportQuantization_8h.html#abbe341056064bac2507375fa22cbd167',1,'Aestra::Audio::ExportQuantization']]],
   ['kpcm24lsb_7',['kPcm24Lsb',['../d0/d8a/AudioExportQuantization_8h.html#aec13df6986cd4f10e89a031f5848bc65',1,'Aestra::Audio::ExportQuantization']]],
   ['kpcm24scale_8',['kPcm24Scale',['../d0/d8a/AudioExportQuantization_8h.html#a6e30354c1b2dd230ca42b810c424d7f9',1,'Aestra::Audio::ExportQuantization']]],
-  ['kunset_9',['kUnset',['../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1',1,'Aestra::AudioSettings']]]
+  ['ksegmentcount_9',['kSegmentCount',['../d3/d28/WorkspaceFocus_8h.html#acf971ab5aff3e9604fcbd859b09b7432',1,'WorkspaceFocusModel']]],
+  ['kunset_10',['kUnset',['../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1',1,'Aestra::AudioSettings']]]
 ];

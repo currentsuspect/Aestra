@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MixerChannel::setSend" name="Aestra::Audio::MixerChannel::setSend">
+<area shape="rect" id="Node000001" title="Replace the send with the given stable sendId." alt="" coords="584,5,791,45"/>
+<area shape="rect" id="Node000002" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a4e26b3619d093ab5cb6f82ce53fb148c" title="Execute the command (first time)" alt="" coords="295,5,536,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="570,28,536,28,536,23,570,23"/>
+<area shape="rect" id="Node000003" href="$dd/d34/classAestra_1_1Audio_1_1EditSendCommand.html#a00463bbb3bdf85217a261001d5996610" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,247,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="281,28,247,28,247,23,281,23"/>
+</map>

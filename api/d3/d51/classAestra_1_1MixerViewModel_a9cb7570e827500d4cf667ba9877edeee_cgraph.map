@@ -1,11 +1,13 @@
 <map id="Aestra::MixerViewModel::syncFromEngine" name="Aestra::MixerViewModel::syncFromEngine">
-<area shape="rect" id="Node000001" title="Sync channel list from engine state." alt="" coords="5,101,185,141"/>
+<area shape="rect" id="Node000001" title="Sync channel list from engine state." alt="" coords="5,133,185,173"/>
 <area shape="rect" id="Node000002" href="$d3/d51/classAestra_1_1MixerViewModel.html#ac43c7f0354f795c8fdf0834c1bd3a0ba" title="Get channel by ID." alt="" coords="247,5,427,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="135,99,232,55,253,47,255,52,234,60,137,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="119,131,169,93,232,55,248,48,250,53,235,60,172,97,122,135"/>
 <area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a96908a79f54bca9aedd97ca1ecf8612c" title="Get raw pointers to the current channel list." alt="" coords="233,69,441,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,107,219,102,220,108,186,112"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="171,131,248,110,249,115,172,136"/>
 <area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae6d91195c6e4c4b347dda8fe52b52a76" title="Get the continuous automation parameter buffer." alt="" coords="233,133,441,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="186,131,220,135,219,140,185,136"/>
-<area shape="rect" id="Node000005" href="$de/d7e/classAestra_1_1Audio_1_1ChannelSlotMap.html#a7563641adcd4bd47b2490f91c70f948d" title="Get the dense slot index for a channel ID." alt="" coords="240,197,435,237"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="137,139,234,183,255,190,253,195,232,188,135,144"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="185,151,220,151,220,156,185,156"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" title="Access the Master strip&#39;s mixer channel (id 0)." alt="" coords="233,197,441,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="172,171,249,191,248,196,171,176"/>
+<area shape="rect" id="Node000006" href="$de/d7e/classAestra_1_1Audio_1_1ChannelSlotMap.html#a7563641adcd4bd47b2490f91c70f948d" title="Get the dense slot index for a channel ID." alt="" coords="240,261,435,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="122,171,172,209,235,247,250,254,248,259,232,252,169,214,119,176"/>
 </map>

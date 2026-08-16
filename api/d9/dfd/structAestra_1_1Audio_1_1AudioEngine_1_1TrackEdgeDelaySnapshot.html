@@ -91,7 +91,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1e/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot__coll__graph.svg" width="100%" height="504"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1e/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot__coll__graph.svg" width="100%" height="551"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
@@ -105,6 +105,15 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a2d4b370a63ff5388f4a1403e741c97c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45909d700552ce401ac13dd5c751c558" id="r_a45909d700552ce401ac13dd5c751c558"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a45909d700552ce401ac13dd5c751c558">outputCompensationSamples</a> {0}</td></tr>
 <tr class="separator:a45909d700552ce401ac13dd5c751c558"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a371e23650596e21ffc4cbbf847f2e0af" id="r_a371e23650596e21ffc4cbbf847f2e0af"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a371e23650596e21ffc4cbbf847f2e0af">outputCompensationGeneration</a> {0}</td></tr>
+<tr class="memdesc:a371e23650596e21ffc4cbbf847f2e0af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generation of the currently published compensation descriptor for this track's output ring (see <a class="el" href="../../dd/d90/structAestra_1_1Audio_1_1TrackCompensationState.html" title="Ownership + RT slot for one track&#39;s compensation ring.">TrackCompensationState</a>).  <br /></td></tr>
+<tr class="separator:a371e23650596e21ffc4cbbf847f2e0af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ab6cf948a7ca829d1be608e6e73dd27" id="r_a4ab6cf948a7ca829d1be608e6e73dd27"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a4ab6cf948a7ca829d1be608e6e73dd27">outputCompensationAckedGeneration</a> {0}</td></tr>
+<tr class="memdesc:a4ab6cf948a7ca829d1be608e6e73dd27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highest compensation generation the RT thread has acknowledged consuming.  <br /></td></tr>
+<tr class="separator:a4ab6cf948a7ca829d1be608e6e73dd27"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a880ac15a6941aee6c95ad9f71236328e" id="r_a880ac15a6941aee6c95ad9f71236328e"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a880ac15a6941aee6c95ad9f71236328e">outputCompensationRetiredGenerationCount</a> {0}</td></tr>
+<tr class="memdesc:a880ac15a6941aee6c95ad9f71236328e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generations currently held in the retired queue (published but not yet acked).  <br /></td></tr>
+<tr class="separator:a880ac15a6941aee6c95ad9f71236328e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cf5a1afada206a6a8507a2d6db39bc9" id="r_a6cf5a1afada206a6a8507a2d6db39bc9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html#a6cf5a1afada206a6a8507a2d6db39bc9">compensationEnabled</a> {false}</td></tr>
 <tr class="memdesc:a6cf5a1afada206a6a8507a2d6db39bc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Engine-wide latency compensation toggle.  <br /></td></tr>
 <tr class="separator:a6cf5a1afada206a6a8507a2d6db39bc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -120,7 +129,7 @@ Public Attributes</h2></td></tr>
 <p>NOT RT-SAFE: read from main / control thread only.</p>
 <p>Returns the node latency/compensation values and per-edge delay state that the off-RT apply pass wrote into <a class="el" href="../../d3/ded/structAestra_1_1Audio_1_1TrackRTState.html">TrackRTState</a> for the given track index. The buffer contents themselves are not exposed; only the values the RT-side P4b.3 consumer will read. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00281">281</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00333">333</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a6cf5a1afada206a6a8507a2d6db39bc9" name="a6cf5a1afada206a6a8507a2d6db39bc9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6cf5a1afada206a6a8507a2d6db39bc9">&#9670;&#160;</a></span>compensationEnabled</h2>
@@ -137,7 +146,7 @@ Public Attributes</h2></td></tr>
 <p>Engine-wide latency compensation toggle. </p>
 <p>Per-track enablement is not implemented, so this is the same value for every track index. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00294">294</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00357">357</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -153,7 +162,64 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00295">295</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00358">358</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a4ab6cf948a7ca829d1be608e6e73dd27" name="a4ab6cf948a7ca829d1be608e6e73dd27"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4ab6cf948a7ca829d1be608e6e73dd27">&#9670;&#160;</a></span>outputCompensationAckedGeneration</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::outputCompensationAckedGeneration {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Highest compensation generation the RT thread has acknowledged consuming. </p>
+<p>Control may not reclaim a retired ring behind this. 0 means "no RT acknowledgement observed" (generations start at 1); the mirror fallback path reports 0 explicitly, never a stale ack. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00351">351</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a371e23650596e21ffc4cbbf847f2e0af" name="a371e23650596e21ffc4cbbf847f2e0af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a371e23650596e21ffc4cbbf847f2e0af">&#9670;&#160;</a></span>outputCompensationGeneration</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::outputCompensationGeneration {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Generation of the currently published compensation descriptor for this track's output ring (see <a class="el" href="../../dd/d90/structAestra_1_1Audio_1_1TrackCompensationState.html" title="Ownership + RT slot for one track&#39;s compensation ring.">TrackCompensationState</a>). </p>
+<p>Monotonic per publish. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00346">346</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a880ac15a6941aee6c95ad9f71236328e" name="a880ac15a6941aee6c95ad9f71236328e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a880ac15a6941aee6c95ad9f71236328e">&#9670;&#160;</a></span>outputCompensationRetiredGenerationCount</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::outputCompensationRetiredGenerationCount {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Generations currently held in the retired queue (published but not yet acked). </p>
+<p>Dropping to 0 proves the retirement queue drained. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00354">354</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -169,7 +235,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00291">291</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00343">343</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -185,7 +251,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00290">290</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00342">342</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -201,7 +267,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00296">296</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00359">359</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -217,7 +283,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00297">297</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00360">360</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>

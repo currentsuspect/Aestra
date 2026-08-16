@@ -280,155 +280,163 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16">  187</a></span>PluginInstancePtr <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16">PluginManager::createInstanceById</a>(<span class="keyword">const</span> std::string&amp; pluginId) {</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* info = <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">findPlugin</a>(pluginId);</div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="keywordflow">if</span> (!info) {</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    }</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a48c405b4bbf034c8e2a8e3a2aab246b0">createInstance</a>(*info);</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>}</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        <span class="comment">// Internal plugins are registered with the InternalPluginRegistry, which</span></div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        <span class="comment">// is the authority for their availability. A project may reference one</span></div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        <span class="comment">// registered after the last scan (tests, dynamically added built-ins),</span></div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        <span class="comment">// so fall back to the registry directly — still gated by availability.</span></div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        <span class="keyword">auto</span>&amp; registry = InternalPluginRegistry::instance();</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        <span class="keywordflow">if</span> (registry.isRegisteredPlugin(pluginId) &amp;&amp; registry.isPluginAvailable(pluginId)) {</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            <span class="keywordflow">return</span> registry.createInstance(pluginId);</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        }</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    }</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a48c405b4bbf034c8e2a8e3a2aab246b0">createInstance</a>(*info);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>}</div>
 </div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
-<div class="foldopen" id="foldopen00195" data-start="{" data-end="}">
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">  195</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">PluginManager::createInstanceAsync</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info, std::function&lt;<span class="keywordtype">void</span>(PluginInstancePtr)&gt; callback) {</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    <span class="keywordflow">if</span> (!m_initialized || !m_factory) {</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        <span class="keywordflow">if</span> (callback)</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            callback(<span class="keyword">nullptr</span>);</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    }</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    m_factory-&gt;createPluginAsync(info, [<span class="keyword">this</span>, callback](PluginInstancePtr instance) {</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        <span class="keywordflow">if</span> (instance) {</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            cleanupExpiredInstances();</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>            m_activeInstances.push_back(instance);</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        }</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>        <span class="keywordflow">if</span> (callback)</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>            callback(instance);</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    });</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>}</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
+<div class="foldopen" id="foldopen00203" data-start="{" data-end="}">
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">  203</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">PluginManager::createInstanceAsync</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info, std::function&lt;<span class="keywordtype">void</span>(PluginInstancePtr)&gt; callback) {</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="keywordflow">if</span> (!m_initialized || !m_factory) {</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>        <span class="keywordflow">if</span> (callback)</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>            callback(<span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    }</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span> </div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    m_factory-&gt;createPluginAsync(info, [<span class="keyword">this</span>, callback](PluginInstancePtr instance) {</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keywordflow">if</span> (instance) {</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            cleanupExpiredInstances();</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>            m_activeInstances.push_back(instance);</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        }</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        <span class="keywordflow">if</span> (callback)</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>            callback(instance);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    });</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>}</div>
 </div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span> </div>
-<div class="foldopen" id="foldopen00213" data-start="{" data-end="}">
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">  213</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">PluginManager::createInstanceByIdAsync</a>(<span class="keyword">const</span> std::string&amp; pluginId,</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>                                            std::function&lt;<span class="keywordtype">void</span>(PluginInstancePtr)&gt; callback) {</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* info = <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">findPlugin</a>(pluginId);</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    <span class="keywordflow">if</span> (!info) {</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keywordflow">if</span> (callback)</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>            callback(<span class="keyword">nullptr</span>);</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    }</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">createInstanceAsync</a>(*info, callback);</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>}</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
+<div class="foldopen" id="foldopen00221" data-start="{" data-end="}">
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">  221</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">PluginManager::createInstanceByIdAsync</a>(<span class="keyword">const</span> std::string&amp; pluginId,</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>                                            std::function&lt;<span class="keywordtype">void</span>(PluginInstancePtr)&gt; callback) {</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* info = <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">findPlugin</a>(pluginId);</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keywordflow">if</span> (!info) {</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <span class="keywordflow">if</span> (callback)</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>            callback(<span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    }</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">createInstanceAsync</a>(*info, callback);</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>}</div>
 </div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span> </div>
-<div class="foldopen" id="foldopen00224" data-start="{" data-end="}">
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">  224</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">PluginManager::destroyInstance</a>(PluginInstancePtr instance) {</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    <span class="keywordflow">if</span> (!instance)</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span> </div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="comment">// Instance will be cleaned up when all shared_ptrs are released</span></div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    <span class="comment">// Just mark for cleanup</span></div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    cleanupExpiredInstances();</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>}</div>
-</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
-<div class="foldopen" id="foldopen00235" data-start="{" data-end="}">
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">  235</a></span>std::vector&lt;PluginInstancePtr&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">PluginManager::getActiveInstances</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
+<div class="foldopen" id="foldopen00232" data-start="{" data-end="}">
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">  232</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">PluginManager::destroyInstance</a>(PluginInstancePtr instance) {</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    <span class="keywordflow">if</span> (!instance)</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
 <div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
 <div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    std::vector&lt;PluginInstancePtr&gt; result;</div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; weak : m_activeInstances) {</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        <span class="keywordflow">if</span> (<span class="keyword">auto</span> ptr = weak.lock()) {</div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>            result.push_back(ptr);</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        }</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    }</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>}</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="comment">// Instance will be cleaned up when all shared_ptrs are released</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="comment">// Just mark for cleanup</span></div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    cleanupExpiredInstances();</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>}</div>
 </div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span> </div>
-<div class="foldopen" id="foldopen00247" data-start="{" data-end="}">
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">  247</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">PluginManager::getActiveInstanceCount</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    <span class="keywordtype">size_t</span> count = 0;</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; weak : m_activeInstances) {</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        <span class="keywordflow">if</span> (!weak.expired()) {</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>            ++count;</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        }</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    }</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    <span class="keywordflow">return</span> count;</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>}</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
+<div class="foldopen" id="foldopen00243" data-start="{" data-end="}">
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">  243</a></span>std::vector&lt;PluginInstancePtr&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">PluginManager::getActiveInstances</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    std::vector&lt;PluginInstancePtr&gt; result;</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; weak : m_activeInstances) {</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        <span class="keywordflow">if</span> (<span class="keyword">auto</span> ptr = weak.lock()) {</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>            result.push_back(ptr);</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        }</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    }</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>}</div>
 </div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span><span class="comment">// ==============================</span></div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span><span class="comment">// Plugin Lookup</span></div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span><span class="comment">// ==============================</span></div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
-<div class="foldopen" id="foldopen00263" data-start="{" data-end="}">
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">  263</a></span><span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">PluginManager::findPlugin</a>(<span class="keyword">const</span> std::string&amp; <span class="keywordtype">id</span>)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* info = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a65732f310fa233a82cc026438959b555">findPlugin</a>(<span class="keywordtype">id</span>);</div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    <span class="keywordflow">if</span> (info &amp;&amp; isUnavailableInternalPlugin(*info)) {</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    }</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    <span class="keywordflow">return</span> info;</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>}</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span> </div>
+<div class="foldopen" id="foldopen00255" data-start="{" data-end="}">
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">  255</a></span><span class="keywordtype">size_t</span> <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">PluginManager::getActiveInstanceCount</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span> </div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    <span class="keywordtype">size_t</span> count = 0;</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; weak : m_activeInstances) {</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>        <span class="keywordflow">if</span> (!weak.expired()) {</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>            ++count;</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        }</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    }</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="keywordflow">return</span> count;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>}</div>
 </div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span><span class="comment">// Plugin Lookup</span></div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span><span class="comment">// ==============================</span></div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
 <div class="foldopen" id="foldopen00271" data-start="{" data-end="}">
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">  271</a></span>std::vector&lt;PluginInfo&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">PluginManager::getPluginsByType</a>(PluginType type)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    <span class="keyword">auto</span> plugins = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a0c7838167fd9dafb09978a674ff30df8">getPluginsByType</a>(type);</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info) {</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>                      return isUnavailableInternalPlugin(info);</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>                  }),</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>                  plugins.end());</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    <span class="keywordflow">return</span> plugins;</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>}</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">  271</a></span><span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">PluginManager::findPlugin</a>(<span class="keyword">const</span> std::string&amp; <span class="keywordtype">id</span>)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>* info = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a65732f310fa233a82cc026438959b555">findPlugin</a>(<span class="keywordtype">id</span>);</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    <span class="keywordflow">if</span> (info &amp;&amp; isUnavailableInternalPlugin(*info)) {</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    }</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <span class="keywordflow">return</span> info;</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>}</div>
 </div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
-<div class="foldopen" id="foldopen00280" data-start="{" data-end="}">
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">  280</a></span>std::vector&lt;PluginInfo&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">PluginManager::getPluginsByFormat</a>(PluginFormat format)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    <span class="keyword">auto</span> plugins = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ad2913f39f24defe1789c681e77eb83d0">getPluginsByFormat</a>(format);</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info) {</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>                      return isUnavailableInternalPlugin(info);</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>                  }),</div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>                  plugins.end());</div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    <span class="keywordflow">return</span> plugins;</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>}</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span> </div>
+<div class="foldopen" id="foldopen00279" data-start="{" data-end="}">
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">  279</a></span>std::vector&lt;PluginInfo&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">PluginManager::getPluginsByType</a>(PluginType type)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    <span class="keyword">auto</span> plugins = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a0c7838167fd9dafb09978a674ff30df8">getPluginsByType</a>(type);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info) {</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>                      return isUnavailableInternalPlugin(info);</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>                  }),</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>                  plugins.end());</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    <span class="keywordflow">return</span> plugins;</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>}</div>
 </div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span><span class="comment">// ==============================</span></div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span><span class="comment">// Factory Methods (Stubs for now)</span></div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span><span class="comment">// ==============================</span></div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span><span class="comment">// ==============================</span></div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span><span class="comment">// Factory Methods (Delegated)</span></div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span> </div>
+<div class="foldopen" id="foldopen00288" data-start="{" data-end="}">
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno"><a class="line" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">  288</a></span>std::vector&lt;PluginInfo&gt; <a class="code hl_function" href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">PluginManager::getPluginsByFormat</a>(PluginFormat format)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    <span class="keyword">auto</span> plugins = m_scanner.<a class="code hl_function" href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ad2913f39f24defe1789c681e77eb83d0">getPluginsByFormat</a>(format);</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a>&amp; info) {</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>                      return isUnavailableInternalPlugin(info);</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>                  }),</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>                  plugins.end());</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    <span class="keywordflow">return</span> plugins;</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>}</div>
+</div>
 <div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span><span class="comment">// Helper methods removed, delegated to InProcessPluginFactory</span></div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span><span class="keywordtype">void</span> PluginManager::cleanupExpiredInstances() {</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    <span class="comment">// Remove expired weak_ptrs</span></div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    m_activeInstances.erase(std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),</div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>                                           [](<span class="keyword">const</span> std::weak_ptr&lt;IPluginInstance&gt;&amp; w) { return w.expired(); }),</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>                            m_activeInstances.end());</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>}</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span><span class="comment">// Factory Methods (Stubs for now)</span></div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span> </div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span><span class="comment">// Factory Methods (Delegated)</span></div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span><span class="comment">// ==============================</span></div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span> </div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span><span class="comment">// Helper methods removed, delegated to InProcessPluginFactory</span></div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span> </div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span><span class="keywordtype">void</span> PluginManager::cleanupExpiredInstances() {</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    <span class="comment">// Remove expired weak_ptrs</span></div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    m_activeInstances.erase(std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                                           [](<span class="keyword">const</span> std::weak_ptr&lt;IPluginInstance&gt;&amp; w) { return w.expired(); }),</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                            m_activeInstances.end());</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>}</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span> </div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html">Aestra::Audio::PluginManager</a></div><div class="ttdoc">Central manager for plugin lifecycle and instances.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/db3/PluginManager_8h_source.html#l00047">PluginManager.h:47</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a150410dd436527ed036cbf42bb8eea81"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">Aestra::Audio::PluginManager::destroyInstance</a></div><div class="ttdeci">void destroyInstance(PluginInstancePtr instance)</div><div class="ttdoc">Destroy a plugin instance.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00224">PluginManager.cpp:224</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a150410dd436527ed036cbf42bb8eea81"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a150410dd436527ed036cbf42bb8eea81">Aestra::Audio::PluginManager::destroyInstance</a></div><div class="ttdeci">void destroyInstance(PluginInstancePtr instance)</div><div class="ttdoc">Destroy a plugin instance.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00232">PluginManager.cpp:232</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a2b16ad3e0f43d5b9a12690af12156878"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878">Aestra::Audio::PluginManager::getInstance</a></div><div class="ttdeci">static PluginManager &amp; getInstance()</div><div class="ttdoc">Get the singleton instance.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00032">PluginManager.cpp:32</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a44cee57644631d1a05358e91b0d4bd16"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16">Aestra::Audio::PluginManager::createInstanceById</a></div><div class="ttdeci">PluginInstancePtr createInstanceById(const std::string &amp;pluginId)</div><div class="ttdoc">Create instance by plugin ID.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00187">PluginManager.cpp:187</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a48c405b4bbf034c8e2a8e3a2aab246b0"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a48c405b4bbf034c8e2a8e3a2aab246b0">Aestra::Audio::PluginManager::createInstance</a></div><div class="ttdeci">PluginInstancePtr createInstance(const PluginInfo &amp;info)</div><div class="ttdoc">Create a new plugin instance.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00161">PluginManager.cpp:161</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a6cd20abbb75e1b272e1db0f1ab57135a"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">Aestra::Audio::PluginManager::getPluginsByFormat</a></div><div class="ttdeci">std::vector&lt; PluginInfo &gt; getPluginsByFormat(PluginFormat format) const</div><div class="ttdoc">Get plugins by format.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00280">PluginManager.cpp:280</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a775c8c51275942e0b56912ab7bc5531b"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">Aestra::Audio::PluginManager::createInstanceByIdAsync</a></div><div class="ttdeci">void createInstanceByIdAsync(const std::string &amp;pluginId, std::function&lt; void(PluginInstancePtr)&gt; callback)</div><div class="ttdoc">Create instance by plugin ID asynchronously.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00213">PluginManager.cpp:213</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a8a456aa7110333ef9ab6fba9f94dbb57"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">Aestra::Audio::PluginManager::getActiveInstanceCount</a></div><div class="ttdeci">size_t getActiveInstanceCount() const</div><div class="ttdoc">Get count of active instances.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00247">PluginManager.cpp:247</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a901766321e58187df55f0ff50294e1f6"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">Aestra::Audio::PluginManager::findPlugin</a></div><div class="ttdeci">const PluginInfo * findPlugin(const std::string &amp;id) const</div><div class="ttdoc">Find plugin by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00263">PluginManager.cpp:263</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a6cd20abbb75e1b272e1db0f1ab57135a"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a6cd20abbb75e1b272e1db0f1ab57135a">Aestra::Audio::PluginManager::getPluginsByFormat</a></div><div class="ttdeci">std::vector&lt; PluginInfo &gt; getPluginsByFormat(PluginFormat format) const</div><div class="ttdoc">Get plugins by format.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00288">PluginManager.cpp:288</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a775c8c51275942e0b56912ab7bc5531b"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b">Aestra::Audio::PluginManager::createInstanceByIdAsync</a></div><div class="ttdeci">void createInstanceByIdAsync(const std::string &amp;pluginId, std::function&lt; void(PluginInstancePtr)&gt; callback)</div><div class="ttdoc">Create instance by plugin ID asynchronously.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00221">PluginManager.cpp:221</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a8a456aa7110333ef9ab6fba9f94dbb57"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a8a456aa7110333ef9ab6fba9f94dbb57">Aestra::Audio::PluginManager::getActiveInstanceCount</a></div><div class="ttdeci">size_t getActiveInstanceCount() const</div><div class="ttdoc">Get count of active instances.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00255">PluginManager.cpp:255</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a901766321e58187df55f0ff50294e1f6"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6">Aestra::Audio::PluginManager::findPlugin</a></div><div class="ttdeci">const PluginInfo * findPlugin(const std::string &amp;id) const</div><div class="ttdoc">Find plugin by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00271">PluginManager.cpp:271</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_abbaac8d8fef536d6949f29e0bfa126c6"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#abbaac8d8fef536d6949f29e0bfa126c6">Aestra::Audio::PluginManager::initialize</a></div><div class="ttdeci">bool initialize()</div><div class="ttdoc">Initialize the plugin manager.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00043">PluginManager.cpp:43</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_ac51ffc856874add2c73c42ce8c32ae4f"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">Aestra::Audio::PluginManager::getActiveInstances</a></div><div class="ttdeci">std::vector&lt; PluginInstancePtr &gt; getActiveInstances() const</div><div class="ttdoc">Get all active plugin instances.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00235">PluginManager.cpp:235</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_ac51ffc856874add2c73c42ce8c32ae4f"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ac51ffc856874add2c73c42ce8c32ae4f">Aestra::Audio::PluginManager::getActiveInstances</a></div><div class="ttdeci">std::vector&lt; PluginInstancePtr &gt; getActiveInstances() const</div><div class="ttdoc">Get all active plugin instances.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00243">PluginManager.cpp:243</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_ae12c05938b291151871537bd02c2c92e"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ae12c05938b291151871537bd02c2c92e">Aestra::Audio::PluginManager::shutdown</a></div><div class="ttdeci">void shutdown()</div><div class="ttdoc">Shutdown the plugin manager.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00106">PluginManager.cpp:106</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_af265607555c7787c305379655c9c293e"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">Aestra::Audio::PluginManager::createInstanceAsync</a></div><div class="ttdeci">void createInstanceAsync(const PluginInfo &amp;info, std::function&lt; void(PluginInstancePtr)&gt; callback)</div><div class="ttdoc">Create a new plugin instance asynchronously (or pseudo-async)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00195">PluginManager.cpp:195</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_af65cee7dc449bfd7a2b017cc80f057ea"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">Aestra::Audio::PluginManager::getPluginsByType</a></div><div class="ttdeci">std::vector&lt; PluginInfo &gt; getPluginsByType(PluginType type) const</div><div class="ttdoc">Get plugins by type.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00271">PluginManager.cpp:271</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_af265607555c7787c305379655c9c293e"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af265607555c7787c305379655c9c293e">Aestra::Audio::PluginManager::createInstanceAsync</a></div><div class="ttdeci">void createInstanceAsync(const PluginInfo &amp;info, std::function&lt; void(PluginInstancePtr)&gt; callback)</div><div class="ttdoc">Create a new plugin instance asynchronously (or pseudo-async)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00203">PluginManager.cpp:203</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_af65cee7dc449bfd7a2b017cc80f057ea"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea">Aestra::Audio::PluginManager::getPluginsByType</a></div><div class="ttdeci">std::vector&lt; PluginInfo &gt; getPluginsByType(PluginType type) const</div><div class="ttdoc">Get plugins by type.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00279">PluginManager.cpp:279</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_a0c7838167fd9dafb09978a674ff30df8"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a0c7838167fd9dafb09978a674ff30df8">Aestra::Audio::PluginScanner::getPluginsByType</a></div><div class="ttdeci">std::vector&lt; PluginInfo &gt; getPluginsByType(PluginType type) const</div><div class="ttdoc">Get plugins filtered by type.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00563">PluginScanner.cpp:563</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_a262f97d26b294e814c7b4cb98a214771"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a262f97d26b294e814c7b4cb98a214771">Aestra::Audio::PluginScanner::scanAsync</a></div><div class="ttdeci">void scanAsync(ScanProgressCallback progressCallback=nullptr, ScanCompleteCallback completeCallback=nullptr)</div><div class="ttdoc">Start async plugin scan.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00433">PluginScanner.cpp:433</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_a65732f310fa233a82cc026438959b555"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a65732f310fa233a82cc026438959b555">Aestra::Audio::PluginScanner::findPlugin</a></div><div class="ttdeci">const PluginInfo * findPlugin(const std::string &amp;id) const</div><div class="ttdoc">Find plugin by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00585">PluginScanner.cpp:585</a></div></div>

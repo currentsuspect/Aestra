@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ClipRenderService::applyPlaybackRate" name="Aestra::Audio::ClipRenderService::applyPlaybackRate">
+<area shape="rect" id="Node000001" title="Bake varispeed playback into buffer using cubic interpolation." alt="" coords="288,5,491,45"/>
+<area shape="rect" id="Node000002" href="$dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" title="Produce the replacement audio for this clip." alt="" coords="5,5,240,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="274,28,240,28,240,23,274,23"/>
+</map>

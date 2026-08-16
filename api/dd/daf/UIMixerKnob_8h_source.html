@@ -107,66 +107,67 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keywordtype">void</span> onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a>&amp; renderer) <span class="keyword">override</span>;</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="../../d6/d69/classAestraUI_1_1UIMixerKnob.html#ae8c203693136fef63bd24826001eed1a">   32</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d69/classAestraUI_1_1UIMixerKnob.html#ae8c203693136fef63bd24826001eed1a">onThemeChanged</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a>&amp; theme)<span class="keyword"> override </span>{ cacheThemeColors(); <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">NUIComponent::onThemeChanged</a>(theme); }</div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="keywordtype">bool</span> onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a>&amp; event) <span class="keyword">override</span>;</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordtype">void</span> setValue(<span class="keywordtype">float</span> value);</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordtype">float</span> getValue()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_value; }</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordtype">void</span> setAccentColor(<span class="keyword">const</span> NUIColor&amp; color) { m_indicator = color; repaint(); }</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordtype">bool</span> isDragging()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_dragging; }</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    std::function&lt;void(<span class="keywordtype">float</span>)&gt; onValueChanged;</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="comment">// Platform bridge for cursor warp (infinite drag)</span></div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">void</span> setPlatformBridge(NUIPlatformBridge* bridge);</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    UIMixerKnobType m_type;</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordtype">float</span> m_value{0.0f};</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keyword">enum class</span> DragAxis { Undecided, Vertical, Horizontal };</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">bool</span> m_dragging{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    NUIPoint m_dragStartPos{};</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keywordtype">float</span> m_dragStartValue{0.0f};</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    DragAxis m_dragAxis{DragAxis::Undecided};</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="comment">// Cursor-warp state (infinite drag)</span></div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    NUIPlatformBridge* m_platformBridge = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordtype">float</span> m_lastDragY;            <span class="comment">// Last cursor Y position for frame-to-frame delta</span></div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="comment">// Cached formatted value string (tooltip)</span></div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordtype">float</span> m_cachedValue{1234567.0f};</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    std::string m_cachedText;</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">// Cached theme colors</span></div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    NUIColor m_bg;</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    NUIColor m_bgHover;</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    NUIColor m_ring;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    NUIColor m_ringHover;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    NUIColor m_indicator;   <span class="comment">// engaged (hover/drag) arc</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    NUIColor m_arcResting;  <span class="comment">// neutral resting arc</span></div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    NUIColor m_text;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    NUIColor m_textSecondary;</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    NUIColor m_tooltipBg;</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    NUIColor m_tooltipText;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span> </div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="comment">// The platform never sets NUIMouseEvent::doubleClick.</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    NUIDoubleClickTracker m_clickTracker;</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordtype">void</span> cacheThemeColors();</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">float</span> clampValue(<span class="keywordtype">float</span> value) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="keywordtype">float</span> minValue() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordtype">float</span> maxValue() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keywordtype">float</span> defaultValue() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordtype">void</span> updateCachedText();</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* label() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keywordtype">void</span> updateGlobalTooltip() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>};</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">void</span> onMouseLeave() <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordtype">void</span> setValue(<span class="keywordtype">float</span> value);</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordtype">float</span> getValue()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_value; }</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keywordtype">void</span> setAccentColor(<span class="keyword">const</span> NUIColor&amp; color) { m_indicator = color; repaint(); }</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keywordtype">bool</span> isDragging()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_dragging; }</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    std::function&lt;void(<span class="keywordtype">float</span>)&gt; onValueChanged;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="comment">// Platform bridge for cursor warp (infinite drag)</span></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">void</span> setPlatformBridge(NUIPlatformBridge* bridge);</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    UIMixerKnobType m_type;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordtype">float</span> m_value{0.0f};</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keyword">enum class</span> DragAxis { Undecided, Vertical, Horizontal };</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">bool</span> m_dragging{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    NUIPoint m_dragStartPos{};</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordtype">float</span> m_dragStartValue{0.0f};</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    DragAxis m_dragAxis{DragAxis::Undecided};</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="comment">// Cursor-warp state (infinite drag)</span></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    NUIPlatformBridge* m_platformBridge = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordtype">float</span> m_lastDragY;            <span class="comment">// Last cursor Y position for frame-to-frame delta</span></div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="comment">// Cached formatted value string (tooltip)</span></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">float</span> m_cachedValue{1234567.0f};</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    std::string m_cachedText;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="comment">// Cached theme colors</span></div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    NUIColor m_bg;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    NUIColor m_bgHover;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    NUIColor m_ring;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    NUIColor m_ringHover;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    NUIColor m_indicator;   <span class="comment">// engaged (hover/drag) arc</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    NUIColor m_arcResting;  <span class="comment">// neutral resting arc</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    NUIColor m_text;</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    NUIColor m_textSecondary;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    NUIColor m_tooltipBg;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    NUIColor m_tooltipText;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="comment">// The platform never sets NUIMouseEvent::doubleClick.</span></div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    NUIDoubleClickTracker m_clickTracker;</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">void</span> cacheThemeColors();</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="keywordtype">float</span> clampValue(<span class="keywordtype">float</span> value) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordtype">float</span> minValue() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keywordtype">float</span> maxValue() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordtype">float</span> defaultValue() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordtype">void</span> updateCachedText();</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* label() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordtype">void</span> updateGlobalTooltip() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>};</div>
 </div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00045">NUIComponent.h:45</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html_a4685e1bd30fd0f50650effa1ac46b41c"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent::onThemeChanged</a></div><div class="ttdeci">virtual void onThemeChanged(const NUIThemeProperties &amp;theme)</div><div class="ttdoc">Refresh cached theme state, then propagate the change to descendants.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/NUIComponent_8cpp_source.html#l00502">NUIComponent.cpp:502</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html_a4685e1bd30fd0f50650effa1ac46b41c"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent::onThemeChanged</a></div><div class="ttdeci">virtual void onThemeChanged(const NUIThemeProperties &amp;theme)</div><div class="ttdoc">Refresh cached theme state, then propagate the change to descendants.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/dbb/NUIComponent_8cpp_source.html#l00546">NUIComponent.cpp:546</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00022">NUIRenderer.h:22</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1UIMixerKnob_html"><div class="ttname"><a href="../../d6/d69/classAestraUI_1_1UIMixerKnob.html">AestraUI::UIMixerKnob</a></div><div class="ttdoc">Compact trim/pan knob for the modern mixer UI.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/daf/UIMixerKnob_8h_source.html#l00026">UIMixerKnob.h:26</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1UIMixerKnob_html_ae8c203693136fef63bd24826001eed1a"><div class="ttname"><a href="../../d6/d69/classAestraUI_1_1UIMixerKnob.html#ae8c203693136fef63bd24826001eed1a">AestraUI::UIMixerKnob::onThemeChanged</a></div><div class="ttdeci">void onThemeChanged(const NUIThemeProperties &amp;theme) override</div><div class="ttdoc">Refresh cached theme state, then propagate the change to descendants.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/daf/UIMixerKnob_8h_source.html#l00032">UIMixerKnob.h:32</a></div></div>

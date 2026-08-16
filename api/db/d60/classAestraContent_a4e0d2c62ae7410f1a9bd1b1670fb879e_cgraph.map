@@ -1,9 +1,5 @@
 <map id="AestraContent::resetToDefaultProject" name="AestraContent::resetToDefaultProject">
-<area shape="rect" id="Node000001" title="Reset the workspace back to the default starter project." alt="" coords="5,37,224,77"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a7ff26d70005e4b70501f6777cfccafad" title="Populate the project with demo tracks for testing." alt="" coords="272,45,499,70"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,55,258,55,258,60,224,60"/>
-<area shape="rect" id="Node000003" href="$d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8" title="Add a control point to the curve." alt="" coords="547,5,740,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="488,42,533,36,533,42,488,47"/>
-<area shape="rect" id="Node000004" href="$d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed" title="Set the default value for this curve." alt="" coords="547,69,740,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="488,67,533,73,533,78,488,73"/>
+<area shape="rect" id="Node000001" title="Reset the workspace back to the default starter project." alt="" coords="5,5,224,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a7ff26d70005e4b70501f6777cfccafad" title="Populate the project with demo tracks for testing." alt="" coords="272,13,499,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,23,258,23,258,28,224,28"/>
 </map>

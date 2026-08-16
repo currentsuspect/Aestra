@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="df/d3c/structAestra_1_1MuseAgent_1_1ModelResponse.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="db/db1/structAestra_1_1MuseAgent_1_1Message.html" target="_top" xlink:title="One conversation turn in provider&#45;neutral form.">
 <polygon fill="white" stroke="#666666" points="115,-30 0,-30 0,0 115,0 115,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::MuseAgent::</text>
-<text text-anchor="middle" x="57.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ModelResponse</text>
+<text text-anchor="middle" x="57.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Message</text>
 </a>
 </g>
 </g>

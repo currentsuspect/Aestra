@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::clearScheduledInstances" name="Aestra::Audio::PatternPlaybackEngine::clearScheduledInstances">
+<area shape="rect" id="Node000001" title="Remove every scheduled instance and queued event." alt="" coords="759,101,993,141"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="496,5,711,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="813,99,710,60,673,48,675,43,712,55,815,94"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="499,69,707,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="745,109,707,104,708,99,745,103"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="499,133,707,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="745,139,708,144,707,139,745,134"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="499,197,707,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="815,149,712,188,675,200,673,195,710,183,813,144"/>
+<area shape="rect" id="Node000006" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,197,448,237"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="486,220,448,220,448,215,486,215"/>
+<area shape="rect" id="Node000007" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,197,200,237"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="235,220,200,220,200,215,235,215"/>
+</map>

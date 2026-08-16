@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::WaveformCache::getPeaksForRangePrecise" name="Aestra::Audio::WaveformCache::getPeaksForRangePrecise">
+<area shape="rect" id="Node000001" title="Get peaks for a source range while preserving fractional pixel boundaries." alt="" coords="277,5,501,45"/>
+<area shape="rect" id="Node000002" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a0b23ef894457773b89d8e8535a47e04c" title="Get peaks for drawing a range at specified zoom." alt="" coords="5,5,229,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,28,229,28,229,23,264,23"/>
+</map>

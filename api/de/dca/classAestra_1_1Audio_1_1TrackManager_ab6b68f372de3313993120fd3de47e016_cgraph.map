@@ -1,7 +1,7 @@
 <map id="Aestra::Audio::TrackManager::stopArsenalPlayback" name="Aestra::Audio::TrackManager::stopArsenalPlayback">
 <area shape="rect" id="Node000001" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="5,37,213,77"/>
-<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a701ba0087e3623b00b365aeff4df839b" title="Flush queued events and rewind active instances." alt="" coords="261,5,484,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,247,38,248,43,214,47"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a2206c36c5c97de4986bd6c081226acb4" title="Stop transport playback and return to the stored cue/start position." alt="" coords="269,69,477,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,67,256,72,255,78,213,73"/>
+<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="261,5,496,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,247,38,248,44,214,48"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a2206c36c5c97de4986bd6c081226acb4" title="Stop transport playback and return to the stored cue/start position." alt="" coords="275,69,483,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,67,261,73,260,78,213,72"/>
 </map>

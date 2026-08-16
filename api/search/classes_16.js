@@ -12,5 +12,6 @@ var searchData=
   ['windowconfig_9',['WindowConfig',['../d7/da3/structAestraWindowManager_1_1WindowConfig.html',1,'AestraWindowManager']]],
   ['windowdesc_10',['WindowDesc',['../d6/d3b/structAestra_1_1WindowDesc.html',1,'Aestra']]],
   ['windowpanel_11',['WindowPanel',['../dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html',1,'Aestra::Audio']]],
-  ['windowstate_12',['WindowState',['../dc/d36/structAestraWindowManager_1_1WindowState.html',1,'AestraWindowManager']]]
+  ['windowstate_12',['WindowState',['../dc/d36/structAestraWindowManager_1_1WindowState.html',1,'AestraWindowManager']]],
+  ['workspacepanelvisibility_13',['WorkspacePanelVisibility',['../d6/d1d/structWorkspaceFocusModel_1_1WorkspacePanelVisibility.html',1,'WorkspaceFocusModel']]]
 ];

@@ -103,8 +103,11 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ab47e3f5c235ce6ad5b1d45a47d6a9d24" id="r_ab47e3f5c235ce6ad5b1d45a47d6a9d24"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html#ab47e3f5c235ce6ad5b1d45a47d6a9d24">TrimClipCommand</a> (<a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html">PlaylistModel</a> &amp;model, <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> clipId, double newStartBeat, double newEndBeat)</td></tr>
-<tr class="memdesc:ab47e3f5c235ce6ad5b1d45a47d6a9d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a trim command.  <br /></td></tr>
+<tr class="memdesc:ab47e3f5c235ce6ad5b1d45a47d6a9d24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lazy variant: original state is captured from the model at first execute.  <br /></td></tr>
 <tr class="separator:ab47e3f5c235ce6ad5b1d45a47d6a9d24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0099984dbac8eef0a9826ef20fe57ce2" id="r_a0099984dbac8eef0a9826ef20fe57ce2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html#a0099984dbac8eef0a9826ef20fe57ce2">TrimClipCommand</a> (<a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html">PlaylistModel</a> &amp;model, <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> clipId, double originalStartBeat, double originalEndBeat, double originalSourceOffsetSeconds, double originalDurationSeconds, double newStartBeat, double newEndBeat)</td></tr>
+<tr class="memdesc:a0099984dbac8eef0a9826ef20fe57ce2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Explicit-variant for UI gestures that already applied the trim to the model live (the timeline edge drag).  <br /></td></tr>
+<tr class="separator:a0099984dbac8eef0a9826ef20fe57ce2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86eb0d50134d7ab3d3195c90973a6889" id="r_a86eb0d50134d7ab3d3195c90973a6889"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html#a86eb0d50134d7ab3d3195c90973a6889">execute</a> () override</td></tr>
 <tr class="memdesc:a86eb0d50134d7ab3d3195c90973a6889"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute the command (first time)  <br /></td></tr>
 <tr class="separator:a86eb0d50134d7ab3d3195c90973a6889"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -136,11 +139,12 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Command to trim a clip's start/end positions. </p>
+<p>Contract (#744): a left-edge trim moves the timeline start AND advances the source read offset by the same musical amount so the right edge stays pinned; a right-edge trim changes only the visible end/duration. Both directions must go through the command history so undo, dirty state, autosave, recovery and serialization agree. For audio clips, durationSeconds is kept canonical (the serializer prefers it over beats) and the source-offset advance lands in sourceOffsetSeconds, from which the legacy beat-domain field is re-derived on load. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00017">17</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00028">28</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab47e3f5c235ce6ad5b1d45a47d6a9d24" name="ab47e3f5c235ce6ad5b1d45a47d6a9d24"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab47e3f5c235ce6ad5b1d45a47d6a9d24">&#9670;&#160;</a></span>TrimClipCommand()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab47e3f5c235ce6ad5b1d45a47d6a9d24">&#9670;&#160;</a></span>TrimClipCommand() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -185,18 +189,93 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Construct a trim command. </p>
-<dl class="params"><dt>Parameters</dt><dd>
+<p>Lazy variant: original state is captured from the model at first execute. </p>
+<p>Used by programmatic/CLI callers that have not mutated the clip yet. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">model</td><td>The playlist model </td></tr>
-    <tr><td class="paramname">clipId</td><td>The clip to trim </td></tr>
     <tr><td class="paramname">newStartBeat</td><td>New start position (-1 = keep current) </td></tr>
     <tr><td class="paramname">newEndBeat</td><td>New end position (-1 = keep current) </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00026">26</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00037">37</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+
+</div>
+</div>
+<a id="a0099984dbac8eef0a9826ef20fe57ce2" name="a0099984dbac8eef0a9826ef20fe57ce2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0099984dbac8eef0a9826ef20fe57ce2">&#9670;&#160;</a></span>TrimClipCommand() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Aestra::Audio::TrimClipCommand::TrimClipCommand </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html">PlaylistModel</a> &amp;&#160;</td>
+          <td class="paramname"><em>model</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>&#160;</td>
+          <td class="paramname"><em>clipId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>originalStartBeat</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>originalEndBeat</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>originalSourceOffsetSeconds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>originalDurationSeconds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>newStartBeat</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>newEndBeat</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Explicit-variant for UI gestures that already applied the trim to the model live (the timeline edge drag). </p>
+<p>Original state must be captured at gesture start, not at execute — by the time the command is pushed the model no longer holds it. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00046">46</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 </div>
 </div>
@@ -228,7 +307,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00076">76</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00139">139</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 </div>
 </div>
@@ -259,11 +338,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a659dccd246e1e0dd194b9c65186bd79a">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00029">29</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00055">55</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00197">Aestra::Audio::PlaylistModel::getClip()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00070">redo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00135">redo()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -308,7 +387,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#ae3e1f451745928e912757c133d949589">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00074">74</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00137">137</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 </div>
 </div>
@@ -339,7 +418,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00075">75</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00138">138</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 </div>
 </div>
@@ -370,9 +449,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a4fd53fa4b883ba1b1b6535d49fb9e381">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00070">70</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00135">135</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00029">execute()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00055">execute()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -410,7 +489,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a7328063595af865922e82ba6feaaf5c3">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00056">56</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html#l00117">117</a> of file <a class="el" href="../../d3/db1/TrimClipCommand_8h_source.html">TrimClipCommand.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00197">Aestra::Audio::PlaylistModel::getClip()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">

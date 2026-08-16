@@ -1,18 +1,20 @@
 <map id="Aestra::Audio::AudioEngine::panic" name="Aestra::Audio::AudioEngine::panic">
-<area shape="rect" id="Node000001" title="Immediate panic/reset (Double Stop)." alt="" coords="831,151,1029,191"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="561,95,773,120"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="833,151,719,123,721,117,834,145"/>
-<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" title="Stop playback based on the current focus mode." alt="" coords="551,183,783,223"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="818,188,783,192,782,187,817,182"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="299,5,499,31"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="623,92,502,46,457,33,458,28,503,41,625,87"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="295,55,503,95"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="547,96,502,90,503,85,547,90"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="301,119,496,159"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="547,124,497,130,496,125,547,119"/>
-<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a78c40e3abcccefa46157ebbb7b8f38a3" title="Pause playback based on the current focus mode." alt="" coords="301,183,496,223"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="537,206,496,206,496,201,537,201"/>
-<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,220,247,245"/>
-<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="567,229,503,238,370,244,247,243,247,237,370,239,502,233,566,223"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="288,218,244,223,244,217,287,213"/>
+<area shape="rect" id="Node000001" title="Immediate panic/reset (Double Stop)." alt="" coords="863,183,1061,223"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="593,127,805,152"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="865,183,751,155,753,149,866,177"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" title="Stop playback based on the current focus mode." alt="" coords="583,247,815,287"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="867,229,782,250,781,245,865,224"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="315,5,515,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="667,121,607,82,534,46,493,33,494,28,536,41,610,78,670,116"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="295,55,535,95"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="627,126,503,98,505,93,629,121"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="311,119,519,159"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="579,142,519,142,519,137,579,137"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="317,183,512,223"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="629,158,505,186,503,181,627,152"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a78c40e3abcccefa46157ebbb7b8f38a3" title="Pause playback based on the current focus mode." alt="" coords="317,247,512,287"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="569,270,512,270,512,265,569,265"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,284,247,309"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="599,293,535,302,385,309,247,307,247,301,385,304,534,297,598,287"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="304,281,247,287,247,282,304,276"/>
 </map>

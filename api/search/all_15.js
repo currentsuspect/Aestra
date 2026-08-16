@@ -15,7 +15,7 @@ var searchData=
   ['verb_20is_20an_20application_20capability_20not_20a_20ui_20gesture_12',['A verb is an application capability, not a UI gesture',['../d3/d7a/HostVerbRegistry_8h.html#autotoc_md0',1,'']]],
   ['version_13',['version',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#a597697581f0c70468c05754ab9fe9449',1,'Aestra::Audio::PluginInfo::version'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#afedd9d41aee3e1df98cf20412a21ddea',1,'AestraUI::PluginListItem::version']]],
   ['view_14',['View',['../d3/d7a/HostVerbRegistry_8h.html#ae4fe5c25565ab3714b60306ec5d3bb7ea4351cfebe4b61d8aa5efa1d020710005',1,'Aestra::Audio']]],
-  ['viewfocus_15',['ViewFocus',['../dc/dd6/AestraContent_8h.html#adcb0a7e988b7d2d5fc5ee5c1bddad1a3',1,'AestraContent.h']]],
+  ['viewfocus_15',['ViewFocus',['../d3/d28/WorkspaceFocus_8h.html#adcb0a7e988b7d2d5fc5ee5c1bddad1a3',1,'WorkspaceFocus.h']]],
   ['viewopenstate_16',['ViewOpenState',['../dc/d8c/structAestraContent_1_1ViewOpenState.html',1,'AestraContent']]],
   ['viewstate_17',['ViewState',['../dc/dce/structAestraContent_1_1ViewState.html',1,'AestraContent']]],
   ['violationcount_18',['violationCount',['../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html#a2e635aa96a671f906aed113e505df8f3',1,'Aestra::Audio::IPluginInstance::WatchdogStats']]],
