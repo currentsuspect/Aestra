@@ -1388,6 +1388,17 @@ void AestraContent::onUpdate(double dt) {
                             }
                         }
                     }
+                } else {
+                    // Selection cleared (e.g. the selected channel was deleted):
+                    // drop the binding so refreshRackDisplay can never dereference
+                    // a chain that died with its channel.
+                    auto mixerUI = m_mixerPanel->getMixerUI();
+                    if (mixerUI) {
+                        auto inspector = mixerUI->getInspector();
+                        if (inspector && inspector->getEffectRack()) {
+                            m_pluginController->unbindEffectRack(inspector->getEffectRack().get());
+                        }
+                    }
                 }
             }
         }
