@@ -191,6 +191,8 @@ void testSourcesLanesClipsPatternsRoundTrip() {
     auto lane = playlist.getLane(laneId);
     lane->volume = 0.8f;
     lane->pan = -0.3f;
+    // FD-14: lanes belong to Tracks — the fixture builds the ownership model.
+    tm1->createTrack(laneId, "Test Lane");
 
     auto& patternManager = tm1->getPatternManager();
     Aestra::Audio::MidiPayload payload;
@@ -472,8 +474,11 @@ void testMultipleRoundTripCycles() {
     std::filesystem::path testProject = testDir / "project.aes";
 
     auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
-    tm1->getPlaylistModel().createLane("Track 1");
-    tm1->getPlaylistModel().createLane("Track 2");
+    Aestra::Audio::PlaylistLaneID lane1 = tm1->getPlaylistModel().createLane("Track 1");
+    Aestra::Audio::PlaylistLaneID lane2 = tm1->getPlaylistModel().createLane("Track 2");
+    // FD-14: lanes belong to Tracks — the fixture builds the ownership model.
+    tm1->createTrack(lane1, "Track 1");
+    tm1->createTrack(lane2, "Track 2");
 
     std::string save1 = serializeProject(*tm1, 128.0, 2.0);
 
