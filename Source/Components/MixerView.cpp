@@ -59,7 +59,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_muteButton->setOnToggle([this](bool toggled) {
         if (m_track && m_trackManager) {
             m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetMuteCommand>(*m_track, toggled));
+                std::make_shared<SetMuteCommand>(*m_trackManager, *m_track, toggled));
         }
     });
     // Initialize state
@@ -71,7 +71,7 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_soloButton->setOnToggle([this](bool toggled) {
         if (m_track && m_trackManager) {
             m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetSoloCommand>(*m_track, toggled));
+                std::make_shared<SetSoloCommand>(*m_trackManager, *m_track, toggled));
         }
     });
     // Initialize state

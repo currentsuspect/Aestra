@@ -8,6 +8,7 @@
 #include "Commands/SetSoloCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Core/MixerChannel.h"
+#include "Models/TrackManager.h"
 
 #include <cassert>
 #include <iostream>
@@ -182,18 +183,25 @@ void testSetMuteCommand() {
     std::cout << "TEST: SetMuteCommand... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setMute(false);
 
-    SetMuteCommand cmd(channel, true);
+    SetMuteCommand cmd(trackManager, channel, true);
     cmd.execute();
 
     assert(channel.isMuted() == true);
     assert(cmd.getName() == "Mute");
+    // A mute mutation must request a graph rebuild: TrackRenderState.mute is
+    // baked into the immutable snapshot, so the live RT command alone leaves
+    // the audible gate (track.mute || state.mute) stale (#782). Consume
+    // between operations so each lifecycle path is proven independently.
+    assert(trackManager.consumePendingGraphRebuild() == true);
 
     cmd.undo();
     assert(channel.isMuted() == false);
+    assert(trackManager.consumePendingGraphRebuild() == true);
 
-    SetMuteCommand unmuteCmd(channel, false);
+    SetMuteCommand unmuteCmd(trackManager, channel, false);
     unmuteCmd.execute();
     assert(unmuteCmd.getName() == "Unmute");
 
@@ -204,9 +212,10 @@ void testSetMuteDoubleExecuteNoOp() {
     std::cout << "TEST: SetMuteCommand double execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setMute(false);
 
-    SetMuteCommand cmd(channel, true);
+    SetMuteCommand cmd(trackManager, channel, true);
     cmd.execute();
     assert(channel.isMuted() == true);
 
@@ -223,9 +232,10 @@ void testSetMuteUndoBeforeExecuteNoOp() {
     std::cout << "TEST: SetMuteCommand undo before execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setMute(true);
 
-    SetMuteCommand cmd(channel, false);
+    SetMuteCommand cmd(trackManager, channel, false);
     cmd.undo(); // Before execute - no-op
 
     assert(channel.isMuted() == true); // Still muted
@@ -237,9 +247,10 @@ void testSetMuteRedoCycle() {
     std::cout << "TEST: SetMuteCommand redo cycle... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setMute(false);
 
-    SetMuteCommand cmd(channel, true);
+    SetMuteCommand cmd(trackManager, channel, true);
     cmd.execute();
     assert(channel.isMuted() == true);
 
@@ -260,9 +271,10 @@ void testSetSoloCommand() {
     std::cout << "TEST: SetSoloCommand... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setSolo(false);
 
-    SetSoloCommand cmd(channel, true);
+    SetSoloCommand cmd(trackManager, channel, true);
     cmd.execute();
 
     assert(channel.isSoloed() == true);
@@ -271,7 +283,7 @@ void testSetSoloCommand() {
     cmd.undo();
     assert(channel.isSoloed() == false);
 
-    SetSoloCommand unsoloCmd(channel, false);
+    SetSoloCommand unsoloCmd(trackManager, channel, false);
     unsoloCmd.execute();
     assert(unsoloCmd.getName() == "Unsolo");
 
@@ -282,9 +294,10 @@ void testSetSoloDoubleExecuteNoOp() {
     std::cout << "TEST: SetSoloCommand double execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setSolo(false);
 
-    SetSoloCommand cmd(channel, true);
+    SetSoloCommand cmd(trackManager, channel, true);
     cmd.execute();
     assert(channel.isSoloed() == true);
 
@@ -301,9 +314,10 @@ void testSetSoloUndoBeforeExecuteNoOp() {
     std::cout << "TEST: SetSoloCommand undo before execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setSolo(true);
 
-    SetSoloCommand cmd(channel, false);
+    SetSoloCommand cmd(trackManager, channel, false);
     cmd.undo(); // Before execute - no-op
 
     assert(channel.isSoloed() == true); // Still soloed
@@ -315,9 +329,10 @@ void testSetSoloRedoCycle() {
     std::cout << "TEST: SetSoloCommand redo cycle... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setSolo(false);
 
-    SetSoloCommand cmd(channel, true);
+    SetSoloCommand cmd(trackManager, channel, true);
     cmd.execute();
     assert(channel.isSoloed() == true);
 
@@ -338,6 +353,7 @@ void testMixerCommandsWithHistory() {
     std::cout << "TEST: Mixer commands with CommandHistory integration... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setVolume(0.5f);
     channel.setPan(0.0f);
     channel.setMute(false);
@@ -348,8 +364,8 @@ void testMixerCommandsWithHistory() {
     // Push all four command types
     history.pushAndExecute(std::make_shared<SetVolumeCommand>(channel, 0.8f));
     history.pushAndExecute(std::make_shared<SetPanCommand>(channel, -0.3f));
-    history.pushAndExecute(std::make_shared<SetMuteCommand>(channel, true));
-    history.pushAndExecute(std::make_shared<SetSoloCommand>(channel, true));
+    history.pushAndExecute(std::make_shared<SetMuteCommand>(trackManager, channel, true));
+    history.pushAndExecute(std::make_shared<SetSoloCommand>(trackManager, channel, true));
 
     assert(approxEqual(channel.getVolume(), 0.8f));
     assert(approxEqual(channel.getPan(), -0.3f));

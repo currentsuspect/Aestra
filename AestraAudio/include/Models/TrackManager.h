@@ -1405,9 +1405,8 @@ private:
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
                       " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
-            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(),
-                                                            instanceId++, instance.sourceOffsetBeats,
-                                                            instance.durationBeats);
+            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.startBeat, instanceId++,
+                                                            instance.sourceOffsetBeats, instance.durationBeats);
         }
     }
 
