@@ -372,6 +372,20 @@ void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
 }
 
+std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) const {
+    const bool showBars = (m_density == Density::Full);
+    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
+    const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float pillY = controlBounds.y + controlBounds.height * 0.5f - 10.0f;
+    const float bandRight = controlBounds.right() - (showBars ? 18.0f : 4.0f);
+    return {
+        NUIRect(bandRight - soloW - 6.0f - muteW - 6.0f - routeW, pillY, routeW, 20.0f), // route
+        NUIRect(bandRight - soloW - 6.0f - muteW, pillY, muteW, 20.0f),                   // mute
+        NUIRect(bandRight - soloW, pillY, soloW, 20.0f),                                  // solo
+    };
+}
+
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     bool hasContent = !m_pluginId.empty() || !m_audioClip.empty();
@@ -392,16 +406,10 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
-    const float pillY = centerY - 10.0f;
-    // Pill band widths follow the density tier (see layoutNameLabel).
-    const bool showBars = (m_density == Density::Full);
-    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
-    const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
-    const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
-    const float bandRight = bounds.right() - (showBars ? 18.0f : 4.0f);
-    const NUIRect routeRect(bandRight - soloW - 6.0f - muteW - 6.0f - routeW, pillY, routeW, 20.0f);
-    const NUIRect muteRect(bandRight - soloW - 6.0f - muteW, pillY, muteW, 20.0f);
-    const NUIRect soloRect(bandRight - soloW, pillY, soloW, 20.0f);
+    const auto pills = controlPillRects(bounds);
+    const NUIRect& routeRect = pills[0];
+    const NUIRect& muteRect = pills[1];
+    const NUIRect& soloRect = pills[2];
     const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
                                    ? theme.getColor("surfaceTertiary")
                                    : unitAccent.withAlpha(0.16f);
@@ -414,7 +422,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     drawMuteIcon(renderer, muteRect, m_isMuted);
     drawSoloIcon(renderer, soloRect, m_isSolo);
 
-    if (showBars) {
+    if (m_density == Density::Full) {
         const float indicatorX = bounds.right() - 18.0f;
         for (int i = 0; i < 3; ++i) {
             const float h = 4.0f + i * 3.0f;
@@ -1010,9 +1018,10 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
         return;
     }
 
-    const NUIRect muteRect(bounds.width - 92.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
-    const NUIRect soloRect(bounds.width - 62.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
-    const NUIRect routeRect(bounds.width - 142.0f, bounds.height * 0.5f - 10.0f, 42.0f, 20.0f);
+    const auto pills = controlPillRects(bounds);
+    const NUIRect& muteRect = pills[1];
+    const NUIRect& soloRect = pills[2];
+    const NUIRect& routeRect = pills[0];
     const NUIPoint localPoint(localX, localY);
     if (routeRect.contains(localPoint)) {
         showMixerRoutingMenu(event.position);

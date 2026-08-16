@@ -493,11 +493,14 @@ void AestraVerbEditor::layoutControls() {
     m_mixLockBounds = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRowY, btnW, btnH);
     m_navPrevBounds = NUIRect(btnStartX, btnRow2Y, btnW, btnH);
     m_navNextBounds = NUIRect(btnStartX + (btnW + btnGap), btnRow2Y, btnW, btnH);
-    m_abBoundsA = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRow2Y, btnW, btnH);
-    m_abBoundsB = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRow2Y, btnW, btnH);
-    // Mode navigator center: between the arrows and the A/B compare pair.
-    const float modeLabelX = m_navNextBounds.right() + 10.0f;
-    const float modeLabelRight = m_abBoundsA.x - 10.0f;
+    // A/B compare pinned to the right edge of the band; the mode label owns
+    // the space between the arrows and the compare pair (CR review: the old
+    // 4-slot geometry left the label zero width).
+    const float deckRight = btnStartX + btnRowW;
+    m_abBoundsA = NUIRect(deckRight - 2.0f * btnW - btnGap, btnRow2Y, btnW, btnH);
+    m_abBoundsB = NUIRect(deckRight - btnW, btnRow2Y, btnW, btnH);
+    const float modeLabelX = m_navNextBounds.right() + 12.0f;
+    const float modeLabelRight = m_abBoundsA.x - 12.0f;
     m_modeLabelBounds = NUIRect(modeLabelX, btnRow2Y - 2.0f,
                                 std::max(0.0f, modeLabelRight - modeLabelX), btnH + 6.0f);
 
@@ -890,37 +893,6 @@ void AestraVerbEditor::drawPresetNav(NUIRenderer& renderer, NUIColor accent) {
     renderer.strokeRoundedRect(m_navNextBounds, 6.0f, 1.0f, m_navNextHovered ? accent.withAlpha(0.4f) : NUIColor(1, 1, 1, 0.15f));
     renderer.drawTextCentered(">", m_navNextBounds, 8.5f, theme.getColor("textPrimary").withAlpha(m_navNextHovered ? 0.9f : 0.60f));
 
-    // Mode navigator center (0.7.0 triage): a tiny MODE micro-label above the
-    // current "CATEGORY · Algorithm" pair. The arrows step through the
-    // adjacent tonal/space models; the label keeps the control discoverable
-    // without bringing the dropdown back.
-    if (m_modeLabelBounds.width > 0.0f) {
-        static const char* modeNames[] = {
-            "Room", "Hall", "Plate", "Cathedral", "Chamber",
-            "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
-        };
-        const int modeIdx = std::clamp(static_cast<int>(std::round(
-            getParamValue(kMode) * static_cast<float>(kModeCount - 1))), 0, kModeCount - 1);
-        const std::string categoryName =
-            (m_selectedCategory >= 0 && m_selectedCategory < kCategoryCount)
-                ? m_categoryPills[m_selectedCategory].label
-                : "";
-        const std::string modeName = (modeIdx >= 0 && modeIdx < kModeCount) ? modeNames[modeIdx] : "";
-        const std::string display = categoryName + " \u00b7 " + modeName;
-
-        renderer.drawTextCentered("MODE", {m_modeLabelBounds.x, m_modeLabelBounds.y,
-                                           m_modeLabelBounds.width, 10.0f},
-                                  7.5f, accent.withAlpha(0.52f));
-        std::string fitted = display;
-        const float nameSize = 10.0f;
-        while (!fitted.empty() && renderer.measureText(fitted, nameSize).width > m_modeLabelBounds.width - 8.0f) {
-            fitted.pop_back();
-        }
-        renderer.drawTextCentered(fitted, {m_modeLabelBounds.x, m_modeLabelBounds.y + 10.0f,
-                                           m_modeLabelBounds.width, 16.0f},
-                                  nameSize, theme.getColor("textPrimary").withAlpha(0.92f));
-    }
-
     renderer.fillRoundedRect(m_saveBounds, 6.0f, m_saveHovered ? accent.withAlpha(0.35f) : NUIColor(0, 0, 0, 0));
     renderer.strokeRoundedRect(m_saveBounds, 6.0f, 1.0f, m_saveHovered ? accent.withAlpha(0.5f) : NUIColor(1, 1, 1, 0.15f));
     renderer.drawTextCentered("SAVE", m_saveBounds, 9.0f, theme.getColor("textPrimary").withAlpha(m_saveHovered ? 0.92f : 0.60f));
@@ -956,7 +928,7 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
     const float centerW = contentW - rightW - 18.0f;
     const float rightX = mainX + centerW + 18.0f;
     constexpr float headerH = 26.0f;
-    constexpr float gap = 8.0f;
+    constexpr float gap = 10.0f; // 0.7.0 triage: relaxed from 8 (matches layoutControls)
     const float rowStep = std::clamp((bodyH - headerH * 3.0f - gap * 2.0f) / 11.0f, 27.0f, 34.0f);
     const float toneH = headerH + rowStep * 2.0f;
     const float motionY = mainY + toneH + gap;
@@ -1035,6 +1007,7 @@ void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
 void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     (void)contentRect;
     auto b = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
     NUIColor accent = verbAccent();
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
@@ -1156,6 +1129,36 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
             chevRight->setColor(NUIColor(1, 1, 1, hov ? 0.82f : 0.55f));
             chevRight->onRender(renderer);
         }
+
+        // Mode navigator label (0.7.0 triage): MODE micro-label above the
+        // centered "CATEGORY · Algorithm" pair, between the arrows and A/B.
+        if (m_modeLabelBounds.width > 0.0f) {
+            static const char* modeNames[] = {
+                "Room", "Hall", "Plate", "Cathedral", "Chamber",
+                "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
+            };
+            const int modeIdx = std::clamp(static_cast<int>(std::round(
+                getParamValue(kMode) * static_cast<float>(kModeCount - 1))), 0, kModeCount - 1);
+            const std::string categoryName =
+                (m_selectedCategory >= 0 && m_selectedCategory < kCategoryCount)
+                    ? m_categoryPills[m_selectedCategory].label
+                    : "";
+            const std::string modeName = (modeIdx >= 0 && modeIdx < kModeCount) ? modeNames[modeIdx] : "";
+            const std::string display = categoryName + " \u00b7 " + modeName;
+
+            renderer.drawTextCentered("MODE", {m_modeLabelBounds.x, m_modeLabelBounds.y,
+                                               m_modeLabelBounds.width, 10.0f},
+                                      7.5f, accent.withAlpha(0.52f));
+            std::string fitted = display;
+            const float nameSize = 10.0f;
+            while (!fitted.empty() && renderer.measureText(fitted, nameSize).width > m_modeLabelBounds.width - 8.0f) {
+                fitted.pop_back();
+            }
+            renderer.drawTextCentered(fitted, {m_modeLabelBounds.x, m_modeLabelBounds.y + 10.0f,
+                                               m_modeLabelBounds.width, 16.0f},
+                                      nameSize, theme.getColor("textPrimary").withAlpha(0.92f));
+        }
+
         const NUIRect abBounds[] = {m_abBoundsA, m_abBoundsB};
         const char* abLabels[] = {"A", "B"};
         for (int i = 0; i < 2; ++i) {

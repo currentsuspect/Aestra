@@ -932,7 +932,10 @@ void SampleEditorPanel::onResize(int width, int height) {
     m_modeLabel->setBounds(NUIRect(cb.x + pad, modeRowY, contentW, labelH));
     y = modeRowY + labelH;
     const float monoBtnW = 52.0f;
-    const float monoGroupW = monoBtnW * 3.0f - 2.0f;
+    // Real gaps between the three mono buttons (2px each), not the old
+    // overlapping -1px segments — keeps modeAvailableW honest so the
+    // ping-pong button cannot drift over the voice group at min width.
+    const float monoGroupW = monoBtnW * 3.0f + 2.0f * 2.0f;
     const float voiceValueW = 24.0f;
     const float voiceSliderW = std::min(132.0f, std::max(84.0f, contentW * 0.20f));
     const float voiceLabelW = 42.0f;

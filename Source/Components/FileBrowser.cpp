@@ -391,6 +391,9 @@ FileBrowser::FileBrowser()
     // Initialize search input
     searchInput_ = std::make_shared<NUITextInput>();
     searchInput_->setPlaceholderText("Search files and folders");
+    // The search row sits on the surface (0.7.0 triage): the input must not
+    // paint its own recessed background/border over the flattened treatment.
+    searchInput_->setBackgroundVisible(false);
     addChild(searchInput_);
 
     // Bind search callback

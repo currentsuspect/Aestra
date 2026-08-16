@@ -275,6 +275,9 @@ private:
     std::shared_ptr<UnitNameLabel> m_nameLabel;
     Density densityForWidth(float width);
     float controlFloorForDensity(float width);
+    // Tier-aware pill geometry shared by rendering and hit-testing (CR review:
+    // the hit-test used fixed Full-density rects in Compact/Minimal tiers).
+    std::array<NUIRect, 3> controlPillRects(const NUIRect& controlBounds) const;
     std::shared_ptr<NUIContextMenu> m_rowContextMenu;
     std::shared_ptr<NUIContextMenu> m_mixerRoutingMenu;
 

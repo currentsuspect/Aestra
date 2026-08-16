@@ -768,12 +768,15 @@ void PianoRollView::setOnCenterOnPlayhead(std::function<void()> cb) {
 }
 
 void PianoRollView::centerOnPlayhead() {
-    // One-shot jump: aim the eased scroll at the playhead (the follow target
-    // math), without arming continuous following.
+    // Explicit center action: aim the eased scroll so the playhead sits at
+    // the viewport's middle (clamped to the pattern start). The guarded
+    // follow math is for CONTINUOUS tracking — it deliberately does nothing
+    // inside its dead zone, which is wrong for a one-shot jump (CR review).
     if (m_grid) {
         const float visibleW = m_grid->getWidth();
         if (visibleW > 0.0f) {
-            m_targetScrollX = pianoRollFollowTargetScroll(m_scrollX, m_pixelsPerBeat, visibleW, m_playheadBeat);
+            const float playheadX = static_cast<float>(m_playheadBeat * m_pixelsPerBeat);
+            m_targetScrollX = std::max(0.0f, playheadX - visibleW * 0.5f);
             updateScrollbars();
         }
     }
