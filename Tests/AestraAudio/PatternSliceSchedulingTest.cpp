@@ -137,15 +137,18 @@ int main() {
         std::cerr << "FAIL: first half note not placed at beat 0.5\n";
         return 1;
     }
-    // Second half: note at pattern beat 2.5 must fire at timeline beat
-    // 2 + 2.5 = 4.5 (correct), never at 2.5 (bug: second slice was anchored at
-    // the original clip start instead of the split point).
-    if (!hasNoteNear(hits, pitchInSecondRegion, static_cast<uint64_t>(4.5 * kBeatFrames), tolerance)) {
-        std::cerr << "FAIL: second half note not placed at beat 4.5\n";
+    // Second half: after the split-prune fix (#787), the second half's pattern
+    // is a REBASED region clone (notes at local origin, sourceOffset 0), so the
+    // note originally at pattern beat 2.5 sits at local beat 0.5 and fires at
+    // timeline beat 2.0 + 0.5 = 2.5 — the musically correct slice position.
+    // The pre-prune expectation (4.5 = split + full-pattern coordinate) pinned
+    // the intermediate model and is superseded by the rebase.
+    if (!hasNoteNear(hits, pitchInSecondRegion, static_cast<uint64_t>(2.5 * kBeatFrames), tolerance)) {
+        std::cerr << "FAIL: second half note not placed at beat 2.5 (split + rebased local offset)\n";
         return 1;
     }
-    if (hasNoteInsideWindow(hits, pitchInSecondRegion, static_cast<uint64_t>(2.5 * kBeatFrames), tolerance)) {
-        std::cerr << "FAIL: second half note fired at the unsliced pattern position (beat 2.5)\n";
+    if (hasNoteInsideWindow(hits, pitchInSecondRegion, static_cast<uint64_t>(4.5 * kBeatFrames), tolerance)) {
+        std::cerr << "FAIL: second half note fired at the pre-rebase full-pattern position (beat 4.5)\n";
         return 1;
     }
 
