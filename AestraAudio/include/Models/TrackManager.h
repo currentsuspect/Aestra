@@ -1404,7 +1404,7 @@ private:
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
-                      " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
+                      " schedStart=" + std::to_string(instance.startBeat) + " " + routeSummary);
             m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.startBeat, instanceId++,
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
