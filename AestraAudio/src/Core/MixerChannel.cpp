@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerChannel.h"
 
+#include "RealtimeThreadGuard.h"
 #include "AestraLog.h"
 
 #include <algorithm>
@@ -26,14 +27,20 @@ MixerChannel::~MixerChannel() {
 }
 
 void MixerChannel::setName(const std::string& name) {
+    if (reportRealtimeMisuse("MixerChannel::setName")) return;
+
     m_name = name;
 }
 
 void MixerChannel::setColor(uint32_t color) {
+    if (reportRealtimeMisuse("MixerChannel::setColor")) return;
+
     m_color = color;
 }
 
 void MixerChannel::setVolume(float volume) {
+    if (reportRealtimeMisuse("MixerChannel::setVolume")) return;
+
     const float previous = m_volume.exchange(volume);
     if (m_mixerBus)
         m_mixerBus->setGain(volume);
@@ -47,6 +54,8 @@ void MixerChannel::setVolume(float volume) {
 }
 
 void MixerChannel::setPan(float pan) {
+    if (reportRealtimeMisuse("MixerChannel::setPan")) return;
+
     const float previous = m_pan.exchange(pan);
     if (m_mixerBus)
         m_mixerBus->setPan(pan);
@@ -60,12 +69,16 @@ void MixerChannel::setPan(float pan) {
 }
 
 void MixerChannel::setWidth(float width) {
+    if (reportRealtimeMisuse("MixerChannel::setWidth")) return;
+
     m_width.store(width);
     if (m_mixerBus)
         m_mixerBus->setWidth(width);
 }
 
 void MixerChannel::setMute(bool mute) {
+    if (reportRealtimeMisuse("MixerChannel::setMute")) return;
+
     const bool previous = m_muted.exchange(mute);
     if (m_mixerBus)
         m_mixerBus->setMute(mute);
@@ -79,6 +92,8 @@ void MixerChannel::setMute(bool mute) {
 }
 
 void MixerChannel::setSolo(bool solo) {
+    if (reportRealtimeMisuse("MixerChannel::setSolo")) return;
+
     const bool previous = m_soloed.exchange(solo);
     if (m_mixerBus)
         m_mixerBus->setSolo(solo);
@@ -92,6 +107,8 @@ void MixerChannel::setSolo(bool solo) {
 }
 
 void MixerChannel::setSoloSafe(bool safe) {
+    if (reportRealtimeMisuse("MixerChannel::setSoloSafe")) return;
+
     m_soloSafe.store(safe);
     // Solo safe doesn't affect internal bus logic directly,
     // it's used by the AudioEngine to decide suppression.
@@ -198,6 +215,8 @@ void MixerChannel::insertSend(int index, const AudioRoute& route) {
 }
 
 void MixerChannel::setSend(uint64_t sendId, const AudioRoute& route) {
+    if (reportRealtimeMisuse("MixerChannel::setSend")) return;
+
     std::lock_guard<std::mutex> lock(m_sendMutex);
     const int index = findSendIndexLocked(sendId);
     if (index < 0) {
@@ -210,6 +229,8 @@ void MixerChannel::setSend(uint64_t sendId, const AudioRoute& route) {
 }
 
 void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
+    if (reportRealtimeMisuse("MixerChannel::replaceSends")) return;
+
     std::lock_guard<std::mutex> lock(m_sendMutex);
     m_sends.clear();
     m_sends.reserve(routes.size());
@@ -223,6 +244,8 @@ void MixerChannel::replaceSends(const std::vector<AudioRoute>& routes) {
 }
 
 void MixerChannel::removeSend(uint64_t sendId) {
+    if (reportRealtimeMisuse("MixerChannel::removeSend")) return;
+
     std::lock_guard<std::mutex> lock(m_sendMutex);
     const int index = findSendIndexLocked(sendId);
     if (index >= 0) {

@@ -1422,6 +1422,7 @@ set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;int
 # Header-only: RealtimeThreadGuard.h + AudioThreadConstraints.h define everything
 # inline, so no link deps (avoids dragging in the plugin registry link chain).
 add_executable(RTGuardConsolidationTest AestraAudio/RTGuardConsolidationTest.cpp)
+target_link_libraries(RTGuardConsolidationTest PRIVATE AestraAudio)
 target_include_directories(RTGuardConsolidationTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerBus.h"
 
+#include "RealtimeThreadGuard.h"
 #include "DSP/PanLaw.h"
 
 #include <algorithm>
@@ -204,28 +205,38 @@ void MixerBus::clear(float* buffer, uint32_t numFrames) {
 }
 
 void MixerBus::setGain(float gain) {
+    if (reportRealtimeMisuse("MixerBus::setGain")) return;
+
     // Clamp gain to reasonable range [0.0, 2.0]
     gain = std::max(0.0f, std::min(2.0f, gain));
     m_gain.store(gain, std::memory_order_release);
 }
 
 void MixerBus::setPan(float pan) {
+    if (reportRealtimeMisuse("MixerBus::setPan")) return;
+
     // Clamp pan to [-1.0, 1.0]
     pan = std::max(-1.0f, std::min(1.0f, pan));
     m_pan.store(pan, std::memory_order_release);
 }
 
 void MixerBus::setWidth(float width) {
+    if (reportRealtimeMisuse("MixerBus::setWidth")) return;
+
     // Clamp width [0.0 (mono) to 4.0 (super-wide)]
     width = std::max(0.0f, std::min(4.0f, width));
     m_width.store(width, std::memory_order_release);
 }
 
 void MixerBus::setMute(bool mute) {
+    if (reportRealtimeMisuse("MixerBus::setMute")) return;
+
     m_muted.store(mute, std::memory_order_release);
 }
 
 void MixerBus::setSolo(bool solo) {
+    if (reportRealtimeMisuse("MixerBus::setSolo")) return;
+
     m_soloed.store(solo, std::memory_order_release);
 }
 
