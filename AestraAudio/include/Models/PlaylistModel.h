@@ -63,6 +63,52 @@ struct MidiClipPlaybackInstance {
 };
 
 /**
+ * @brief Prune a MIDI pattern to a temporal region, making it a truthful
+ *        self-contained pattern (#786).
+ *
+ * Drops notes fully outside [regionStart, regionStart + regionBeats),
+ * re-anchors straddling notes at the region start, clamps tails to the region
+ * end, and rebases the result to local origin (the pattern's lengthBeats
+ * becomes the region length). Without this, a split's second half carried the
+ * whole original pattern and only the engine's playback filter kept it honest
+ * — the editor showed notes/units that could never sound.
+ *
+ * @return true when the pattern was pruned (valid MIDI pattern).
+ */
+inline bool prunePatternToRegion(PatternManager* patternManager, PatternID patternId, double regionStart,
+                                 double regionBeats) {
+    if (!patternManager) {
+        return false;
+    }
+    auto* pattern = patternManager->getPattern(patternId);
+    if (!pattern || !pattern->isMidi() || regionBeats <= 0.0) {
+        return false;
+    }
+    const double regionEnd = regionStart + regionBeats;
+    auto& notes = pattern->getMidiNotes();
+    std::vector<MidiNote> kept;
+    kept.reserve(notes.size());
+    for (auto& note : notes) {
+        const double noteEnd = note.startBeat + note.durationBeats;
+        if (noteEnd <= regionStart || note.startBeat >= regionEnd) {
+            continue;
+        }
+        if (note.startBeat < regionStart) {
+            note.startBeat = regionStart;
+            note.durationBeats = noteEnd - regionStart;
+        }
+        if (note.startBeat + note.durationBeats > regionEnd) {
+            note.durationBeats = regionEnd - note.startBeat;
+        }
+        note.startBeat -= regionStart;
+        kept.push_back(note);
+    }
+    notes = std::move(kept);
+    pattern->lengthBeats = regionBeats;
+    return true;
+}
+
+/**
  * @brief Multi-lane playlist model with undo/redo support
  *
  * This is the canonical data model for the playlist (arrangement view).
@@ -396,12 +442,25 @@ public:
         ClipInstance newClip;
         newClip.id = ClipInstanceID::generate();
         newClip.name = clip->name;
+        newClip.startBeat = splitBeat;
+        newClip.durationBeats = clip->endBeat() - splitBeat;
         // Clone the pattern so split halves are independent (not instanced)
         // Per design philosophy: "Everything is independent by default"
+        bool rebased = false;
         if (m_patternManager) {
             PatternID clonedId = m_patternManager->clonePattern(clip->patternId);
             if (clonedId.isValid()) {
                 newClip.patternId = clonedId;
+                // Prune + rebase the clone to its region so the second half is
+                // a truthful, self-contained pattern (#786): notes fully
+                // outside the region are dropped (no ghost units), straddling
+                // notes re-anchor at the cut and are clamped to the region
+                // end, and the pattern starts at its own origin. Without this
+                // the clone carries the whole original pattern and only the
+                // engine's region filter keeps playback honest — the editor
+                // shows content the scheduler can never play.
+                rebased = prunePatternToRegion(m_patternManager, clonedId, splitBeat - clip->startBeat,
+                                               newClip.durationBeats);
             } else {
                 newClip.patternId = clip->patternId; // fallback: share if clone fails
             }
@@ -409,10 +468,10 @@ public:
             newClip.patternId = clip->patternId;
         }
         newClip.colorRGBA = clip->colorRGBA;
-        newClip.startBeat = splitBeat;
-        newClip.durationBeats = clip->endBeat() - splitBeat;
         newClip.sourceId = clip->sourceId;
-        newClip.sourceOffset = clip->sourceOffset + (splitBeat - clip->startBeat);
+        // A rebased pattern starts at its own origin; the shared-pattern
+        // fallback keeps the region-shifted offset (engine filter semantics).
+        newClip.sourceOffset = rebased ? 0.0 : (clip->sourceOffset + (splitBeat - clip->startBeat));
         newClip.sourceOffsetSeconds = clip->sourceOffsetSeconds;
         newClip.edits = clip->edits;
         newClip.edits.fadeInBeats = 0.0f; // Clear fades at split point
