@@ -196,6 +196,7 @@ AudioRoute sanitizeRoute(const AudioRoute& route) {
 } // namespace
 
 void MixerChannel::addSend(const AudioRoute& route) {
+    if (reportRealtimeMisuse("MixerChannel::addSend")) return;
     std::lock_guard<std::mutex> lock(m_sendMutex);
     AudioRoute sanitized = sanitizeRoute(route);
     if (sanitized.sendId == 0) {
@@ -205,6 +206,7 @@ void MixerChannel::addSend(const AudioRoute& route) {
 }
 
 void MixerChannel::insertSend(int index, const AudioRoute& route) {
+    if (reportRealtimeMisuse("MixerChannel::insertSend")) return;
     std::lock_guard<std::mutex> lock(m_sendMutex);
     AudioRoute sanitized = sanitizeRoute(route);
     if (sanitized.sendId == 0) {
