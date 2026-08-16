@@ -2213,6 +2213,21 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
     set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
 endif()
 
+# Arsenal pause/resume test (pattern-mode pause preserves the playhead)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ArsenalPauseResumeTest.cpp")
+    add_executable(ArsenalPauseResumeTest AestraAudio/ArsenalPauseResumeTest.cpp)
+    target_link_libraries(ArsenalPauseResumeTest PRIVATE AestraAudio)
+    target_include_directories(ArsenalPauseResumeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalPauseResumeTest COMMAND ArsenalPauseResumeTest)
+    set_tests_properties(ArsenalPauseResumeTest PROPERTIES LABELS "audio;pattern;transport;regression;contract:audio")
+endif()
+
 # Pattern Transport Position Test (piano-roll playhead cue preservation)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternTransportPositionTest.cpp")
     add_executable(PatternTransportPositionTest AestraAudio/PatternTransportPositionTest.cpp)
