@@ -306,20 +306,19 @@ void AestraVerbEditor::syncCategoryFromMode() {
     const int modeIdx = static_cast<int>(std::round(
         getParamValue(kMode) * static_cast<float>(kModeCount - 1)));
     const int newCat = categoryForMode(std::clamp(modeIdx, 0, kModeCount - 1));
-    if (newCat == m_selectedCategory && !m_dropdownItems.empty()) return;
+    if (newCat == m_selectedCategory) return;
     if (newCat != m_selectedCategory) m_presetScroll = 0;
     m_selectedCategory = newCat;
-    m_dropdownItems.clear();
-    int modes[3] = {};
-    const int count = modesInCategory(m_selectedCategory, modes);
-    for (int i = 0; i < count; ++i) {
-        static const char* modeNames[] = {
-            "Room", "Hall", "Plate", "Cathedral", "Chamber",
-            "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
-        };
-        m_dropdownItems.push_back({modeNames[modes[i]], modes[i], {}, false});
-    }
     layoutControls();
+}
+
+void AestraVerbEditor::stepMode(int direction) {
+    const int modeIdx = static_cast<int>(std::round(
+        getParamValue(kMode) * static_cast<float>(kModeCount - 1)));
+    const int next = (modeIdx + direction + kModeCount) % kModeCount;
+    updateParameter(kMode, static_cast<float>(next) / static_cast<float>(kModeCount - 1));
+    syncCategoryFromMode();
+    setDirty(true);
 }
 
 bool AestraVerbEditor::presetIsInSelectedCategory(const PresetButton& preset) const {
@@ -397,19 +396,7 @@ void AestraVerbEditor::layoutControls() {
                                             catY, catW, catH);
     }
 
-    // Secondary algorithm selector.
-    const float ddY = b.y + 94.0f;
-    const float ddH = 30.0f;
-    m_dropdownButtonBounds = NUIRect(contentX, ddY, contentW, ddH);
-
-    // Dropdown list (positioned below button when open)
-    const float itemH = 26.0f;
-    m_dropdownListBounds = NUIRect(contentX, ddY + ddH + 2.0f, contentW, itemH * static_cast<float>(m_dropdownItems.size()));
-    for (size_t i = 0; i < m_dropdownItems.size(); ++i) {
-        m_dropdownItems[i].bounds = NUIRect(contentX, ddY + ddH + 2.0f + itemH * static_cast<float>(i), contentW, itemH);
-    }
-
-    const float mainY = b.y + 134.0f;
+    const float mainY = b.y + 100.0f; // MODE dropdown removed: content reclaims the band
     const float bodyBottom = b.y + b.height - 14.0f;
     const float bodyH = std::max(360.0f, bodyBottom - mainY);
     const float rightW = rightColWidth(b.width);
@@ -418,7 +405,7 @@ void AestraVerbEditor::layoutControls() {
     const float rightX = centerX + centerW + 18.0f;
 
     const float sectionHeaderH = 26.0f;
-    const float sectionGap = 8.0f;
+    const float sectionGap = 10.0f; // 0.7.0 triage: relaxed from 8 for breathing room
     const float sectionRowStep = std::clamp((bodyH - sectionHeaderH * 3.0f - sectionGap * 2.0f) / 11.0f,
                                             27.0f, 34.0f);
     const float toneY = mainY;
@@ -492,8 +479,8 @@ void AestraVerbEditor::layoutControls() {
     m_mixTrack = NUIRect(m_mixBounds.x + 42.0f, m_mixBounds.y + 18.0f,
                          m_mixBounds.width - 86.0f, 4.0f);
 
-    // Two-row utility deck: performance controls first, navigation and compare second.
-    const float btnGap = 6.0f;
+    // Two-row utility deck: performance controls first, mode navigation second.
+    const float btnGap = 8.0f; // 0.7.0 triage: relaxed from 6
     const float btnW = std::clamp((centerW - 24.0f - btnGap * 3.0f) * 0.25f, 42.0f, 72.0f);
     const float btnRowW = 4.0f * btnW + 3.0f * btnGap;
     const float btnStartX = centerX + (centerW - btnRowW) * 0.5f;
@@ -508,6 +495,11 @@ void AestraVerbEditor::layoutControls() {
     m_navNextBounds = NUIRect(btnStartX + (btnW + btnGap), btnRow2Y, btnW, btnH);
     m_abBoundsA = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRow2Y, btnW, btnH);
     m_abBoundsB = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRow2Y, btnW, btnH);
+    // Mode navigator center: between the arrows and the A/B compare pair.
+    const float modeLabelX = m_navNextBounds.right() + 10.0f;
+    const float modeLabelRight = m_abBoundsA.x - 10.0f;
+    m_modeLabelBounds = NUIRect(modeLabelX, btnRow2Y - 2.0f,
+                                std::max(0.0f, modeLabelRight - modeLabelX), btnH + 6.0f);
 
     m_layouting = false;
 }
@@ -748,77 +740,6 @@ void AestraVerbEditor::drawCategoryPills(NUIRenderer& renderer, NUIColor accent)
     }
 }
 
-void AestraVerbEditor::drawModeDropdown(NUIRenderer& renderer, NUIColor accent) {
-    auto& theme = NUIThemeManager::getInstance();
-    const auto& btn = m_dropdownButtonBounds;
-    const bool anyHovered = m_dropdownOpen;
-    renderer.fillRoundedRect(btn, 6.0f, verbInsetBg().withAlpha(0.96f));
-    renderer.strokeRoundedRect(btn, 6.0f, 1.0f,
-                               anyHovered ? accent.withAlpha(0.45f) : NUIColor(1, 1, 1, 0.12f));
-
-    const int modeIdx = static_cast<int>(std::round(
-        getParamValue(kMode) * static_cast<float>(kModeCount - 1)));
-    static const char* modeNames[] = {
-        "Room", "Hall", "Plate", "Cathedral", "Chamber",
-        "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
-    };
-    // Small caption so the bar reads as a labelled selector rather than a bare box.
-    // Centre the mode name on the button, then sit the caption on the SAME baseline
-    // (not independently centred) so the small "MODE" doesn't float above it.
-    const float ddNameSize = 10.5f;
-    const float ddCapSize = 8.0f;
-    const float ddNameY = opticalTextY(renderer, btn.center().y, ddNameSize);
-    const float ddBaseline = ddNameY + renderer.getFontMetrics(ddNameSize).ascent;
-    const float ddCapY = ddBaseline - renderer.getFontMetrics(ddCapSize).ascent;
-    renderer.drawText("MODE", {btn.x + 10.0f, std::round(ddCapY)}, ddCapSize,
-                      accent.withAlpha(0.52f));
-    const char* currentName = (modeIdx >= 0 && modeIdx < kModeCount) ? modeNames[modeIdx] : "Room";
-    renderer.drawText(currentName, {btn.x + 48.0f, std::round(ddNameY)}, ddNameSize,
-                      theme.getColor("textPrimary").withAlpha(0.92f));
-
-    // Split-button divider + chevron affordance on the right.
-    renderer.drawLine({std::round(btn.right() - 28.0f), btn.y + 6.0f},
-                      {std::round(btn.right() - 28.0f), btn.bottom() - 6.0f}, 1.0f, NUIColor(1, 1, 1, 0.08f));
-    static const char* kChevronDownSvg = R"svg(
-        <svg viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    )svg";
-    static const char* kChevronUpSvg = R"svg(
-        <svg viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 5L5 1L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    )svg";
-    static auto chevronDown = std::make_shared<NUIIcon>(kChevronDownSvg);
-    static auto chevronUp = std::make_shared<NUIIcon>(kChevronUpSvg);
-    auto& chevronIcon = m_dropdownOpen ? chevronUp : chevronDown;
-    const float chevronSize = 10.0f;
-    chevronIcon->setBounds({std::round(btn.right() - 19.0f), std::round(btn.center().y - chevronSize * 0.5f),
-                            chevronSize, chevronSize});
-    chevronIcon->setColor(accent.withAlpha(anyHovered ? 0.90f : 0.70f));
-    chevronIcon->onRender(renderer);
-
-    if (m_dropdownOpen && !m_dropdownItems.empty()) {
-        renderer.fillRoundedRect(m_dropdownListBounds, 6.0f, editorNeutral(0.027f, 0.985f));
-        renderer.strokeRoundedRect(m_dropdownListBounds, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));
-        for (const auto& item : m_dropdownItems) {
-            const bool isCurrent = item.mode == modeIdx;
-            if (isCurrent) {
-                renderer.fillRoundedRect({item.bounds.x + 2.0f, item.bounds.y + 1.0f,
-                                          item.bounds.width - 4.0f, item.bounds.height - 2.0f},
-                                         4.0f, accent.withAlpha(0.35f));
-            } else if (item.hovered) {
-                renderer.fillRoundedRect({item.bounds.x + 2.0f, item.bounds.y + 1.0f,
-                                          item.bounds.width - 4.0f, item.bounds.height - 2.0f},
-                                         4.0f, accent.withAlpha(0.08f));
-            }
-            renderer.drawText(item.label, {item.bounds.x + 10.0f,
-                                            std::round(renderer.calculateTextY(item.bounds, 10.0f))}, 10.0f,
-                              theme.getColor("textPrimary").withAlpha(isCurrent ? 0.96f : (item.hovered ? 0.82f : 0.60f)));
-        }
-    }
-}
-
 void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUIColor accent) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIRect knobRect = k.slider ? k.slider->getBounds() : NUIRect();
@@ -968,6 +889,38 @@ void AestraVerbEditor::drawPresetNav(NUIRenderer& renderer, NUIColor accent) {
     renderer.fillRoundedRect(m_navNextBounds, 6.0f, m_navNextHovered ? NUIColor(1, 1, 1, 0.08f) : NUIColor(0, 0, 0, 0));
     renderer.strokeRoundedRect(m_navNextBounds, 6.0f, 1.0f, m_navNextHovered ? accent.withAlpha(0.4f) : NUIColor(1, 1, 1, 0.15f));
     renderer.drawTextCentered(">", m_navNextBounds, 8.5f, theme.getColor("textPrimary").withAlpha(m_navNextHovered ? 0.9f : 0.60f));
+
+    // Mode navigator center (0.7.0 triage): a tiny MODE micro-label above the
+    // current "CATEGORY · Algorithm" pair. The arrows step through the
+    // adjacent tonal/space models; the label keeps the control discoverable
+    // without bringing the dropdown back.
+    if (m_modeLabelBounds.width > 0.0f) {
+        static const char* modeNames[] = {
+            "Room", "Hall", "Plate", "Cathedral", "Chamber",
+            "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
+        };
+        const int modeIdx = std::clamp(static_cast<int>(std::round(
+            getParamValue(kMode) * static_cast<float>(kModeCount - 1))), 0, kModeCount - 1);
+        const std::string categoryName =
+            (m_selectedCategory >= 0 && m_selectedCategory < kCategoryCount)
+                ? m_categoryPills[m_selectedCategory].label
+                : "";
+        const std::string modeName = (modeIdx >= 0 && modeIdx < kModeCount) ? modeNames[modeIdx] : "";
+        const std::string display = categoryName + " \u00b7 " + modeName;
+
+        renderer.drawTextCentered("MODE", {m_modeLabelBounds.x, m_modeLabelBounds.y,
+                                           m_modeLabelBounds.width, 10.0f},
+                                  7.5f, accent.withAlpha(0.52f));
+        std::string fitted = display;
+        const float nameSize = 10.0f;
+        while (!fitted.empty() && renderer.measureText(fitted, nameSize).width > m_modeLabelBounds.width - 8.0f) {
+            fitted.pop_back();
+        }
+        renderer.drawTextCentered(fitted, {m_modeLabelBounds.x, m_modeLabelBounds.y + 10.0f,
+                                           m_modeLabelBounds.width, 16.0f},
+                                  nameSize, theme.getColor("textPrimary").withAlpha(0.92f));
+    }
+
     renderer.fillRoundedRect(m_saveBounds, 6.0f, m_saveHovered ? accent.withAlpha(0.35f) : NUIColor(0, 0, 0, 0));
     renderer.strokeRoundedRect(m_saveBounds, 6.0f, 1.0f, m_saveHovered ? accent.withAlpha(0.5f) : NUIColor(1, 1, 1, 0.15f));
     renderer.drawTextCentered("SAVE", m_saveBounds, 9.0f, theme.getColor("textPrimary").withAlpha(m_saveHovered ? 0.92f : 0.60f));
@@ -996,7 +949,7 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
     auto b = getBounds();
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
-    const float mainY = b.y + 134.0f;
+    const float mainY = b.y + 100.0f; // 0.7.0 triage: dropdown band reclaimed
     const float bodyBottom = b.y + b.height - 14.0f;
     const float bodyH = std::max(360.0f, bodyBottom - mainY);
     const float rightW = rightColWidth(b.width);
@@ -1085,7 +1038,7 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     NUIColor accent = verbAccent();
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
-    const float mainY = b.y + 134.0f;
+    const float mainY = b.y + 100.0f; // 0.7.0 triage: dropdown band reclaimed
     const float bodyBottom = b.y + b.height - 14.0f;
     const float bodyH = std::max(360.0f, bodyBottom - mainY);
     const float rightW = rightColWidth(b.width);
@@ -1232,7 +1185,6 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
                               NUIColor(1, 1, 1, 0.78f));
         }
     }
-    drawModeDropdown(renderer, accent);
 }
 
 void AestraVerbEditor::onUpdate(double deltaTime) {
@@ -1260,16 +1212,6 @@ void AestraVerbEditor::onUpdate(double deltaTime) {
 int AestraVerbEditor::hitTestCategory(float x, float y) const {
     for (size_t i = 0; i < m_categoryPills.size(); ++i) {
         if (m_categoryPills[i].bounds.contains({x, y})) return static_cast<int>(i);
-    }
-    return -1;
-}
-
-int AestraVerbEditor::hitTestDropdown(float x, float y) const {
-    if (m_dropdownButtonBounds.contains({x, y})) return -2;
-    if (m_dropdownOpen) {
-        for (size_t i = 0; i < m_dropdownItems.size(); ++i) {
-            if (m_dropdownItems[i].bounds.contains({x, y})) return static_cast<int>(i);
-        }
     }
     return -1;
 }
@@ -1465,10 +1407,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (!hasBounds) continue;
         const bool overKnob = sb.contains({event.position.x, event.position.y});
         const bool dragging = k.slider->isDragging();
-        // An open dropdown is a modal input layer. Keep forwarding an active
-        // drag so it can release cleanly, but do not let new presses reach a
-        // knob underneath the dropdown list.
-        if ((overKnob && !m_dropdownOpen) || dragging) {
+        if (overKnob || dragging) {
             if (k.slider->onMouseEvent(event)) return true;
         }
     }
@@ -1481,7 +1420,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     const float mainY = b2.y + 128.0f;
     const auto updateHoverState = [&]() {
         const int ch = contains ? hitTestCategory(event.position.x, event.position.y) : -1;
-        const int ddh = contains ? hitTestDropdown(event.position.x, event.position.y) : -1;
         const int ph = contains ? hitTestPreset(event.position.x, event.position.y) : -1;
         const bool mixHovered = contains && hitTestMix(event.position.x, event.position.y);
         const bool bypassHovered = contains && hitTestBypass(event.position.x, event.position.y);
@@ -1497,13 +1435,12 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         const bool abHA = abHovered && isA;
         const bool abHB = abHovered && !isA;
         const bool mixLockH = contains && hitTestMixLock(event.position.x, event.position.y);
-        if (ch == m_hoveredCategory && ddh == m_hoveredDropdownItem && ph == m_hoveredPreset && mixHovered == m_mixHovered &&
+        if (ch == m_hoveredCategory && ph == m_hoveredPreset && mixHovered == m_mixHovered &&
             bypassHovered == m_bypassHovered && freezeHovered == m_freezeHovered &&
             navPrevH == m_navPrevHovered && navNextH == m_navNextHovered &&
             saveHovered == m_saveHovered && abHA == m_abHoveredA && abHB == m_abHoveredB &&
             mixLockH == m_mixLockHovered) return;
         m_hoveredCategory = ch;
-        m_hoveredDropdownItem = ddh;
         m_hoveredPreset = ph;
         m_mixHovered = mixHovered;
         m_bypassHovered = bypassHovered;
@@ -1515,7 +1452,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         m_abHoveredB = abHB;
         m_mixLockHovered = mixLockH;
         for (size_t i = 0; i < m_categoryPills.size(); ++i) m_categoryPills[i].hovered = (static_cast<int>(i) == ch);
-        for (size_t i = 0; i < m_dropdownItems.size(); ++i) m_dropdownItems[i].hovered = (static_cast<int>(i) == ddh);
         for (size_t i = 0; i < m_presets.size(); ++i) m_presets[i].hovered = (static_cast<int>(i) == ph);
         setDirty(true);
     };
@@ -1528,11 +1464,10 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
     if (!contains && !isDraggingWindow() && !m_draggingMix) {
-        if (m_hoveredCategory != -1 || m_hoveredDropdownItem != -1 || m_hoveredPreset != -1 || m_mixHovered ||
+        if (m_hoveredCategory != -1 || m_hoveredPreset != -1 || m_mixHovered ||
             m_bypassHovered || m_freezeHovered || m_navPrevHovered || m_navNextHovered ||
             m_saveHovered || m_abHoveredA || m_abHoveredB || m_mixLockHovered) {
             m_hoveredCategory = -1;
-            m_hoveredDropdownItem = -1;
             m_hoveredPreset = -1;
             m_mixHovered = false;
             m_bypassHovered = false;
@@ -1544,12 +1479,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_abHoveredB = false;
             m_mixLockHovered = false;
             for (auto& pill : m_categoryPills) pill.hovered = false;
-            for (auto& item : m_dropdownItems) item.hovered = false;
             for (auto& preset : m_presets) preset.hovered = false;
-            setDirty(true);
-        }
-        if (m_dropdownOpen) {
-            m_dropdownOpen = false;
             setDirty(true);
         }
         return false;
@@ -1564,47 +1494,18 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_mixFocused = false;
             m_selectedCategory = catIdx;
             m_presetScroll = 0;
-            m_dropdownItems.clear();
+            // Select the first algorithm of the chosen family (the mode
+            // navigator in the bottom deck steps through the rest).
             int modes[3] = {};
             const int count = modesInCategory(catIdx, modes);
-            for (int i = 0; i < count; ++i) {
-                static const char* modeNames[] = {
-                    "Room", "Hall", "Plate", "Cathedral", "Chamber",
-                    "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
-                };
-                m_dropdownItems.push_back({modeNames[modes[i]], modes[i], {}, false});
-            }
-            // Select first mode in category
             if (count > 0) {
                 updateParameter(kMode, static_cast<float>(modes[0]) / static_cast<float>(kModeCount - 1));
             }
-            m_dropdownOpen = true;
             layoutControls();
             setDirty(true);
             return true;
         }
-        // Dropdown interaction
-        const int ddIdx = hitTestDropdown(event.position.x, event.position.y);
-        if (ddIdx == -2) {
-            // Clicked dropdown button — toggle open (only if there are items)
-            if (!m_dropdownItems.empty()) m_dropdownOpen = !m_dropdownOpen;
-            setDirty(true);
-            return true;
-        }
-        if (ddIdx >= 0 && m_dropdownOpen && ddIdx < static_cast<int>(m_dropdownItems.size())) {
-            // Clicked dropdown item
-            const auto& item = m_dropdownItems[ddIdx];
-            updateParameter(kMode, static_cast<float>(item.mode) / static_cast<float>(kModeCount - 1));
-            m_dropdownOpen = false;
-            setDirty(true);
-            return true;
-        }
-        if (m_dropdownOpen && !m_dropdownButtonBounds.contains({event.position.x, event.position.y}) &&
-            !m_dropdownListBounds.contains({event.position.x, event.position.y})) {
-            m_dropdownOpen = false;
-            setDirty(true);
-            return true;
-        }
+
         // Preset click
         const int presetIdx = hitTestPreset(event.position.x, event.position.y);
         if (presetIdx >= 0) {
@@ -1633,9 +1534,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         int navDir = 0;
         if (hitTestPresetNav(event.position.x, event.position.y, navDir)) {
-            m_presetScroll = std::clamp(m_presetScroll + navDir, 0, maxPresetScroll());
-            layoutControls();
-            setDirty(true);
+            stepMode(navDir);
             return true;
         }
         bool isA = false;
