@@ -20,6 +20,8 @@ jobs:
     if: github.event.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
+      - name: Check out the Aestra repo (workflow + issue-body template)
+        uses: actions/checkout@v4
       - name: Check out the Aestra-website draft generator
         uses: actions/checkout@v4
         with:
