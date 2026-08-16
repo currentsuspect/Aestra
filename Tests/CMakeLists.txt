@@ -2414,3 +2414,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternInstanceSlotReuseTest.
     set_tests_properties(PatternInstanceSlotReuseTest PROPERTIES LABELS "audio;pattern;scheduler;regression;contract:audio")
     message(STATUS "PatternInstanceSlotReuseTest added - pattern scheduler slot reuse + clearing")
 endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternSplitRegionPruneTest.cpp")
+    add_executable(PatternSplitRegionPruneTest AestraAudio/PatternSplitRegionPruneTest.cpp)
+    target_link_libraries(PatternSplitRegionPruneTest PRIVATE AestraAudio)
+    target_include_directories(PatternSplitRegionPruneTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternSplitRegionPruneTest COMMAND PatternSplitRegionPruneTest)
+    set_tests_properties(PatternSplitRegionPruneTest PROPERTIES LABELS "audio;pattern;regression;contract:audio")
+endif()
