@@ -40,12 +40,6 @@ private:
         bool hovered = false;
         bool enabled = true;
     };
-    struct ModeDropdownItem {
-        std::string label;
-        int mode = 0;
-        NUIRect bounds;
-        bool hovered = false;
-    };
     struct PresetButton {
         std::string label;
         std::string tooltip;
@@ -101,6 +95,7 @@ private:
     int visiblePresetRows() const;
     int maxPresetScroll() const;
     void syncCategoryFromMode();
+    void stepMode(int direction); // Mode navigator (0.7.0 triage)
     void updateParameter(uint32_t paramId, float v);
     void applyPreset(const PresetButton& preset);
     void loadUserPresets();
@@ -119,14 +114,10 @@ private:
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<KnobControl> m_knobs;
     std::array<CategoryPill, 4> m_categoryPills;
-    std::vector<ModeDropdownItem> m_dropdownItems;
     std::vector<PresetButton> m_presets;
     std::vector<PresetButton> m_userPresets;
     int m_presetScroll = 0;
     int m_selectedCategory = 0;
-    bool m_dropdownOpen = false;
-    NUIRect m_dropdownButtonBounds;
-    NUIRect m_dropdownListBounds;
     NUIRect m_mixBounds;
     NUIRect m_mixTrack;
     NUIRect m_bypassBounds;
@@ -137,9 +128,9 @@ private:
     NUIRect m_abBoundsA;
     NUIRect m_abBoundsB;
     NUIRect m_mixLockBounds;
+    NUIRect m_modeLabelBounds; // Mode navigator center (0.7.0 triage)
     NUIRect m_paramRowBounds[3];
     int m_hoveredCategory = -1;
-    int m_hoveredDropdownItem = -1;
     int m_hoveredPreset = -1;
     int m_focusedCategory = -1;
     int m_focusedPreset = -1;

@@ -745,6 +745,43 @@ void PianoRollView::setOnPatternChoiceSelected(std::function<void(int patternVal
     }
 }
 
+void PianoRollView::setFollowPlayhead(bool on) {
+    if (m_toolbar) {
+        m_toolbar->setFollowPlayhead(on);
+    }
+}
+
+bool PianoRollView::getFollowPlayhead() const {
+    return m_toolbar ? m_toolbar->getFollowPlayhead() : false;
+}
+
+void PianoRollView::setOnFollowPlayheadChanged(std::function<void(bool)> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnFollowPlayheadChanged(std::move(cb));
+    }
+}
+
+void PianoRollView::setOnCenterOnPlayhead(std::function<void()> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnCenterOnPlayhead(std::move(cb));
+    }
+}
+
+void PianoRollView::centerOnPlayhead() {
+    // Explicit center action: aim the eased scroll so the playhead sits at
+    // the viewport's middle (clamped to the pattern start). The guarded
+    // follow math is for CONTINUOUS tracking — it deliberately does nothing
+    // inside its dead zone, which is wrong for a one-shot jump (CR review).
+    if (m_grid) {
+        const float visibleW = m_grid->getWidth();
+        if (visibleW > 0.0f) {
+            const float playheadX = static_cast<float>(m_playheadBeat * m_pixelsPerBeat);
+            m_targetScrollX = std::max(0.0f, playheadX - visibleW * 0.5f);
+            updateScrollbars();
+        }
+    }
+}
+
 void PianoRollView::setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
     if (m_toolbar) {
         m_toolbar->setOnUnitChoiceSelected(std::move(cb));

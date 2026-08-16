@@ -195,6 +195,17 @@ public:
     std::shared_ptr<NUIComponent> getActiveContextMenu() const { return m_activeContextMenu; }
     /** @brief Close and remove the currently open context menu, if any. */
     void dismissActiveContextMenu() { closeActiveContextMenu(); }
+    /** @brief Set whether the viewport follows the playhead during playback. */
+    void setFollowPlayhead(bool on) {
+        m_followPlayhead = on;
+        repaint();
+    }
+    /** @brief Current follow-playhead state (default off — playhead moves, viewport does not). */
+    bool getFollowPlayhead() const { return m_followPlayhead; }
+    /** @brief Set callback fired when the user toggles follow-playhead. */
+    void setOnFollowPlayheadChanged(std::function<void(bool)> cb) { onFollowPlayheadChanged_ = std::move(cb); }
+    /** @brief Set callback fired when the user requests "center on playhead". */
+    void setOnCenterOnPlayhead(std::function<void()> cb) { onCenterOnPlayhead_ = std::move(cb); }
     
     // Callbacks provided by view or used internally
     // void setOnToolChanged... -> Now we might just call NoteLayer directly
@@ -208,11 +219,14 @@ private:
     std::shared_ptr<NUIButton> m_eraserBtn;
     std::shared_ptr<NUIButton> m_lengthDownBtn;
     std::shared_ptr<NUIButton> m_lengthUpBtn;
+    std::shared_ptr<NUIButton> m_followBtn;
+    std::shared_ptr<NUIButton> m_centerBtn;
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
     std::shared_ptr<NUIDropdown> m_snapDropdown;
 
     GlobalTool activeTool_ = GlobalTool::Pencil;
+    bool m_followPlayhead = false;
     void applySnap(SnapGrid snap);
     
     // Icons
@@ -222,6 +236,8 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_eraserIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_lengthDownIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_lengthUpIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_followIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_centerIcon;
 
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
@@ -232,6 +248,8 @@ private:
     std::function<void(int unitValue)> onUnitChoiceSelected_;
     std::function<void(int rootKey, ScaleType scaleType, bool snapToScale)> onHarmonyContextChanged_;
     std::function<void()> onShowShortcutHelp_;
+    std::function<void(bool)> onFollowPlayheadChanged_;
+    std::function<void()> onCenterOnPlayhead_;
     bool m_updatingPatternDropdown = false;
     bool m_updatingUnitDropdown = false;
     bool m_updatingSnapDropdown = false;
@@ -688,6 +706,13 @@ public:
     void setOnUnitChoiceSelected(std::function<void(int unitValue)> cb);
     void setOnHarmonyContextChanged(std::function<void(int, ScaleType, bool)> cb);
     void setOnPlayheadScrubbed(std::function<void(double beat, bool active)> cb);
+    /** @brief Forward follow-playhead state/toggle to the toolbar. */
+    void setFollowPlayhead(bool on);
+    bool getFollowPlayhead() const;
+    void setOnFollowPlayheadChanged(std::function<void(bool)> cb);
+    /** @brief One-shot "center on playhead" (no continuous following). */
+    void setOnCenterOnPlayhead(std::function<void()> cb);
+    void centerOnPlayhead();
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);

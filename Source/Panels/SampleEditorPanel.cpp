@@ -704,7 +704,7 @@ void SampleEditorPanel::buildUI() {
     m_voiceCountLabel = makeLabel("Voices");
     m_voiceCountValueLabel = makeLabel("4");
     m_voiceCountValueLabel->setAlignment(NUILabel::Alignment::Right);
-    m_pitchLabel = makeLabel("KEYBOARD PITCH / ROOT");
+    m_pitchLabel = makeLabel("PITCH / ROOT");
     m_pitchRootLabel = makeLabel("Root");
     m_pitchRootValueLabel = makeLabel(midiNoteName(60));
     m_pitchRootValueLabel->setAlignment(NUILabel::Alignment::Right);
@@ -932,7 +932,10 @@ void SampleEditorPanel::onResize(int width, int height) {
     m_modeLabel->setBounds(NUIRect(cb.x + pad, modeRowY, contentW, labelH));
     y = modeRowY + labelH;
     const float monoBtnW = 52.0f;
-    const float monoGroupW = monoBtnW * 3.0f - 2.0f;
+    // Real gaps between the three mono buttons (2px each), not the old
+    // overlapping -1px segments — keeps modeAvailableW honest so the
+    // ping-pong button cannot drift over the voice group at min width.
+    const float monoGroupW = monoBtnW * 3.0f + 2.0f * 2.0f;
     const float voiceValueW = 24.0f;
     const float voiceSliderW = std::min(132.0f, std::max(84.0f, contentW * 0.20f));
     const float voiceLabelW = 42.0f;
@@ -940,16 +943,19 @@ void SampleEditorPanel::onResize(int width, int height) {
     const float modeAvailableW = std::max(168.0f, contentW - monoGroupW - voiceGroupW - gutter * 3.0f);
     const float modeBtnW = std::max(56.0f, std::min(82.0f, modeAvailableW / 3.0f));
     float x = cb.x + pad;
+    // Real gaps between buttons: the previous -1px overlap faked a segment
+    // container with colliding borders (DESIGN.md: dividers explain structure,
+    // they do not decorate).
     m_monoModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
-    x += monoBtnW - 1.0f;
+    x += monoBtnW + 2.0f;
     m_polyModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
-    x += monoBtnW - 1.0f;
+    x += monoBtnW + 2.0f;
     m_cutSelfModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
     x += monoBtnW + gutter;
     m_oneShotModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
-    x += modeBtnW - 1.0f;
+    x += modeBtnW + 2.0f;
     m_loopModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
-    x += modeBtnW - 1.0f;
+    x += modeBtnW + 2.0f;
     m_pingPongModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
     const float voiceX = cb.x + layoutW - pad - voiceGroupW;
     m_voiceCountLabel->setBounds(NUIRect(voiceX, y + 4.0f, voiceLabelW, labelH));
@@ -1064,11 +1070,13 @@ void SampleEditorPanel::setLoopMode(LoopMode mode) {
 
 void SampleEditorPanel::updateModeButtons() {
     auto& theme = NUIThemeManager::getInstance();
-    const auto activeBg = theme.getColor("secondary").withAlpha(0.78f);
+    // Active interaction intent is the Aestra accent (DESIGN.md color
+    // semantics); the previous secondary (electric blue) token violated it.
+    const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
     const auto inactiveBg = NUIColor::transparent();
-    const auto hoverBg = theme.getColor("secondary").withAlpha(0.18f);
-    const auto borderCol = theme.getColor("secondary").withAlpha(0.40f);
-    const auto activeText = theme.getColor("textPrimary").withAlpha(0.96f);
+    const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
+    const auto borderCol = theme.getColor("borderSubtle").withAlpha(0.40f);
+    const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
     const auto inactiveText = theme.getColor("textSecondary").withAlpha(0.72f);
 
     auto styleButton = [&](const std::shared_ptr<NUIButton>& button, LoopMode mode) {
@@ -1078,12 +1086,12 @@ void SampleEditorPanel::updateModeButtons() {
         const bool active = m_loopPoints.mode == mode;
         button->setBackgroundColor(active ? activeBg : inactiveBg);
         button->setHoverColor(active ? activeBg : hoverBg);
-        button->setPressedColor(theme.getColor("secondary").withAlpha(0.9f));
+        button->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.32f));
         button->setTextColor(active ? activeText : inactiveText);
         button->setCornerRadius(4.0f);
         button->setBorderEnabled(true);
         button->setBorderWidth(1.0f);
-        button->setBorderColor(active ? theme.getColor("secondary").withAlpha(0.72f) : borderCol);
+        button->setBorderColor(active ? theme.getColor("accentPrimary").withAlpha(0.55f) : borderCol);
     };
 
     styleButton(m_oneShotModeBtn, LoopMode::OneShot);
@@ -1127,23 +1135,23 @@ void SampleEditorPanel::setCutSelfMode(bool cutSelf) {
 
 void SampleEditorPanel::updateMonoPolyControls() {
     auto& theme = NUIThemeManager::getInstance();
-    const auto activeBg = theme.getColor("secondary").withAlpha(0.78f);
+    const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
     const auto inactiveBg = NUIColor::transparent();
-    const auto hoverBg = theme.getColor("secondary").withAlpha(0.18f);
-    const auto activeText = theme.getColor("textPrimary").withAlpha(0.96f);
+    const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
+    const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
     const auto inactiveText = theme.getColor("textSecondary").withAlpha(0.72f);
-    const auto inactiveBorder = theme.getColor("secondary").withAlpha(0.40f);
+    const auto inactiveBorder = theme.getColor("borderSubtle").withAlpha(0.40f);
 
     auto styleButton = [&](const std::shared_ptr<NUIButton>& button, bool active) {
         if (!button) return;
         button->setBackgroundColor(active ? activeBg : inactiveBg);
         button->setHoverColor(active ? activeBg : hoverBg);
-        button->setPressedColor(theme.getColor("secondary").withAlpha(0.9f));
+        button->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.32f));
         button->setTextColor(active ? activeText : inactiveText);
         button->setCornerRadius(4.0f);
         button->setBorderEnabled(true);
         button->setBorderWidth(1.0f);
-        button->setBorderColor(active ? theme.getColor("secondary").withAlpha(0.72f) : inactiveBorder);
+        button->setBorderColor(active ? theme.getColor("accentPrimary").withAlpha(0.55f) : inactiveBorder);
     };
 
     styleButton(m_monoModeBtn, m_monoMode);
