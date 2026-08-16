@@ -165,7 +165,7 @@ void UIMixerPanel::refreshChannels()
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<Aestra::Audio::SetMuteCommand>(*mixerChannel, muted));
+                std::make_shared<Aestra::Audio::SetMuteCommand>(*m_trackManager, *mixerChannel, muted));
         };
 
         // Wire solo to CommandHistory for undo/redo
@@ -175,7 +175,7 @@ void UIMixerPanel::refreshChannels()
             if (!mixerChannel) return;
 
             m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<Aestra::Audio::SetSoloCommand>(*mixerChannel, soloed));
+                std::make_shared<Aestra::Audio::SetSoloCommand>(*m_trackManager, *mixerChannel, soloed));
         };
 
         // Wire pan to CommandHistory for undo/redo

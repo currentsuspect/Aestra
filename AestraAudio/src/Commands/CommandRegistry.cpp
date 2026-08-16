@@ -240,7 +240,7 @@ void CommandRegistry::initialize() {
         if (!trackOpt.has_value() || *trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
-        return std::make_unique<SetMuteCommand>(*ch, state);
+        return std::make_unique<SetMuteCommand>(*tm, *ch, state);
     });
 
     reg.registerCommand("solo_track", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
@@ -256,7 +256,7 @@ void CommandRegistry::initialize() {
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
-        return std::make_unique<SetSoloCommand>(*ch, state);
+        return std::make_unique<SetSoloCommand>(*tm, *ch, state);
     });
 
     reg.registerCommand("set_volume", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

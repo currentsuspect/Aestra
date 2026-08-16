@@ -772,6 +772,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternSliceSchedulingTest.cp
     set_tests_properties(PatternSliceSchedulingTest PROPERTIES LABELS "audio;pattern;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/MuteSoloCommandRebuildTest.cpp")
+    add_executable(MuteSoloCommandRebuildTest AestraAudio/MuteSoloCommandRebuildTest.cpp)
+    target_link_libraries(MuteSoloCommandRebuildTest PRIVATE AestraAudio)
+    target_include_directories(MuteSoloCommandRebuildTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuteSoloCommandRebuildTest COMMAND MuteSoloCommandRebuildTest)
+    set_tests_properties(MuteSoloCommandRebuildTest PROPERTIES LABELS "audio;mixer;regression;contract:audio")
+endif()
+
 # Sinc Interpolator Benchmark
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore)
