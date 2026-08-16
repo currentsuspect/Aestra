@@ -18,7 +18,9 @@ permissions:
 
 jobs:
   remind:
-    if: github.event.ref_type == 'tag'
+    # Tag creates fire the reminder; workflow_dispatch allows re-running a
+    # reminder (e.g. after a failed run) against any ref.
+    if: github.event.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the Aestra repo (workflow + issue-body template)
