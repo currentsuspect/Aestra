@@ -327,7 +327,6 @@ private:
     }
 };
 
-using Track = MixerChannel;
 
 } // namespace Audio
 } // namespace Aestra

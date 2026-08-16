@@ -135,6 +135,12 @@ void TrackManagerUI::addTrack(const std::string& name) {
     auto laneCmd = std::make_shared<CreateLaneCommand>(m_trackManager->getPlaylistModel(), name);
     m_trackManager->getCommandHistory().pushAndExecute(laneCmd);
 
+    // FD-14: every lane belongs to a Track. The app's add-track creates the
+    // lane AND its owning Track in one operation (ownership by stable id).
+    if (laneCmd->getLaneId().isValid()) {
+        m_trackManager->createTrack(laneCmd->getLaneId(), name);
+    }
+
     // Rebuild UI from model state
     refreshTracks();
     layoutTracks();

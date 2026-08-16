@@ -18,7 +18,7 @@ namespace Audio {
 // ChannelStrip Implementation
 //=============================================================================
 
-ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager)
+ChannelStrip::ChannelStrip(std::shared_ptr<MixerChannel> track, TrackManager* trackManager)
     : m_track(track)
     , m_trackManager(trackManager)
 {

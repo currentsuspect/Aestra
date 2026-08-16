@@ -1044,11 +1044,36 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 clipsJson.push(cjs);
             }
             ljs.set("clips", clipsJson);
+            ljs.set("trackId", JSON(static_cast<double>(lane->trackId)));
             lanesJson.push(ljs);
         }
         ++laneIndex;
     }
     root.set("lanes", lanesJson);
+    // 3b. Save Tracks (FD-14 ownership layer). The tracks array carries the
+    // stable ownership: trackId, routing channel, arm state, and owned lane
+    // ids in order. Lanes carry their trackId for cross-reference.
+    {
+        JSON tracksJson = JSON::array();
+        for (const auto* track : trackManager->getTracks()) {
+            if (!track) {
+                continue;
+            }
+            JSON tjs = JSON::object();
+            tjs.set("trackId", JSON(static_cast<double>(track->trackId)));
+            tjs.set("name", JSON(track->name));
+            tjs.set("channelId", JSON(static_cast<double>(track->channelId)));
+            tjs.set("armed", JSON(track->armed));
+            tjs.set("activeLaneId", JSON(track->activeLaneId.toString()));
+            JSON laneIdsJson = JSON::array();
+            for (const auto& laneId : track->laneIds) {
+                laneIdsJson.push(JSON(laneId.toString()));
+            }
+            tjs.set("laneIds", laneIdsJson);
+            tracksJson.push(tjs);
+        }
+        root.set("tracks", tracksJson);
+    }
 
     // 4. Save Arsenal Units
     root.set("arsenal", trackManager->getUnitManager().saveToJSON());
@@ -1938,6 +1963,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         // Clip ids restored from the file must stay unique — a hand-edited or
         // corrupted file with duplicates would silently break id lookups.
         std::unordered_set<AestraUUID> seenClipIds;
+        // FD-14: capture each legacy lane's OWN stored channel id (an explicit
+        // per-lane file field) so the track migration never infers ownership
+        // from array position.
+        std::unordered_map<std::string, uint32_t> legacyLaneChannelIds;
         if (root.has("lanes")) {
             const JSON& lj = root["lanes"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1974,6 +2003,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         if (std::isfinite(rawId) && rawId > 0.0 && rawId < static_cast<double>(UINT32_MAX)) {
                             storedMixerChannelId = static_cast<uint32_t>(rawId);
                         }
+                    }
+                    if (storedMixerChannelId != 0) {
+                        legacyLaneChannelIds[laneId.toString()] = storedMixerChannelId;
                     }
                     channel = trackManager->addChannelWithId(laneName, storedMixerChannelId);
                     if (!channel) {
@@ -2420,6 +2452,73 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     continuous->setFaderDb(slot, faderDb);
                     continuous->setPan(slot, channel->getPan());
                 }
+            }
+        }
+
+        // PHASE 7c: Restore Track ownership (FD-14). The "tracks" section
+        // restores exact stable ids; legacy files (no section) migrate
+        // deterministically — one Track per lane in lane order, channel =
+        // the lane's OWN stored channel id (an explicit per-lane file field,
+        // never a positional inference), master when none exists.
+        {
+            const auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+
+            if (root.has("tracks") && root["tracks"].isArray()) {
+                const JSON& tj = root["tracks"];
+                for (size_t t = 0; t < tj.size(); ++t) {
+                    if (!tj[t].isObject()) {
+                        continue;
+                    }
+                    Track track;
+                    track.trackId = static_cast<uint64_t>(
+                        finiteNumberOr(tj[t], "trackId", 0.0, 1.0, static_cast<double>(UINT64_MAX)));
+                    if (track.trackId == 0) {
+                        continue;
+                    }
+                    track.name = boundedStringOr(tj[t], "name", "", PROJECT_MAX_STRING_BYTES);
+                    track.channelId = static_cast<uint32_t>(finiteNumberOr(
+                        tj[t], "channelId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    track.armed = (tj[t].has("armed") && tj[t]["armed"].isBool()) ? tj[t]["armed"].asBool()
+                                                                                  : false;
+                    if (tj[t].has("activeLaneId") && tj[t]["activeLaneId"].isString()) {
+                        AestraUUID parsedActive;
+                        if (AestraUUID::tryParse(tj[t]["activeLaneId"].asString(), parsedActive)) {
+                            track.activeLaneId = PlaylistLaneID(parsedActive);
+                        }
+                    }
+                    if (tj[t].has("laneIds") && tj[t]["laneIds"].isArray()) {
+                        const JSON& ids = tj[t]["laneIds"];
+                        for (size_t l = 0; l < ids.size(); ++l) {
+                            if (ids[l].isString()) {
+                                AestraUUID parsedLane;
+                                if (AestraUUID::tryParse(ids[l].asString(), parsedLane)) {
+                                    track.laneIds.push_back(PlaylistLaneID(parsedLane));
+                                }
+                            }
+                        }
+                    }
+                    if (!trackManager->restoreTrack(track)) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::EffectChain,
+                            "[ProjectLoad] Failed to restore track '" + track.name + "' — skipped.",
+                            "[ProjectLoad] Additional track restore failures suppressed.");
+                    }
+                }
+            }
+
+            // Migration: lanes without ownership get one deterministic Track
+            // each, using the lane's OWN stored channel when one exists.
+            for (const auto& laneId : laneIds) {
+                auto* lane = trackManager->getPlaylistModel().getLane(laneId);
+                if (!lane || lane->trackId != 0) {
+                    continue;
+                }
+                uint32_t storedChannelId = MASTER_MIXER_CHANNEL_ID;
+                const auto legacyIt = legacyLaneChannelIds.find(laneId.toString());
+                if (legacyIt != legacyLaneChannelIds.end()) {
+                    storedChannelId = legacyIt->second;
+                }
+                trackManager->createTrack(laneId, lane->name, storedChannelId);
             }
         }
 
