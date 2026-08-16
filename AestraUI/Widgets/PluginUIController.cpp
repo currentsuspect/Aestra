@@ -132,7 +132,16 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
                                          Aestra::Audio::EffectChain* chain) {
     if (!rack || !chain) return;
     
-    // Store binding
+    // One binding per rack: a re-bind (e.g. the inspector following a new
+    // selection) REPLACES the previous binding instead of appending. Stale
+    // bindings used to accumulate, and refreshRackDisplay() read the FIRST
+    // match — so the rack kept showing (and later dereferencing) a chain
+    // that had been destroyed with its channel. SEGV in getPlugin() on a
+    // normal frame update, three crashes in one day.
+    m_rackBindings.erase(
+        std::remove_if(m_rackBindings.begin(), m_rackBindings.end(),
+                       [rack](const RackBinding& b) { return b.rack == rack; }),
+        m_rackBindings.end());
     m_rackBindings.push_back({rack, chain});
     
     // Wire slot clicks

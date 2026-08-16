@@ -1929,6 +1929,26 @@ else()
     message(STATUS "PanelResizeLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# The inspector rack must follow the LAST-bound chain: bindEffectRack() used
+# to append bindings and refreshRackDisplay() read the first match, so a
+# selection switch left the rack bound to a chain that died with its channel
+# (three SEGVs in one day — getPlugin() from refreshRackDisplay on a frame).
+if(TARGET AestraUI_Core)
+    add_executable(PluginRackBindingLifecycleTest
+        AestraUI/PluginRackBindingLifecycleTest.cpp
+    )
+    target_link_libraries(PluginRackBindingLifecycleTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PluginRackBindingLifecycleTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginRackBindingLifecycleTest COMMAND PluginRackBindingLifecycleTest)
+    set_tests_properties(PluginRackBindingLifecycleTest PROPERTIES LABELS "ui;plugin;regression;contract:application")
+endif()
+
 # Floating panels must only raise themselves on presses inside their bounds:
 # the overlay forwards every press to every visible panel, so a transport-bar
 # click must not pop panels to the front (the Arsenal-mode double-stop bug).
