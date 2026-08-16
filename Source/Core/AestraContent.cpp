@@ -1377,15 +1377,16 @@ void AestraContent::onUpdate(double dt) {
                 // but let's be safe and assume we need to manage it)
 
                 if (selectedCh) {
-                    auto* channel = selectedCh->channel;
-                    if (channel) {
-                        auto mixerUI = m_mixerPanel->getMixerUI();
-                        if (mixerUI) {
-                            auto inspector = mixerUI->getInspector();
-                            if (inspector && inspector->getEffectRack()) {
-                                m_pluginController->bindEffectRack(inspector->getEffectRack().get(),
-                                                                   &channel->getEffectChain());
-                            }
+                    auto mixerUI = m_mixerPanel->getMixerUI();
+                    if (mixerUI) {
+                        auto inspector = mixerUI->getInspector();
+                        if (inspector && inspector->getEffectRack()) {
+                            // Bind by STABLE channel identity: the controller
+                            // resolves the chain fresh at refresh time, so a
+                            // deleted channel can never leave the rack pointing
+                            // at freed memory (#790).
+                            m_pluginController->bindEffectRack(inspector->getEffectRack().get(),
+                                                               m_trackManager.get(), selectedCh->id);
                         }
                     }
                 } else {
