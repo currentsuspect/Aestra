@@ -193,12 +193,13 @@ void testSetMuteCommand() {
     assert(cmd.getName() == "Mute");
     // A mute mutation must request a graph rebuild: TrackRenderState.mute is
     // baked into the immutable snapshot, so the live RT command alone leaves
-    // the audible gate (track.mute || state.mute) stale (#782).
-    assert(trackManager.hasPendingGraphRebuild() == true);
+    // the audible gate (track.mute || state.mute) stale (#782). Consume
+    // between operations so each lifecycle path is proven independently.
+    assert(trackManager.consumePendingGraphRebuild() == true);
 
     cmd.undo();
     assert(channel.isMuted() == false);
-    assert(trackManager.hasPendingGraphRebuild() == true);
+    assert(trackManager.consumePendingGraphRebuild() == true);
 
     SetMuteCommand unmuteCmd(trackManager, channel, false);
     unmuteCmd.execute();
