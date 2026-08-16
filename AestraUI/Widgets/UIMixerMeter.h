@@ -25,6 +25,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onMouseLeave() override;
 
     /**
      * @brief Set meter levels (in dB, already smoothed by ViewModel).

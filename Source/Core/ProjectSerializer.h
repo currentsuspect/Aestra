@@ -66,6 +66,19 @@ public:
         bool settingsDialogVisible{false};
         std::string settingsDialogActivePage;
         std::vector<PanelState> panels;
+
+        // Phase-3 workspace state. All three are OPTIONAL in project files:
+        // files saved before they existed load with the historical defaults
+        // (Timeline workspace, overlays closed) — see the loader's has() guards.
+        // `viewFocus` matches WorkspaceFocusModel::workspaceFocusName
+        // ("arsenal|timeline|audition|routingMap"); empty means the loader
+        // keeps the default Timeline focus. The piano roll is a contextual
+        // editor, not a workspace: its remembered-open flag is `pianoRollOpen`,
+        // and the legacy "pianoRoll" focus value (phase-3 builds) is rejected
+        // by the loader and degrades to Timeline.
+        std::string viewFocus;
+        bool pianoRollOpen{false};
+        bool sequencerOpen{false};
     };
 
     /**
@@ -110,6 +123,11 @@ public:
         /// destination channel. Non-zero means patterns exist in memory that are
         /// not in the file, which is why such a load reports `Transformed`.
         size_t legacyAudioPatternsSplit{0};
+
+        /// Audio clips whose persisted source offset was negative. Source
+        /// material before time zero cannot be reconstructed, so load clamps
+        /// these offsets to zero, reports a warning, and requires a resave.
+        size_t negativeAudioClipOffsetsCorrected{0};
 
         std::string errorMessage;
         std::vector<std::string> missingAssets;

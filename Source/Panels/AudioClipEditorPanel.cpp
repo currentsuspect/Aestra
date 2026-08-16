@@ -1,11 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioClipEditorPanel.h"
 
+#include "ChannelDisplayName.h"
 #include "Commands/MakeAudioClipUniqueCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
-#include "ChannelDisplayName.h"
+#include "Models/ClipRenderService.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
 #include "NUIRenderer.h"
@@ -28,10 +29,90 @@ namespace Audio {
 
 namespace {
 constexpr float kMinPanelWidth = 660.0f;
-constexpr float kMinPanelHeight = 500.0f;
+// Minimum height that keeps the waveform region usable. The layout runs on
+// the surface (panel height minus the 28px WindowPanel title bar); the
+// controls card starts at surfaceBottom - kControlsCardHeight - 8 - 14 and
+// the waveform top is at surfaceY + 130, so a 64px waveform needs a surface
+// of 458px, i.e. a panel of 486px. 490 leaves ~96px of waveform and
+// guarantees the card can never overlap the waveform (triage 2026-08-14).
+constexpr float kMinPanelHeight = 490.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
-constexpr float kControlsCardHeight = 194.0f;
+constexpr float kControlsCardHeight = 242.0f;
+constexpr float kSourceCardHeight = 88.0f;
+
+// All editor colors come from the theme system. The editor uses the standard
+// surface hierarchy (canvas < card < sub-card < raised) and the Aestra accent
+// for identity, so it follows palette changes instead of carrying its own.
+NUIColor canvasColor() {
+    return NUIThemeManager::getInstance().getColor("backgroundPrimary");
+}
+
+NUIColor surface1Color() {
+    return NUIThemeManager::getInstance().getColor("backgroundSecondary");
+}
+
+NUIColor surface2Color() {
+    return NUIThemeManager::getInstance().getColor("surfaceTertiary");
+}
+
+NUIColor surface3Color() {
+    return NUIThemeManager::getInstance().getColor("surfaceRaised");
+}
+
+NUIColor borderColor() {
+    return NUIThemeManager::getInstance().getColor("border");
+}
+
+NUIColor primaryTextColor() {
+    return NUIThemeManager::getInstance().getColor("textPrimary");
+}
+
+NUIColor secondaryTextColor() {
+    return NUIThemeManager::getInstance().getColor("textSecondary");
+}
+
+NUIColor mutedTextColor() {
+    return NUIThemeManager::getInstance().getColor("textMuted");
+}
+
+NUIColor clipAccent() {
+    return NUIThemeManager::getInstance().getColor("accentPrimary");
+}
+
+NUIColor accentStrongColor() {
+    return NUIThemeManager::getInstance().getColor("primaryHover");
+}
+
+class ClipRangeSlider final : public NUISlider {
+public:
+    explicit ClipRangeSlider(bool bipolar) : NUISlider(), m_bipolar(bipolar) {}
+
+protected:
+    void drawSliderTrack(NUIRenderer& renderer) override {
+        const auto bounds = getBounds();
+        const float trackY = bounds.y + (bounds.height - getSliderThickness()) * 0.5f;
+        const float inset = std::min(getSliderRadius(), bounds.width * 0.5f);
+        const NUIRect track{bounds.x + inset, trackY,
+                            std::max(0.0f, bounds.width - inset * 2.0f), getSliderThickness()};
+        const float radius = getSliderThickness() * 0.5f;
+        renderer.fillRoundedRect(track, radius, getTrackColor());
+
+        const float valueX = track.x + track.width * static_cast<float>(valueToProportionOfLength(getValue()));
+        if (m_bipolar) {
+            const float centerX = track.x + track.width * static_cast<float>(valueToProportionOfLength(0.0));
+            const float left = std::min(centerX, valueX);
+            const float right = std::max(centerX, valueX);
+            if (right > left)
+                renderer.fillRoundedRect({left, track.y, right - left, track.height}, radius, getFillColor());
+        } else if (valueX > track.x) {
+            renderer.fillRoundedRect({track.x, track.y, valueX - track.x, track.height}, radius, getFillColor());
+        }
+    }
+
+private:
+    bool m_bipolar{false};
+};
 
 class AudioClipEditorSurface final : public NUIComponent {
 public:
@@ -39,18 +120,38 @@ public:
         if (!isVisible())
             return;
         const auto bounds = getBounds();
-        auto& theme = NUIThemeManager::getInstance();
-        renderer.fillRect(bounds, theme.getColor("workspaceBackground"));
+        renderer.fillRect(bounds, canvasColor());
 
-        const auto card = theme.getColor("surfaceTertiary").withAlpha(0.46f);
-        const auto stroke = theme.getColor("borderSubtle").withAlpha(0.68f);
-        const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, 78.0f};
+        const auto card = surface1Color();
+        const auto stroke = borderColor();
+        const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, kSourceCardHeight};
         const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - kControlsCardHeight - 8.0f, bounds.width - 16.0f,
                                    kControlsCardHeight};
-        renderer.fillRoundedRect(sourceCard, 7.0f, card);
-        renderer.strokeRoundedRect(sourceCard, 7.0f, 1.0f, stroke);
-        renderer.fillRoundedRect(controlsCard, 7.0f, card.withAlpha(0.38f));
-        renderer.strokeRoundedRect(controlsCard, 7.0f, 1.0f, stroke);
+        renderer.fillRoundedRect(sourceCard, 9.0f, card);
+        renderer.strokeRoundedRect(sourceCard, 10.0f, 1.0f, stroke);
+        renderer.fillRoundedRect({sourceCard.x, sourceCard.y + 13.0f, 3.0f, sourceCard.height - 26.0f}, 1.5f,
+                                 clipAccent());
+
+        // The waveform is a separate editing surface, not part of the source
+        // card. Keep its eyebrow marker in the canvas gap above the card.
+        renderer.fillRoundedRect({bounds.x + 16.0f, bounds.y + 110.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
+
+        renderer.fillRoundedRect(controlsCard, 9.0f, card.withAlpha(0.92f));
+        renderer.strokeRoundedRect(controlsCard, 10.0f, 1.0f, stroke);
+
+        const float innerPad = 10.0f;
+        const float sectionGap = 10.0f;
+        const float sectionTop = controlsCard.y + 42.0f;
+        const float sectionHeight = controlsCard.height - 52.0f;
+        const float sectionWidth = (controlsCard.width - innerPad * 2.0f - sectionGap) * 0.5f;
+        const NUIRect toneCard{controlsCard.x + innerPad, sectionTop, sectionWidth, sectionHeight};
+        const NUIRect timingCard{toneCard.right() + sectionGap, sectionTop, sectionWidth, sectionHeight};
+        renderer.fillRoundedRect(toneCard, 8.0f, surface2Color());
+        renderer.strokeRoundedRect(toneCard, 8.0f, 1.0f, borderColor());
+        renderer.fillRoundedRect(timingCard, 8.0f, surface2Color());
+        renderer.strokeRoundedRect(timingCard, 8.0f, 1.0f, borderColor());
+        renderer.fillRoundedRect({toneCard.x + 10.0f, toneCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
+        renderer.fillRoundedRect({timingCard.x + 10.0f, timingCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
         renderChildren(renderer);
         setDirty(false);
     }
@@ -72,7 +173,7 @@ std::string formatGainDb(float linear) {
 bool editsEqual(const ClipEdits& a, const ClipEdits& b) {
     return a.fadeInBeats == b.fadeInBeats && a.fadeOutBeats == b.fadeOutBeats && a.gainLinear == b.gainLinear &&
            a.pan == b.pan && a.muted == b.muted && a.playbackRate == b.playbackRate &&
-           a.sourceStart == b.sourceStart;
+           a.pitchSemitones == b.pitchSemitones && a.sourceStart == b.sourceStart;
 }
 
 } // namespace
@@ -85,74 +186,93 @@ AudioClipEditorPanel::AudioClipEditorPanel(std::shared_ptr<TrackManager> trackMa
 
 void AudioClipEditorPanel::buildUI() {
     m_surface = std::make_shared<AudioClipEditorSurface>();
-    auto& theme = NUIThemeManager::getInstance();
-
-    const auto makeLabel = [&theme](const std::string& text, float size = 11.0f) {
+    const auto makeLabel = [](const std::string& text, float size = 12.5f) {
         auto label = std::make_shared<NUILabel>(text);
         label->setFontSize(size);
-        label->setTextColor(theme.getColor("textSecondary").withAlpha(0.88f));
+        label->setTextColor(secondaryTextColor());
         label->setEllipsize(true);
         return label;
     };
-    const auto makeSlider = [](const std::string& name, double minimum, double maximum, double initial) {
-        auto slider = std::make_shared<NUISlider>(name);
+    const auto makeSlider = [](const std::string& name, double minimum, double maximum, double initial,
+                               bool bipolar = false) {
+        auto slider = std::make_shared<ClipRangeSlider>(bipolar);
+        slider->setId(name);
         slider->setOrientation(NUISlider::Orientation::Horizontal);
         slider->setTextBoxVisible(false);
-        slider->setSliderRadius(6.0f);
-        slider->setSliderThickness(5.0f);
+        slider->setSliderRadius(6.5f);
+        slider->setSliderThickness(3.0f);
         slider->setRange(minimum, maximum);
         slider->setValue(initial);
+        slider->setDefaultValue(initial);
+        slider->setDoubleClickReturnValue(true, initial);
+        slider->setTrackColor(surface3Color());
+        slider->setFillColor(clipAccent());
+        slider->setThumbColor(primaryTextColor());
+        slider->setThumbHoverColor(accentStrongColor());
         return slider;
     };
-    const auto styleButton = [&theme](const std::shared_ptr<NUIButton>& button) {
+    const auto styleButton = [](const std::shared_ptr<NUIButton>& button) {
         button->setStyle(NUIButton::Style::Text);
-        button->setFontSize(11.0f);
-        button->setCornerRadius(5.0f);
+        button->setFontSize(12.0f);
+        button->setCornerRadius(6.0f);
         button->setGlowEnabled(false);
-        button->setBackgroundColor(theme.getColor("surfaceRaised").withAlpha(0.72f));
-        button->setHoverColor(theme.getColor("secondary").withAlpha(0.18f));
-        button->setPressedColor(theme.getColor("secondary").withAlpha(0.28f));
-        button->setTextColor(theme.getColor("textPrimary").withAlpha(0.88f));
+        button->setBackgroundColor(surface2Color());
+        button->setHoverColor(surface3Color());
+        button->setPressedColor(surface3Color());
+        button->setTextColor(secondaryTextColor());
         button->setBorderEnabled(true);
         button->setBorderWidth(1.0f);
-        button->setBorderColor(theme.getColor("borderSubtle").withAlpha(0.72f));
+        button->setBorderColor(borderColor());
     };
 
-    m_sourceNameLabel = makeLabel("No audio clip selected", 14.0f);
-    m_sourceNameLabel->setTextColor(theme.getColor("textPrimary"));
+    m_sourceNameLabel = makeLabel("No audio clip selected", 15.0f);
+    m_sourceNameLabel->setTextColor(primaryTextColor());
     m_sourceMetaLabel = makeLabel("");
     m_routeLabel = makeLabel("OUTPUT CHANNEL", 10.0f);
-    m_routeHintLabel = makeLabel("Source route • Alt-drag this clip onto a channel", 10.0f);
-    m_routeHintLabel->setAlignment(NUILabel::Alignment::Right);
+    m_routeLabel->setTextColor(mutedTextColor());
+    m_routeLabel->setVisible(false);
+    m_routeHintLabel = makeLabel("");
+    m_routeHintLabel->setVisible(false);
     m_routePicker = std::make_shared<UIInsertRoutePicker>();
+    m_routePicker->setCompactChipStyle(true);
     m_routePicker->setOnRouteSelected([this](uint32_t routeId) { selectRoute(routeId); });
 
     m_waveform = std::make_shared<WaveformDisplayComponent>();
-    m_instanceLabel = makeLabel("THIS CLIP", 10.0f);
+    m_waveformTitleLabel = makeLabel("WAVEFORM", 10.5f);
+    m_waveformTitleLabel->setTextColor(secondaryTextColor());
+    m_instanceLabel = makeLabel("CLIP ACTIONS", 9.0f);
+    m_toneSectionLabel = makeLabel("LEVEL & PITCH", 10.5f);
+    m_timingSectionLabel = makeLabel("TIMING & SOURCE", 10.5f);
+    m_toneSectionLabel->setTextColor(secondaryTextColor());
+    m_timingSectionLabel->setTextColor(secondaryTextColor());
     m_gainLabel = makeLabel("Gain");
     m_panLabel = makeLabel("Pan");
     m_fadeInLabel = makeLabel("Fade in");
     m_fadeOutLabel = makeLabel("Fade out");
+    m_pitchLabel = makeLabel("Pitch");
     m_speedLabel = makeLabel("Speed");
     m_sourceStartLabel = makeLabel("Start");
-    m_gainValueLabel = makeLabel("-5.0 dB", 10.0f);
-    m_panValueLabel = makeLabel("Center", 10.0f);
-    m_fadeInValueLabel = makeLabel("0.00 beats", 10.0f);
-    m_fadeOutValueLabel = makeLabel("0.00 beats", 10.0f);
-    m_speedValueLabel = makeLabel("1.00x", 10.0f);
-    m_sourceStartValueLabel = makeLabel("0.000 s", 10.0f);
-    m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 10.0f);
+    m_gainValueLabel = makeLabel("-5.0 dB", 11.5f);
+    m_panValueLabel = makeLabel("Center", 11.5f);
+    m_fadeInValueLabel = makeLabel("0.00 beats", 11.5f);
+    m_fadeOutValueLabel = makeLabel("0.00 beats", 11.5f);
+    m_pitchValueLabel = makeLabel("0.0 st  •  1.00x", 11.5f);
+    m_speedValueLabel = makeLabel("1.00x", 11.5f);
+    m_sourceStartValueLabel = makeLabel("0.000 s", 11.5f);
+    m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 11.0f);
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
     for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
-                              m_speedValueLabel, m_sourceStartValueLabel}) {
+                              m_pitchValueLabel, m_speedValueLabel, m_sourceStartValueLabel}) {
         value->setAlignment(NUILabel::Alignment::Right);
     }
 
     m_gainSlider = makeSlider("Clip gain", 0.0, 2.0, DEFAULT_AUDIO_CLIP_GAIN_LINEAR);
-    m_panSlider = makeSlider("Clip pan", -1.0, 1.0, 0.0);
+    m_panSlider = makeSlider("Clip pan", -1.0, 1.0, 0.0, true);
     m_fadeInSlider = makeSlider("Fade in", 0.0, 4.0, 0.0);
     m_fadeOutSlider = makeSlider("Fade out", 0.0, 4.0, 0.0);
-    m_speedSlider = makeSlider("Playback speed", 0.25, 4.0, 1.0);
+    m_pitchSlider = makeSlider("Clip pitch (varispeed)", ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones,
+                               0.0, true);
+    m_speedSlider = makeSlider("Speed", 0.25, 4.0, 1.0);
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
@@ -167,10 +287,18 @@ void AudioClipEditorPanel::buildUI() {
     styleButton(m_makeUniqueButton);
     styleButton(m_reverseButton);
     styleButton(m_commitButton);
+    m_resetButton->setBackgroundColor(NUIColor::transparent());
+    m_resetButton->setHoverColor(NUIThemeManager::getInstance().getColor("error").withAlpha(0.14f));
+    m_resetButton->setPressedColor(NUIThemeManager::getInstance().getColor("error").withAlpha(0.14f));
+    m_resetButton->setTextColor(mutedTextColor());
+    m_resetButton->setBorderEnabled(false);
+    m_muteButton->setPressedColor(clipAccent().withAlpha(0.16f));
+    m_muteButton->setTextColor(secondaryTextColor());
 
-    const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update) {
+    const auto wireSlider = [this](const std::shared_ptr<NUISlider>& slider, auto update,
+                                   bool updatesWaveform = false) {
         slider->setOnDragStart([this]() { beginEditGesture(); });
-        slider->setOnValueChange([this, slider, update](double value) {
+        slider->setOnValueChange([this, slider, update, updatesWaveform](double value) {
             if (m_suppressCallbacks)
                 return;
             if (!m_editGestureActive)
@@ -179,10 +307,17 @@ void AudioClipEditorPanel::buildUI() {
             applyWorkingEdits();
             // Double-click resets and other non-drag changes do not receive a
             // drag-end callback, so commit them immediately.
-            if (!slider->isDragging())
+            if (!slider->isDragging()) {
+                if (updatesWaveform)
+                    rebuildWaveform();
                 commitEditGesture();
+            }
         });
-        slider->setOnDragEnd([this]() { commitEditGesture(); });
+        slider->setOnDragEnd([this, updatesWaveform]() {
+            if (updatesWaveform)
+                rebuildWaveform();
+            commitEditGesture();
+        });
     };
     wireSlider(m_gainSlider, [](ClipEdits& edits, double value) {
         edits.gainLinear = static_cast<float>(value);
@@ -190,7 +325,14 @@ void AudioClipEditorPanel::buildUI() {
     wireSlider(m_panSlider, [](ClipEdits& edits, double value) { edits.pan = static_cast<float>(value); });
     wireSlider(m_fadeInSlider, [](ClipEdits& edits, double value) { edits.fadeInBeats = static_cast<float>(value); });
     wireSlider(m_fadeOutSlider, [](ClipEdits& edits, double value) { edits.fadeOutBeats = static_cast<float>(value); });
-    wireSlider(m_speedSlider, [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); });
+    wireSlider(
+        m_pitchSlider,
+        [](ClipEdits& edits, double value) { edits.pitchSemitones = static_cast<float>(value); },
+        true);
+    wireSlider(
+        m_speedSlider,
+        [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); },
+        true);
     wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
         const double projectRate =
             m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
@@ -236,7 +378,8 @@ void AudioClipEditorPanel::buildUI() {
         // dead file, mint a source and pattern, and add an undo step that
         // changes nothing audible.
         if (m_workingEdits.gainLinear == 1.0f && m_workingEdits.fadeInBeats == 0.0f &&
-            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.sourceStart == 0.0)
+            m_workingEdits.fadeOutBeats == 0.0f && m_workingEdits.playbackRate == 1.0f &&
+            m_workingEdits.pitchSemitones == 0.0f && m_workingEdits.sourceStart == 0.0)
             return;
         auto command = std::make_shared<CommitAudioClipEditsCommand>(*m_trackManager, m_clipId);
         m_trackManager->getCommandHistory().pushAndExecute(command);
@@ -244,17 +387,27 @@ void AudioClipEditorPanel::buildUI() {
     });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
-        m_sourceNameLabel,   m_sourceMetaLabel,   m_routeLabel,        m_routeHintLabel,   m_routePicker,
-        m_waveform,          m_waveformHintLabel, m_instanceLabel,     m_gainLabel,        m_panLabel,
-        m_fadeInLabel,       m_fadeOutLabel,      m_speedLabel,        m_sourceStartLabel, m_gainValueLabel,
-        m_panValueLabel,     m_fadeInValueLabel,  m_fadeOutValueLabel, m_speedValueLabel,  m_sourceStartValueLabel,
-        m_gainSlider,        m_panSlider,         m_fadeInSlider,      m_fadeOutSlider,    m_speedSlider,
-        m_sourceStartSlider, m_muteButton,        m_normalizeButton,   m_resetButton,      m_makeUniqueButton,
-        m_reverseButton,     m_commitButton};
+        m_sourceNameLabel,    m_sourceMetaLabel,       m_routeLabel,
+        m_routeHintLabel,     m_routePicker,           m_waveform,
+        m_waveformTitleLabel, m_waveformHintLabel,     m_instanceLabel,
+        m_toneSectionLabel,   m_timingSectionLabel,    m_gainLabel,
+        m_panLabel,           m_fadeInLabel,           m_fadeOutLabel,
+        m_pitchLabel,         m_speedLabel,            m_sourceStartLabel,      m_gainValueLabel,
+        m_panValueLabel,      m_fadeInValueLabel,      m_fadeOutValueLabel,     m_pitchValueLabel,
+        m_speedValueLabel,    m_sourceStartValueLabel, m_gainSlider,             m_panSlider,
+        m_fadeInSlider,       m_fadeOutSlider,         m_pitchSlider,            m_speedSlider,
+        m_sourceStartSlider,  m_muteButton,
+        m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
+        m_reverseButton,      m_commitButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
     setContent(m_surface);
+}
+
+void AudioClipEditorPanel::onRender(NUIRenderer& renderer) {
+    renderer.drawShadow(getBounds(), 0.0f, 8.0f, 20.0f, NUIColor::black().withAlpha(0.65f));
+    WindowPanel::onRender(renderer);
 }
 
 bool AudioClipEditorPanel::resolveClip(ClipInstance*& clip, PatternSource*& pattern) const {
@@ -279,7 +432,7 @@ bool AudioClipEditorPanel::openClip(ClipInstanceID clipId) {
     }
     m_patternId = pattern->id;
     m_workingEdits = clip->edits;
-    setTitle(clip->name.empty() ? "AUDIO CLIP" : "AUDIO CLIP  •  " + clip->name);
+    setTitle("AUDIO CLIP");
     rebuildWaveform();
     syncControlsFromModel();
     rebuildRoutes(true);
@@ -328,31 +481,62 @@ void AudioClipEditorPanel::rebuildWaveform() {
     m_sourceNameLabel->setText(source->getName().empty() ? clip->name : source->getName());
     const char* channelText =
         buffer->numChannels == 1 ? "Mono" : (buffer->numChannels == 2 ? "Stereo" : "Multichannel");
-    m_sourceMetaLabel->setText(formatFixed(buffer->durationSeconds(), 2) + " s  •  " +
-                               std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
-                               (linkedInstances > 1
-                                    ? "Shared source • " + std::to_string(linkedInstances) + " instances"
-                                    : "Unique source • 1 instance"));
+    const float playbackRate =
+        std::isfinite(m_workingEdits.playbackRate) ? std::clamp(m_workingEdits.playbackRate, 0.25f, 4.0f) : 1.0f;
+    const float pitchSemitones =
+        std::isfinite(m_workingEdits.pitchSemitones)
+            ? std::clamp(m_workingEdits.pitchSemitones, ClipEdits::kMinPitchSemitones, ClipEdits::kMaxPitchSemitones)
+            : 0.0f;
+    const double varispeed =
+        std::clamp(static_cast<double>(playbackRate) * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
+    const double outputDurationSeconds = buffer->durationSeconds() / varispeed;
+    m_sourceMetaLabel->setText(
+        formatFixed(buffer->durationSeconds(), 2) + " s source  •  " + formatFixed(outputDurationSeconds, 2) +
+        " s output  •  " + std::to_string(buffer->sampleRate) + " Hz  •  " + channelText + "  •  " +
+        (linkedInstances > 1 ? "Shared source • " + std::to_string(linkedInstances) + " instances"
+                             : "Unique source • 1 instance"));
     m_makeUniqueButton->setVisible(linkedInstances > 1);
     m_makeUniqueButton->setText(linkedInstances > 1 ? "Make unique" : "Unique");
-    m_routeHintLabel->setText(linkedInstances > 1 ? "Shared source route • changes " + std::to_string(linkedInstances) +
-                                                        " clips • Alt-drag to a channel"
-                                                  : "Unique source route • Alt-drag this clip onto a channel");
+    m_routeHintLabel->setText("");
 
-    const size_t frameCount = static_cast<size_t>(buffer->numFrames);
+    ClipRenderService renderService(m_trackManager->getSourceManager(), m_trackManager->getPatternManager());
+    const auto region = renderService.resolveClipRegion(
+        *clip, std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()));
+    const size_t sourceStartFrame = region.isValid() ? static_cast<size_t>(region.startFrame) : 0;
+    const size_t sourceFrameCount =
+        region.isValid() ? static_cast<size_t>(region.frameCount) : static_cast<size_t>(buffer->numFrames);
+    const size_t sourceEndFrame = sourceStartFrame + sourceFrameCount;
     const size_t channels = static_cast<size_t>(buffer->numChannels);
-    const size_t framesPerBucket = std::max<size_t>(1, (frameCount + kWaveformBuckets - 1) / kWaveformBuckets);
+    // The waveform width represents the clip's fixed timeline duration. Map
+    // each output-time bucket through playbackRate: faster rates exhaust the
+    // source early and leave visible silence, while slower rates stretch the
+    // audible prefix across the clip. Normalizing the pitched output back to
+    // the full width would make every rate look unchanged.
+    const double clipFrames = clip->durationSeconds * static_cast<double>(buffer->sampleRate);
+    const size_t outputFrameCount = std::max<size_t>(
+        1, std::isfinite(clipFrames) && clipFrames > 0.0 ? static_cast<size_t>(clipFrames) : sourceFrameCount);
+    const size_t framesPerBucket = std::max<size_t>(1, (outputFrameCount + kWaveformBuckets - 1) / kWaveformBuckets);
     m_waveformData.clear();
     m_waveformData.reserve(kWaveformBuckets * 2);
     for (size_t bucket = 0; bucket < kWaveformBuckets; ++bucket) {
         const size_t begin = bucket * framesPerBucket;
-        const size_t end = std::min(frameCount, begin + framesPerBucket);
+        const size_t end = std::min(outputFrameCount, begin + framesPerBucket);
         float minimum = 0.0f;
         float maximum = 0.0f;
-        for (size_t frame = begin; frame < end; ++frame) {
+        const size_t sampleStride = std::max<size_t>(1, framesPerBucket / 256);
+        for (size_t outputFrame = begin; outputFrame < end; outputFrame += sampleStride) {
+            const double phase =
+                static_cast<double>(sourceStartFrame) + static_cast<double>(outputFrame) * varispeed;
+            if (phase >= static_cast<double>(sourceEndFrame))
+                continue;
+            const size_t frame = static_cast<size_t>(phase);
+            const size_t nextFrame = std::min(sourceEndFrame - 1, frame + 1);
+            const float fraction = static_cast<float>(phase - static_cast<double>(frame));
             float mono = 0.0f;
             for (size_t channel = 0; channel < channels; ++channel) {
-                mono += buffer->interleavedData[frame * channels + channel];
+                const float a = buffer->interleavedData[frame * channels + channel];
+                const float b = buffer->interleavedData[nextFrame * channels + channel];
+                mono += a + (b - a) * fraction;
             }
             mono /= static_cast<float>(channels);
             minimum = std::min(minimum, mono);
@@ -362,6 +546,9 @@ void AudioClipEditorPanel::rebuildWaveform() {
         m_waveformData.push_back(minimum);
     }
     m_waveform->setWaveformData(m_waveformData);
+    m_waveformTitleLabel->setText(std::abs(varispeed - 1.0) < 1.0e-5
+                                      ? "WAVEFORM"
+                                      : "PITCHED WAVEFORM  •  " + formatFixed(outputDurationSeconds, 2) + " s");
 }
 
 uint64_t AudioClipEditorPanel::calculateRouteFingerprint() const {
@@ -426,7 +613,8 @@ void AudioClipEditorPanel::syncControlsFromModel() {
     m_fadeOutSlider->setRange(0.0, fadeMaximum);
     m_fadeInSlider->setValue(std::min<double>(m_workingEdits.fadeInBeats, fadeMaximum));
     m_fadeOutSlider->setValue(std::min<double>(m_workingEdits.fadeOutBeats, fadeMaximum));
-    m_speedSlider->setValue(std::clamp<double>(m_workingEdits.playbackRate, 0.25, 4.0));
+    m_pitchSlider->setValue(m_workingEdits.pitchSemitones);
+    m_speedSlider->setValue(m_workingEdits.playbackRate);
     const double projectRate = std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate());
     const double sourceStartSeconds = std::max(0.0, m_workingEdits.sourceStart) / projectRate;
     const double sourceStartMaximum = std::max(0.001, m_sourceDurationSeconds);
@@ -449,6 +637,9 @@ void AudioClipEditorPanel::updateValueLabels() {
     }
     m_fadeInValueLabel->setText(formatFixed(m_workingEdits.fadeInBeats, 2) + " beats");
     m_fadeOutValueLabel->setText(formatFixed(m_workingEdits.fadeOutBeats, 2) + " beats");
+    const float pitchSemitones = m_workingEdits.pitchSemitones;
+    const std::string pitchSign = pitchSemitones > 0.049f ? "+" : "";
+    m_pitchValueLabel->setText(pitchSign + formatFixed(pitchSemitones, 1) + " st");
     m_speedValueLabel->setText(formatFixed(m_workingEdits.playbackRate, 2) + "x");
     const double projectRate =
         m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
@@ -512,55 +703,83 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const auto bounds = m_surface->getBounds();
     const float pad = 16.0f;
     const float contentWidth = bounds.width - pad * 2.0f;
-    const float routeWidth = std::min(270.0f, contentWidth * 0.36f);
-    m_sourceNameLabel->setBounds({bounds.x + pad, bounds.y + 14.0f, contentWidth - routeWidth - 18.0f, 20.0f});
-    m_sourceMetaLabel->setBounds({bounds.x + pad, bounds.y + 39.0f, contentWidth - routeWidth - 18.0f, 16.0f});
-    m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 14.0f, routeWidth, 14.0f});
-    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 34.0f, routeWidth, 30.0f});
-    m_routeHintLabel->setBounds({bounds.x + pad, bounds.y + 61.0f, contentWidth, 14.0f});
+    const float routeWidth = std::min(238.0f, contentWidth * 0.34f);
+    m_sourceNameLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 17.0f, contentWidth - routeWidth - 20.0f, 20.0f});
+    m_sourceMetaLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 43.0f, contentWidth - routeWidth - 20.0f, 16.0f});
+    m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 17.0f, routeWidth, 14.0f});
+    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 29.0f, routeWidth, 38.0f});
+    m_routeHintLabel->setBounds({});
 
     const float controlsTop = bounds.bottom() - kControlsCardHeight - 8.0f;
-    const float waveformTop = bounds.y + 96.0f;
-    m_waveform->setBounds(
-        {bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, std::max(100.0f, controlsTop - waveformTop - 8.0f)});
-    m_waveformHintLabel->setBounds({bounds.x + pad, controlsTop - 23.0f, contentWidth - 4.0f, 14.0f});
-
-    m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, contentWidth, 14.0f});
-    // Right-aligned strip, laid out right-to-left so the row stays anchored to
-    // the panel edge as buttons are added. Destructive operations (Reverse,
-    // Commit) sit left of the reversible ones so a misclick is less likely to
-    // land on the one that writes a file.
-    const float buttonGap = 6.0f;
-    const std::shared_ptr<NUIButton> buttonRow[] = {m_resetButton,  m_muteButton,    m_normalizeButton,
-                                                    m_commitButton, m_reverseButton, m_makeUniqueButton};
-    constexpr size_t buttonCount = sizeof(buttonRow) / sizeof(buttonRow[0]);
-    const float availableWidth = contentWidth - buttonGap * static_cast<float>(buttonCount - 1);
-    const float buttonWidth = std::clamp(availableWidth / static_cast<float>(buttonCount), 64.0f, 104.0f);
-
-    float buttonRight = bounds.right() - pad;
-    for (const auto& button : buttonRow) {
-        button->setBounds({buttonRight - buttonWidth, controlsTop + 8.0f, buttonWidth, 24.0f});
-        buttonRight -= buttonWidth + buttonGap;
+    const float waveformSectionTop = bounds.y + 108.0f;
+    const float waveformTop = waveformSectionTop + 22.0f;
+    const float waveformBottom = controlsTop - 14.0f;
+    // Never let the waveform grow into the controls card: clamp to zero and
+    // hide it below the 64px usability floor instead (triage 2026-08-14).
+    // The old max(64, ...) painted the waveform over the card's top edge.
+    const float waveformHeight = std::max(0.0f, waveformBottom - waveformTop);
+    const bool waveformUsable = waveformHeight >= 64.0f;
+    m_waveform->setVisible(waveformUsable);
+    if (waveformUsable) {
+        m_waveform->setBounds({bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, waveformHeight});
+    } else {
+        m_waveform->setBounds({});
     }
+    m_waveformTitleLabel->setBounds({bounds.x + pad + 9.0f, waveformSectionTop, 110.0f, 14.0f});
+    m_waveformHintLabel->setBounds({bounds.x + pad, waveformSectionTop, contentWidth - 4.0f, 14.0f});
 
-    const float columnGap = 20.0f;
+    m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, 96.0f, 14.0f});
+    const float buttonGap = 6.0f;
+    const float actionY = controlsTop + 8.0f;
+    const float actionH = 26.0f;
+    // The CLIP ACTIONS label owns the first 96px; the action row starts after
+    // it and shrinks proportionally when the panel is narrow, instead of the
+    // old fixed-width row that collided below ~574px (triage 2026-08-14).
+    const float resetWidth = 104.0f;
+    float actionX = bounds.x + pad + 104.0f;
+    float totalRequired = buttonGap * 4.0f + 78.0f + 78.0f + 78.0f + 88.0f +
+                          (m_makeUniqueButton->isVisible() ? 92.0f : 0.0f);
+    const float available = (bounds.right() - pad - resetWidth) - actionX;
+    const float scale = totalRequired > 0.0f ? std::clamp(available / totalRequired, 0.0f, 1.0f) : 1.0f;
+    const auto placeAction = [&](const std::shared_ptr<NUIButton>& button, float width) {
+        // No width floor: the proportional shrink keeps the row inside the
+        // available band at every panel width (a floor here would overflow
+        // into the Reset button when the panel is forced very narrow).
+        const float w = width * scale;
+        button->setBounds({actionX, actionY, w, actionH});
+        actionX += w + buttonGap * scale;
+    };
+    placeAction(m_reverseButton, 78.0f);
+    placeAction(m_commitButton, 78.0f);
+    placeAction(m_normalizeButton, 78.0f);
+    placeAction(m_muteButton, 88.0f);
+    if (m_makeUniqueButton->isVisible())
+        placeAction(m_makeUniqueButton, 92.0f);
+    m_resetButton->setBounds({bounds.right() - pad - resetWidth, actionY, resetWidth, actionH});
+
+    const float columnGap = 30.0f;
     const float columnWidth = (contentWidth - columnGap) * 0.5f;
     const float labelWidth = 58.0f;
-    const float valueWidth = 72.0f;
-    const float sliderWidth = columnWidth - labelWidth - valueWidth - 10.0f;
+    const float valueWidth = 116.0f;
+    // Floor at zero: a negative slider width produced inverted bounds that
+    // rendered as malformed controls on narrow panels (triage 2026-08-14).
+    const float sliderWidth = std::max(0.0f, columnWidth - labelWidth - valueWidth - 18.0f);
     const auto layoutControl = [&](float x, float y, const auto& label, const auto& slider, const auto& value) {
         label->setBounds({x, y + 5.0f, labelWidth, 16.0f});
         slider->setBounds({x + labelWidth, y, sliderWidth, 24.0f});
         value->setBounds({x + labelWidth + sliderWidth + 8.0f, y + 5.0f, valueWidth, 16.0f});
     };
-    const float left = bounds.x + pad;
+    const float left = bounds.x + pad + 10.0f;
     const float right = left + columnWidth + columnGap;
-    layoutControl(left, controlsTop + 42.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
-    layoutControl(right, controlsTop + 42.0f, m_panLabel, m_panSlider, m_panValueLabel);
-    layoutControl(left, controlsTop + 88.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
-    layoutControl(right, controlsTop + 88.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
-    layoutControl(left, controlsTop + 134.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
-    layoutControl(right, controlsTop + 134.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
+    m_toneSectionLabel->setBounds({left + 9.0f, controlsTop + 49.0f, columnWidth - 29.0f, 14.0f});
+    m_timingSectionLabel->setBounds({right + 9.0f, controlsTop + 49.0f, columnWidth - 29.0f, 14.0f});
+    layoutControl(left, controlsTop + 78.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
+    layoutControl(left, controlsTop + 124.0f, m_panLabel, m_panSlider, m_panValueLabel);
+    layoutControl(left, controlsTop + 170.0f, m_pitchLabel, m_pitchSlider, m_pitchValueLabel);
+    layoutControl(left, controlsTop + 216.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
+    layoutControl(right, controlsTop + 78.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
+    layoutControl(right, controlsTop + 124.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
+    layoutControl(right, controlsTop + 170.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
 }
 
 void AudioClipEditorPanel::onUpdate(double deltaTime) {

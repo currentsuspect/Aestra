@@ -240,7 +240,9 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     renderer.fillRoundedRect({cardBounds.x + 1.0f, cardBounds.y + 8.0f, 4.0f, cardBounds.height - 16.0f}, 2.0f,
                              unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
 
-    m_controlWidth = std::clamp(cardBounds.width * 0.38f, 220.0f, 312.0f);
+    // Density-derived control floor (responsive contract): narrow rows give
+    // the grid the width back instead of clipping it against a fixed 220.
+    m_controlWidth = std::clamp(cardBounds.width * 0.38f, controlFloorForDensity(cardBounds.width), 312.0f);
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
@@ -370,6 +372,20 @@ void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
 }
 
+std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) const {
+    const bool showBars = (m_density == Density::Full);
+    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
+    const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float pillY = controlBounds.y + controlBounds.height * 0.5f - 10.0f;
+    const float bandRight = controlBounds.right() - (showBars ? 18.0f : 4.0f);
+    return {
+        NUIRect(bandRight - soloW - 6.0f - muteW - 6.0f - routeW, pillY, routeW, 20.0f), // route
+        NUIRect(bandRight - soloW - 6.0f - muteW, pillY, muteW, 20.0f),                   // mute
+        NUIRect(bandRight - soloW, pillY, soloW, 20.0f),                                  // solo
+    };
+}
+
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     bool hasContent = !m_pluginId.empty() || !m_audioClip.empty();
@@ -390,10 +406,10 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
-    const float pillY = centerY - 10.0f;
-    const NUIRect routeRect(bounds.x + bounds.width - 142.0f, pillY, 42.0f, 20.0f);
-    const NUIRect muteRect(bounds.x + bounds.width - 92.0f, pillY, 24.0f, 20.0f);
-    const NUIRect soloRect(bounds.x + bounds.width - 62.0f, pillY, 24.0f, 20.0f);
+    const auto pills = controlPillRects(bounds);
+    const NUIRect& routeRect = pills[0];
+    const NUIRect& muteRect = pills[1];
+    const NUIRect& soloRect = pills[2];
     const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
                                    ? theme.getColor("surfaceTertiary")
                                    : unitAccent.withAlpha(0.16f);
@@ -401,17 +417,20 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : unitAccent.withAlpha(0.42f);
     renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
     renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
-    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 9.0f, theme.getColor("textPrimary").withAlpha(0.9f));
+    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, m_density == Density::Minimal ? 7.5f : 9.0f,
+                              theme.getColor("textPrimary").withAlpha(0.9f));
     drawMuteIcon(renderer, muteRect, m_isMuted);
     drawSoloIcon(renderer, soloRect, m_isSolo);
 
-    const float indicatorX = bounds.right() - 18.0f;
-    for (int i = 0; i < 3; ++i) {
-        const float h = 4.0f + i * 3.0f;
-        const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
-        const NUIColor color = hasContent ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
-                                          : theme.getColor("textDisabled").withAlpha(0.28f);
-        renderer.fillRoundedRect(bar, 1.0f, color);
+    if (m_density == Density::Full) {
+        const float indicatorX = bounds.right() - 18.0f;
+        for (int i = 0; i < 3; ++i) {
+            const float h = 4.0f + i * 3.0f;
+            const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
+            const NUIColor color = hasContent ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
+                                              : theme.getColor("textDisabled").withAlpha(0.28f);
+            renderer.fillRoundedRect(bar, 1.0f, color);
+        }
     }
 }
 
@@ -503,7 +522,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
@@ -556,7 +576,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         std::vector<NUIPoint> slidePoints;
         for (int step = 0; step < m_stepCount; ++step) {
             const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
-            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
@@ -648,7 +669,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const float midY = timelineStrip.y + timelineStrip.height * 0.5f;
             const float ampScale = std::max(4.0f, timelineStrip.height * 0.42f);
             const float binWidth = timelineStrip.width / static_cast<float>(m_audioPreviewWaveform.size());
-            const NUIColor waveColor = theme.getColor("primary").withAlpha(0.9f);
+            const NUIColor waveColor = theme.getColor("waveformLine").withAlpha(0.9f);
 
             for (size_t i = 0; i < m_audioPreviewWaveform.size(); ++i) {
                 const float x = timelineStrip.x + static_cast<float>(i) * binWidth;
@@ -745,7 +766,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
 
     auto bounds = getBounds();
     const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
-    m_controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
     const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
     const float separatorX = m_controlWidth;
     const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
@@ -763,8 +784,11 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         float relativeX = position.x - gridBounds.x;
         float availWidth = gridBounds.width;
         float stepWidth = gridStepWidth(availWidth);
+        if (stepWidth <= 0.0f || relativeX < 0.0f || relativeX >= availWidth) {
+            return -1;
+        }
         float contentX = relativeX + m_scrollX;
-        return static_cast<int>(contentX / stepWidth);
+        return static_cast<int>(std::floor(contentX / stepWidth));
     };
 
     // === Scroll Handling ===
@@ -824,18 +848,22 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         invalidateVisuals();
     }
 
-    // === Velocity-drag session (Sampler step grid) ===
+    // === Step-grid gesture session ===
     if (m_velEditStep >= 0) {
         if (event.released || event.type == NUIMouseEventType::Up) {
-            // Release: a click that never moved vertically toggles the step
-            // (place was already done on press; remove if it pre-existed).
-            if (!m_velEditMoved && m_velEditWasActive) {
-                removeStepNote(m_velEditStep);
+            // A stationary left click toggles the initial step. Empty steps
+            // were placed on press for immediate feedback; active ones are
+            // removed here once we know the gesture was not a velocity edit.
+            if (m_stepGestureMode == StepGestureMode::Pending && m_velEditWasActive) {
+                m_stepGestureChanged |= removeStepNote(m_velEditStep);
             }
-            if (m_onPatternEdited && m_patternId.isValid()) {
-                m_onPatternEdited(m_patternId); // reschedule audio once, on release
+            if (m_stepGestureChanged && m_onPatternEdited && m_patternId.isValid()) {
+                m_onPatternEdited(m_patternId);
             }
             m_velEditStep = -1;
+            m_stepGestureLastStep = -1;
+            m_stepGestureMode = StepGestureMode::None;
+            m_stepGestureChanged = false;
             invalidateVisuals();
             return true;
         }
@@ -844,17 +872,36 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                                    (event.type == NUIMouseEventType::Drag || event.type == NUIMouseEventType::Move ||
                                     event.button == NUIMouseButton::None);
         if (isPointerMove) {
+            const float dx = event.position.x - m_stepGestureStartX;
             const float dy = m_velEditStartY - event.position.y; // up = louder
-            if (!m_velEditMoved && std::abs(dy) > 3.0f) {
-                m_velEditMoved = true;
-                if (!m_velEditWasActive) {
-                    // We placed on press; a drag now edits that fresh note.
+            if (m_stepGestureMode == StepGestureMode::Pending && std::max(std::abs(dx), std::abs(dy)) > 3.0f) {
+                if (std::abs(dx) >= std::abs(dy)) {
+                    m_stepGestureMode = m_velEditWasActive ? StepGestureMode::Erase : StepGestureMode::Paint;
+                    if (m_stepGestureMode == StepGestureMode::Erase) {
+                        m_stepGestureChanged |= removeStepNote(m_velEditStep);
+                    }
+                } else {
+                    m_stepGestureMode = StepGestureMode::Velocity;
                 }
             }
-            if (m_velEditMoved) {
+
+            if (m_stepGestureMode == StepGestureMode::Paint || m_stepGestureMode == StepGestureMode::Erase) {
+                const int currentStep = resolveGridStep(localPoint, localGridRect);
+                if (currentStep >= 0 && currentStep < m_stepCount && currentStep != m_stepGestureLastStep) {
+                    const int first = std::min(m_stepGestureLastStep, currentStep);
+                    const int last = std::max(m_stepGestureLastStep, currentStep);
+                    for (int step = first; step <= last; ++step) {
+                        m_stepGestureChanged |=
+                            m_stepGestureMode == StepGestureMode::Paint ? placeStepNote(step) : removeStepNote(step);
+                    }
+                    m_stepGestureLastStep = currentStep;
+                    invalidateVisuals();
+                }
+            } else if (m_stepGestureMode == StepGestureMode::Velocity) {
                 // Full row height ≈ full velocity range.
                 const float vel = m_velEditBaseVelocity + dy / 90.0f;
                 setStepNoteVelocity(m_velEditStep, vel);
+                m_stepGestureChanged = true;
                 invalidateVisuals();
             }
             return true;
@@ -884,23 +931,25 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     handleControlClick(event, localControlRect);
                     return true;
                 } else if (localContextRect.contains(localPoint)) {
-                    // Loaded Sampler step grid: arm a velocity-drag session.
-                    // A vertical drag sets the step's velocity; a plain click
-                    // toggles it on release. Empty units / pitched / note-roll
-                    // fall through to the classic toggle.
+                    // Loaded step grids support one continuous gesture:
+                    // vertical movement edits velocity, horizontal movement
+                    // paints or erases, and a stationary click toggles.
                     const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
-                    if (m_type == Aestra::Audio::UnitType::Sampler && !shouldUseNoteRoll() && hasContent &&
+                    if (usesStepSequencerForType(m_type) && !shouldUseNoteRoll() && hasContent &&
                         m_patternId.isValid() && m_trackManager) {
                         const int step = resolveGridStep(localPoint, localGridRect);
                         if (step >= 0 && step < m_stepCount) {
                             float vel = kDefaultStepVelocity;
                             const bool active = stepHasNote(step, vel);
                             m_velEditStep = step;
+                            m_stepGestureLastStep = step;
+                            m_stepGestureStartX = event.position.x;
                             m_velEditStartY = event.position.y;
-                            m_velEditMoved = false;
+                            m_stepGestureMode = StepGestureMode::Pending;
                             m_velEditWasActive = active;
+                            m_stepGestureChanged = false;
                             if (!active) {
-                                placeStepNote(step); // show immediately; kept unless click-removed
+                                m_stepGestureChanged = placeStepNote(step);
                                 vel = kDefaultStepVelocity;
                             }
                             m_velEditBaseVelocity = vel;
@@ -917,38 +966,24 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
-                // On a step pad with a note: right-click deletes it (FL-style).
-                // Anywhere else on the row keeps the context menu.
-                if (localContextRect.contains(localPoint) && !shouldUseNoteRoll() && m_patternId.isValid() &&
-                    m_trackManager) {
+                // Right-drag across a step grid erases every crossed pad.
+                // Outside the grid, right-click keeps the row context menu.
+                const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
+                if (localContextRect.contains(localPoint) && hasContent && usesStepSequencerForType(m_type) &&
+                    !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
                     if (stepIndex >= 0 && stepIndex < m_stepCount) {
-                        bool removed = false;
-                        m_trackManager->getPatternManager().applyPatch(
-                            m_patternId, [this, stepIndex, &removed](Aestra::Audio::PatternSource& p) {
-                                if (!p.isMidi())
-                                    return;
-                                auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
-                                const double targetBeat = stepIndex * 0.25;
-                                auto it =
-                                    std::find_if(midi.notes.begin(), midi.notes.end(),
-                                                 [this, targetBeat](const Aestra::Audio::MidiNote& n) {
-                                                     const double endBeat =
-                                                         std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
-                                                     return n.unitId == m_unitId && targetBeat >= n.startBeat - 0.01 &&
-                                                            targetBeat < endBeat - 0.01;
-                                                 });
-                                if (it != midi.notes.end()) {
-                                    midi.notes.erase(it);
-                                    removed = true;
-                                }
-                            });
-                        if (removed) {
-                            if (m_onPatternEdited)
-                                m_onPatternEdited(m_patternId);
-                            invalidateVisuals();
-                            return true;
-                        }
+                        float velocity = kDefaultStepVelocity;
+                        m_velEditStep = stepIndex;
+                        m_stepGestureLastStep = stepIndex;
+                        m_stepGestureStartX = event.position.x;
+                        m_velEditStartY = event.position.y;
+                        m_velEditBaseVelocity = velocity;
+                        m_velEditWasActive = stepHasNote(stepIndex, velocity);
+                        m_stepGestureMode = StepGestureMode::Erase;
+                        m_stepGestureChanged = removeStepNote(stepIndex);
+                        invalidateVisuals();
+                        return true;
                     }
                 }
                 showRowContextMenu(event.position);
@@ -983,9 +1018,10 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
         return;
     }
 
-    const NUIRect muteRect(bounds.width - 92.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
-    const NUIRect soloRect(bounds.width - 62.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
-    const NUIRect routeRect(bounds.width - 142.0f, bounds.height * 0.5f - 10.0f, 42.0f, 20.0f);
+    const auto pills = controlPillRects(bounds);
+    const NUIRect& muteRect = pills[1];
+    const NUIRect& soloRect = pills[2];
+    const NUIRect& routeRect = pills[0];
     const NUIPoint localPoint(localX, localY);
     if (routeRect.contains(localPoint)) {
         showMixerRoutingMenu(event.position);
@@ -1025,8 +1061,8 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
 
     // === Double-click to load sample (EMPTY units only) ===
     // With a sample loaded, rapid taps are step programming — treating any two
-    // grid clicks within 400ms as "open the file picker" made fast FL-style
-    // tap-tap placement randomly hijack the second click.
+    // grid clicks within 400ms as "open the file picker" made fast rhythmic
+    // tap placement randomly hijack the second click.
     auto now = std::chrono::steady_clock::now();
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
@@ -1294,10 +1330,32 @@ void UnitRow::layoutNameLabel() {
     if (!m_nameLabel)
         return;
     auto bounds = getBounds();
-    float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    // Density tiers from available width: Full >= 620, Compact >= 440,
+    // Minimal below. The control block floor follows the tier so narrow rows
+    // give the step grid the width back instead of clipping it.
+    m_density = densityForWidth(bounds.width);
+    float controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
-    float labelWidth = std::max(56.0f, controlWidth - 206.0f);
+    // The label ends before the pill band; the band width follows the tier.
+    const float pillBand = (m_density == Density::Full)     ? 142.0f
+                           : (m_density == Density::Compact) ? 110.0f
+                                                             : 74.0f;
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+    m_nameLabel->setCompact(m_density != Density::Full);
+}
+
+UnitRow::Density UnitRow::densityForWidth(float width) {
+    return (width >= 620.0f)   ? Density::Full
+           : (width >= 440.0f) ? Density::Compact
+                               : Density::Minimal;
+}
+
+float UnitRow::controlFloorForDensity(float width) {
+    const Density d = densityForWidth(width);
+    return (d == Density::Minimal)   ? 150.0f
+           : (d == Density::Compact) ? 180.0f
+                                     : 220.0f;
 }
 
 void UnitRow::routeToMixerChannel(uint32_t channelId) {

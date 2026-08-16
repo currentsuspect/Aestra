@@ -110,6 +110,25 @@ public:
     void drainDeferredResourcesForShutdown();
 
     /**
+     * @brief Reclaim compensation rings retired while the audio stream was
+     *        stopped (control thread only).
+     *
+     * The normal retirement drain is ack-gated: control only frees a retired
+     * ring once RT has acknowledged a newer generation. While the stream is
+     * stopped RT never runs, so ackedGeneration never advances and every
+     * latency recompute would otherwise retain its 128 KiB ring indefinitely.
+     * This path PROVES quiescence first — it waits (bounded) until no
+     * processBlock is in flight (engine-wide RT callback depth) — then
+     * reclaims every retired ring unconditionally and converges the ack to the
+     * current generation.
+     *
+     * Call after stopping/joining the device stream (e.g. from the controller
+     * after AudioDeviceManager::stopStream, and at shutdown). Safe to call
+     * repeatedly; cheap when nothing is pending.
+     */
+    void reclaimRetiredCompensationWhenStopped();
+
+    /**
      * @brief Immediate panic/reset (Double Stop).
      * Clears all buffers and resets plugin states. Main Thread.
      */
@@ -159,8 +178,20 @@ public:
     /** @brief Check if a routing cycle was detected on the audio thread (poll from UI). */
     bool hasRoutingCycleDetected() const { return m_loggedRoutingCycleWarning.load(std::memory_order_relaxed); }
 
-    /** @brief Configure the maximum buffer and output-channel counts. */
-    void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
+    /**
+     * @brief Configure the maximum buffer and output-channel counts.
+     * @return true when the configuration was applied, false when the call was
+     *         refused because a realtime callback was in flight (#731).
+     *
+     * Contract: this must only be called while no stream callback is running.
+     * It grows RT-visible storage (track buffers, graph scratch, plugin
+     * scratch), so a call racing a live processBlock is a use-after-free
+     * hazard. Hosts reconfiguring a running stream must do it through
+     * AudioDeviceManager's pre-restart config hook, which applies the actual
+     * granted config while the callback is stopped. A refused call leaves the
+     * engine unchanged and logs a critical error.
+     */
+    bool setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
     /** @brief Set transport running state and mirror it onto the audio command queue. */
     void setTransportPlaying(bool playing) {
         // Update immediately for UI queries, but also enqueue a command so the audio thread
@@ -176,10 +207,31 @@ public:
     }
     /** @brief Check whether transport playback is active. */
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Mark the engine as rendering an offline export.
+     *
+     * While active, processBlock renders track gains snapped to their targets
+     * instead of ramping over the first offline block. Live playback ramps
+     * gains over one realtime block after a graph compile; the exporter's
+     * 4096-frame block would smear the same ramp over ~8x the frames, leaving
+     * a level bump at the start of a master bounce that an isolated bounce
+     * and warmed live playback do not have (#745). AudioExporter sets this
+     * around its render loop; the audio thread reads it once per block.
+     */
+    void setOfflineRenderActive(bool active) { m_offlineRenderActive.store(active, std::memory_order_relaxed); }
+    bool isOfflineRenderActive() const { return m_offlineRenderActive.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
         auto preparedGraph = graph;
         finalizeAudioGraphRouting(preparedGraph);
+        // Routing Contract D1: a cyclic snapshot is corruption, not a
+        // rendering fallback. Refuse to publish it and keep the last valid
+        // graph so the audio thread never interprets an invalid topology.
+        if (preparedGraph.hasRoutingCycle) {
+            Aestra::Log::error("[AudioEngine] setGraph refused: routing cycle in snapshot; keeping previous graph");
+            return;
+        }
         prepareTrackStateForGraph(preparedGraph);
         m_state.swapGraph(preparedGraph);
         compileGraph();
@@ -289,6 +341,17 @@ public:
         };
         uint32_t pluginLatencySamples{0};
         uint32_t outputCompensationSamples{0};
+        /// Generation of the currently published compensation descriptor for this
+        /// track's output ring (see TrackCompensationState). Monotonic per publish.
+        uint32_t outputCompensationGeneration{0};
+        /// Highest compensation generation the RT thread has acknowledged
+        /// consuming. Control may not reclaim a retired ring behind this.
+        /// 0 means "no RT acknowledgement observed" (generations start at 1);
+        /// the mirror fallback path reports 0 explicitly, never a stale ack.
+        uint32_t outputCompensationAckedGeneration{0};
+        /// Generations currently held in the retired queue (published but not
+        /// yet acked). Dropping to 0 proves the retirement queue drained.
+        uint32_t outputCompensationRetiredGenerationCount{0};
         /// Engine-wide latency compensation toggle. Per-track enablement is not
         /// implemented, so this is the same value for every track index.
         bool compensationEnabled{false};
@@ -577,6 +640,18 @@ public:
     void setTrackManager(std::shared_ptr<TrackManager> trackManager) {
         if (auto previous = m_trackManager.lock()) {
             previous->setChannelPrepareCallback(nullptr);
+            // Release latency-change callbacks captured from the previous
+            // manager: a later chain mutation on it must not solve PDC
+            // against the new manager (or a destroyed engine). The
+            // destructor only clears the current manager's callbacks.
+            for (size_t i = 0; i < previous->getChannelCount(); ++i) {
+                if (auto* channel = previous->getChannel(i)) {
+                    channel->setEffectChainLatencyCallback(nullptr);
+                }
+            }
+            if (auto* master = previous->getMasterChannel()) {
+                master->setEffectChainLatencyCallback(nullptr);
+            }
         }
         m_trackManager = std::move(trackManager);
         if (auto current = m_trackManager.lock()) {
@@ -601,6 +676,12 @@ public:
                     prepareChannel(*channel);
                     channel->setEffectChainLatencyCallback([this]() { calculateLatencyCompensation(); });
                 }
+            }
+            // The Master strip hosts plugins too: its chain latency feeds the
+            // PDC graph (P9/G6), so chain mutations must re-solve.
+            if (auto* master = current->getMasterChannel()) {
+                prepareChannel(*master);
+                master->setEffectChainLatencyCallback([this]() { calculateLatencyCompensation(); });
             }
             calculateLatencyCompensation();
         }
@@ -649,6 +730,17 @@ public:
         return 0.0;
     }
 
+public:
+    /**
+     * @brief Test-only fault injection (#731): makes the next setBufferConfig
+     * attempt throw std::bad_alloc before any mutation, deterministically and
+     * sanitizer-safe (no astronomically-sized allocations, which LSan/TSan
+     * interceptors abort on instead of throwing).
+     */
+    void setSimulateBufferConfigAllocFailure(bool simulate) {
+        m_simulateBufferConfigAllocFailure = simulate;
+    }
+
 private:
     /**
      * @brief Withdraw all applied latency compensation from the RT state.
@@ -691,6 +783,27 @@ private:
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);
+
+    /**
+     * @brief Prepare/publish a track's PDC compensation ring off the audio thread (#727).
+     *
+     * The only place a compensation buffer is allocated. Publish-replacement
+     * protocol: each call that changes the delay publishes a fresh immutable
+     * descriptor + zeroed 16384-frame ring and retires the previous generation,
+     * which stays alive until RT acknowledges it (PR #730 follow-up). Calls with
+     * an unchanged delay no-op — UNLESS @p ownerTrackId differs from the slot's
+     * stamped owner, in which case the publication is forced: `m_trackState` is
+     * indexed positionally, so a deleted channel shifts later tracks into the
+     * previous occupant's slot, and a same-delay no-op would let RT keep reading
+     * the previous track's ring contents (audible leakage). A fresh zeroed ring
+     * makes the first `delay` frames silence — the same semantics as the v1
+     * delay-change reset. Must be called BEFORE the RT path can act on a new
+     * nonzero delay — publication is atomic, so there is no window where a delay
+     * is visible without its ring.
+     *
+     * Control thread only — never call from processBlock.
+     */
+    void prepareCompensationRing(TrackRTState& state, uint32_t delaySamples, uint32_t ownerTrackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset, uint64_t patternFrameStart);
     // Block-stable values renderGraph() derives once per call and every
     // per-track render reads. Bundled so renderTrack() takes them as one
@@ -722,7 +835,6 @@ private:
     // renderTrack phase helpers (verbatim extractions; RT path — no allocation).
     void renderClips(const std::vector<ClipRenderState>& clips, double* destination, const RenderContext& ctx,
                      bool& srcActiveThisBlock);
-
 
     void renderTrackUnits(uint32_t mixerChannelId, std::vector<double>& buffer, const RenderContext& ctx);
     float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
@@ -790,9 +902,20 @@ private:
 
     std::atomic<uint32_t> m_sampleRate{48000};
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
+    // Test-only fault injection: makes setBufferConfig throw std::bad_alloc
+    // at the first allocation, deterministically (sanitizer-safe: no
+    // astronomically-sized allocs, which LSan/TSan interceptors abort on).
+    // Set via the public setSimulateBufferConfigAllocFailure() test hook.
+    bool m_simulateBufferConfigAllocFailure{false};
+    // Admission gate for RT-callback vs buffer-config mutual exclusion (#731).
+    // High bit: owned by setBufferConfig while it resizes RT-visible storage.
+    // Lower 31 bits: count of processBlock() callbacks currently in flight.
+    // See RTConfigAdmission.h for protocol details.
+    std::atomic<uint32_t> m_admissionGate{0};
     std::shared_ptr<ChannelPrepareConfig> m_channelPrepareConfig{std::make_shared<ChannelPrepareConfig>()};
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
+    std::atomic<bool> m_offlineRenderActive{false};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
@@ -805,6 +928,38 @@ private:
     std::atomic<uint64_t> m_metronomeCountInSamplePos{0};
     std::atomic<uint32_t> m_pendingMetronomeCountInBeats{0};
     std::atomic<bool> m_pendingMetronomeCountInStop{false};
+
+    // Engine-wide realtime callback depth. Incremented on renderGraph entry
+    // (the only place compensation rings are read) and decremented on exit
+    // (RAII, covers all return paths). Control thread, via
+    // reclaimRetiredCompensationWhenStopped(), waits for this to reach 0 to
+    // PROVE no callback can still be reading compensation rings before it
+    // reclaims retired generations that ackedGeneration never advanced past.
+    //
+    // Memory ordering: the guard uses acquire-on-increment / release-on-
+    // decrement so the control thread's acquire-load of 0 synchronizes-with
+    // the releasing callback's entire critical section. Without that pairing,
+    // observing depth == 0 would not order the ring free after the callback's
+    // final ring access, and the reclaim would be a data race. On x86 this is
+    // free; on weaker ISAs it is one acquire and one release per block.
+    std::atomic<uint32_t> m_rtCallbackDepth{0};
+
+    // RAII depth guard for renderGraph; increments on entry, decrements on all
+    // exit paths (including early returns). Acquire/release pairing (see
+    // m_rtCallbackDepth) is what makes the quiescence proof real; do not
+    // weaken to relaxed.
+    class RealtimeCallbackDepthGuard {
+    public:
+        explicit RealtimeCallbackDepthGuard(AudioEngine& engine) noexcept : m_engine(engine) {
+            m_engine.m_rtCallbackDepth.fetch_add(1, std::memory_order_acquire);
+        }
+        ~RealtimeCallbackDepthGuard() noexcept { m_engine.m_rtCallbackDepth.fetch_sub(1, std::memory_order_release); }
+        RealtimeCallbackDepthGuard(const RealtimeCallbackDepthGuard&) = delete;
+        RealtimeCallbackDepthGuard& operator=(const RealtimeCallbackDepthGuard&) = delete;
+
+    private:
+        AudioEngine& m_engine;
+    };
 
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};
@@ -1069,7 +1224,7 @@ private:
     std::atomic<uint64_t> m_patternMonotonicFrame{0};
     // Last loop length (samples) used for a maintenance refill. Only touched
     // on the maintenance thread; a change (BPM / sample-rate) means queued
-    // timestamps are in a stale domain and the pattern engine must flush.
+    // timestamps are in a stale domain and the pattern engine must rewind.
     uint64_t m_lastRefillLoopLenSamples{0};
 
     // Test Tone State

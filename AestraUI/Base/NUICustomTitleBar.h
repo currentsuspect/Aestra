@@ -46,6 +46,9 @@ public:
     // Export callback
     void setOnExportRequested(std::function<void()> callback) { onExportRequested_ = callback; }
 
+    // Membership callback
+    void setOnMembershipClicked(std::function<void()> callback) { onMembershipClicked_ = callback; }
+
     // Export progress state
     void setExportProgress(float progress);  // 0.0 - 1.0, -1 for indeterminate
     void setExporting(bool exporting);
@@ -126,6 +129,11 @@ private:
     NUIRect exportButtonRect_;
     bool exportHovered_ = false;
     bool exportAnimating_ = false;
+
+    // Membership status cluster
+    bool m_statusHovered = false;
+    NUIRect m_statusClusterRect;
+    std::function<void()> onMembershipClicked_;
     
     // Helper methods
     void updateButtonRects();

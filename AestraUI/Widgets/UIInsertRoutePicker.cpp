@@ -1,5 +1,5 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-#include "UIInsertRoutePicker.h"
+#include "UIMixerRoutePicker.h"
 
 #include "NUIRenderer.h"
 #include "NUITextInput.h"
@@ -30,8 +30,10 @@ std::string trim(std::string text) {
 
 std::string searchableQuery(std::string query) {
     query = lowercase(trim(std::move(query)));
-    if (query.rfind("insert ", 0) == 0)
-        query.erase(0, 7);
+    if (query.rfind("channel ", 0) == 0)
+        query.erase(0, 8);
+    else if (query.rfind("insert ", 0) == 0)
+        query.erase(0, 7); // Legacy producer vocabulary remains accepted as input.
     if (!query.empty() && query.front() == '#')
         query.erase(query.begin());
     return trim(std::move(query));
@@ -51,20 +53,20 @@ NUIColor colorFromArgb(uint32_t argb) {
                     static_cast<float>(argb & 0xFF) / 255.0f, static_cast<float>((argb >> 24) & 0xFF) / 255.0f);
 }
 
-std::string routeNumberLabel(const UIInsertRoutePicker::Route& route) {
-    if (route.insertNumber <= 0)
+std::string routeNumberLabel(const UIMixerRoutePicker::Route& route) {
+    if (route.channelNumber <= 0)
         return "M";
     std::ostringstream stream;
-    stream << std::setfill('0') << std::setw(2) << route.insertNumber;
+    stream << std::setfill('0') << std::setw(2) << route.channelNumber;
     return stream.str();
 }
 
 } // namespace
 
-UIInsertRoutePicker::UIInsertRoutePicker() {
+UIMixerRoutePicker::UIMixerRoutePicker() {
     setLayer(NUILayer::Dropdown);
     m_searchInput = std::make_shared<NUITextInput>();
-    m_searchInput->setPlaceholderText("Type insert # or name…");
+    m_searchInput->setPlaceholderText("Type channel # or name…");
     m_searchInput->setShowPlaceholderWhenFocused(true);
     m_searchInput->setMaxLength(128);
     m_searchInput->setBorderRadius(5.0f);
@@ -80,7 +82,7 @@ UIInsertRoutePicker::UIInsertRoutePicker() {
     addChild(m_searchInput);
 }
 
-void UIInsertRoutePicker::setRoutes(std::vector<Route> routes, uint32_t selectedRouteId) {
+void UIMixerRoutePicker::setRoutes(std::vector<Route> routes, uint32_t selectedRouteId) {
     m_routes = std::move(routes);
     m_selectedRouteId = selectedRouteId;
     if (!selectedRoute())
@@ -89,27 +91,27 @@ void UIInsertRoutePicker::setRoutes(std::vector<Route> routes, uint32_t selected
     repaint();
 }
 
-void UIInsertRoutePicker::setSelectedRoute(uint32_t routeId) {
+void UIMixerRoutePicker::setSelectedRoute(uint32_t routeId) {
     const auto found =
         std::find_if(m_routes.begin(), m_routes.end(), [routeId](const Route& route) { return route.id == routeId; });
     m_selectedRouteId = found == m_routes.end() ? 0 : routeId;
     repaint();
 }
 
-void UIInsertRoutePicker::setTriggerBounds(const NUIRect& bounds) {
+void UIMixerRoutePicker::setTriggerBounds(const NUIRect& bounds) {
     m_triggerBounds = bounds;
     setBounds(bounds);
     updatePopupBounds();
 }
 
-void UIInsertRoutePicker::setSearchQuery(const std::string& query) {
+void UIMixerRoutePicker::setSearchQuery(const std::string& query) {
     m_searchQuery = query;
     if (m_searchInput && m_searchInput->getText() != query)
         m_searchInput->setText(query);
     rebuildFilter();
 }
 
-std::vector<uint32_t> UIInsertRoutePicker::getFilteredRouteIds() const {
+std::vector<uint32_t> UIMixerRoutePicker::getFilteredRouteIds() const {
     std::vector<uint32_t> result;
     result.reserve(m_filteredIndices.size());
     for (const size_t index : m_filteredIndices)
@@ -117,7 +119,7 @@ std::vector<uint32_t> UIInsertRoutePicker::getFilteredRouteIds() const {
     return result;
 }
 
-bool UIInsertRoutePicker::routeFirstMatch() {
+bool UIMixerRoutePicker::routeFirstMatch() {
     if (m_filteredIndices.empty())
         return false;
 
@@ -126,7 +128,7 @@ bool UIInsertRoutePicker::routeFirstMatch() {
     if (!query.empty()) {
         const auto exact = std::find_if(m_filteredIndices.begin(), m_filteredIndices.end(), [&](size_t index) {
             const auto& route = m_routes[index];
-            return (isNumber(query) && std::to_string(route.insertNumber) == query) || lowercase(route.name) == query;
+            return (isNumber(query) && std::to_string(route.channelNumber) == query) || lowercase(route.name) == query;
         });
         if (exact != m_filteredIndices.end())
             matchIndex = *exact;
@@ -135,7 +137,7 @@ bool UIInsertRoutePicker::routeFirstMatch() {
     return true;
 }
 
-void UIInsertRoutePicker::open() {
+void UIMixerRoutePicker::open() {
     if (m_open)
         return;
     m_open = true;
@@ -151,7 +153,7 @@ void UIInsertRoutePicker::open() {
     repaint();
 }
 
-void UIInsertRoutePicker::close() {
+void UIMixerRoutePicker::close() {
     if (!m_open)
         return;
     m_open = false;
@@ -161,23 +163,23 @@ void UIInsertRoutePicker::close() {
     repaint();
 }
 
-void UIInsertRoutePicker::rebuildFilter() {
+void UIMixerRoutePicker::rebuildFilter() {
     m_filteredIndices.clear();
     const std::string query = searchableQuery(m_searchQuery);
     const bool numericQuery = isNumber(query);
     for (size_t index = 0; index < m_routes.size(); ++index) {
         const auto& route = m_routes[index];
         if (query.empty() || contains(route.name, query) ||
-            (numericQuery && std::to_string(route.insertNumber).find(query) != std::string::npos) ||
-            (route.insertNumber == 0 && std::string("master").find(query) != std::string::npos)) {
+            (numericQuery && std::to_string(route.channelNumber).find(query) != std::string::npos) ||
+            (route.channelNumber == 0 && std::string("master").find(query) != std::string::npos)) {
             m_filteredIndices.push_back(index);
         }
     }
 
     if (numericQuery) {
         std::stable_sort(m_filteredIndices.begin(), m_filteredIndices.end(), [&](size_t left, size_t right) {
-            const bool leftExact = std::to_string(m_routes[left].insertNumber) == query;
-            const bool rightExact = std::to_string(m_routes[right].insertNumber) == query;
+            const bool leftExact = std::to_string(m_routes[left].channelNumber) == query;
+            const bool rightExact = std::to_string(m_routes[right].channelNumber) == query;
             return leftExact && !rightExact;
         });
     }
@@ -186,7 +188,7 @@ void UIInsertRoutePicker::rebuildFilter() {
     m_hoveredVisibleRow = -1;
 }
 
-void UIInsertRoutePicker::updatePopupBounds() {
+void UIMixerRoutePicker::updatePopupBounds() {
     const float width = std::max(kPopupWidth, m_triggerBounds.width);
     m_popupBounds = {m_triggerBounds.right() - width, m_triggerBounds.bottom() + 6.0f, width,
                      kSearchHeight + kRowHeight * kVisibleRows + kFooterHeight};
@@ -196,20 +198,20 @@ void UIInsertRoutePicker::updatePopupBounds() {
     }
 }
 
-void UIInsertRoutePicker::selectRoute(uint32_t routeId) {
+void UIMixerRoutePicker::selectRoute(uint32_t routeId) {
     setSelectedRoute(routeId);
     close();
     if (m_onRouteSelected)
         m_onRouteSelected(m_selectedRouteId);
 }
 
-const UIInsertRoutePicker::Route* UIInsertRoutePicker::selectedRoute() const {
+const UIMixerRoutePicker::Route* UIMixerRoutePicker::selectedRoute() const {
     const auto found = std::find_if(m_routes.begin(), m_routes.end(),
                                     [this](const Route& route) { return route.id == m_selectedRouteId; });
     return found == m_routes.end() ? nullptr : &*found;
 }
 
-int UIInsertRoutePicker::hitTestVisibleRow(const NUIPoint& point) const {
+int UIMixerRoutePicker::hitTestVisibleRow(const NUIPoint& point) const {
     const NUIRect listBounds{m_popupBounds.x, m_popupBounds.y + kSearchHeight, m_popupBounds.width,
                              kRowHeight * kVisibleRows};
     if (!listBounds.contains(point))
@@ -219,7 +221,7 @@ int UIInsertRoutePicker::hitTestVisibleRow(const NUIPoint& point) const {
     return filteredIndex < static_cast<int>(m_filteredIndices.size()) ? visibleRow : -1;
 }
 
-void UIInsertRoutePicker::onRender(NUIRenderer& renderer) {
+void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
     if (!isVisible())
         return;
 
@@ -227,21 +229,49 @@ void UIInsertRoutePicker::onRender(NUIRenderer& renderer) {
     const auto textPrimary = theme.getColor("textPrimary");
     const auto textSecondary = theme.getColor("textSecondary");
     const auto border = theme.getColor("borderSubtle");
-    const auto triggerBackground = theme.getColor("surfaceRaised").withAlpha(0.94f);
-    const auto accent = theme.getColor("secondary");
+    const auto triggerBackground = m_compactChipStyle
+                                       ? theme.getColor("surfaceTertiary")
+                                       : theme.getColor("surfaceRaised").withAlpha(0.94f);
+    const auto accent = m_compactChipStyle ? theme.getColor("accentPrimary") : theme.getColor("secondary");
 
-    renderer.fillRoundedRect(m_triggerBounds, 6.0f,
+    renderer.fillRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
                              isHovered() ? triggerBackground.lightened(0.05f) : triggerBackground);
-    renderer.strokeRoundedRect(m_triggerBounds, 6.0f, m_open ? 1.5f : 1.0f, m_open ? accent.withAlpha(0.9f) : border);
+    renderer.strokeRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
+                               m_open ? 1.5f : 1.0f, m_open ? accent.withAlpha(0.9f) : border);
 
     const Route* selected = selectedRoute();
     const std::string number = selected ? routeNumberLabel(*selected) : "M";
     const std::string name = selected ? selected->name : "Master";
-    const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
-    renderer.fillRoundedRect(badge, 4.0f, accent.withAlpha(0.17f));
-    renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
-    renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
-    renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
+    if (m_compactChipStyle) {
+        const NUIRect badge{m_triggerBounds.x + 8.0f, m_triggerBounds.y + 8.0f, 22.0f, 22.0f};
+        renderer.fillRoundedRect(badge, 6.0f, accent.withAlpha(0.16f));
+        renderer.drawTextCentered(number, badge, 11.0f, accent.lightened(0.20f));
+        renderer.drawText("OUTPUT", {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 5.0f}, 9.5f,
+                          textSecondary.withAlpha(0.78f));
+        // Long explicit route names must not collide with the chevron: ellipsize
+        // against the space between the name and the arrow.
+        const float nameX = m_triggerBounds.x + 39.0f;
+        const float maxNameWidth = std::max(0.0f, (m_triggerBounds.right() - 17.0f - 8.0f) - nameX);
+        std::string displayName = name;
+        if (maxNameWidth > 0.0f && renderer.measureText(displayName, 12.5f).width > maxNameWidth) {
+            constexpr const char* kEllipsis = "...";
+            const float ellipsisW = renderer.measureText(kEllipsis, 12.5f).width;
+            while (!displayName.empty() &&
+                   renderer.measureText(displayName + kEllipsis, 12.5f).width > maxNameWidth) {
+                displayName.pop_back();
+            }
+            displayName += kEllipsis;
+        }
+        renderer.drawText(displayName, {nameX, m_triggerBounds.y + 18.0f}, 12.5f, textPrimary);
+        renderer.drawText(">", {m_triggerBounds.right() - 17.0f, m_triggerBounds.y + 11.0f}, 14.0f,
+                          textSecondary);
+    } else {
+        const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
+        renderer.fillRoundedRect(badge, 4.0f, accent.withAlpha(0.17f));
+        renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
+        renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
+        renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
+    }
 
     if (!m_open) {
         setDirty(false);
@@ -285,7 +315,7 @@ void UIInsertRoutePicker::onRender(NUIRenderer& renderer) {
     renderer.clearClipRect();
 
     if (m_filteredIndices.empty()) {
-        renderer.drawTextCentered("No matching Inserts", listBounds, 12.0f, textSecondary);
+        renderer.drawTextCentered("No matching channels", listBounds, 12.0f, textSecondary);
     }
 
     const float footerY = m_popupBounds.bottom() - kFooterHeight;
@@ -297,7 +327,7 @@ void UIInsertRoutePicker::onRender(NUIRenderer& renderer) {
     setDirty(false);
 }
 
-bool UIInsertRoutePicker::onMouseEvent(const NUIMouseEvent& event) {
+bool UIMixerRoutePicker::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled())
         return false;
 
@@ -348,7 +378,7 @@ bool UIInsertRoutePicker::onMouseEvent(const NUIMouseEvent& event) {
     return false;
 }
 
-bool UIInsertRoutePicker::onKeyEvent(const NUIKeyEvent& event) {
+bool UIMixerRoutePicker::onKeyEvent(const NUIKeyEvent& event) {
     if (!m_open)
         return false;
     if (event.pressed && event.keyCode == NUIKeyCode::Escape) {

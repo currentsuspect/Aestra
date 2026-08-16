@@ -360,6 +360,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
     )
 endif()
 
+# #731 — engine-side contract: setBufferConfig must be refused while a realtime
+# callback is in flight (RT-visible storage must never be resized mid-callback).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/BufferConfigContractTest.cpp")
+    add_executable(BufferConfigContractTest BufferConfigContractTest.cpp)
+    target_link_libraries(BufferConfigContractTest PRIVATE AestraAudio)
+    target_include_directories(BufferConfigContractTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME BufferConfigContractTest COMMAND BufferConfigContractTest)
+    set_tests_properties(BufferConfigContractTest PROPERTIES
+        LABELS "headless;engine;contract:core"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P4b.1 — engine populates LatencyGraph::edges from real project routing
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     add_executable(PDCEngineEdgeConstructionTest PDCEngineEdgeConstructionTest.cpp)
@@ -392,6 +409,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
     )
 endif()
 
+# Master-direct vs channel-routed level parity (triage 2026-08-14)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingMasterDirectParityTest.cpp")
+    add_executable(RoutingMasterDirectParityTest RoutingMasterDirectParityTest.cpp)
+    target_link_libraries(RoutingMasterDirectParityTest PRIVATE AestraAudio)
+    target_include_directories(RoutingMasterDirectParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME RoutingMasterDirectParityTest COMMAND RoutingMasterDirectParityTest)
+    set_tests_properties(RoutingMasterDirectParityTest PROPERTIES
+        LABELS "headless;routing;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC disable-clears-compensation regression (#684)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
     add_executable(PDCDisableClearsCompensationTest PDCDisableClearsCompensationTest.cpp)
@@ -407,5 +440,28 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCDisableClearsCompensationTest.cpp")
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
+
+# Headless export must contain ONLY the timeline's content. exportTo() documented that
+# guarantee but implemented it with flush(), which rewinds instances rather than removing
+# them, so anything already scheduled bled into the rendered file. The sibling
+# HeadlessExportSessionInvarianceTest covers the TRANSPORT half of the contract only.
+# Deliberately unguarded: this regression test is part of the repo, and silently omitting
+# it on configuration would drop the isolation guarantee without failing loudly.
+add_executable(HeadlessExportInstanceIsolationTest
+    HeadlessExportInstanceIsolationTest.cpp
+)
+target_link_libraries(HeadlessExportInstanceIsolationTest PRIVATE AestraAudio)
+target_include_directories(HeadlessExportInstanceIsolationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME HeadlessExportInstanceIsolationTest
+    COMMAND HeadlessExportInstanceIsolationTest
+)
+set_tests_properties(HeadlessExportInstanceIsolationTest PROPERTIES
+    LABELS "headless;export;engine;regression;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+)
 
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

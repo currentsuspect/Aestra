@@ -31,7 +31,7 @@ On first launch, Aestra will:
 
 1. Initialize the audio engine (WASAPI on Windows, Linux audio stack where supported)
 2. Load the default theme
-3. Create a new empty project
+3. Create a new project (with starter tracks)
 
 ## 🖥️ Understanding the Interface
 

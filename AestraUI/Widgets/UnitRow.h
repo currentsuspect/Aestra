@@ -193,6 +193,12 @@ private:
     static constexpr float PAD_SPACING = 3.0f;        // Space between pads
     
     float m_controlWidth = CONTROL_WIDTH;
+    // Responsive density (0.7.0 triage): derived from row width, never
+    // hardcoded per-state. Full keeps the pill band + type line; Compact
+    // compresses pills and drops the type line; Minimal collapses to a
+    // letter-only route chip and icon mute/solo.
+    enum class Density { Full, Compact, Minimal };
+    Density m_density = Density::Full;
     
     // Step sequencer
     int m_stepCount = 16;
@@ -219,16 +225,20 @@ private:
     bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
 
-    // Velocity-drag session (Sampler step grid). A press arms a step; a
-    // vertical drag sets its velocity, a click without vertical movement
-    // toggles the step (place empty / remove active) on release.
+    // Step gesture session. A vertical drag edits velocity; a horizontal drag
+    // paints from an empty starting pad or erases from an active one. Right
+    // drag always erases. A click without movement keeps toggle semantics.
+    enum class StepGestureMode { None, Pending, Velocity, Paint, Erase };
     static constexpr float kDefaultStepVelocity = 100.0f / 127.0f;
     static constexpr float kMinStepVelocity = 0.05f;
-    int m_velEditStep = -1;         // -1 = no session
-    float m_velEditStartY = 0.0f;   // pointer Y at press
+    StepGestureMode m_stepGestureMode = StepGestureMode::None;
+    int m_velEditStep = -1; // initial step; -1 = no session
+    int m_stepGestureLastStep = -1;
+    float m_stepGestureStartX = 0.0f;
+    float m_velEditStartY = 0.0f;
     float m_velEditBaseVelocity = kDefaultStepVelocity;
-    bool m_velEditMoved = false;    // crossed the drag threshold → velocity edit
     bool m_velEditWasActive = false; // step already had a note at press
+    bool m_stepGestureChanged = false;
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
 
@@ -263,6 +273,11 @@ private:
 
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;
+    Density densityForWidth(float width);
+    float controlFloorForDensity(float width);
+    // Tier-aware pill geometry shared by rendering and hit-testing (CR review:
+    // the hit-test used fixed Full-density rects in Compact/Minimal tiers).
+    std::array<NUIRect, 3> controlPillRects(const NUIRect& controlBounds) const;
     std::shared_ptr<NUIContextMenu> m_rowContextMenu;
     std::shared_ptr<NUIContextMenu> m_mixerRoutingMenu;
 

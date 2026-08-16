@@ -43,7 +43,7 @@ constexpr float BROWSER_SEARCH_ROW_H = 34.0f;
 constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 30.0f;
-constexpr float BROWSER_LIST_HEADER_H = 58.0f;
+constexpr float BROWSER_LIST_HEADER_H = 34.0f;
 constexpr float BROWSER_LIST_ROW_H = 30.0f;
 
 static std::string getSettingsPath() {
@@ -391,6 +391,9 @@ FileBrowser::FileBrowser()
     // Initialize search input
     searchInput_ = std::make_shared<NUITextInput>();
     searchInput_->setPlaceholderText("Search files and folders");
+    // The search row sits on the surface (0.7.0 triage): the input must not
+    // paint its own recessed background/border over the flattened treatment.
+    searchInput_->setBackgroundVisible(false);
     addChild(searchInput_);
 
     // Bind search callback
@@ -412,8 +415,8 @@ FileBrowser::FileBrowser()
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
     searchInput_->setPadding(6.0f);
     searchInput_->setBorderRadius(5.0f);
-    searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("border"));
+    searchInput_->setBackgroundColor(themeManager.getColor("backgroundPrimary"));
+    searchInput_->setBorderColor(themeManager.getColor("borderSubtle").withAlpha(0.62f));
     searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
     searchInput_->setBorderWidth(1.0f);
 
@@ -896,14 +899,14 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H, listW,
                           std::max(0.0f, contentH - BROWSER_LIST_HEADER_H - previewH));
-    const float chromeY = layout.listHeader.y + 3.0f;
+    const float chromeY = layout.listHeader.y + 5.0f;
     layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
     layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
     layout.upButton = NUIRect(layout.forwardButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
+    layout.sortButton = NUIRect(layout.listHeader.right() - 27.0f, chromeY, 22.0f, 24.0f);
+    layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
     layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
-                               std::max(0.0f, layout.listHeader.right() - layout.upButton.right() - 14.0f), 24.0f);
-    layout.sortButton = NUIRect(layout.listHeader.right() - 31.0f, layout.listHeader.y + 31.0f, 26.0f, 23.0f);
-    layout.filterButton = NUIRect(layout.sortButton.x - 29.0f, layout.sortButton.y, 26.0f, 23.0f);
+                               std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
     layout.searchActionButton = NUIRect(layout.searchBar.right() - 30.0f, layout.searchBar.y + 4.0f, 26.0f, 26.0f);
     layout.navWidth = navW;
     return layout;
@@ -970,7 +973,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.07f);
+    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.05f);
     const NUIColor divider = themeManager.getColor("divider");
     const bool compact = layout.navWidth < 112.0f;
 
@@ -978,14 +981,15 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     renderer.setClipRect(layout.navPane);
     renderer.drawLine({layout.navPane.right(), layout.navPane.y},
                       {layout.navPane.right(), layout.navPane.bottom()},
-                      1.0f, divider);
+                      1.0f, divider.withAlpha(0.58f));
 
-    // Left header matches right listHeader exactly in height and structure
+    // One shared, compact navigation row. The browser no longer spends a full
+    // second row on item counts and duplicate structural rules.
     const float navHeaderH = BROWSER_LIST_HEADER_H;
     const NUIRect navHeader(layout.navPane.x, layout.navPane.y, layout.navPane.width, navHeaderH);
     renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
-                      1.0f, themeManager.getColor("border")); // matches list header bottom rule → continuous line
+                      1.0f, themeManager.getColor("border").withAlpha(0.42f));
 
     // Folder name at top (like breadcrumb on the right)
     const auto& themeProps = themeManager.getCurrentTheme();
@@ -1011,12 +1015,6 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                                NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 8.5f))},
                           8.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
     }
-
-    // Inner divider — aligned with the list header's inner rule (listHeader.y + 29)
-    // so the two form one continuous line across the browser.
-    renderer.drawLine({navHeader.x, navHeader.y + 29.0f},
-                      {navHeader.right(), navHeader.y + 29.0f},
-                      1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
     // Scrollable content region below the fixed folder-name header. Short
     // windows keep the tail rows reachable without moving the header. Start at the
@@ -1290,11 +1288,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     const NUIColor headerBg = themeManager.getColor("backgroundSecondary").darkened(0.03f);
-    const NUIColor border = themeManager.getColor("border").withAlpha(0.40f);
+    const NUIColor border = themeManager.getColor("border").withAlpha(0.38f);
     const NUIColor text = themeManager.getColor("textPrimary");
     const NUIColor muted = themeManager.getColor("textSecondary");
     const NUIColor accent = themeManager.getColor("accentPrimary");
-    const auto& view = getActiveView();
     renderer.fillRect(layout.listHeader, headerBg);
 
     const auto& themeProps = themeManager.getCurrentTheme();
@@ -1331,26 +1328,9 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       {layout.pathLabel.x, std::round(renderer.calculateTextY(layout.pathLabel, themeProps.fontSizeS))},
                       themeProps.fontSizeS, text.withAlpha(0.88f));
 
-    renderer.drawLine({layout.listHeader.x, layout.listHeader.y + 29.0f},
-                      {layout.listHeader.right(), layout.listHeader.y + 29.0f},
-                      1.0f, border.withAlpha(0.65f));
     renderer.drawLine({layout.listHeader.x, layout.listHeader.bottom()},
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
-    std::string status;
-    if (selectedIndices_.size() > 1) {
-        status = std::to_string(selectedIndices_.size()) + " selected";
-    } else {
-        status = std::to_string(view.size()) + (view.size() == 1 ? " item" : " items");
-        const std::string filterLabel = getQuickFilterLabel();
-        if (filterLabel != "All") status += "  ·  " + filterLabel;
-        if (!activeTagFilter_.empty()) status += "  ·  " + activeTagFilter_;
-    }
-    const NUIRect statusRect(layout.listHeader.x + 10.0f, layout.listHeader.y + 31.0f,
-                             std::max(0.0f, layout.filterButton.x - layout.listHeader.x - 14.0f), 23.0f);
-    renderer.drawText(ellipsizeEnd(renderer, status, themeProps.fontSizeXS, statusRect.width),
-                      {statusRect.x, std::round(renderer.calculateTextY(statusRect, themeProps.fontSizeXS))},
-                      themeProps.fontSizeXS, muted.withAlpha(0.66f));
 
     const bool filterActive = isFilterActive();
     const NUIColor controlColor = filterActive ? accent.withAlpha(0.94f) : muted.withAlpha(0.62f);
@@ -1398,29 +1378,14 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
     renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
-    renderer.fillRect(browserLayout.searchBar, themeManager.getColor("backgroundSecondary").darkened(0.02f));
+    // Search row sits ON the surface (DESIGN.md rule 4: no recessed dark
+    // well); the single quiet divider below it explains the boundary.
     renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
                       {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
-                      1.0f, themeManager.getColor("border").withAlpha(0.52f));
+                      1.0f, themeManager.getColor("border").withAlpha(0.30f));
 
-    const auto& themeProps = themeManager.getCurrentTheme();
-    const float cornerRadius = themeProps.radiusM;
-
-    NUIRect topClip = fileBrowserBounds;
-    topClip.height -= cornerRadius;
-    renderer.setClipRect(topClip);
-    renderer.strokeRoundedRect(fileBrowserBounds, cornerRadius, 1.0f, borderColor_);
-    renderer.clearClipRect();
-
-    NUIRect bottomClip = fileBrowserBounds;
-    bottomClip.y = fileBrowserBounds.bottom() - cornerRadius;
-    bottomClip.height = cornerRadius;
-    renderer.setClipRect(bottomClip);
-
-    renderer.drawLine(NUIPoint(fileBrowserBounds.x, bottomClip.y), NUIPoint(fileBrowserBounds.x, bottomClip.bottom()), 1.0f, borderColor_);
-    renderer.drawLine(NUIPoint(fileBrowserBounds.right(), bottomClip.y), NUIPoint(fileBrowserBounds.right(), bottomClip.bottom()), 1.0f, borderColor_);
-
-    renderer.clearClipRect();
+    // Flat square border — the curved grey top treatment is gone (0.7.0 triage).
+    renderer.strokeRect(fileBrowserBounds, 1.0f, borderColor_);
 
     renderNavigationPane(renderer, browserLayout);
     renderListHeader(renderer, browserLayout);
@@ -1668,8 +1633,8 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBounds(browserLayout.search);
 
         searchInput_->setTextColor(textColor_);
-        searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-        searchInput_->setBorderColor(themeManager.getColor("border"));
+        searchInput_->setBackgroundColor(themeManager.getColor("backgroundPrimary"));
+        searchInput_->setBorderColor(themeManager.getColor("borderSubtle").withAlpha(0.62f));
         searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(6.0f);
@@ -2301,28 +2266,17 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
 
-        if (!(event.modifiers & NUIModifiers::Ctrl) &&
-            !(event.modifiers & NUIModifiers::Alt) &&
-            !(event.modifiers & NUIModifiers::Super)) {
-            char c = event.character;
-            if (c == 0) {
-                if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
-                    c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
-                    const bool shift = event.modifiers & NUIModifiers::Shift;
-                    const bool caps = event.modifiers & NUIModifiers::CapsLock;
-                    if (shift != caps) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                } else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
-                    c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
-                }
-            }
-            if (c >= 32 && c <= 126 && searchInput_) {
-                searchInput_->setFocused(true);
-                NUIKeyEvent resolvedEvent = event;
-                resolvedEvent.character = c;
-                searchInput_->onKeyEvent(resolvedEvent);
-                return true;
-            }
-        }
+        // NOTE: type-to-search was removed deliberately. A printable key reaching the
+        // browser used to call searchInput_->setFocused(true) and forward the character,
+        // which meant that once the browser was anywhere in the focus chain every letter
+        // the user typed was swallowed into the search box — letters are musical typing
+        // and shortcuts in this app, so search would "start typing" seemingly at random.
+        // It also double-entered the first character: the char was forwarded manually AND
+        // then delivered again by the normal charCallback to the now-focused input
+        // ("hello" arrived as "hhello"). Search is now focused explicitly only, via
+        // Ctrl+F (above) or by clicking the field. Note the search action button is
+        // NOT a focus path — ChromeAction::SearchAction clears the query or opens the
+        // quick-filter menu, and that stays its job.
     }
 
     // Handle navigation/activation on key-down only.
@@ -3056,6 +3010,19 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         } else if (isFilterActive()) {
             drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
                                "Press Esc to clear the search and filters");
+        } else if (!currentPath_.empty() && !rootPath_.empty() &&
+                   normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_)) {
+            // Both paths must be real: setCurrentPath() clears currentPath_ when a path
+            // fails to resolve, and that is not a subfolder — telling the user to "go up"
+            // out of a folder they are not in would be worse than the generic copy.
+            // An empty SUBFOLDER is not an empty library. currentPath_ is persisted
+            // across sessions (ui_state.json fileBrowser.lastPath), so a user who last
+            // browsed into an empty category folder reopens the app to what reads as
+            // "you have no content at all" — with nothing pointing back to the library.
+            const std::string rootName = std::filesystem::path(rootPath_).filename().string();
+            drawListEmptyState(renderer, listClip, folderIcon_, "This folder is empty",
+                               rootName.empty() ? "Go up to see the rest of your library"
+                                                : ("Go up to " + rootName + " to see your library"));
         } else {
             drawListEmptyState(renderer, listClip, folderIcon_, "Nothing here yet",
                                "Audio, MIDI, and Aestra projects show up here");
@@ -3070,12 +3037,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     renderer.setClipRect(listClip);
 
-    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.12f);
+    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.04f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
     const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(previewPanelVisible_ ? 0.0f
                                                                                                        : 0.065f);
     const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.035f);
-    const NUIColor gridLine = themeManager.getColor("gridMinor").withAlpha(0.10f);
+    const NUIColor gridLine = themeManager.getColor("gridMinor").withAlpha(0.045f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);

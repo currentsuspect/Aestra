@@ -56,14 +56,6 @@ const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNot
     return nullptr;
 }
 
-int resolveSamplerRootMidiNote(const UnitInfo* unit) {
-    if (!unit) {
-        return 60;
-    }
-    auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin);
-    return sampler ? sampler->getRootMidiNote() : 60;
-}
-
 int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
     if (note.pitchOffset == 0 && note.pitch > 0 && note.pitch != rootMidiNote) {
         return std::clamp(note.pitch, 0, 127);
@@ -94,7 +86,6 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        // Add to active instances
         PatternInstance inst;
         inst.patternId = pid;
         inst.startBeat = startBeat;
@@ -104,7 +95,21 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
             durationBeats > 0.0 ? (inst.sourceStartBeat + durationBeats) : std::numeric_limits<double>::infinity();
         inst.scheduledThroughFrame = 0;
 
-        m_activeInstances.push_back(inst);
+        // An instanceId identifies a SLOT, not an occurrence — cancellation is keyed on
+        // it (m_instanceCancelled is indexed by id), so two live entries sharing an id
+        // were never individually addressable anyway. This used to push_back
+        // unconditionally: the Arsenal preview always re-arms slot 1, and nothing ever
+        // erased entries (rewindScheduledInstances() only rewinds scheduledThroughFrame),
+        // so a session accumulated dozens of overlapping copies — 31 observed in one
+        // sitting — each emitting its own events into the same units. Re-arming a slot
+        // must replace it.
+        auto existing = std::find_if(m_activeInstances.begin(), m_activeInstances.end(),
+                                     [instanceId](const PatternInstance& e) { return e.instanceId == instanceId; });
+        if (existing != m_activeInstances.end()) {
+            *existing = inst;
+        } else {
+            m_activeInstances.push_back(inst);
+        }
     }
 
     Aestra::Log::info("[PatternPlayback] Scheduled instance " + std::to_string(instanceId) + " pattern " +
@@ -218,12 +223,20 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
             const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
             const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+            const auto sampler = unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
             const int resolvedMidiNote = isPitchedSampler
-                                             ? resolvePitchedSamplerMidiNote(note, resolveSamplerRootMidiNote(unit))
+                                             ? resolvePitchedSamplerMidiNote(note,
+                                                                             sampler ? sampler->getRootMidiNote() : 60)
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
+            // A one-shot sample may continue to its natural endpoint when no
+            // note gate is present, but a Piano Roll note still owns an ADSR
+            // gate. Always emit its note-off so the sampler can enter release
+            // when the note ends. Pitched-sampler slides are the one explicit
+            // exception because they intentionally hold the voice across the
+            // next step.
             bool suppressNoteOff = false;
 
             if (isPitchedSampler) {
@@ -375,7 +388,34 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
     }
 }
 
-void PatternPlaybackEngine::flush() {
+void PatternPlaybackEngine::clearScheduledInstances() {
+    // Control thread only — takes the scheduler mutex. processAudio() consumes m_rtQueue
+    // and never reads m_activeInstances, so erasing here cannot race the audio thread.
+    if (reportRealtimeMisuse("PatternPlaybackEngine::clearScheduledInstances")) {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_activeInstances.clear();
+        m_lastRefillFrame = 0;
+    }
+
+    for (auto& flag : m_instanceCancelled) {
+        flag.store(false, std::memory_order_release);
+    }
+
+    // A pending rewind is moot once the instances are gone.
+    m_flushRequested.store(false, std::memory_order_release);
+    m_rtQueue.forceDrain();
+}
+
+size_t PatternPlaybackEngine::getActiveInstanceCount() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeInstances.size();
+}
+
+void PatternPlaybackEngine::rewindScheduledInstances() {
     // RT-safe: set atomic flag for deferred processing by non-RT maintenance.
     // The SPSC queue and m_activeInstances are only safely mutable from the
     // control thread, so actual drain/reset happens in refillWindow().

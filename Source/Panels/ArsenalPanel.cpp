@@ -135,7 +135,18 @@ void drawArsenalChip(AestraUI::NUIRenderer& renderer,
     const float chipRadius = AestraUI::NUIThemeManager::getInstance().getCurrentTheme().radiusS + 1.0f;
     renderer.fillRoundedRect(rect, chipRadius, fill);
     renderer.strokeRoundedRect(rect, chipRadius, 1.0f, stroke);
-    renderer.drawTextCentered(text, rect, fontSize, textColor);
+    // Truncate long labels (e.g. "16 Steps · Pitched" in a 62px chip) instead
+    // of letting the text bleed outside the chip (triage 2026-08-14).
+    std::string fitted = text;
+    const float maxWidth = std::max(8.0f, rect.width - 8.0f);
+    if (renderer.measureText(fitted, fontSize).width > maxWidth) {
+        constexpr const char* ellipsis = "...";
+        while (!fitted.empty() && renderer.measureText(fitted + ellipsis, fontSize).width > maxWidth) {
+            fitted.pop_back();
+        }
+        fitted = fitted.empty() ? ellipsis : fitted + ellipsis;
+    }
+    renderer.drawTextCentered(fitted, rect, fontSize, textColor);
 }
 } // namespace
 
@@ -152,6 +163,11 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
         if (unitMgr.getUnitCount() == 0) {
             UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
             unitMgr.setUnitEnabled(defaultUnit, true);
+            if (const auto* unit = unitMgr.getUnit(defaultUnit)) {
+                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                // Bootstrap routing belongs to the pristine default project, not to user edit history.
+                routeUnitToFirstFreeMixerChannel(*m_trackManager, defaultUnit, destinationName, unit->color, true);
+            }
         }
     }
 
@@ -368,6 +384,10 @@ void ArsenalPanel::refreshUnits() {
             if (!m_trackManager) return;
             UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
             if (newId != 0) {
+                if (const auto* unit = m_trackManager->getUnitManager().getUnit(newId)) {
+                    const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                    routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+                }
                 m_selectedUnitId = newId;
                 refreshUnits();
             }
@@ -413,6 +433,10 @@ void ArsenalPanel::createUnitOfType(UnitType type) {
                         type == UnitType::PitchedSampler ? "808 " :
                         type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count);
     m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
+    if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+        routeUnitToFirstFreeMixerChannel(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+    }
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
@@ -434,6 +458,10 @@ bool ArsenalPanel::removeSelectedUnit() {
         unitMgr.removeUnit(oldId);
         removeUnitNotes(oldId);
         UnitID newId = unitMgr.createUnit();
+        if (const auto* unit = unitMgr.getUnit(newId)) {
+            const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+            routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+        }
         m_selectedUnitId = newId;
         refreshUnits();
         if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
@@ -617,7 +645,7 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     renderer.fillRoundedRect(m_commandHeaderRect, themeProps.radiusM,
                              theme.getColor("backgroundSecondary").withAlpha(0.97f));
     renderer.strokeRoundedRect(m_commandHeaderRect, themeProps.radiusM, 1.0f,
-                               theme.getColor("borderSubtle").withAlpha(0.82f));
+                               theme.getColor("borderSubtle").withAlpha(0.42f));
 
     const float iconX = m_commandHeaderRect.x + 15.0f;
     const float iconY = m_commandHeaderRect.y + 13.0f;
@@ -629,11 +657,8 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     }
 
     std::string patternName = "Pattern";
-    std::string selectedName = "No unit selected";
-    std::string selectedType = "READY";
-    int unitCount = 0;
+    std::string selectedName;
     if (m_trackManager) {
-        unitCount = static_cast<int>(m_trackManager->getUnitManager().getUnitCount());
         if (m_activePatternID.isValid()) {
             if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
                 pattern && !pattern->name.empty()) {
@@ -643,33 +668,32 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
         if (m_selectedUnitId != 0) {
             if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
                 selectedName = unit->name.empty() ? "Untitled unit" : unit->name;
-                selectedType = unitTypeDisplayName(unit->type);
-                if (m_activePatternID.isValid()) {
-                    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
-                    if (patternUsesNoteRoll(pattern, m_selectedUnitId, unit->type,
-                                            m_trackManager->getUnitManager().getUnitRootMidiNote(m_selectedUnitId))) {
-                        selectedType = "MIDI";
-                    }
-                }
             }
         }
     }
 
     const float textX = iconX + 28.0f;
-    renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS,
-                      theme.getColor("textPrimary").withAlpha(0.96f));
-    renderer.drawText(selectedName + "  ·  " + selectedType + "  ·  " + std::to_string(unitCount) +
-                          (unitCount == 1 ? " UNIT" : " UNITS"),
-                      {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
-                      theme.getColor("textSecondary").withAlpha(0.70f));
+    // Clip the name band at the FIT/ADD controls so long names cannot bleed
+    // underneath them when the panel is narrow (triage 2026-08-14).
+    const float textMaxX = m_fitToggleRect.width > 0.0f ? m_fitToggleRect.x - 8.0f : m_commandHeaderRect.right() - 8.0f;
+    if (textMaxX > textX) {
+        renderer.setClipRect({textX, m_commandHeaderRect.y + 8.0f, textMaxX - textX, 36.0f});
+        renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS,
+                          theme.getColor("textPrimary").withAlpha(0.96f));
+        if (!selectedName.empty()) {
+            renderer.drawText(selectedName, {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
+                              theme.getColor("textSecondary").withAlpha(0.70f));
+        }
+        renderer.clearClipRect();
+    }
 
     // View toggle: reflects current mode (accent = Fit, muted = Scroll).
     if (m_fitToggleRect.width > 0.0f) {
         const float radius = themeProps.radiusS;
         const NUIColor fill = m_fitToWidth ? theme.getColor("accentPrimary").withAlpha(0.18f)
                                            : theme.getColor("surfaceTertiary").withAlpha(0.85f);
-        const NUIColor stroke = m_fitToWidth ? theme.getColor("accentPrimary").withAlpha(0.70f)
-                                             : theme.getColor("borderSubtle").withAlpha(0.85f);
+        const NUIColor stroke = m_fitToWidth ? theme.getColor("accentPrimary").withAlpha(0.5f)
+                                             : theme.getColor("borderSubtle").withAlpha(0.5f);
         const NUIColor text = m_fitToWidth ? theme.getColor("accentPrimary")
                                            : theme.getColor("textSecondary").withAlpha(0.9f);
         renderer.fillRoundedRect(m_fitToggleRect, radius, fill);
@@ -911,7 +935,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(216.0f, controlWidth - 10.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
-    renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
+    renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.45f));
 
     const float compactHitArea = themeProps.layout.minimumHitArea;
     m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
@@ -919,7 +943,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
 
     const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
-    const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.85f);
+    const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.5f);
     const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
     renderer.fillRoundedRect(m_barsDecrementRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsDecrementRect, pillRadius, 1.0f, pillStroke);
@@ -939,12 +963,12 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                     contentBadge,
                     contentLabel,
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
-                    theme.getColor("borderSubtle").withAlpha(0.85f),
+                    theme.getColor("borderSubtle").withAlpha(0.5f),
                     theme.getColor("textSecondary").withAlpha(0.9f),
                     themeProps.fontSizeMicro);
     const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
-    renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
+    renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.42f));
 
     // Same step width formula as the rows + the shared scroll offset, so the
     // header ruler and every row grid stay in lockstep. Fit mode shrinks pads
@@ -963,8 +987,10 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     // Draw step indicators
     for (int i = 0; i < m_stepCount; ++i) {
-        float stepX = gridStartX + (i * stepWidth) - m_gridScrollX + 2.0f;
-        float indicatorWidth = stepWidth - 4.0f;
+        const float stepOriginX = gridStartX + (i * stepWidth) - m_gridScrollX;
+        const float cellGap = 3.0f;
+        const float stepX = stepOriginX + cellGap * 0.5f;
+        const float indicatorWidth = std::max(1.0f, stepWidth - cellGap);
         if (stepX > gridCard.right()) break;
         if (stepX + stepWidth < gridCard.x) continue;
 
@@ -1005,7 +1031,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
 
         if (isBarStart) {
-            const NUIRect labelRect(stepX, indicatorY, stepWidth * static_cast<float>(stepsPerBar), indicatorHeight);
+            const NUIRect labelRect(stepOriginX, indicatorY,
+                                    stepWidth * static_cast<float>(stepsPerBar), indicatorHeight);
             renderer.drawTextCentered(std::to_string((i / stepsPerBar) + 1), labelRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
         }
     }
@@ -1043,7 +1070,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
 
     const float pickerRadius = std::max(themeProps.radiusL - 2.0f, 0.0f);
     renderer.fillRoundedRect(m_unitTypePickerRect, pickerRadius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
-    renderer.strokeRoundedRect(m_unitTypePickerRect, pickerRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
+    renderer.strokeRoundedRect(m_unitTypePickerRect, pickerRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.6f));
 
     const float padding = 10.0f;
     const float gap = 8.0f;
@@ -1060,7 +1087,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                            cellWidth,
                            cellHeight);
         renderer.fillRoundedRect(cell, themeProps.radiusM, theme.getColor("surfaceTertiary").withAlpha(0.8f));
-        renderer.strokeRoundedRect(cell, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.72f));
+        renderer.strokeRoundedRect(cell, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawText(icons[i], NUIPoint(cell.x + 10.0f, cell.y + 11.0f), themeProps.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
         renderer.drawText(unitTypeDisplayName(types[i]), NUIPoint(cell.x + 32.0f, cell.y + 10.0f), themeProps.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
         renderer.drawText(unitTypeDescription(types[i]), NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
@@ -1414,7 +1441,7 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId);
         if (!unit)
             return false;
-        const std::string destinationName = unit->name.empty() ? "Mixer Insert" : unit->name;
+        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
         assignUnitToFirstFreeInsert(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
         return true;
     }

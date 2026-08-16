@@ -62,6 +62,14 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
                       12.0f,
                       theme.getColor("textPrimary").withAlpha(0.92f));
 
+    if (m_compact) {
+        // Compact representation: name only. The type line returns at Full
+        // density (responsive contract: available width -> density ->
+        // representation).
+        renderer.clearClipRect();
+        return;
+    }
+
     std::string typeLabel;
     switch (m_unitType) {
     case Aestra::Audio::UnitType::Sampler:

@@ -49,6 +49,34 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     m_pianoRoll->setOnNotesChanged([this](const std::vector<AestraUI::MidiNote>&) {
         savePattern();
     });
+    m_pianoRoll->setOnHarmonyContextChanged([this](int rootKey, AestraUI::ScaleType scaleType, bool snapToScale) {
+        if (!m_trackManager || !m_currentPatternId.isValid()) return;
+
+        ScaleContext context;
+        context.rootKey = clampRootKey(rootKey);
+        context.scaleKind = static_cast<ScaleKind>(static_cast<int>(scaleType));
+        context.snapToScale = snapToScale;
+
+        auto& patternManager = m_trackManager->getPatternManager();
+        const auto* pattern = patternManager.getPattern(m_currentPatternId);
+        if (!pattern || !pattern->isMidi()) return;
+
+        std::optional<ScaleContext> desired;
+        assignScaleContextOverride(desired, context);
+        const bool unchanged = (!desired && !pattern->scaleOverride) ||
+                               (desired && pattern->scaleOverride &&
+                                desired->rootKey == pattern->scaleOverride->rootKey &&
+                                desired->scaleKind == pattern->scaleOverride->scaleKind &&
+                                desired->snapToScale == pattern->scaleOverride->snapToScale);
+        if (unchanged) return;
+
+        patternManager.applyPatch(m_currentPatternId, [desired](PatternSource& mutablePattern) {
+            mutablePattern.scaleOverride = desired;
+        });
+        if (m_onPatternEdited) {
+            m_onPatternEdited(m_currentPatternId);
+        }
+    });
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setOnAdjustPatternLength([this](int barsDelta) {
         adjustPatternLengthBars(barsDelta);
@@ -110,6 +138,14 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     m_pianoRoll->setIsPlayingCallback([this]() {
         return m_trackManager && m_trackManager->isPlaying();
     });
+    // Follow-playhead is opt-in (0.7.0 triage): the playhead always moves,
+    // the viewport tracks only when enabled; "Center on playhead" jumps once.
+    m_pianoRoll->setOnFollowPlayheadChanged([this](bool on) {
+        m_followPlayhead = on;
+    });
+    m_pianoRoll->setOnCenterOnPlayhead([this]() {
+        m_pianoRoll->centerOnPlayhead();
+    });
     m_pianoRoll->setOnPreviewNote([this](int pitch, int velocity) {
         if (m_trackManager && m_trackManager->isPlaying()) return;
         if (m_audioEngine && m_editingUnitId != 0) {
@@ -147,10 +183,16 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         }
     });
 
-    // Wire CommandHistory state-changed callback to reload pattern into UI on undo/redo
+    // Wire CommandHistory state-changed callback to reload pattern into UI on undo/redo.
+    // savePattern() sets m_applyingUndoRedo while it pushes its own commands, so a
+    // state change with that flag already set is our own save in progress — the UI
+    // already reflects the edit, and reloading would rebuild every note with
+    // selected=false, wiping the user's selection after the first committed edit.
+    // Only reload when the state change came from outside (undo/redo elsewhere).
     if (m_trackManager) {
         m_trackManager->getCommandHistory().addOnStateChanged([this]() {
             if (!m_currentPatternId.isValid()) return;
+            if (m_applyingUndoRedo) return;
             m_applyingUndoRedo = true;
             loadPattern(m_currentPatternId);
             m_applyingUndoRedo = false;
@@ -184,6 +226,22 @@ void PianoRollPanel::setBeatsPerBar(int bpb) {
     if (m_pianoRoll) {
         m_pianoRoll->setBeatsPerBar(bpb);
     }
+}
+
+void PianoRollPanel::applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale) {
+    if (m_pianoRoll) {
+        m_pianoRoll->applyHarmonyContextEdit(rootKey, scaleType, snapToScale);
+    }
+}
+
+ScaleContext PianoRollPanel::getHarmonyContext() const {
+    ScaleContext context;
+    if (m_pianoRoll) {
+        context.rootKey = m_pianoRoll->getRootKey();
+        context.scaleKind = static_cast<ScaleKind>(static_cast<int>(m_pianoRoll->getScaleType()));
+        context.snapToScale = m_pianoRoll->getSnapToScale();
+    }
+    return context;
 }
 
 void PianoRollPanel::onResize(int width, int height) {
@@ -373,21 +431,35 @@ void PianoRollPanel::savePattern() {
         m_onPatternEdited(m_currentPatternId);
     }
 
-    double longestBeat = 0.0;
-    for (const auto& note : currentNotes) {
-        longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
+    // Only a real note edit may drive the pattern length. savePattern() also runs
+    // when nothing was edited — setEditingUnit() commits pending edits before every
+    // unit switch — and recomputing the length there rewrote the user's pattern:
+    // adding or selecting a unit collapsed an empty 2-bar pattern to 1 bar, and an
+    // explicitly-sized 4-bar pattern to 1 bar, silently halving the audible loop
+    // while the Arsenal grid still displayed the old bar count.
+    double newLengthBeats = m_patternDurationBeats;
+    if (!diff.empty()) {
+        double longestBeat = 0.0;
+        for (const auto& note : currentNotes) {
+            longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
+        }
+        // Keep patterns musical in whole bars and let note content drive the
+        // default loop size on add/delete.
+        newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+
+        // Persist the updated length back to the PatternManager so playback uses it
+        pm.applyPatch(m_currentPatternId, [newLengthBeats](PatternSource& pattern) {
+            pattern.lengthBeats = newLengthBeats;
+        });
+    } else if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
+        // Nothing changed: adopt the stored length instead of rewriting it, so an
+        // explicit length set via the bars control survives a unit switch.
+        newLengthBeats = std::max(static_cast<double>(beatsPerBar()), storedPattern->lengthBeats);
     }
-    // Keep patterns musical in whole bars and let note content drive the
-    // default loop size on add/delete.
-    const double newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+
     m_patternDurationBeats = newLengthBeats;
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
-
-    // Persist the updated length back to the PatternManager so playback uses it
-    pm.applyPatch(m_currentPatternId, [newLengthBeats](PatternSource& pattern) {
-        pattern.lengthBeats = newLengthBeats;
-    });
 
     // If we're in Arsenal pattern mode, update the audio engine's loop length immediately
     // so the next playback restart uses the correct boundary without requiring a focus switch.
@@ -514,9 +586,26 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                     if (m_trackManager->isPatternMode()) {
                         playheadBeat = std::fmod(currentBeat, patternLength);
                         if (playheadBeat < 0.0) playheadBeat += patternLength;
-                        follow = m_trackManager->isPlaying();
+                        // Follow is opt-in (0.7.0 triage): the playhead always
+                        // moves, but the viewport only tracks it when the user
+                        // enabled "Follow playhead" — editing while playing
+                        // must not yank the viewport back.
+                        follow = m_followPlayhead && m_trackManager->isPlaying();
                     } else {
-                        playheadBeat = std::max(0.0, currentBeat);
+                        // This editor's X axis is PATTERN-LOCAL beats; the transport reports
+                        // ARRANGEMENT beats. Feeding one into the other drew a playhead that
+                        // drifted across the pattern and off its end — at 8.6s (17.2 beats) it
+                        // sat past bar 5 of a 2-bar pattern — asserting a playback position
+                        // that does not exist in this editor, then vanishing off the right.
+                        //
+                        // Timeline playback of a pattern happens through clip instances placed
+                        // on lanes, each with its own offset into the source; this panel edits
+                        // the pattern itself and resolves no clip, so there is no single honest
+                        // pattern-local position to show. Park at the pattern start rather than
+                        // display a false one. (Mapping a clip under the playhead back into
+                        // pattern-local beats would be the richer behaviour, and needs the clip
+                        // lookup this panel deliberately does not carry.)
+                        playheadBeat = 0.0;
                     }
                 }
             }

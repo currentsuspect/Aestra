@@ -230,6 +230,8 @@ private:
     double m_trimOriginalStart = 0.0;         // Original trim start before drag
     double m_trimOriginalDuration = 0.0;      // Original trim duration before drag
     double m_trimOriginalEnd = 0.0;           // Original trim end before drag
+    double m_trimOriginalSourceOffsetSeconds = 0.0; // Original source offset (audio) before drag
+    double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
     
@@ -242,6 +244,10 @@ private:
     bool m_isDraggingVolumeFader = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
+    // Point position at drag start; a release that never moved the point
+    // (simple click-select) must not dirty the project or rebuild the graph.
+    double m_dragStartBeat = -1.0;
+    float m_dragStartValue = -1.0f;
     AestraUI::NUIPoint m_lastAutomationMousePos;
 
     // Optimization
@@ -303,22 +309,20 @@ private:
                               const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels,
                               const AestraUI::NUIColor& tint);
 
-    // Deep-zoom helpers: render finer than the peak cache's base mip level.
-    // Both read bounded sample ranges directly from the (immutable) source buffer.
-    void drawSampleWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                            const Aestra::Audio::AudioBufferData& buffer, double startFrame, double endFrame,
-                            const AestraUI::NUIColor& tint);
+    // Deep-zoom helper: render finer than the peak cache's base mip level using the
+    // same fractional source-frame bins as the cached path.
     static void computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
-                                   size_t startFrame, size_t endFrame, int numColumns,
+                                   double startFrame, double endFrame, int numColumns,
                                    std::vector<Aestra::Audio::WaveformPeak>& outPeaks);
 
     // Sample clip container
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
     void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
+                                const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip,
+                                bool seamLeft, bool seamRight);
     // Header scrim + label, drawn AFTER the waveform so it stays readable over it.
     void drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                              const ClipInstance& clip);
+                              const ClipInstance& clip, bool seamLeft, bool seamRight);
 
     // Pattern clip rendering
     void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,

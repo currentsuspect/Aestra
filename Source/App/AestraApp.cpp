@@ -963,7 +963,7 @@ void AestraApp::connectAudioToUI() {
                 if (auto trackManager = m_content->getTrackManager()) {
                     trackManager->getPlaylistModel().setBPM(bpm);
                     trackManager->getTimelineClock().setTempo(bpm);
-                    trackManager->getPatternPlaybackEngine().flush();
+                    trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
                 }
                 if (auto trackManagerUI = m_content->getTrackManagerUI()) {
                     trackManagerUI->invalidateCache();
@@ -1620,7 +1620,7 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
         if (auto trackManager = m_content->getTrackManager()) {
             trackManager->getPlaylistModel().setBPM(result.tempo);
             trackManager->getTimelineClock().setTempo(result.tempo);
-            trackManager->getPatternPlaybackEngine().flush();
+            trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();
@@ -2036,6 +2036,13 @@ ProjectSerializer::UIState AestraApp::captureUIState() const {
         }
     }
 
+    // Phase-3 workspace state: active workspace + remembered-open overlays.
+    if (m_content) {
+        state.viewFocus = WorkspaceFocusModel::workspaceFocusName(m_content->getViewFocus());
+        state.pianoRollOpen = m_content->isPianoRollOpen();
+        state.sequencerOpen = m_content->isSequencerOpen();
+    }
+
     return state;
 }
 
@@ -2053,6 +2060,15 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
         } else {
             settingsDialog->hide();
         }
+    }
+
+    // Restore persisted workspace state. Legacy files leave viewFocus empty,
+    // which keeps the default Timeline workspace; a malformed value likewise
+    // falls back to Timeline while still restoring the remembered-open flags.
+    if (m_content) {
+        ViewFocus focus = ViewFocus::Timeline;
+        WorkspaceFocusModel::parseWorkspaceFocus(state.viewFocus, focus);
+        m_content->restoreWorkspaceState(focus, state.pianoRollOpen, state.sequencerOpen);
     }
 }
 

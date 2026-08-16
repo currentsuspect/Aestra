@@ -83,6 +83,12 @@ public:
      * @param bpb Beats per bar.
      */
     void setBeatsPerBar(int bpb);
+    /** @brief Apply one complete harmony edit through the editor view. */
+    void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
+    /** @brief Return the complete harmony context currently shown by the editor. */
+    ScaleContext getHarmonyContext() const;
+    /** @brief Current notes as shown by the editor view (including selection state). */
+    const std::vector<AestraUI::MidiNote>& getNotes() const { return m_pianoRoll->getNotes(); }
     /**
      * @brief Bind the live audio engine used for transport/playhead sync.
      * @param engine Audio engine pointer, or nullptr to disable engine sync.
@@ -120,6 +126,7 @@ private:
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
     bool m_switchingUnit{false};              // Guards setEditingUnit against save-echo recursion
     bool m_wasVisible{false};
+    bool m_followPlayhead{false}; // Opt-in viewport tracking (0.7.0 triage)
     double m_lastPlayheadBeat{-1.0}; // Gates idle repaint; only redraw when the playhead actually moves
 };
 

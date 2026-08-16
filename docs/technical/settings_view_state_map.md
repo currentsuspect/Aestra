@@ -46,9 +46,9 @@ Read at `develop`, 2026-07-27.
 |---|---|
 | displayed | panel `isVisible()` |
 | editing | none — no transient edit state for views |
-| committed | `AestraContent::m_viewState.*Open` |
-| persistence | `Source/Core/UIState.h` — `browserVisible`, `mixerVisible` only |
-| runtime consumer | `setViewOpen` → `panel->setVisible()` |
+| committed | `AestraContent::m_viewState.*Open` plus `AestraContent::m_viewFocus` |
+| persistence | per-install `Source/Core/UIState.h` for `browserVisible` / `mixerVisible`; per-project `ProjectSerializer::UIState` for `viewFocus` / `pianoRollOpen` / `sequencerOpen` |
+| runtime consumer | `setViewOpen` / `setViewFocus`; project workspace state reapplied by `AestraApp::applyUIState` → `AestraContent::restoreWorkspaceState` |
 
 ### B1 — committed and displayed disagree, and the query reads whichever is handy
 
@@ -97,8 +97,25 @@ from one and two from the other. `view.current` gains a field; nothing loses the
 restore semantics it needs.
 
 Also unexposed today: `m_viewFocus` (Arsenal / Timeline / Audition / RoutingMap),
-which is the state that *causes* the divergence. An agent cannot currently see
-it.
+which is the state that *causes* the divergence. An agent cannot
+currently see it.
+
+**Update (phase-3, workspace-panel ownership):** the active workspace and the
+remembered-open overlay flags ARE now persisted in the `.aes` project file as
+optional `ui.viewFocus` / `ui.pianoRollOpen` / `ui.sequencerOpen` keys
+(`ProjectSerializer::UIState`), and reapplied through `AestraApp::applyUIState`
+→ `AestraContent::restoreWorkspaceState`. Muse `view.current` reports the active
+workspace through its `focus` field, whose protocol string lives in
+`WorkspaceFocusModel::workspaceFocusName`.
+
+The piano roll is a **contextual editor, not a workspace**: it opens inside the
+owning focus (Arsenal for pattern construction, Timeline for arrangement
+material) and keeps that focus while open; `pianoRollOpen` persists its
+remembered-open state separately. `ViewFocus` carries only the three workspaces
+plus the RoutingMap overlay, so files saved by phase-3 builds with
+`viewFocus: "pianoRoll"` degrade to the Timeline default on load rather than
+resurrecting a workspace mode. The B1 `status` field resolution can consume
+`view.current` without a `viewFocus` key.
 
 ---
 
@@ -230,7 +247,7 @@ buckets are different work:
 | type | holds | persisted to |
 |---|---|---|
 | `Source/Core/UIState.h` | window geometry, browser width/visibility, mixer height/visibility, browser expanded folders, last path, timeline zoom + scroll | a global UI-state file, per install |
-| `ProjectSerializer::UIState` | settings-dialog visibility + active page, panel geometry (B2) | inside the `.aes` project file |
+| `ProjectSerializer::UIState` | settings-dialog visibility + active page, panel geometry (B2), active workspace (`viewFocus`), remembered-open piano roll and Arsenal overlay flags (`pianoRollOpen`, `sequencerOpen`) | inside the `.aes` project file |
 
 Both are named `UIState` and both are reachable from `AestraApp`. They are
 genuinely different things — one is per-install, one is per-project — and the

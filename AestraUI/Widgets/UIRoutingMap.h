@@ -64,10 +64,10 @@ public:
     void setOnNodeSoloToggle(std::function<void(uint32_t)> cb) { m_onNodeSoloToggle = std::move(cb); }
 
     /// Callback fired when a selected send edge is deleted (e.g. via Delete key).
-    void setOnRemoveSend(std::function<void(uint32_t channelId, int sendIndex)> cb) { m_onRemoveSend = std::move(cb); }
+    void setOnRemoveSend(std::function<void(uint32_t channelId, uint64_t sendId)> cb) { m_onRemoveSend = std::move(cb); }
 
     /// Callback fired when user edits a send level directly (e.g. right-click edge).
-    void setOnEditSendLevel(std::function<void(uint32_t channelId, int sendIndex, float newDb)> cb) { m_onEditSendLevel = std::move(cb); }
+    void setOnEditSendLevel(std::function<void(uint32_t channelId, uint64_t sendId, float newDb)> cb) { m_onEditSendLevel = std::move(cb); }
 
     /// Refresh live state (mute/solo/levels) from the bound view model. Cheap; call per frame.
     void refreshLiveState();
@@ -110,7 +110,7 @@ private:
         uint32_t targetNodeId{0};
         enum Type { MainPath, SendPath, SidechainPath } type{MainPath};
         float sendLevelDb{0.0f};
-        int sendIndex{-1}; // index into ChannelViewModel::sends (for send/sidechain edges)
+        uint64_t sendId{0}; // stable send identity (Contract D2); 0 = main path
         bool hovered{false};
         // Y attachment within the target node (node-local, world units).
         // Negative → use the node's default input pin. Assigned by
@@ -284,8 +284,8 @@ private:
     std::function<void(uint32_t, uint32_t, bool)> m_onAddSend;
     std::function<void(uint32_t)> m_onNodeMuteToggle;
     std::function<void(uint32_t)> m_onNodeSoloToggle;
-    std::function<void(uint32_t, int)> m_onRemoveSend;
-    std::function<void(uint32_t, int, float)> m_onEditSendLevel;
+    std::function<void(uint32_t, uint64_t)> m_onRemoveSend;
+    std::function<void(uint32_t, uint64_t, float)> m_onEditSendLevel;
 };
 
 } // namespace AestraUI

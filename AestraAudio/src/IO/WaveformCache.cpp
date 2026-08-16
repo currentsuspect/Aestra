@@ -140,21 +140,31 @@ size_t WaveformCache::selectLevel(double samplesPerPixel) const {
 
 void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, SampleIndex endSample,
                                      uint32_t numPixels, std::vector<WaveformPeak>& outPeaks) const {
+    getPeaksForRangePrecise(channel, static_cast<double>(startSample), static_cast<double>(endSample), numPixels,
+                            outPeaks);
+}
+
+void WaveformCache::getPeaksForRangePrecise(uint32_t channel, double startSample, double endSample,
+                                            uint32_t numPixels, std::vector<WaveformPeak>& outPeaks) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
 
     outPeaks.clear();
     outPeaks.resize(numPixels);
 
-    if (!m_ready.load(std::memory_order_acquire) || m_levels.empty() || numPixels == 0) {
+    if (!m_ready.load(std::memory_order_acquire) || m_levels.empty() || numPixels == 0 ||
+        !std::isfinite(startSample) || !std::isfinite(endSample)) {
         return;
     }
 
+    const double sourceFrames = static_cast<double>(m_sourceFrames);
+    startSample = std::clamp(startSample, 0.0, sourceFrames);
+    endSample = std::clamp(endSample, 0.0, sourceFrames);
     if (channel >= m_numChannels || startSample >= endSample) {
         return;
     }
 
     // Calculate samples per pixel
-    double samplesPerPixel = static_cast<double>(endSample - startSample) / numPixels;
+    const double samplesPerPixel = (endSample - startSample) / static_cast<double>(numPixels);
 
     // Select appropriate mip level: coarsest where samplesPerPeak <= samplesPerPixel
     size_t levelIdx = 0;
@@ -170,13 +180,17 @@ void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, 
 
     // Generate peaks for each pixel by merging LOD entries overlapping the pixel's sample range.
     // This avoids interpolation of min/max (which is physically meaningless) and ensures
-    // deterministic, subpixel-stable mapping.
+    // deterministic, source-anchored mapping. The fractional range is retained until the
+    // cache level is queried, so a clip split cannot reset the pixel grid at its seam.
     for (uint32_t pixel = 0; pixel < numPixels; ++pixel) {
-        double startPeakF = (startSample + pixel * samplesPerPixel) / level.samplesPerPeak;
-        double endPeakF = (startSample + (pixel + 1) * samplesPerPixel) / level.samplesPerPeak;
+        const double pixelStart = startSample + static_cast<double>(pixel) * samplesPerPixel;
+        const double pixelEnd = startSample + static_cast<double>(pixel + 1) * samplesPerPixel;
+        const double startPeakF = pixelStart / level.samplesPerPeak;
+        const double endPeakF = pixelEnd / level.samplesPerPeak;
 
         SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
         SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
+        endPeak = std::max(endPeak, startPeak + 1);
         outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
     }
 }

@@ -244,9 +244,10 @@ std::string TimerDisplay::formatTime(double seconds) const {
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    // Inset readout well — barely visible glassy background
-    renderer.fillRoundedRect(bounds, themeManager.getRadius("s"), themeManager.getColor("surfaceRaised").withAlpha(0.10f));
-    renderer.strokeRoundedRect(bounds, themeManager.getRadius("s"), 1.0f, themeManager.getColor("border").withAlpha(0.18f));
+    // Time is transport information, not a standalone button. A near-invisible
+    // tonal well keeps it aligned with BPM/time signature without a third box.
+    renderer.fillRoundedRect(bounds, themeManager.getRadius("s"),
+                             themeManager.getColor("surfaceRaised").withAlpha(0.045f));
     std::string timeText = formatTime(m_currentTime);
     renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
                               themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));

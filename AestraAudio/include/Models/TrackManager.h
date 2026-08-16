@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <unordered_set>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -80,6 +81,12 @@ public:
         m_continuousParams = std::make_shared<ContinuousParamBuffer>();
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         m_playlistModel.setPatternManager(&m_patternManager);
+        // Master strip: a real MixerChannel (id 0) so Master hosts an insert
+        // chain like any other strip. Deliberately NOT in m_channels — Master
+        // must stay out of the slot map, routing topology, and graph tracks
+        // (terminal-sink contract). Its chain snapshot rides the graph via
+        // AudioGraph::masterEffectChainSnapshot.
+        m_masterChannel = std::make_unique<MixerChannel>("Master", 0);
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
@@ -91,6 +98,18 @@ public:
         // that happens to own the wiring fails to initialise.
         m_commandHistory.addOnStateChanged([this]() { markModified(); });
     }
+
+    /**
+     * @brief Access the Master strip's mixer channel (id 0).
+     *
+     * Master is a valid plugin host like any other strip, but it is not a
+     * routable track: it never appears in the slot map, routing topology, or
+     * graph tracks. Returns nullptr only before construction completes.
+     */
+    MixerChannel* getMasterChannel() { return m_masterChannel.get(); }
+    /** @brief Const access to the Master strip's mixer channel (UI sync uses
+     * the same mutable-pointer pattern as getChannelsSnapshot()). */
+    MixerChannel* getMasterChannel() const { return m_masterChannel.get(); }
 
     /**
      * @brief Get the number of channels
@@ -337,6 +356,63 @@ public:
     const MixerChannel* getChannelById(uint32_t channelId) const {
         const size_t index = findChannelIndexById(channelId);
         return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    /**
+     * @brief Whether routing source -> target is legal (Routing Contract D1).
+     *
+     * Rejects self-routes and audible cycles before any mutation commits, and
+     * rejects dangling destinations. Master is a terminal sink: always a legal
+     * target, never a source. Only audible edges are followed (main outputs +
+     * unmuted non-sidechain sends) — sidechain edges cannot form audible
+     * cycles, so they do not participate.
+     */
+    bool canRouteTo(uint32_t sourceId, uint32_t targetId) const {
+        // Master has two spellings: user/model space (0, MASTER_MIXER_CHANNEL_ID)
+        // and engine space (0xFFFFFFFF). Both are the same terminal sink.
+        constexpr uint32_t kEngineMaster = 0xFFFFFFFFu;
+        if (sourceId == MASTER_MIXER_CHANNEL_ID || sourceId == kEngineMaster) {
+            return false;
+        }
+        if (targetId == MASTER_MIXER_CHANNEL_ID || targetId == kEngineMaster) {
+            return true;
+        }
+        if (sourceId == targetId) {
+            return false;
+        }
+        if (!getChannelById(sourceId) || !getChannelById(targetId)) {
+            return false;
+        }
+
+        std::vector<uint32_t> stack{targetId};
+        std::unordered_set<uint32_t> visited;
+        while (!stack.empty()) {
+            const uint32_t current = stack.back();
+            stack.pop_back();
+            if (current == sourceId) {
+                return false;
+            }
+            if (!visited.insert(current).second) {
+                continue;
+            }
+            const MixerChannel* channel = getChannelById(current);
+            if (!channel) {
+                continue;
+            }
+            const uint32_t mainOutput = channel->getMainOutputId();
+            if (mainOutput != kEngineMaster) {
+                stack.push_back(mainOutput);
+            }
+            for (const auto& send : channel->getSends()) {
+                if (send.mute || send.sidechainOnly) {
+                    continue;
+                }
+                if (send.targetChannelId != kEngineMaster) {
+                    stack.push_back(send.targetChannelId);
+                }
+            }
+        }
+        return true;
     }
 
     /** Route an audio source pattern independently from Playlist placement. */
@@ -805,7 +881,11 @@ public:
             return;
         }
 
-        const float monitorMixScale = PanLaw::kEqualPowerCenterGain / static_cast<float>(monitoredCount);
+        // Unity centre gain per monitored input: the main path (strips) uses
+        // the stereo-balance law since the strip pan-law fix (2026-08-14), and
+        // the audition/preview parity contract keeps every listening surface
+        // at the same reference level. Only the N-input normalization remains.
+        const float monitorMixScale = 1.0f / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
@@ -845,7 +925,12 @@ public:
      */
     void play() {
         if (!m_patternMode.load(std::memory_order_relaxed)) {
-            m_patternPlaybackEngine.flush();
+            // Timeline playback owns the scheduler outright. rewindScheduledInstances() only
+            // rewinds, so an Arsenal instance survived into timeline playback and kept
+            // sounding under a linear transport; scheduleTimelinePatternInstances() below
+            // starts at id 2 and would never have replaced it. Clear before rebuilding the
+            // timeline set.
+            m_patternPlaybackEngine.clearScheduledInstances();
         }
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
@@ -898,8 +983,11 @@ public:
      * live transport (playing flag, position, transport command). An offline
      * render (headless export) drives the engine's own transport instead, so it
      * only needs the scheduling — this leaves isPlaying/isPaused/position
-     * untouched. Callers flush() the pattern engine before and after so the
-     * render's scheduled instances do not leak into the caller's session.
+     * untouched. Callers clearScheduledInstances() the pattern engine before and after
+     * the render so neither prior content nor this render's instances leak into the
+     * caller's session: rewindScheduledInstances() only rewinds active instances, so
+     * anything already scheduled stayed live and was rendered into the export alongside
+     * the timeline.
      */
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
@@ -974,7 +1062,9 @@ public:
      */
     void stopArsenalPlayback(bool keepPatternMode = false) {
         stop();
-        m_patternPlaybackEngine.flush();
+        // Arsenal playback is over: drop its instances rather than rewinding them, so
+        // nothing carries into whatever plays next.
+        m_patternPlaybackEngine.clearScheduledInstances();
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -1129,6 +1219,14 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
+        // The Master strip survives channel clears (it is not a routable
+        // track), but its insert chain is project state: loading a project
+        // without a master node (or with an empty one) must not keep the
+        // previous project's Master plugins active, or they would be saved
+        // into the new project.
+        if (m_masterChannel) {
+            m_masterChannel->getEffectChain().clear();
+        }
         m_nextChannelId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {
@@ -1177,7 +1275,13 @@ public:
         m_isPaused.store(false, std::memory_order_relaxed);
         m_position.store(startSeconds, std::memory_order_relaxed);
         m_playStartPosition.store(startSeconds, std::memory_order_relaxed);
-        m_patternPlaybackEngine.flush();
+        // Arsenal preview means "play THIS pattern alone". rewindScheduledInstances() only
+        // rewinds, so whatever was already scheduled — timeline clip instances from a
+        // previous play(), or an earlier preview — kept sounding alongside it and was mixed
+        // into offline pattern renders too (a render_pattern was measured emitting 3
+        // instances when the caller asked for one, inflating its peak by ~3 dB).
+        // Start from an empty scheduler so the preview renders exactly what was asked for.
+        m_patternPlaybackEngine.clearScheduledInstances();
 
         {
             auto* pattern = m_patternManager.getPattern(pid);
@@ -1195,12 +1299,12 @@ public:
     }
 
     /**
-     * @brief Flush the Arsenal scheduler before arming a pattern for playback.
+     * @brief Rewind the Arsenal scheduler before arming a pattern for playback.
      * @param pid Pattern identifier prepared for playback.
      */
     void preparePatternForArsenal(PatternID pid) {
         (void)pid;
-        m_patternPlaybackEngine.flush();
+        m_patternPlaybackEngine.rewindScheduledInstances();
     }
 
     /**
@@ -1732,6 +1836,7 @@ private:
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
+    std::unique_ptr<MixerChannel> m_masterChannel;
     uint32_t m_nextChannelId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;

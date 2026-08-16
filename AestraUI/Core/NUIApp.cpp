@@ -230,15 +230,11 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
     } else if (event.type == NUIMouseEventType::Scroll) {
         adaptiveFPS_.signalActivity(NUIAdaptiveFPS::ActivityType::Scroll);
     }
-    
-    // Dispatch event to root component
-    // The component will handle hover state internally
-    // Dispatch event to root component
-    // The component will handle hover state internally
-    NUIComponent::beginEventDispatch();
-    bool handled = rootComponent_->onMouseEvent(event);
-    NUIComponent::endEventDispatch();
-    
+
+    // Dispatch through the canonical guarded entry point so callbacks may
+    // safely rebuild component hierarchies.
+    bool handled = NUIComponent::dispatchMouseEvent(rootComponent_.get(), event);
+
     // Handle focus on click
     if (event.pressed && !handled) {
         // Only reset to root if no component handled the interaction

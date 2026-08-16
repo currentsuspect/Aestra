@@ -421,10 +421,15 @@ public:
         clip->durationBeats = splitBeat - clip->startBeat;
         clip->edits.fadeOutBeats = 0.0f;
         if (isAudioClipUnlocked(*clip)) {
+            // Source-domain invariants under varispeed (#746): the second half
+            // must start at splitOffsetSeconds * varispeed into the source and
+            // both halves keep durationSeconds == beatToSeconds(durationBeats)
+            // / varispeed, matching what the renderer reads.
             const double splitOffsetSeconds = beatToSeconds(splitBeat - clip->startBeat);
-            newClip.sourceOffsetSeconds = clip->sourceOffsetSeconds + splitOffsetSeconds;
-            clip->durationSeconds = beatToSeconds(clip->durationBeats);
-            newClip.durationSeconds = beatToSeconds(newClip.durationBeats);
+            const double varispeed = static_cast<double>(clip->edits.effectiveVarispeed());
+            newClip.sourceOffsetSeconds = clip->sourceOffsetSeconds + splitOffsetSeconds * varispeed;
+            clip->durationSeconds = beatToSeconds(clip->durationBeats) / varispeed;
+            newClip.durationSeconds = beatToSeconds(newClip.durationBeats) / varispeed;
         }
 
         // Add new clip
@@ -464,19 +469,6 @@ public:
         snapshot->projectSampleRate = m_projectSampleRate;
 
         const double samplesPerBeat = (m_projectSampleRate * 60.0) / snapshot->bpm;
-        constexpr uint64_t kMaxSampleOffset = std::numeric_limits<uint64_t>::max();
-        const auto toSampleOffset = [](double offset, double scale) -> uint64_t {
-            constexpr uint64_t kMaxOffset = std::numeric_limits<uint64_t>::max();
-            if (!std::isfinite(offset) || offset <= 0.0 || !std::isfinite(scale) || scale <= 0.0) {
-                return 0;
-            }
-
-            const long double scaled = static_cast<long double>(offset) * static_cast<long double>(scale);
-            if (scaled >= static_cast<long double>(kMaxOffset)) {
-                return kMaxOffset;
-            }
-            return static_cast<uint64_t>(scaled);
-        };
 
         const bool anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),
                                              [](const PlaylistLane& lane) { return lane.solo && !lane.muted; });
@@ -491,18 +483,17 @@ public:
                 ClipRuntimeInfo clipInfo;
                 clipInfo.startTime = static_cast<uint64_t>(clip.startBeat * samplesPerBeat);
                 clipInfo.duration = static_cast<uint64_t>(clip.durationBeats * samplesPerBeat);
-                const uint64_t canonicalSourceStart =
-                    clip.durationSeconds > 0.0 ? toSampleOffset(clip.sourceOffsetSeconds, m_projectSampleRate)
-                                               : toSampleOffset(clip.sourceOffset, samplesPerBeat);
-                const uint64_t instanceSourceStart = toSampleOffset(clip.edits.sourceStart, 1.0);
-                clipInfo.sourceStart = instanceSourceStart > kMaxSampleOffset - canonicalSourceStart
-                                           ? kMaxSampleOffset
-                                           : canonicalSourceStart + instanceSourceStart;
+                clipInfo.sourceStart = getClipSourceStartSamples(clip);
                 clipInfo.gainLinear = std::isfinite(clip.edits.gainLinear) ? clip.edits.gainLinear : 1.0f;
                 clipInfo.pan =
                     std::isfinite(clip.edits.pan) ? std::clamp(clip.edits.pan, -1.0f, 1.0f) : 0.0f;
                 clipInfo.playbackRate =
                     std::isfinite(clip.edits.playbackRate) ? std::clamp(clip.edits.playbackRate, 0.25f, 4.0f) : 1.0f;
+                clipInfo.pitchSemitones =
+                    std::isfinite(clip.edits.pitchSemitones)
+                        ? std::clamp(clip.edits.pitchSemitones, ClipEdits::kMinPitchSemitones,
+                                     ClipEdits::kMaxPitchSemitones)
+                        : 0.0f;
                 const double fadeInBeats =
                     std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
                                                          : 0.0;
@@ -566,6 +557,39 @@ public:
      */
     double getProjectSampleRate() const {
         return m_projectSampleRate;
+    }
+
+    /**
+     * @brief Resolve a clip's source start in project-rate samples.
+     *
+     * This is shared by the live renderer and the timeline waveform preview so
+     * split/trim offsets cannot make audio and visuals start at different source
+     * positions. The legacy beat-domain offset remains the fallback for older
+     * clips that do not have canonical audio duration metadata.
+     */
+    uint64_t getClipSourceStartSamples(const ClipInstance& clip) const {
+        constexpr uint64_t kMaxSampleOffset = std::numeric_limits<uint64_t>::max();
+        const auto toSampleOffset = [kMaxSampleOffset](double offset, double scale) -> uint64_t {
+            if (!std::isfinite(offset) || offset <= 0.0 || !std::isfinite(scale) || scale <= 0.0) {
+                return 0;
+            }
+
+            const long double scaled = static_cast<long double>(offset) * static_cast<long double>(scale);
+            if (scaled >= static_cast<long double>(kMaxSampleOffset)) {
+                return kMaxSampleOffset;
+            }
+            return static_cast<uint64_t>(scaled);
+        };
+
+        const double bpm = std::max(m_bpm, 1.0);
+        const double samplesPerBeat = (m_projectSampleRate * 60.0) / bpm;
+        const uint64_t canonicalSourceStart =
+            clip.durationSeconds > 0.0 ? toSampleOffset(clip.sourceOffsetSeconds, m_projectSampleRate)
+                                       : toSampleOffset(clip.sourceOffset, samplesPerBeat);
+        const uint64_t instanceSourceStart = toSampleOffset(clip.edits.sourceStart, 1.0);
+        return instanceSourceStart > kMaxSampleOffset - canonicalSourceStart
+                   ? kMaxSampleOffset
+                   : canonicalSourceStart + instanceSourceStart;
     }
 
     /**

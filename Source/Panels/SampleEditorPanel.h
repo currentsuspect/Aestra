@@ -28,7 +28,7 @@ class ADSRDisplayComponent;
  * - Waveform display with horizontal zoom
  * - ADSR envelope (Attack, Decay, Sustain, Release) with visual curve display
  * - Loop points (start/end) with mode toggle: one-shot, loop, ping-pong
- * - Pitch/tune control (coarse ±24 st + fine ±100 cents)
+ * - Keyboard pitch controls (root note, coarse ±24 st, fine ±100 cents)
  * - Normalize and Reverse buttons
  */
 class SampleEditorPanel : public WindowPanel {
@@ -66,7 +66,8 @@ public:
 
     // Pitch/tune
     struct PitchTune {
-        int coarse{0};   // ±24 semitones
+        int rootMidiNote{60}; // C3 default
+        int coarse{0};        // ±24 semitones
         float fine{0.0f}; // ±100 cents
     };
 
@@ -76,6 +77,8 @@ public:
     int getVoiceCount() const;
     void setMonoMode(bool mono);
     bool isMonoMode() const { return m_monoMode; }
+    void setCutSelfMode(bool cutSelf);
+    bool isCutSelfMode() const { return m_cutSelfMode; }
 
     // Normalize and Reverse
     void normalize();
@@ -87,6 +90,7 @@ public:
     std::function<void(const PitchTune&)> onPitchTuneChanged;
     std::function<void(int)> onVoiceCountChanged;
     std::function<void(bool)> onMonoModeChanged;
+    std::function<void(bool)> onCutSelfModeChanged;
     std::function<void()> onControlCommitRequested;
     std::function<void()> onNormalizeRequested;
     std::function<void()> onReverseRequested;
@@ -110,6 +114,7 @@ private:
     // Loop
     LoopPoints m_loopPoints;
     bool m_monoMode{false};
+    bool m_cutSelfMode{false};
 
     // Pitch/Tune
     PitchTune m_pitchTune;
@@ -120,6 +125,7 @@ private:
 
     std::shared_ptr<AestraUI::NUISlider> m_pitchCoarseSlider;
     std::shared_ptr<AestraUI::NUISlider> m_pitchFineSlider;
+    std::shared_ptr<AestraUI::NUISlider> m_pitchRootSlider;
     std::shared_ptr<AestraUI::NUISlider> m_voiceCountSlider;
 
     std::shared_ptr<AestraUI::NUIButton> m_normalizeBtn;
@@ -129,11 +135,14 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_pingPongModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_monoModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_polyModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_cutSelfModeBtn;
     std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUILabel> m_modeLabel;
     std::shared_ptr<AestraUI::NUILabel> m_voiceCountLabel;
     std::shared_ptr<AestraUI::NUILabel> m_voiceCountValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchRootLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchRootValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchCoarseLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchFineLabel;
     std::shared_ptr<AestraUI::NUILabel> m_adsrLabel;
@@ -150,6 +159,7 @@ private:
     void onPitchControlChanged();
     void onVoiceCountControlChanged();
     void setMonoModeInternal(bool mono, bool notify);
+    void setCutSelfModeInternal(bool cutSelf, bool notify);
     void setLoopMode(LoopMode mode);
     void updateModeButtons();
     void updateMonoPolyControls();

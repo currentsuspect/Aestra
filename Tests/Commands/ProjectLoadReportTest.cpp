@@ -191,6 +191,98 @@ int main() {
     check(response["status"].asString() == "validation_error",
           "get_project_load_report rejects arguments");
 
+    // 8b. Wide send ids survive the project round trip exactly (Contract D2:
+    // ids above 2^53 must not be mangled by JSON doubles).
+    {
+        Aestra::Tests::ScopedTempDirectory wideTemp("wide_send_id");
+        auto wideSource = makeTracks();
+        auto* wideChannel = wideSource->addChannelWithId("Wide", 81);
+        auto* wideTarget = wideSource->addChannelWithId("WideTarget", 82);
+        check(wideChannel != nullptr && wideTarget != nullptr, "wide-id fixture channels created");
+        if (wideChannel && wideTarget) {
+            Aestra::Audio::AudioRoute wideSend;
+            wideSend.targetChannelId = wideTarget->getChannelId(); // master sends are illegal (D4)
+            wideSend.sendId = 9007199254740993ull;
+            wideChannel->addSend(wideSend);
+            const std::filesystem::path widePath = wideTemp.path() / "wide.aes";
+            check(ProjectSerializer::save(widePath.string(), wideSource, 120.0, 0.0),
+                  "wide-id project saved");
+            if (std::filesystem::exists(widePath)) {
+                auto wideTracks = makeTracks();
+                auto wideResult = ProjectSerializer::load(widePath.string(), wideTracks);
+                check(wideResult.ok, "wide-id project loads");
+                auto* loadedWide = wideTracks->getChannel(0);
+                check(loadedWide != nullptr && loadedWide->getSends().size() == 1 &&
+                          loadedWide->getSends()[0].sendId == 9007199254740993ull,
+                      "a send id above 2^53 survives the project round trip exactly");
+            }
+        }
+    }
+
+    // 9. Routing repair at load (Contract I8/D3/D4): dangling mains reroute to
+    // master; dangling sends and sends to master are removed with diagnostics.
+    {
+        Aestra::Tests::ScopedTempDirectory repairTemp("routing_repair");
+        auto source = makeTracks();
+        auto* ch1 = source->addChannelWithId("A", 71);
+        auto* ch2 = source->addChannelWithId("B", 72);
+        check(ch1 != nullptr && ch2 != nullptr, "routing repair fixture channels created");
+        if (ch1 && ch2) {
+            ch1->setMainOutputId(72);
+            Aestra::Audio::AudioRoute send;
+            send.targetChannelId = 72;
+            ch1->addSend(send);
+
+            const std::filesystem::path path = repairTemp.path() / "dangling.aes";
+            check(ProjectSerializer::save(path.string(), source, 120.0, 0.0),
+                  "routing repair fixture saved");
+            if (std::filesystem::exists(path)) {
+                // Corrupt the saved routing: dangling main, send to master, dangling send.
+                std::ifstream in(path);
+                std::stringstream buffer;
+                buffer << in.rdbuf();
+                JSON root = JSON::parse(buffer.str());
+                for (size_t ci = 0; ci < root["mixerChannels"].size(); ++ci) {
+                    JSON& ch = root["mixerChannels"][ci];
+                    if (ch["id"].asNumber() == 71.0) {
+                        ch["routing"]["mainOutputId"] = 999999.0;
+                        ch["routing"]["sends"][0]["targetId"] = 0.0; // master
+                        JSON extra = JSON::object();
+                        extra.set("targetId", JSON(999999.0));
+                        extra.set("gain", JSON(1.0));
+                        extra.set("pan", JSON(0.0));
+                        extra.set("postFader", JSON(true));
+                        extra.set("mute", JSON(false));
+                        extra.set("sidechainOnly", JSON(false));
+                        ch["routing"]["sends"].push(extra);
+                    }
+                }
+                std::ofstream out(path);
+                out << root.toString();
+                out.close();
+
+                auto repairedTracks = makeTracks();
+                auto repairedResult = ProjectSerializer::load(path.string(), repairedTracks);
+                JSON repairedReport =
+                    makeMuseProjectLoadReport(repairedResult, MuseProjectLoadOrigin::Canonical);
+                check(repairedResult.ok, "corrupt-routing project still loads");
+                auto* repairedA = repairedTracks->getChannel(0);
+                check(repairedA != nullptr &&
+                          repairedA->getMainOutputId() == 0xFFFFFFFFu,
+                      "dangling main output rerouted to master at load");
+                check(repairedA != nullptr && repairedA->getSends().empty(),
+                      "master send and dangling send removed at load");
+                bool routingIssueReported = false;
+                for (size_t wi = 0; wi < repairedReport["warnings"].size(); ++wi) {
+                    if (repairedReport["warnings"][wi]["issueCode"].asString() == "routing_repaired") {
+                        routingIssueReported = true;
+                    }
+                }
+                check(routingIssueReported, "routing repairs are surfaced as diagnostics");
+            }
+        }
+    }
+
     if (g_failures == 0) {
         std::cout << "All ProjectLoadReport tests passed\n";
         return 0;

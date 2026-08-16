@@ -100,7 +100,7 @@ int main() {
     engine.setGlobalSamplePos(0);
     engine.setTransportPlaying(true);
 
-    playbackEngine.flush();
+    playbackEngine.rewindScheduledInstances();
     playbackEngine.schedulePatternInstance(patternId, 0.0, 1);
 
     std::vector<float> output(blockSize * channels, 0.0f);

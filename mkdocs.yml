@@ -277,6 +277,9 @@ nav:
       - Overview: api/index.md
   - 📋 Changelog:
       - Release Notes: https://github.com/currentsuspect/Aestra/blob/main/CHANGELOG.md
+      - 2026 Q3: https://github.com/currentsuspect/Aestra/blob/main/meta/CHANGELOGS/CHANGELOG_2026Q3.md
+      - 2026 Q2: https://github.com/currentsuspect/Aestra/blob/main/meta/CHANGELOGS/CHANGELOG_2026Q2.md
+      - 2026 Q1: https://github.com/currentsuspect/Aestra/blob/main/meta/CHANGELOGS/CHANGELOG_2026Q1.md
       - 2025 Q1: https://github.com/currentsuspect/Aestra/blob/main/meta/CHANGELOGS/CHANGELOG_2025Q1.md
   - 🌐 Community:
       - Code of Conduct: community/code-of-conduct.md

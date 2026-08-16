@@ -267,26 +267,13 @@ AestraContent::AestraContent()
     // Create Focus Toggle Buttons
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& themeProps = theme.getCurrentTheme();
-    m_viewToggle =
-        std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
+    m_viewToggle = std::make_shared<AestraUI::NUISegmentedControl>(
+        std::vector<std::string>(WorkspaceFocusModel::kSegmentLabels.begin(),
+                                 WorkspaceFocusModel::kSegmentLabels.end()));
     m_viewToggle->setCornerRadius(themeProps.radiusL);             // tokenized: 12.0
     m_viewToggle->setAccentColor(theme.getColor("primary"));        // tokenized: theme accent
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
-        ViewFocus newFocus;
-        switch (index) {
-        case 0:
-            newFocus = ViewFocus::Arsenal;
-            break;
-        case 1:
-            newFocus = ViewFocus::Timeline;
-            break;
-        case 2:
-            newFocus = ViewFocus::Audition;
-            break;
-        default:
-            newFocus = ViewFocus::Timeline;
-            break;
-        }
+        ViewFocus newFocus = WorkspaceFocusModel::focusForSegmentIndex(index);
         setViewFocus(newFocus);
 
         // Auto-open Arsenal panel when switching TO Arsenal mode
@@ -792,16 +779,9 @@ void AestraContent::setupMixerPanels() {
     m_routingMapPanel->setOnAddSend([this](uint32_t sourceId, uint32_t targetId, bool sidechainOnly) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
-                vm->addSend(sourceId, targetId);
-                // Set sidechain flag on the newly appended send
-                if (sidechainOnly) {
-                    if (auto* ch = vm->getChannelById(sourceId)) {
-                        if (!ch->sends.empty()) {
-                            int newIdx = static_cast<int>(ch->sends.size()) - 1;
-                            vm->setSendSidechainOnly(sourceId, newIdx, true);
-                        }
-                    }
-                }
+                // sidechainOnly is part of the route itself now (Contract D2) —
+                // no post-append positional flip.
+                vm->addSend(sourceId, targetId, sidechainOnly);
             }
         }
     });
@@ -819,18 +799,18 @@ void AestraContent::setupMixerPanels() {
             }
         }
     });
-    m_routingMapPanel->setOnRemoveSend([this](uint32_t channelId, int sendIndex) {
+    m_routingMapPanel->setOnRemoveSend([this](uint32_t channelId, uint64_t sendId) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
-                vm->removeSend(channelId, sendIndex);
+                vm->removeSend(channelId, sendId);
             }
         }
     });
-    m_routingMapPanel->setOnEditSendLevel([this](uint32_t channelId, int sendIndex, float newDb) {
+    m_routingMapPanel->setOnEditSendLevel([this](uint32_t channelId, uint64_t sendId, float newDb) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
                 float linearGain = (newDb <= -144.0f) ? 0.0f : std::pow(10.0f, newDb / 20.0f);
-                vm->setSendLevel(channelId, sendIndex, linearGain);
+                vm->setSendLevel(channelId, sendId, linearGain);
             }
         }
     });
@@ -974,7 +954,12 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setSampleWindow(loopPoints.start, loopPoints.end);
-        sampler->setLoopEnabled(loopPoints.mode != SampleEditorPanel::LoopMode::OneShot);
+        const auto mode = loopPoints.mode == SampleEditorPanel::LoopMode::PingPong
+                              ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong
+                              : (loopPoints.mode == SampleEditorPanel::LoopMode::Loop
+                                     ? Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward
+                                     : Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot);
+        sampler->setLoopMode(mode);
     };
     m_sampleEditorPanel->onPitchTuneChanged = [this](const SampleEditorPanel::PitchTune& pitchTune) {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -985,6 +970,7 @@ void AestraContent::setupArsenalPanels() {
         if (!sampler) {
             return;
         }
+        sampler->setRootMidiNote(pitchTune.rootMidiNote);
         sampler->setCoarseSemitones(static_cast<float>(pitchTune.coarse));
         sampler->setFineTuneCents(pitchTune.fine);
     };
@@ -1009,6 +995,17 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setMonoMode(monoMode);
+    };
+    m_sampleEditorPanel->onCutSelfModeChanged = [this](bool cutSelf) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setCutSelfMode(cutSelf);
     };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -1070,7 +1067,7 @@ void AestraContent::setupArsenalPanels() {
         setDirty(true);
     });
     m_audioClipEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
-    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 430.0f);
+    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 490.0f);
     m_audioClipEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         m_sampleEditorRect = clampRectToAllowed(proposed, computeAllowedRectForPanels());
         if (m_audioClipEditorPanel)
@@ -1194,8 +1191,9 @@ void AestraContent::setupArsenalPanels() {
         }
         // Re-prepare the pattern so the playback engine re-schedules the notes
         // just edited in the Arsenal grid. Without this, newly placed steps stay
-        // silent during pattern playback until some other path flushes (e.g.
-        // editing the same pattern in the Piano Roll). Mirrors setActivePattern.
+        // silent during pattern playback until some other path rewinds the
+        // scheduler (e.g. editing the same pattern in the Piano Roll). Mirrors
+        // setActivePattern.
         if (m_trackManager) {
             m_trackManager->preparePatternForArsenal(patternId);
         }
@@ -1818,7 +1816,7 @@ void AestraContent::onResize(int width, int height) {
         (m_audioClipEditorPanel && m_audioClipEditorPanel->isVisible())) {
         if (m_sampleEditorRect.x == 0.0f && m_sampleEditorRect.y == 0.0f) {
             m_sampleEditorRect.width = std::min(700.0f, allowed.width);
-            m_sampleEditorRect.height = std::min(430.0f, allowed.height);
+            m_sampleEditorRect.height = std::min(500.0f, allowed.height);
             m_sampleEditorRect.x = allowed.x + (allowed.width - m_sampleEditorRect.width) * 0.5f;
             m_sampleEditorRect.y = allowed.y + (allowed.height - m_sampleEditorRect.height) * 0.5f;
         }
@@ -2178,29 +2176,24 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
     ViewFocus previousFocus = m_viewFocus;
+    const bool focusChanged = (focus != previousFocus);
 
     m_viewFocus = focus;
 
-    auto applyOverlayPanelVisibility = [this](bool auditionMode) {
-        if (auditionMode) {
-            if (m_mixerPanel)
-                m_mixerPanel->setVisible(false);
-            if (m_pianoRollPanel)
-                m_pianoRollPanel->setVisible(false);
-            if (m_sequencerPanel) {
-                m_sequencerPanel->setVisible(false);
-                m_sequencerPanel->unregisterDropTargets();
-            }
-            return;
-        }
-
+    auto applyOverlayPanelVisibility = [this](ViewFocus activeFocus) {
+        // Overlay visibility is derived from remembered-open state + active
+        // focus (see WorkspaceFocusModel::derivePanelVisibility). RoutingMap
+        // never reaches here: its branch manages its own panel and mixer.
+        const WorkspaceFocusModel::WorkspacePanelVisibility vis =
+            WorkspaceFocusModel::derivePanelVisibility(activeFocus, m_viewState.mixerOpen,
+                                                       m_viewState.pianoRollOpen, m_viewState.sequencerOpen);
         if (m_mixerPanel)
-            m_mixerPanel->setVisible(m_viewState.mixerOpen);
+            m_mixerPanel->setVisible(vis.mixer);
         if (m_pianoRollPanel)
-            m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
+            m_pianoRollPanel->setVisible(vis.pianoRoll);
         if (m_sequencerPanel) {
-            m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
-            if (m_viewState.sequencerOpen) {
+            m_sequencerPanel->setVisible(vis.sequencer);
+            if (vis.sequencer) {
                 m_sequencerPanel->registerDropTargets(true);
             } else {
                 m_sequencerPanel->unregisterDropTargets();
@@ -2211,7 +2204,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
     // Handle mode transitions
     if (m_audioEngine) {
         // === ENTERING ARSENAL ===
-        if (focus == ViewFocus::Arsenal) {
+        if (focusChanged && focus == ViewFocus::Arsenal) {
             stopPatternClipPreview(false);
             // Use actual pattern length from the active pattern
             double lengthBeats = getActivePatternLengthBeats();
@@ -2237,12 +2230,25 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_trackManagerUI->setVisible(true);
         }
         // === ENTERING TIMELINE ===
-        else if (focus == ViewFocus::Timeline) {
+        else if (focusChanged && focus == ViewFocus::Timeline) {
             stopPatternClipPreview(false);
-            // Stop any running playback from previous mode
-            if (previousFocus == ViewFocus::Arsenal) {
-                if (m_trackManager && m_trackManager->isPatternMode()) {
-                    m_trackManager->stopArsenalPlayback(false);
+            // Pattern mode is mirrored in two places: AudioEngine (drives the transport's
+            // loop/wrap) and TrackManager (gates the pattern scheduler and, in play(),
+            // whether the timeline is scheduled at all). The engine mirror is cleared
+            // unconditionally below, so keying the TrackManager teardown off previousFocus
+            // — where we came FROM rather than what state we are actually IN — lets the two
+            // disagree for any path that reaches Timeline without previousFocus==Arsenal.
+            // With TrackManager left in pattern mode, play() skips BOTH the scheduler
+            // clear and scheduleTimelinePatternInstances(). Keyed off real state,
+            // matching the ENTERING AUDITION branch below, which was already written
+            // this way.
+            // (Hardening: the observed limbo in this pass came from updatePatternLoopLength,
+            // fixed separately. This asymmetry is latent, not the measured cause.)
+            const bool leavingArsenal = (previousFocus == ViewFocus::Arsenal);
+            const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
+            if (leavingArsenal || patternStillArmed) {
+                if (patternStillArmed) {
+                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND the scheduler
                 } else if (m_trackManager && m_trackManager->isPlaying()) {
                     m_trackManager->stop();
                 }
@@ -2269,6 +2275,28 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             // Hide Audition panel if it exists (returning from Audition)
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        // Self-transitions refresh UI only. Engine, transport, preview,
+        // scheduler, and position state must remain untouched.
+        else if (!focusChanged && focus == ViewFocus::Arsenal) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(true);
+                m_trackManagerUI->setFollowPlayhead(false);
+            }
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
+        }
+        else if (!focusChanged && focus == ViewFocus::Timeline) {
+            if (m_trackManagerUI) {
+                m_trackManagerUI->setPatternMode(false);
+                m_trackManagerUI->setFollowPlayhead(true);
+            }
             if (m_auditionPanel)
                 m_auditionPanel->setVisible(false);
             if (m_trackManagerUI)
@@ -2344,7 +2372,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             m_auditionPanel->setVisible(true);
             if (m_trackManagerUI)
                 m_trackManagerUI->setVisible(false);
-            applyOverlayPanelVisibility(true);
+            applyOverlayPanelVisibility(focus);
 
             // POLISH: Hide Transport, Pattern Browser, and Visualizers for immersion
             if (m_transportBar)
@@ -2368,10 +2396,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_routingMapPanel->bringToFront();
                 m_routingMapPanel->setDirty(true);
             }
-            // Keep mixer visible so user still sees context
-            if (m_mixerPanel && m_viewState.mixerOpen) {
-                m_mixerPanel->setVisible(true);
-            }
+            // Keep mixer visible so user still sees context. The centralized
+            // visibility rules also hide the piano roll and sequencer and
+            // unregister sequencer drop targets for the map's isolation.
+            applyOverlayPanelVisibility(focus);
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Routing Map");
         }
 
@@ -2406,7 +2434,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_waveformVisualizer->setVisible(true);
             if (m_audioVisualizer)
                 m_audioVisualizer->setVisible(true);
-            applyOverlayPanelVisibility(false);
+            applyOverlayPanelVisibility(focus);
         } else if (isAudition) {
             // Audition Mode - Hide Distractions
             if (m_transportBar)
@@ -2417,17 +2445,14 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_waveformVisualizer->setVisible(false);
             if (m_audioVisualizer)
                 m_audioVisualizer->setVisible(false);
-            applyOverlayPanelVisibility(true);
+            applyOverlayPanelVisibility(focus);
         }
 
         // Sync segment control to reflect the new focus
         if (m_viewToggle) {
-            size_t idx = 0;
-            if (focus == ViewFocus::Arsenal) idx = 0;
-            else if (focus == ViewFocus::Timeline) idx = 1;
-            else if (focus == ViewFocus::Audition) idx = 2;
             // RoutingMap doesn't map to a toggle segment; leave prior selection
-            if (focus != ViewFocus::RoutingMap) {
+            size_t idx = 0;
+            if (WorkspaceFocusModel::segmentIndexForFocus(focus, idx)) {
                 m_viewToggle->setSelectedIndex(idx);
             }
         }
@@ -2441,16 +2466,29 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ViewFocus::Arsenal);
     }
 
-    // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition or RoutingMap)
-    bool isRoutingMapTransition = (focus == ViewFocus::RoutingMap || previousFocus == ViewFocus::RoutingMap);
-    if (wasPlaying && m_transportBar && !isRoutingMapTransition &&
-        focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
+    // Hot-swap playback on focus switch. Only Arsenal<->Timeline re-arms the
+    // transport (pattern == arrangement); Audition and RoutingMap transitions
+    // and every ordinary workspace transition leave playback/scheduled-instances
+    // untouched.
+    const auto transitionKind = WorkspaceFocusModel::classifyTransition(focus, previousFocus);
+    if (wasPlaying && m_transportBar &&
+        transitionKind == WorkspaceFocusModel::WorkspaceTransitionKind::PlaybackHotSwap) {
         AESTRA_LOG_DEBUG("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
     }
 
     isUpdating = false;
+}
+
+void AestraContent::restoreWorkspaceState(ViewFocus focus, bool pianoRollOpen, bool sequencerOpen) {
+    // Restore remembered-open flags first, then the workspace focus. Because
+    // setViewFocus caches engine mode/mirrors keyed off `wasPlaying` and the
+    // current focus, restoring focus first would have the overlay visibility
+    // derive from the pre-restore flags.
+    m_viewState.pianoRollOpen = pianoRollOpen;
+    m_viewState.sequencerOpen = sequencerOpen;
+    setViewFocus(focus);
 }
 
 void AestraContent::setArsenalPanelVisible(bool visible) {
@@ -2465,16 +2503,9 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
     if (visible) {
         // Calculate initial position on first show (if position is at origin)
         if (m_viewState.sequencerRect.x == 0 && m_viewState.sequencerRect.y == 0) {
-            AestraUI::NUIRect safe = computeSafeRect();
-            // Position below title bar with some margin
-            float titleBarHeight = 35.0f;
-            float margin = 10.0f;
-            m_viewState.sequencerRect.x = margin;
-            m_viewState.sequencerRect.y = titleBarHeight + safe.y + margin;
-
-            // Clamp to allowed area
             AestraUI::NUIRect allowed = computeAllowedRectForPanels();
-            m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+            m_viewState.sequencerRect = {
+                allowed.x, allowed.y, allowed.width, std::min(300.0f, allowed.height)};
         }
 
         m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, computeAllowedRectForPanels());
@@ -2900,13 +2931,15 @@ void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
 
 ViewFocus AestraContent::resolveTransportFocus() const {
     if (m_viewToggle) {
-        switch (m_viewToggle->getSelectedIndex()) {
-        case 0:
+        const ViewFocus segmentFocus =
+            WorkspaceFocusModel::focusForSegmentIndex(m_viewToggle->getSelectedIndex());
+        switch (segmentFocus) {
+        case ViewFocus::Arsenal:
             return ViewFocus::Arsenal;
-        case 2:
+        case ViewFocus::Audition:
             return ViewFocus::Audition;
-        case 1:
         default:
+            // Timeline is the arrangement transport context.
             return ViewFocus::Timeline;
         }
     }
@@ -2980,6 +3013,19 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
     // domain from the audio thread (= silence after the next wrap).
     const double barBeats = static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar());
     double lengthBeats = std::max(barBeats, pattern->lengthBeats);
+
+    // Only Arsenal focus may put the ENGINE into pattern playback. This function runs
+    // from pattern-edit callbacks (setOnPatternEdited), and the Arsenal panel stays open
+    // across a focus change — so editing a pattern from it while the user is on the
+    // Timeline used to seize the transport: the engine looped the pattern length while
+    // TrackManager stayed in timeline mode, so play() scheduled the timeline but the
+    // transport never left the pattern's first bars and timeline audio stopped sounding.
+    // It was unrecoverable from the UI, because the user was ALREADY on Timeline, so
+    // clicking Timeline fired no focus transition to clear the flag.
+    // Creating or deleting a unit while in timeline mode is the shortest repro.
+    if (resolveTransportFocus() != ViewFocus::Arsenal) {
+        return; // Pattern loop length governs Arsenal playback only.
+    }
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
 }
 
@@ -3102,15 +3148,32 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
     if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
             AESTRA_LOG_DEBUG("[Arsenal] Focus-aware stop");
+            if (hardStop) {
+                // Zero the cue BEFORE the stop command goes out: stop() pushes the
+                // stored play-start into the command, and the audio thread's drain is
+                // authoritative — a UI-side rewind after the fact races it.
+                m_trackManager->setPlayStartPosition(0.0);
+            }
             m_trackManager->stopArsenalPlayback(true);
         }
         if (hardStop && m_audioEngine) {
             m_audioEngine->panic();
         }
+        if (hardStop && m_trackManager) {
+            m_trackManager->setPlayStartPosition(0.0);
+            m_trackManager->setPosition(0.0);
+            m_trackManager->clearDisplayPositionOverride();
+            if (m_audioEngine) {
+                m_audioEngine->setGlobalSamplePos(0);
+            }
+        }
         return;
     }
 
     if (m_trackManager) {
+        if (hardStop) {
+            m_trackManager->setPlayStartPosition(0.0);
+        }
         m_trackManager->stop();
     }
     if (hardStop && m_audioEngine) {
@@ -3173,6 +3236,10 @@ void AestraContent::openPatternInPianoRoll(PatternID patternId) {
     m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
     m_pianoRollPanel->loadPattern(patternId);
     setViewOpen(Audio::ViewType::PianoRoll, true);
+    // The piano roll is a contextual editor, not a workspace: it opens inside
+    // the owning focus (Arsenal for pattern construction, Timeline for
+    // arrangement material) and keeps that focus. Closing it returns to the
+    // owning workspace. No transport/engine state is touched.
 }
 
 Aestra::Audio::UnitID AestraContent::resolveEditingUnitForPattern(PatternID patternId) const {
@@ -3272,7 +3339,18 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
         });
     }
     AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
-    // Ensure correct initial state now that engine is valid
+    // Timeline is already the default focus on first engine attachment. Since a
+    // focus self-transition is engine-idempotent, initialize that engine state
+    // explicitly before using setViewFocus() for the UI refresh.
+    if (m_audioEngine && m_viewFocus == ViewFocus::Timeline) {
+        m_audioEngine->setPatternPlaybackMode(false, 4.0);
+        m_audioEngine->setAuditionModeEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+            m_trackManager->setPosition(m_savedTimelinePosition);
+            m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
+        }
+    }
     setViewFocus(ViewFocus::Timeline);
 }
 
@@ -3340,20 +3418,6 @@ void AestraContent::addDemoTracks() {
             // Cycle the shared track palette so the lane strip matches the
             // name ink and mixer tint derived from the same index.
             lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
-
-            if (i == 1) {
-                AutomationCurve vol("Volume", AutomationTarget::Volume);
-                if (const auto* channel = m_trackManager->getChannel(static_cast<size_t>(i - 1))) {
-                    vol.mixerChannelId = channel->getChannelId();
-                }
-                vol.setDefaultValue(0.8);
-                double samplesPerBeat = (48000.0 * 60.0) / 120.0; // Demo values
-                vol.addPoint(0.0, 0.5, samplesPerBeat, 0.5f);
-                vol.addPoint(4.0, 1.0, samplesPerBeat, 0.5f);
-                vol.addPoint(8.0, 0.2, samplesPerBeat, 0.5f);
-                vol.addPoint(12.0, 0.8, samplesPerBeat, 0.5f);
-                lane->automationCurves.push_back(vol);
-            }
         }
     }
 
@@ -3760,15 +3824,27 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     SampleEditorPanel::LoopPoints loop;
     loop.start = sampler->getLoopStartNorm();
     loop.end = sampler->getLoopEndNorm();
-    loop.mode = sampler->isLoopEnabled() ? SampleEditorPanel::LoopMode::Loop : SampleEditorPanel::LoopMode::OneShot;
+    switch (sampler->getLoopMode()) {
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong:
+        loop.mode = SampleEditorPanel::LoopMode::PingPong;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::Forward:
+        loop.mode = SampleEditorPanel::LoopMode::Loop;
+        break;
+    case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::OneShot:
+        loop.mode = SampleEditorPanel::LoopMode::OneShot;
+        break;
+    }
     m_sampleEditorPanel->setLoopPoints(loop);
 
     SampleEditorPanel::PitchTune pitch;
+    pitch.rootMidiNote = sampler->getRootMidiNote();
     pitch.coarse = static_cast<int>(std::round(sampler->getCoarseSemitones()));
     pitch.fine = sampler->getFineTuneCents();
     m_sampleEditorPanel->setPitchTune(pitch);
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
+    m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {
@@ -4253,15 +4329,18 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.keyCode == AestraUI::NUIKeyCode::Space) {
         ViewFocus transportFocus = m_viewFocus;
         if (m_viewToggle) {
-            switch (m_viewToggle->getSelectedIndex()) {
-            case 0:
+            const ViewFocus segmentFocus =
+                WorkspaceFocusModel::focusForSegmentIndex(m_viewToggle->getSelectedIndex());
+            switch (segmentFocus) {
+            case ViewFocus::Arsenal:
                 transportFocus = ViewFocus::Arsenal;
                 break;
-            case 2:
+            case ViewFocus::Audition:
                 transportFocus = ViewFocus::Audition;
                 break;
-            case 1:
+            case ViewFocus::Timeline:
             default:
+                // Timeline is the arrangement transport context.
                 transportFocus = ViewFocus::Timeline;
                 break;
             }

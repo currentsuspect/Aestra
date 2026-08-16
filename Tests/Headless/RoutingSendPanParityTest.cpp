@@ -1,12 +1,9 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // RoutingSendPanParityTest — acceptance tests for routing BUG-3 (#261) and BUG-5 (#262).
 //
-// #261: Send pan must use the same pan law as main mixer pan.
-//   * A pre-fader send at pan P, unity gain, must produce sample-identical
-//     master output to routing the track's main output at pan P.
-//   * A post-fader send stacks the source's main pan stage on top; with the
-//     source panned center the send output must equal the direct path scaled
-//     by exactly the center gain of the shared law (cos(π/4)).
+// #261: Send pan must balance an existing stereo signal without attenuating
+// it at centre. A centred unity post-fader send must therefore match the
+// source's direct centred output exactly.
 //
 // #262: Batched send processing must match a naive per-sample reference.
 //   * The test recomputes the expected send output sample-by-sample from the
@@ -17,9 +14,12 @@
 // deterministic generator plugin as the signal source — no clips, no audio
 // hardware, no file I/O on the verification path.
 
+#include "../AestraAudio/GoldenAudio/GoldenAudioHarness.h"
 #include "Core/AudioEngine.h"
 #include "Core/AudioGraph.h"
 #include "Core/AudioGraphBuilder.h"
+#include "Core/AudioGraphState.h"
+#include "Core/AudioRenderer.h"
 #include "Core/MixerChannel.h"
 #include "Models/TrackManager.h"
 #include "Plugin/EffectChain.h"
@@ -53,11 +53,11 @@ void reportFailure(const char* what, const std::string& detail) {
     ++g_failures;
 }
 
-#define EXPECT_TRUE(expr)                                                                                              \
-    do {                                                                                                               \
-        if (!(expr)) {                                                                                                 \
-            reportFailure(#expr, std::string(__FILE__) + ":" + std::to_string(__LINE__));                              \
-        }                                                                                                              \
+#define EXPECT_TRUE(expr)                                                                 \
+    do {                                                                                  \
+        if (!(expr)) {                                                                    \
+            reportFailure(#expr, std::string(__FILE__) + ":" + std::to_string(__LINE__)); \
+        }                                                                                 \
     } while (0)
 
 // Deterministic stateless noise: pure function of the global sample index so
@@ -81,13 +81,18 @@ float sourceR(uint64_t n) {
     return static_cast<float>(noiseAt(n)) * -0.5f;
 }
 
-// Replicates the engine's shared pan law (fastPanGainsD in AudioEngine.cpp)
-// including its float intermediate, so reference gains match to double
-// precision. Any future divergence between main/send law breaks the tests.
-void referencePanGains(double pan, double vol, double& gainL, double& gainR) {
-    float p = (static_cast<float>(pan) + 1.0f) * 0.5f;
-    gainL = static_cast<double>(std::cos(p * 1.57079632679f)) * vol;
-    gainR = static_cast<double>(std::sin(p * 1.57079632679f)) * vol;
+// Replicates the stereo balance law used by sends and routed destination
+// channels. Centre is unity on both legs; moving away from centre attenuates
+// only the opposite leg.
+void referenceBalanceGains(double pan, double gain, double& gainL, double& gainR) {
+    const double clampedPan = std::clamp(pan, -1.0, 1.0);
+    if (clampedPan < 0.0) {
+        gainL = gain;
+        gainR = std::cos(-clampedPan * 1.57079632679) * gain;
+    } else {
+        gainL = std::cos(clampedPan * 1.57079632679) * gain;
+        gainR = gain;
+    }
 }
 
 // Minimal signal-generator plugin: ignores input, writes the deterministic
@@ -175,9 +180,11 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
 
     MixerChannel* src = trackManager->addChannel("src");
     MixerChannel* sink = trackManager->addChannel("sink");
+    MixerChannel* bus = trackManager->addChannel("bus");
     EXPECT_TRUE(src != nullptr);
     EXPECT_TRUE(sink != nullptr);
-    if (!src || !sink) {
+    EXPECT_TRUE(bus != nullptr);
+    if (!src || !sink || !bus) {
         return {};
     }
 
@@ -187,8 +194,10 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
 
     if (send.enabled) {
         src->setMainOutputId(sink->getChannelId()); // Keep the direct path out of the master mix
+        // Sends to master are illegal (Contract D4): route the send into a
+        // bus that feeds master, preserving the measurement path.
         AudioRoute route;
-        route.targetChannelId = kMasterId;
+        route.targetChannelId = bus->getChannelId();
         route.gain = send.gain;
         route.pan = send.pan;
         route.postFader = send.postFader;
@@ -211,8 +220,7 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
     std::vector<float> block(static_cast<size_t>(kBlockFrames) * kChannels, 0.0f);
     for (uint32_t b = 0; b < kWarmupBlocks; ++b) {
         std::fill(block.begin(), block.end(), 0.0f);
-        engine.processBlock(block.data(), nullptr, kBlockFrames,
-                            static_cast<double>(b * kBlockFrames) / kSampleRate);
+        engine.processBlock(block.data(), nullptr, kBlockFrames, static_cast<double>(b * kBlockFrames) / kSampleRate);
     }
 
     std::vector<float> captured;
@@ -223,6 +231,174 @@ std::vector<float> renderConfig(float mainPan, const SendSpec& send) {
         engine.processBlock(block.data(), nullptr, kBlockFrames,
                             static_cast<double>(absBlock * kBlockFrames) / kSampleRate);
         captured.insert(captured.end(), block.begin(), block.end());
+    }
+    return captured;
+}
+
+// Render a source through N centred mixer destinations before Master. Every
+// strip uses the stereo-balance law: an already-stereo route must not add a
+// centre attenuation at any hop, so hop count cannot change the level.
+std::vector<float> renderMainChain(size_t destinationCount) {
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+
+    MixerChannel* source = trackManager->addChannel("source");
+    EXPECT_TRUE(source != nullptr);
+    if (!source) {
+        return {};
+    }
+    EXPECT_TRUE(source->getEffectChain().insertPlugin(0, std::make_shared<GeneratorPlugin>()));
+
+    MixerChannel* previous = source;
+    for (size_t index = 0; index < destinationCount; ++index) {
+        MixerChannel* destination = trackManager->addChannel("destination");
+        EXPECT_TRUE(destination != nullptr);
+        if (!destination) {
+            return {};
+        }
+        previous->setMainOutputId(destination->getChannelId());
+        previous = destination;
+    }
+
+    AudioEngine engine;
+    engine.setTrackManager(trackManager);
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(kBlockFrames, kChannels);
+    trackManager->buildAndShareSlotMap();
+    if (auto slotMap = trackManager->getChannelSlotMapShared()) {
+        engine.setChannelSlotMap(slotMap);
+    }
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager));
+    engine.setSafetyLimiterEnabled(false);
+
+    std::vector<float> block(static_cast<size_t>(kBlockFrames) * kChannels, 0.0f);
+    for (uint32_t b = 0; b < kWarmupBlocks; ++b) {
+        std::fill(block.begin(), block.end(), 0.0f);
+        engine.processBlock(block.data(), nullptr, kBlockFrames, static_cast<double>(b * kBlockFrames) / kSampleRate);
+    }
+
+    std::vector<float> captured;
+    captured.reserve(static_cast<size_t>(kMeasureBlocks) * kBlockFrames * kChannels);
+    for (uint32_t b = 0; b < kMeasureBlocks; ++b) {
+        std::fill(block.begin(), block.end(), 0.0f);
+        const uint32_t absBlock = kWarmupBlocks + b;
+        engine.processBlock(block.data(), nullptr, kBlockFrames,
+                            static_cast<double>(absBlock * kBlockFrames) / kSampleRate);
+        captured.insert(captured.end(), block.begin(), block.end());
+    }
+    return captured;
+}
+
+std::shared_ptr<TrackManager> buildClipMainChain(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    std::vector<float> source(static_cast<size_t>(totalFrames) * kChannels, 0.0f);
+    for (uint32_t frame = 0; frame < totalFrames; ++frame) {
+        source[static_cast<size_t>(frame) * 2] = sourceL(frame);
+        source[static_cast<size_t>(frame) * 2 + 1] = sourceR(frame);
+    }
+
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    GoldenAudio::addAudioTrack(*trackManager, "renderer-route-source", source, totalFrames, config);
+
+    MixerChannel* previous = trackManager->getChannel(0);
+    EXPECT_TRUE(previous != nullptr);
+    for (size_t index = 0; previous && index < destinationCount; ++index) {
+        MixerChannel* destination = trackManager->addChannel("renderer-route-destination");
+        EXPECT_TRUE(destination != nullptr);
+        if (!destination) {
+            break;
+        }
+        previous->setMainOutputId(destination->getChannelId());
+        previous = destination;
+    }
+    return trackManager;
+}
+
+std::vector<float> renderClipMainChainLive(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    auto trackManager = buildClipMainChain(destinationCount, totalFrames);
+    AudioEngine engine;
+    GoldenAudio::prepareEngine(engine, trackManager, config);
+    engine.setTransportPlaying(true);
+    return GoldenAudio::renderBlocks(engine, totalFrames, config);
+}
+
+std::vector<float> renderClipMainChainOffline(size_t destinationCount, uint32_t totalFrames) {
+    GoldenAudio::SessionConfig config;
+    config.sampleRate = kSampleRate;
+    config.blockSize = kBlockFrames;
+    config.channels = kChannels;
+
+    auto trackManager = buildClipMainChain(destinationCount, totalFrames);
+    AudioEngine engine;
+    GoldenAudio::prepareEngine(engine, trackManager, config);
+    AudioGraph graph = AudioGraphBuilder::buildFromTrackManager(*trackManager);
+
+    std::vector<std::vector<double>> trackBuffers(
+        graph.tracks.size(), std::vector<double>(static_cast<size_t>(kBlockFrames) * kChannels, 0.0));
+    std::vector<double> masterBuffer(static_cast<size_t>(kBlockFrames) * kChannels, 0.0);
+    AudioGraphState state;
+    state.trackStates.resize(graph.tracks.size());
+    state.renderTracks.reserve(graph.tracks.size());
+
+    for (const size_t orderedIndex : graph.topologicalOrder) {
+        EXPECT_TRUE(orderedIndex < graph.tracks.size());
+        if (orderedIndex >= graph.tracks.size()) {
+            continue;
+        }
+        const auto& graphTrack = graph.tracks[orderedIndex];
+        RenderTrack renderTrack;
+        renderTrack.trackIndex = graphTrack.trackIndex;
+        renderTrack.selfBuffer = trackBuffers[graphTrack.trackIndex].data();
+
+        RuntimeConnection output;
+        output.stride = 2;
+        if (graphTrack.mainOutputId == kMasterId) {
+            output.destinationBufferL = masterBuffer.data();
+            output.destinationBufferR = masterBuffer.data() + 1;
+        } else {
+            const size_t destinationIndex = graphTrack.mainOutputId < graph.trackIndexById.size()
+                                                ? graph.trackIndexById[graphTrack.mainOutputId]
+                                                : AudioGraph::kInvalidTrackIndex;
+            EXPECT_TRUE(destinationIndex != AudioGraph::kInvalidTrackIndex);
+            if (destinationIndex == AudioGraph::kInvalidTrackIndex) {
+                continue;
+            }
+            output.destinationBufferL = trackBuffers[destinationIndex].data();
+            output.destinationBufferR = trackBuffers[destinationIndex].data() + 1;
+        }
+        renderTrack.activeConnections.push_back(output);
+        state.renderTracks.push_back(std::move(renderTrack));
+    }
+
+    AudioRenderer renderer;
+    std::vector<float> captured;
+    captured.reserve(static_cast<size_t>(totalFrames) * kChannels);
+    for (uint64_t rendered = 0; rendered < totalFrames; rendered += kBlockFrames) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<uint64_t>(kBlockFrames, totalFrames - rendered));
+        std::fill(masterBuffer.begin(), masterBuffer.end(), 0.0);
+        AudioRenderer::Context context;
+        context.masterBuffer = masterBuffer.data();
+        context.numFrames = frames;
+        context.bufferOffset = 0;
+        context.globalPos = rendered;
+        context.sampleRate = kSampleRate;
+        context.graph = &graph;
+        context.isOffline = true;
+        renderer.renderBlock(context, state, engine);
+        for (uint32_t frame = 0; frame < frames; ++frame) {
+            captured.push_back(static_cast<float>(masterBuffer[static_cast<size_t>(frame) * 2]));
+            captured.push_back(static_cast<float>(masterBuffer[static_cast<size_t>(frame) * 2 + 1]));
+        }
     }
     return captured;
 }
@@ -246,70 +422,95 @@ double peakAbs(const std::vector<float>& v) {
     return peak;
 }
 
-// #261 acceptance: a pre-fader unity send at pan P must be sample-identical to
-// the main path at pan P — same taps, same law, same smoothers.
-void testPreFaderSendMatchesMainPan() {
-    std::printf("[RoutingSendPanParityTest] pre-fader send pan matches main pan across sweep...\n");
-    // Extremes, center, one symmetric pair, one asymmetric point. Each pan
-    // value costs two full engine fixtures (~1.6s), so keep the sweep lean.
+// A pre-fader send reads the raw stereo source, so compare it directly with
+// the balance-law reference rather than the source channel's pan stage.
+void testPreFaderSendMatchesBalanceReference() {
+    std::printf("[RoutingSendPanParityTest] pre-fader send matches stereo balance reference...\n");
     const float sweep[] = {-1.0f, -0.5f, 0.0f, 0.25f, 1.0f};
     for (float pan : sweep) {
-        SendSpec none;
-        std::vector<float> mainOut = renderConfig(pan, none);
-
         SendSpec preSend;
         preSend.enabled = true;
         preSend.gain = 1.0f;
         preSend.pan = pan;
         preSend.postFader = false;
-        // Deliberately different main pan on the send config: the pre-fader
-        // send must not be affected by the source's own pan stage.
         std::vector<float> sendOut = renderConfig(0.7f, preSend);
 
-        EXPECT_TRUE(!mainOut.empty() && !sendOut.empty());
-        EXPECT_TRUE(peakAbs(mainOut) > 1e-4); // Signal actually flowed
-        const double diff = maxAbsDiff(mainOut, sendOut);
-        if (diff > 1e-9) {
-            reportFailure("pre-fader send == main pan",
-                          "pan " + std::to_string(pan) + " max abs diff " + std::to_string(diff));
+        EXPECT_TRUE(!sendOut.empty());
+        EXPECT_TRUE(peakAbs(sendOut) > 1e-4);
+        double gainL = 0.0;
+        double gainR = 0.0;
+        referenceBalanceGains(pan, 1.0, gainL, gainR);
+        double maxDiff = 0.0;
+        const uint64_t firstSample = static_cast<uint64_t>(kWarmupBlocks) * kBlockFrames;
+        for (uint32_t i = 0; i < kMeasureBlocks * kBlockFrames; ++i) {
+            const uint64_t n = firstSample + i;
+            maxDiff = std::max(maxDiff, std::abs(static_cast<double>(sendOut[static_cast<size_t>(i) * 2]) -
+                                                 static_cast<double>(sourceL(n)) * gainL));
+            maxDiff = std::max(maxDiff, std::abs(static_cast<double>(sendOut[static_cast<size_t>(i) * 2 + 1]) -
+                                                 static_cast<double>(sourceR(n)) * gainR));
+        }
+        if (maxDiff > 1e-6) {
+            reportFailure("pre-fader send balance reference",
+                          "pan " + std::to_string(pan) + " max abs diff " + std::to_string(maxDiff));
         }
     }
 }
 
-// #261 acceptance (post-fader): with the source panned center, a post-fader
-// unity send at pan P equals the direct path at pan P scaled by exactly the
-// shared law's center gain. Any law mismatch changes that scale factor.
-void testPostFaderSendStacksSameLaw() {
-    std::printf("[RoutingSendPanParityTest] post-fader send stacks the same law on top of center main pan...\n");
-    double centerL = 0.0;
-    double centerR = 0.0;
-    referencePanGains(0.0, 1.0, centerL, centerR);
+void testCentredPostFaderSendPreservesLevel() {
+    std::printf("[RoutingSendPanParityTest] centred post-fader send preserves source level...\n");
+    SendSpec none;
+    const std::vector<float> direct = renderConfig(0.0f, none);
 
-    const float sweep[] = {-0.5f, 0.25f};
-    for (float pan : sweep) {
-        SendSpec none;
-        std::vector<float> mainOut = renderConfig(pan, none);
+    SendSpec postSend;
+    postSend.enabled = true;
+    postSend.gain = 1.0f;
+    postSend.pan = 0.0f;
+    postSend.postFader = true;
+    const std::vector<float> routed = renderConfig(0.0f, postSend);
 
-        SendSpec postSend;
-        postSend.enabled = true;
-        postSend.gain = 1.0f;
-        postSend.pan = pan;
-        postSend.postFader = true;
-        std::vector<float> sendOut = renderConfig(0.0f, postSend);
+    EXPECT_TRUE(!direct.empty() && !routed.empty());
+    EXPECT_TRUE(peakAbs(direct) > 1e-4);
+    const double diff = maxAbsDiff(direct, routed);
+    if (diff > 1e-9) {
+        reportFailure("centred post-fader send preserves level", "max abs diff " + std::to_string(diff));
+    }
+}
 
-        EXPECT_TRUE(!mainOut.empty() && !sendOut.empty());
-        EXPECT_TRUE(peakAbs(mainOut) > 1e-4);
-
-        double maxDiff = 0.0;
-        for (size_t i = 0; i + 1 < mainOut.size(); i += 2) {
-            const double expectL = static_cast<double>(mainOut[i]) * centerL;
-            const double expectR = static_cast<double>(mainOut[i + 1]) * centerR;
-            maxDiff = std::max(maxDiff, std::abs(static_cast<double>(sendOut[i]) - expectL));
-            maxDiff = std::max(maxDiff, std::abs(static_cast<double>(sendOut[i + 1]) - expectR));
+void testCentredMainRoutingPreservesLevelAcrossHops() {
+    std::printf("[RoutingSendPanParityTest] centred main routing preserves level across hops...\n");
+    const std::vector<float> direct = renderMainChain(0);
+    EXPECT_TRUE(!direct.empty());
+    EXPECT_TRUE(peakAbs(direct) > 1e-4);
+    for (size_t destinations = 1; destinations <= 3; ++destinations) {
+        const std::vector<float> routed = renderMainChain(destinations);
+        const double diff = maxAbsDiff(direct, routed);
+        if (diff > 1e-9) {
+            reportFailure("centred main route hop parity",
+                          std::to_string(destinations) + " destination(s), max abs diff " + std::to_string(diff));
         }
-        if (maxDiff > 1e-6) {
-            reportFailure("post-fader send == main pan * center gain",
-                          "pan " + std::to_string(pan) + " max abs diff " + std::to_string(maxDiff));
+    }
+}
+
+void testOfflineRendererMatchesLiveCentredRouting() {
+    std::printf("[RoutingSendPanParityTest] offline renderer matches live centred routing...\n");
+    constexpr uint32_t totalBlocks = kWarmupBlocks + kMeasureBlocks;
+    constexpr uint32_t totalFrames = totalBlocks * kBlockFrames;
+    const size_t firstMeasuredSample = static_cast<size_t>(kWarmupBlocks) * kBlockFrames * kChannels;
+
+    for (const size_t destinations : {size_t{0}, size_t{2}}) {
+        const std::vector<float> live = renderClipMainChainLive(destinations, totalFrames);
+        const std::vector<float> offline = renderClipMainChainOffline(destinations, totalFrames);
+        EXPECT_TRUE(live.size() == offline.size());
+        if (live.size() != offline.size() || live.size() <= firstMeasuredSample) {
+            continue;
+        }
+        const std::vector<float> liveMeasured(live.begin() + static_cast<ptrdiff_t>(firstMeasuredSample), live.end());
+        const std::vector<float> offlineMeasured(offline.begin() + static_cast<ptrdiff_t>(firstMeasuredSample),
+                                                 offline.end());
+        const double diff = maxAbsDiff(liveMeasured, offlineMeasured);
+        if (diff > 1e-6) {
+            reportFailure("offline renderer/live centred route parity",
+                          std::to_string(destinations) + " destination(s), max abs diff " + std::to_string(diff));
         }
     }
 }
@@ -332,7 +533,7 @@ void testBatchedSendMatchesPerSampleReference() {
 
     double gainL = 0.0;
     double gainR = 0.0;
-    referencePanGains(static_cast<double>(sendPan), static_cast<double>(sendGain), gainL, gainR);
+    referenceBalanceGains(static_cast<double>(sendPan), static_cast<double>(sendGain), gainL, gainR);
 
     double maxDiff = 0.0;
     const uint64_t firstSample = static_cast<uint64_t>(kWarmupBlocks) * kBlockFrames;
@@ -353,8 +554,10 @@ void testBatchedSendMatchesPerSampleReference() {
 int main() {
     std::printf("=== RoutingSendPanParityTest (routing BUG-3 #261, BUG-5 #262) ===\n");
 
-    testPreFaderSendMatchesMainPan();
-    testPostFaderSendStacksSameLaw();
+    testPreFaderSendMatchesBalanceReference();
+    testCentredPostFaderSendPreservesLevel();
+    testCentredMainRoutingPreservesLevelAcrossHops();
+    testOfflineRendererMatchesLiveCentredRouting();
     testBatchedSendMatchesPerSampleReference();
 
     if (g_failures == 0) {

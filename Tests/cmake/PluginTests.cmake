@@ -244,3 +244,33 @@ target_include_directories(EffectChainInstanceIdentityTest PRIVATE
 )
 add_test(NAME EffectChainInstanceIdentityTest COMMAND EffectChainInstanceIdentityTest)
 set_tests_properties(EffectChainInstanceIdentityTest PROPERTIES LABELS "audio;plugins;automation;regression;contract:plugins")
+
+# Automation Identity Resolution Test (contract I2/I3/I8/I10)
+add_executable(AutomationIdentityResolutionTest AestraAudio/AutomationIdentityResolutionTest.cpp)
+target_link_libraries(AutomationIdentityResolutionTest PRIVATE AestraAudio)
+target_include_directories(AutomationIdentityResolutionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AutomationIdentityResolutionTest COMMAND AutomationIdentityResolutionTest)
+set_tests_properties(AutomationIdentityResolutionTest PROPERTIES LABELS "audio;automation;contract:audio")
+
+# Master strip is a plugin host like any other channel (triage 2026-08-14):
+# processing on the summed master buffer + save/load roundtrip + old-project
+# compatibility.
+add_executable(MasterEffectChainTest
+    AestraAudio/MasterEffectChainTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(MasterEffectChainTest PRIVATE AestraAudio)
+target_include_directories(MasterEffectChainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME MasterEffectChainTest COMMAND MasterEffectChainTest)
+set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence;contract:plugins")
+

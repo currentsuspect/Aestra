@@ -163,11 +163,14 @@ void testBranchCompensationAndSidechainLimitation() {
               "main branch exposes matched solver and RT compensation");
         check((*sendEdge)["solverCompensationSamples"].asNumber() == 0.0 &&
                   (*sendEdge)["appliedCompensationSamples"].asNumber() == 0.0 &&
-                  (*sendEdge)["positionalIdentityAvailable"].asBool() && (*sendEdge)["sendIndex"].asNumber() == 0.0,
-              "send branch exposes positional identity and applied delay");
+                  (*sendEdge)["stableIdentityAvailable"].asBool() && !(*sendEdge)["sendId"].asString().empty(),
+              "send branch exposes stable send identity and applied delay");
     }
 
-    source->removeSend(0);
+    const auto sourceSends = source->getSends();
+    if (!sourceSends.empty()) {
+        source->removeSend(sourceSends[0].sendId);
+    }
     send.sidechainOnly = true;
     source->addSend(send);
     fx.engine.calculateLatencyCompensation();
@@ -178,9 +181,9 @@ void testBranchCompensationAndSidechainLimitation() {
               hasIssueCode(degraded["uncompensatedPaths"], "sidechain_latency_compensation_unavailable"),
           "sidechain path is explicitly reported as uncompensated");
     check(degraded["uncompensatedPaths"][0]["evidence"]["stableEndpointIdentityAvailable"].asBool() &&
-              degraded["uncompensatedPaths"][0]["evidence"]["positionalIdentityAvailable"].asBool() &&
-              degraded["uncompensatedPaths"][0]["evidence"]["sendIndex"].asNumber() == 0.0,
-          "uncompensated sidechain evidence identifies stable endpoints and positional send");
+              degraded["uncompensatedPaths"][0]["evidence"]["stableSendIdAvailable"].asBool() &&
+              !degraded["uncompensatedPaths"][0]["evidence"]["sendId"].asString().empty(),
+          "uncompensated sidechain evidence identifies stable endpoints and send identity");
 }
 
 void testPendingSolveStaysObservational() {
@@ -272,7 +275,10 @@ void testRoutingEditIsReportedWithoutCascading() {
     // Remove the *first* send behind the published solve. Every later send
     // shifts down a slot, which is precisely the case positional pairing got
     // wrong: it reported every subsequent edge as unmappable.
-    source->removeSend(0);
+    const auto preEditSends = source->getSends();
+    if (!preEditSends.empty()) {
+        source->removeSend(preEditSends[0].sendId);
+    }
 
     JSON response = call(fx.service, R"({"id":11,"verb":"get_latency_report"})");
     JSON& report = response["result"];

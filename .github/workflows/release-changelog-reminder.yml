@@ -1,0 +1,71 @@
+name: Release changelog reminder
+
+# Every release tag opens a reminder issue with the site-changelog draft
+# already generated, so the human compose step (paste the notes into
+# Aestra-website/src/content/changelog/) cannot be forgotten at cut time.
+# The draft is a reminder, not an auto-publish: the producer notes still go
+# through a human before the site deploys.
+
+on:
+  create:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    if: github.event.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the Aestra-website draft generator
+        uses: actions/checkout@v4
+        with:
+          repository: currentsuspect/Aestra-website
+          path: website
+
+      - name: Skip if a reminder is already open for this tag
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count="$(
+            gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+              --search "in:title \"${{ github.event.ref }} release: site changelog\"" \
+              --json number --jq 'length'
+          )"
+          echo "existing=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Generate the producer-note draft
+        if: steps.existing.outputs.existing == '0'
+        working-directory: website
+        run: node scripts/changelog-draft.mjs > ../changelog-draft.txt 2>&1 || true
+
+      - name: Assemble the issue body from the template
+        if: steps.existing.outputs.existing == '0'
+        run: |
+          python3 - "${{ github.event.ref }}" /tmp/reminder-body.md <<'PYEOF'
+          import sys
+          version, out_path = sys.argv[1], sys.argv[2]
+          template = open(".github/release-changelog-reminder-body.md", encoding="utf-8").read()
+          draft = open("changelog-draft.txt", encoding="utf-8").read()
+          open(out_path, "w", encoding="utf-8").write(
+              template.replace("__VERSION__", version).replace("__DRAFT__", draft.strip())
+          )
+          PYEOF
+
+      - name: Open the reminder issue
+        if: steps.existing.outputs.existing == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "${{ github.event.ref }} release: site changelog" \
+            --body-file /tmp/reminder-body.md
+
+      - name: Log when a reminder already exists
+        if: steps.existing.outputs.existing != '0'
+        run: |
+          echo "An open reminder for ${{ github.event.ref }} already exists; skipping."

@@ -52,7 +52,7 @@ HeadlessMusicGenerator& HeadlessMusicGenerator::setTempo(double bpm) {
     m_tempo = bpm;
     m_trackManager.getPlaylistModel().setBPM(bpm);
     m_trackManager.getTimelineClock().setTempo(bpm);
-    m_trackManager.getPatternPlaybackEngine().flush();
+    m_trackManager.getPatternPlaybackEngine().rewindScheduledInstances();
     m_engine.setBPM(static_cast<float>(bpm));
     return *this;
 }
@@ -396,7 +396,7 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     // synchronous export leaves the caller's engine and session unchanged:
     //  - engine wiring (weak TrackManager ref, raw UnitManager*, owned slot map,
     //    graph copy, pattern-engine pointer) is cleared;
-    //  - the pattern-playback engine is flushed so the timeline instances this
+    //  - the pattern-playback engine is cleared so the timeline instances this
     //    render scheduled do not leak into the caller's TrackManager.
     // The transport flags/position are never touched (see
     // scheduleTimelineForOfflineRender below), so there is nothing else to undo.
@@ -409,7 +409,10 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
             engine.setUnitManager(nullptr);
             engine.setChannelSlotMap(nullptr);
             engine.setTrackManager(nullptr);
-            trackManager.getPatternPlaybackEngine().flush();
+            // Remove, don't rewind: this render's instances must not survive into the
+            // caller's session (rewindScheduledInstances() would leave them scheduled and
+            // merely restarted).
+            trackManager.getPatternPlaybackEngine().clearScheduledInstances();
         }
     };
 
@@ -436,9 +439,12 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     // (AudioEngine::processBlock pops scheduled notes into unit MIDI routes).
     // Schedule the committed timeline into it WITHOUT starting live transport —
     // the exporter drives the engine's own transport, so we must not mutate the
-    // caller's playing flag / position. flush() first clears any prior contents;
-    // the render guard flushes again on exit so these instances don't leak.
-    m_trackManager.getPatternPlaybackEngine().flush();
+    // caller's playing flag / position. clearScheduledInstances() first removes any prior
+    // contents; the render guard clears again on exit so these instances don't leak.
+    // rewindScheduledInstances() cannot serve here — it only REWINDS active instances
+    // (re-emit from the top, which a loop restart wants), so anything already scheduled
+    // would have been rendered into the export alongside the timeline we just asked for.
+    m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
     m_trackManager.scheduleTimelineForOfflineRender(0.0);
 
     // Setup exporter

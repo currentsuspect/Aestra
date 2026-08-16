@@ -34,6 +34,7 @@ struct ClipRenderState {
     float gain{1.0f};
     float pan{0.0f};
     float playbackRate{1.0f};
+    float pitchSemitones{0.0f};
     uint64_t fadeInSamples{0};
     uint64_t fadeOutSamples{0};
 };
@@ -50,6 +51,9 @@ struct AudioRoute {
     bool postFader{true};     // Pre/Post Fader tap
     bool mute{false};         // Mute this specific send
     bool sidechainOnly{false}; // Route exists for sidechain/control input, not audible mix
+    uint64_t sendId{0};       // Stable per-channel send identity (Contract D2).
+                              // Minted by MixerChannel on creation; survives
+                              // index shifts and undo; 0 = unassigned.
 };
 
 /**
@@ -81,6 +85,10 @@ struct AudioGraph {
     std::vector<TrackRenderState> tracks;
     /** Audio clips whose source routes directly to Master. */
     std::vector<ClipRenderState> masterClips;
+    /** Master strip insert chain snapshot (processed on the summed master
+     * buffer before the master fader and safety limiter). Immutable once the
+     * graph is published, like channel chain snapshots. */
+    std::shared_ptr<const EffectChainSnapshot> masterEffectChainSnapshot;
     bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.

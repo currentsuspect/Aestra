@@ -82,12 +82,13 @@ public:
     void removeChild(std::shared_ptr<NUIComponent> child);
     void removeAllChildren();
 
-    // Event-dispatch guard. While a mouse-event dispatch is in flight (bracketed
-    // by NUIApp around the root onMouseEvent), addChild()/removeChild() defer the
-    // actual hierarchy mutation until dispatch unwinds. This prevents callbacks
-    // that open or close popups from mutating a parent's children_ mid-iteration
-    // (iterator invalidation) or freeing a component still on the call stack
-    // (use-after-free). Nestable via an internal depth counter.
+    // Canonical mouse-event entry point. All platform/app dispatch must use this
+    // rather than calling onMouseEvent() directly so hierarchy mutations are
+    // deferred until the full component traversal unwinds.
+    static bool dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event);
+
+    // Low-level nestable guard retained for code that brackets a larger custom
+    // dispatch. Prefer dispatchMouseEvent() for a single target.
     static void beginEventDispatch();
     static void endEventDispatch();
 

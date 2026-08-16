@@ -191,7 +191,8 @@ struct Rendered {
 // that insert, sets the playlist BPM to `renderBpm`, and renders `beats` beats.
 // An optional extra effect is inserted at chain slot 1 (after the generator).
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
-                              std::shared_ptr<IPluginInstance> slot1Fx = nullptr) {
+                              std::shared_ptr<IPluginInstance> slot1Fx = nullptr,
+                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
@@ -211,6 +212,9 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     lane->automationCurves = curves;
     for (auto& curve : lane->automationCurves) {
         curve.mixerChannelId = src->getChannelId();
+        if (fixup) {
+            fixup(curve, *src);
+        }
     }
 
     AudioEngine engine;
@@ -351,13 +355,15 @@ int main() {
     {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
-        param.effectSlot = 1;
         param.paramId = 0;
         param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(2.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
-        const auto r =
-            renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal));
+        const auto r = renderWithAutomation(
+            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
+            });
         require(!r.hasInvalid, "param: output contains NaN/Inf");
         const double loud = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double mid = rmsWindow(r.left, 2.9, 3.1, 120.0);
@@ -374,16 +380,37 @@ int main() {
     {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
-        param.effectSlot = 1;
         param.paramId = 0;
         param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
         param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
-        const auto r = renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3));
+        const auto r = renderWithAutomation(
+            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
+            });
         require(!r.hasInvalid, "guard: output contains NaN/Inf");
         const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
         require(early > 1.0e-3, "guard: output is silent");
         require(late > 0.8 * early, "guard: Custom curve drove a non-Internal plugin (RT-unsafe path)");
+    }
+
+    // ---------------- 7. UI-created empty curve contract: the first point on
+    // an empty lane creates a Volume curve with defaultValue 1.0 (neutral).
+    // An empty curve must NOT silence the channel — the pre-fix UI creation
+    // path left defaultValue at 0.0, which muted the channel until a point
+    // was added.
+    {
+        AutomationCurve empty("Volume", AutomationTarget::Volume);
+        empty.setDefaultValue(1.0f); // exactly what TrackUIComponent now sets
+        const auto r = renderWithAutomation({empty}, 120.0, 3.0);
+        const auto baseline = renderWithAutomation({}, 120.0, 3.0);
+        require(!r.hasInvalid, "empty-curve: output contains NaN/Inf");
+        const double level = rmsWindow(r.left, 0.5, 2.5, 120.0);
+        const double baseLevel = rmsWindow(baseline.left, 0.5, 2.5, 120.0);
+        std::cout << "empty volume curve (default 1.0): rms=" << level << " baseline=" << baseLevel << "\n";
+        require(level > 1.0e-3, "empty-curve: default-1.0 volume curve silenced the channel");
+        require(level > 0.95 * baseLevel, "empty-curve: default-1.0 volume curve attenuated the channel");
     }
 
     std::cout << "[PASS] AutomationPlaybackTest\n";

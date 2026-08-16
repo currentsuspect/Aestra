@@ -144,6 +144,35 @@ int main() {
         trackManager->getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
     }
 
+    // Track 0 also sends to a bus at a non-unity, panned level. This exercises
+    // the send-gain stage in AudioEngine::renderTrack (snapped during offline
+    // render) against the baked send connection gain AudioRenderer uses, so a
+    // regression in either send path fails the master-vs-isolated comparison.
+    // (Sends to master are illegal — Contract D4 — so the send targets a bus.)
+    trackManager->addChannel("Track_0_Bus"); // index 3
+    if (auto* sendChannel = trackManager->getChannel(0)) {
+        AudioRoute sendToBus;
+        sendToBus.targetChannelId = trackManager->getChannel(3)->getChannelId();
+        sendToBus.gain = 0.5f;
+        sendToBus.pan = 0.3f;
+        sendChannel->addSend(sendToBus);
+    }
+
+    // Track 3 is a return track (no clips of its own). Track 0 sends to it at a
+    // non-unity, panned level: the isolated bounce must carry that content
+    // through the return's strip to master, exactly like the live full-mix path
+    // (#761).
+    trackManager->addChannel("Track_3_Return"); // index 4
+    if (auto* returnChannel = trackManager->getChannel(4)) {
+        AudioRoute sendToReturn;
+        sendToReturn.targetChannelId = returnChannel->getChannelId();
+        sendToReturn.gain = 0.5f;
+        sendToReturn.pan = 0.3f;
+        if (auto* sourceChannel = trackManager->getChannel(0)) {
+            sourceChannel->addSend(sendToReturn);
+        }
+    }
+
     // --- Master bounce ---
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);
@@ -169,7 +198,7 @@ int main() {
 
     // --- Isolated track bounces ---
     std::vector<fs::path> trackPaths;
-    for (int t = 0; t < 3; ++t) {
+    for (int t = 0; t < 4; ++t) {
         fs::path trackPath = tempRoot / ("track_" + std::to_string(t) + "_bounce.wav");
         fs::remove(trackPath, ec);
         bool ok = engine.bounceRangeToWav(0.0, kDurationBeats, trackPath.string(), t);
@@ -192,7 +221,7 @@ int main() {
 
     // Decode and sum isolated track bounces in software
     std::vector<float> sumSamples(masterAudio.samples.size(), 0.0f);
-    for (int t = 0; t < 3; ++t) {
+    for (int t = 0; t < 4; ++t) {
         DecodedAudio trackAudio;
         if (!decodeWav(trackPaths[t], trackAudio)) {
             std::cerr << "Failed to decode track " << t << " bounce\n";

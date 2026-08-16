@@ -24,11 +24,28 @@ v1.0.0                  — initial public release
 | `v1.0.0`             | Deleted   | —          | Premature — do not recreate until release |
 | `v0.4.0-alpha`       | Superseded | 2026-05-20 | Hardening milestone: security audit, audio quality session, repo hygiene mega-pass |
 | `v0.5.0-alpha`       | Superseded | 2026-05-23 | Takes system, CLAP parameters, audio quality, CI hardening, 11 PRs merged |
-| `v0.6.0-alpha`       | Current   | 2026-05-29 | Security & RT hardening, plugin host crash resilience, callback-safety architecture, 26 PRs merged |
+| `v0.6.0-alpha`       | Superseded | 2026-05-29 | Security & RT hardening, plugin host crash resilience, callback-safety architecture, 26 PRs merged |
+| `v0.7.0-alpha`       | Current   | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
 
 ---
 
 ## Milestone History
+
+### v0.7.0-alpha — Routing, Automation & Hosting Milestone (Aug 2026)
+
+338 PRs merged (#624–#775). The milestone's story is coherence: routing and gain staging are correct end to end, automation lanes are actually automatable, the Master channel is a real plugin host whose latency sits in the compensation graph, and the piano roll grew from an editor into a workflow.
+
+**Routing & Mixing** — Unity gain law across live, export, isolated bounce, audition, and monitoring; single-store fader/pan; routing command seam with cycle rejection and stable send IDs; Master as a plugin host with chain latency in the PDC graph; master clips obey the live solo gate (isolation contract pinned both ways).
+
+**Automation** — Instance-identity contract (curves follow the plugin, not the slot); automatable empty lanes; demo automation removed from default and saved projects.
+
+**Piano Roll** — Subdivision, proportional stretching, chord-aware strokes, harmony persistence, contextual editor.
+
+**UI** — Design constitution pass; Audio Clip editor pitching/trim/waveform/resize; timeline geometry authority.
+
+**Reliability** — Security/durability/realtime contract lanes CI-authoritative; decision-citation and test-contract gates; plugin hosting compiled in CI, Windows plugins sandboxed; four review rounds (20 findings) on the triage branch; undici CVEs cleaned.
+
+**PRs merged** — #624–#775 (338 PRs).
 
 ### v0.6.0-alpha — Security & RT Hardening (May 2026)
 

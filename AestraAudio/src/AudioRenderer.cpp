@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraMath.h"
 #include "ArsenalProcessingContext.h"
 #include "AudioEngine.h"
+#include "Core/MixMath.h"
 #include "DSP/PanLaw.h"
 #include "EffectChain.h"
 #include "Interpolators.h"
@@ -64,6 +65,10 @@ inline double clampD(double v, double lo, double hi) {
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::equalPower(pan, vol, gainL, gainR);
 }
+
+inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
+    PanLaw::stereoBalance(pan, vol, gainL, gainR);
+}
 } // namespace
 
 AudioRenderer::AudioRenderer() {}
@@ -74,31 +79,45 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
     auto* snaps = engineRef.m_meterSnapshotsRaw.load(std::memory_order_relaxed);
     auto* slotMap = engineRef.m_channelSlotMapRaw.load(std::memory_order_relaxed);
 
+    // Clear every track once before routing begins. Clearing inside
+    // renderClipAudio would erase audio already accumulated from an upstream
+    // track when a destination is processed later in topological order.
+    for (const auto& track : state.renderTracks) {
+        if (track.selfBuffer) {
+            std::memset(track.selfBuffer + ctx.bufferOffset * 2, 0, ctx.numFrames * 2 * sizeof(double));
+        }
+    }
+
     // Iterate through topologically sorted render tracks
     for (const auto& track : state.renderTracks) {
         if (track.trackIndex >= state.trackStates.size())
             continue;
 
-        // If we are isolating a track, skip others.
-        if (ctx.isolatedTrackIndex >= 0 && track.trackIndex != (uint32_t)ctx.isolatedTrackIndex) {
-            continue;
-        }
-
         TrackRTState& trackState = state.trackStates[track.trackIndex];
 
-        // 1. Render Clips (Generates Audio) -> track.selfBuffer
-        renderClipAudio(track.selfBuffer, trackState, track.trackIndex, ctx, engineRef);
+        // When isolating a track, only that track renders clips and units.
+        // Every track still applies its strip and routes its connections so
+        // content that arrived via sends or bus routing reaches master (#761).
+        const bool rendersClips =
+            ctx.isolatedTrackIndex < 0 || track.trackIndex == (uint32_t)ctx.isolatedTrackIndex;
 
-        // 1.5 Render units assigned to this track's stable mixer identity.
-        if (track.trackIndex < ctx.graph->tracks.size()) {
-            renderArsenalUnitsForTrack(ctx.graph->tracks[track.trackIndex].trackId, track.selfBuffer, ctx, engineRef);
+        if (rendersClips) {
+            // 1. Render Clips (Generates Audio) -> track.selfBuffer
+            renderClipAudio(track.selfBuffer, trackState, track.trackIndex, ctx, engineRef);
+
+            // 1.5 Render units assigned to this track's stable mixer identity.
+            if (track.trackIndex < ctx.graph->tracks.size()) {
+                renderArsenalUnitsForTrack(ctx.graph->tracks[track.trackIndex].trackId, track.selfBuffer, ctx,
+                                           engineRef);
+            }
         }
 
         // 2. Process Effects (In-Place) -> track.selfBuffer
-        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph);
+        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph, ctx.isOffline);
 
         // 3. Calculate Track Meter Peaks (post-fader)
-        if (!ctx.isOffline && track.selfBuffer && snaps && slotMap && track.trackIndex < ctx.graph->tracks.size()) {
+        if (rendersClips && !ctx.isOffline && track.selfBuffer && snaps && slotMap &&
+            track.trackIndex < ctx.graph->tracks.size()) {
             const auto& graphTrack = ctx.graph->tracks[track.trackIndex];
             const uint32_t slotIdx = slotMap->getSlotIndex(graphTrack.trackId);
 
@@ -157,7 +176,6 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
                                     AudioEngine& engineRef) {
     uint32_t numFrames = ctx.numFrames;
     uint32_t bufferOffset = ctx.bufferOffset;
-    std::memset(outputBuffer + bufferOffset * 2, 0, numFrames * 2 * sizeof(double));
     if (state.mute)
         return;
 
@@ -187,7 +205,18 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
         const uint32_t localOffset = static_cast<uint32_t>(start - blockStart);
         uint32_t framesToRender = static_cast<uint32_t>(end - start);
         const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
-        const double ratio = srcRate / outputRate;
+        // Mirrors ClipRenderKernel::renderClip: clip Speed (playbackRate) scales
+        // the resample ratio. Without this, isolated-track bounces ignored speed
+        // while live playback and full-mix export honored it (#745). Pitch
+        // (pitchSemitones) folds into the same envelope (#746).
+        const double playbackRate =
+            std::isfinite(clip.playbackRate) ? MixMath::clampD(static_cast<double>(clip.playbackRate), 0.25, 4.0)
+                                             : 1.0;
+        const double pitchSemitones = std::isfinite(clip.pitchSemitones)
+                                          ? MixMath::clampD(static_cast<double>(clip.pitchSemitones), -24.0, 24.0)
+                                          : 0.0;
+        const double ratio = (srcRate / outputRate) *
+                             MixMath::clampD(playbackRate * std::pow(2.0, pitchSemitones / 12.0), 0.25, 4.0);
         double phase = clip.sampleOffset + static_cast<double>(start - clip.startSample) * ratio;
 
         if (clip.totalFrames > 0) {
@@ -332,7 +361,8 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
 }
 
 void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphState& graphState, uint32_t numFrames,
-                                        uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph) {
+                                        uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph,
+                                        bool snapGains) {
     if (track.trackIndex >= graphState.trackStates.size())
         return;
     TrackRTState& state = graphState.trackStates[track.trackIndex];
@@ -352,20 +382,40 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
                 float panParam = 0.0f;
                 float trimDb = 0.0f;
                 continuous->read(slot, faderDb, panParam, trimDb);
-                const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
-                const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
-                volTarget *= dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
-                panTarget = clampD(panTarget + static_cast<double>(panParam), -1.0, 1.0);
+                // Same gain staging as the live path: the fader is
+                // track.volume, trim lives in the continuous slot. The
+                // continuous faderDb/panParam are display mirrors only.
+                // clampD passes NaN through (both comparisons are false), so
+                // reject a non-finite trim before it reaches the gain;
+                // treat it as neutral (no trim).
+                if (std::isfinite(trimDb)) {
+                    const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+                    volTarget *= dbToLinearD(trimDbClamped);
+                }
             }
         }
 
+        // stereoBalance, always: equalPower would attenuate stereo content by
+        // -3.01 dB at centre and make a channel's own level depend on whether
+        // it receives an audible route. Matches the live path and the
+        // direct-to-Master reference (which applies no strip pan law).
         double gainL, gainR;
-        fastPanGainsD(panTarget, volTarget, gainL, gainR);
+        fastStereoBalanceGainsD(panTarget, volTarget, gainL, gainR);
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
-    state.gainL.beginRamp(numFrames);
-    state.gainR.beginRamp(numFrames);
+    if (snapGains) {
+        // Offline bounce: render at the settled target from frame 0. Live
+        // playback ramps 1.0 -> target over one realtime block after a graph
+        // compile; the offline loop uses 4096-frame blocks, so the same ramp
+        // would smear the settle over ~8x the frames and misalign a bounce
+        // with live playback (#745).
+        state.gainL.snap();
+        state.gainR.snap();
+    } else {
+        state.gainL.beginRamp(numFrames);
+        state.gainR.beginRamp(numFrames);
+    }
     double* self = track.selfBuffer + bufferOffset * 2;
     for (uint32_t i = 0; i < numFrames; ++i) {
         self[i * 2] *= state.gainL.next();

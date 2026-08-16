@@ -254,6 +254,7 @@ void assertAllValues(Aestra::Audio::TrackManager& tm, const ProjectSerializer::L
         require(param.getAutomationTarget() == AutomationTarget::Custom, tag("param curve target"));
         requireExactF(param.getDefaultValue(), 0.7f, tag("param curve default"));
         require(param.effectSlot == 3, tag("param curve effectSlot"));
+        require(param.deviceInstanceId == 0x1000000000001ull, tag("param curve instanceId"));
         require(param.paramId == 17, tag("param curve paramId"));
         require(param.points.size() == 1, tag("param curve point count"));
         if (param.points.size() == 1) {
@@ -373,10 +374,11 @@ int main() {
         vol.addPoint(kAutoBeatFar, 0.9f, samplesPerBeat, 0.5f);
         lane->automationCurves.push_back(vol);
 
-        // Plugin-parameter curve: slot/paramId addressing must roundtrip.
+        // Plugin-parameter curve: (instanceId, paramId) addressing must roundtrip.
         AutomationCurve param("cutoff", AutomationTarget::Custom);
         param.setDefaultValue(0.7f);
-        param.effectSlot = 3;
+        param.effectSlot = 3; // legacy position retained for compat
+        param.deviceInstanceId = 0x1000000000001ull; // beyond 2^48; exact identity
         param.paramId = 17;
         param.addPoint(1.0, 0.33f, samplesPerBeat, 0.5f);
         lane->automationCurves.push_back(param);

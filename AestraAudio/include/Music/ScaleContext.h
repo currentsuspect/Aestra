@@ -58,6 +58,18 @@ inline int clampRootKey(int key) {
 }
 
 /**
+ * @brief Store a normalized pattern override, or clear it when all values are defaults.
+ */
+inline void assignScaleContextOverride(std::optional<ScaleContext>& target, ScaleContext context) {
+    context.rootKey = clampRootKey(context.rootKey);
+    if (context.hasNonDefaultValues()) {
+        target = context;
+    } else {
+        target.reset();
+    }
+}
+
+/**
  * @brief Convert ScaleKind to string for serialization
  */
 inline std::string scaleKindToString(ScaleKind kind) {

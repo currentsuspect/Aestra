@@ -28,7 +28,8 @@ constexpr uint32_t kBlockFrames = 512;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kTotalFrames = kSampleRate;
 constexpr float kSourceSample = 0.25f;
-constexpr float kExpectedOutput = kSourceSample * Aestra::Audio::PanLaw::kEqualPowerCenterGain;
+// stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
+constexpr float kExpectedOutput = kSourceSample;
 
 void writeUint32(std::ofstream& out, uint32_t value) {
     out.put(static_cast<char>(value & 0xFF));

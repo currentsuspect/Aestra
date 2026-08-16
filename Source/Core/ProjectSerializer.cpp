@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "WorkspaceFocus.h"
 #include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
@@ -13,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -75,6 +77,7 @@ namespace {
         AutomationTarget,
         DroppedClip,
         SendRoute,
+        ClipTiming,
         Count
     };
 
@@ -484,6 +487,19 @@ namespace {
         }
     }
 
+    if (root.has("master")) {
+        if (!root["master"].isObject()) {
+            error = "Invalid project file: master entry must be an object";
+            return false;
+        }
+        if (root["master"].has("effectChainStateHex") &&
+            (!root["master"]["effectChainStateHex"].isString() ||
+             root["master"]["effectChainStateHex"].asString().size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES)) {
+            error = "Invalid project file: master effect chain state is too large";
+            return false;
+        }
+    }
+
         const JSON& lanes = root["lanes"];
         for (size_t i = 0; i < lanes.size(); ++i) {
             if (!lanes[i].isObject()) {
@@ -883,6 +899,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             sjs.set("postFader", JSON(send.postFader));
             sjs.set("mute", JSON(send.mute));
             sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+            sjs.set("sendId", JSON(std::to_string(send.sendId)));
             sendsJson.push(sjs);
         }
         routingJson.set("sends", sendsJson);
@@ -895,6 +912,17 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         mixerChannelsJson.push(mjs);
     }
     root.set("mixerChannels", mixerChannelsJson);
+
+    // 2b. Save the Master strip (a plugin host like any other channel, but a
+    // terminal sink: no routing, no lane, just its insert chain).
+    if (const auto* master = trackManager->getMasterChannel()) {
+        JSON masterJson = JSON::object();
+        const auto masterChainState = master->getEffectChain().saveState();
+        if (!masterChainState.empty()) {
+            masterJson.set("effectChainStateHex", JSON(bytesToHex(masterChainState)));
+        }
+        root.set("master", masterJson);
+    }
 
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
@@ -933,6 +961,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                     sjs.set("postFader", JSON(send.postFader));
                     sjs.set("mute", JSON(send.mute));
                     sjs.set("sidechainOnly", JSON(send.sidechainOnly));
+                    sjs.set("sendId", JSON(std::to_string(send.sendId)));
                     sendsJson.push(sjs);
                 }
                 routingJson.set("sends", sendsJson);
@@ -953,10 +982,12 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
-                    // Plugin-parameter address (older builds ignore unknown keys;
-                    // loads without them default to slot 0 / param 0).
+                    // Plugin-parameter address. instanceId is the authoritative
+                    // decimal-string identity (Automation Identity Contract);
+                    // slot stays for older-build compatibility and v1 readers.
                     cj.set("slot", JSON(static_cast<double>(curve.effectSlot)));
                     cj.set("paramId", JSON(static_cast<double>(curve.paramId)));
+                    cj.set("instanceId", JSON(std::to_string(curve.deviceInstanceId)));
                 }
 
                 JSON ptsJson = JSON::array();
@@ -1000,6 +1031,11 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 ejs.set("pan", JSON(static_cast<double>(clip.edits.pan)));
                 ejs.set("muted", JSON(clip.edits.muted));
                 ejs.set("playbackRate", JSON(static_cast<double>(clip.edits.playbackRate)));
+                const float persistedPitch = std::isfinite(clip.edits.pitchSemitones)
+                                                 ? std::clamp(clip.edits.pitchSemitones, ClipEdits::kMinPitchSemitones,
+                                                              ClipEdits::kMaxPitchSemitones)
+                                                 : 0.0f;
+                ejs.set("pitchSemitones", JSON(static_cast<double>(persistedPitch)));
                 ejs.set("fadeIn", JSON(clip.edits.fadeInBeats));
                 ejs.set("fadeOut", JSON(clip.edits.fadeOutBeats));
                 ejs.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
@@ -1025,6 +1061,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         settings.set("visible", JSON(uiState->settingsDialogVisible));
         settings.set("activePage", JSON(uiState->settingsDialogActivePage));
         ui.set("settingsDialog", settings);
+
+        // Phase-3 workspace state (optional on load; written on every save).
+        if (!uiState->viewFocus.empty()) {
+            ui.set("viewFocus", JSON(uiState->viewFocus));
+        }
+        ui.set("pianoRollOpen", JSON(uiState->pianoRollOpen));
+        ui.set("sequencerOpen", JSON(uiState->sequencerOpen));
 
         JSON panels = JSON::array();
         for (const auto& p : uiState->panels) {
@@ -1458,6 +1501,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
 
+        // Phase-3 workspace state: all keys optional (pre-phase-3 files keep the
+        // historical defaults: Timeline focus, overlays closed).
+        if (ui.has("viewFocus") && ui["viewFocus"].isString()) {
+            const std::string focusName = ui["viewFocus"].asString();
+            if (focusName.size() <= 32) {
+                ViewFocus parsed;
+                if (WorkspaceFocusModel::parseWorkspaceFocus(focusName, parsed)) {
+                    uiState.viewFocus = focusName;
+                }
+            }
+        }
+        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) {
+            uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
+        }
+        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) {
+            uiState.sequencerOpen = ui["sequencerOpen"].asBool();
+        }
+
         if (ui.has("panels") && ui["panels"].isArray()) {
             const JSON& panels = ui["panels"];
             for (size_t i = 0; i < panels.size(); ++i) {
@@ -1809,6 +1870,24 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             route.mute = sends[s].has("mute") && sends[s]["mute"].isBool() && sends[s]["mute"].asBool();
                             route.sidechainOnly = sends[s].has("sidechainOnly") && sends[s]["sidechainOnly"].isBool() &&
                                                   sends[s]["sidechainOnly"].asBool();
+                            // Stable send identity (Contract D2). Serialized as an
+                            // exact decimal string so ids above 2^53 survive the
+                            // JSON round trip. Legacy numeric values are accepted
+                            // only inside the exact JSON-integer range; anything
+                            // else (or a missing key) is 0, which mints in addSend.
+                            route.sendId = 0;
+                            if (sends[s].has("sendId") && sends[s]["sendId"].isString()) {
+                                try {
+                                    route.sendId = std::stoull(sends[s]["sendId"].asString());
+                                } catch (const std::exception&) {
+                                    route.sendId = 0;
+                                }
+                            } else if (sends[s].has("sendId") && sends[s]["sendId"].isNumber()) {
+                                const double legacyId = sends[s]["sendId"].asNumber();
+                                if (std::isfinite(legacyId) && legacyId >= 0.0 && legacyId <= 9007199254740991.0) {
+                                    route.sendId = static_cast<uint64_t>(legacyId);
+                                }
+                            }
                             channel->addSend(route);
                         }
                     }
@@ -1827,6 +1906,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     }
                     for (auto& id : missingIds) {
                         result.missingPlugins.push_back({std::move(id), channelName});
+                    }
+                }
+            }
+        }
+
+        // 4b. Restore the Master strip's insert chain (absent in older
+        // projects: loaders must ignore a missing master node).
+        if (auto* master = trackManager->getMasterChannel()) {
+            if (root.has("master") && root["master"].isObject()) {
+                const JSON& masterJson = root["master"];
+                auto& pluginManager = PluginManager::getInstance();
+                auto& masterChain = master->getEffectChain();
+                masterChain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+                if (masterJson.has("effectChainStateHex") && masterJson["effectChainStateHex"].isString()) {
+                    const auto effectState = hexToBytes(masterJson["effectChainStateHex"].asString());
+                    std::vector<std::string> missingIds;
+                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &missingIds)) {
+                        warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
+                                               "[ProjectLoad] Failed to restore Master effect chain",
+                                               "[ProjectLoad] Additional Master effect-chain warnings suppressed.");
+                    }
+                    for (auto& id : missingIds) {
+                        result.missingPlugins.push_back({std::move(id), "Master"});
                     }
                 }
             }
@@ -2027,6 +2129,51 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             // slot to the effect-chain size, paramId defensively.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
                             curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
+                            // Automation Identity Contract: a v2 curve carries
+                            // its exact instance id. A v1 curve (no key)
+                            // migrates exactly once: the slot's minted instance
+                            // id, resolved against the already-loaded chains.
+                            // Empty slots yield 0 — the curve is preserved as
+                            // dangling (diagnostic), never re-pointed.
+                            if (aj[a].has("instanceId") && aj[a]["instanceId"].isString()) {
+                                // Untrusted input: digits-only parse. std::stoull
+                                // would accept "-1" (wraps to UINT64_MAX, which the
+                                // chain refuses by design) and "12abc" (trailing
+                                // junk silently attaching the curve to id 12).
+                                const std::string rawId = aj[a]["instanceId"].asString();
+                                const bool digitsOnly =
+                                    !rawId.empty() &&
+                                    std::all_of(rawId.begin(), rawId.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+                                if (digitsOnly) {
+                                    curve.deviceInstanceId = std::stoull(rawId);
+                                    if (curve.deviceInstanceId == std::numeric_limits<uint64_t>::max()) {
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::AutomationTarget,
+                                            "[ProjectLoad] Automation curve '" + param +
+                                                "' carries the reserved max instance id; preserved as dangling.",
+                                            "[ProjectLoad] Additional reserved-instance-id warnings suppressed.");
+                                        curve.deviceInstanceId = 0;
+                                    }
+                                } else {
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' carries a malformed instance id; preserved as dangling.",
+                                        "[ProjectLoad] Additional malformed instance-id warnings suppressed.");
+                                }
+                            } else if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
+                                if (auto* targetChannel = trackManager->getChannelById(curve.mixerChannelId)) {
+                                    curve.deviceInstanceId =
+                                        targetChannel->getEffectChain().getSlotInstanceId(curve.effectSlot);
+                                }
+                                if (curve.deviceInstanceId == 0) {
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' targets an empty insert slot; preserved as dangling.",
+                                        "[ProjectLoad] Additional dangling automation curve warnings suppressed.");
+                                }
+                            }
 
                             if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
                             const JSON& pts = aj[a]["points"];
@@ -2101,9 +2248,34 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                             finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
                                         clip.durationSeconds = legacyDurationBeats * 60.0 / std::max(result.tempo, 1.0);
                                     }
-                                    clip.sourceOffsetSeconds =
-                                        finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
-                                    if (clip.sourceOffsetSeconds <= 0.0) {
+                                    const bool hadNegativeSourceOffset =
+                                        cj[c].has("sourceOffsetSeconds") && cj[c]["sourceOffsetSeconds"].isNumber() &&
+                                        std::isfinite(cj[c]["sourceOffsetSeconds"].asNumber()) &&
+                                        cj[c]["sourceOffsetSeconds"].asNumber() < 0.0;
+                                    if (hadNegativeSourceOffset) {
+                                        clip.sourceOffsetSeconds = 0.0;
+                                        ++result.negativeAudioClipOffsetsCorrected;
+                                        const std::string clipReference = clip.id.toString();
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::ClipTiming,
+                                            "[ProjectLoad] Audio clip " + clipReference +
+                                                " had a negative source offset; clamped to 0 because source material "
+                                                "before time zero does not exist",
+                                            "[ProjectLoad] Additional negative audio clip source-offset warnings "
+                                            "suppressed.");
+                                        if (!result.report) {
+                                            result.report = std::make_unique<ProjectLoadReport>();
+                                        }
+                                        result.report->issues.push_back(
+                                            {LoadIssueSeverity::Warning, "clip_timing",
+                                             "Audio clip had a negative source offset; clamped to zero because source "
+                                             "material before time zero does not exist",
+                                             0, clipReference, laneName});
+                                    } else {
+                                        clip.sourceOffsetSeconds =
+                                            finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
+                                    }
+                                    if (!hadNegativeSourceOffset && clip.sourceOffsetSeconds <= 0.0) {
                                         const double legacySourceOffsetBeats =
                                             finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
                                         clip.sourceOffsetSeconds =
@@ -2135,6 +2307,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     clip.edits.muted = ej.has("muted") && ej["muted"].isBool() && ej["muted"].asBool();
                                     clip.edits.playbackRate = static_cast<float>(
                                         finiteNumberOr(ej, "playbackRate", 1.0, 0.01, 100.0));
+                                    clip.edits.pitchSemitones = static_cast<float>(
+                                        finiteNumberOr(ej, "pitchSemitones", 0.0, -24.0, 24.0));
                                     clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
                                     clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
                                     clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
@@ -2166,9 +2340,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             trackManager->getPatternManager().validateMixerChannels(mixerChannelIds);
         }
 
-        // PHASE 7: Validate send routing targets.
-        // Unresolved sends are non-fatal — the audio runtime silently ignores them
-        // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
+        // PHASE 7: Validate routing against the loaded channel set (Contract
+        // I8/I10/D3/D4). Unresolved destinations are repaired, never silently
+        // dropped later: mains reroute to master, dangling sends are removed,
+        // and sends to master (illegal since D4) are removed. Every repair
+        // produces a diagnostic.
         {
             std::unordered_set<uint32_t> validChannelIds;
             validChannelIds.insert(0xFFFFFFFFu); // master
@@ -2177,18 +2353,49 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     validChannelIds.insert(ch->getChannelId());
                 }
             }
+            auto reportRoutingIssue = [&](const std::string& message, uint64_t objectId) {
+                warningLimiter.warning(ProjectLoadWarningCategory::SendRoute, message,
+                                       "[ProjectLoad] Additional routing repair warnings suppressed.");
+                if (!result.report) {
+                    result.report = std::make_unique<ProjectLoadReport>();
+                }
+                result.report->issues.push_back({LoadIssueSeverity::Warning, "routing", message, objectId, {}, {}});
+            };
+
             for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
                 auto* channel = trackManager->getChannel(ci);
                 if (!channel) continue;
+
+                // Main output: dangling destinations fail safe to master.
+                const uint32_t mainOutput = channel->getMainOutputId();
+                if (mainOutput != 0xFFFFFFFFu && !validChannelIds.count(mainOutput)) {
+                    channel->setMainOutputId(0xFFFFFFFFu);
+                    reportRoutingIssue("[ProjectLoad] Main output of '" + channel->getName() +
+                                           "' targets channel ID " + std::to_string(mainOutput) +
+                                           " which does not exist; rerouted to Master.",
+                                       channel->getChannelId());
+                }
+
+                // Sends: dangling targets and sends to master are removed.
+                std::vector<AudioRoute> keptSends;
                 for (const auto& send : channel->getSends()) {
-                    if (!validChannelIds.count(send.targetChannelId)) {
-                        warningLimiter.warning(
-                            ProjectLoadWarningCategory::SendRoute,
-                            "[ProjectLoad] Send from '" + channel->getName() +
-                                "' targets channel ID " + std::to_string(send.targetChannelId) +
-                                " which does not exist; send will be silent.",
-                            "[ProjectLoad] Additional unresolved send route warnings suppressed.");
+                    if (send.targetChannelId == 0xFFFFFFFFu) {
+                        reportRoutingIssue("[ProjectLoad] Send from '" + channel->getName() +
+                                               "' targets Master; sends to master are illegal and were removed.",
+                                           channel->getChannelId());
+                        continue;
                     }
+                    if (!validChannelIds.count(send.targetChannelId)) {
+                        reportRoutingIssue("[ProjectLoad] Send from '" + channel->getName() +
+                                               "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                               " which does not exist; send was removed.",
+                                           channel->getChannelId());
+                        continue;
+                    }
+                    keptSends.push_back(send);
+                }
+                if (keptSends.size() != channel->getSends().size()) {
+                    channel->replaceSends(keptSends);
                 }
             }
         }
@@ -2268,6 +2475,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
         Log::info("[ProjectLoad] Split " + std::to_string(result.legacyAudioPatternsSplit) +
                   " legacy audio pattern(s) across mixer channels — project must be saved to keep the split");
+    }
+    if (result.negativeAudioClipOffsetsCorrected > 0) {
+        result.migrationOutcome = combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+        Log::warning("[ProjectLoad] Corrected " + std::to_string(result.negativeAudioClipOffsetsCorrected) +
+                     " negative audio clip source offset(s) — project must be saved to keep the correction");
     }
 
     result.ok = true;

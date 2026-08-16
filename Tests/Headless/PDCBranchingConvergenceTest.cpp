@@ -206,6 +206,50 @@ void testNoCycleWarning() {
     EXPECT_TRUE(t.warnings.empty());
 }
 
+// P9 (G6): the Master strip's insert-chain latency must surface in project
+// and monitoring latency while cancelling out of per-track/per-edge
+// compensation — it delays every path uniformly, so no track may be delayed
+// further to "align" with it.
+void testMasterIntrinsicLatency() {
+    std::printf("[PDCBranchingConvergenceTest] master intrinsic latency: uniform, cancels from compensation...\n");
+    constexpr uint32_t kMasterLatency = 128;
+
+    LatencyGraph direct;
+    direct.generation = 1;
+    // channelId is a label; edges reference node *indices* (0, 1 here).
+    direct.nodes.push_back({kA, 0, false, LatencyDomain::FullyCompensated});
+    direct.nodes.push_back({kMaster, kMasterLatency, false, LatencyDomain::FullyCompensated});
+    direct.edges.push_back({0, 1, false});
+
+    const auto t = solveLatency(direct);
+    EXPECT_EQ(findNode(t, kA)->totalPathLatency, kMasterLatency);
+    EXPECT_EQ(t.projectAlignmentLatency, kMasterLatency);
+    EXPECT_EQ(t.monitoringLatency, kMasterLatency);
+    // The whole point: master latency must NOT delay the source track.
+    EXPECT_EQ(findNode(t, kA)->outputCompensationSamples, 0u);
+    EXPECT_EQ(findEdge(t, 0, 1)->compensationSamples, 0u);
+    EXPECT_EQ(findNode(t, kMaster)->outputCompensationSamples, 0u);
+
+    // Through a bus: A(0) -> Bus(100) -> Master(128). totalPath(A) = 228,
+    // alignment = 228, compensation still zero everywhere on the path.
+    LatencyGraph chained;
+    chained.generation = 2;
+    chained.nodes.push_back({kA, 0, false, LatencyDomain::FullyCompensated});
+    chained.nodes.push_back({kBus1, 100, false, LatencyDomain::FullyCompensated});
+    chained.nodes.push_back({kMaster, kMasterLatency, false, LatencyDomain::FullyCompensated});
+    chained.edges.push_back({0, 1, false});
+    chained.edges.push_back({1, 2, false});
+
+    const auto tc = solveLatency(chained);
+    EXPECT_EQ(findNode(tc, kA)->totalPathLatency, 228u);
+    EXPECT_EQ(tc.projectAlignmentLatency, 228u);
+    EXPECT_EQ(tc.monitoringLatency, 228u);
+    EXPECT_EQ(findNode(tc, kA)->outputCompensationSamples, 0u);
+    EXPECT_EQ(findNode(tc, kBus1)->outputCompensationSamples, 0u);
+    EXPECT_EQ(findEdge(tc, 0, 1)->compensationSamples, 0u);
+    EXPECT_EQ(findEdge(tc, 1, 2)->compensationSamples, 0u);
+}
+
 } // namespace
 
 int main() {
@@ -218,6 +262,7 @@ int main() {
     testEdgeCompensationDelaysFastBranch();
     testReconvergenceAlignmentArithmetic();
     testNoCycleWarning();
+    testMasterIntrinsicLatency();
 
     if (g_failures == 0) {
         std::printf("=== PDCBranchingConvergenceTest: all checks passed ===\n");

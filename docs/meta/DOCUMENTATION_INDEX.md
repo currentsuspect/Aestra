@@ -1,7 +1,7 @@
 # 📚 Aestra Documentation Index
 
 ![Documentation](https://img.shields.io/badge/Documentation-Complete-brightgreen)
-![Version](https://img.shields.io/badge/Version-1.1.0-blue)
+![Version](https://img.shields.io/badge/Version-0.7.0--alpha-blue)
 
 Welcome to the comprehensive documentation hub for **Aestra**! This guide helps you navigate our extensive documentation and find exactly what you need.
 
@@ -157,8 +157,8 @@ This documentation is actively maintained and updated:
 
 ---
 
-**Last Updated**: March 2026  
-**Version**: 1.1.0  
+**Last Updated**: August 2026  
+**Version**: 0.7.0-alpha  
 **Maintainer**: Dylan Makori / Aestra Studios
 
 *For questions about this documentation, please open an issue or contact us directly.*

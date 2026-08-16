@@ -140,6 +140,10 @@ std::shared_ptr<AudioBufferData> CommitAudioClipEditsCommand::renderBuffer(const
         return nullptr;
     }
 
+    // Varispeed changes both pitch and duration. Bake it before time-domain
+    // fades so their lengths continue to match what the user heard.
+    ClipRenderService::applyPlaybackRate(*buffer, clip.edits.playbackRate);
+
     // Fades are authored in beats, so they only become frame counts at the
     // project tempo the user is hearing them at.
     const double bpm = std::max(1.0, m_manager.getPlaylistModel().getBPM());
@@ -165,6 +169,7 @@ void CommitAudioClipEditsCommand::adjustEditsAfterRender(ClipEdits& edits) const
     edits.gainLinear = 1.0f;
     edits.fadeInBeats = 0.0f;
     edits.fadeOutBeats = 0.0f;
+    edits.playbackRate = 1.0f;
 }
 
 } // namespace Audio

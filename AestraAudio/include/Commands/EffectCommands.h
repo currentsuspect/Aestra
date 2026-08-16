@@ -193,5 +193,78 @@ private:
     bool m_executed = false;
 };
 
+/**
+ * @brief Undoable reorder of a plugin within a chain (Automation Identity
+ * Contract I7).
+ *
+ * The instance identity travels with the plugin (movePlugin/swapPlugins carry
+ * it), so a reorder is a rearrangement, never a retarget: automation addressed
+ * by deviceInstanceId is untouched. Undo restores the exact original ordering
+ * and identities; redo reapplies. Nothing is minted, regenerated, or swapped
+ * as a side effect. Invalid moves throw, leaving both the chain and the
+ * command history untouched.
+ */
+class MovePluginCommand : public ICommand {
+public:
+    MovePluginCommand(TrackManager& trackManager, MixerChannel& channel, size_t fromSlot, size_t toSlot)
+        : m_trackManager(trackManager), m_channel(channel), m_fromSlot(fromSlot), m_toSlot(toSlot) {}
+
+    void execute() override {
+        auto& chain = m_channel.getEffectChain();
+        if (m_fromSlot >= EffectChain::MAX_SLOTS || m_toSlot >= EffectChain::MAX_SLOTS) {
+            throw std::runtime_error("MovePlugin: slot out of range");
+        }
+        if (m_fromSlot == m_toSlot) {
+            throw std::runtime_error("MovePlugin: source and destination are the same slot");
+        }
+        if (chain.getSlot(m_fromSlot) == nullptr || chain.getSlot(m_fromSlot)->isEmpty()) {
+            throw std::runtime_error("MovePlugin: source slot is empty");
+        }
+        const auto* target = chain.getSlot(m_toSlot);
+        const bool targetEmpty = !target || target->isEmpty();
+        if (targetEmpty) {
+            if (!chain.movePlugin(m_fromSlot, m_toSlot)) {
+                throw std::runtime_error("MovePlugin: move refused by the chain");
+            }
+            m_usedSwap = false;
+        } else {
+            if (!chain.swapPlugins(m_fromSlot, m_toSlot)) {
+                throw std::runtime_error("MovePlugin: swap refused by the chain");
+            }
+            m_usedSwap = true;
+        }
+        m_executed = true;
+        m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);
+    }
+    void undo() override {
+        if (!m_executed) {
+            return;
+        }
+        auto& chain = m_channel.getEffectChain();
+        // A refused revert must not leave the history believing the reorder
+        // was undone while the chain still holds the moved layout.
+        const bool reverted = m_usedSwap ? chain.swapPlugins(m_toSlot, m_fromSlot)
+                                         : chain.movePlugin(m_toSlot, m_fromSlot);
+        if (!reverted) {
+            throw std::runtime_error("MovePlugin: undo refused by the chain");
+        }
+        m_executed = false;
+        m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::EffectChainChanged);
+    }
+    void redo() override { execute(); }
+
+    std::string getName() const override { return "Move Plugin"; }
+    bool changesProjectState() const override { return true; }
+    std::string type() const override { return "move_plugin"; }
+
+private:
+    TrackManager& m_trackManager;
+    MixerChannel& m_channel;
+    size_t m_fromSlot;
+    size_t m_toSlot;
+    bool m_usedSwap = false;
+    bool m_executed = false;
+};
+
 } // namespace Audio
 } // namespace Aestra

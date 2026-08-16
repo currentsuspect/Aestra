@@ -79,7 +79,7 @@ bool runSilenceCase() {
 // Case 2: single impulse through the master path — exact position + amplitude
 // -----------------------------------------------------------------------------
 // The impulse is placed past the first block so the transport fade-in has
-// completed. Expectation models the engine's centre pan law (cos(π/4)).
+// completed. Expectation models the engine's centre pan law (stereo-balance: unity at centre).
 // A wrong sample rate, a shifted render, or a master-gain change moves or
 // scales the impulse and fails with the exact frame in the report.
 bool runImpulseCase() {
@@ -103,8 +103,12 @@ bool runImpulseCase() {
     engine.setTransportPlaying(false);
 
     // Expected: pan-law-scaled impulse at the same frame; zeros elsewhere.
+    // The impulse passes through a channel strip, which uses the
+    // stereo-balance law — unity at centre, matching the direct-to-Master
+    // reference. (Previously the strip used equalPower, pinning -3.01 dB at
+    // centre; see the strip pan-law fix in the same PR.)
     std::vector<float> expected(output.size(), 0.0f);
-    const float panGain = PanLaw::kEqualPowerCenterGain;
+    const float panGain = 1.0f;
     expected[static_cast<size_t>(impulseFrame) * 2] = kAmp * panGain;
     expected[static_cast<size_t>(impulseFrame) * 2 + 1] = kAmp * panGain;
 
@@ -141,7 +145,7 @@ bool runMultiTrackMixCase() {
     struct TrackSpec {
         double freq;
         float amp;
-        float faderDb;
+        float faderDb; // mixer fader position (dB) — drives channel volume
         float pan;
     };
     const TrackSpec specs[3] = {
@@ -157,6 +161,21 @@ bool runMultiTrackMixCase() {
                       totalFrames, cfg);
     }
 
+    // Gain staging contract (updated with the strip gain fix): the mixer
+    // fader lives on the channel (track.volume, SetVolumeCommand/undo path)
+    // and pan lives on the channel too; the continuous buffer's fader/pan are
+    // display mirrors. Trim remains in the continuous slot. Drive the channel
+    // stores exactly like the UI's fader/pan commands do.
+    const auto faderDbToLinear = [](float faderDb) {
+        return faderDb <= -90.0f ? 0.0f : std::pow(10.0f, faderDb / 20.0f);
+    };
+    for (int t = 0; t < 3; ++t) {
+        if (auto* ch = tm->getChannel(static_cast<size_t>(t))) {
+            ch->setVolume(faderDbToLinear(specs[t].faderDb));
+            ch->setPan(specs[t].pan);
+        }
+    }
+
     // Bypassed insert on track 1: the chain still runs its processing path,
     // but a bypassed slot must be acoustically transparent.
     if (auto* ch = tm->getChannel(1)) {
@@ -170,25 +189,18 @@ bool runMultiTrackMixCase() {
     AudioEngine engine;
     prepareEngine(engine, tm, cfg);
 
-    // Fader/pan via the same continuous-param path the UI uses (dense slots
-    // are assigned in track order by ChannelSlotMap::rebuild).
-    auto params = std::make_shared<ContinuousParamBuffer>();
-    for (uint32_t t = 0; t < 3; ++t) {
-        params->setFaderDb(t, specs[t].faderDb);
-        params->setPan(t, specs[t].pan);
-    }
-    engine.setContinuousParams(params);
-
     engine.setTransportPlaying(true);
     std::vector<float> output = renderBlocks(engine, totalFrames, cfg);
     engine.setTransportPlaying(false);
 
-    // Expected: sum of pan-law-scaled, fader-scaled sines.
+    // Expected: sum of stereo-balance-scaled, fader-scaled sines. The strip
+    // pan law is stereoBalance (unity at centre — equalPower would have
+    // applied a second -3.01 dB centre law to already-stereo content).
     std::vector<float> expected(static_cast<size_t>(totalFrames) * 2, 0.0f);
     for (const auto& s : specs) {
-        const double gain = std::pow(10.0, static_cast<double>(s.faderDb) / 20.0);
+        const double gain = static_cast<double>(faderDbToLinear(s.faderDb));
         double gL = 0.0, gR = 0.0;
-        PanLaw::equalPower(static_cast<double>(s.pan), gain, gL, gR);
+        PanLaw::stereoBalance(static_cast<double>(s.pan), gain, gL, gR);
         for (uint32_t i = 0; i < totalFrames; ++i) {
             const double v = std::sin(kTau * s.freq * static_cast<double>(i) / cfg.sampleRate) *
                              static_cast<double>(s.amp);

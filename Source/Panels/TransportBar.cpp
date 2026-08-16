@@ -44,12 +44,12 @@ constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP RECORD";
 // the view is called Arsenal everywhere else in the product, so nothing here
 // invents a second name for it.
 
-// 11px matches the renderer's small-text floor, so the size layout assumes is
-// the size that actually renders.
-constexpr float TRANSPORT_LABEL_FONT_SIZE = 11.0f;
-constexpr float TRANSPORT_LABEL_ICON_SIZE = 14.0f;
-constexpr float TRANSPORT_LABEL_ICON_GAP = 6.0f;
-constexpr float TRANSPORT_LABEL_PAD_X = 9.0f;
+// Micro label tier for DAW-specific transport concepts: the label carries the
+// meaning and the icon reinforces it, so the word stays below label size.
+constexpr float TRANSPORT_LABEL_FONT_SIZE = 9.5f;
+constexpr float TRANSPORT_LABEL_ICON_SIZE = 13.0f;
+constexpr float TRANSPORT_LABEL_ICON_GAP = 5.0f;
+constexpr float TRANSPORT_LABEL_PAD_X = 7.0f;
 
 // layoutComponents runs without a renderer, so label widths are estimated
 // rather than measured. Estimate high: the label is left-aligned after the
@@ -730,8 +730,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);
 
     // --- View Toggles (Right) ---
-    // All icon-only: faders, a channel rack and a keyboard are vocabulary a
-    // producer already has. Tooltips confirm rather than translate.
+    // Workspace switches are repeated, space-constrained controls. Their
+    // established glyphs plus tooltips communicate more cleanly than a second
+    // row of six-pixel abbreviations.
     renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);
     renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
     renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);

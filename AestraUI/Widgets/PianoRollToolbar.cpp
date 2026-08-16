@@ -69,9 +69,8 @@ void PianoRollToolbar::setupUI() {
         auto rootMenu = std::make_shared<NUIContextMenu>();
         auto roots = MusicTheory::getRootNames();
         for (size_t i = 0; i < roots.size(); ++i) {
-            rootMenu->addItem(roots[i], [this, i]() {
-                if (auto g = grid_.lock()) g->setRootKey(static_cast<int>(i));
-                if (auto n = notes_.lock()) n->setRootKey(static_cast<int>(i));
+            rootMenu->addRadioItem(roots[i], "piano-roll-root", m_rootKey == static_cast<int>(i), [this, i]() {
+                applyHarmonyContextEdit(static_cast<int>(i), m_scaleType, m_snapToScale);
             });
         }
         menu->addSubmenu("Root Key", rootMenu);
@@ -80,22 +79,16 @@ void PianoRollToolbar::setupUI() {
         auto scaleMenu = std::make_shared<NUIContextMenu>();
         auto scales = MusicTheory::getScales();
         for (size_t i = 0; i < scales.size(); ++i) {
-            scaleMenu->addItem(scales[i].name, [this, i]() {
-                if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(i));
-                if (auto n = notes_.lock()) n->setScaleType(static_cast<ScaleType>(i));
+            scaleMenu->addRadioItem(scales[i].name, "piano-roll-scale",
+                                    m_scaleType == static_cast<ScaleType>(i), [this, i]() {
+                applyHarmonyContextEdit(m_rootKey, static_cast<ScaleType>(i), m_snapToScale);
             });
         }
         menu->addSubmenu("Scale Type", scaleMenu);
 
         // --- SNAP TO SCALE TOGGLE ---
-        bool snapToScaleActive = false;
-        if (auto n = notes_.lock()) {
-            snapToScaleActive = n->getSnapToScale();
-        }
-        menu->addCheckbox("Snap to Scale", snapToScaleActive, [this](bool) {
-            if (auto n = notes_.lock()) {
-                n->setSnapToScale(!n->getSnapToScale());
-            }
+        menu->addCheckbox("Snap to Scale", m_snapToScale, [this](bool enabled) {
+            applyHarmonyContextEdit(m_rootKey, m_scaleType, enabled);
         });
 
         // --- CHORD MODE TOGGLE (pencil stamps a diatonic triad) ---
@@ -122,6 +115,11 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Strum Selection", strumMenu);
 
+        // --- SUBDIVIDE ---
+        menu->addItem("Subdivide Selection", [this]() {
+            if (auto n = notes_.lock()) n->subdivideSelectedNotes();
+        });
+
         // --- HUMANIZE ---
         menu->addItem("Humanize Velocity", [this]() {
             if (auto n = notes_.lock()) n->humanizeSelectedVelocities();
@@ -146,12 +144,15 @@ void PianoRollToolbar::setupUI() {
 
     // 1. Tool Buttons
     m_ptrBtn = std::make_shared<NUIButton>("");
+    m_ptrBtn->setTooltip("Select");
     m_ptrBtn->setOnClick([this](){ setActiveTool(GlobalTool::Pointer); });
 
     m_pencilBtn = std::make_shared<NUIButton>("");
+    m_pencilBtn->setTooltip("Draw");
     m_pencilBtn->setOnClick([this](){ setActiveTool(GlobalTool::Pencil); });
 
     m_eraserBtn = std::make_shared<NUIButton>("");
+    m_eraserBtn->setTooltip("Erase");
     m_eraserBtn->setOnClick([this](){ setActiveTool(GlobalTool::Eraser); });
 
     m_patternDropdown = std::make_shared<NUIDropdown>();
@@ -215,6 +216,28 @@ void PianoRollToolbar::setupUI() {
     m_lengthDownIcon = std::make_shared<NUIIcon>(minusSvg);
     m_lengthUpIcon = std::make_shared<NUIIcon>(plusSvg);
 
+    // Follow-playhead toggle (default OFF: the playhead always moves, the
+    // viewport only follows when explicitly enabled) + one-shot "center on
+    // playhead" jump. 0.7.0 triage: editing must not yank the viewport.
+    m_followBtn = std::make_shared<NUIButton>("");
+    m_followBtn->setToggleable(true);
+    m_followBtn->setTooltip("Follow playhead");
+    m_followBtn->setOnClick([this]() {
+        m_followPlayhead = !m_followPlayhead;
+        if (onFollowPlayheadChanged_) onFollowPlayheadChanged_(m_followPlayhead);
+        repaint();
+    });
+    const char* followSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg>)";
+    m_followIcon = std::make_shared<NUIIcon>(followSvg);
+
+    m_centerBtn = std::make_shared<NUIButton>("");
+    m_centerBtn->setTooltip("Center on playhead");
+    m_centerBtn->setOnClick([this]() {
+        if (onCenterOnPlayhead_) onCenterOnPlayhead_();
+    });
+    const char* centerSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>)";
+    m_centerIcon = std::make_shared<NUIIcon>(centerSvg);
+
     addChild(m_menuBtn);
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
@@ -224,6 +247,8 @@ void PianoRollToolbar::setupUI() {
     addChild(m_snapDropdown);
     addChild(m_lengthDownBtn);
     addChild(m_lengthUpBtn);
+    addChild(m_followBtn);
+    addChild(m_centerBtn);
 }
 
 void PianoRollToolbar::applySnap(SnapGrid snap) {
@@ -278,6 +303,31 @@ void PianoRollToolbar::setUnitChoices(const std::vector<PatternChoice>& choices,
     repaint();
 }
 
+void PianoRollToolbar::setHarmonyContext(int rootKey, ScaleType scaleType, bool snapToScale) {
+    const int scaleIndex = std::clamp(static_cast<int>(scaleType), 0, static_cast<int>(ScaleType::Count) - 1);
+    m_rootKey = std::clamp(rootKey, 0, 11);
+    m_scaleType = static_cast<ScaleType>(scaleIndex);
+    m_snapToScale = snapToScale;
+
+    if (auto grid = grid_.lock()) {
+        grid->setRootKey(m_rootKey);
+        grid->setScaleType(m_scaleType);
+    }
+    if (auto notes = notes_.lock()) {
+        notes->setRootKey(m_rootKey);
+        notes->setScaleType(m_scaleType);
+        notes->setSnapToScale(m_snapToScale);
+    }
+    repaint();
+}
+
+void PianoRollToolbar::applyHarmonyContextEdit(int rootKey, ScaleType scaleType, bool snapToScale) {
+    setHarmonyContext(rootKey, scaleType, snapToScale);
+    if (onHarmonyContextChanged_) {
+        onHarmonyContextChanged_(m_rootKey, m_scaleType, m_snapToScale);
+    }
+}
+
 
 void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
@@ -287,6 +337,11 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     const auto groupBg = themeManager.getColor("backgroundPrimary").withAlpha(0.72f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
     renderer.fillRect(b, toolbarBg);
+    // Top border to visually separate this toolbar from the panel above it
+    renderer.drawLine(NUIPoint(b.x, b.y + 0.5f),
+                      NUIPoint(b.right(), b.y + 0.5f),
+                      1.0f,
+                      themeManager.getColor("divider"));
     renderer.drawLine(NUIPoint(b.x, b.bottom() - 0.5f),
                       NUIPoint(b.right(), b.bottom() - 0.5f),
                       1.0f,
@@ -407,6 +462,12 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     currentX += pillW + buttonSpacing;
 
     renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
+
+    // Follow/center group — transport-adjacent, after the length controls.
+    currentX += 8.0f;
+    drawGroup(currentX - 3.0f, buttonSize * 2.0f + buttonSpacing + 6.0f);
+    renderButton(m_followBtn, m_followIcon, m_followPlayhead);
+    renderButton(m_centerBtn, m_centerIcon, false);
 
     // Snap selector — a real dropdown (was a dead "SNAP Beat" text pill). The
     // menu's Snap submenu and this dropdown stay in sync via applySnap().

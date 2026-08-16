@@ -9,6 +9,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Base/NUIButton.h"
 #include "AudioFileValidator.h"
 #include "ClipSource.h"
 #include "Commands/AddChannelCommand.h"
@@ -84,6 +85,16 @@ void TrackManagerUI::createToolIcons() {
     const char* moveSvg =
         R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.05 2.2h1.9v19.6h-1.9z"/><path d="M2.2 11.05h19.6v1.9H2.2z"/><path d="M12 1 15.1 5.2H8.9L12 1zm0 22-3.1-4.2h6.2L12 23zM1 12l4.2-3.1v6.2L1 12zm22 0-4.2 3.1V8.9L23 12z"/></svg>)";
     m_moveCursorIcon = std::make_shared<AestraUI::NUIIcon>(moveSvg);
+    if (!m_addTrackBtn) {
+        m_addTrackBtn = std::make_shared<AestraUI::NUIButton>("");
+        m_addTrackBtn->setBackgroundColor(AestraUI::NUIColor::transparent());
+        m_addTrackBtn->setBorderEnabled(false);
+        m_addTrackBtn->setTooltip("Add Track");
+        m_addTrackBtn->setOnClick([this]() {
+            addTrack();
+        });
+        addChild(m_addTrackBtn);
+    }
 
     Log::info("Tool icons created");
 }
@@ -229,6 +240,9 @@ void TrackManagerUI::updateToolbarBounds() {
 
     // 5. Menu (rightmost)
     m_menuIconBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    if (m_addTrackBtn) {
+        m_addTrackBtn->setBounds(m_addTrackBounds);
+    }
 }
 
 // =============================================================================
@@ -340,11 +354,14 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         m_followPlayheadIcon->onRender(renderer);
     }
 
-    // Render Add Track button
+    // Render Add Track button. The button owns hover/tooltip/click state; this
+    // block draws the chrome and icon from the button's state so there is one
+    // state source (same pattern as the transport glass buttons).
     {
-        auto currentBg = m_addTrackHovered ? utilityHoverBg : utilityBg;
-        auto currentBorder = m_addTrackHovered ? utilityHoverBorder : utilityBorder;
-        if (m_addTrackHovered) {
+        const bool addHovered = m_addTrackBtn && m_addTrackBtn->isHovered();
+        auto currentBg = addHovered ? utilityHoverBg : utilityBg;
+        auto currentBorder = addHovered ? utilityHoverBorder : utilityBorder;
+        if (addHovered) {
             renderer.fillRoundedRect(m_addTrackBounds, radius, currentBg);
             renderer.strokeRoundedRect(m_addTrackBounds, radius, 1.0f, currentBorder);
         }
@@ -354,7 +371,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
                 std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
                 std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f), iconSz, iconSz);
             m_addTrackIcon->setBounds(iconRect);
-            m_addTrackIcon->setColor(themeManager.getColor("textPrimary").withAlpha(m_addTrackHovered ? 0.85f : 0.55f));
+            m_addTrackIcon->setColor(themeManager.getColor("textPrimary").withAlpha(addHovered ? 0.85f : 0.55f));
             m_addTrackIcon->onRender(renderer);
         }
     }

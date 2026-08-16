@@ -95,7 +95,8 @@ void run96kImpulseCase() {
     verdict(peakFrame == impulseFrame,
             "96k: impulse at exact frame (got " + std::to_string(peakFrame) + ", want " +
                 std::to_string(impulseFrame) + ")");
-    const float expectedAmp = kAmp * PanLaw::kEqualPowerCenterGain;
+    // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
+    const float expectedAmp = kAmp * 1.0f;
     verdict(std::abs(peakVal - expectedAmp) <= 1e-6f,
             "96k: impulse amplitude = pan-law expectation (got " + std::to_string(peakVal) + ")");
 }
@@ -147,8 +148,8 @@ void runCrossRateCase() {
     // Expected: a 1 kHz sine at 96 kHz, pan-law scaled. If the engine ignored
     // the clip's rate it would play 2x too fast (2 kHz) and correlation with
     // the 1 kHz reference collapses toward 0.
-    std::vector<float> expected = makeSine(1000.0, 0.5f * PanLaw::kEqualPowerCenterGain, engineFrames,
-                                           cfg.sampleRate);
+    // Stereo-balance law: unity at center (strip pan-law fix 2026-08-14).
+    std::vector<float> expected = makeSine(1000.0, 0.5f, engineFrames, cfg.sampleRate);
 
     const size_t trimStart = static_cast<size_t>(cfg.blockSize) * 4 * cfg.channels;
     const size_t trimEnd = static_cast<size_t>(4096) * cfg.channels; // SRC tail headroom

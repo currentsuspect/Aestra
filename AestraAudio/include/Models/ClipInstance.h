@@ -4,6 +4,8 @@
 #include "../AestraUUID.h"
 #include "PatternSource.h" // For PatternID
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -58,6 +60,9 @@ struct PlaylistLaneID : public AestraUUID {
  * @brief Clip edits (user modifications to clip content)
  */
 struct ClipEdits {
+    static constexpr float kMinPitchSemitones = -24.0f;
+    static constexpr float kMaxPitchSemitones = 24.0f;
+
     float fadeInBeats = 0.0f;
     float fadeOutBeats = 0.0f;
     /** Clip level, linear. The only gain field: the render path, the editor
@@ -66,7 +71,41 @@ struct ClipEdits {
     float pan = 0.0f;
     bool muted = false;
     float playbackRate = 1.0f;
+    /** Musical pitch offset in semitones, independent of Speed. Rendered as
+     *  2^(st/12) folded into the same varispeed ratio as playbackRate; pitch
+     *  up plays faster/shorter like any varispeed (#746). */
+    float pitchSemitones = 0.0f;
     double sourceStart = 0.0;
+
+    /** Musical varispeed control used by the Audio Clip Editor. Pitch and
+     *  duration move together because playbackRate is the render authority;
+     *  this does not claim independent time-stretching. */
+    static float playbackRateFromSemitones(float semitones) noexcept {
+        if (!std::isfinite(semitones))
+            return 1.0f;
+        const float clamped = std::clamp(semitones, kMinPitchSemitones, kMaxPitchSemitones);
+        return std::pow(2.0f, clamped / 12.0f);
+    }
+
+    static float semitonesFromPlaybackRate(float playbackRate) noexcept {
+        if (!std::isfinite(playbackRate) || playbackRate <= 0.0f)
+            return 0.0f;
+        const float semitones = 12.0f * std::log2(playbackRate);
+        return std::clamp(semitones, kMinPitchSemitones, kMaxPitchSemitones);
+    }
+
+    /** Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render
+     *  envelope. Single authority for source-domain offset/duration math in
+     *  split, trim and the editor; mirrors ClipRenderKernel::renderClipInto
+     *  exactly, so editing math always agrees with what the renderer plays
+     *  (#746, split/trim varispeed regression). */
+    float effectiveVarispeed() const noexcept {
+        const float rate = std::isfinite(playbackRate) ? std::clamp(playbackRate, 0.25f, 4.0f) : 1.0f;
+        const float pitch = std::isfinite(pitchSemitones)
+                                ? std::clamp(pitchSemitones, kMinPitchSemitones, kMaxPitchSemitones)
+                                : 0.0f;
+        return std::clamp(rate * std::pow(2.0f, pitch / 12.0f), 0.25f, 4.0f);
+    }
 
     /**
      * Defaults for a newly created audio clip. The value-initialized defaults
@@ -87,7 +126,8 @@ struct ClipEdits {
     bool operator==(const ClipEdits& other) const {
         return fadeInBeats == other.fadeInBeats && fadeOutBeats == other.fadeOutBeats &&
                gainLinear == other.gainLinear && pan == other.pan && muted == other.muted &&
-               playbackRate == other.playbackRate && sourceStart == other.sourceStart;
+               playbackRate == other.playbackRate && pitchSemitones == other.pitchSemitones &&
+               sourceStart == other.sourceStart;
     }
     bool operator!=(const ClipEdits& other) const { return !(*this == other); }
 };

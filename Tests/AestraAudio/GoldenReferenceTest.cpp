@@ -29,7 +29,7 @@ constexpr uint32_t kChannels = 2;
 constexpr double kTau = 6.28318530717958647692;
 constexpr uint32_t kTestDurationFrames = kSampleRate; // 1 second per test
 constexpr double kPassRmsDb = -100.0; // More negative = better
-constexpr double kPanLawCenterGain = 0.7071067811865476; // cos(π/4) center pan constant-power
+constexpr double kPanLawCenterGain = 1.0; // stereo-balance law: unity at center (strip pan-law fix 2026-08-14)
 
 // =============================================================================
 // Analysis
@@ -139,7 +139,7 @@ AnalysisResult runSignalTest(const std::string& label, const std::vector<float>&
     engine.setTransportPlaying(false);
 
     // Trim startup transient (gainL ramp + fade-in) and clip-edge fade-out (128 samples)
-    // Also apply pan-law gain: engine applies cos(π/4) to centered mono signals.
+    // Also apply pan-law gain: engine applies the stereo-balance law (unity at centre).
     constexpr size_t kTrimStart = static_cast<size_t>(kBlockSize) * kChannels;
     constexpr size_t kTrimEnd = static_cast<size_t>(256) * kChannels; // covers CLIP_EDGE_FADE_SAMPLES
     AnalysisResult result;
