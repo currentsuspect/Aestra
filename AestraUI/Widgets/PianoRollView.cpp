@@ -745,6 +745,40 @@ void PianoRollView::setOnPatternChoiceSelected(std::function<void(int patternVal
     }
 }
 
+void PianoRollView::setFollowPlayhead(bool on) {
+    if (m_toolbar) {
+        m_toolbar->setFollowPlayhead(on);
+    }
+}
+
+bool PianoRollView::getFollowPlayhead() const {
+    return m_toolbar ? m_toolbar->getFollowPlayhead() : false;
+}
+
+void PianoRollView::setOnFollowPlayheadChanged(std::function<void(bool)> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnFollowPlayheadChanged(std::move(cb));
+    }
+}
+
+void PianoRollView::setOnCenterOnPlayhead(std::function<void()> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnCenterOnPlayhead(std::move(cb));
+    }
+}
+
+void PianoRollView::centerOnPlayhead() {
+    // One-shot jump: aim the eased scroll at the playhead (the follow target
+    // math), without arming continuous following.
+    if (m_grid) {
+        const float visibleW = m_grid->getWidth();
+        if (visibleW > 0.0f) {
+            m_targetScrollX = pianoRollFollowTargetScroll(m_scrollX, m_pixelsPerBeat, visibleW, m_playheadBeat);
+            updateScrollbars();
+        }
+    }
+}
+
 void PianoRollView::setOnUnitChoiceSelected(std::function<void(int unitValue)> cb) {
     if (m_toolbar) {
         m_toolbar->setOnUnitChoiceSelected(std::move(cb));

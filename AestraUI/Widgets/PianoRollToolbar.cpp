@@ -216,6 +216,28 @@ void PianoRollToolbar::setupUI() {
     m_lengthDownIcon = std::make_shared<NUIIcon>(minusSvg);
     m_lengthUpIcon = std::make_shared<NUIIcon>(plusSvg);
 
+    // Follow-playhead toggle (default OFF: the playhead always moves, the
+    // viewport only follows when explicitly enabled) + one-shot "center on
+    // playhead" jump. 0.7.0 triage: editing must not yank the viewport.
+    m_followBtn = std::make_shared<NUIButton>("");
+    m_followBtn->setToggleable(true);
+    m_followBtn->setTooltip("Follow playhead");
+    m_followBtn->setOnClick([this]() {
+        m_followPlayhead = !m_followPlayhead;
+        if (onFollowPlayheadChanged_) onFollowPlayheadChanged_(m_followPlayhead);
+        repaint();
+    });
+    const char* followSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg>)";
+    m_followIcon = std::make_shared<NUIIcon>(followSvg);
+
+    m_centerBtn = std::make_shared<NUIButton>("");
+    m_centerBtn->setTooltip("Center on playhead");
+    m_centerBtn->setOnClick([this]() {
+        if (onCenterOnPlayhead_) onCenterOnPlayhead_();
+    });
+    const char* centerSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>)";
+    m_centerIcon = std::make_shared<NUIIcon>(centerSvg);
+
     addChild(m_menuBtn);
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
@@ -225,6 +247,8 @@ void PianoRollToolbar::setupUI() {
     addChild(m_snapDropdown);
     addChild(m_lengthDownBtn);
     addChild(m_lengthUpBtn);
+    addChild(m_followBtn);
+    addChild(m_centerBtn);
 }
 
 void PianoRollToolbar::applySnap(SnapGrid snap) {
@@ -438,6 +462,12 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     currentX += pillW + buttonSpacing;
 
     renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
+
+    // Follow/center group — transport-adjacent, after the length controls.
+    currentX += 8.0f;
+    drawGroup(currentX - 3.0f, buttonSize * 2.0f + buttonSpacing + 6.0f);
+    renderButton(m_followBtn, m_followIcon, m_followPlayhead);
+    renderButton(m_centerBtn, m_centerIcon, false);
 
     // Snap selector — a real dropdown (was a dead "SNAP Beat" text pill). The
     // menu's Snap submenu and this dropdown stay in sync via applySnap().

@@ -126,6 +126,7 @@ private:
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
     bool m_switchingUnit{false};              // Guards setEditingUnit against save-echo recursion
     bool m_wasVisible{false};
+    bool m_followPlayhead{false}; // Opt-in viewport tracking (0.7.0 triage)
     double m_lastPlayheadBeat{-1.0}; // Gates idle repaint; only redraw when the playhead actually moves
 };
 

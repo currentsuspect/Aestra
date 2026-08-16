@@ -18,6 +18,8 @@ namespace AestraUI {
 class UnitNameLabel : public NUIComponent {
 public:
     explicit UnitNameLabel(const std::string& name, Aestra::Audio::UnitType type);
+    /** @brief Compact representation: name only, no type line (responsive density). */
+    void setCompact(bool compact) { m_compact = compact; repaint(); }
 
     void setUnitName(const std::string& name);
     void setUnitType(Aestra::Audio::UnitType type);
@@ -42,6 +44,7 @@ private:
     std::string m_unitName;
     Aestra::Audio::UnitType m_unitType;
     bool m_isRenaming = false;
+    bool m_compact = false;
     long long m_lastClickTimeMs = 0;
 
     std::shared_ptr<NUITextInput> m_textInput;

@@ -240,7 +240,9 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     renderer.fillRoundedRect({cardBounds.x + 1.0f, cardBounds.y + 8.0f, 4.0f, cardBounds.height - 16.0f}, 2.0f,
                              unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
 
-    m_controlWidth = std::clamp(cardBounds.width * 0.38f, 220.0f, 312.0f);
+    // Density-derived control floor (responsive contract): narrow rows give
+    // the grid the width back instead of clipping it against a fixed 220.
+    m_controlWidth = std::clamp(cardBounds.width * 0.38f, controlFloorForDensity(cardBounds.width), 312.0f);
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
@@ -391,9 +393,15 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // Name + type label are rendered by the UnitNameLabel child component.
 
     const float pillY = centerY - 10.0f;
-    const NUIRect routeRect(bounds.x + bounds.width - 142.0f, pillY, 42.0f, 20.0f);
-    const NUIRect muteRect(bounds.x + bounds.width - 92.0f, pillY, 24.0f, 20.0f);
-    const NUIRect soloRect(bounds.x + bounds.width - 62.0f, pillY, 24.0f, 20.0f);
+    // Pill band widths follow the density tier (see layoutNameLabel).
+    const bool showBars = (m_density == Density::Full);
+    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
+    const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    const float bandRight = bounds.right() - (showBars ? 18.0f : 4.0f);
+    const NUIRect routeRect(bandRight - soloW - 6.0f - muteW - 6.0f - routeW, pillY, routeW, 20.0f);
+    const NUIRect muteRect(bandRight - soloW - 6.0f - muteW, pillY, muteW, 20.0f);
+    const NUIRect soloRect(bandRight - soloW, pillY, soloW, 20.0f);
     const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
                                    ? theme.getColor("surfaceTertiary")
                                    : unitAccent.withAlpha(0.16f);
@@ -401,17 +409,20 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : unitAccent.withAlpha(0.42f);
     renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
     renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
-    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 9.0f, theme.getColor("textPrimary").withAlpha(0.9f));
+    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, m_density == Density::Minimal ? 7.5f : 9.0f,
+                              theme.getColor("textPrimary").withAlpha(0.9f));
     drawMuteIcon(renderer, muteRect, m_isMuted);
     drawSoloIcon(renderer, soloRect, m_isSolo);
 
-    const float indicatorX = bounds.right() - 18.0f;
-    for (int i = 0; i < 3; ++i) {
-        const float h = 4.0f + i * 3.0f;
-        const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
-        const NUIColor color = hasContent ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
-                                          : theme.getColor("textDisabled").withAlpha(0.28f);
-        renderer.fillRoundedRect(bar, 1.0f, color);
+    if (showBars) {
+        const float indicatorX = bounds.right() - 18.0f;
+        for (int i = 0; i < 3; ++i) {
+            const float h = 4.0f + i * 3.0f;
+            const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
+            const NUIColor color = hasContent ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
+                                              : theme.getColor("textDisabled").withAlpha(0.28f);
+            renderer.fillRoundedRect(bar, 1.0f, color);
+        }
     }
 }
 
@@ -747,7 +758,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
 
     auto bounds = getBounds();
     const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
-    m_controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
     const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
     const float separatorX = m_controlWidth;
     const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
@@ -1310,13 +1321,32 @@ void UnitRow::layoutNameLabel() {
     if (!m_nameLabel)
         return;
     auto bounds = getBounds();
-    float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    // Density tiers from available width: Full >= 620, Compact >= 440,
+    // Minimal below. The control block floor follows the tier so narrow rows
+    // give the step grid the width back instead of clipping it.
+    m_density = densityForWidth(bounds.width);
+    float controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
-    // No 56px floor: at controlWidth 220 the floor pushed the label 38px past
-    // the route pill (which starts at controlWidth - 148). The label shrinks
-    // with the row and ellipsizes in UnitNameLabel (triage 2026-08-14).
-    float labelWidth = std::max(16.0f, controlWidth - 206.0f);
+    // The label ends before the pill band; the band width follows the tier.
+    const float pillBand = (m_density == Density::Full)     ? 142.0f
+                           : (m_density == Density::Compact) ? 110.0f
+                                                             : 74.0f;
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+    m_nameLabel->setCompact(m_density != Density::Full);
+}
+
+UnitRow::Density UnitRow::densityForWidth(float width) {
+    return (width >= 620.0f)   ? Density::Full
+           : (width >= 440.0f) ? Density::Compact
+                               : Density::Minimal;
+}
+
+float UnitRow::controlFloorForDensity(float width) {
+    const Density d = densityForWidth(width);
+    return (d == Density::Minimal)   ? 150.0f
+           : (d == Density::Compact) ? 180.0f
+                                     : 220.0f;
 }
 
 void UnitRow::routeToMixerChannel(uint32_t channelId) {

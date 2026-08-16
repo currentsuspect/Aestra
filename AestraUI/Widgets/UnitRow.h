@@ -193,6 +193,12 @@ private:
     static constexpr float PAD_SPACING = 3.0f;        // Space between pads
     
     float m_controlWidth = CONTROL_WIDTH;
+    // Responsive density (0.7.0 triage): derived from row width, never
+    // hardcoded per-state. Full keeps the pill band + type line; Compact
+    // compresses pills and drops the type line; Minimal collapses to a
+    // letter-only route chip and icon mute/solo.
+    enum class Density { Full, Compact, Minimal };
+    Density m_density = Density::Full;
     
     // Step sequencer
     int m_stepCount = 16;
@@ -267,6 +273,8 @@ private:
 
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;
+    Density densityForWidth(float width);
+    float controlFloorForDensity(float width);
     std::shared_ptr<NUIContextMenu> m_rowContextMenu;
     std::shared_ptr<NUIContextMenu> m_mixerRoutingMenu;
 

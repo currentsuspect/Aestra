@@ -138,6 +138,14 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     m_pianoRoll->setIsPlayingCallback([this]() {
         return m_trackManager && m_trackManager->isPlaying();
     });
+    // Follow-playhead is opt-in (0.7.0 triage): the playhead always moves,
+    // the viewport tracks only when enabled; "Center on playhead" jumps once.
+    m_pianoRoll->setOnFollowPlayheadChanged([this](bool on) {
+        m_followPlayhead = on;
+    });
+    m_pianoRoll->setOnCenterOnPlayhead([this]() {
+        m_pianoRoll->centerOnPlayhead();
+    });
     m_pianoRoll->setOnPreviewNote([this](int pitch, int velocity) {
         if (m_trackManager && m_trackManager->isPlaying()) return;
         if (m_audioEngine && m_editingUnitId != 0) {
@@ -578,7 +586,11 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                     if (m_trackManager->isPatternMode()) {
                         playheadBeat = std::fmod(currentBeat, patternLength);
                         if (playheadBeat < 0.0) playheadBeat += patternLength;
-                        follow = m_trackManager->isPlaying();
+                        // Follow is opt-in (0.7.0 triage): the playhead always
+                        // moves, but the viewport only tracks it when the user
+                        // enabled "Follow playhead" — editing while playing
+                        // must not yank the viewport back.
+                        follow = m_followPlayhead && m_trackManager->isPlaying();
                     } else {
                         // This editor's X axis is PATTERN-LOCAL beats; the transport reports
                         // ARRANGEMENT beats. Feeding one into the other drew a playhead that
