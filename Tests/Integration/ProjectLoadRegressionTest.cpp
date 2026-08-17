@@ -1080,6 +1080,11 @@ void testProjectLoadWarningsAreBounded() {
 
 } // namespace
 
+void testLegacyDemoAutomationCurveDroppedOnLoad();
+void testLegacyDemoAutomationNearMissPreserved();
+void testLegacyDemoAutomationMixedLane();
+void testLegacyDemoAutomationCloseNearMissPreserved();
+
 int main() {
     std::cout << "=== Project Load Regression Tests ===" << std::endl;
 
@@ -1097,7 +1102,271 @@ int main() {
     testTrackColorIndexRoundtrip();
     testProjectLoadWarningsAreBounded();
     testV1AutomationCurveMigratesToInstanceId();
+    testLegacyDemoAutomationCurveDroppedOnLoad();
+    testLegacyDemoAutomationNearMissPreserved();
+    testLegacyDemoAutomationMixedLane();
+    testLegacyDemoAutomationCloseNearMissPreserved();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;
+}
+
+// Legacy demo automation migration: projects saved before the 2026-08-14
+// demo-automation removal carry the addDemoTracks-era curve — channel 1
+// Volume, default 0.8, points 0.5/1.0/0.2/0.8 at beats 0/4/8/12. It must be
+// dropped on load (self-heal) with a diagnostic, while a near-miss curve
+// (same channel/default, different points) must survive untouched.
+void testLegacyDemoAutomationCurveDroppedOnLoad() {
+    std::cout << "[TEST] legacy demo automation curve dropped on load..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"legacy_demo_automation"};
+    const auto testDir = tempDirScope.path();
+    const std::filesystem::path testProject = testDir / "demo_curve.aes";
+
+    // Mirrors the exact saved shape found in pre-cleanup project files
+    // (e.g. "working 1.takes/main.aes", saved 2026-08-09).
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "automation": [
+                    {
+                        "param": 0,
+                        "targetEnum": 0,
+                        "default": 0.800000011920929,
+                        "mixerChannelId": 1,
+                        "points": [
+                            {"b": 0, "c": 0.5, "v": 0.5},
+                            {"b": 4, "c": 0.5, "v": 1},
+                            {"b": 8, "c": 0.5, "v": 0.20000000298023224},
+                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                        ]
+                    }
+                ]
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->automationCurves.empty() &&
+           "legacy demo curve must be dropped on load (channel 1 must not auto-automate)");
+
+    std::cout << "[TEST] legacy demo automation drop passed" << std::endl;
+}
+
+void testLegacyDemoAutomationNearMissPreserved() {
+    std::cout << "[TEST] legacy demo automation near-miss preserved..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"legacy_demo_automation_nearmiss"};
+    const auto testDir = tempDirScope.path();
+    const std::filesystem::path testProject = testDir / "nearmiss.aes";
+
+    // Same channel/default/count but a different value at beat 8: a real user
+    // curve that must NOT be mistaken for the demo shape.
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "automation": [
+                    {
+                        "param": 0,
+                        "targetEnum": 0,
+                        "default": 0.800000011920929,
+                        "mixerChannelId": 1,
+                        "points": [
+                            {"b": 0, "c": 0.5, "v": 0.5},
+                            {"b": 4, "c": 0.5, "v": 1},
+                            {"b": 8, "c": 0.5, "v": 0.7},
+                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                        ]
+                    }
+                ]
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->automationCurves.size() == 1 &&
+           "near-miss curve must survive (exact-shape match only)");
+    assert(lane->automationCurves[0].getPoints().size() == 4);
+
+    std::cout << "[TEST] near-miss preservation passed" << std::endl;
+}
+
+// A matching legacy curve followed by a real user curve: BOTH must be
+// evaluated — the legacy one is dropped, the user curve survives (the
+// migration filters the whole lane, not just the last curve).
+void testLegacyDemoAutomationMixedLane() {
+    std::cout << "[TEST] legacy demo automation mixed lane..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"legacy_demo_automation_mixed"};
+    const auto testDir = tempDirScope.path();
+    const std::filesystem::path testProject = testDir / "mixed.aes";
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "automation": [
+                    {
+                        "param": 0,
+                        "targetEnum": 0,
+                        "default": 0.800000011920929,
+                        "mixerChannelId": 1,
+                        "points": [
+                            {"b": 0, "c": 0.5, "v": 0.5},
+                            {"b": 4, "c": 0.5, "v": 1},
+                            {"b": 8, "c": 0.5, "v": 0.20000000298023224},
+                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                        ]
+                    },
+                    {
+                        "param": 0,
+                        "targetEnum": 0,
+                        "default": 0.6,
+                        "mixerChannelId": 2,
+                        "points": [
+                            {"b": 0, "c": 0.0, "v": 0.6},
+                            {"b": 8, "c": 0.0, "v": 0.9}
+                        ]
+                    }
+                ]
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(result.migrationOutcome == Aestra::MigrationOutcome::Transformed &&
+           "demo-curve removal must mark the load as transformed");
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->automationCurves.size() == 1 &&
+           "legacy curve dropped, user curve survives (filter, not last-only)");
+    assert(lane->automationCurves[0].mixerChannelId == 2 && "the surviving curve is the user's");
+
+    std::cout << "[TEST] mixed lane passed" << std::endl;
+}
+
+// A near-miss within the OLD 1e-3 tolerance (0.2005 vs 0.2) must survive:
+// the match threshold covers float32 serialization noise only (~1e-7), not
+// real user values.
+void testLegacyDemoAutomationCloseNearMissPreserved() {
+    std::cout << "[TEST] legacy demo automation close near-miss preserved..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"legacy_demo_automation_close"};
+    const auto testDir = tempDirScope.path();
+    const std::filesystem::path testProject = testDir / "close.aes";
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "automation": [
+                    {
+                        "param": 0,
+                        "targetEnum": 0,
+                        "default": 0.800000011920929,
+                        "mixerChannelId": 1,
+                        "points": [
+                            {"b": 0, "c": 0.5, "v": 0.5},
+                            {"b": 4, "c": 0.5, "v": 1},
+                            {"b": 8, "c": 0.5, "v": 0.2005},
+                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                        ]
+                    }
+                ]
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(result.migrationOutcome != Aestra::MigrationOutcome::Transformed &&
+           "a close near-miss must not trigger the migration");
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->automationCurves.size() == 1 &&
+           "close near-miss (0.2005) must survive the exact-shape match");
+    assert(lane->automationCurves[0].getPoints()[2].value == 0.2005f);
+
+    std::cout << "[TEST] close near-miss passed" << std::endl;
 }
