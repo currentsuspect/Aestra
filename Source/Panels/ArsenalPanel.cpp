@@ -20,6 +20,10 @@ constexpr int kArsenalMaxPatternBars = 16;
 constexpr int kArsenalMinPatternSteps = 16; // One bar at 1/16 resolution
 constexpr int kArsenalMaxPatternSteps = 256; // 16 bars at 1/16 resolution
 constexpr float kGroupGap = UnitRow::kStepGroupGap;
+// Bottom padding reserved in the unit-list scroll extent so the last row never
+// sits flush against the panel edge. One definition for preferred height and
+// both scroll computations — they used to disagree by this amount.
+constexpr float kArsenalListBottomPadding = 40.0f + 12.0f;
 
 const char* unitTypeDisplayName(UnitType type) {
     switch (type) {
@@ -223,12 +227,13 @@ int ArsenalPanel::computeLoopStepCount() const {
 
 float ArsenalPanel::computeGridMaxScrollX() const {
     if (m_fitToWidth) return 0.0f; // Whole loop shown → nothing to scroll
-    // Mirrors the UnitRow grid geometry (control block + context paddings +
-    // min 20px pads) so the shared scroll clamps against the real content.
+    // Mirrors the UnitRow grid geometry (control block + 8px context inset +
+    // 6px lane padding + min 20px pads) so the shared scroll clamps against
+    // the real content.
     const float width = m_progressHeaderRect.width;
     if (width <= 0.0f) return 0.0f;
     const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
-    const float availWidth = std::max(1.0f, width - controlWidth - 30.0f);
+    const float availWidth = std::max(1.0f, width - controlWidth - 14.0f);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
                                          static_cast<float>(std::max(1, m_stepCount)),
@@ -260,7 +265,7 @@ void ArsenalPanel::followGridPlayhead() {
     const float width = m_progressHeaderRect.width;
     if (width <= 0.0f) return;
     const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
-    const float availWidth = std::max(1.0f, width - controlWidth - 30.0f);
+    const float availWidth = std::max(1.0f, width - controlWidth - 14.0f);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
                                          static_cast<float>(std::max(1, m_stepCount)),
@@ -449,7 +454,8 @@ void ArsenalPanel::refreshUnits() {
     syncRowSelection();
     if (m_onPreferredHeightChanged) {
         const float preferredHeight = getTitleBarHeight() + 136.0f +
-                                      static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f);
+                                      static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f) +
+                                      kArsenalListBottomPadding;
         m_onPreferredHeightChanged(preferredHeight);
     }
     if (shouldRestoreDropTargets) {
@@ -825,7 +831,8 @@ void ArsenalPanel::onUpdate(double dt) {
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 32.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
-    const float contentHeight = static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f);
+    const float contentHeight =
+        static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f) + kArsenalListBottomPadding;
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
@@ -975,8 +982,8 @@ void ArsenalPanel::adjustPatternBars(int deltaBars) {
     }
 }
 
-void ArsenalPanel::adjustPatternSteps(int deltaSteps) {
-    if (!m_trackManager || !m_activePatternID.isValid() || deltaSteps == 0) {
+void ArsenalPanel::adjustPatternSteps(int deltaBars) {
+    if (!m_trackManager || !m_activePatternID.isValid() || deltaBars == 0) {
         return;
     }
 
@@ -990,10 +997,17 @@ void ArsenalPanel::adjustPatternSteps(int deltaSteps) {
         static_cast<int>(std::lround(std::max(0.25, pattern->lengthBeats) / 0.25)),
         kArsenalMinPatternSteps,
         kArsenalMaxPatternSteps);
-    // Snap to the 16-step bar grid so Bars and Steps can never contradict
-    // each other (e.g. a 63-step pattern would read as "4 Bars / 63 Steps").
-    const int barAlignedSteps = ((currentSteps + 15) / 16) * 16;
-    const int nextSteps = std::clamp(barAlignedSteps + deltaSteps, kArsenalMinPatternSteps, kArsenalMaxPatternSteps);
+    // Snap to the nearest bar so Bars and Steps can never contradict each
+    // other (e.g. a 63-step pattern would read as "4 Bars / 63 Steps") and
+    // "+" never skips past the next bar (a 20-step pattern used to jump
+    // straight to 48). The bar size follows the pattern's time signature,
+    // like the ruler hairlines — fixed 16-step bars would disagree with Bars
+    // display outside 4/4.
+    const int stepsPerBar = beatsPerBar() * 4;
+    const int barAlignedSteps =
+        std::max(stepsPerBar, ((currentSteps + stepsPerBar / 2) / stepsPerBar) * stepsPerBar);
+    const int nextSteps = std::clamp(barAlignedSteps + deltaBars * stepsPerBar, kArsenalMinPatternSteps,
+                                     kArsenalMaxPatternSteps);
     const double nextLengthBeats = static_cast<double>(nextSteps) * 0.25;
     if (std::abs(nextLengthBeats - pattern->lengthBeats) < 0.001) {
         return;
@@ -1020,7 +1034,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     // inset + 6px lane padding, so header pads line up with row pads exactly)
     const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     const float gridStartX = bounds.x + controlWidth + 14.0f;
-    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 30.0f);
+    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 14.0f);
 
     double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
     UnitType selectedType = UnitType::Sampler;
@@ -1103,6 +1117,12 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         renderer.drawTextCentered("+", m_stepsIncrementRect, themeProps.fontSizeXS,
                                   stepsIncEnabled ? pillText : disabledText);
     } else {
+        // Clear the step hit rects: the mouse handler gates on width > 0, so
+        // stale rects from a previously selected step unit would stay
+        // clickable and adjust the pattern length behind a MIDI/Audio unit.
+        m_stepsDecrementRect = NUIRect{};
+        m_stepsValueRect = NUIRect{};
+        m_stepsIncrementRect = NUIRect{};
         const float contentBadgeWidth = contentLabel == "Note Roll" ? 74.0f : 62.0f;
         const NUIRect contentBadge(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, contentBadgeWidth,
                                    leftCard.height - 8.0f);
@@ -1513,12 +1533,12 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         const auto stepsIncHit = expandHitRect(m_stepsIncrementRect, 4.0f);
         if (m_stepsDecrementRect.width > 0.0f && stepsDecHit.contains(event.position) &&
             m_stepCount > kArsenalMinPatternSteps) {
-            adjustPatternSteps(-16);
+            adjustPatternSteps(-1);
             return true;
         }
         if (m_stepsIncrementRect.width > 0.0f && stepsIncHit.contains(event.position) &&
             m_stepCount < kArsenalMaxPatternSteps) {
-            adjustPatternSteps(16);
+            adjustPatternSteps(1);
             return true;
         }
     }
@@ -1559,7 +1579,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         
         // Fallback: scroll the unit list
-        float contentHeight = (m_unitRows.size() * (56.0f + 8.0f)) + 40.0f + 12.0f; 
+        float contentHeight = (m_unitRows.size() * (56.0f + 8.0f)) + kArsenalListBottomPadding;
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         

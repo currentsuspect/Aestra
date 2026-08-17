@@ -141,7 +141,7 @@ private:
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
-    void adjustPatternSteps(int deltaSteps);
+    void adjustPatternSteps(int deltaBars);
     void createUnitOfType(UnitType type);
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
