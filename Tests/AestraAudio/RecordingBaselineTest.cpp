@@ -215,6 +215,38 @@ void testMultipleArmedTracksCaptureIndependently() {
     }
 }
 
+void testTwoArmedTracksSharingChannelCaptureIndependently() {
+    std::cout << "[A] two armed tracks sharing one channel capture independently\n";
+    auto tm = makeRecorder();
+    const PlaylistLaneID lane1 = tm->getPlaylistModel().createLane("Shared A");
+    const PlaylistLaneID lane2 = tm->getPlaylistModel().createLane("Shared B");
+    MixerChannel* ch = tm->addChannel("Shared");
+    if (!ch) {
+        check(false, "shared channel created");
+        return;
+    }
+    ch->setInputChannelIndex(0);
+    const uint64_t track1 = tm->createTrack(lane1, "Shared A", ch->getChannelId());
+    const uint64_t track2 = tm->createTrack(lane2, "Shared B", ch->getChannelId());
+    tm->setTrackArmed(track1, true);
+    tm->setTrackArmed(track2, true);
+
+    tm->record();
+    recordTake(*tm, 1.0);
+
+    auto* t1 = tm->getTrack(track1);
+    auto* t2 = tm->getTrack(track2);
+    check(t1 && t2, "both tracks resolvable");
+    check(t1 && t1->laneIds.size() == 2, "track 1 owns setup lane plus its take");
+    check(t2 && t2->laneIds.size() == 2, "track 2 owns setup lane plus its take");
+    if (t1 && t2 && t1->laneIds.size() == 2 && t2->laneIds.size() == 2) {
+        const PlaylistLaneID take1 = takeLaneOf(*tm, track1);
+        const PlaylistLaneID take2 = takeLaneOf(*tm, track2);
+        check(take1.isValid() && take2.isValid(), "both tracks got their own take despite the shared channel");
+        check(take1 != take2, "takes are on distinct lanes");
+    }
+}
+
 void testEachTakeCreatesALane() {
     std::cout << "[A] each take creates a track-local lane\n";
     auto tm = makeRecorder();
@@ -402,6 +434,7 @@ int main() {
     testRecordingIsOneUndoableTransaction();
     testDirtyStateUpdated();
     testMultipleArmedTracksCaptureIndependently();
+    testTwoArmedTracksSharingChannelCaptureIndependently();
     testEachTakeCreatesALane();
 
     std::cout << "Section B: post-migration acceptance\n";

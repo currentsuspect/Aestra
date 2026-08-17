@@ -2789,11 +2789,13 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
 void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth) {
     if (!m_trackManager || !m_channel) return;
     if (!m_trackManager->isRecording()) return;
-    if (!m_channel->isArmed()) return;
+    auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+    auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
+    if (!track || !track->armed) return;
 
     std::vector<float> recordingData;
     double startBeat = 0.0;
-    bool gotSnapshot = m_trackManager->getRecordingDataSnapshot(m_channel->getChannelId(), recordingData, startBeat);
+    bool gotSnapshot = m_trackManager->getRecordingDataSnapshot(track->trackId, recordingData, startBeat);
     
     if (!gotSnapshot || recordingData.empty()) return;
 
