@@ -31,6 +31,10 @@ public:
     UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aestra::Audio::UnitManager& manager, Aestra::Audio::UnitID unitId, Aestra::Audio::PatternID patternId);
     ~UnitRow() override;
 
+    // Structural 4-step group gap shared by rows and the Arsenal header ruler.
+    // Keep in sync with ArsenalPanel's kGroupGap.
+    static constexpr float kStepGroupGap = 2.0f;
+
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
@@ -150,6 +154,26 @@ public:
      */
     bool isSelected() const { return m_isSelected; }
 
+    /**
+     * @brief Set the selected step indices for this row. The panel owns the
+     *        source of truth (it survives row rebuilds) and pushes it back
+     *        here; rows only draw and edit against it.
+     * @param steps Sorted step indices to mark as selected.
+     */
+    void setStepSelection(const std::vector<int>& steps) {
+        m_selectedSteps = steps;
+        invalidateVisuals();
+    }
+    /**
+     * @brief Callback fired whenever this row's step selection changes.
+     * @param unitId The unit owning the selection.
+     * @param steps The new sorted selection.
+     */
+    std::function<void(Aestra::Audio::UnitID, const std::vector<int>&)> m_onStepSelectionChanged;
+    void setOnStepSelectionChanged(std::function<void(Aestra::Audio::UnitID, const std::vector<int>&)> cb) {
+        m_onStepSelectionChanged = std::move(cb);
+    }
+
 private:
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
     Aestra::Audio::UnitManager& m_manager;
@@ -207,13 +231,21 @@ private:
 
     // Pad width for the current fit mode: fit shrinks to show every step,
     // scroll mode keeps a readable minimum and lets m_scrollX page the grid.
+    // The 4-step group gap is carved out of the available width so fit mode
+    // still shows the whole loop exactly (content = stepWidth * N + gaps).
     float gridStepWidth(float availWidth) const {
-        const float w = availWidth / static_cast<float>(std::max(1, m_stepCount));
+        const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kStepGroupGap;
+        const float w = std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount));
         return m_fitToWidth ? std::max(w, 4.0f) : std::max(w, PAD_MIN_SIZE);
     }
     std::function<void(float)> m_onGridScroll; // Panel-owned shared scroll (see setOnGridScroll)
     NUIRect m_viewport{}; // Panel list viewport; empty = unrestricted
     int m_hoveredStep = -1;
+    // Step selection (selection-based editing): sorted step indices. The
+    // panel mirrors this per active unit so it survives row rebuilds.
+    std::vector<int> m_selectedSteps;
+    bool m_stepGestureShiftHeld = false; // Shift state captured at grid press
+    bool m_stepGestureWasActive = false; // pressed step already had a note at press
     
     // Minimap pitch scroll
     float m_minimapPitchOffset = 0.0f; // Scroll offset for pitch viewport
@@ -231,16 +263,17 @@ private:
     enum class StepGestureMode { None, Pending, Velocity, Paint, Erase };
     static constexpr float kDefaultStepVelocity = 100.0f / 127.0f;
     static constexpr float kMinStepVelocity = 0.05f;
+    static constexpr float kVelocityNudgeStep = 0.05f; // Up/Down arrow velocity nudge
     StepGestureMode m_stepGestureMode = StepGestureMode::None;
     int m_velEditStep = -1; // initial step; -1 = no session
     int m_stepGestureLastStep = -1;
     float m_stepGestureStartX = 0.0f;
     float m_velEditStartY = 0.0f;
     float m_velEditBaseVelocity = kDefaultStepVelocity;
-    bool m_velEditWasActive = false; // step already had a note at press
     bool m_stepGestureChanged = false;
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
+    int m_lastClipClickStep = -1;        // Step of the last grid press; -1 = miss / non-grid
 
     // === Helpers ===
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
@@ -264,11 +297,22 @@ private:
     bool removeStepNote(int step);                         // remove note at step
     void setStepNoteVelocity(int step, float velocity);    // set velocity of note at step
 
+    // Selection-based editing helpers.
+    bool isStepSelected(int step) const;
+    void applyClickSelection(int step, bool additive); // click / shift-click select
+    void applyRangeSelection(int firstStep, int lastStep); // select painted range
+    void notifyStepSelectionChanged();
+    void duplicateSelection(); // Ctrl+B: copy selection just after its occupied span
+    void deleteSelection();    // Delete/Backspace: remove every selected step
+    void moveSelection(int stepDelta);         // Left/Right: move selected notes (per-step, cascading)
+    void nudgeSelectionVelocity(float delta);  // Up/Down: velocity nudge on selected notes
+    void selectAllNotes();                     // Ctrl+A: select every step that has a note
+
     // Icon drawing helpers
     void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
-    void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
-    void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
+    void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
+    void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
     void drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active); // [NEW]
 
     // Internal components
