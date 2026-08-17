@@ -314,17 +314,18 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         // Fire undo/redo callback
         if (onSoloChanged) onSoloChanged(soloed);
     };
-    m_buttons->onArmToggled = [this](bool armed) {
+    m_buttons->onMonitorToggled = [this](bool monitored) {
         if (!m_viewModel) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel || channel->id == 0) return;
 
-        // v3.0: Recording is handled by PlaylistModel/TrackManager transport logic, not MixerChannel.
-        channel->armed = armed;
+        // FD-14 #6: the mixer slot is input monitoring, not record arm. The
+        // engine's monitor routes gate on channel armed + monitorInput.
+        channel->monitored = monitored;
         invalidateStaticCache();
 
         if (auto mc = channel->channel) {
-            mc->setArmed(armed);
+            mc->setArmed(monitored);
         }
     };
     addChild(m_buttons);
@@ -671,7 +672,9 @@ void UIMixerStrip::onUpdate(double deltaTime)
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->setMuted(channel->muted);
         m_buttons->setSoloed(channel->soloed);
-        m_buttons->setArmed(channel->armed);
+        // The monitor button reflects the engine's arm flag — post-FD-14 #6
+        // that flag is the input-monitoring gate, never a recording control.
+        m_buttons->setMonitored(channel->armed);
     }
 
     if (m_trimKnob && m_trimKnob->isVisible() && !m_trimKnob->isDragging()) {

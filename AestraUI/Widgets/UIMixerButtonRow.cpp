@@ -19,9 +19,10 @@ namespace {
     constexpr float BTN_GAP = 5.0f;
     constexpr float BTN_RADIUS = 8.0f;
 
-    // Mute/solo/record glyphs come from TrackControlIcons.h, shared with the
+    // Mute/solo/monitor glyphs come from TrackControlIcons.h, shared with the
     // arrangement track headers so both surfaces speak one icon language by
-    // construction rather than by matching copies.
+    // construction rather than by matching copies. FD-14 #6: the strip's third
+    // slot is input monitoring — record arm lives on the Track only.
 
     // Parsed once, then rasterized+cached per size/tint by NUISVGRenderer, so the
     // per-frame cost is a single texture draw.
@@ -51,7 +52,7 @@ void UIMixerButtonRow::cacheThemeColors()
 
     m_muteOn = theme.getColor("muted");
     m_soloOn = theme.getColor("soloed");
-    m_armOn = theme.getColor("armed");
+    m_monitorOn = theme.getColor("armed");
 }
 
 void UIMixerButtonRow::layoutButtons()
@@ -97,10 +98,10 @@ void UIMixerButtonRow::setSoloed(bool soloed)
     requestInvalidate();
 }
 
-void UIMixerButtonRow::setArmed(bool armed)
+void UIMixerButtonRow::setMonitored(bool monitored)
 {
-    if (m_armed == armed) return;
-    m_armed = armed;
+    if (m_monitored == monitored) return;
+    m_monitored = monitored;
     requestInvalidate();
 }
 
@@ -112,7 +113,7 @@ void UIMixerButtonRow::onResize(int width, int height)
 
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
-    static constexpr const char* icons[kButtonCount] = {kMuteIconSvg, kSoloIconSvg, kRecordIconSvg};
+    static constexpr const char* icons[kButtonCount] = {kMuteIconSvg, kSoloIconSvg, kMonitorIconSvg};
     auto& theme = NUIThemeManager::getInstance();
 
     for (int i = 0; i < kButtonCount; ++i) {
@@ -132,8 +133,8 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             activeBg = m_soloOn;
             if (active) textColor = m_textOnBright;
         } else if (i == 2) {
-            active = m_armed;
-            activeBg = m_armOn;
+            active = m_monitored;
+            activeBg = m_monitorOn;
             if (active) textColor = m_textOnRed;
         }
 
@@ -199,7 +200,7 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 std::string text;
                 if (m_hovered == 0) text = "Mute";
                 else if (m_hovered == 1) text = "Solo";
-                else if (m_hovered == 2) text = "Record Arm";
+                else if (m_hovered == 2) text = "Input Monitor";
                 
                 const auto& rect = m_buttonBounds[m_hovered];
                 NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
@@ -237,9 +238,9 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 requestInvalidate();
                 if (onSoloToggled) onSoloToggled(m_soloed, event.modifiers);
             } else if (wasPressed == 2) {
-                m_armed = !m_armed;
+                m_monitored = !m_monitored;
                 requestInvalidate();
-                if (onArmToggled) onArmToggled(m_armed);
+                if (onMonitorToggled) onMonitorToggled(m_monitored);
             }
             return true;
         }

@@ -218,8 +218,8 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_soloButton->setTooltip("Solo Track (S)");
     addChild(m_soloButton);
 
-    // Recording is armed from mixer inserts. A Playlist lane only receives a
-    // record control when an explicit mixer association is supplied.
+    // FD-14 #6: record arm lives on the Track (setTrackArmed). The button is
+    // the track's arm control; input monitoring is the right-click menu.
     if (m_channel) {
         m_recordButton = std::make_shared<AestraUI::NUIButton>();
         m_recordButton->setText("");
@@ -388,17 +388,16 @@ void TrackUIComponent::onSoloToggled() {
 
 
 void TrackUIComponent::onRecordToggled() {
-    if (m_channel) {
-        const bool armed = m_recordButton && m_recordButton->isToggled();
-        m_channel->setArmed(armed);
-        if (m_trackManager) {
-            m_trackManager->publishInputMonitoringSnapshot();
-        }
-        Log::info("Lane " + m_laneId.toString() + " armed: " + (armed ? "ON" : "OFF"));
-        updateUI();
-        repaint();
-        if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-    }
+    if (!m_trackManager) return;
+    auto* track = m_trackManager->getTrackForLane(m_laneId);
+    if (!track) return;
+    const bool armed = m_recordButton && m_recordButton->isToggled();
+    m_trackManager->setTrackArmed(track->trackId, armed);
+    m_trackManager->markModified();
+    Log::info("Track " + std::to_string(track->trackId) + " armed: " + (armed ? "ON" : "OFF"));
+    updateUI();
+    repaint();
+    if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
 }
 
 void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
@@ -409,7 +408,7 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
     detachContextMenu(m_recordModeMenu);
     m_recordModeMenu = std::make_shared<AestraUI::NUIContextMenu>();
     m_recordModeMenu->setOnHide([this]() { detachContextMenu(m_recordModeMenu); });
-    m_recordModeMenu->addRadioItem("Arm Only", "record_mode", !m_channel->isMonitoringEnabled(), [this]() {
+    m_recordModeMenu->addRadioItem("Input Monitoring: Off", "record_mode", !m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(false);
         if (m_trackManager) {
@@ -418,7 +417,7 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
         updateUI();
         repaint();
     });
-    m_recordModeMenu->addRadioItem("Arm + Monitor", "record_mode", m_channel->isMonitoringEnabled(), [this]() {
+    m_recordModeMenu->addRadioItem("Input Monitoring: On", "record_mode", m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(true);
         if (m_trackManager) {
@@ -435,8 +434,8 @@ void TrackUIComponent::updateRecordTooltip() {
         return;
     }
 
-    const char* modeText = m_channel->isMonitoringEnabled() ? "Arm + Monitor" : "Arm Only";
-    m_recordButton->setTooltip(std::string("Arm for Recording (O) • Right-click: ") + modeText);
+    const char* monitorText = m_channel->isMonitoringEnabled() ? "On" : "Off";
+    m_recordButton->setTooltip(std::string("Arm for Recording (O) • Right-click: Input Monitoring: ") + monitorText);
 }
 
 
@@ -468,9 +467,10 @@ void TrackUIComponent::updateUI() {
     };
 
     const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
+    const auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
     configureStatusButton(m_muteButton, lane && lane->muted, themeManager.getColor("muted"));
     configureStatusButton(m_soloButton, lane && lane->solo, themeManager.getColor("soloed"));
-    configureStatusButton(m_recordButton, m_channel && m_channel->isArmed(), themeManager.getColor("armed"));
+    configureStatusButton(m_recordButton, track && track->armed, themeManager.getColor("armed"));
 
     if (m_recordButton) {
         updateRecordTooltip();
@@ -1671,9 +1671,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
         drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
         if (m_channel) {
-            drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
-                            m_channel->isArmed() ? recordActive : textIdle,
-                            m_channel->isArmed(), recordActive);
+            auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
+            const bool isArmed = armTrack && armTrack->armed;
+            drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
         }
     }
 
