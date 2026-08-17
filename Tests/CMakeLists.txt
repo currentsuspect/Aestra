@@ -1338,6 +1338,7 @@ target_include_directories(RecordingBaselineTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME RecordingBaselineTest COMMAND RecordingBaselineTest)
+set_tests_properties(RecordingBaselineTest PROPERTIES LABELS "audio;recording;baseline;contract:audio")
 set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless;contract:application")
 
 

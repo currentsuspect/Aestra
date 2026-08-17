@@ -58,15 +58,17 @@ std::shared_ptr<TrackManager> makeRecorder() {
 }
 
 void feedInput(TrackManager& tm, double seconds) {
+    // processInput() expects interleaved frames * inputChannelCount samples.
     const uint32_t frames = static_cast<uint32_t>(seconds * kSampleRate);
-    std::vector<float> input(static_cast<size_t>(frames));
+    const uint32_t channels = std::max(1u, static_cast<uint32_t>(tm.getInputChannelCount()));
+    std::vector<float> input(static_cast<size_t>(frames) * channels);
     for (size_t i = 0; i < input.size(); ++i) {
-        input[i] = 0.25f * std::sin(2.0 * 3.14159265 * 440.0 * static_cast<double>(i) / kSampleRate);
+        input[i] = 0.25f * std::sin(2.0 * 3.14159265 * 440.0 * static_cast<double>(i / channels) / kSampleRate);
     }
     constexpr uint32_t kBlock = 512;
-    for (size_t off = 0; off < input.size(); off += kBlock) {
-        const size_t n = std::min<size_t>(kBlock, input.size() - off);
-        tm.processInput(input.data() + off, static_cast<uint32_t>(n));
+    for (size_t off = 0; off < frames; off += kBlock) {
+        const size_t n = std::min<size_t>(kBlock, frames - off);
+        tm.processInput(input.data() + off * channels, static_cast<uint32_t>(n));
     }
 }
 
