@@ -27,12 +27,17 @@
 
 #include "RealtimeThreadGuard.h"   // canonical: ScopedRealtimeAudioThread / isRealtimeAudioThread
 #include "AudioThreadConstraints.h" // app-layer constraint macros + AudioThreadStats
+#include "Core/MixerChannel.h"
 
 #include <cstdio>
+#include <string>
 
 using namespace Aestra::Audio;
 
 static int g_failures = 0;
+static const char* g_firedApi = nullptr;
+
+static void onMisuse(const char* apiName) noexcept { g_firedApi = apiName; }
 
 #define CHECK(cond)                                                            \
     do {                                                                       \
@@ -90,6 +95,40 @@ int main() {
         CHECK(isRealtimeAudioThread()); // still RT after inner exits
     }
     CHECK(!isRealtimeAudioThread());
+
+    // ── Mixer mutation tripwires (T-2 coverage audit) ───────────────────────
+    // The mixer setter surface must refuse mutations from the audio thread:
+    // the graph snapshot is the audio thread's view, and a stray setter call
+    // from inside the callback is a real-time violation that would otherwise
+    // go unnoticed. Off the audio thread, behavior is unchanged.
+    {
+        MixerChannel channel("Tripwire Test", 1);
+        channel.setMute(false);
+
+        CHECK(!isRealtimeAudioThread());
+        channel.setMute(true); // off-thread: normal mutation
+        CHECK(channel.isMuted() == true);
+
+        const char* firedApi = nullptr;
+        g_firedApi = nullptr;
+        setRealtimeMisuseHandler(onMisuse);
+
+        channel.setMute(true); // off-thread: no report (state unchanged)
+        CHECK(g_firedApi == nullptr);
+
+        {
+            ScopedRealtimeAudioThread rtScope;
+            CHECK(isRealtimeAudioThread());
+            channel.setMute(false); // on-thread: must report + refuse
+        }
+        firedApi = g_firedApi;
+        CHECK(firedApi != nullptr && std::string(firedApi) == "MixerChannel::setMute");
+        CHECK(channel.isMuted() == true); // mutation refused on the audio thread
+
+        setRealtimeMisuseHandler(nullptr);
+        channel.setMute(false); // off-thread again: works
+        CHECK(channel.isMuted() == false);
+    }
 
     if (g_failures == 0) {
         std::puts("RTGuardConsolidationTest: PASS");
