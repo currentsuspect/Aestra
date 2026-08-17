@@ -365,7 +365,19 @@ void assertV2PositionalMixerSemantics(TrackManager& tracks, const std::string& g
             require(channel->isSoloSafe() == expected[i].soloSafe, at + " channel solo-safe");
             require(channel->isArmed() == expected[i].armed, at + " channel armed");
         }
+
+        // FD-14 #6/#8: the legacy lane `armed` flag migrates onto the lane's
+        // created Track, so pre-FD-14 recording-arm intent survives the
+        // ownership migration instead of silently vanishing.
+        const auto* track = tracks.getTrackForLane(ids[i]);
+        require(track != nullptr, at + " track missing (FD-14 ownership)");
+        if (track) {
+            require(track->armed == expected[i].armed, at + " track armed must inherit legacy lane armed");
+        }
     }
+
+    require(tracks.hasArmedTracks(),
+            generation + ": migrated armed track must satisfy hasArmedTracks()");
 
     // Routing is a separate concern from level state: it must survive the
     // topology change with its target still resolving to the intended channel.

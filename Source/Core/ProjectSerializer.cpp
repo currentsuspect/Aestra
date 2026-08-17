@@ -1968,6 +1968,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         // per-lane file field) so the track migration never infers ownership
         // from array position.
         std::unordered_map<std::string, uint32_t> legacyLaneChannelIds;
+        // FD-14 #6/#8: legacy lane JSON carries the channel's armed flag per
+        // lane (an explicit per-lane file field); the track migration uses it
+        // to preserve recording-arm intent onto the created tracks.
+        std::unordered_map<std::string, bool> legacyLaneArmed;
         if (root.has("lanes")) {
             const JSON& lj = root["lanes"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1997,6 +2001,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     continue;
                 }
                 MixerChannel* channel = nullptr;
+                if (lj[i].has("armed") && lj[i]["armed"].isBool()) {
+                    legacyLaneArmed[laneId.toString()] = lj[i]["armed"].asBool();
+                }
                 if (!hasIndependentMixerChannels) {
                     uint32_t storedMixerChannelId = 0;
                     if (lj[i].has("mixerChannelId") && lj[i]["mixerChannelId"].isNumber()) {
@@ -2565,7 +2572,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
 
             // Migration: lanes without ownership get one deterministic Track
-            // each, using the lane's OWN stored channel when one exists.
+            // each, using the lane's OWN stored channel when one exists. The
+            // legacy per-lane armed flag migrates onto the created track so
+            // pre-FD-14 recording arm is preserved, never silently dropped.
             for (const auto& laneId : laneIds) {
                 auto* lane = trackManager->getPlaylistModel().getLane(laneId);
                 if (!lane || lane->trackId != 0) {
@@ -2576,7 +2585,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (legacyIt != legacyLaneChannelIds.end()) {
                     storedChannelId = legacyIt->second;
                 }
-                trackManager->createTrack(laneId, lane->name, storedChannelId);
+                const uint64_t createdTrackId = trackManager->createTrack(laneId, lane->name, storedChannelId);
+                const auto armedIt = legacyLaneArmed.find(laneId.toString());
+                if (createdTrackId != 0 && armedIt != legacyLaneArmed.end() && armedIt->second) {
+                    trackManager->setTrackArmed(createdTrackId, true);
+                }
             }
         }
 
