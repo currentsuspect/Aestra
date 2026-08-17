@@ -2195,34 +2195,55 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     // 0/4/8/12 — is dropped on load so projects saved before
                     // the demo-automation removal self-heal instead of
                     // silently automating channel 1 on every playback.
-                    // Exact-shape match only: a real user curve is never
-                    // touched unless it matches all characteristics.
+                    // Exact-shape match only, at serialization-scale tolerance
+                    // (float32 storage noise ~1e-7; a real point like 0.2005
+                    // differs by 5e-4 and must survive). EVERY matching curve
+                    // is removed, wherever it sits in the lane's list.
                     if (!lane->automationCurves.empty()) {
-                        auto& curve = lane->automationCurves.back();
-                        const bool legacyDemoShape =
-                            curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Volume &&
-                            curve.mixerChannelId == 1 && std::abs(curve.getDefaultValue() - 0.8f) < 1e-3f &&
-                            curve.getPoints().size() == 4;
-                        if (legacyDemoShape) {
-                            constexpr double kDemoBeats[4] = {0.0, 4.0, 8.0, 12.0};
-                            constexpr double kDemoValues[4] = {0.5, 1.0, 0.2, 0.8};
-                            bool shapeMatches = true;
-                            for (size_t i = 0; i < 4; ++i) {
-                                const auto& pt = curve.getPoints()[i];
-                                if (std::abs(pt.beat - kDemoBeats[i]) > 1e-3 ||
-                                    std::abs(static_cast<double>(pt.value) - kDemoValues[i]) > 1e-3) {
-                                    shapeMatches = false;
-                                    break;
-                                }
+                        constexpr double kDemoBeats[4] = {0.0, 4.0, 8.0, 12.0};
+                        constexpr double kDemoValues[4] = {0.5, 1.0, 0.2, 0.8};
+                        constexpr double kDemoTolerance = 1e-6;
+                        const auto isLegacyDemoCurve = [](const AutomationCurve& curve) {
+                            return curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Volume &&
+                                   curve.mixerChannelId == 1 &&
+                                   std::abs(curve.getDefaultValue() - 0.8f) < 1e-6f &&
+                                   curve.getPoints().size() == 4;
+                        };
+                        size_t droppedCount = 0;
+                        lane->automationCurves.erase(
+                            std::remove_if(lane->automationCurves.begin(), lane->automationCurves.end(),
+                                           [&](const AutomationCurve& curve) {
+                                               if (!isLegacyDemoCurve(curve)) {
+                                                   return false;
+                                               }
+                                               const auto& pts = curve.getPoints();
+                                               for (size_t i = 0; i < 4; ++i) {
+                                                   if (std::abs(pts[i].beat - kDemoBeats[i]) > kDemoTolerance ||
+                                                       std::abs(static_cast<double>(pts[i].value) - kDemoValues[i]) >
+                                                           kDemoTolerance) {
+                                                       return false;
+                                                   }
+                                               }
+                                               ++droppedCount;
+                                               return true;
+                                           }),
+                            lane->automationCurves.end());
+                        if (droppedCount > 0) {
+                            warningLimiter.warning(
+                                ProjectLoadWarningCategory::LegacyDemoAutomation,
+                                "[ProjectLoad] Dropped " + std::to_string(droppedCount) +
+                                    " legacy demo automation curve(s) on channel 1 (pre-0.7.0 demo data).",
+                                "[ProjectLoad] Additional legacy demo automation drops suppressed.");
+                            if (!result.report) {
+                                result.report = std::make_unique<ProjectLoadReport>();
                             }
-                            if (shapeMatches) {
-                                lane->automationCurves.pop_back();
-                                warningLimiter.warning(
-                                    ProjectLoadWarningCategory::LegacyDemoAutomation,
-                                    "[ProjectLoad] Dropped the legacy demo automation curve on channel 1 "
-                                    "(pre-0.7.0 demo data).",
-                                    "[ProjectLoad] Additional legacy demo automation drops suppressed.");
-                            }
+                            result.report->issues.push_back(
+                                {LoadIssueSeverity::Warning, "legacy_demo_automation",
+                                 "Removed the legacy demo automation curve(s) on channel 1 (pre-0.7.0 demo "
+                                 "data); the project has been migrated.",
+                                 0, {}, laneName});
+                            result.migrationOutcome =
+                                combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
                         }
                     }
                     if (lj[i].has("clips")) {
