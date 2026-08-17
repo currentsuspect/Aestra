@@ -28,11 +28,11 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     renderer.fillRect(bounds, theme.getColor("timelineBed"));
 
     const auto gridInk = theme.getCurrentTheme().textPrimary;
-    const auto accidentalRow = gridInk.withAlpha(0.032f);
-    const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.055f);
+    const auto accidentalRow = gridInk.withAlpha(0.018f);
+    const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.035f);
     // Out-of-scale rows recede toward the bed's own polarity, not toward black.
-    const auto outOfScaleRow = gridInk.withAlpha(0.10f);
-    const auto rowLine = gridInk.withAlpha(0.045f);
+    const auto outOfScaleRow = gridInk.withAlpha(0.025f);
+    const auto rowLine = gridInk.withAlpha(0.020f);
 
     int startPitch = 127 - static_cast<int>(scrollY_ / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + bounds.height) / keyHeight_);
@@ -56,9 +56,13 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         renderer.drawLine(NUIPoint(bounds.x, y), NUIPoint(bounds.right(), y), 1.0f, rowLine);
     }
 
-    renderTimelineGrid(
-        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
-        {}, getSnapSubdivisionBeats());
+    TimelineGridStyle gridStyle;
+    gridStyle.barLineAlpha = 0.02f;
+    gridStyle.beatLineAlpha = 0.005f;
+    gridStyle.subdivisionLineAlpha = 0.002f;
+    gridStyle.zebraAlpha = 0.006f;
+    renderTimelineGrid(renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
+                       gridStyle, getSnapSubdivisionBeats());
 
     if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
         const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;
@@ -77,16 +81,11 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
 
     const float patternEndX =
         beatToScreenX(totalDurationBeats_, pixelsPerBeat_, scrollX_, bounds.x);
-    if (patternEndX < bounds.right()) {
-        const float shadeX = std::max(bounds.x, patternEndX);
-        renderer.fillRect(NUIRect(shadeX, bounds.y, bounds.right() - shadeX, bounds.height),
-                          NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.14f));
-    }
     if (patternEndX >= bounds.x && patternEndX <= bounds.right()) {
         renderer.drawLine(NUIPoint(patternEndX, bounds.y),
                           NUIPoint(patternEndX, bounds.bottom()),
-                          2.0f,
-                          theme.getColor("accentPrimary").withAlpha(0.58f));
+                          1.0f,
+                          theme.getColor("accentPrimary").withAlpha(0.34f));
     }
 
     renderer.clearClipRect();

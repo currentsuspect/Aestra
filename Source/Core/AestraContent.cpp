@@ -897,6 +897,23 @@ void AestraContent::setupArsenalPanels() {
     // Create Arsenal panel
     m_sequencerPanel = std::make_shared<ArsenalPanel>(m_trackManager);
     m_sequencerPanel->setPatternBrowser(m_patternBrowser.get());
+    m_sequencerPanel->setOnPreferredHeightChanged([this](float preferredHeight) {
+        if (!m_sequencerPanel || m_sequencerPanel->isMaximized()) {
+            return;
+        }
+        const auto allowed = computeAllowedRectForPanels();
+        auto rect = m_viewState.sequencerRect;
+        rect.width = std::max(rect.width, 520.0f);
+        const float desiredHeight = std::clamp(preferredHeight, 220.0f, allowed.height);
+        if (std::abs(rect.height - desiredHeight) < 0.5f) {
+            return;
+        }
+        rect.height = desiredHeight;
+        rect = clampRectToAllowed(rect, allowed);
+        m_viewState.sequencerRect = rect;
+        m_sequencerPanel->setBounds(rect);
+        setDirty(true);
+    });
 
     m_sampleEditorPanel = std::make_shared<SampleEditorPanel>(m_trackManager);
     m_sampleEditorPanel->setVisible(false);
@@ -1247,7 +1264,7 @@ void AestraContent::setupArsenalPanels() {
     m_sequencerPanel->setVisible(false);
     m_sequencerPanel->unregisterDropTargets();
     m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
-    wireFloatingPanel(m_sequencerPanel, ViewType::Sequencer, &ViewState::sequencerRect, 520.0f, 260.0f);
+    wireFloatingPanel(m_sequencerPanel, ViewType::Sequencer, &ViewState::sequencerRect, 520.0f, 220.0f);
     m_overlayLayer->addChild(m_sequencerPanel);
 }
 

@@ -133,9 +133,8 @@ void PianoRollToolbar::setupUI() {
         auto b = m_menuBtn->getBounds();
         if (auto* parent = getParent()) {
             parent->addChild(m_activeContextMenu);
-            const auto pb = parent->getBounds();
-            menu->showAt(static_cast<int>(b.x - pb.x),
-                         static_cast<int>(b.y - pb.y + b.height + 2.0f));
+            menu->showAt(static_cast<int>(b.x),
+                         static_cast<int>(b.y + b.height + 2.0f));
         } else {
             addChild(m_activeContextMenu);
             menu->showAt(static_cast<int>(b.x), static_cast<int>(b.y + b.height + 2.0f));

@@ -174,8 +174,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& themeManager = NUIThemeManager::getInstance();
     
-    const auto panelBg = themeManager.getColor("backgroundSecondary").darkened(0.025f);
-    const auto border = themeManager.getColor("border").withAlpha(0.52f);
+    const auto panelBg = themeManager.getColor("backgroundPrimary");
+    const auto border = themeManager.getColor("border").withAlpha(0.28f);
     renderer.fillRect(b, panelBg);
     renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.right(), b.y), 1.0f, border);
     
@@ -220,8 +220,13 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(contentRect);
 
     const float startX = contentRect.x;
+    TimelineGridStyle gridStyle;
+    gridStyle.barLineAlpha = 0.02f;
+    gridStyle.beatLineAlpha = 0.005f;
+    gridStyle.subdivisionLineAlpha = 0.002f;
+    gridStyle.zebraAlpha = 0.006f;
     renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar_,
-                       themeManager.getCurrentTheme().textPrimary);
+                       themeManager.getCurrentTheme().textPrimary, gridStyle);
 
     const float availH = std::max(1.0f, b.height - 28.0f);
     const float bottomY = b.bottom() - 8.0f;
@@ -235,16 +240,11 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.drawLine(NUIPoint(contentRect.x, bottomY), NUIPoint(contentRect.right(), bottomY), 1.0f, guideColor);
 
     const float patternEndX = startX + static_cast<float>(layer->getTotalDurationBeats() * pixelsPerBeat_) - scrollX_;
-    if (patternEndX < contentRect.right()) {
-        const float shadeX = std::max(contentRect.x, patternEndX);
-        renderer.fillRect(NUIRect(shadeX, contentRect.y, contentRect.right() - shadeX, contentRect.height),
-                          NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.14f));
-    }
     if (patternEndX >= contentRect.x && patternEndX <= contentRect.right()) {
         renderer.drawLine(NUIPoint(patternEndX, contentRect.y),
                           NUIPoint(patternEndX, contentRect.bottom()),
-                          2.0f,
-                          themeManager.getColor("accentPrimary").withAlpha(0.58f));
+                          1.0f,
+                          themeManager.getColor("accentPrimary").withAlpha(0.34f));
     }
     
     // 2. Render the lane stems: velocity rises from the floor; pan hangs off
