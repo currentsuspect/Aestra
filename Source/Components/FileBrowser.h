@@ -499,7 +499,7 @@ public:
     bool sortAscending_;
     
     // Icons
-    std::shared_ptr<NUIIcon> searchIcon_;
+    std::shared_ptr<NUIIcon> m_searchIcon;
     std::shared_ptr<NUIIcon> folderIcon_;
     std::shared_ptr<NUIIcon> folderOpenIcon_;
     std::shared_ptr<NUIIcon> audioFileIcon_;

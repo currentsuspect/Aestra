@@ -904,12 +904,18 @@ void AestraContent::setupArsenalPanels() {
         const auto allowed = computeAllowedRectForPanels();
         auto rect = m_viewState.sequencerRect;
         rect.width = std::max(rect.width, 520.0f);
-        const float desiredHeight = std::clamp(preferredHeight, 220.0f, allowed.height);
-        if (std::abs(rect.height - desiredHeight) < 0.5f) {
+        // std::clamp requires lo <= hi: on short layouts the 220 floor must
+        // shrink with the allowed height.
+        const float floorHeight = std::min(220.0f, allowed.height);
+        const float desiredHeight = std::clamp(preferredHeight, floorHeight, allowed.height);
+        rect.height = desiredHeight;
+        // Normalize against the allowed rect BEFORE the equality check, so an
+        // out-of-bounds request cannot masquerade as a settled layout.
+        rect = clampRectToAllowed(rect, allowed);
+        if (std::abs(rect.height - m_viewState.sequencerRect.height) < 0.5f &&
+            std::abs(rect.width - m_viewState.sequencerRect.width) < 0.5f) {
             return;
         }
-        rect.height = desiredHeight;
-        rect = clampRectToAllowed(rect, allowed);
         m_viewState.sequencerRect = rect;
         m_sequencerPanel->setBounds(rect);
         setDirty(true);

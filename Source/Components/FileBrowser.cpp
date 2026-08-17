@@ -421,10 +421,15 @@ FileBrowser::FileBrowser()
     searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
     searchInput_->setBorderWidth(1.0f);
 
-    searchIcon_ = std::make_shared<NUIIcon>();
-    searchIcon_->loadSVG(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.4 3.2a7.2 7.2 0 1 0 4.55 12.78l4.03 4.03 1.7-1.7-4.03-4.03A7.2 7.2 0 0 0 10.4 3.2Zm0 2.4a4.8 4.8 0 1 1 0 9.6 4.8 4.8 0 0 1 0-9.6Z"/></svg>)");
-    searchIcon_->setIconSize(15.0f, 15.0f);
-    searchIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+    m_searchIcon = std::make_shared<NUIIcon>();
+    // Search icon (magnifier), split across literals to respect the column limit
+    const char* searchSvg =
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.4 3.2a7.2 7.2 0 1 0 4.55 12.78l4.03 )"
+        R"(4.03 1.7-1.7-4.03-4.03A7.2 7.2 0 0 0 10.4 3.2Zm0 2.4a4.8 4.8 0 1 1 0 9.6 4.8 4.8 )"
+        R"(0 0 1 0-9.6Z"/></svg>)";
+    m_searchIcon->loadSVG(searchSvg);
+    m_searchIcon->setIconSize(15.0f, 15.0f);
+    m_searchIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -1529,10 +1534,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
         auto& themeManager = NUIThemeManager::getInstance();
         const BrowserLayout layout = computeBrowserLayout();
         const NUIRect search = layout.searchBar;
-        if (searchIcon_) {
-            searchIcon_->setBounds({search.x + 6.0f, search.y + (search.height - 15.0f) * 0.5f, 15.0f, 15.0f});
-            searchIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
-            searchIcon_->onRender(renderer);
+        if (m_searchIcon) {
+            m_searchIcon->setBounds({search.x + 6.0f, search.y + (search.height - 15.0f) * 0.5f, 15.0f, 15.0f});
+            m_searchIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+            m_searchIcon->onRender(renderer);
         }
 
         const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
