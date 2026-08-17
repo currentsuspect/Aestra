@@ -273,7 +273,7 @@ void CommandRegistry::initialize() {
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
-        return std::make_unique<SetVolumeCommand>(*ch, *valueOpt);
+        return std::make_unique<SetVolumeCommand>(*tm, *ch, *valueOpt);
     });
 
     reg.registerCommand("set_pan", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
@@ -290,7 +290,7 @@ void CommandRegistry::initialize() {
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
-        return std::make_unique<SetPanCommand>(*ch, *valueOpt);
+        return std::make_unique<SetPanCommand>(*tm, *ch, *valueOpt);
     });
 
     // ===== Clip (5) =====

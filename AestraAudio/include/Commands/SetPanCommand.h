@@ -3,6 +3,7 @@
 
 #include "Commands/ICommand.h"
 #include "Core/MixerChannel.h"
+#include "Models/TrackManager.h"
 
 #include <memory>
 #include <string>
@@ -12,11 +13,16 @@ namespace Audio {
 
 /**
  * @brief Command to change a channel's pan position
+ *
+ * Requests an audio graph rebuild on every mutation (execute/undo/redo):
+ * the strip pan reads TrackRenderState.pan, baked into the immutable graph
+ * snapshot at build time — a pan change without a rebuild leaves the snapshot
+ * stale (the T-4 mute-bug class).
  */
 class SetPanCommand : public ICommand {
 public:
-    SetPanCommand(MixerChannel& channel, float newPan)
-        : m_channel(channel), m_newPan(newPan) {}
+    SetPanCommand(TrackManager& trackManager, MixerChannel& channel, float newPan)
+        : m_trackManager(trackManager), m_channel(channel), m_newPan(newPan) {}
 
     void execute() override {
         if (m_executed)
@@ -24,6 +30,7 @@ public:
 
         m_originalPan = m_channel.getPan();
         m_channel.setPan(m_newPan);
+        m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::MixerStateChanged);
         m_executed = true;
     }
 
@@ -32,6 +39,7 @@ public:
             return;
 
         m_channel.setPan(m_originalPan);
+        m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::MixerStateChanged);
         m_executed = false;
     }
 
@@ -40,6 +48,7 @@ public:
             return;
 
         m_channel.setPan(m_newPan);
+        m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::MixerStateChanged);
         m_executed = true;
     }
 
@@ -48,6 +57,7 @@ public:
     bool changesProjectState() const override { return true; }
 
 private:
+    TrackManager& m_trackManager;
     MixerChannel& m_channel;
     float m_newPan;
     float m_originalPan = 0.0f;

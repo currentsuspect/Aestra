@@ -28,9 +28,10 @@ void testSetVolumeCommand() {
     std::cout << "TEST: SetVolumeCommand... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setVolume(0.5f);
 
-    SetVolumeCommand cmd(channel, 0.8f);
+    SetVolumeCommand cmd(trackManager, channel, 0.8f);
     cmd.execute();
 
     assert(approxEqual(channel.getVolume(), 0.8f));
@@ -49,9 +50,10 @@ void testSetVolumeDoubleExecuteNoOp() {
     std::cout << "TEST: SetVolumeCommand double execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setVolume(0.3f);
 
-    SetVolumeCommand cmd(channel, 0.9f);
+    SetVolumeCommand cmd(trackManager, channel, 0.9f);
     cmd.execute();
     assert(approxEqual(channel.getVolume(), 0.9f));
 
@@ -70,9 +72,10 @@ void testSetVolumeUndoBeforeExecuteNoOp() {
     std::cout << "TEST: SetVolumeCommand undo before execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setVolume(0.5f);
 
-    SetVolumeCommand cmd(channel, 0.8f);
+    SetVolumeCommand cmd(trackManager, channel, 0.8f);
     // Undo before execute should be no-op
     cmd.undo();
 
@@ -86,7 +89,8 @@ void testSetVolumeCommandMetadata() {
     std::cout << "TEST: SetVolumeCommand metadata... ";
 
     MixerChannel channel("Test Channel", 0);
-    SetVolumeCommand cmd(channel, 0.7f);
+    TrackManager trackManager;
+    SetVolumeCommand cmd(trackManager, channel, 0.7f);
 
     assert(cmd.changesProjectState() == true);
     assert(cmd.getSizeInBytes() > 0);
@@ -102,9 +106,10 @@ void testSetPanCommand() {
     std::cout << "TEST: SetPanCommand... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setPan(0.0f);  // Center
 
-    SetPanCommand cmd(channel, -0.5f);  // Pan left
+    SetPanCommand cmd(trackManager, channel, -0.5f);  // Pan left
     cmd.execute();
 
     assert(approxEqual(channel.getPan(), -0.5f));
@@ -123,17 +128,18 @@ void testSetPanBoundaryValues() {
     std::cout << "TEST: SetPanCommand boundary values... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
 
     // Full left
     channel.setPan(0.0f);
-    SetPanCommand leftCmd(channel, -1.0f);
+    SetPanCommand leftCmd(trackManager, channel, -1.0f);
     leftCmd.execute();
     assert(approxEqual(channel.getPan(), -1.0f));
     leftCmd.undo();
     assert(approxEqual(channel.getPan(), 0.0f));
 
     // Full right
-    SetPanCommand rightCmd(channel, 1.0f);
+    SetPanCommand rightCmd(trackManager, channel, 1.0f);
     rightCmd.execute();
     assert(approxEqual(channel.getPan(), 1.0f));
     rightCmd.undo();
@@ -146,9 +152,10 @@ void testSetPanDoubleExecuteNoOp() {
     std::cout << "TEST: SetPanCommand double execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setPan(0.0f);
 
-    SetPanCommand cmd(channel, 0.75f);
+    SetPanCommand cmd(trackManager, channel, 0.75f);
     cmd.execute();
     assert(approxEqual(channel.getPan(), 0.75f));
 
@@ -165,9 +172,10 @@ void testSetPanUndoBeforeExecuteNoOp() {
     std::cout << "TEST: SetPanCommand undo before execute no-op... ";
 
     MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
     channel.setPan(0.3f);
 
-    SetPanCommand cmd(channel, -0.8f);
+    SetPanCommand cmd(trackManager, channel, -0.8f);
     cmd.undo(); // Before execute - no-op
 
     assert(approxEqual(channel.getPan(), 0.3f));
@@ -362,8 +370,8 @@ void testMixerCommandsWithHistory() {
     CommandHistory history;
 
     // Push all four command types
-    history.pushAndExecute(std::make_shared<SetVolumeCommand>(channel, 0.8f));
-    history.pushAndExecute(std::make_shared<SetPanCommand>(channel, -0.3f));
+    history.pushAndExecute(std::make_shared<SetVolumeCommand>(trackManager, channel, 0.8f));
+    history.pushAndExecute(std::make_shared<SetPanCommand>(trackManager, channel, -0.3f));
     history.pushAndExecute(std::make_shared<SetMuteCommand>(trackManager, channel, true));
     history.pushAndExecute(std::make_shared<SetSoloCommand>(trackManager, channel, true));
 

@@ -2,7 +2,9 @@
 
 #include "AudioGraphBuilder.h"
 #include "Commands/SetMuteCommand.h"
+#include "Commands/SetPanCommand.h"
 #include "Commands/SetSoloCommand.h"
+#include "Commands/SetVolumeCommand.h"
 #include "Models/TrackManager.h"
 
 #include <iostream>
@@ -89,6 +91,49 @@ int main() {
         return 1;
     }
 
-    std::cout << "mute/solo command rebuild passed\n";
+    // Volume: the strip gain reads the SNAPSHOT (track.volume), so a volume
+    // command without a rebuild leaves the fader cosmetic until an unrelated
+    // edit rebuilds the graph. Regression for the cosmetic-fader report.
+    history.pushAndExecute(std::make_shared<SetVolumeCommand>(trackManager, *channel, 0.25f));
+    if (!drainAndCheck(trackManager, channelId, false, false, "volume")) {
+        return 1;
+    }
+    {
+        auto graph = AudioGraphBuilder::buildFromTrackManager(trackManager);
+        const TrackRenderState* track = findTrack(graph, channelId);
+        if (!track || std::abs(track->volume - 0.25f) > 0.0001f) {
+            std::cerr << "FAIL[volume]: snapshot volume does not reflect the command ("
+                      << (track ? track->volume : -1.0f) << ")\n";
+            return 1;
+        }
+    }
+    history.undo();
+    if (!drainAndCheck(trackManager, channelId, false, false, "undo-volume")) {
+        return 1;
+    }
+    {
+        auto graph = AudioGraphBuilder::buildFromTrackManager(trackManager);
+        const TrackRenderState* track = findTrack(graph, channelId);
+        if (!track || std::abs(track->volume - 1.0f) > 0.0001f) {
+            std::cerr << "FAIL[undo-volume]: snapshot volume not restored\n";
+            return 1;
+        }
+    }
+
+    // Pan: same contract.
+    history.pushAndExecute(std::make_shared<SetPanCommand>(trackManager, *channel, 0.5f));
+    if (!drainAndCheck(trackManager, channelId, false, false, "pan")) {
+        return 1;
+    }
+    {
+        auto graph = AudioGraphBuilder::buildFromTrackManager(trackManager);
+        const TrackRenderState* track = findTrack(graph, channelId);
+        if (!track || std::abs(track->pan - 0.5f) > 0.0001f) {
+            std::cerr << "FAIL[pan]: snapshot pan does not reflect the command\n";
+            return 1;
+        }
+    }
+
+    std::cout << "mute/solo/volume/pan command rebuild passed\n";
     return 0;
 }
