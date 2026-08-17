@@ -41,7 +41,10 @@ const expectedSignatureHex =
 
 describe("LicenseGate cross-language fixture", () => {
   it("generates the exact canonical lease and signature verified by the C++ fixture test", async () => {
-    const secret_b64 = "Vn6i+8aS0USH3ssQKlJYM5nDndtF5lBBtYO7qqlwqM6/ML+55m/zSbuWkism6S+4YCcq3CQT8VtAUryLVoAPWA==";
+    const secret_b64 = process.env.AESTRA_LICENSE_GATE_FIXTURE_PRIVATE_KEY;
+    if (!secret_b64) {
+      throw new Error("AESTRA_LICENSE_GATE_FIXTURE_PRIVATE_KEY is required");
+    }
     const secret = Uint8Array.from(atob(secret_b64), (c: string) => c.charCodeAt(0));
     const keyPair = nacl.sign.keyPair.fromSecretKey(secret);
     const env: Env = {
