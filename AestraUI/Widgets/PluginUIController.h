@@ -19,12 +19,19 @@ class NUIPlatformBridge;
 #include <memory>
 #include "Events/Connection.h"
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
 #endif
+
+namespace Aestra {
+namespace Audio {
+class TrackManager;
+}
+} // namespace Aestra
 
 namespace AestraUI {
 class UIMixerPluginDropdown;
@@ -110,11 +117,14 @@ public:
     // ==============================
     
     /**
-     * @brief Bind an EffectChainRack to an audio EffectChain
+     * @brief Bind an EffectChainRack to a mixer channel's effect chain
      * @param rack Rack widget to populate.
-     * @param chain Audio effect chain mirrored by the rack.
+     * @param trackManager Track manager owning the channel (id 0 = master).
+     * @param channelId Stable mixer channel identity — the chain is resolved
+     *        fresh at refresh/callback time so a deleted channel can never
+     *        leave the rack pointing at freed memory.
      */
-    void bindEffectRack(EffectChainRack* rack, Aestra::Audio::EffectChain* chain);
+    void bindEffectRack(EffectChainRack* rack, Aestra::Audio::TrackManager* trackManager, uint32_t channelId);
     
     /**
      * @brief Unbind effect rack
@@ -223,12 +233,21 @@ private:
     // Bound widgets
     PluginBrowserPanel* m_browser = nullptr;
     
-    // Rack bindings (rack -> chain)
+    // Rack bindings (rack -> stable channel identity). The chain is resolved
+    // fresh at use time (resolveBoundChain), never cached: a channel can die
+    // with its chain at any moment, and a raw chain pointer in the binding is
+    // what made refreshRackDisplay crash in getPlugin() — three SEGVs on
+    // 2026-08-16, two more after the first fix (22:04, 22:19).
     struct RackBinding {
         EffectChainRack* rack;
-        Aestra::Audio::EffectChain* chain;
+        Aestra::Audio::TrackManager* trackManager;
+        uint32_t channelId;
     };
     std::vector<RackBinding> m_rackBindings;
+
+    /** Resolve the live chain for a bound rack, or nullptr when the channel
+     * (or its chain) no longer exists. Channel id 0 = master channel. */
+    Aestra::Audio::EffectChain* resolveBoundChain(EffectChainRack* rack);
     
     // effectChainChanged is a scoped subscription signal for effect-chain mutations.
     std::function<void(int)> m_onScanComplete;

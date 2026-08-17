@@ -1,19 +1,21 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// PluginRackBindingLifecycleTest — the inspector rack must follow the
-// LAST-bound chain and never hold a binding to a chain that died with its
-// channel (three SEGVs in one day: EffectChain::getPlugin from
-// refreshRackDisplay on a normal frame update).
+// PluginRackBindingLifecycleTest — the inspector rack must resolve its chain
+// FRESH from the channel's stable identity, never from a cached pointer.
 //
-// Root cause: bindEffectRack() APPENDED bindings, and refreshRackDisplay()
-// read the FIRST match — so after switching selection A -> B, the rack kept
-// displaying (and later dereferencing) chain A. When channel A was deleted,
-// chain A's memory was freed and the next fingerprint-triggered refresh
-// crashed. The fix: one binding per rack — a re-bind replaces the previous.
+// The pointer-based binding crashed five times in one day (2026-08-16,
+// 12:58/16:10/19:28 + 22:04/22:19): refreshRackDisplay() dereferenced an
+// EffectChain that died with its channel — first because re-binds appended
+// stale bindings, then (after the replace fix) because the frame's
+// fingerprint refresh can fire before the selection sync re-binds, and the
+// VM's channel pointer itself can go stale. The binding now stores the
+// channel ID and resolves the chain at refresh/callback time; a deleted
+// channel resolves to null and the rack clears to Empty.
 
 #include "PluginBrowserPanel.h"
 #include "PluginUIController.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginHost.h"
+#include "Models/TrackManager.h"
 
 #include <iostream>
 #include <memory>
@@ -98,35 +100,56 @@ std::string slotName(EffectChainRack& rack, int slot) {
 
 int main() {
     auto rack = std::make_shared<EffectChainRack>();
-    EffectChain chainA;
-    EffectChain chainB;
-    chainA.insertPlugin(0, makePlugin("Alpha"));
-    chainB.insertPlugin(0, makePlugin("Beta"));
+    TrackManager trackManager;
+    MixerChannel* channelA = trackManager.addChannel("Alpha Channel");
+    MixerChannel* channelB = trackManager.addChannel("Beta Channel");
+    if (!channelA || !channelB) {
+        std::cerr << "failed to add channels\n";
+        return 1;
+    }
+    channelA->getEffectChain().insertPlugin(0, makePlugin("Alpha"));
+    channelB->getEffectChain().insertPlugin(0, makePlugin("Beta"));
+    const uint32_t idA = channelA->getChannelId();
+    const uint32_t idB = channelB->getChannelId();
 
     PluginUIController controller;
 
-    // Initial bind: the rack shows chain A's content.
-    controller.bindEffectRack(rack.get(), &chainA);
+    // Initial bind by stable id: the rack shows channel A's content.
+    controller.bindEffectRack(rack.get(), &trackManager, idA);
     controller.refreshRackDisplay(rack.get());
     expect(slotName(*rack, 0) == "Alpha", "first bind shows chain A");
 
-    // Selection switch A -> B: the rack must now show chain B. Regression:
-    // the old code appended the binding and read the FIRST match, so the rack
-    // kept showing (and dereferencing) chain A — which later crashed when
-    // channel A was deleted.
-    controller.bindEffectRack(rack.get(), &chainB);
+    // Selection switch A -> B: re-bind replaces; rack now shows B.
+    controller.bindEffectRack(rack.get(), &trackManager, idB);
     controller.refreshRackDisplay(rack.get());
-    expect(slotName(*rack, 0) == "Beta", "re-bind replaces the previous binding (rack shows chain B)");
+    expect(slotName(*rack, 0) == "Beta", "re-bind replaces the previous binding");
 
-    // Cycling back to A must work too — the replace invariant holds both ways.
-    controller.bindEffectRack(rack.get(), &chainA);
+    // Cycling back to A works.
+    controller.bindEffectRack(rack.get(), &trackManager, idA);
     controller.refreshRackDisplay(rack.get());
     expect(slotName(*rack, 0) == "Alpha", "cycling back to chain A shows A");
 
-    // Unbind clears the binding; a fresh bind afterwards works (the app uses
-    // this when the mixer selection is cleared).
+    // THE REGRESSION: channel A dies (deleted mid-session). The rack's next
+    // refresh must resolve null and clear to Empty — never dereference the
+    // freed chain. The pointer-based binding crashed here (5 SEGVs, #790).
+    trackManager.removeChannelById(idA);
+    controller.refreshRackDisplay(rack.get());
+    expect(slotName(*rack, 0) == "Empty", "deleted channel clears the rack (no stale chain)");
+
+    // Re-bind to the surviving channel still works after the deletion.
+    controller.bindEffectRack(rack.get(), &trackManager, idB);
+    controller.refreshRackDisplay(rack.get());
+    expect(slotName(*rack, 0) == "Beta", "bind after deletion shows chain B");
+
+    // Master (id 0) resolves through getMasterChannel.
+    trackManager.getMasterChannel()->getEffectChain().insertPlugin(0, makePlugin("Master"));
+    controller.bindEffectRack(rack.get(), &trackManager, 0);
+    controller.refreshRackDisplay(rack.get());
+    expect(slotName(*rack, 0) == "Master", "master channel binds and resolves");
+
+    // Unbind clears the binding; a fresh bind afterwards works.
     controller.unbindEffectRack(rack.get());
-    controller.bindEffectRack(rack.get(), &chainB);
+    controller.bindEffectRack(rack.get(), &trackManager, idB);
     controller.refreshRackDisplay(rack.get());
     expect(slotName(*rack, 0) == "Beta", "bind after unbind shows chain B");
 
