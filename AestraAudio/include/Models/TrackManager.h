@@ -4,6 +4,7 @@
 #include "../Commands/CommandHistory.h"
 #include "../Commands/CommandTransaction.h"
 #include "../Commands/CreateLaneCommand.h"
+#include "../Commands/AttachLaneToTrackCommand.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
@@ -62,6 +63,7 @@ public:
         std::atomic<uint64_t> totalCapturedFrames{0};
         std::atomic<bool> hasStarted{false};
         int inputIndex{-1};
+        uint64_t trackId{0};
     };
 
     struct RtInputMonitorRoute {
@@ -416,6 +418,24 @@ public:
         track->laneIds.push_back(laneId);
         if (!track->activeLaneId.isValid()) {
             track->activeLaneId = laneId;
+        }
+        return true;
+    }
+
+    /** @brief Detach a lane from its Track (undo of attachLaneToTrack).
+     *  Returns false when either id is invalid or the lane is not owned by
+     *  the track. */
+    bool detachLaneFromTrack(uint64_t trackId, PlaylistLaneID laneId) {
+        auto* track = getTrack(trackId);
+        auto* lane = m_playlistModel.getLane(laneId);
+        if (!track || !lane || lane->trackId != trackId) {
+            return false;
+        }
+        lane->trackId = 0;
+        auto& lanes = track->laneIds;
+        lanes.erase(std::remove(lanes.begin(), lanes.end(), laneId), lanes.end());
+        if (track->activeLaneId == laneId) {
+            track->activeLaneId = lanes.empty() ? PlaylistLaneID{} : lanes.back();
         }
         return true;
     }
@@ -1116,7 +1136,7 @@ public:
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
     }
-    bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
+    bool hasArmedTracks() const { return getTrackArmedCount() > 0; }
 
     /**
      * @brief Toggle record-arm state and manage capture session lifetime.
@@ -1567,8 +1587,12 @@ private:
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_recordingCaptures.clear();
         const size_t maxSamplesPerCapture = maxRecordingSamplesPerCapture();
-        for (const auto& channel : m_channels) {
-            if (!channel || !channel->isArmed()) {
+        for (const auto& [trackId, track] : m_tracks) {
+            if (!track.armed) {
+                continue;
+            }
+            auto* channel = getChannelById(track.channelId);
+            if (!channel) {
                 continue;
             }
             const int requestedInput = channel->getInputChannelIndex();
@@ -1584,6 +1608,7 @@ private:
             capture->totalCapturedFrames.store(0, std::memory_order_relaxed);
             capture->hasStarted.store(false, std::memory_order_relaxed);
             capture->inputIndex = requestedInput;
+            capture->trackId = trackId;
             m_recordingCaptures[channel->getChannelId()] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
@@ -1603,7 +1628,7 @@ private:
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         publishRecordingCaptureSnapshot();
-        Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
+        Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getTrackArmedCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
 
@@ -1650,14 +1675,21 @@ private:
         Log::info("[TrackManager] Recording session stopped. Captured tracks: " + std::to_string(captures.size()));
 
         for (const auto& [channelId, capture] : captures) {
+            (void)channelId;
             if (capture) {
-                commitRecordingTake(channelId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
+                commitRecordingTake(capture->trackId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
             }
         }
     }
 
-    void commitRecordingTake(uint32_t channelId, const RecordingCapture& capture, double fallbackStartBeat,
+    void commitRecordingTake(uint64_t trackId, const RecordingCapture& capture, double fallbackStartBeat,
                              bool forcePlacementStartBeat) {
+        auto* track = getTrack(trackId);
+        if (!track) {
+            Log::warning("[TrackManager] Could not resolve Track for recorded take: " + std::to_string(trackId));
+            return;
+        }
+        const uint32_t channelId = track->channelId;
         std::vector<float> capturedSamples = copyCaptureSamples(capture);
         if (capturedSamples.empty()) {
             return;
@@ -1665,7 +1697,7 @@ private:
 
         if (!getChannelById(channelId)) {
             Log::warning("[TrackManager] Could not resolve mixer insert for recorded take " +
-                         std::to_string(channelId));
+                         std::to_string(channelId) + " (track " + std::to_string(trackId) + ")");
             return;
         }
 
@@ -1758,11 +1790,28 @@ private:
             return;
         }
 
+        // The take lane is owned by the recording Track (FD-14): the lane
+        // joins the track in the same undoable step as its creation, so undo
+        // detaches and removes it atomically.
+        auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
+        attachLane->execute();
+        auto* ownedLane = m_playlistModel.getLane(laneId);
+        if (!ownedLane || ownedLane->trackId != trackId) {
+            attachLane->undo();
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to attach recorded take lane to track " + std::to_string(trackId));
+            return;
+        }
+
         auto transaction = std::make_shared<CommandTransaction>("Record Take");
         transaction->add(createLane);
         transaction->add(addClip);
+        transaction->add(attachLane);
         transaction->markExecuted();
         if (!m_commandHistory.pushExecuted(transaction)) {
+            attachLane->undo();
             addClip->undo();
             createLane->undo();
             m_patternManager.removePattern(patternId);
@@ -1911,16 +1960,6 @@ private:
                 sample *= scale;
             }
         }
-    }
-
-    size_t getArmedTrackCount() const {
-        size_t count = 0;
-        for (const auto& channel : m_channels) {
-            if (channel && channel->isArmed()) {
-                ++count;
-            }
-        }
-        return count;
     }
 
     size_t findChannelIndexById(uint32_t channelId) const {
