@@ -237,6 +237,8 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             clearDropPreview();
             return result;
         }
+        // FD-14: a new lane belongs to a new Track (ownership by stable id).
+        m_trackManager->createTrack(targetLaneId, laneName);
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {

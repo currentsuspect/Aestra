@@ -158,6 +158,10 @@ int main() {
     PlaylistLaneID laneBId = playlist1.createLane("Identity B");
     auto* chanB = tm1->addChannel("Identity B");
     require(laneAId.isValid() && laneBId.isValid() && chanA && chanB, "setup: lanes/channels");
+    // FD-14: lanes belong to Tracks. The fixture creates the ownership layer
+    // the model now expects, with explicit channel associations.
+    tm1->createTrack(laneAId, "Identity A", chanA->getChannelId());
+    tm1->createTrack(laneBId, "Identity B", chanB->getChannelId());
 
     MidiPayload midi;
     MidiNote note;
@@ -227,6 +231,7 @@ int main() {
 
         PlaylistLaneID freshLane = tm2->getPlaylistModel().createLane("PostLoad");
         require(freshLane.isValid(), "post-load lane create failed");
+        tm2->createTrack(freshLane, "PostLoad");
         auto laneIds2 = collectLaneIds(*tm2);
         require(std::count(laneIds2.begin(), laneIds2.end(), freshLane.toString()) == 1,
                 "post-load lane ID must be unique");

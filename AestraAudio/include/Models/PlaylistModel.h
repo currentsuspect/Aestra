@@ -31,6 +31,9 @@ struct PlaylistLane {
     int index = 0;
     /** @brief Clips currently placed on the lane. */
     std::vector<ClipInstance> clips;
+    /** @brief Owning Track's stable id (FD-14). 0 = unowned/legacy until the
+     *  loader migration assigns ownership. Never derived from lane index. */
+    uint64_t trackId{0};
 
     /** @brief Lane volume multiplier. */
     float volume{1.0f};

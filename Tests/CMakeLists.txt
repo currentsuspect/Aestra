@@ -1293,6 +1293,29 @@ else()
 endif()
 
 # Recording Path Test (headless, no audio hardware required)
+# FD-14 PR-1: Track model + lane ownership + load-time migration.
+add_executable(TrackOwnershipTest
+    AestraAudio/TrackOwnershipTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(TrackOwnershipTest PRIVATE AestraAudio)
+target_include_directories(TrackOwnershipTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME TrackOwnershipTest COMMAND TrackOwnershipTest)
+set_tests_properties(TrackOwnershipTest PROPERTIES LABELS "audio;tracks;migration;contract:audio")
+
 add_executable(RecordingPathTest
     AestraAudio/RecordingPathTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp

@@ -20,19 +20,19 @@ namespace Audio {
  */
 class ChannelStrip : public AestraUI::NUIComponent {
 public:
-    ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackManager = nullptr);
+    ChannelStrip(std::shared_ptr<MixerChannel> track, TrackManager* trackManager = nullptr);
     
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     
-    void setTrack(std::shared_ptr<Track> track) { m_track = track; }
-    std::shared_ptr<Track> getTrack() const { return m_track; }
+    void setTrack(std::shared_ptr<MixerChannel> track) { m_track = track; }
+    std::shared_ptr<MixerChannel> getTrack() const { return m_track; }
 
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
 
 private:
-    std::shared_ptr<Track> m_track;
+    std::shared_ptr<MixerChannel> m_track;
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
 

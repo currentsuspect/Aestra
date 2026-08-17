@@ -18,6 +18,7 @@
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
+#include "Track.h"
 #include "SourceManager.h"
 #include "UnitManager.h"
 
@@ -338,14 +339,6 @@ public:
      * @param index Channel index inside the current track list.
      * @return Mutable track pointer or nullptr when out of range.
      */
-    MixerChannel* getTrack(size_t index) { return getChannel(index); }
-    /**
-     * @brief Get a track by zero-based index.
-     * @param index Channel index inside the current track list.
-     * @return Const track pointer or nullptr when out of range.
-     */
-    const MixerChannel* getTrack(size_t index) const { return getChannel(index); }
-
     /** @brief Find a mixer channel by stable ID. */
     MixerChannel* getChannelById(uint32_t channelId) {
         const size_t index = findChannelIndexById(channelId);
@@ -356,6 +349,137 @@ public:
     const MixerChannel* getChannelById(uint32_t channelId) const {
         const size_t index = findChannelIndexById(channelId);
         return index < m_channels.size() ? m_channels[index].get() : nullptr;
+    }
+
+    // ==============================
+    // Tracks (FD-14 ownership layer)
+    // ==============================
+
+    /**
+     * @brief Create a Track owning the given lane (FD-14).
+     *
+     * Ownership is by stable ID: the lane's trackId is set explicitly and the
+     * track's laneIds list is appended. Never positional.
+     *
+     * @param laneId The lane the track owns (must exist).
+     * @param name Track name.
+     * @param channelId Routing destination (MASTER_MIXER_CHANNEL_ID default).
+     * @return The new track's stable id, or 0 on failure.
+     */
+    uint64_t createTrack(PlaylistLaneID laneId, const std::string& name,
+                         uint32_t channelId = MASTER_MIXER_CHANNEL_ID) {
+        auto* lane = m_playlistModel.getLane(laneId);
+        if (!lane) {
+            return 0;
+        }
+        Track track;
+        track.trackId = m_nextTrackId++;
+        track.name = name.empty() ? ("Track " + std::to_string(track.trackId)) : name;
+        track.channelId = channelId;
+        track.laneIds.push_back(laneId);
+        track.activeLaneId = laneId;
+        lane->trackId = track.trackId;
+        m_tracks[track.trackId] = std::move(track);
+        return track.trackId;
+    }
+
+    /** @brief Find a Track by stable ID. */
+    Track* getTrack(uint64_t trackId) {
+        auto it = m_tracks.find(trackId);
+        return it != m_tracks.end() ? &it->second : nullptr;
+    }
+
+    /** @brief Find a Track by stable ID (const). */
+    const Track* getTrack(uint64_t trackId) const {
+        auto it = m_tracks.find(trackId);
+        return it != m_tracks.end() ? &it->second : nullptr;
+    }
+
+    /** @brief Resolve the Track owning a lane, or nullptr when unowned. */
+    Track* getTrackForLane(PlaylistLaneID laneId) {
+        auto* lane = m_playlistModel.getLane(laneId);
+        if (!lane || lane->trackId == 0) {
+            return nullptr;
+        }
+        return getTrack(lane->trackId);
+    }
+
+    /** @brief Attach an existing lane to a Track (lane created after the
+     *  track, e.g. a recorded take). Returns false when either is invalid. */
+    bool attachLaneToTrack(uint64_t trackId, PlaylistLaneID laneId) {
+        auto* track = getTrack(trackId);
+        auto* lane = m_playlistModel.getLane(laneId);
+        if (!track || !lane) {
+            return false;
+        }
+        lane->trackId = trackId;
+        track->laneIds.push_back(laneId);
+        if (!track->activeLaneId.isValid()) {
+            track->activeLaneId = laneId;
+        }
+        return true;
+    }
+
+    /** @brief Set the Track's recording arm state (FD-14 #6: the authoritative
+     *  recording arm lives on the Track). */
+    void setTrackArmed(uint64_t trackId, bool armed) {
+        if (auto* track = getTrack(trackId)) {
+            track->armed = armed;
+        }
+    }
+
+    /** @brief Number of armed Tracks. */
+    size_t getTrackArmedCount() const {
+        size_t count = 0;
+        for (const auto& [id, track] : m_tracks) {
+            (void)id;
+            if (track.armed) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    /** @brief All tracks in stable-id order (for serialization/UI). */
+    std::vector<Track*> getTracks() {
+        std::vector<Track*> result;
+        result.reserve(m_tracks.size());
+        for (auto& [id, track] : m_tracks) {
+            (void)id;
+            result.push_back(&track);
+        }
+        // Deterministic serialization order (unordered_map iteration is not).
+        std::sort(result.begin(), result.end(),
+                  [](const Track* a, const Track* b) { return a->trackId < b->trackId; });
+        return result;
+    }
+
+    /**
+     * @brief Restore a Track from serialized state (project load).
+     *
+     * Rebuilds the exact stable ids from the file — never mints fresh ones —
+     * and re-attaches the owned lanes by their ids. Advances the minting
+     * counter past the restored id.
+     */
+    bool restoreTrack(const Track& restored) {
+        if (restored.trackId == 0 || m_tracks.count(restored.trackId) != 0) {
+            return false;
+        }
+        Track track = restored;
+        track.laneIds.clear();
+        for (const auto& laneId : restored.laneIds) {
+            auto* lane = m_playlistModel.getLane(laneId);
+            if (!lane) {
+                continue;
+            }
+            lane->trackId = restored.trackId;
+            track.laneIds.push_back(laneId);
+        }
+        m_tracks[restored.trackId] = std::move(track);
+        if (m_nextTrackId <= restored.trackId) {
+            m_nextTrackId = restored.trackId + 1;
+        }
+        return true;
     }
 
     /**
@@ -1854,6 +1978,8 @@ private:
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
     std::unique_ptr<MixerChannel> m_masterChannel;
     uint32_t m_nextChannelId{1};
+    std::unordered_map<uint64_t, Track> m_tracks;
+    uint64_t m_nextTrackId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;
     SourceManager m_sourceManager;
