@@ -393,6 +393,7 @@ void TrackUIComponent::onRecordToggled() {
     if (!track) return;
     const bool armed = m_recordButton && m_recordButton->isToggled();
     m_trackManager->setTrackArmed(track->trackId, armed);
+    m_trackManager->markModified();
     Log::info("Track " + std::to_string(track->trackId) + " armed: " + (armed ? "ON" : "OFF"));
     updateUI();
     repaint();
