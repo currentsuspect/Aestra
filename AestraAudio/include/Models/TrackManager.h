@@ -1,12 +1,13 @@
 #pragma once
-#include "../Core/GraphDirtyReason.h"
 #include "../Commands/AddClipCommand.h"
+#include "../Commands/AttachLaneToTrackCommand.h"
 #include "../Commands/CommandHistory.h"
 #include "../Commands/CommandTransaction.h"
 #include "../Commands/CreateLaneCommand.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
+#include "../Core/GraphDirtyReason.h"
 #include "../Core/MixerChannel.h"
 #include "../DSP/ContinuousParamBuffer.h"
 #include "../DSP/PanLaw.h"
@@ -18,8 +19,8 @@
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
-#include "Track.h"
 #include "SourceManager.h"
+#include "Track.h"
 #include "UnitManager.h"
 
 #include <algorithm>
@@ -29,7 +30,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <unordered_set>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -40,6 +40,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Aestra {
@@ -62,6 +63,7 @@ public:
         std::atomic<uint64_t> totalCapturedFrames{0};
         std::atomic<bool> hasStarted{false};
         int inputIndex{-1};
+        uint64_t trackId{0};
     };
 
     struct RtInputMonitorRoute {
@@ -321,8 +323,7 @@ public:
             return false;
         }
         const size_t clamped = std::min(index, m_channels.size());
-        m_channels.insert(m_channels.begin() + static_cast<std::ptrdiff_t>(clamped),
-                          std::move(channel));
+        m_channels.insert(m_channels.begin() + static_cast<std::ptrdiff_t>(clamped), std::move(channel));
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (!m_channelSlotMap) {
@@ -366,8 +367,7 @@ public:
      * @param channelId Routing destination (MASTER_MIXER_CHANNEL_ID default).
      * @return The new track's stable id, or 0 on failure.
      */
-    uint64_t createTrack(PlaylistLaneID laneId, const std::string& name,
-                         uint32_t channelId = MASTER_MIXER_CHANNEL_ID) {
+    uint64_t createTrack(PlaylistLaneID laneId, const std::string& name, uint32_t channelId = MASTER_MIXER_CHANNEL_ID) {
         auto* lane = m_playlistModel.getLane(laneId);
         if (!lane) {
             return 0;
@@ -420,6 +420,24 @@ public:
         return true;
     }
 
+    /** @brief Detach a lane from its Track (undo of attachLaneToTrack).
+     *  Returns false when either id is invalid or the lane is not owned by
+     *  the track. */
+    bool detachLaneFromTrack(uint64_t trackId, PlaylistLaneID laneId) {
+        auto* track = getTrack(trackId);
+        auto* lane = m_playlistModel.getLane(laneId);
+        if (!track || !lane || lane->trackId != trackId) {
+            return false;
+        }
+        lane->trackId = 0;
+        auto& lanes = track->laneIds;
+        lanes.erase(std::remove(lanes.begin(), lanes.end(), laneId), lanes.end());
+        if (track->activeLaneId == laneId) {
+            track->activeLaneId = lanes.empty() ? PlaylistLaneID{} : lanes.back();
+        }
+        return true;
+    }
+
     /** @brief Set the Track's recording arm state (FD-14 #6: the authoritative
      *  recording arm lives on the Track). */
     void setTrackArmed(uint64_t trackId, bool armed) {
@@ -449,8 +467,7 @@ public:
             result.push_back(&track);
         }
         // Deterministic serialization order (unordered_map iteration is not).
-        std::sort(result.begin(), result.end(),
-                  [](const Track* a, const Track* b) { return a->trackId < b->trackId; });
+        std::sort(result.begin(), result.end(), [](const Track* a, const Track* b) { return a->trackId < b->trackId; });
         return result;
     }
 
@@ -650,14 +667,14 @@ public:
 
     /**
      * @brief Get a copy of the currently captured waveform for one armed track.
-     * @param channelId Target channel identifier.
+     * @param trackId Target track identifier.
      * @param recordingData Output buffer for captured samples.
      * @param startBeat Output start beat for the returned capture.
      * @return True when captured waveform data exists for the target track.
      */
-    bool getRecordingDataSnapshot(uint32_t channelId, std::vector<float>& recordingData, double& startBeat) {
+    bool getRecordingDataSnapshot(uint64_t trackId, std::vector<float>& recordingData, double& startBeat) {
         std::lock_guard<std::mutex> lock(m_recordingMutex);
-        auto it = m_recordingCaptures.find(channelId);
+        auto it = m_recordingCaptures.find(trackId);
         if (it == m_recordingCaptures.end() || !it->second) {
             return false;
         }
@@ -1116,7 +1133,7 @@ public:
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
     }
-    bool hasArmedTracks() const { return getArmedTrackCount() > 0; }
+    bool hasArmedTracks() const { return getTrackArmedCount() > 0; }
 
     /**
      * @brief Toggle record-arm state and manage capture session lifetime.
@@ -1228,7 +1245,8 @@ public:
      */
     void markModified() {
         m_modified.store(true, std::memory_order_relaxed);
-        if (m_onModified) m_onModified();
+        if (m_onModified)
+            m_onModified();
     }
     /**
      * @brief Override the project modified flag.
@@ -1261,31 +1279,23 @@ public:
     /**
      * @brief Check if a rebuild has been requested (non-consuming).
      */
-    bool hasPendingGraphRebuild() const {
-        return m_graphDirty.load(std::memory_order_acquire);
-    }
+    bool hasPendingGraphRebuild() const { return m_graphDirty.load(std::memory_order_acquire); }
 
     /**
      * @brief Get the request generation counter (non-consuming).
      */
-    uint64_t graphRebuildRequestGeneration() const {
-        return m_requestGeneration.load(std::memory_order_relaxed);
-    }
+    uint64_t graphRebuildRequestGeneration() const { return m_requestGeneration.load(std::memory_order_relaxed); }
 
     /**
      * @brief Get the last reason for a rebuild request (non-consuming).
      */
-    GraphDirtyReason lastGraphDirtyReason() const {
-        return m_lastReason.load(std::memory_order_relaxed);
-    }
+    GraphDirtyReason lastGraphDirtyReason() const { return m_lastReason.load(std::memory_order_relaxed); }
 
     /**
      * @brief Consume and clear pending rebuild request.
      * ONLY PlaybackGraphController should call this.
      */
-    bool consumePendingGraphRebuild() {
-        return m_graphDirty.exchange(false, std::memory_order_acq_rel);
-    }
+    bool consumePendingGraphRebuild() { return m_graphDirty.exchange(false, std::memory_order_acq_rel); }
 
     /**
      * @brief Push effect chain snapshots for all channels.
@@ -1481,7 +1491,8 @@ private:
         const uint32_t inactive = 1u - m_activeRecordingCaptureSnapshot.load(std::memory_order_relaxed);
         auto& snap = m_recordingCaptureSnapshots[inactive];
         uint32_t count = 0;
-        for (const auto& [channelId, capture] : m_recordingCaptures) {
+        for (const auto& [captureTrackId, capture] : m_recordingCaptures) {
+            (void)captureTrackId;
             if (!capture) {
                 continue;
             }
@@ -1567,8 +1578,12 @@ private:
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_recordingCaptures.clear();
         const size_t maxSamplesPerCapture = maxRecordingSamplesPerCapture();
-        for (const auto& channel : m_channels) {
-            if (!channel || !channel->isArmed()) {
+        for (const auto& [trackId, track] : m_tracks) {
+            if (!track.armed) {
+                continue;
+            }
+            auto* channel = getChannelById(track.channelId);
+            if (!channel) {
                 continue;
             }
             const int requestedInput = channel->getInputChannelIndex();
@@ -1584,7 +1599,8 @@ private:
             capture->totalCapturedFrames.store(0, std::memory_order_relaxed);
             capture->hasStarted.store(false, std::memory_order_relaxed);
             capture->inputIndex = requestedInput;
-            m_recordingCaptures[channel->getChannelId()] = std::move(capture);
+            capture->trackId = trackId;
+            m_recordingCaptures[trackId] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
         m_recordingSessionUsesPlacementOverride = m_hasNextCapturePlacementStartBeat.load(std::memory_order_relaxed);
@@ -1603,7 +1619,7 @@ private:
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         publishRecordingCaptureSnapshot();
-        Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
+        Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getTrackArmedCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
 
@@ -1631,7 +1647,7 @@ private:
         m_recordingCaptureRouteCounts[1].store(0, std::memory_order_release);
         m_activeRecordingCaptureSnapshot.store(0, std::memory_order_release);
 
-        std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> captures;
+        std::unordered_map<uint64_t, std::unique_ptr<RecordingCapture>> captures;
         double sessionStartBeat = 0.0;
         bool sessionUsesPlacementOverride = false;
         {
@@ -1650,14 +1666,21 @@ private:
         Log::info("[TrackManager] Recording session stopped. Captured tracks: " + std::to_string(captures.size()));
 
         for (const auto& [channelId, capture] : captures) {
+            (void)channelId;
             if (capture) {
-                commitRecordingTake(channelId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
+                commitRecordingTake(capture->trackId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
             }
         }
     }
 
-    void commitRecordingTake(uint32_t channelId, const RecordingCapture& capture, double fallbackStartBeat,
+    void commitRecordingTake(uint64_t trackId, const RecordingCapture& capture, double fallbackStartBeat,
                              bool forcePlacementStartBeat) {
+        auto* track = getTrack(trackId);
+        if (!track) {
+            Log::warning("[TrackManager] Could not resolve Track for recorded take: " + std::to_string(trackId));
+            return;
+        }
+        const uint32_t channelId = track->channelId;
         std::vector<float> capturedSamples = copyCaptureSamples(capture);
         if (capturedSamples.empty()) {
             return;
@@ -1665,7 +1688,7 @@ private:
 
         if (!getChannelById(channelId)) {
             Log::warning("[TrackManager] Could not resolve mixer insert for recorded take " +
-                         std::to_string(channelId));
+                         std::to_string(channelId) + " (track " + std::to_string(trackId) + ")");
             return;
         }
 
@@ -1758,11 +1781,28 @@ private:
             return;
         }
 
+        // The take lane is owned by the recording Track (FD-14): the lane
+        // joins the track in the same undoable step as its creation, so undo
+        // detaches and removes it atomically.
+        auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
+        attachLane->execute();
+        auto* ownedLane = m_playlistModel.getLane(laneId);
+        if (!ownedLane || ownedLane->trackId != trackId) {
+            attachLane->undo();
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to attach recorded take lane to track " + std::to_string(trackId));
+            return;
+        }
+
         auto transaction = std::make_shared<CommandTransaction>("Record Take");
         transaction->add(createLane);
         transaction->add(addClip);
+        transaction->add(attachLane);
         transaction->markExecuted();
         if (!m_commandHistory.pushExecuted(transaction)) {
+            attachLane->undo();
             addClip->undo();
             createLane->undo();
             m_patternManager.removePattern(patternId);
@@ -1913,16 +1953,6 @@ private:
         }
     }
 
-    size_t getArmedTrackCount() const {
-        size_t count = 0;
-        for (const auto& channel : m_channels) {
-            if (channel && channel->isArmed()) {
-                ++count;
-            }
-        }
-        return count;
-    }
-
     size_t findChannelIndexById(uint32_t channelId) const {
         for (size_t i = 0; i < m_channels.size(); ++i) {
             if (m_channels[i] && m_channels[i]->getChannelId() == channelId) {
@@ -2019,7 +2049,7 @@ private:
     std::atomic<uint64_t> m_requestGeneration{0};
     std::atomic<GraphDirtyReason> m_lastReason{GraphDirtyReason::TimelineChanged};
     mutable std::mutex m_recordingMutex;
-    std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
+    std::unordered_map<uint64_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
     std::atomic<bool> m_recordingCaptureAccepting{false};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
