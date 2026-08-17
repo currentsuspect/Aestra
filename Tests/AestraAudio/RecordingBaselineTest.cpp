@@ -462,26 +462,35 @@ void testLaneChannelStateFollowsTrackIdentity() {
         return;
     }
 
-    // Wire pin: each lane JSON carries ITS OWN channel's id and state.
+    // Wire pin: each lane JSON carries ITS OWN channel's id and state. Missing
+    // fields or missing lanes are failures, never skips — a regression that
+    // drops a lane's channel state must fail loudly.
     const Aestra::JSON root = Aestra::JSON::parse(ser.contents);
     check(root.has("lanes") && root["lanes"].isArray() && root["lanes"].size() == 2, "lanes array on the wire");
     if (root.has("lanes") && root["lanes"].isArray()) {
         const Aestra::JSON& lanesJson = root["lanes"];
+        bool sawA = false;
+        bool sawB = false;
         for (size_t i = 0; i < lanesJson.size(); ++i) {
-            if (!lanesJson[i].has("name") || !lanesJson[i].has("mixerChannelId") || !lanesJson[i].has("armed")) {
+            const bool complete = lanesJson[i].has("name") && lanesJson[i].has("mixerChannelId") && lanesJson[i].has("armed");
+            check(complete, "lane " + std::to_string(i) + " carries the full channel-state set on the wire");
+            if (!complete) {
                 continue;
             }
             const std::string laneName = lanesJson[i]["name"].asString();
             if (laneName == "A") {
+                sawA = true;
                 check(lanesJson[i]["mixerChannelId"].asNumber() == static_cast<double>(chA->getChannelId()),
                       "lane A carries channel A's id on the wire");
                 check(lanesJson[i]["armed"].asBool(), "lane A carries channel A's armed state");
             } else if (laneName == "B") {
+                sawB = true;
                 check(lanesJson[i]["mixerChannelId"].asNumber() == static_cast<double>(chB->getChannelId()),
                       "lane B carries channel B's id on the wire");
                 check(!lanesJson[i]["armed"].asBool(), "lane B carries channel B's armed state");
             }
         }
+        check(sawA && sawB, "both lanes present on the wire with their own channel state");
     }
 
     // Round-trip: after load, each lane's channel is its OWN channel.
@@ -501,6 +510,16 @@ void testLaneChannelStateFollowsTrackIdentity() {
               "lane A resolves to channel A after load");
         check(loadedChA != nullptr && loadedChA->getVolume() == 0.25f, "lane A keeps channel A's volume");
         check(loadedChA != nullptr && loadedChA->isArmed(), "lane A keeps channel A's armed state");
+    }
+    auto* loadedLaneB = tm2->getPlaylistModel().getLane(laneB);
+    auto* loadedTrackB = tm2->getTrackForLane(laneB);
+    check(loadedLaneB != nullptr && loadedTrackB != nullptr, "lane B and its track loaded");
+    if (loadedTrackB) {
+        auto* loadedChB = tm2->getChannelById(static_cast<uint32_t>(loadedTrackB->channelId));
+        check(loadedChB != nullptr && loadedChB->getChannelId() == chB->getChannelId(),
+              "lane B resolves to channel B after load");
+        check(loadedChB != nullptr && loadedChB->getVolume() == 0.75f, "lane B keeps channel B's volume");
+        check(loadedChB != nullptr && !loadedChB->isArmed(), "lane B keeps channel B's unarmed state");
     }
 }
 
