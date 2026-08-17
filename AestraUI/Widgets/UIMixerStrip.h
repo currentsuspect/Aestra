@@ -65,6 +65,7 @@ public:
     std::function<void(bool muted)> onMuteChanged;
     std::function<void(bool soloed)> onSoloChanged;
     std::function<void(float pan)> onPanChanged;
+    std::function<void(bool monitored)> onMonitorToggled;
 
 private:
     uint32_t m_channelId{0};

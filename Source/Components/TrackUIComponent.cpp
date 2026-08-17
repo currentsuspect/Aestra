@@ -414,6 +414,7 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
         channel->setMonitoringEnabled(false);
         if (m_trackManager) {
             m_trackManager->publishInputMonitoringSnapshot();
+            m_trackManager->markModified();
         }
         updateUI();
         repaint();
@@ -422,6 +423,7 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
         channel->setMonitoringEnabled(true);
         if (m_trackManager) {
             m_trackManager->publishInputMonitoringSnapshot();
+            m_trackManager->markModified();
         }
         updateUI();
         repaint();
