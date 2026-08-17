@@ -22,6 +22,7 @@
 // weakened — if an assertion fails here, the migration broke an invariant.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "AestraJSON.h"
 #include "../Support/TestTempDirectory.h"
 #include "Core/MixerChannel.h"
 #include "Models/TrackManager.h"
@@ -425,6 +426,84 @@ void testTakeLaneOwnershipRoundTrips() {
     check(loadedLaneIds.size() == 2, "playlist holds the same two lanes after load");
 }
 
+void testLaneChannelStateFollowsTrackIdentity() {
+    std::cout << "[B] lane channel state resolves through track identity, not position\n";
+    auto tm = makeRecorder();
+    // Lane creation order differs from channel creation order: track B is
+    // created first but lives on the playlist's second lane. A positional
+    // lane->channel pairing would write B's state into lane A's JSON.
+    const PlaylistLaneID laneA = tm->getPlaylistModel().createLane("A");
+    const PlaylistLaneID laneB = tm->getPlaylistModel().createLane("B");
+    MixerChannel* chB = tm->addChannel("ChB");
+    MixerChannel* chA = tm->addChannel("ChA");
+    check(chB != nullptr && chA != nullptr, "channels created");
+    if (!chB || !chA) {
+        return;
+    }
+    chB->setInputChannelIndex(1);
+    chA->setInputChannelIndex(0);
+    const uint64_t trackB = tm->createTrack(laneB, "Track B", chB->getChannelId());
+    const uint64_t trackA = tm->createTrack(laneA, "Track A", chA->getChannelId());
+    check(trackB != 0 && trackA != 0, "tracks created");
+    if (trackB == 0 || trackA == 0) {
+        return;
+    }
+    chA->setVolume(0.25f);
+    chB->setVolume(0.75f);
+    chA->setArmed(true);
+    chB->setArmed(false);
+
+    Aestra::Tests::ScopedTempDirectory dir{"RecordingBaselineRoundTrip"};
+    const std::string path = (dir.path() / "identity.aes").string();
+    tm->setRecordingProjectPath(path);
+    const auto ser = ProjectSerializer::serialize(tm, kBpm, 0.0, 2);
+    check(ser.ok && !ser.contents.empty(), "project serialized");
+    if (!ser.ok) {
+        return;
+    }
+
+    // Wire pin: each lane JSON carries ITS OWN channel's id and state.
+    const Aestra::JSON root = Aestra::JSON::parse(ser.contents);
+    check(root.has("lanes") && root["lanes"].isArray() && root["lanes"].size() == 2, "lanes array on the wire");
+    if (root.has("lanes") && root["lanes"].isArray()) {
+        const Aestra::JSON& lanesJson = root["lanes"];
+        for (size_t i = 0; i < lanesJson.size(); ++i) {
+            if (!lanesJson[i].has("name") || !lanesJson[i].has("mixerChannelId") || !lanesJson[i].has("armed")) {
+                continue;
+            }
+            const std::string laneName = lanesJson[i]["name"].asString();
+            if (laneName == "A") {
+                check(lanesJson[i]["mixerChannelId"].asNumber() == static_cast<double>(chA->getChannelId()),
+                      "lane A carries channel A's id on the wire");
+                check(lanesJson[i]["armed"].asBool(), "lane A carries channel A's armed state");
+            } else if (laneName == "B") {
+                check(lanesJson[i]["mixerChannelId"].asNumber() == static_cast<double>(chB->getChannelId()),
+                      "lane B carries channel B's id on the wire");
+                check(!lanesJson[i]["armed"].asBool(), "lane B carries channel B's armed state");
+            }
+        }
+    }
+
+    // Round-trip: after load, each lane's channel is its OWN channel.
+    check(ProjectSerializer::writeAtomically(path, ser.contents), "project written");
+    auto tm2 = makeRecorder();
+    const auto result = ProjectSerializer::load(path, tm2);
+    check(result.ok, "project loaded");
+    if (!result.ok) {
+        return;
+    }
+    auto* loadedLaneA = tm2->getPlaylistModel().getLane(laneA);
+    auto* loadedTrackA = tm2->getTrackForLane(laneA);
+    check(loadedLaneA != nullptr && loadedTrackA != nullptr, "lane A and its track loaded");
+    if (loadedTrackA) {
+        auto* loadedChA = tm2->getChannelById(static_cast<uint32_t>(loadedTrackA->channelId));
+        check(loadedChA != nullptr && loadedChA->getChannelId() == chA->getChannelId(),
+              "lane A resolves to channel A after load");
+        check(loadedChA != nullptr && loadedChA->getVolume() == 0.25f, "lane A keeps channel A's volume");
+        check(loadedChA != nullptr && loadedChA->isArmed(), "lane A keeps channel A's armed state");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -442,6 +521,7 @@ int main() {
     testLanesOwnedAndGrouped();
     testTrackEntityHoldsArm();
     testTakeLaneOwnershipRoundTrips();
+    testLaneChannelStateFollowsTrackIdentity();
 
     std::cout << "\n";
     if (g_failures == 0) {
