@@ -1013,8 +1013,10 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                                                       now.time_since_epoch())
                                                       .count();
                                 const bool isDoubleClick =
-                                    (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+                                    ((nowMs - m_lastClipClickTimeMs < 400) && m_lastClipClickStep == step) ||
+                                    event.doubleClick;
                                 m_lastClipClickTimeMs = nowMs;
+                                m_lastClipClickStep = step;
                                 if (isDoubleClick) {
                                     if (m_onLoadUnitSample) {
                                         m_onLoadUnitSample(m_unitId);
@@ -1161,8 +1163,10 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     if (usesStepSequencerForType(m_type)) {
         auto now = std::chrono::steady_clock::now();
         long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-        const bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+        const bool isDoubleClick =
+            ((nowMs - m_lastClipClickTimeMs < 400) && m_lastClipClickStep == -1) || event.doubleClick;
         m_lastClipClickTimeMs = nowMs;
+        m_lastClipClickStep = -1;
         if (isDoubleClick && m_audioClip.empty() && m_pluginId.empty()) {
             if (m_onLoadUnitSample) {
                 m_onLoadUnitSample(m_unitId);

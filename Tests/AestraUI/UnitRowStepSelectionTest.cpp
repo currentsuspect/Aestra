@@ -8,11 +8,9 @@
 #include "TrackManager.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
-#include <thread>
 #include <vector>
 
 using namespace AestraUI;
@@ -291,9 +289,9 @@ void testClickOnEmptyPlacesWithoutSelecting() {
     check(capturedSelection == std::vector<int>{1}, "placing a note does not select it");
 
     // Shift+click on an empty pad: same — placement is not selection.
-    // Step outside the 400ms double-click-load window first (sample-less rows
-    // treat two rapid taps as "open the file picker", by design).
-    std::this_thread::sleep_for(std::chrono::milliseconds(450));
+    // Within the 400ms double-click window on purpose: rapid taps on
+    // DIFFERENT pads must not pair into "open the file picker" — the
+    // double-click identity is per-step, so this still places.
     const float x2 = cellCenterX(6);
     NUIMouseEvent shiftPress = leftPress(x2, 28.0f);
     shiftPress.modifiers = NUIModifiers::Shift;

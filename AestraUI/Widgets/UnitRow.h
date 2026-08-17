@@ -273,6 +273,7 @@ private:
     bool m_stepGestureChanged = false;
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
+    int m_lastClipClickStep = -1;        // Step of the last grid press; -1 = miss / non-grid
 
     // === Helpers ===
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
