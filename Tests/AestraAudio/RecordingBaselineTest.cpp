@@ -1,26 +1,30 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// RecordingBaselineTest — Phase 2 of the Track/Lane/Channel migration (vault:
-// "Track Lane Channel Ownership Contract").
+// RecordingBaselineTest — Phase 2 baseline + Phase 3 acceptance of the
+// Track/Lane/Channel migration (vault: "Track Lane Channel Ownership Contract").
 //
-// This file captures CURRENT behavior as a regression baseline. Two sections:
+// Phase 2 (pre-migration) captured CURRENT behavior as a regression baseline:
 //
 //   SECTION A — surviving invariants: behavior that MUST hold after the
 //               migration (recorded audio routes to the armed channel; one
 //               undoable transaction; dirty state; multi-arm independence;
 //               one lane per take).
 //
-//   SECTION B — expected-to-change behavior: the current reality the
-//               migration removes (channel-based recording identity; lanes
-//               without ownership; flat ungrouped lanes; no Track entity).
-//               These assertions are intentionally RED against the future
-//               architecture — when the migration lands they are replaced by
-//               the new acceptance, they are NOT "fixed" by weakening them.
+//   SECTION B — expected-to-change behavior, intentionally RED against the
+//               future architecture (channel-based recording identity; lanes
+//               without ownership; no Track entity).
 //
-// Nothing here may be changed to make the baseline pass. If a Section A
-// assertion fails after the migration, the migration broke an invariant.
+// Phase 3 landed the migration. Section A is unchanged in its assertions and
+// arms TRACKS (the arming surface moved, the invariants did not). Each track
+// is created with one lane, so a recorded take is the track's NEXT lane
+// (track-local numbering). Section B was replaced by the new acceptance:
+// recording identity is track-based, lanes are owned and track-local
+// numbered, and the Track entity carries the arm. Nothing in Section A may be
+// weakened — if an assertion fails here, the migration broke an invariant.
 
-#include "Models/TrackManager.h"
+#include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Core/MixerChannel.h"
+#include "Models/TrackManager.h"
 
 #include <cmath>
 #include <cstdint>
@@ -52,7 +56,7 @@ std::shared_ptr<TrackManager> makeRecorder() {
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(kSampleRate));
     tm->getPlaylistModel().setBPM(kBpm);
-    tm->setInputChannelCount(1);
+    tm->setInputChannelCount(2);
     tm->setMaxRecordingSeconds(5.0);
     return tm;
 }
@@ -72,33 +76,73 @@ void feedInput(TrackManager& tm, double seconds) {
     }
 }
 
+/** Create a lane, a channel, a Track owning the lane and routing to the
+ *  channel, and arm the Track (FD-14: the Track's arm is authoritative).
+ *  Mirrors the app: a track is born with one lane. */
+uint64_t armTrack(TrackManager& tm, const std::string& channelName, int inputIndex) {
+    const PlaylistLaneID laneId = tm.getPlaylistModel().createLane(channelName);
+    MixerChannel* ch = tm.addChannel(channelName);
+    if (!ch) {
+        return 0;
+    }
+    ch->setInputChannelIndex(inputIndex);
+    const uint64_t trackId = tm.createTrack(laneId, channelName, ch->getChannelId());
+    if (trackId != 0) {
+        tm.setTrackArmed(trackId, true);
+    }
+    return trackId;
+}
+
+/** The lane holding a recorded take clip, or an invalid id. */
+PlaylistLaneID takeLaneOf(TrackManager& tm, uint64_t trackId) {
+    auto* track = tm.getTrack(trackId);
+    if (!track) {
+        return {};
+    }
+    for (const auto& laneId : track->laneIds) {
+        auto* lane = tm.getPlaylistModel().getLane(laneId);
+        if (lane && !lane->clips.empty()) {
+            return laneId;
+        }
+    }
+    return {};
+}
+
+void recordTake(TrackManager& tm, double seconds) {
+    tm.onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
+    feedInput(tm, seconds);
+    tm.onTransportStateApplied(false, static_cast<uint64_t>(seconds * kSampleRate), static_cast<double>(kSampleRate));
+}
+
 size_t laneCount(TrackManager& tm) {
     return tm.getPlaylistModel().getLaneIDs().size();
 }
 
 // ===========================================================================
-// SECTION A — surviving invariants (must stay green after the migration)
+// SECTION A — surviving invariants (armed via Tracks; assertions unchanged)
 // ===========================================================================
 
-void testTakeRoutesToArmedChannel() {
-    std::cout << "[A] take routes to the armed channel\n";
+void testTakeRoutesToArmedTrackChannel() {
+    std::cout << "[A] take routes to the armed track's channel\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 5");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
-
-    tm->record();
-    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-    feedInput(*tm, 1.0);
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                static_cast<double>(kSampleRate));
-
-    const auto laneIds = tm->getPlaylistModel().getLaneIDs();
-    check(laneIds.size() == 1, "one take creates one lane");
-    if (laneIds.empty()) {
+    const uint64_t trackId = armTrack(*tm, "Guitar", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
         return;
     }
-    auto* lane = tm->getPlaylistModel().getLane(laneIds[0]);
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "track resolvable by id");
+
+    tm->record();
+    recordTake(*tm, 1.0);
+
+    const PlaylistLaneID takeLaneId = takeLaneOf(*tm, trackId);
+    check(takeLaneId.isValid(), "one take creates one take lane");
+    if (!takeLaneId.isValid()) {
+        return;
+    }
+    auto* lane = tm->getPlaylistModel().getLane(takeLaneId);
+    check(lane != nullptr, "take lane is on the playlist");
     check(lane && !lane->clips.empty(), "take clip is on the lane");
     if (!lane || lane->clips.empty()) {
         return;
@@ -107,179 +151,270 @@ void testTakeRoutesToArmedChannel() {
     auto* pattern = patternManager.getPattern(lane->clips[0].patternId);
     check(pattern != nullptr, "take clip references a pattern");
     if (pattern) {
-        check(pattern->getMixerChannelId() == ch->getChannelId(),
-              "take pattern routes to the armed channel (id " + std::to_string(ch->getChannelId()) + ")");
+        check(pattern->getMixerChannelId() == track->channelId,
+              "take pattern routes to the armed track's channel (id " + std::to_string(track->channelId) + ")");
     }
 }
 
 void testRecordingIsOneUndoableTransaction() {
     std::cout << "[A] recording is one undoable transaction\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 1");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
 
     tm->record();
-    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-    feedInput(*tm, 1.0);
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                static_cast<double>(kSampleRate));
-
-    check(laneCount(*tm) == 1, "take committed before undo");
+    recordTake(*tm, 1.0);
+    check(tm->getCommandHistory().canUndo(), "take committed before undo");
+    check(laneCount(*tm) == 2, "setup lane plus one take lane");
     check(tm->getCommandHistory().undo(), "undo of the take succeeds");
-    check(laneCount(*tm) == 0, "undo removes the take's lane");
+    check(laneCount(*tm) == 1, "undo removes the take's lane");
+    check(!takeLaneOf(*tm, trackId).isValid(), "undo leaves no take lane on the track");
     check(tm->getCommandHistory().redo(), "redo restores the take");
-    check(laneCount(*tm) == 1, "redo restores the take's lane");
+    check(laneCount(*tm) == 2, "redo restores the take's lane");
+    check(takeLaneOf(*tm, trackId).isValid(), "redo restores the take lane on the track");
 }
 
 void testDirtyStateUpdated() {
     std::cout << "[A] dirty state updated by recording\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 1");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
 
-    tm->setModified(false);
     tm->record();
-    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-    feedInput(*tm, 1.0);
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                static_cast<double>(kSampleRate));
-
+    recordTake(*tm, 1.0);
     check(tm->isModified(), "project is dirty after a recorded take");
 }
 
-void testMultipleArmedChannelsCaptureIndependently() {
-    std::cout << "[A] multiple armed channels capture independently\n";
+void testMultipleArmedTracksCaptureIndependently() {
+    std::cout << "[A] multiple armed tracks capture independently\n";
     auto tm = makeRecorder();
-    tm->setInputChannelCount(2);
-    MixerChannel* ch1 = tm->addChannel("Ch 1");
-    ch1->setArmed(true);
-    ch1->setInputChannelIndex(0);
-    MixerChannel* ch2 = tm->addChannel("Ch 2");
-    ch2->setArmed(true);
-    ch2->setInputChannelIndex(1);
+    const uint64_t track1 = armTrack(*tm, "Ch 1", 0);
+    const uint64_t track2 = armTrack(*tm, "Ch 2", 1);
+    check(track1 != 0 && track2 != 0, "two tracks created and armed");
 
     tm->record();
-    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-    feedInput(*tm, 1.0);
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                static_cast<double>(kSampleRate));
+    recordTake(*tm, 1.0);
 
-    check(laneCount(*tm) == 2, "two armed channels produce two take lanes");
+    auto* t1 = tm->getTrack(track1);
+    auto* t2 = tm->getTrack(track2);
+    check(t1 && t2, "both tracks resolvable");
+    check(t1 && t1->laneIds.size() == 2, "track 1 owns its setup lane plus one take lane");
+    check(t2 && t2->laneIds.size() == 2, "track 2 owns its setup lane plus one take lane");
+    if (t1 && t2 && t1->laneIds.size() == 2 && t2->laneIds.size() == 2) {
+        const PlaylistLaneID take1 = takeLaneOf(*tm, track1);
+        const PlaylistLaneID take2 = takeLaneOf(*tm, track2);
+        check(take1.isValid() && take2.isValid(), "each armed track captured a take");
+        check(take1 != take2, "each take lane is distinct");
+        check(t1->laneIds[1] == take1 && t2->laneIds[1] == take2, "each take landed on its own track's lane");
+    }
 }
 
 void testEachTakeCreatesALane() {
-    std::cout << "[A] each take creates a lane\n";
+    std::cout << "[A] each take creates a track-local lane\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 1");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
 
     // Arm ONCE: the app keeps record-armed across takes; each play/stop
     // pass captures and commits its own take.
     tm->record();
     for (int pass = 1; pass <= 2; ++pass) {
-        tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-        feedInput(*tm, 1.0);
-        tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                    static_cast<double>(kSampleRate));
+        recordTake(*tm, 1.0);
     }
-    check(laneCount(*tm) == 2, "two recording passes create two lanes");
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "track still resolvable");
+    if (track) {
+        check(track->laneIds.size() == 3, "two recording passes create two take lanes");
+        const PlaylistLaneID take1 = takeLaneOf(*tm, trackId);
+        check(take1.isValid(), "first take lane exists");
+        if (take1.isValid()) {
+            check(track->laneNumber(take1) == 2, "first take lane is track-local lane 2");
+            check(track->laneIds.size() == 3, "take lanes accumulate track-locally");
+        }
+    }
 }
 
 // ===========================================================================
-// SECTION B — expected-to-change (RED against the future architecture)
+// SECTION B — post-migration acceptance (the Phase 2 RED assertions now hold)
 // ===========================================================================
 
-void testRecordingIdentityIsChannelBased() {
-    std::cout << "[B] recording identity is channel-based (expected to change)\n";
+void testRecordingIdentityIsTrackBased() {
+    std::cout << "[B] recording identity is track-based\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 5");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
-
-    // The arm state that drives recording lives on the CHANNEL.
-    tm->record();
-    tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-    feedInput(*tm, 1.0);
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                static_cast<double>(kSampleRate));
-
-    const auto laneIds = tm->getPlaylistModel().getLaneIDs();
-    check(laneIds.size() == 1, "take landed on a lane");
-    if (laneIds.empty()) {
+    const uint64_t trackId = armTrack(*tm, "Guitar", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
         return;
     }
-    auto* lane = tm->getPlaylistModel().getLane(laneIds[0]);
-    // Current reality: the lane's only tie to the armed channel is the
-    // pattern's OWN routing — the lane itself carries no ownership. Post
-    // migration, the lane must be reachable as the track's lane.
+
+    tm->record();
+    recordTake(*tm, 1.0);
+
+    const PlaylistLaneID takeLaneId = takeLaneOf(*tm, trackId);
+    check(takeLaneId.isValid(), "take landed on a lane");
+    if (!takeLaneId.isValid()) {
+        return;
+    }
+    auto* lane = tm->getPlaylistModel().getLane(takeLaneId);
     check(lane != nullptr, "lane exists");
     if (!lane) {
         return;
     }
-    check(lane->name.find("Ch 5") == std::string::npos,
-          "lane name is the take name, not the armed channel/track (no ownership naming today)");
+    check(lane->trackId == trackId, "lane is owned by the recording track");
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "recording track resolvable");
+    if (track) {
+        check(track->laneNumber(lane->id) == 2, "take lane is track-local lane 2 (after the born-with lane)");
+    }
+    check(tm->getTrackForLane(lane->id) == track, "lane resolves to its track");
 }
 
-void testLanesHaveNoOwnership() {
-    std::cout << "[B] lanes have no ownership (expected to change)\n";
+void testLanesOwnedAndGrouped() {
+    std::cout << "[B] lanes are owned and grouped by track\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 1");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
 
     tm->record();
     for (int pass = 1; pass <= 2; ++pass) {
-        tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
-        feedInput(*tm, 1.0);
-        tm->onTransportStateApplied(false, static_cast<uint64_t>(1.0 * kSampleRate),
-                                    static_cast<double>(kSampleRate));
+        recordTake(*tm, 1.0);
     }
 
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "track resolvable");
+    if (!track) {
+        return;
+    }
+    check(track->laneIds.size() == 3, "all three lanes group under the same track");
     const auto laneIds = tm->getPlaylistModel().getLaneIDs();
-    check(laneIds.size() == 2, "two flat lanes after two passes");
-    // Current reality: nothing groups these lanes — they are independent
-    // playlist rows. Post migration, both must resolve to the SAME track.
+    check(laneIds.size() == 3, "playlist holds the same three lanes");
+    for (const auto& laneId : laneIds) {
+        auto* lane = tm->getPlaylistModel().getLane(laneId);
+        check(lane && lane->trackId == trackId, "every lane carries the track's stable id");
+    }
+    check(track->laneNumber(track->laneIds[0]) == 1 && track->laneNumber(track->laneIds[1]) == 2 &&
+              track->laneNumber(track->laneIds[2]) == 3,
+          "lanes have consecutive track-local numbers");
 }
 
-void testNoTrackEntity() {
-    std::cout << "[B] no Track entity exists (expected to change)\n";
+void testTrackEntityHoldsArm() {
+    std::cout << "[B] the Track entity holds the recording arm\n";
     auto tm = makeRecorder();
-    MixerChannel* ch = tm->addChannel("Ch 1");
-    ch->setArmed(true);
-    ch->setInputChannelIndex(0);
+    check(tm->getTrackArmedCount() == 0, "no armed tracks initially");
+    check(tm->getTracks().empty(), "no tracks exist before arming");
 
-    // Current reality: record() is a GLOBAL toggle; there is no per-track
-    // arm, no per-track capture, no track id anywhere in the recording path.
-    // Post migration, arming and recording are track-scoped operations.
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created");
+    if (trackId == 0) {
+        return;
+    }
+    check(tm->getTrackArmedCount() == 1, "arm is model state on the track");
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr && track->armed, "track carries the armed flag");
+    check(tm->getTracks().size() == 1, "track listed by the manager");
+
+    // Channel arming alone no longer starts a capture: the track is the only
+    // recording control. With the track disarmed, no take may be committed.
+    tm->setTrackArmed(trackId, false);
+    if (auto* ch = tm->getChannelById(track->channelId)) {
+        ch->setArmed(true);
+    }
     tm->record();
-    check(tm->isRecordArmed(), "record arm is a global transport toggle today");
-    check(!tm->getCommandHistory().canUndo(), "arming alone creates no model state");
+    recordTake(*tm, 1.0);
+    check(laneCount(*tm) == 1, "channel arm alone produces no take");
+    check(!takeLaneOf(*tm, trackId).isValid(), "disarmed track captures nothing");
+}
+
+void testTakeLaneOwnershipRoundTrips() {
+    std::cout << "[B] take lane ownership survives project round-trip\n";
+    auto tm = makeRecorder();
+    const uint64_t trackId = armTrack(*tm, "Guitar", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
+
+    tm->record();
+    recordTake(*tm, 1.0);
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "track resolvable before save");
+    if (!track) {
+        return;
+    }
+    check(track->laneIds.size() == 2, "setup lane plus one take lane before save");
+    const PlaylistLaneID takeLaneId = takeLaneOf(*tm, trackId);
+    check(takeLaneId.isValid(), "take lane exists before save");
+    if (!takeLaneId.isValid()) {
+        return;
+    }
+    check(track->laneNumber(takeLaneId) == 2, "take lane is track-local lane 2 before save");
+
+    Aestra::Tests::ScopedTempDirectory dir{"RecordingBaselineRoundTrip"};
+    const std::string path = (dir.path() / "roundtrip.aes").string();
+    tm->setRecordingProjectPath(path);
+    const bool saved = ProjectSerializer::save(path, tm, kBpm, 0.0);
+    check(saved, "project saved");
+    if (!saved) {
+        return;
+    }
+
+    auto tm2 = makeRecorder();
+    const auto result = ProjectSerializer::load(path, tm2);
+    check(result.ok, "project loaded");
+    if (!result.ok) {
+        return;
+    }
+
+    auto* loadedTrack = tm2->getTrack(trackId);
+    check(loadedTrack != nullptr, "loaded track keeps the same track id");
+    if (!loadedTrack) {
+        return;
+    }
+    check(loadedTrack->laneIds.size() == 2, "loaded track owns setup lane plus take lane");
+    const PlaylistLaneID loadedTakeLaneId = takeLaneOf(*tm2, trackId);
+    check(loadedTakeLaneId.isValid(), "take lane resolves after load");
+    if (loadedTakeLaneId.isValid()) {
+        check(loadedTrack->laneNumber(loadedTakeLaneId) == 2, "take lane keeps track-local lane 2 after load");
+        check(tm2->getTrackForLane(loadedTakeLaneId) == loadedTrack, "loaded lane resolves to its track");
+    }
+    const auto loadedLaneIds = tm2->getPlaylistModel().getLaneIDs();
+    check(loadedLaneIds.size() == 2, "playlist holds the same two lanes after load");
 }
 
 } // namespace
 
 int main() {
-    std::cout << "=== Recording Baseline (Phase 2) ===\n";
+    std::cout << "=== Recording Baseline (Phase 2 + Phase 3 acceptance) ===\n";
     std::cout << "Section A: surviving invariants\n";
-    testTakeRoutesToArmedChannel();
+    testTakeRoutesToArmedTrackChannel();
     testRecordingIsOneUndoableTransaction();
     testDirtyStateUpdated();
-    testMultipleArmedChannelsCaptureIndependently();
+    testMultipleArmedTracksCaptureIndependently();
     testEachTakeCreatesALane();
 
-    std::cout << "Section B: expected-to-change (RED against the future)\n";
-    testRecordingIdentityIsChannelBased();
-    testLanesHaveNoOwnership();
-    testNoTrackEntity();
+    std::cout << "Section B: post-migration acceptance\n";
+    testRecordingIdentityIsTrackBased();
+    testLanesOwnedAndGrouped();
+    testTrackEntityHoldsArm();
+    testTakeLaneOwnershipRoundTrips();
 
     std::cout << "\n";
     if (g_failures == 0) {
-        std::cout << "Baseline: current behavior captured, all green.\n";
+        std::cout << "Track/Lane/Channel migration: all green.\n";
         return 0;
     }
-    std::cerr << g_failures << " baseline check(s) failed — investigate before Phase 3.\n";
+    std::cerr << g_failures << " check(s) failed.\n";
     return 1;
 }
