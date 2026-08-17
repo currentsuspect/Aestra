@@ -472,6 +472,9 @@ void AestraContent::setupTransportBar() {
             if (recording != isRecordArmed) {
                 m_trackManager->record();
             }
+            if (recording && !m_trackManager->hasArmedTracks()) {
+                showToast("No armed tracks — recording will capture nothing. Arm a track in the playlist.");
+            }
         }
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {

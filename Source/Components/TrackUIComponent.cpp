@@ -219,15 +219,16 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_soloButton);
 
     // FD-14 #6: record arm lives on the Track (setTrackArmed). The button is
-    // the track's arm control; input monitoring is the right-click menu.
-    if (m_channel) {
-        m_recordButton = std::make_shared<AestraUI::NUIButton>();
-        m_recordButton->setText("");
-        configureFlatTrackButton(m_recordButton);
-        m_recordButton->setToggleable(true);
-        m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
-        addChild(m_recordButton);
-    }
+    // the track's arm control for every owned lane — it must not depend on a
+    // mixer channel being passed in, because the playlist builds components
+    // without one (TrackManagerUI.cpp). Input monitoring stays on the
+    // right-click menu, gated on a resolvable channel.
+    m_recordButton = std::make_shared<AestraUI::NUIButton>();
+    m_recordButton->setText("");
+    configureFlatTrackButton(m_recordButton);
+    m_recordButton->setToggleable(true);
+    m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
+    addChild(m_recordButton);
 
     updateUI();
 }
@@ -401,25 +402,24 @@ void TrackUIComponent::onRecordToggled() {
 }
 
 void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
-    if (!m_channel) {
+    auto* channel = resolveMonitorChannel();
+    if (!channel) {
         return;
     }
 
     detachContextMenu(m_recordModeMenu);
     m_recordModeMenu = std::make_shared<AestraUI::NUIContextMenu>();
     m_recordModeMenu->setOnHide([this]() { detachContextMenu(m_recordModeMenu); });
-    m_recordModeMenu->addRadioItem("Input Monitoring: Off", "record_mode", !m_channel->isMonitoringEnabled(), [this]() {
-        if (!m_channel) return;
-        m_channel->setMonitoringEnabled(false);
+    m_recordModeMenu->addRadioItem("Input Monitoring: Off", "record_mode", !channel->isMonitoringEnabled(), [this, channel]() {
+        channel->setMonitoringEnabled(false);
         if (m_trackManager) {
             m_trackManager->publishInputMonitoringSnapshot();
         }
         updateUI();
         repaint();
     });
-    m_recordModeMenu->addRadioItem("Input Monitoring: On", "record_mode", m_channel->isMonitoringEnabled(), [this]() {
-        if (!m_channel) return;
-        m_channel->setMonitoringEnabled(true);
+    m_recordModeMenu->addRadioItem("Input Monitoring: On", "record_mode", channel->isMonitoringEnabled(), [this, channel]() {
+        channel->setMonitoringEnabled(true);
         if (m_trackManager) {
             m_trackManager->publishInputMonitoringSnapshot();
         }
@@ -429,13 +429,31 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
     attachAndShowContextMenu(this, m_recordModeMenu, position);
 }
 
+MixerChannel* TrackUIComponent::resolveMonitorChannel() const {
+    if (m_channel) {
+        return m_channel.get();
+    }
+    if (!m_trackManager) {
+        return nullptr;
+    }
+    auto* track = m_trackManager->getTrackForLane(m_laneId);
+    if (!track) {
+        return nullptr;
+    }
+    return m_trackManager->getChannelById(static_cast<uint32_t>(track->channelId));
+}
+
 void TrackUIComponent::updateRecordTooltip() {
-    if (!m_recordButton || !m_channel) {
+    if (!m_recordButton) {
         return;
     }
 
-    const char* monitorText = m_channel->isMonitoringEnabled() ? "On" : "Off";
-    m_recordButton->setTooltip(std::string("Arm for Recording (O) • Right-click: Input Monitoring: ") + monitorText);
+    if (auto* channel = resolveMonitorChannel()) {
+        const char* monitorText = channel->isMonitoringEnabled() ? "On" : "Off";
+        m_recordButton->setTooltip(std::string("Arm for Recording (O) • Right-click: Input Monitoring: ") + monitorText);
+    } else {
+        m_recordButton->setTooltip("Arm for Recording (O)");
+    }
 }
 
 
@@ -1670,11 +1688,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
         drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
-        if (m_channel) {
-            auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
-            const bool isArmed = armTrack && armTrack->armed;
-            drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
-        }
+        auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
+        const bool isArmed = armTrack && armTrack->armed;
+        drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
     }
 
     // Track number marker (left of name): recedes as quiet metadata (Level 4).
