@@ -1929,6 +1929,25 @@ else()
     message(STATUS "PanelResizeLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Selection-based step editing regression: click-to-select grammar, Ctrl+B
+# span duplication, Delete/Backspace removal (2026-08-17).
+if(TARGET AestraUI_Core AND TARGET AestraAudio)
+    add_executable(UnitRowStepSelectionTest AestraUI/UnitRowStepSelectionTest.cpp)
+    target_link_libraries(UnitRowStepSelectionTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(UnitRowStepSelectionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitRowStepSelectionTest COMMAND UnitRowStepSelectionTest)
+    set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+else()
+    message(STATUS "UnitRowStepSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel

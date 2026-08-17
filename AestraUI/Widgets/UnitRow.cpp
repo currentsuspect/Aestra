@@ -228,8 +228,8 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = unitAccent.withAlpha(0.10f);
-        border = unitAccent.withAlpha(0.72f);
+        cardBg = unitAccent.withAlpha(0.06f);
+        border = unitAccent.withAlpha(0.28f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
@@ -255,7 +255,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
                       NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f), 1.0f,
                       theme.getColor("borderSubtle").withAlpha(0.55f));
 
-    NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 14.0f,
+    NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 2.0f,
                         cardBounds.height - 12.0f);
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
@@ -263,7 +263,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
 void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor gripColor = theme.getColor("textSecondary").withAlpha(m_isHovered ? 0.78f : 0.45f);
+    const NUIColor gripColor = theme.getColor("textSecondary").withAlpha(m_isHovered || m_isSelected ? 0.70f : 0.28f);
     const float clusterX = bounds.x + bounds.width * 0.5f - 3.0f;
     const float clusterY = bounds.y + bounds.height * 0.5f - 6.0f;
     for (int row = 0; row < 3; ++row) {
@@ -310,12 +310,17 @@ void UnitRow::drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool act
     }
 }
 
-void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) {
     auto& theme = NUIThemeManager::getInstance();
 
     NUIColor bgColor = active ? theme.getColor("warning") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active ? theme.getContrastColor(bgColor) : theme.getColor("textSecondary");
-    NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
+    NUIColor textColor = active
+                             ? theme.getContrastColor(bgColor)
+                             : (engaged ? theme.getColor("textSecondary")
+                                        : theme.getColor("textDisabled").withAlpha(0.55f));
+    NUIColor borderColor = active ? bgColor
+                                  : (engaged ? theme.getColor("textDisabled")
+                                             : theme.getColor("textDisabled").withAlpha(0.40f));
 
     // Circular Button
     float radius = theme.getRadius("xs") * 2.0f;
@@ -331,12 +336,17 @@ void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     renderer.drawTextCentered("M", bounds, 10.0f, textColor);
 }
 
-void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) {
     auto& theme = NUIThemeManager::getInstance();
 
     NUIColor bgColor = active ? theme.getColor("success") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active ? theme.getContrastColor(bgColor) : theme.getColor("textSecondary");
-    NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
+    NUIColor textColor = active
+                             ? theme.getContrastColor(bgColor)
+                             : (engaged ? theme.getColor("textSecondary")
+                                        : theme.getColor("textDisabled").withAlpha(0.55f));
+    NUIColor borderColor = active ? bgColor
+                                  : (engaged ? theme.getColor("textDisabled")
+                                             : theme.getColor("textDisabled").withAlpha(0.40f));
 
     // Circular Button
     float radius = theme.getRadius("xs") * 2.0f;
@@ -388,21 +398,17 @@ std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) c
 
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    bool hasContent = !m_pluginId.empty() || !m_audioClip.empty();
-    if (!hasContent && m_patternId.isValid()) {
-        if (auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId); pattern && pattern->isMidi()) {
-            const auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
-            hasContent = std::any_of(midi.notes.begin(), midi.notes.end(), [this](const Aestra::Audio::MidiNote& note) {
-                return note.unitId == m_unitId || note.unitId == 0;
-            });
-        }
-    }
-    const float centerY = bounds.y + bounds.height * 0.5f;
     const float nameX = bounds.x + 12.0f;
     const NUIColor unitAccent = colorFromUnitValue(m_color);
+    const bool engaged = m_isHovered || m_isSelected;
 
-    renderer.fillCircle(NUIPoint(nameX, bounds.y + 18.0f), 3.0f,
-                        m_isEnabled ? unitAccent : theme.getColor("textDisabled"));
+    // Center the status dot on the primary name line ("Sampler 2"), using the
+    // same line-height metric the renderer uses for vertical text centering,
+    // so it reads as part of the label, not a top-attached status indicator.
+    const float nameTopY = m_nameLabel ? m_nameLabel->getBounds().y + 3.0f : bounds.y + 11.0f;
+    const float nameLineCenterY = nameTopY + renderer.getFontMetrics(12.0f).lineHeight * 0.5f;
+    renderer.fillCircle(NUIPoint(nameX, nameLineCenterY), 3.0f,
+                        m_isEnabled ? unitAccent : theme.getColor("textDisabled").withAlpha(0.45f));
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
@@ -412,26 +418,17 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const NUIRect& soloRect = pills[2];
     const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
                                    ? theme.getColor("surfaceTertiary")
-                                   : unitAccent.withAlpha(0.16f);
+                                   : unitAccent.withAlpha(engaged ? 0.16f : 0.07f);
     const NUIColor routeStroke =
-        m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : unitAccent.withAlpha(0.42f);
+        m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f)
+                                      : unitAccent.withAlpha(engaged ? 0.42f : 0.20f);
     renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
     renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
     renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, m_density == Density::Minimal ? 7.5f : 9.0f,
-                              theme.getColor("textPrimary").withAlpha(0.9f));
-    drawMuteIcon(renderer, muteRect, m_isMuted);
-    drawSoloIcon(renderer, soloRect, m_isSolo);
+                              theme.getColor("textPrimary").withAlpha(engaged ? 0.9f : 0.45f));
+    drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
+    drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
 
-    if (m_density == Density::Full) {
-        const float indicatorX = bounds.right() - 18.0f;
-        for (int i = 0; i < 3; ++i) {
-            const float h = 4.0f + i * 3.0f;
-            const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
-            const NUIColor color = hasContent ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
-                                              : theme.getColor("textDisabled").withAlpha(0.28f);
-            renderer.fillRoundedRect(bar, 1.0f, color);
-        }
-    }
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -457,7 +454,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // === Step Grid Layout ===
     float availWidth = timelineStrip.width;
     float stepWidth = gridStepWidth(availWidth);
-    float totalWidth = stepWidth * m_stepCount;
+    float totalWidth = stepWidth * m_stepCount + static_cast<float>((m_stepCount + 3) / 4) * kStepGroupGap;
 
     // Clamp scroll
     float maxScroll = std::max(0.0f, totalWidth - availWidth);
@@ -512,8 +509,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
+        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
+        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
         const NUIColor activeFill = theme.getColor("primary");
         const float cellGap = 3.0f;
         const float cellRadius = 3.0f;
@@ -521,7 +518,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
 
         for (int step = 0; step < m_stepCount; ++step) {
-            const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
+            const float cellX = timelineStrip.x + (step * stepWidth) + static_cast<float>(step / 4) * kStepGroupGap - m_scrollX +
+                        (cellGap * 0.5f);
             // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
             const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
@@ -530,10 +528,17 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
             const bool isPlayhead = (step == playStep);
+            const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (((step / 4) & 1) != 0) {
+                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
+            }
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
+            }
+            if (isSelected) {
+                cellFill = cellFill.lightened(0.28f); // selection brightens the note
             }
             if (isActive) {
                 // Velocity meter: dim base + a brighter bar rising from the
@@ -548,21 +553,35 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.fillRoundedRect(cellRect, cellRadius, cellFill);
             }
             renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
+            if (isActive && !isSelected) {
+                // Subtle inner rim keeps adjacent active pads legible as
+                // individual steps instead of one merged bar.
+                renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f,
+                                           activeFill.lightened(0.25f).withAlpha(0.30f));
+            }
+            if (isSelected) {
+                // Selection halo: expanded light ring, distinct from the
+                // playhead (on-edge accent ring) and the active rim.
+                const NUIRect haloRect(cellRect.x - 1.5f, cellRect.y - 1.5f,
+                                       cellRect.width + 3.0f, cellRect.height + 3.0f);
+                renderer.strokeRoundedRect(haloRect, cellRadius + 1.5f, 1.5f,
+                                           theme.getColor("textPrimary").withAlpha(0.9f));
+            }
+            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
+                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
+                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
+                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
+                                  theme.getColor("border").withAlpha(0.18f));
+            }
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
                                            playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
 
-            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
-                const float markerX = cellRect.right() + (cellGap * 0.5f);
-                renderer.drawLine(NUIPoint(markerX, timelineStrip.y + 2.0f),
-                                  NUIPoint(markerX, timelineStrip.bottom() - 2.0f), 1.0f,
-                                  theme.getColor("border").withAlpha(0.12f));
-            }
         }
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
+        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
+        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
         const NUIColor activeFill = theme.getColor("primary");
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
         const float cellGap = 3.0f;
@@ -575,7 +594,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
         std::vector<NUIPoint> slidePoints;
         for (int step = 0; step < m_stepCount; ++step) {
-            const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
+            const float cellX = timelineStrip.x + (step * stepWidth) + static_cast<float>(step / 4) * kStepGroupGap - m_scrollX +
+                        (cellGap * 0.5f);
             // Do not exceed the step advance in narrow layouts (triage 2026-08-14).
             const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - cellGap));
             if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
@@ -583,13 +603,32 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             }
             const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
             const bool isPlayhead = (step == playStep);
+            const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
+            if (((step / 4) & 1) != 0) {
+                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
+            }
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f);
             }
+            if (isSelected) {
+                cellFill = cellFill.lightened(0.28f); // selection brightens the note
+            }
             renderer.fillRoundedRect(cellRect, 3.0f, cellFill);
             renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
+            if (isSelected) {
+                const NUIRect haloRect(cellRect.x - 1.5f, cellRect.y - 1.5f,
+                                       cellRect.width + 3.0f, cellRect.height + 3.0f);
+                renderer.strokeRoundedRect(haloRect, 4.5f, 1.5f,
+                                           theme.getColor("textPrimary").withAlpha(0.9f));
+            }
+            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
+                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
+                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
+                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
+                                  theme.getColor("border").withAlpha(0.18f));
+            }
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
@@ -769,7 +808,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
     const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
     const float separatorX = m_controlWidth;
-    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
+    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 2.0f)), 44.0f);
     // Step math must use the same geometry the pads are DRAWN with:
     // drawContextBlock insets the context rect by 6px lane padding before
     // laying out steps. Resolving against the un-inset rect skewed the step
@@ -787,8 +826,20 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         if (stepWidth <= 0.0f || relativeX < 0.0f || relativeX >= availWidth) {
             return -1;
         }
-        float contentX = relativeX + m_scrollX;
-        return static_cast<int>(std::floor(contentX / stepWidth));
+        // Exact pad containment: 4-step groups carry a structural gap, and the
+        // 3px lane gap between pads is not clickable — only the drawn cell
+        // itself registers (bounded, 32 steps max -> trivial loop).
+        constexpr float kCellGap = 3.0f;
+        const float contentX = relativeX + m_scrollX;
+        for (int s = 0; s < m_stepCount; ++s) {
+            const float slotLeft = s * stepWidth + static_cast<float>(s / 4) * kStepGroupGap;
+            const float cellLeft = slotLeft + kCellGap * 0.5f;
+            const float cellWidth = std::min(stepWidth, std::max(2.0f, stepWidth - kCellGap));
+            if (contentX >= cellLeft && contentX < cellLeft + cellWidth) {
+                return s;
+            }
+        }
+        return -1;
     };
 
     // === Scroll Handling ===
@@ -851,11 +902,23 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     // === Step-grid gesture session ===
     if (m_velEditStep >= 0) {
         if (event.released || event.type == NUIMouseEventType::Up) {
-            // A stationary left click toggles the initial step. Empty steps
-            // were placed on press for immediate feedback; active ones are
-            // removed here once we know the gesture was not a velocity edit.
-            if (m_stepGestureMode == StepGestureMode::Pending && m_velEditWasActive) {
-                m_stepGestureChanged |= removeStepNote(m_velEditStep);
+            // A stationary click selects only when it lands on an already-
+            // placed note — placing a new note (press on an empty pad) must
+            // never hijack the selection. Paint is placement-only; velocity
+            // drags on pre-existing notes select them like a click would.
+            if (m_stepGestureMode == StepGestureMode::Pending && m_stepGestureWasActive) {
+                applyClickSelection(m_velEditStep, m_stepGestureShiftHeld);
+            } else if (m_stepGestureMode == StepGestureMode::Velocity && m_stepGestureWasActive) {
+                applyClickSelection(m_velEditStep, false);
+            } else if (m_stepGestureMode == StepGestureMode::Erase) {
+                // Right-drag erase: drop erased steps from the selection.
+                m_selectedSteps.erase(
+                    std::remove_if(m_selectedSteps.begin(), m_selectedSteps.end(), [this](int s) {
+                        float v = kDefaultStepVelocity;
+                        return !stepHasNote(s, v);
+                    }),
+                    m_selectedSteps.end());
+                notifyStepSelectionChanged();
             }
             if (m_stepGestureChanged && m_onPatternEdited && m_patternId.isValid()) {
                 m_onPatternEdited(m_patternId);
@@ -876,10 +939,11 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             const float dy = m_velEditStartY - event.position.y; // up = louder
             if (m_stepGestureMode == StepGestureMode::Pending && std::max(std::abs(dx), std::abs(dy)) > 3.0f) {
                 if (std::abs(dx) >= std::abs(dy)) {
-                    m_stepGestureMode = m_velEditWasActive ? StepGestureMode::Erase : StepGestureMode::Paint;
-                    if (m_stepGestureMode == StepGestureMode::Erase) {
-                        m_stepGestureChanged |= removeStepNote(m_velEditStep);
-                    }
+                    // Horizontal drag paints from any starting pad. Erasing is
+                    // now Delete/Backspace (selection-based editing), so a
+                    // drag from an active note extends the phrase instead of
+                    // destroying it.
+                    m_stepGestureMode = StepGestureMode::Paint;
                 } else {
                     m_stepGestureMode = StepGestureMode::Velocity;
                 }
@@ -931,14 +995,33 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     handleControlClick(event, localControlRect);
                     return true;
                 } else if (localContextRect.contains(localPoint)) {
-                    // Loaded step grids support one continuous gesture:
+                    // Step grids support one continuous gesture on every pad:
                     // vertical movement edits velocity, horizontal movement
-                    // paints or erases, and a stationary click toggles.
-                    const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
-                    if (usesStepSequencerForType(m_type) && !shouldUseNoteRoll() && hasContent &&
-                        m_patternId.isValid() && m_trackManager) {
+                    // paints, and a stationary click creates/selects. The
+                    // pattern (not a loaded sample) is what makes pads real —
+                    // notes-only units must edit identically to loaded ones.
+                    if (usesStepSequencerForType(m_type) && !shouldUseNoteRoll() && m_patternId.isValid() &&
+                        m_trackManager) {
                         const int step = resolveGridStep(localPoint, localGridRect);
                         if (step >= 0 && step < m_stepCount) {
+                            // Double-click on a unit without a sample opens the
+                            // file picker (fast onboarding). Units with a
+                            // sample treat rapid taps as step programming.
+                            if (m_audioClip.empty() && m_pluginId.empty()) {
+                                auto now = std::chrono::steady_clock::now();
+                                long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                      now.time_since_epoch())
+                                                      .count();
+                                const bool isDoubleClick =
+                                    (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+                                m_lastClipClickTimeMs = nowMs;
+                                if (isDoubleClick) {
+                                    if (m_onLoadUnitSample) {
+                                        m_onLoadUnitSample(m_unitId);
+                                    }
+                                    return true;
+                                }
+                            }
                             float vel = kDefaultStepVelocity;
                             const bool active = stepHasNote(step, vel);
                             m_velEditStep = step;
@@ -946,8 +1029,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                             m_stepGestureStartX = event.position.x;
                             m_velEditStartY = event.position.y;
                             m_stepGestureMode = StepGestureMode::Pending;
-                            m_velEditWasActive = active;
                             m_stepGestureChanged = false;
+                            m_stepGestureShiftHeld = (event.modifiers & NUIModifiers::Shift) != 0;
+                            m_stepGestureWasActive = active;
                             if (!active) {
                                 m_stepGestureChanged = placeStepNote(step);
                                 vel = kDefaultStepVelocity;
@@ -966,10 +1050,18 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
+                if (localControlRect.contains(localPoint)) {
+                    const auto pills = controlPillRects(localControlRect);
+                    if (pills[0].contains(localPoint)) {
+                        showMixerRoutingMenu(event.position);
+                        return true;
+                    }
+                }
+
                 // Right-drag across a step grid erases every crossed pad.
-                // Outside the grid, right-click keeps the row context menu.
-                const bool hasContent = !m_audioClip.empty() || !m_pluginId.empty();
-                if (localContextRect.contains(localPoint) && hasContent && usesStepSequencerForType(m_type) &&
+                // Right-click raises the row context menu only from the name
+                // label (far left) — the grid never opens menus.
+                if (localContextRect.contains(localPoint) && usesStepSequencerForType(m_type) &&
                     !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
                     if (stepIndex >= 0 && stepIndex < m_stepCount) {
@@ -979,14 +1071,16 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                         m_stepGestureStartX = event.position.x;
                         m_velEditStartY = event.position.y;
                         m_velEditBaseVelocity = velocity;
-                        m_velEditWasActive = stepHasNote(stepIndex, velocity);
                         m_stepGestureMode = StepGestureMode::Erase;
                         m_stepGestureChanged = removeStepNote(stepIndex);
                         invalidateVisuals();
                         return true;
                     }
                 }
-                showRowContextMenu(event.position);
+                // Row context menu lives on the far-left text (name) area only.
+                if (m_nameLabel && m_nameLabel->getBounds().contains(localPoint)) {
+                    showRowContextMenu(event.position);
+                }
                 return true;
             }
         }
@@ -1022,18 +1116,18 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
     const NUIRect& muteRect = pills[1];
     const NUIRect& soloRect = pills[2];
     const NUIRect& routeRect = pills[0];
-    const NUIPoint localPoint(localX, localY);
-    if (routeRect.contains(localPoint)) {
+    const NUIPoint rowLocalPoint(rowLocalX, rowLocalY);
+    if (routeRect.contains(rowLocalPoint)) {
         showMixerRoutingMenu(event.position);
         return;
     }
-    if (muteRect.contains(localPoint)) {
+    if (muteRect.contains(rowLocalPoint)) {
         m_manager.setUnitMute(m_unitId, !m_isMuted);
         updateState();
         invalidateVisuals();
         return;
     }
-    if (soloRect.contains(localPoint)) {
+    if (soloRect.contains(rowLocalPoint)) {
         m_manager.setUnitSolo(m_unitId, !m_isSolo);
         updateState();
         invalidateVisuals();
@@ -1059,46 +1153,286 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
         return;
     }
 
-    // === Double-click to load sample (EMPTY units only) ===
-    // With a sample loaded, rapid taps are step programming — treating any two
-    // grid clicks within 400ms as "open the file picker" made fast rhythmic
-    // tap placement randomly hijack the second click.
-    auto now = std::chrono::steady_clock::now();
-    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-    bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
-    m_lastClipClickTimeMs = nowMs;
-
-    if (isDoubleClick && m_audioClip.empty() && m_pluginId.empty()) {
-        // Empty unit: double-click is a shortcut to give it a sample.
-        if (m_onLoadUnitSample)
-            m_onLoadUnitSample(m_unitId);
+    // === Step-grid rows: clicks that miss a pad do nothing ===
+    // Selection-based editing only creates/selects on a real pad hit; lane
+    // padding and cell gaps are dead space now (they used to toggle the
+    // nearest pad, which made left-clicks erase active notes). Double-click
+    // on a unit without a sample still opens the file picker.
+    if (usesStepSequencerForType(m_type)) {
+        auto now = std::chrono::steady_clock::now();
+        long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+        const bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400) || event.doubleClick;
+        m_lastClipClickTimeMs = nowMs;
+        if (isDoubleClick && m_audioClip.empty() && m_pluginId.empty()) {
+            if (m_onLoadUnitSample) {
+                m_onLoadUnitSample(m_unitId);
+            }
+        }
         return;
     }
+}
 
-    // === Single click: Grid Interaction - Toggle Steps ===
-    float relativeX = localPoint.x;
-    float availWidth = bounds.width;
-    float stepWidth = gridStepWidth(availWidth);
+bool UnitRow::isStepSelected(int step) const {
+    return std::binary_search(m_selectedSteps.begin(), m_selectedSteps.end(), step);
+}
 
-    float contentX = relativeX + m_scrollX;
-    int stepIndex = static_cast<int>(contentX / stepWidth);
-
-    if (stepIndex >= 0 && stepIndex < m_stepCount && m_patternId.isValid()) {
-        // Plain toggle: place if empty, remove if present. Silent — the running
-        // loop hot-swaps the change on its next pass, which is the wanted
-        // feedback. (The Sampler grid arms a velocity-drag session instead and
-        // never reaches here; this path covers pitched samplers + fallbacks.)
-        float dummy = kDefaultStepVelocity;
-        if (stepHasNote(stepIndex, dummy)) {
-            removeStepNote(stepIndex);
-        } else {
-            placeStepNote(stepIndex);
+void UnitRow::applyClickSelection(int step, bool additive) {
+    if (step < 0 || step >= m_stepCount) {
+        return;
+    }
+    if (additive) {
+        if (!isStepSelected(step)) {
+            m_selectedSteps.push_back(step);
+            std::sort(m_selectedSteps.begin(), m_selectedSteps.end());
+            notifyStepSelectionChanged();
+            invalidateVisuals();
         }
-        if (m_onPatternEdited) {
-            m_onPatternEdited(m_patternId);
-        }
+    } else if (m_selectedSteps.size() != 1 || m_selectedSteps[0] != step) {
+        m_selectedSteps = {step};
+        notifyStepSelectionChanged();
         invalidateVisuals();
     }
+}
+
+void UnitRow::applyRangeSelection(int firstStep, int lastStep) {
+    firstStep = std::max(0, firstStep);
+    lastStep = std::min(m_stepCount - 1, lastStep);
+    if (lastStep < firstStep) {
+        return;
+    }
+    m_selectedSteps.clear();
+    for (int s = firstStep; s <= lastStep; ++s) {
+        m_selectedSteps.push_back(s);
+    }
+    notifyStepSelectionChanged();
+    invalidateVisuals();
+}
+
+void UnitRow::notifyStepSelectionChanged() {
+    if (m_onStepSelectionChanged) {
+        m_onStepSelectionChanged(m_unitId, m_selectedSteps);
+    }
+}
+
+void UnitRow::duplicateSelection() {
+    if (m_selectedSteps.empty() || !m_patternId.isValid() || !m_trackManager) {
+        return;
+    }
+    const int minStep = *std::min_element(m_selectedSteps.begin(), m_selectedSteps.end());
+    const int maxStep = *std::max_element(m_selectedSteps.begin(), m_selectedSteps.end());
+    const int span = maxStep - minStep + 1; // occupied span → duplicate starts right after it
+
+    std::vector<int> newSelection;
+    bool changed = false;
+    m_trackManager->getPatternManager().applyPatch(m_patternId,
+        [this, span, &newSelection, &changed](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) {
+                return;
+            }
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            const auto covers = [&midi](Aestra::Audio::UnitID unitId, double beat) {
+                for (const auto& n : midi.notes) {
+                    const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                    if (n.unitId == unitId && beat >= n.startBeat - 0.01 && beat < endBeat - 0.01) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            for (const int step : m_selectedSteps) {
+                const int dstStep = step + span;
+                if (dstStep >= m_stepCount) {
+                    continue; // clipped at the pattern end — never grows the loop silently
+                }
+                const double srcBeat = step * 0.25;
+                const double dstBeat = dstStep * 0.25;
+                const Aestra::Audio::MidiNote* src = nullptr;
+                for (const auto& n : midi.notes) {
+                    const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                    if (n.unitId == m_unitId && srcBeat >= n.startBeat - 0.01 && srcBeat < endBeat - 0.01) {
+                        src = &n;
+                        break;
+                    }
+                }
+                if (!src || covers(m_unitId, dstBeat)) {
+                    continue; // no source note, or destination already occupied
+                }
+                Aestra::Audio::MidiNote copy = *src; // pitch/duration/velocity preserved
+                copy.startBeat = dstBeat;
+                midi.notes.push_back(copy);
+                newSelection.push_back(dstStep);
+                changed = true;
+            }
+        });
+    if (!changed) {
+        return;
+    }
+    m_selectedSteps = std::move(newSelection); // sorted: constant offset over a sorted selection
+    notifyStepSelectionChanged();
+    invalidateVisuals();
+    if (m_onPatternEdited) {
+        m_onPatternEdited(m_patternId);
+    }
+}
+
+void UnitRow::deleteSelection() {
+    if (m_selectedSteps.empty() || !m_patternId.isValid() || !m_trackManager) {
+        return;
+    }
+    bool changed = false;
+    m_trackManager->getPatternManager().applyPatch(m_patternId,
+        [this, &changed](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) {
+                return;
+            }
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            const auto stepCovered = [this](const Aestra::Audio::MidiNote& n) {
+                if (n.unitId != m_unitId) {
+                    return false;
+                }
+                const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                for (const int s : m_selectedSteps) {
+                    const double beat = s * 0.25;
+                    if (beat >= n.startBeat - 0.01 && beat < endBeat - 0.01) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            const size_t before = midi.notes.size();
+            midi.notes.erase(std::remove_if(midi.notes.begin(), midi.notes.end(), stepCovered), midi.notes.end());
+            changed = midi.notes.size() != before;
+        });
+    m_selectedSteps.clear();
+    notifyStepSelectionChanged();
+    invalidateVisuals();
+    if (changed && m_onPatternEdited) {
+        m_onPatternEdited(m_patternId);
+    }
+}
+
+void UnitRow::moveSelection(int stepDelta) {
+    if (m_selectedSteps.empty() || !m_patternId.isValid() || !m_trackManager) {
+        return;
+    }
+    const int dir = stepDelta > 0 ? 1 : -1;
+    bool changed = false;
+    std::vector<int> newSelection;
+    m_trackManager->getPatternManager().applyPatch(m_patternId,
+        [this, dir, &newSelection, &changed](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) {
+                return;
+            }
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            // Process in movement direction so vacated slots are reusable and
+            // blocked cascades resolve (right: high→low; left: low→high).
+            std::vector<int> ordered = m_selectedSteps;
+            if (dir > 0) {
+                std::sort(ordered.rbegin(), ordered.rend());
+            } else {
+                std::sort(ordered.begin(), ordered.end());
+            }
+
+            const auto occupiedBy = [&midi](Aestra::Audio::UnitID uid, double beat) {
+                for (const auto& n : midi.notes) {
+                    const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                    if (n.unitId == uid && beat >= n.startBeat - 0.01 && beat < endBeat - 0.01) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            const auto findAt = [&midi](Aestra::Audio::UnitID uid, double beat) {
+                for (auto it = midi.notes.begin(); it != midi.notes.end(); ++it) {
+                    const double endBeat = std::max(it->startBeat + 0.25, it->startBeat + it->durationBeats);
+                    if (it->unitId == uid && beat >= it->startBeat - 0.01 && beat < endBeat - 0.01) {
+                        return it;
+                    }
+                }
+                return midi.notes.end();
+            };
+
+            for (const int step : ordered) {
+                const int dst = step + dir;
+                const double srcBeat = step * 0.25;
+                const double dstBeat = dst * 0.25;
+                if (dst < 0 || dst >= m_stepCount || occupiedBy(m_unitId, dstBeat)) {
+                    newSelection.push_back(step); // stuck: note (or empty slot) stays put
+                    continue;
+                }
+                auto it = findAt(m_unitId, srcBeat);
+                if (it == midi.notes.end()) {
+                    newSelection.push_back(dst); // empty selected slot moves freely
+                    continue;
+                }
+                Aestra::Audio::MidiNote copy = *it; // pitch/duration/velocity preserved
+                copy.startBeat = dstBeat;
+                midi.notes.erase(it);
+                midi.notes.push_back(copy);
+                newSelection.push_back(dst);
+                changed = true;
+            }
+        });
+    std::sort(newSelection.begin(), newSelection.end());
+    const bool selectionChanged = newSelection != m_selectedSteps;
+    m_selectedSteps = std::move(newSelection);
+    if (selectionChanged) {
+        notifyStepSelectionChanged();
+    }
+    invalidateVisuals();
+    if (changed && m_onPatternEdited) {
+        m_onPatternEdited(m_patternId);
+    }
+}
+
+void UnitRow::nudgeSelectionVelocity(float delta) {
+    if (m_selectedSteps.empty() || !m_patternId.isValid() || !m_trackManager) {
+        return;
+    }
+    bool changed = false;
+    m_trackManager->getPatternManager().applyPatch(m_patternId,
+        [this, delta, &changed](Aestra::Audio::PatternSource& p) {
+            if (!p.isMidi()) {
+                return;
+            }
+            auto& midi = std::get<Aestra::Audio::MidiPayload>(p.payload);
+            for (const int step : m_selectedSteps) {
+                const double beat = step * 0.25;
+                for (auto& n : midi.notes) {
+                    const double endBeat = std::max(n.startBeat + 0.25, n.startBeat + n.durationBeats);
+                    if (n.unitId == m_unitId && beat >= n.startBeat - 0.01 && beat < endBeat - 0.01) {
+                        const float v = std::clamp(n.velocity + delta, kMinStepVelocity, 1.0f);
+                        if (v != n.velocity) {
+                            n.velocity = v;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        });
+    invalidateVisuals();
+    if (changed && m_onPatternEdited) {
+        m_onPatternEdited(m_patternId);
+    }
+}
+
+void UnitRow::selectAllNotes() {
+    if (!m_patternId.isValid() || !m_trackManager) {
+        return;
+    }
+    std::vector<int> steps;
+    for (int s = 0; s < m_stepCount; ++s) {
+        float v = kDefaultStepVelocity;
+        if (stepHasNote(s, v)) {
+            steps.push_back(s);
+        }
+    }
+    if (steps == m_selectedSteps) {
+        return;
+    }
+    m_selectedSteps = std::move(steps);
+    notifyStepSelectionChanged();
+    invalidateVisuals();
 }
 
 bool UnitRow::stepHasNote(int step, float& velocityOut) const {
@@ -1194,7 +1528,55 @@ void UnitRow::setStepNoteVelocity(int step, float velocity) {
 bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
     // Key events are forwarded to children automatically by NUIComponent.
     // The UnitNameLabel (when renaming) receives them via its NUITextInput child.
-    (void)event;
+    if (!event.pressed) {
+        return false;
+    }
+    if (m_nameLabel && m_nameLabel->isRenaming()) {
+        return false; // typing a name — Delete/Backspace belong to the text field
+    }
+
+    const bool isStepGrid = usesStepSequencerForType(m_type) && !shouldUseNoteRoll() &&
+                            m_patternId.isValid() && m_trackManager;
+    if (!isStepGrid) {
+        return false;
+    }
+
+    const bool ctrl = (event.modifiers & NUIModifiers::Ctrl) != 0;
+    if (ctrl && event.keyCode == NUIKeyCode::B) {
+        if (!event.repeat) {
+            duplicateSelection();
+        }
+        return true;
+    }
+    if (!ctrl && (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace)) {
+        deleteSelection();
+        return true;
+    }
+    if (!ctrl && (event.keyCode == NUIKeyCode::Left || event.keyCode == NUIKeyCode::Right)) {
+        // Move mirrors the horizontal drag axis: selected notes shift one step.
+        moveSelection(event.keyCode == NUIKeyCode::Right ? 1 : -1);
+        return true;
+    }
+    if (!ctrl && (event.keyCode == NUIKeyCode::Up || event.keyCode == NUIKeyCode::Down)) {
+        // Velocity mirrors the vertical drag axis: Up louder, Down quieter.
+        nudgeSelectionVelocity(event.keyCode == NUIKeyCode::Up ? kVelocityNudgeStep : -kVelocityNudgeStep);
+        return true;
+    }
+    if (ctrl && event.keyCode == NUIKeyCode::A) {
+        if (!event.repeat) {
+            selectAllNotes(); // Ctrl+A: select the active notes (empty slots stay unselected)
+        }
+        return true;
+    }
+    if (!ctrl && event.keyCode == NUIKeyCode::Escape) {
+        // Esc dismisses the selection — intuitive way out of the editing grammar.
+        if (!m_selectedSteps.empty()) {
+            m_selectedSteps.clear();
+            notifyStepSelectionChanged();
+            invalidateVisuals();
+        }
+        return true;
+    }
     return false;
 }
 

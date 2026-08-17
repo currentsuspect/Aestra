@@ -3,6 +3,7 @@
 
 #include "WindowPanel.h"
 #include "TrackManager.h"
+#include <chrono>
 #include "../AestraUI/Widgets/UnitRow.h"
 #include "../AestraUI/Widgets/UnitColorPicker.h"
 #include "NUIComponent.h"
@@ -95,6 +96,10 @@ public:
     /** @brief Get the currently selected unit identifier. */
     UnitID getSelectedUnitId() const { return m_selectedUnitId; }
 
+    void setOnPreferredHeightChanged(std::function<void(float)> callback) {
+        m_onPreferredHeightChanged = std::move(callback);
+    }
+
 private:
     std::shared_ptr<TrackManager> m_trackManager;
     
@@ -122,7 +127,7 @@ private:
     bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
-    void scrollGridBy(float deltaPx); // Clamp + broadcast the shared grid scroll
+    void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
@@ -136,6 +141,7 @@ private:
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
+    void adjustPatternSteps(int deltaSteps);
     void createUnitOfType(UnitType type);
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
@@ -151,6 +157,8 @@ private:
     };
     std::optional<PatternClipboard> m_clipboard;
     UnitID m_selectedUnitId = 0; // Currently selected unit for copy/paste
+    UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
+    std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
 
     void createLayout();
     void onAddUnit();
@@ -173,6 +181,7 @@ private:
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
+    std::function<void(float)> m_onPreferredHeightChanged;
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;
     std::function<void(PatternID)> m_onActivePatternChanged;
@@ -180,6 +189,10 @@ private:
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
     AestraUI::NUIRect m_fitToggleRect{};
+    AestraUI::NUIRect m_fitModeRect{};
+    AestraUI::NUIRect m_scrollModeRect{};
+    float m_scrollIndicatorAlpha = 0.0f;
+    std::chrono::steady_clock::time_point m_lastUserGridScroll{};
     AestraUI::NUIRect m_commandHeaderRect{};
     AestraUI::NUIRect m_progressHeaderRect{};
     AestraUI::NUIRect m_listViewportRect{}; // Visible area for unit rows (scroll clip + hit-test)
@@ -187,6 +200,9 @@ private:
     AestraUI::NUIRect m_barsDecrementRect{};
     AestraUI::NUIRect m_barsValueRect{};
     AestraUI::NUIRect m_barsIncrementRect{};
+    AestraUI::NUIRect m_stepsDecrementRect{};
+    AestraUI::NUIRect m_stepsValueRect{};
+    AestraUI::NUIRect m_stepsIncrementRect{};
 };
 
 } // namespace Audio

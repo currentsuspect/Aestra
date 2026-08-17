@@ -23,6 +23,8 @@ public:
 
     void setUnitName(const std::string& name);
     void setUnitType(Aestra::Audio::UnitType type);
+    /** @brief True while an inline rename is active (row key handling must not steal Delete/Backspace). */
+    bool isRenaming() const { return m_isRenaming; }
 
     /** @brief Callback fired on double-click to open the unit/plugin editor. */
     std::function<void()> m_onOpenEditor;
