@@ -927,7 +927,6 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
 
     // 3. Save Lanes and Clips
     JSON lanesJson = JSON::array();
-    size_t laneIndex = 0;
     for (const auto& laneId : playlist.getLaneIDs()) {
         if (const auto* lane = playlist.getLane(laneId)) {
             JSON ljs = JSON::object();
@@ -939,7 +938,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("pan", JSON(lane->pan));
             ljs.set("mute", JSON(lane->muted));
             ljs.set("solo", JSON(lane->solo));
-            if (const auto* channel = trackManager->getChannel(laneIndex)) {
+            // FD-14 §contract: lane channel state resolves through explicit
+            // ownership — the lane's Track, then the track's channel id.
+            // Never by lane position: lane order is creation/append order and
+            // can diverge from channel order (take lanes, track-first setups).
+            const auto* laneTrack = trackManager->getTrackForLane(laneId);
+            const auto* channel = laneTrack ? trackManager->getChannelById(laneTrack->channelId) : nullptr;
+            if (channel) {
                 // MixerChannel state not covered by PlaylistLane
                 ljs.set("mixerChannelId", JSON(static_cast<double>(channel->getChannelId())));
                 ljs.set("soloSafe", JSON(channel->isSoloSafe()));
@@ -1048,7 +1053,6 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("trackId", JSON(static_cast<double>(lane->trackId)));
             lanesJson.push(ljs);
         }
-        ++laneIndex;
     }
     root.set("lanes", lanesJson);
     // 3b. Save Tracks (FD-14 ownership layer). The tracks array carries the
