@@ -289,6 +289,7 @@ private:
     void onRecordToggled();
     void showRecordModeMenu(const AestraUI::NUIPoint& position);
     void updateRecordTooltip();
+    std::string recordButtonTooltipText() const;
     MixerChannel* resolveMonitorChannel() const;
 
     void drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,

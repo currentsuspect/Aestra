@@ -443,17 +443,19 @@ MixerChannel* TrackUIComponent::resolveMonitorChannel() const {
     return m_trackManager->getChannelById(static_cast<uint32_t>(track->channelId));
 }
 
+std::string TrackUIComponent::recordButtonTooltipText() const {
+    if (auto* channel = resolveMonitorChannel()) {
+        const char* monitorText = channel->isMonitoringEnabled() ? "On" : "Off";
+        return std::string("Arm for Recording (O) • Right-click: Input Monitoring: ") + monitorText;
+    }
+    return "Arm for Recording (O)";
+}
+
 void TrackUIComponent::updateRecordTooltip() {
     if (!m_recordButton) {
         return;
     }
-
-    if (auto* channel = resolveMonitorChannel()) {
-        const char* monitorText = channel->isMonitoringEnabled() ? "On" : "Off";
-        m_recordButton->setTooltip(std::string("Arm for Recording (O) • Right-click: Input Monitoring: ") + monitorText);
-    } else {
-        m_recordButton->setTooltip("Arm for Recording (O)");
-    }
+    m_recordButton->setTooltip(recordButtonTooltipText());
 }
 
 
@@ -1793,7 +1795,10 @@ void TrackUIComponent::onResize(int width, int height) {
     const float buttonW = 24.0f;
     const float buttonH = 24.0f;
     const float spacing = 2.0f;
-    const int numButtons = m_channel ? 4 : 2; // Playlist lanes only own M/S.
+    // Every lane owns M/S; the record arm button is track-owned and renders
+    // without a channel too. Channel-backed lanes keep their historical
+    // 4-slot reservation (the extra slot precedes the volume knob).
+    const int numButtons = m_channel ? 4 : 3;
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     const float leftPad = 14.0f;
@@ -2033,7 +2038,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     lane && lane->muted && lane->solo ? "Solo held • Track is muted (S)" : "Solo Track (S)";
                 AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Arm Track for Recording (O)", event.position, this);
+                AestraUI::NUIComponent::showRemoteTooltip(recordButtonTooltipText(), event.position, this);
             } else if (m_volumeKnobHovered) {
                 int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
                 AestraUI::NUIPoint tipPos(
