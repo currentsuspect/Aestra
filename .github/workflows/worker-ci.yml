@@ -117,6 +117,10 @@ jobs:
       - name: Test
         if: steps.scope.outputs.relevant == 'true'
         run: npm test
+        env:
+          # The cross-language fixture test needs the gate's fixture key. It
+          # used to be committed in the test file; now it lives in repo secrets.
+          AESTRA_LICENSE_GATE_FIXTURE_PRIVATE_KEY: ${{ secrets.AESTRA_LICENSE_GATE_FIXTURE_PRIVATE_KEY }}
 
       # Builds the worker and resolves its bindings without touching the account,
       # so a toolchain bump that breaks deployment fails here rather than at deploy.
