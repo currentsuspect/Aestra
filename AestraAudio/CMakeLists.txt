@@ -393,6 +393,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/SetPanCommand.h
     include/Commands/SetMuteCommand.h
     include/Commands/SetSoloCommand.h
+    include/Commands/SetMonitoringCommand.h
     include/Commands/AddNoteCommand.h
     include/Commands/RemoveNoteCommand.h
     include/Commands/MoveNoteCommand.h

@@ -11,6 +11,7 @@
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetPanCommand.h"
+#include "Commands/SetMonitoringCommand.h"
 #include "TrackManager.h"
 #include "PluginManager.h"
 #include "Commands/PluginCommands.h"
@@ -186,6 +187,16 @@ void UIMixerPanel::refreshChannels()
 
             m_trackManager->getCommandHistory().pushAndExecute(
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
+        };
+
+        // Wire input monitoring to CommandHistory for undo/redo + dirty parity
+        strip->onMonitorToggled = [this, chId](bool monitored) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
+            if (!mixerChannel) return;
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<Aestra::Audio::SetMonitoringCommand>(*m_trackManager, *mixerChannel, monitored));
         };
 
         m_strips.push_back(strip);

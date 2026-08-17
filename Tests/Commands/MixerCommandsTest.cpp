@@ -6,6 +6,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
+#include "Commands/SetMonitoringCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Core/MixerChannel.h"
 #include "Models/TrackManager.h"
@@ -357,6 +358,60 @@ void testSetSoloRedoCycle() {
 // Integration test: mixer commands with CommandHistory
 // =============================================================================
 
+void testSetMonitoringCommand() {
+    std::cout << "TEST: SetMonitoringCommand... ";
+
+    MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
+    channel.setArmed(false);
+
+    SetMonitoringCommand cmd(trackManager, channel, true);
+    cmd.execute();
+
+    assert(channel.isArmed() == true);
+    assert(cmd.getName() == "Enable Input Monitoring");
+    assert(trackManager.consumePendingGraphRebuild() == true);
+
+    cmd.undo();
+    assert(channel.isArmed() == false);
+    assert(trackManager.consumePendingGraphRebuild() == true);
+
+    cmd.redo();
+    assert(channel.isArmed() == true);
+    assert(trackManager.consumePendingGraphRebuild() == true);
+
+    SetMonitoringCommand disableCmd(trackManager, channel, false);
+    disableCmd.execute();
+    assert(disableCmd.getName() == "Disable Input Monitoring");
+    assert(channel.isArmed() == false);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testMonitoringToggleMarksProjectModified() {
+    std::cout << "TEST: monitoring toggle marks project modified (#806)... ";
+
+    MixerChannel channel("Test Channel", 0);
+    TrackManager trackManager;
+    channel.setArmed(false);
+    trackManager.setModified(false);
+    assert(trackManager.isModified() == false);
+
+    // The mixer slot toggle must run through the manager's own history so the
+    // dirty flag and undo both engage, matching mute/solo/pan.
+    trackManager.getCommandHistory().pushAndExecute(
+        std::make_shared<SetMonitoringCommand>(trackManager, channel, true));
+
+    assert(channel.isArmed() == true);
+    assert(trackManager.isModified() == true);
+
+    trackManager.getCommandHistory().undo();
+    assert(channel.isArmed() == false);
+    assert(trackManager.isModified() == true);
+
+    std::cout << "✅ PASS\n";
+}
+
 void testMixerCommandsWithHistory() {
     std::cout << "TEST: Mixer commands with CommandHistory integration... ";
 
@@ -428,6 +483,9 @@ int main() {
     testSetSoloDoubleExecuteNoOp();
     testSetSoloUndoBeforeExecuteNoOp();
     testSetSoloRedoCycle();
+
+    testSetMonitoringCommand();
+    testMonitoringToggleMarksProjectModified();
 
     testMixerCommandsWithHistory();
 

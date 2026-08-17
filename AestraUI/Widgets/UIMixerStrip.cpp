@@ -324,9 +324,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         channel->monitored = monitored;
         invalidateStaticCache();
 
-        if (auto mc = channel->channel) {
-            mc->setArmed(monitored);
-        }
+        // Engine side goes through the command history (SetMonitoringCommand)
+        // for dirty/undo parity with mute/solo/pan. The snapshot refresh
+        // rides setArmed's own notification.
+        if (onMonitorToggled) onMonitorToggled(monitored);
     };
     addChild(m_buttons);
 
