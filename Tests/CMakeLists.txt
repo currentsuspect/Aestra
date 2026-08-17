@@ -1318,6 +1318,7 @@ set_tests_properties(TrackOwnershipTest PROPERTIES LABELS "audio;tracks;migratio
 
 add_executable(RecordingPathTest
     AestraAudio/RecordingPathTest.cpp
+
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
 )
 target_link_libraries(RecordingPathTest PRIVATE AestraAudio)
@@ -1336,6 +1337,31 @@ target_include_directories(RecordingPathTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 add_test(NAME RecordingPathTest COMMAND RecordingPathTest)
+set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
+
+# Phase 2 baseline of the Track/Lane/Channel migration (vault: ownership
+# the current channel-based reality that the migration intentionally changes.
+add_executable(RecordingBaselineTest
+    AestraAudio/RecordingBaselineTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(RecordingBaselineTest PRIVATE AestraAudio)
+target_include_directories(RecordingBaselineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME RecordingBaselineTest COMMAND RecordingBaselineTest)
+set_tests_properties(RecordingBaselineTest PROPERTIES LABELS "audio;recording;baseline;contract:audio")
 set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless;contract:application")
 
 
