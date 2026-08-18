@@ -2125,15 +2125,19 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     event.pressed && event.button == AestraUI::NUIMouseButton::Left;
                 if (isLeftPress && lane->automationCurves.empty()) {
                     // First point on an empty lane: create the default Volume
-                    // curve bound to this lane's paired mixer channel (the
-                    // same lane-index -> channel pairing the serializer uses).
-                    // defaultValue 1.0 keeps an empty curve neutral — the old
-                    // default of 0.0 silenced the channel until a point was
-                    // added. Press-only: pointer moves (hover) must not
-                    // insert a curve into the project model.
+                    // curve bound to this lane's routing channel. FD-14 §15:
+                    // automation targets must never resolve through lane
+                    // POSITION (getChannel(lane->index)) — they resolve by
+                    // ownership: lane -> owning Track -> track channelId,
+                    // master when the lane is unowned. defaultValue 1.0 keeps
+                    // an empty curve neutral — the old default of 0.0 silenced
+                    // the channel until a point was added. Press-only: pointer
+                    // moves (hover) must not insert a curve into the model.
                     AutomationCurve curve("Volume", AutomationTarget::Volume);
                     curve.setDefaultValue(1.0f);
-                    if (const auto* ch = m_trackManager->getChannel(static_cast<size_t>(lane->index))) {
+                    const uint32_t resolvedId = m_trackManager->resolveLaneChannelId(lane->id);
+                    const uint32_t defaultChannelId = resolvedId != 0 ? resolvedId : MASTER_MIXER_CHANNEL_ID;
+                    if (const auto* ch = m_trackManager->getChannelById(defaultChannelId)) {
                         curve.mixerChannelId = ch->getChannelId();
                     }
                     lane->automationCurves.push_back(std::move(curve));

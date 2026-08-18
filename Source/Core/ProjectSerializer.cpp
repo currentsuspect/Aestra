@@ -942,8 +942,9 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             // ownership — the lane's Track, then the track's channel id.
             // Never by lane position: lane order is creation/append order and
             // can diverge from channel order (take lanes, track-first setups).
-            const auto* laneTrack = trackManager->getTrackForLane(laneId);
-            const auto* channel = laneTrack ? trackManager->getChannelById(laneTrack->channelId) : nullptr;
+            const uint32_t resolvedChannelId = trackManager->resolveLaneChannelId(laneId);
+            const auto* channel = resolvedChannelId != 0 ? trackManager->getChannelById(resolvedChannelId)
+                                                         : nullptr;
             if (channel) {
                 // MixerChannel state not covered by PlaylistLane
                 ljs.set("mixerChannelId", JSON(static_cast<double>(channel->getChannelId())));

@@ -211,6 +211,25 @@ void testLegacyFileMigration() {
     std::filesystem::remove_all(dir);
 }
 
+void testResolveLaneChannelId() {
+    std::cout << "[model] lane channel resolves through track identity, never position\n";
+    TrackManager tm;
+    PlaylistLaneID laneId = tm.getPlaylistModel().createLane("Lane 1");
+
+    check(tm.resolveLaneChannelId(laneId) == 0, "unowned lane resolves to 0 (caller falls back to master)");
+
+    MixerChannel* channel = tm.addChannelWithId("Insert 7", 7);
+    check(channel != nullptr && channel->getChannelId() == 7, "test channel 7 exists");
+    uint64_t trackId = tm.createTrack(laneId, "Track 1", 7);
+    check(trackId != 0, "track created routing to channel 7");
+    check(tm.resolveLaneChannelId(laneId) == 7, "owned lane resolves through track channelId — not position");
+
+    tm.removeTrack(trackId);
+    check(tm.resolveLaneChannelId(laneId) == 0, "lane outliving its removed track resolves to 0");
+
+    check(tm.resolveLaneChannelId(PlaylistLaneID::generate()) == 0, "missing lane resolves to 0");
+}
+
 } // namespace
 
 int main() {
@@ -221,6 +240,7 @@ int main() {
     testRestoreTrackExactIds();
     testSerializeRoundtrip();
     testLegacyFileMigration();
+    testResolveLaneChannelId();
 
     if (g_failures == 0) {
         std::cout << "Track ownership: all green.\n";
