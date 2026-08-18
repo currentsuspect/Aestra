@@ -261,6 +261,8 @@ private:
 
     // UI Components
     std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_laneCountLabel;
+    std::shared_ptr<AestraUI::NUIIcon> m_laneCountIcon;
     std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_soloButton;

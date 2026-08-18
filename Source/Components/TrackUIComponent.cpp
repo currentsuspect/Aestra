@@ -78,6 +78,7 @@ using AestraUI::kMonitorIconSvg;
 using AestraUI::kMuteIconSvg;
 using AestraUI::kRecordIconSvg;
 using AestraUI::kSoloIconSvg;
+using AestraUI::kLaneStackIconSvg;
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -184,6 +185,20 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_nameLabel->setEllipsize(true);
     updateTrackNameColors();
     addChild(m_nameLabel);
+
+    // FD-14 scope §10 (lane visibility): the track's primary row carries a
+    // lane-stack icon + count so a multi-lane track is discoverable at a glance.
+    m_laneCountIcon = std::make_shared<AestraUI::NUIIcon>();
+    m_laneCountIcon->loadSVG(kLaneStackIconSvg);
+    m_laneCountIcon->setIconSize(13.0f, 13.0f);
+    m_laneCountIcon->setVisible(false);
+    addChild(m_laneCountIcon);
+
+    m_laneCountLabel = std::make_shared<AestraUI::NUILabel>();
+    m_laneCountLabel->setFontSize(11.0f);
+    m_laneCountLabel->setEllipsize(false);
+    m_laneCountLabel->setVisible(false);
+    addChild(m_laneCountLabel);
 
     // Volume fader removed from track header to reduce clutter.
     m_volumeFader.reset();
@@ -496,6 +511,20 @@ void TrackUIComponent::updateUI() {
 
     if (m_recordButton) {
         updateRecordTooltip();
+    }
+
+    if (m_laneCountLabel && m_laneCountIcon) {
+        const bool isPrimaryRow = track && !track->laneIds.empty() && track->laneIds.front() == m_laneId;
+        if (isPrimaryRow && track->laneIds.size() > 1) {
+            m_laneCountLabel->setText(std::to_string(track->laneIds.size()));
+            m_laneCountLabel->setTextColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+            m_laneCountLabel->setVisible(true);
+            m_laneCountIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+            m_laneCountIcon->setVisible(true);
+        } else {
+            m_laneCountLabel->setVisible(false);
+            m_laneCountIcon->setVisible(false);
+        }
     }
 
     if (m_channel) {
@@ -1812,9 +1841,15 @@ void TrackUIComponent::onResize(int width, int height) {
     const float localButtonsXStart = controlAreaWidth - rightPad - buttonsTotalW;
     const float localButtonsY = (bounds.height - buttonH) * 0.5f;
 
+    // Lane-count indicator (FD-14 scope §10) sits just left of the buttons on
+    // the track's primary row; the name label flexes around it.
+    const float laneIndicatorWidth = 54.0f;
+    const float laneIndicatorGap = 6.0f;
+    const float laneIndicatorX = localButtonsXStart - laneIndicatorGap - laneIndicatorWidth;
+
     // Keep track number + name anchored to the left, with flexible space to buttons.
     const float localLabelLeft = leftPad + trackNumberWidth + numberNameGap;
-    const float localInlineRight = localButtonsXStart - 8.0f;
+    const float localInlineRight = laneIndicatorX - 8.0f;
     const float localInlineWidth = std::max(0.0f, localInlineRight - localLabelLeft);
     const float localNameHeight = std::max(14.0f, layout.trackLabelHeight - 2.0f);
     const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
@@ -1823,6 +1858,13 @@ void TrackUIComponent::onResize(int width, int height) {
     // Name label - use NUIAbsolute for global coordinate system
     if (m_nameLabel) {
         m_nameLabel->setBounds(AestraUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localNameY, localLabelWidth, localNameHeight));
+    }
+    if (m_laneCountLabel && m_laneCountIcon) {
+        const float laneIconY = localButtonsY + std::max(0.0f, (buttonH - 13.0f) * 0.5f);
+        m_laneCountIcon->setBounds(
+            AestraUI::NUIRect(bounds.x + laneIndicatorX, bounds.y + laneIconY, 13.0f, 13.0f));
+        m_laneCountLabel->setBounds(AestraUI::NUIRect(
+            bounds.x + laneIndicatorX + 15.0f, bounds.y + localNameY, laneIndicatorWidth - 17.0f, localNameHeight));
     }
     if (m_volumeFader) {
         m_volumeFader->setVisible(false);
