@@ -17,6 +17,7 @@
 #include "Commands/SetStepsCommand.h"
 #include "Commands/TransposePatternCommand.h"
 #include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DeleteLaneCommand.h"
 #include "Commands/ImportAudioClipCommand.h"
 #include "IO/MiniAudioDecoder.h"
@@ -312,6 +313,15 @@ void CommandRegistry::initialize() {
         PlaylistLaneID laneId;
         if (!AestraUUID::tryParse(laneIt->second, laneId)) return nullptr;
         return std::make_unique<DeleteLaneCommand>(*tm, laneId);
+    });
+
+    reg.registerCommand("create_track_lane", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        std::string name;
+        auto nameIt = flags.find("name");
+        if (nameIt != flags.end()) name = nameIt->second;
+        return std::make_unique<CreateTrackWithLaneCommand>(*tm, name);
     });
 
     // Imports the file for real. This used to record the path as the clip's

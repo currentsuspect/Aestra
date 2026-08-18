@@ -383,6 +383,25 @@ public:
         return track.trackId;
     }
 
+    /** @brief Remove a Track entirely. Owned lanes are detached (trackId=0)
+     *  and remain in the playlist. Returns false when the track is missing.
+     *  Used by CreateTrackWithLaneCommand::undo() so a dropped or added track
+     *  never survives the undo of the lane it was created with. */
+    bool removeTrack(uint64_t trackId) {
+        auto it = m_tracks.find(trackId);
+        if (it == m_tracks.end()) {
+            return false;
+        }
+        for (const auto& laneId : it->second.laneIds) {
+            if (auto* lane = m_playlistModel.getLane(laneId)) {
+                lane->trackId = 0;
+            }
+        }
+        m_tracks.erase(it);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        return true;
+    }
+
     /** @brief Find a Track by stable ID. */
     Track* getTrack(uint64_t trackId) {
         auto it = m_tracks.find(trackId);

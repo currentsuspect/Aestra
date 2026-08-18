@@ -10,7 +10,7 @@
 #include "AudioFileValidator.h"
 #include "ClipSource.h"
 #include "Commands/AddClipCommand.h"
-#include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DeleteLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -133,21 +133,21 @@ void TrackManagerUI::addTrack(const std::string& name) {
         return;
 
     // Playlist lanes are created independently from mixer inserts.
-    auto laneCmd = std::make_shared<CreateLaneCommand>(m_trackManager->getPlaylistModel(), name);
+    //
+    // FD-14: the lane AND its owning Track are one operation — "add a track" is
+    // a lane plus ownership, and undoing it removes both. A bare createTrack()
+    // after a CreateLaneCommand push left an empty Track behind on undo.
+    auto laneCmd = std::make_shared<CreateTrackWithLaneCommand>(*m_trackManager, name);
     m_trackManager->getCommandHistory().pushAndExecute(laneCmd);
 
-    // FD-14: every lane belongs to a Track. The app's add-track creates the
-    // lane AND its owning Track in one operation (ownership by stable id).
     if (laneCmd->getLaneId().isValid()) {
-        m_trackManager->createTrack(laneCmd->getLaneId(), name);
+        // Rebuild UI from model state
+        refreshTracks();
+        layoutTracks();
+        scheduleTimelineMinimapRebuild();
+        invalidateCache();
+        Log::info("Added Playlist lane via command: " + name);
     }
-
-    // Rebuild UI from model state
-    refreshTracks();
-    layoutTracks();
-    scheduleTimelineMinimapRebuild();
-    invalidateCache();
-    Log::info("Added Playlist lane via command: " + name);
 }
 
 void TrackManagerUI::refreshTracks() {

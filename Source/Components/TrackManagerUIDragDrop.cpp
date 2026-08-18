@@ -14,7 +14,7 @@
 #include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
 #include "Commands/CommandTransaction.h"
-#include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -207,16 +207,26 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         clearDropPreview();
         return result;
     }
+    // Catch-all for every payload the playlist cannot handle (None, Custom,
+    // AudioSourceRoute): the append branch below would otherwise create a lane
+    // and a Track for a payload no handler consumes, and a rejected drop must
+    // leave no objects behind. This must run BEFORE the lane-creation branch.
+    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::Pattern) {
+        result.accepted = false;
+        result.message = "Unsupported drop payload";
+        clearDropPreview();
+        return result;
+    }
 
     // 2. Resolve target lane
     //
     // A drop that has to append a lane must undo as ONE step: the lane is part of
-    // the edit, not scaffolding around it. Creating it through CreateLaneCommand
+    // the edit, not scaffolding around it. Creating it through CreateTrackWithLaneCommand
     // rather than calling playlist.createLane() directly is what lets it join the
     // clip in a single transaction — otherwise Ctrl+Z removes the clip and leaves
     // an empty orphan lane the user never asked for and cannot undo away.
     PlaylistLaneID targetLaneId;
-    std::shared_ptr<CreateLaneCommand> laneCommand;
+    std::shared_ptr<CreateTrackWithLaneCommand> laneCommand;
     if (laneIndex == displayRows) {
         // When a new lane is created for a file drop, name it from the sample
         // rather than "Track N" — the moment a clip lands on a track, the track
@@ -227,7 +237,10 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             namespace fs = std::filesystem;
             laneName = fs::path(data.filePath).stem().string();
         }
-        laneCommand = std::make_shared<CreateLaneCommand>(playlist, laneName);
+        // FD-14: the lane and its owning Track are ONE command, so a failed
+        // import rolls both back and an undo removes both — never an orphaned
+        // Track left behind when its lane disappears.
+        laneCommand = std::make_shared<CreateTrackWithLaneCommand>(*m_trackManager, laneName);
         laneCommand->execute();
         targetLaneId = laneCommand->getLaneId();
         if (!targetLaneId.isValid()) {
@@ -237,8 +250,6 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             clearDropPreview();
             return result;
         }
-        // FD-14: a new lane belongs to a new Track (ownership by stable id).
-        m_trackManager->createTrack(targetLaneId, laneName);
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {

@@ -20,6 +20,7 @@
 #include "Commands/AddClipCommand.h"
 #include "Commands/CommandTransaction.h"
 #include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
 #include "Models/TrackManager.h"
 
 #include <cstdlib>
@@ -126,9 +127,11 @@ int main() {
 
         const size_t lanesBefore = playlist.getLaneCount();
 
-        auto laneCommand = std::make_shared<CreateLaneCommand>(playlist, "Lane 1");
+        auto laneCommand = std::make_shared<CreateTrackWithLaneCommand>(tracks, "Lane 1");
         laneCommand->execute();
+        const uint64_t trackId = laneCommand->getTrackId();
         require(playlist.getLaneCount() == lanesBefore + 1, "Lane command did not append a lane");
+        require(tracks.getTrack(trackId) != nullptr, "Lane command did not create its track");
 
         // The clip cannot be placed — this stands in for a pattern that could not be
         // resolved or a source that decoded to nothing. onDrop rolls the lane back
@@ -141,7 +144,59 @@ int main() {
         laneCommand->undo();
 
         require(playlist.getLaneCount() == lanesBefore, "A failed drop left its appended lane behind");
+        require(tracks.getTrack(trackId) == nullptr, "A failed drop left its Track behind");
         require(!history.canUndo(), "A failed drop was recorded in the undo history");
+    }
+
+    // --- a drop-appended lane owns a Track; undo removes both -------------------
+    {
+        auto tracksOwner = std::make_unique<TrackManager>();
+        auto& tracks = *tracksOwner;
+        auto& playlist = tracks.getPlaylistModel();
+        auto& history = tracks.getCommandHistory();
+
+        const size_t lanesBefore = playlist.getLaneCount();
+
+        // What onDrop does since the FD-14 pairing: one command creates the lane
+        // AND its owning Track, so neither a failed import nor an undo can strand
+        // an orphaned Track with zero lanes.
+        auto laneCommand = std::make_shared<CreateTrackWithLaneCommand>(tracks, "Dropped");
+        laneCommand->execute();
+        const PlaylistLaneID laneId = laneCommand->getLaneId();
+        const uint64_t trackId = laneCommand->getTrackId();
+        require(laneId.isValid() && trackId != 0, "Track+Lane command did not create both");
+
+        const Track* track = tracks.getTrack(trackId);
+        require(track && track->laneIds.size() == 1 && track->laneIds[0] == laneId,
+                "Track does not own its created lane");
+        const PlaylistLane* lane = playlist.getLane(laneId);
+        require(lane && lane->trackId == trackId, "Lane does not point at its owning track");
+
+        const ClipInstance clip = makeClip();
+        auto clipCommand = std::make_shared<AddClipCommand>(playlist, laneId, clip);
+        clipCommand->execute();
+
+        auto transaction = std::make_shared<CommandTransaction>("Import Audio Clip");
+        transaction->add(laneCommand);
+        transaction->add(clipCommand);
+        transaction->markExecuted();
+        require(history.pushExecuted(transaction), "The drop transaction was refused by the history");
+
+        // One Ctrl+Z removes clip, lane, AND track — no orphaned Track.
+        require(history.undo(), "Undo of the drop transaction failed");
+        require(playlist.getClip(clip.id) == nullptr, "Undo left the dropped clip behind");
+        require(playlist.getLane(laneId) == nullptr, "Undo left the appended lane behind");
+        require(tracks.getTrack(trackId) == nullptr, "Undo left an orphaned Track behind");
+        require(playlist.getLaneCount() == lanesBefore, "Undo did not restore the playlist");
+
+        // Redo restores the lane's ORIGINAL identity (the clip command still holds
+        // that id) and mints a fresh track.
+        require(history.redo(), "Redo of the drop transaction failed");
+        require(playlist.getLane(laneId) != nullptr, "Redo did not restore the lane's identity");
+        require(playlist.getClip(clip.id) != nullptr, "Redo lost the dropped clip");
+        require(playlist.findClipLane(clip.id) == laneId, "Redo restored the clip onto the wrong lane");
+        const PlaylistLane* redoneLane = playlist.getLane(laneId);
+        require(redoneLane && redoneLane->trackId != 0, "Redo did not restore lane ownership");
     }
 
     std::cout << "[PASS] DropTransactionTest\n";
