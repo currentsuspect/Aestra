@@ -224,6 +224,14 @@ void testResolveLaneChannelId() {
     check(trackId != 0, "track created routing to channel 7");
     check(tm.resolveLaneChannelId(laneId) == 7, "owned lane resolves through track channelId — not position");
 
+    // Track exists but its channelId does not resolve to a MixerChannel:
+    // the resolver must return 0, never hand a dead id to the caller as if
+    // it were live (branch shared with the serializer's channel state save).
+    PlaylistLaneID deadLaneId = tm.getPlaylistModel().createLane("Lane 2");
+    uint64_t deadTrackId = tm.createTrack(deadLaneId, "Track 2", 99);
+    check(deadTrackId != 0, "track with nonexistent channel created");
+    check(tm.resolveLaneChannelId(deadLaneId) == 0, "track with dead channel resolves to 0");
+
     tm.removeTrack(trackId);
     check(tm.resolveLaneChannelId(laneId) == 0, "lane outliving its removed track resolves to 0");
 
