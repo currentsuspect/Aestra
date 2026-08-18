@@ -75,6 +75,7 @@ int main() {
         require(playlist.getLaneId(0) == primaryId && playlist.getLaneId(1) == takeId &&
                     playlist.getLaneId(2) == take3Id && playlist.getLaneId(3) == tailId,
                 "Fixture playlist order is wrong");
+        tracks.getTrack(trackId)->activeLaneId = takeId;
 
         history.pushAndExecute(std::make_shared<DeleteLaneCommand>(tracks, takeId));
         require(playlist.getLane(takeId) == nullptr, "Take lane still present after delete");
@@ -83,6 +84,8 @@ int main() {
         require(track && track->laneIds.size() == 2 && track->laneIds[0] == primaryId &&
                     track->laneIds[1] == take3Id,
                 "Lane was not detached from the track");
+        require(track && track->activeLaneId == take3Id,
+                "Active lane did not fall back to the remaining lane after delete");
 
         require(history.undo(), "Undo of the lane delete failed");
         const PlaylistLane* restored = playlist.getLane(takeId);
@@ -99,6 +102,8 @@ int main() {
         require(playlist.getLaneId(0) == primaryId && playlist.getLaneId(1) == takeId &&
                     playlist.getLaneId(2) == take3Id && playlist.getLaneId(3) == tailId,
                 "Undo did not restore the lane's playlist position");
+        require(trackAfterUndo && trackAfterUndo->activeLaneId == takeId,
+                "Undo did not restore the active lane");
 
         require(history.redo(), "Redo of the lane delete failed");
         require(playlist.getLane(takeId) == nullptr, "Redo did not remove the lane again");
@@ -142,6 +147,35 @@ int main() {
         history.pushAndExecute(std::make_shared<DeleteLaneCommand>(tracks, PlaylistLaneID::generate()));
         require(playlist.getLaneCount() == lanesBefore, "A no-op delete changed the playlist");
         require(history.undo(), "Undo of a no-op delete must succeed cleanly");
+        require(playlist.getLaneCount() == lanesBefore, "Undo of a no-op delete changed the playlist");
+    }
+
+    // --- deleting a track's only lane is a no-op (command-layer policy) -------
+    {
+        auto tracksOwner = std::make_unique<TrackManager>();
+        auto& tracks = *tracksOwner;
+        auto& playlist = tracks.getPlaylistModel();
+        auto& history = tracks.getCommandHistory();
+
+        auto primaryCmd = std::make_shared<CreateLaneCommand>(playlist, "Track 1");
+        primaryCmd->execute();
+        const PlaylistLaneID primaryId = primaryCmd->getLaneId();
+        const uint64_t trackId = tracks.createTrack(primaryId, "Track 1");
+        const size_t lanesBefore = playlist.getLaneCount();
+
+        // The UI blocks the last lane via the context menu; the command layer
+        // enforces the same invariant so delete_lane can't strand a track with
+        // zero owned lanes (Track::laneIds/activeLaneId stay valid).
+        history.pushAndExecute(std::make_shared<DeleteLaneCommand>(tracks, primaryId));
+        require(playlist.getLane(primaryId) != nullptr, "A track's only lane was deleted");
+        const Track* track = tracks.getTrack(trackId);
+        require(track && track->laneIds.size() == 1 && track->laneIds[0] == primaryId,
+                "Track laneIds changed after a no-op delete");
+        require(track && track->activeLaneId == primaryId, "Active lane changed after a no-op delete");
+        require(playlist.getLaneCount() == lanesBefore, "No-op delete changed the playlist");
+
+        require(history.undo(), "Undo after a no-op delete must succeed cleanly");
+        require(playlist.getLane(primaryId) != nullptr, "Undo removed the lane after a no-op delete");
         require(playlist.getLaneCount() == lanesBefore, "Undo of a no-op delete changed the playlist");
     }
 

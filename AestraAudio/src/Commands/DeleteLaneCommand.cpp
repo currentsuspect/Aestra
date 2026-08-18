@@ -27,10 +27,16 @@ void DeleteLaneCommand::execute() {
     m_playlistIndex = model.getLaneIndex(m_laneId);
     if (m_trackId != 0) {
         if (const Track* track = m_trackManager.getTrack(m_trackId)) {
+            // A track's last lane cannot be deleted (UI and command policy):
+            // an owned track must keep at least its primary lane.
+            if (track->laneIds.size() <= 1) {
+                return;
+            }
             const auto it = std::find(track->laneIds.begin(), track->laneIds.end(), m_laneId);
             if (it != track->laneIds.end()) {
                 m_laneIdsIndex = static_cast<int>(it - track->laneIds.begin());
             }
+            m_wasActiveLane = track->activeLaneId == m_laneId;
         }
         m_trackManager.detachLaneFromTrack(m_trackId, m_laneId);
     }
@@ -52,6 +58,13 @@ void DeleteLaneCommand::undo() {
         m_trackManager.attachLaneToTrack(m_trackId, restored);
         if (m_laneIdsIndex >= 0) {
             m_trackManager.moveLaneWithinTrack(m_trackId, restored, static_cast<size_t>(m_laneIdsIndex));
+        }
+        // detachLaneFromTrack reassigned activeLaneId to lanes.back(); put the
+        // deleted lane back in charge when it was active before the delete.
+        if (m_wasActiveLane) {
+            if (Track* track = m_trackManager.getTrack(m_trackId)) {
+                track->activeLaneId = restored;
+            }
         }
     }
     if (m_playlistIndex >= 0) {

@@ -46,6 +46,7 @@ private:
     std::vector<ClipInstance> m_clips;
     int m_playlistIndex{-1};
     int m_laneIdsIndex{-1};
+    bool m_wasActiveLane{false};
     bool m_executed = false;
 };
 

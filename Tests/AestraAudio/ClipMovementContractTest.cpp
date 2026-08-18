@@ -66,6 +66,7 @@ int main() {
         // Lane-attached automation bag, de-facto track-scoped (§23.3): must
         // not follow the clip.
         auto* takeLane = playlist.getLane(t1Take);
+        require(takeLane != nullptr, "Take lane is missing from the playlist");
         takeLane->automationCurves.emplace_back("Take gain", AutomationTarget::Custom);
         const size_t curvesBefore = takeLane->automationCurves.size();
 
@@ -82,8 +83,11 @@ int main() {
         require(playlist.findClipLane(clip.id) == t2Primary, "Clip landed on the wrong lane");
         const auto* destLane = playlist.getLane(t2Primary);
         require(destLane && destLane->trackId == track2, "Placement track is not the destination track");
-        require(playlist.getLane(t1Take)->clips.empty(), "Clip still present in the source lane");
+        const auto* sourceLane = playlist.getLane(t1Take);
+        require(sourceLane != nullptr, "Source lane vanished after the move");
+        require(sourceLane->clips.empty(), "Clip still present in the source lane");
         takeLane = playlist.getLane(t1Take);
+        require(takeLane != nullptr, "Take lane missing after the move");
         require(takeLane->automationCurves.size() == curvesBefore, "Automation moved with the clip");
 
         // Undo of the cross-track move restores the original placement.
@@ -92,8 +96,10 @@ int main() {
         history.pushAndExecute(moveCmd);
         require(history.undo(), "Undo of the cross-track move failed");
         require(playlist.findClipLane(clip.id) == t1Take, "Undo did not restore the source lane");
-        require(playlist.getClip(clip.id)->startBeat == 0.0, "Undo did not restore the source position");
-        require(playlist.getClip(clip.id)->id == clip.id, "Undo changed the clip id");
+        const ClipInstance* undone = playlist.getClip(clip.id);
+        require(undone != nullptr, "Clip missing after undo of the move");
+        require(undone->startBeat == 0.0, "Undo did not restore the source position");
+        require(undone->id == clip.id, "Undo changed the clip id");
     }
 
     // --- same-track lane move: identity stable, automation untouched -------
@@ -114,6 +120,7 @@ int main() {
         require(tracks.attachLaneToTrack(track1, take), "Take lane did not attach");
 
         auto* takeLane = playlist.getLane(take);
+        require(takeLane != nullptr, "Take lane is missing from the playlist");
         takeLane->automationCurves.emplace_back();
         const size_t curvesBefore = takeLane->automationCurves.size();
 
@@ -126,8 +133,11 @@ int main() {
         const ClipInstance* moved = playlist.getClip(clip.id);
         require(moved != nullptr && moved->id == clip.id, "Same-track move changed the clip identity");
         require(playlist.findClipLane(clip.id) == primary, "Same-track move landed on the wrong lane");
-        require(playlist.getLane(primary)->trackId == track1, "Placement track changed on a same-track move");
+        const auto* primaryLane = playlist.getLane(primary);
+        require(primaryLane != nullptr, "Primary lane missing after the move");
+        require(primaryLane->trackId == track1, "Placement track changed on a same-track move");
         takeLane = playlist.getLane(take);
+        require(takeLane != nullptr, "Take lane missing after the move");
         require(takeLane->automationCurves.size() == curvesBefore, "Automation moved with the clip");
         require(takeLane->clips.empty(), "Clip still present in the source lane");
 
@@ -135,7 +145,9 @@ int main() {
         history.pushAndExecute(moveCmd);
         require(history.undo(), "Undo of the same-track move failed");
         require(playlist.findClipLane(clip.id) == take, "Undo did not restore the take lane");
-        require(playlist.getLane(take)->clips.size() == 1, "Undo did not restore the clip");
+        const auto* restoredLane = playlist.getLane(take);
+        require(restoredLane != nullptr, "Take lane missing after undo");
+        require(restoredLane->clips.size() == 1, "Undo did not restore the clip");
     }
 
     std::cout << "[PASS] ClipMovementContractTest\n";

@@ -564,8 +564,10 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                     if (laneId.isValid()) {
                         const PlaylistLane* lane = playlist.getLane(laneId);
                         std::string trackName = lane ? lane->name : ("Track " + std::to_string(trackIndex + 1));
-                        // Pass track index instead of lane ID internal value
-                        m_onSendToAudition(static_cast<uint32_t>(trackIndex), trackName);
+                        // Display rows are not mixer channels after lane grouping;
+                        // resolve like the per-track audition button does.
+                        const uint32_t channelIndex = resolveLaneToChannelIndex(lane, static_cast<uint32_t>(trackIndex));
+                        m_onSendToAudition(channelIndex, trackName);
                         Log::info("Sending track to Audition: " + trackName);
                     }
                 }

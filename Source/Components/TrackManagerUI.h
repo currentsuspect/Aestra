@@ -605,6 +605,11 @@ private:
     double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
 
+    // Resolve a lane to its first pattern's mixer channel position, falling
+    // back to fallbackIndex when the lane is missing or unresolved. Shared by
+    // the per-track audition button and the toolbar's "Send Track to Audition".
+    uint32_t resolveLaneToChannelIndex(const Audio::PlaylistLane* lane, uint32_t fallbackIndex) const;
+
     // Tool icons initialization and rendering
     void createToolIcons();
     void updateToolbarBounds();

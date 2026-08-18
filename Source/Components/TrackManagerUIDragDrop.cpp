@@ -63,7 +63,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& dat
     m_dropTargetTime = getTimeAtPosition(position.x);
 
     // Allow dropping on existing tracks OR appending a new track
-    int trackCount = static_cast<int>(m_trackManager->getTrackCount());
+    int trackCount = static_cast<int>(m_trackUIComponents.size());
 
     // If dragging below last track, target the next available slot
     if (m_dropTargetTrack >= trackCount) {
@@ -123,7 +123,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
     double snappedBeats = snapBeatToGrid(rawTimeBeats);
     double newTime = m_trackManager->getPlaylistModel().beatToSeconds(snappedBeats);
 
-    int trackCount = static_cast<int>(m_trackManager->getTrackCount());
+    int trackCount = static_cast<int>(m_trackUIComponents.size());
 
     // If dragging below last track, target the next available slot
     if (newTrack >= trackCount) {
