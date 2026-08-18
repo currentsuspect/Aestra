@@ -192,7 +192,7 @@ void TrackManagerUI::refreshTracks() {
             orderedLaneIds.push_back(laneId);
             continue;
         }
-        if (laneId != track->laneIds.front()) {
+        if (track->laneIds.empty() || laneId != track->laneIds.front()) {
             continue; // Owned lane: rendered nested under its track's primary row.
         }
         if (seenTracks.count(track->trackId)) {

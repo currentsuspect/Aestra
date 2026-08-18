@@ -153,9 +153,10 @@ AestraContent::~AestraContent() {
         m_audioEngine->setPreviewEngine(nullptr);
     }
 
-    // TrackManager may be shared outside this component; clear the stored owner callback before member teardown.
+    // TrackManager may be shared outside this component; clear the stored owner callbacks before member teardown.
     if (m_trackManager) {
         m_trackManager->setStopPreviewCallback(nullptr);
+        m_trackManager->setOnTakeCommitted(nullptr);
     }
 
     // Cancel any running plugin scan to prevent callbacks from accessing dead pointers
