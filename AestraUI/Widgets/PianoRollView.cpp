@@ -72,7 +72,8 @@ PianoRollView::PianoRollView()
     
     // Ruler Zoom Callback
     m_ruler->onZoomRequested = [this](float delta, float mouseX) {
-        applyZoom((delta > 0) ? 1.15f : 0.85f, mouseX);
+        const float zoomDelta = std::clamp(delta, -4.0f, 4.0f);
+        applyZoom(std::pow(1.15f, zoomDelta), mouseX);
     };
 
     m_ruler->onPlayheadScrubbed = [this](double beat, bool active) {
@@ -144,7 +145,9 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
                       9.0f,
                       theme.getColor("textSecondary").withAlpha(0.62f));
 
+    renderer.setClipRect(bounds);
     NUIComponent::onRender(renderer);
+    renderer.clearClipRect();
 
     // Draw playhead
     if (m_grid && m_ruler) {
@@ -525,7 +528,8 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             // Zoom (Fallback) — same anchored, multiplicative semantics as the ruler.
             // The ruler passes grid-local X (its bounds start after the key lane);
             // mirror that basis or the beat under the cursor drifts with the lane width.
-            applyZoom((event.wheelDelta > 0) ? 1.15f : 0.85f,
+            const float zoomDelta = std::clamp(event.wheelDelta, -4.0f, 4.0f);
+            applyZoom(std::pow(1.15f, zoomDelta),
                       event.position.x - getBounds().x - m_grid->getBounds().x);
         } else if (shift) {
             // H-Scroll

@@ -725,10 +725,13 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     float fontSize = themeManager.getFontSize("m");
     float textY = std::round(renderer.calculateTextY(textRect, fontSize));
 
-    // Always center placeholder regardless of justification setting
-    // This allows placeholder to be centered while typing remains left-aligned
     auto textSize = renderer.measureText(placeholderText_, fontSize);
-    float textX = std::round(textRect.x + (textRect.width - textSize.width) / 2.0f);
+    float textX = std::round(textRect.x);
+    if (justification_ == Justification::Center) {
+        textX = std::round(textRect.x + (textRect.width - textSize.width) / 2.0f);
+    } else if (justification_ == Justification::Right) {
+        textX = std::round(textRect.right() - textSize.width);
+    }
 
     // Draw placeholder with reduced opacity if not already handled by color
     const NUIColor color = isEnabled() ? placeholderColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
