@@ -257,6 +257,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/AddClipCommand.cpp
     src/Commands/AttachLaneToTrackCommand.cpp
     src/Commands/CreateLaneCommand.cpp
+    src/Commands/DeleteLaneCommand.cpp
     src/Commands/AddNoteCommand.cpp
     src/Commands/RemoveNoteCommand.cpp
     src/Commands/MoveNoteCommand.cpp

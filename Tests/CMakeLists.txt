@@ -1362,6 +1362,35 @@ target_include_directories(RecordingBaselineTest PRIVATE
 )
 add_test(NAME RecordingBaselineTest COMMAND RecordingBaselineTest)
 set_tests_properties(RecordingBaselineTest PROPERTIES LABELS "audio;recording;baseline;contract:audio")
+
+# FD-14 phase-5: lane deletion is undoable and identity-stable (DeleteLaneCommand).
+add_executable(DeleteLaneCommandTest
+    AestraAudio/DeleteLaneCommandTest.cpp
+)
+target_link_libraries(DeleteLaneCommandTest PRIVATE AestraAudio)
+target_include_directories(DeleteLaneCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+)
+add_test(NAME DeleteLaneCommandTest COMMAND DeleteLaneCommandTest)
+set_tests_properties(DeleteLaneCommandTest PROPERTIES LABELS "audio;lanes;command;contract:audio")
+
+# Clip Movement Contract (§23, freeze 2026-08-18): cross-track moves keep clip
+# identity; automation bags never follow clips.
+add_executable(ClipMovementContractTest
+    AestraAudio/ClipMovementContractTest.cpp
+)
+target_link_libraries(ClipMovementContractTest PRIVATE AestraAudio)
+target_include_directories(ClipMovementContractTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+)
+add_test(NAME ClipMovementContractTest COMMAND ClipMovementContractTest)
+set_tests_properties(ClipMovementContractTest PROPERTIES LABELS "audio;lanes;movement;contract:audio")
 set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;headless;contract:application")
 
 

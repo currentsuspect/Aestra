@@ -438,6 +438,29 @@ public:
         return true;
     }
 
+    /** @brief Move an owned lane to a position within its track's lane order
+     *  (undo position fidelity for DeleteLaneCommand). The lane must already
+     *  be owned by the track. Out-of-range targets clamp. */
+    bool moveLaneWithinTrack(uint64_t trackId, PlaylistLaneID laneId, size_t targetIndex) {
+        auto* track = getTrack(trackId);
+        if (!track) {
+            return false;
+        }
+        auto& laneIds = track->laneIds;
+        auto it = std::find(laneIds.begin(), laneIds.end(), laneId);
+        if (it == laneIds.end()) {
+            return false;
+        }
+        const size_t from = static_cast<size_t>(it - laneIds.begin());
+        targetIndex = std::min(targetIndex, laneIds.size() - 1);
+        if (from == targetIndex) {
+            return true;
+        }
+        laneIds.erase(it);
+        laneIds.insert(laneIds.begin() + targetIndex, laneId);
+        return true;
+    }
+
     /** @brief Set the Track's recording arm state (FD-14 #6: the authoritative
      *  recording arm lives on the Track). */
     void setTrackArmed(uint64_t trackId, bool armed) {

@@ -868,6 +868,54 @@ public:
     }
 
     /**
+     * @brief Playlist row position of a lane (-1 when missing).
+     */
+    int getLaneIndex(const PlaylistLaneID& laneId) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        auto it = m_laneMap.find(laneId);
+        return it == m_laneMap.end() ? -1 : static_cast<int>(it->second);
+    }
+
+    /**
+     * @brief Move an existing lane to a playlist position.
+     *
+     * Undo position fidelity for lane deletion (DeleteLaneCommand): the lane
+     * keeps its id, clips, and ownership, and lands back where it was instead
+     * of appending at the end. Also maintains PlaylistLane::index across the
+     * affected span (display numbering and channel lookups read it).
+     * Out-of-range targets clamp. Returns false when the lane is missing.
+     */
+    bool moveLaneToIndex(const PlaylistLaneID& laneId, size_t targetIndex) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        auto it = m_laneMap.find(laneId);
+        if (it == m_laneMap.end() || m_lanes.empty()) {
+            return false;
+        }
+        const size_t from = it->second;
+        targetIndex = std::min(targetIndex, m_lanes.size() - 1);
+        if (from == targetIndex) {
+            return true;
+        }
+
+        PlaylistLane lane = std::move(m_lanes[from]);
+        m_lanes.erase(m_lanes.begin() + from);
+        m_lanes.insert(m_lanes.begin() + targetIndex, std::move(lane));
+
+        // Keep .index truthful across the span the lane traveled.
+        const size_t lo = std::min(from, targetIndex);
+        const size_t hi = std::max(from, targetIndex);
+        for (size_t i = lo; i <= hi; ++i) {
+            m_lanes[i].index = static_cast<int>(i);
+        }
+
+        m_laneMap.clear();
+        for (size_t i = 0; i < m_lanes.size(); ++i) {
+            m_laneMap[m_lanes[i].id] = i;
+        }
+        return true;
+    }
+
+    /**
      * @brief Clear all lanes and clips
      */
     void clear() {
