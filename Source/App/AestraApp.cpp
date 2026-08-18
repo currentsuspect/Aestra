@@ -558,6 +558,32 @@ void AestraApp::buildSettingsAndDialogs() {
     m_windowManager->setSettingsDialog(settingsDialog);
     m_windowManager->setConfirmationDialog(std::make_shared<ConfirmationDialog>());
 
+    // Route destructive UI confirmations (e.g. Delete Lane on a lane with
+    // clips) through the app-owned dialog, mirroring requestClose's parenting.
+    if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
+        tmUI->setOnConfirmDialogRequest([this](const std::string& title, const std::string& message,
+                                               const std::string& confirmLabel,
+                                               std::function<void(bool)> onResult) {
+            auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
+            if (!dialog || !onResult) {
+                if (onResult) {
+                    // Fail closed: a destructive action must not run without
+                    // its confirmation surface.
+                    onResult(false);
+                }
+                return;
+            }
+            if (auto* root = m_windowManager->getRootComponent()) {
+                dialog->setBounds(root->getBounds());
+                root->removeChild(dialog);
+                root->addChild(dialog);
+            }
+            dialog->showConfirm(title, message, confirmLabel, [onResult](DialogResponse response) {
+                onResult(response == DialogResponse::Confirm);
+            });
+        });
+    }
+
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
 
@@ -892,13 +918,16 @@ void AestraApp::restoreUIState(const UIState& uiState) {
 
     if (m_content && m_content->getTrackManagerUI()) {
         auto trackManagerUI = m_content->getTrackManagerUI();
-        if (uiState.horizontalZoom != 1.0f || uiState.scrollPositionX != 0.0f || uiState.scrollPositionY != 0.0f) {
+        if (uiState.horizontalZoom != 1.0f || uiState.scrollPositionX != 0.0f) {
             trackManagerUI->setHorizontalZoom(uiState.horizontalZoom);
             trackManagerUI->setHorizontalScroll(uiState.scrollPositionX);
-            trackManagerUI->setVerticalScroll(uiState.scrollPositionY);
+            // Deliberately NOT restoring scrollPositionY: launching into a
+            // dead session's mid-list viewport reads as "the app starts me at
+            // track N" — the track list must open at the top of a fresh
+            // default project. Vertical viewport position is transient; zoom
+            // and horizontal fit are the durable parts.
             Log::info("[UIState] Applied track view state: zoom=" + std::to_string(uiState.horizontalZoom) +
-                      ", hScroll=" + std::to_string(uiState.scrollPositionX) +
-                      ", vScroll=" + std::to_string(uiState.scrollPositionY));
+                      ", hScroll=" + std::to_string(uiState.scrollPositionX));
         }
     }
 }

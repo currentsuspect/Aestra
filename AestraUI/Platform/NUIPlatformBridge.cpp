@@ -267,10 +267,11 @@ void NUIPlatformBridge::setupEventBridges() {
     // Key
     m_window->setKeyCallback([this](Aestra::KeyCode key, bool pressed, const Aestra::KeyModifiers& mods) {
         if (key == Aestra::KeyCode::CapsLock && pressed) {
-            m_capsLockLatched = !m_capsLockLatched;
-        }
-        if (mods.capsLock) {
-            m_capsLockLatched = true;
+            // Sync from the platform's live state instead of blind-toggling:
+            // a one-way "re-stick when any event reports capsLock" ratchet could
+            // leave the latch stuck true after a toggle whose key event reports
+            // pre-toggle modifier state, routing every wheel to horizontal scroll.
+            m_capsLockLatched = m_window && m_window->getCurrentModifiers().capsLock;
         }
         if (m_keyCallback) {
             m_keyCallback(convertKeyCode(key), pressed);

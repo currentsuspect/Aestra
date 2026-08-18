@@ -557,13 +557,17 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                     }
                 }
 
-                PlaylistLaneID laneId = playlist.getLaneId(trackIndex);
-                if (laneId.isValid()) {
-                    const PlaylistLane* lane = playlist.getLane(laneId);
-                    std::string trackName = lane ? lane->name : ("Track " + std::to_string(trackIndex + 1));
-                    // Pass track index instead of lane ID internal value
-                    m_onSendToAudition(static_cast<uint32_t>(trackIndex), trackName);
-                    Log::info("Sending track to Audition: " + trackName);
+                // Display-row index, not playlist index: rows are track-grouped
+                // (FD-14 §10), so the lane must come from the row widget itself.
+                if (trackIndex < static_cast<int>(m_trackUIComponents.size())) {
+                    PlaylistLaneID laneId = m_trackUIComponents[trackIndex]->getLaneId();
+                    if (laneId.isValid()) {
+                        const PlaylistLane* lane = playlist.getLane(laneId);
+                        std::string trackName = lane ? lane->name : ("Track " + std::to_string(trackIndex + 1));
+                        // Pass track index instead of lane ID internal value
+                        m_onSendToAudition(static_cast<uint32_t>(trackIndex), trackName);
+                        Log::info("Sending track to Audition: " + trackName);
+                    }
                 }
             }
         });
@@ -855,7 +859,11 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
 
 void TrackManagerUI::performSplitAtPosition(int laneIndex, double timeSeconds) {
     auto& playlist = m_trackManager->getPlaylistModel();
-    PlaylistLaneID laneId = playlist.getLaneId(laneIndex);
+    // Display-row index, not playlist index: rows are track-grouped
+    // (FD-14 §10), so the lane must come from the row widget itself.
+    if (laneIndex < 0 || laneIndex >= static_cast<int>(m_trackUIComponents.size()))
+        return;
+    PlaylistLaneID laneId = m_trackUIComponents[laneIndex]->getLaneId();
     if (!laneId.isValid())
         return;
 

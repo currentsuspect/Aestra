@@ -154,6 +154,13 @@ public:
     void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) {
         m_onSendToAudition = cb;
     }
+
+    // Destructive-action confirmation, routed to the app's ConfirmationDialog.
+    // When unset, destructive actions proceed without confirmation.
+    using ConfirmDialogRequest =
+        std::function<void(const std::string& title, const std::string& message, const std::string& confirmLabel,
+                           std::function<void(bool confirmed)> onResult)>;
+    void setOnConfirmDialogRequest(ConfirmDialogRequest cb) { m_onConfirmDialogRequest = std::move(cb); }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) {
         m_onSendSelectionToAudition = cb;
     }
@@ -173,6 +180,7 @@ public:
 
     // Context Menu Helpers (v4.0)
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control
     void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
@@ -526,6 +534,7 @@ private:
     std::function<void(double, double)>
         m_onLoopRegionUpdate; // Called when loop region needs update (Project auto-update)
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition; // Called for "Send to Audition"
+    ConfirmDialogRequest m_onConfirmDialogRequest;
     std::function<void(double, double)> m_onSendSelectionToAudition;      // Called for "Send Selection to Audition"
     std::function<void()> m_onClipLibraryChanged;
     bool m_dragPatternPreviewActive = false;

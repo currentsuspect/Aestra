@@ -339,6 +339,12 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // on dark themes, recessed light bed on light themes.
         renderer.fillRect(trackBounds, themeManager.getColor("timelineBed"));
 
+        // FD-14 §10: nested lane rows carry a faint containment tint so the
+        // expanded lanes read as one block under their track.
+        if (track->isNestedLane()) {
+            renderer.fillRect(trackBounds, themeManager.getColor("accentSecondary").withAlpha(0.05f));
+        }
+
         track->renderStatic(renderer);
 
         // One pixel is enough to locate the next lane; filling the whole gap

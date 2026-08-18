@@ -15,7 +15,8 @@ enum class DialogResponse {
     None,       // Dialog not yet answered
     Save,       // User chose to save
     DontSave,   // User chose to discard changes
-    Cancel      // User cancelled the action
+    Cancel,     // User cancelled the action
+    Confirm     // User confirmed a generic destructive action
 };
 
 /**
@@ -45,6 +46,16 @@ public:
      * @param callback Function called with user's response
      */
     void show(const std::string& title, const std::string& message, ResponseCallback callback);
+
+    /**
+     * @brief Show a generic two-button confirm dialog
+     * @param title Dialog title (e.g., "Delete Lane")
+     * @param message Dialog message (e.g., "This lane still contains 3 clips...")
+     * @param confirmLabel Label of the primary action button (e.g., "Delete Lane")
+     * @param callback Function called with user's response (Confirm or Cancel)
+     */
+    void showConfirm(const std::string& title, const std::string& message, const std::string& confirmLabel,
+                     ResponseCallback callback);
     
     /**
      * @brief Hide the dialog
@@ -67,6 +78,8 @@ private:
     ResponseCallback m_callback;
     DialogResponse m_response;
     bool m_isVisible;
+    bool m_isConfirmMode{false};
+    std::string m_confirmLabel{"Delete"};
     
     // Button hover states
     bool m_saveHovered;

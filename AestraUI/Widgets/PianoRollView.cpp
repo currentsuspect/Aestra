@@ -521,7 +521,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
 
     // 2. View-level fallback for Grid Scrolling (if Grid didn't handle it)
     if (event.wheelDelta != 0.0f) {
-        bool shift = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
+        bool shift = (event.modifiers & NUIModifiers::Shift);
         bool ctrl = (event.modifiers & NUIModifiers::Ctrl);
         
         if (ctrl) {

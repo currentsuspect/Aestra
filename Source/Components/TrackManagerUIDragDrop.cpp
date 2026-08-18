@@ -173,12 +173,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     double timePositionBeats = snapBeatToGrid(rawTimeBeats);
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    size_t laneCount = playlist.getLaneCount();
+    const int displayRows = static_cast<int>(m_trackUIComponents.size());
 
     Log::info("[TrackManagerUI] onDrop: position.y=" + std::to_string(position.y) +
-              ", laneIndex=" + std::to_string(laneIndex) + ", laneCount=" + std::to_string(laneCount));
+              ", laneIndex=" + std::to_string(laneIndex) + ", displayRows=" + std::to_string(displayRows));
 
-    if (laneIndex < 0 || laneIndex > static_cast<int>(laneCount)) {
+    if (laneIndex < 0 || laneIndex > displayRows) {
         result.accepted = false;
         result.message = "Invalid track position";
         clearDropPreview();
@@ -217,7 +217,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     // an empty orphan lane the user never asked for and cannot undo away.
     PlaylistLaneID targetLaneId;
     std::shared_ptr<CreateLaneCommand> laneCommand;
-    if (laneIndex == static_cast<int>(laneCount)) {
+    if (laneIndex == displayRows) {
         // When a new lane is created for a file drop, name it from the sample
         // rather than "Track N" — the moment a clip lands on a track, the track
         // should inherit the content name.  MIDI patterns keep the sequential
@@ -242,7 +242,9 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {
-        targetLaneId = playlist.getLaneId(laneIndex);
+        // Display-row index, not playlist index: rows are track-grouped
+        // (FD-14 §10), so the lane must come from the row widget itself.
+        targetLaneId = m_trackUIComponents[laneIndex]->getLaneId();
     }
 
     // Undo the appended lane without recording anything: a drop that failed is not

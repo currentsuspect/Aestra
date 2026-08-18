@@ -11,6 +11,7 @@
 #include "ClipSource.h"
 #include "Commands/AddClipCommand.h"
 #include "Commands/CreateLaneCommand.h"
+#include "Commands/DeleteLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -523,15 +524,13 @@ void TrackManagerUI::layoutTracks() {
 
         float yPos = trackAreaTop + (i * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
 
-        // FD-14 §10: nested lane rows (owned lanes of an expanded track) sit
-        // visibly inside their track — whole-row indent, leaving a gutter and
-        // offsetting the row border so the nesting reads at a glance.
-        const float rowIndent = trackUI->isNestedLane() ? kNestedLaneIndent : 0.0f;
-
         // Fix: Use absolute coordinates (bounds.x, yPos).
         // AestraUI components use absolute screen coordinates.
-        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f - rowIndent);
-        trackUI->setBounds(bounds.x + rowIndent, yPos, trackWidth, m_trackHeight);
+        // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid
+        // must stay globally aligned across lanes (a row-x indent would shift
+        // clip snapping); nesting is expressed in the chrome instead.
+        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
+        trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
 
         // Zebra Striping: Ensure index is set during layout (critical for refresh persistence)
@@ -721,6 +720,17 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
             }
         });
         menu->addSeparator();
+
+        // FD-14 phase-5: take lanes accumulate with no escape hatch. Only the
+        // LAST owned lane is protected — a track must keep at least one lane;
+        // unowned lanes are always deletable.
+        const uint64_t owningTrackId = lane->trackId;
+        const auto* owningTrack = owningTrackId != 0 ? m_trackManager->getTrack(owningTrackId) : nullptr;
+        const bool deletable = owningTrack == nullptr || owningTrack->laneIds.size() > 1;
+        auto deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        deleteLaneItem->setEnabled(deletable);
+        deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
+        menu->addItem(deleteLaneItem);
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -734,6 +744,43 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     menu->addItem(selectAllItem);
 
     attachAndShowContextMenu(this, menu, position);
+}
+
+void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {
+    if (!m_trackManager) {
+        return;
+    }
+    const auto* lane = m_trackManager->getPlaylistModel().getLane(laneId);
+    if (!lane) {
+        return;
+    }
+    const auto* track = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+    if (track && track->laneIds.size() <= 1) {
+        return;
+    }
+    const auto executeDelete = [this, laneId]() {
+        m_trackManager->getCommandHistory().pushAndExecute(std::make_shared<DeleteLaneCommand>(*m_trackManager, laneId));
+        refreshTracks();
+        invalidateCache();
+        scheduleTimelineMinimapRebuild();
+    };
+
+    // Deleting a lane that still holds clips is destructive: ask first when a
+    // dialog channel is wired. Headless callers without one proceed directly.
+    if (!lane->clips.empty() && m_onConfirmDialogRequest) {
+        m_onConfirmDialogRequest(
+            "Delete Lane",
+            "This lane still contains " + std::to_string(lane->clips.size()) +
+                (lane->clips.size() == 1 ? " clip" : " clips") +
+                ". Deleting the lane removes them. This can be undone.",
+            "Delete Lane", [executeDelete](bool confirmed) {
+                if (confirmed) {
+                    executeDelete();
+                }
+            });
+        return;
+    }
+    executeDelete();
 }
 
 } // namespace Audio

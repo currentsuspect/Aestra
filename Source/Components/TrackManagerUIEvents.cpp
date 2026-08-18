@@ -471,7 +471,6 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
         const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
         const bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
-        const bool capsHeld = (event.modifiers & AestraUI::NUIModifiers::CapsLock);
 
         if (isInRuler || ctrlHeld) {
             // ZOOM: ruler wheel or Ctrl+wheel.
@@ -519,7 +518,7 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
 
             invalidateCache(); // Full cache invalidation for zoom changes
             return true;
-        } else if (isInTrackArea && (shiftHeld || capsHeld)) {
+        } else if (isInTrackArea && shiftHeld) {
             // HORIZONTAL SCROLL: Shift/Caps+wheel (and synthetic Shift from laptop horizontal wheel).
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;

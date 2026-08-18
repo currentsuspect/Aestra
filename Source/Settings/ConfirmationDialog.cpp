@@ -22,12 +22,29 @@ void ConfirmationDialog::show(const std::string& title, const std::string& messa
     m_message = message;
     m_callback = callback;
     m_response = DialogResponse::None;
+    m_isConfirmMode = false;
     m_focusIndex = 2; // default focus on the primary action (Save)
     m_pressedButton = DialogResponse::None;
     m_isVisible = true;
     setVisible(true);
     
     Log::info("[ConfirmationDialog] Showing: " + title);
+}
+
+void ConfirmationDialog::showConfirm(const std::string& title, const std::string& message,
+                                     const std::string& confirmLabel, ResponseCallback callback) {
+    m_title = title;
+    m_message = message;
+    m_callback = callback;
+    m_response = DialogResponse::None;
+    m_isConfirmMode = true;
+    m_confirmLabel = confirmLabel.empty() ? "Confirm" : confirmLabel;
+    m_focusIndex = 1; // default focus on the primary action (Confirm)
+    m_pressedButton = DialogResponse::None;
+    m_isVisible = true;
+    setVisible(true);
+
+    Log::info("[ConfirmationDialog] Showing (confirm): " + title);
 }
 
 void ConfirmationDialog::hide() {
@@ -45,6 +62,7 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
         case DialogResponse::Save: responseStr = "Save"; break;
         case DialogResponse::DontSave: responseStr = "Don't Save"; break;
         case DialogResponse::Cancel: responseStr = "Cancel"; break;
+        case DialogResponse::Confirm: responseStr = m_confirmLabel; break;
         default: responseStr = "Unknown"; break;
     }
     Log::info("[ConfirmationDialog] User selected: " + responseStr);
@@ -57,6 +75,13 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
 }
 
 DialogResponse ConfirmationDialog::responseForFocus(int index) const {
+    if (m_isConfirmMode) {
+        switch (index) {
+            case 0: return DialogResponse::Cancel;
+            case 1: return DialogResponse::Confirm;
+            default: return DialogResponse::Confirm;
+        }
+    }
     switch (index) {
         case 0: return DialogResponse::Cancel;
         case 1: return DialogResponse::DontSave;
@@ -82,19 +107,30 @@ void ConfirmationDialog::calculateLayout() {
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
 
-    // Right-aligned button row, primary (Save) rightmost — modern convention:
-    // [ Cancel ] [ Don't Save ] [ Save ].
+    // Right-aligned button row, primary rightmost — modern convention:
+    // Save flow: [ Cancel ] [ Don't Save ] [ Save ].
+    // Confirm flow: [ Cancel ] [ Confirm ].
     const float cancelWidth = 84.0f;
-    const float dontSaveWidth = 104.0f;
+    const float confirmWidth = 110.0f;
     const float saveWidth = 96.0f;
-    const float totalWidth = cancelWidth + dontSaveWidth + saveWidth + buttonSpacing * 2.0f;
+    const float dontSaveWidth = 104.0f;
+    const float totalWidth = m_isConfirmMode
+        ? cancelWidth + confirmWidth + buttonSpacing
+        : cancelWidth + dontSaveWidth + saveWidth + buttonSpacing * 2.0f;
 
     const float buttonY = m_dialogRect.y + dialogHeight - margin - buttonHeight;
     const float startX = m_dialogRect.right() - margin - totalWidth;
 
     m_cancelButtonRect = {startX, buttonY, cancelWidth, buttonHeight};
-    m_dontSaveButtonRect = {m_cancelButtonRect.right() + buttonSpacing, buttonY, dontSaveWidth, buttonHeight};
-    m_saveButtonRect = {m_dontSaveButtonRect.right() + buttonSpacing, buttonY, saveWidth, buttonHeight};
+    if (m_isConfirmMode) {
+        // The Don't Save slot does not exist in confirm mode; keep it empty so
+        // no stale rect aliases a live button.
+        m_dontSaveButtonRect = AestraUI::NUIRect{};
+        m_saveButtonRect = {m_cancelButtonRect.right() + buttonSpacing, buttonY, confirmWidth, buttonHeight};
+    } else {
+        m_dontSaveButtonRect = {m_cancelButtonRect.right() + buttonSpacing, buttonY, dontSaveWidth, buttonHeight};
+        m_saveButtonRect = {m_dontSaveButtonRect.right() + buttonSpacing, buttonY, saveWidth, buttonHeight};
+    }
 }
 
 void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
@@ -145,24 +181,34 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.drawTextCentered("Cancel", m_cancelButtonRect, theme.fontSizeM,
                               m_cancelHovered ? theme.textPrimary : theme.textSecondary);
 
-    // Don't Save: subtle filled + border.
-    const bool dontSavePressed = m_pressedButton == DialogResponse::DontSave;
-    renderer.fillRoundedRect(m_dontSaveButtonRect, theme.radiusM,
-                             dontSavePressed ? theme.pressed
-                                             : (m_dontSaveHovered ? theme.hover : theme.buttonBgDefault));
-    renderer.strokeRoundedRect(m_dontSaveButtonRect, theme.radiusM, theme.layout.dividerWidth,
-                               theme.borderStrong);
-    renderer.drawTextCentered("Don't Save", m_dontSaveButtonRect, theme.fontSizeM, theme.error);
+    if (m_isConfirmMode) {
+        // Confirm: primary fill, mirrors the Save slot.
+        const bool confirmPressed = m_pressedButton == DialogResponse::Confirm;
+        renderer.fillRoundedRect(m_saveButtonRect, theme.radiusM,
+                                 confirmPressed ? theme.primaryPressed
+                                                : (m_saveHovered ? theme.primaryHover : theme.primary));
+        renderer.drawTextCentered(m_confirmLabel, m_saveButtonRect, theme.fontSizeM, theme.textOnPrimary);
+    } else {
+        // Don't Save: subtle filled + border.
+        const bool dontSavePressed = m_pressedButton == DialogResponse::DontSave;
+        renderer.fillRoundedRect(m_dontSaveButtonRect, theme.radiusM,
+                                 dontSavePressed ? theme.pressed
+                                                 : (m_dontSaveHovered ? theme.hover : theme.buttonBgDefault));
+        renderer.strokeRoundedRect(m_dontSaveButtonRect, theme.radiusM, theme.layout.dividerWidth,
+                                   theme.borderStrong);
+        renderer.drawTextCentered("Don't Save", m_dontSaveButtonRect, theme.fontSizeM, theme.error);
 
-    const bool savePressed = m_pressedButton == DialogResponse::Save;
-    renderer.fillRoundedRect(m_saveButtonRect, theme.radiusM,
-                             savePressed ? theme.primaryPressed : (m_saveHovered ? theme.primaryHover : theme.primary));
-    renderer.drawTextCentered("Save", m_saveButtonRect, theme.fontSizeM, theme.textOnPrimary);
+        const bool savePressed = m_pressedButton == DialogResponse::Save;
+        renderer.fillRoundedRect(m_saveButtonRect, theme.radiusM,
+                                 savePressed ? theme.primaryPressed : (m_saveHovered ? theme.primaryHover : theme.primary));
+        renderer.drawTextCentered("Save", m_saveButtonRect, theme.fontSizeM, theme.textOnPrimary);
+    }
 
     // Keyboard focus highlight: a faint accent ring around the focused button
     // (Left/Right move it, Enter activates it).
-    const AestraUI::NUIRect focusRect =
-        (m_focusIndex == 0) ? m_cancelButtonRect : (m_focusIndex == 1) ? m_dontSaveButtonRect : m_saveButtonRect;
+    const AestraUI::NUIRect focusRect = m_isConfirmMode
+        ? (m_focusIndex == 0 ? m_cancelButtonRect : m_saveButtonRect)
+        : (m_focusIndex == 0) ? m_cancelButtonRect : (m_focusIndex == 1) ? m_dontSaveButtonRect : m_saveButtonRect;
     AestraUI::NUIRect ring = focusRect;
     ring.x -= 2.0f;
     ring.y -= 2.0f;
@@ -182,10 +228,13 @@ bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     float mouseY = event.position.y;
     
     // Update hover states; hovering also moves keyboard focus so the two stay in sync.
-    m_saveHovered = m_saveButtonRect.contains(mouseX, mouseY);
-    m_dontSaveHovered = m_dontSaveButtonRect.contains(mouseX, mouseY);
     m_cancelHovered = m_cancelButtonRect.contains(mouseX, mouseY);
-    if (m_cancelHovered) m_focusIndex = 0;
+    m_dontSaveHovered = !m_isConfirmMode && m_dontSaveButtonRect.contains(mouseX, mouseY);
+    m_saveHovered = m_saveButtonRect.contains(mouseX, mouseY);
+    if (m_isConfirmMode) {
+        if (m_cancelHovered) m_focusIndex = 0;
+        else if (m_saveHovered) m_focusIndex = 1;
+    } else if (m_cancelHovered) m_focusIndex = 0;
     else if (m_dontSaveHovered) m_focusIndex = 1;
     else if (m_saveHovered) m_focusIndex = 2;
 
@@ -195,7 +244,7 @@ bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // reached whatever was underneath).
     if (event.button == AestraUI::NUIMouseButton::Left) {
         if (event.pressed) {
-            if (m_saveHovered) m_pressedButton = DialogResponse::Save;
+            if (m_saveHovered) m_pressedButton = m_isConfirmMode ? DialogResponse::Confirm : DialogResponse::Save;
             else if (m_dontSaveHovered) m_pressedButton = DialogResponse::DontSave;
             else if (m_cancelHovered) m_pressedButton = DialogResponse::Cancel;
             else if (!m_dialogRect.contains(mouseX, mouseY)) m_pressedButton = DialogResponse::Cancel; // click-outside
@@ -206,11 +255,14 @@ bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             const DialogResponse armed = m_pressedButton;
             m_pressedButton = DialogResponse::None;
             // Only fire if the release lands on the same button that was pressed.
-            const bool overArmed =
-                (armed == DialogResponse::Save && m_saveHovered) ||
-                (armed == DialogResponse::DontSave && m_dontSaveHovered) ||
-                (armed == DialogResponse::Cancel &&
-                 (m_cancelHovered || !m_dialogRect.contains(mouseX, mouseY)));
+            const bool overArmed = m_isConfirmMode
+                ? (armed == DialogResponse::Confirm && m_saveHovered) ||
+                      (armed == DialogResponse::Cancel &&
+                       (m_cancelHovered || !m_dialogRect.contains(mouseX, mouseY)))
+                : (armed == DialogResponse::Save && m_saveHovered) ||
+                      (armed == DialogResponse::DontSave && m_dontSaveHovered) ||
+                      (armed == DialogResponse::Cancel &&
+                       (m_cancelHovered || !m_dialogRect.contains(mouseX, mouseY)));
             if (armed != DialogResponse::None && overArmed) {
                 handleResponse(armed);
             }
@@ -236,11 +288,13 @@ bool ConfirmationDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
         // Left/Right move the focus highlight across the button row.
         if (event.keyCode == AestraUI::NUIKeyCode::Left) {
-            m_focusIndex = (m_focusIndex + 2) % 3; // wrap left
+            const int buttonCount = m_isConfirmMode ? 2 : 3;
+            m_focusIndex = (m_focusIndex - 1 + buttonCount) % buttonCount; // wrap left
             return true;
         }
         if (event.keyCode == AestraUI::NUIKeyCode::Right) {
-            m_focusIndex = (m_focusIndex + 1) % 3; // wrap right
+            const int buttonCount = m_isConfirmMode ? 2 : 3;
+            m_focusIndex = (m_focusIndex + 1) % buttonCount; // wrap right
             return true;
         }
 
