@@ -314,6 +314,12 @@ void AudioEngine::applyPendingCommands() {
         case AudioQueueCommandType::SetMetronomeEnabled:
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
             break;
+        case AudioQueueCommandType::MetronomeCountInStart:
+            startMetronomeCountIn(static_cast<uint32_t>(cmd.value1));
+            break;
+        case AudioQueueCommandType::MetronomeCountInStop:
+            stopMetronomeCountIn();
+            break;
         case AudioQueueCommandType::SetTrackVolume: {
             const uint32_t trackIndex = resolveTrackIndex(cmd);
             if (trackIndex == ChannelSlotMap::INVALID_SLOT)

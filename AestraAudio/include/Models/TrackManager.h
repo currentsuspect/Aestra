@@ -1228,6 +1228,87 @@ public:
         clearDeferredRecordingStartBeat();
     }
 
+    /**
+     * @brief Begin the count-in phase ahead of playback/recording.
+     *
+     * The canonical transport contract for count-in: pins the transport to the
+     * requested start position, defers recording capture (when armed) to the
+     * beat where playback will begin — so recorded material is aligned to the
+     * post-count-in position — and starts the engine's metronome count-in
+     * through the command sink. The app polls the engine for count-in
+     * completion and calls completeCountIn() when the metronome finishes.
+     * Count-in is a universal lead-in: it runs before playback whether or not
+     * a take is armed. When recording is armed, the pinned start also defers
+     * capture to the post-count-in beat.
+     * @param beats Number of metronome beats to count (>= 1).
+     * @param startSeconds Transport position playback (and capture) starts at.
+     * @return False when no count-in can start (already pending or rolling).
+     */
+    bool beginCountIn(uint32_t beats, double startSeconds) {
+        if (m_countInPending.load(std::memory_order_relaxed) || m_isPlaying.load(std::memory_order_relaxed)) {
+            return false;
+        }
+        const double clampedStart = std::max(0.0, startSeconds);
+        m_countInPending.store(true, std::memory_order_release);
+        setPlayStartPosition(clampedStart);
+        m_position.store(clampedStart, std::memory_order_relaxed);
+        setDeferredRecordingStartBeat(secondsToBeats(clampedStart));
+        setDisplayPositionOverride(clampedStart);
+        if (m_commandSink) {
+            AudioQueueCommand cmd{};
+            cmd.type = AudioQueueCommandType::MetronomeCountInStart;
+            cmd.value1 = static_cast<float>(std::max<uint32_t>(1, beats));
+            m_commandSink(cmd);
+        }
+        return true;
+    }
+
+    /**
+     * @brief Cancel a pending count-in and drop its deferred capture alignment.
+     */
+    void cancelCountIn() {
+        if (m_commandSink) {
+            AudioQueueCommand cmd{};
+            cmd.type = AudioQueueCommandType::MetronomeCountInStop;
+            m_commandSink(cmd);
+        }
+        clearDeferredRecordingStartBeat();
+        clearDisplayPositionOverride();
+        clearNextCapturePlacementStartBeat();
+        m_countInPending.store(false, std::memory_order_release);
+    }
+
+    /**
+     * @brief Finish the count-in phase and start playback at the pinned
+     *        position. Called by the app once the engine's count-in metronome
+     *        has finished, so recording (when armed) begins exactly where the
+     *        count-in ended.
+     */
+    void completeCountIn() {
+        if (!m_countInPending.load(std::memory_order_relaxed)) {
+            return;
+        }
+        m_countInPending.store(false, std::memory_order_release);
+        clearDisplayPositionOverride();
+        clearNextCapturePlacementStartBeat();
+        if (!m_recordArmed.load(std::memory_order_relaxed) || !hasArmedTracks()) {
+            // No capture will follow this count-in (plain playback). Leaving a
+            // stale deferred start would misalign a later, non-count-in
+            // recording — capture would skip frames to the old count-in beat.
+            clearDeferredRecordingStartBeat();
+        }
+        play();
+    }
+
+    /** @brief True while a count-in is pending (before playback has started). */
+    bool isCountInPending() const { return m_countInPending.load(std::memory_order_acquire); }
+
+    /** @brief Convert a transport position in seconds to beats at the current tempo. */
+    double secondsToBeats(double seconds) const {
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        return std::max(0.0, seconds) * bpm / 60.0;
+    }
+
     void clearDeferredRecordingStartBeat() {
         m_hasDeferredRecordingStart.store(false, std::memory_order_release);
         m_deferredRecordingStartBeat.store(0.0, std::memory_order_relaxed);
@@ -1886,6 +1967,94 @@ private:
         }
     }
 
+    /**
+     * @brief Remove recording files that no session can reference anymore.
+     *
+     * Recording lifecycle: captured audio is held in-memory until the take
+     * commits, at which point a WAV is written and a take (source → pattern →
+     * clip) lands on the armed track's lane. A WAV becomes a cleanup candidate
+     * only at session boundaries (project close/new/open, app exit), where the
+     * undo history is being discarded and a redo can no longer resurrect the
+     * take. A candidate is KEPT when:
+     *  - a live lane clip still references it (kept audio is ownable/audible), or
+     *  - keepCheck(path) returns true (the app says an on-disk project still
+     *    references it — a saved project owns its recording assets), or
+     *  - recording is still in progress (the WAV may be mid-write).
+     * Candidates are *.wav files directly under the recording root. Registered
+     * sources pointing at removed files are dropped so a later save never
+     * persists a dangling reference.
+     * @param keepCheck Optional external keep predicate (app-supplied project
+     *        reference check).
+     * @return Number of recording files removed.
+     */
+public:
+    size_t cleanupOrphanedRecordings(const std::function<bool(const std::string&)>& keepCheck = {}) {
+        namespace fs = std::filesystem;
+        if (m_isCapturing.load(std::memory_order_relaxed)) {
+            return 0;
+        }
+        const fs::path root = recordingRootDirectory();
+        std::error_code ec;
+        if (!fs::exists(root, ec) || !fs::is_directory(root, ec)) {
+            return 0;
+        }
+
+        auto normalized = [](const std::string& p) { return fs::path(p).lexically_normal().generic_string(); };
+
+        std::unordered_set<std::string> keep;
+        const auto markKept = [&](const std::string& p) {
+            if (!p.empty()) {
+                keep.insert(normalized(p));
+            }
+        };
+
+        // Live model: every path a lane clip can reach through pattern → source.
+        for (const auto& laneId : m_playlistModel.getLaneIDs()) {
+            auto* lane = m_playlistModel.getLane(laneId);
+            if (!lane) {
+                continue;
+            }
+            for (const auto& clip : lane->clips) {
+                auto* pattern = m_patternManager.getPattern(clip.patternId);
+                if (!pattern || !pattern->isAudio()) {
+                    continue;
+                }
+                const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
+                if (const auto* source = m_sourceManager.getSource(payload.audioSourceId)) {
+                    markKept(source->getFilePath());
+                }
+            }
+        }
+
+        size_t removed = 0;
+        for (const auto& entry : fs::directory_iterator(root, ec)) {
+            if (!entry.is_regular_file(ec) || entry.path().extension() != ".wav") {
+                continue;
+            }
+            const std::string path = entry.path().string();
+            if (keep.count(normalized(path)) > 0) {
+                continue;
+            }
+            if (keepCheck && keepCheck(path)) {
+                continue;
+            }
+            if (fs::remove(entry.path(), ec)) {
+                ++removed;
+                // Drop the registration so a later save never persists a
+                // dangling recording source.
+                if (const ClipSourceID sid = m_sourceManager.findSourceByPath(path); sid.isValid()) {
+                    m_sourceManager.removeSource(sid);
+                }
+            }
+        }
+
+        if (removed > 0) {
+            Log::info("[TrackManager] Recording cleanup removed " + std::to_string(removed) + " orphaned file(s) from " +
+                      root.string());
+        }
+        return removed;
+    }
+
     std::string buildRecordingTakePath(uint32_t channelId) const {
         namespace fs = std::filesystem;
         fs::path root = recordingRootDirectory();
@@ -2105,6 +2274,7 @@ private:
     std::atomic<bool> m_isPaused{false};
     std::atomic<bool> m_recordArmed{false};
     std::atomic<bool> m_isCapturing{false};
+    std::atomic<bool> m_countInPending{false};
     std::atomic<bool> m_transportPlayingConfirmed{false};
     std::atomic<bool> m_hasDeferredRecordingStart{false};
     std::atomic<double> m_deferredRecordingStartBeat{0.0};

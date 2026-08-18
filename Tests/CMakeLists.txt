@@ -1339,6 +1339,47 @@ target_include_directories(RecordingPathTest PRIVATE
 add_test(NAME RecordingPathTest COMMAND RecordingPathTest)
 set_tests_properties(RecordingPathTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
 
+# Count-in → recording contract (the count-in/recording sweep): Record → Count-in
+# → Recording starts, with capture aligned to the post-count-in beat.
+add_executable(CountInRecordingTest
+    AestraAudio/CountInRecordingTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(CountInRecordingTest PRIVATE AestraAudio)
+target_include_directories(CountInRecordingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME CountInRecordingTest COMMAND CountInRecordingTest)
+set_tests_properties(CountInRecordingTest PROPERTIES LABELS "audio;recording;count-in;regression;contract:audio")
+
+# Reference-aware recording file cleanup (the recording-lifecycle sweep): kept
+# takes survive, discarded takes are removed only at session boundaries.
+add_executable(RecordingCleanupTest
+    AestraAudio/RecordingCleanupTest.cpp
+)
+target_link_libraries(RecordingCleanupTest PRIVATE AestraAudio)
+target_include_directories(RecordingCleanupTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME RecordingCleanupTest COMMAND RecordingCleanupTest)
+set_tests_properties(RecordingCleanupTest PROPERTIES LABELS "audio;recording;cleanup;regression;contract:audio")
+
 # Phase 2 baseline of the Track/Lane/Channel migration (vault: ownership
 # the current channel-based reality that the migration intentionally changes.
 add_executable(RecordingBaselineTest
@@ -1451,6 +1492,20 @@ target_include_directories(MetronomeRestartTest PRIVATE
 )
 add_test(NAME MetronomeRestartTest COMMAND MetronomeRestartTest)
 set_tests_properties(MetronomeRestartTest PROPERTIES LABELS "audio;metronome;transport;regression;contract:audio" TIMEOUT 120)
+
+# Count-in lifecycle through the audio command queue (count-in/recording sweep):
+# the engine renders the configured count-in beats and clears when done — the
+# signal the app polls to start recording.
+add_executable(CountInEngineTest AestraAudio/CountInEngineTest.cpp)
+target_link_libraries(CountInEngineTest PRIVATE AestraAudio)
+target_include_directories(CountInEngineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CountInEngineTest COMMAND CountInEngineTest)
+set_tests_properties(CountInEngineTest PROPERTIES LABELS "audio;metronome;count-in;record;regression;contract:audio" TIMEOUT 120)
 
 # Realtime/Export Parity — realtime processBlock output vs offline
 # bounceRangeToWav output for the same session, plus the preview-ducking

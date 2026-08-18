@@ -27,6 +27,8 @@ enum class AudioQueueCommandType : uint8_t {
     StartPreview,
     StopPreview,
     SetMetronomeEnabled,
+    MetronomeCountInStart, // value1 = beats to count
+    MetronomeCountInStop,
     AuditionUnit, // trackIndex = unitId, value1 = velocity
 };
 
