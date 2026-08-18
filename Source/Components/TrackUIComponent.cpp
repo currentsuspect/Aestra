@@ -78,6 +78,7 @@ using AestraUI::kMonitorIconSvg;
 using AestraUI::kMuteIconSvg;
 using AestraUI::kRecordIconSvg;
 using AestraUI::kSoloIconSvg;
+using AestraUI::kLaneStackIconSvg;
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -185,8 +186,19 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     updateTrackNameColors();
     addChild(m_nameLabel);
 
-    // Volume fader removed from track header to reduce clutter.
-    m_volumeFader.reset();
+    // FD-14 scope §10 (lane visibility): the track's primary row carries a
+    // lane-stack icon + count so a multi-lane track is discoverable at a glance.
+    m_laneCountIcon = std::make_shared<AestraUI::NUIIcon>();
+    m_laneCountIcon->loadSVG(kLaneStackIconSvg);
+    m_laneCountIcon->setIconSize(13.0f, 13.0f);
+    m_laneCountIcon->setVisible(false);
+    addChild(m_laneCountIcon);
+
+    m_laneCountLabel = std::make_shared<AestraUI::NUILabel>();
+    m_laneCountLabel->setFontSize(11.0f);
+    m_laneCountLabel->setEllipsize(false);
+    m_laneCountLabel->setVisible(false);
+    addChild(m_laneCountLabel);
 
     auto configureFlatTrackButton = [](const std::shared_ptr<AestraUI::NUIButton>& button) {
         button->setStyle(AestraUI::NUIButton::Style::Text);
@@ -498,17 +510,20 @@ void TrackUIComponent::updateUI() {
         updateRecordTooltip();
     }
 
-    if (m_channel) {
-        m_volumeKnobValue = std::clamp(m_channel->getVolume(), 0.0f, 2.0f);
+    if (m_laneCountLabel && m_laneCountIcon) {
+        const bool isPrimaryRow = track && !track->laneIds.empty() && track->laneIds.front() == m_laneId;
+        if (isPrimaryRow && track->laneIds.size() > 1) {
+            m_laneCountLabel->setText(std::to_string(track->laneIds.size()));
+            m_laneCountLabel->setTextColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+            m_laneCountLabel->setVisible(true);
+            m_laneCountIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
+            m_laneCountIcon->setVisible(true);
+        } else {
+            m_laneCountLabel->setVisible(false);
+            m_laneCountIcon->setVisible(false);
+        }
     }
 
-    if (m_volumeFader) {
-        m_volumeFader->setTrackColor(themeManager.getColor("borderSubtle").withAlpha(0.36f));
-        m_volumeFader->setFillColor(themeManager.getColor("accentPrimary").withAlpha(0.72f));
-        m_volumeFader->setThumbColor(themeManager.getColor("textPrimary").withAlpha(0.92f));
-        m_volumeFader->setThumbHoverColor(themeManager.getColor("textPrimary"));
-        m_volumeFader->setValue(m_channel ? m_channel->getVolume() : 1.0f);
-    }
 }
 
 
@@ -1642,54 +1657,6 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect, color);
         };
 
-        // A Playlist lane has no gain stage of its own. Only draw the knob
-        // when an explicit mixer association was supplied by another view.
-        if (m_channel) {
-            const auto& knobBounds = m_volumeKnobBounds;
-            if (!knobBounds.isEmpty()) {
-                const float cx = knobBounds.x + knobBounds.width * 0.5f;
-                const float cy = knobBounds.y + knobBounds.height * 0.5f;
-                const float r = std::min(knobBounds.width, knobBounds.height) * 0.38f;
-
-                // Arc angles: 7 o'clock (135°) to 5 o'clock (405°)
-                constexpr float ARC_START = 135.0f * 3.14159265f / 180.0f;
-                constexpr float ARC_END = 405.0f * 3.14159265f / 180.0f;
-                const float t = std::clamp(m_volumeKnobValue, 0.0f, 1.5f) / 1.5f;
-                const float currentAng = ARC_START + t * (ARC_END - ARC_START);
-
-                // Background track arc
-                const int segments = 24;
-                std::vector<AestraUI::NUIPoint> trackPoints;
-                trackPoints.reserve(segments + 1);
-                for (int i = 0; i <= segments; ++i) {
-                    float theta = ARC_START + i * (ARC_END - ARC_START) / segments;
-                    trackPoints.push_back({cx + std::cos(theta) * r, cy + std::sin(theta) * r});
-                }
-                renderer.drawPolyline(trackPoints.data(), static_cast<int>(trackPoints.size()), 2.0f,
-                                      themeManager.getCurrentTheme().textPrimary.withAlpha(0.13f));
-
-                // Active value arc
-                if (t > 0.0f) {
-                    std::vector<AestraUI::NUIPoint> activePoints;
-                    int activeSegs = std::max(1, static_cast<int>(std::round(t * segments)));
-                    activePoints.reserve(activeSegs + 1);
-                    for (int i = 0; i <= activeSegs; ++i) {
-                        float theta = ARC_START + i * (currentAng - ARC_START) / activeSegs;
-                        activePoints.push_back({cx + std::cos(theta) * r, cy + std::sin(theta) * r});
-                    }
-                    AestraUI::NUIColor knobColor = themeManager.getColor("accentPrimary");
-                    if (m_volumeKnobHovered || m_isDraggingVolumeKnob) knobColor = knobColor.withAlpha(1.0f);
-                    else knobColor = knobColor.withAlpha(0.85f);
-                    renderer.drawPolyline(activePoints.data(), static_cast<int>(activePoints.size()), 2.5f, knobColor);
-                }
-
-                // Pointer dot at current value
-                const float ptrX = cx + std::cos(currentAng) * (r * 0.72f);
-                const float ptrY = cy + std::sin(currentAng) * (r * 0.72f);
-                renderer.fillCircle({ptrX, ptrY}, 1.8f, themeManager.getCurrentTheme().textPrimary.withAlpha(0.9f));
-            }
-        }
-
         drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
         drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
         auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
@@ -1798,9 +1765,9 @@ void TrackUIComponent::onResize(int width, int height) {
     const float buttonH = 24.0f;
     const float spacing = 2.0f;
     // Every lane owns M/S; the record arm button is track-owned and renders
-    // without a channel too. Channel-backed lanes keep their historical
-    // 4-slot reservation (the extra slot precedes the volume knob).
-    const int numButtons = m_channel ? 4 : 3;
+    // without a channel too. No volume slot in the header: volume lives in
+    // the mixer only.
+    const int numButtons = 3;
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     const float leftPad = 14.0f;
@@ -1812,9 +1779,15 @@ void TrackUIComponent::onResize(int width, int height) {
     const float localButtonsXStart = controlAreaWidth - rightPad - buttonsTotalW;
     const float localButtonsY = (bounds.height - buttonH) * 0.5f;
 
+    // Lane-count indicator (FD-14 scope §10) sits just left of the buttons on
+    // the track's primary row; the name label flexes around it.
+    const float laneIndicatorWidth = 54.0f;
+    const float laneIndicatorGap = 6.0f;
+    const float laneIndicatorX = localButtonsXStart - laneIndicatorGap - laneIndicatorWidth;
+
     // Keep track number + name anchored to the left, with flexible space to buttons.
     const float localLabelLeft = leftPad + trackNumberWidth + numberNameGap;
-    const float localInlineRight = localButtonsXStart - 8.0f;
+    const float localInlineRight = laneIndicatorX - 8.0f;
     const float localInlineWidth = std::max(0.0f, localInlineRight - localLabelLeft);
     const float localNameHeight = std::max(14.0f, layout.trackLabelHeight - 2.0f);
     const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
@@ -1824,8 +1797,12 @@ void TrackUIComponent::onResize(int width, int height) {
     if (m_nameLabel) {
         m_nameLabel->setBounds(AestraUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localNameY, localLabelWidth, localNameHeight));
     }
-    if (m_volumeFader) {
-        m_volumeFader->setVisible(false);
+    if (m_laneCountLabel && m_laneCountIcon) {
+        const float laneIconY = localButtonsY + std::max(0.0f, (buttonH - 13.0f) * 0.5f);
+        m_laneCountIcon->setBounds(
+            AestraUI::NUIRect(bounds.x + laneIndicatorX, bounds.y + laneIconY, 13.0f, 13.0f));
+        m_laneCountLabel->setBounds(AestraUI::NUIRect(
+            bounds.x + laneIndicatorX + 15.0f, bounds.y + localNameY, laneIndicatorWidth - 17.0f, localNameHeight));
     }
 
     float xCursor = localButtonsXStart;
@@ -1839,12 +1816,7 @@ void TrackUIComponent::onResize(int width, int height) {
     }
     if (m_recordButton) {
         m_recordButton->setBounds(AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW, buttonH));
-        xCursor += buttonW + spacing;
     }
-    // Volume belongs to the mixer, never to a normal Playlist lane.
-    m_volumeKnobBounds = m_channel
-                             ? AestraUI::NUIRect(bounds.x + xCursor, bounds.y + localButtonsY, buttonW + 2.0f, buttonH)
-                             : AestraUI::NUIRect();
 
     AestraUI::NUIComponent::onResize(width, height);
 }
@@ -1873,17 +1845,13 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
     bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential || m_isDraggingPoint;
-    bool isControlCapture = m_isDraggingVolumeFader ||
-                            m_isDraggingVolumeKnob ||
-                            (m_muteButton && m_muteButton->isPressed()) ||
+    bool isControlCapture = (m_muteButton && m_muteButton->isPressed()) ||
                             (m_soloButton && m_soloButton->isPressed()) ||
                             (m_recordButton && m_recordButton->isPressed());
     bool controlsNeedEvents = isControlCapture ||
-                              (m_volumeFader && m_volumeFader->isHovered()) ||
                               (m_muteButton && m_muteButton->isHovered()) ||
                               (m_soloButton && m_soloButton->isHovered()) ||
-                              (m_recordButton && m_recordButton->isHovered()) ||
-                              m_volumeKnobHovered;
+                              (m_recordButton && m_recordButton->isHovered());
     
     if (!isInsideBounds && !isActiveOperation && !controlsNeedEvents) {
         return false;  // Let parent/siblings handle it (e.g., scrollbar)
@@ -1949,87 +1917,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         bool handledByControls = false;
 
-        // Volume knob mouse handling
-        {
-            const bool isOver = m_volumeKnobBounds.contains(event.position);
-            if (!event.cursorCaptured && m_volumeKnobHovered != isOver) {
-                m_volumeKnobHovered = isOver;
-                if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-            }
-
-            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isOver) {
-                m_isDraggingVolumeKnob = true;
-                m_volumeKnobDragStartPos = event.position;
-                m_volumeKnobDragStartValue = m_volumeKnobValue;
-
-                // Cursor capture via the unified service: hides + confines to
-                // a small anchor rect + routes motion here only + recenters, so
-                // the hidden pointer can't roam other panels (foreign hover /
-                // escape). Restores at the knob center on release.
-                if (m_platformBridge) {
-                    m_platformBridge->beginCursorCapture(
-                        this, AestraUI::NUICursorRestorePolicy::KnobCenter,
-                        static_cast<int>(event.position.x), static_cast<int>(event.position.y));
-                }
-
-                if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-                handledByControls = true;
-            } else if (event.released && event.button == AestraUI::NUIMouseButton::Left && m_isDraggingVolumeKnob) {
-                m_isDraggingVolumeKnob = false;
-                AestraUI::NUIComponent::hideRemoteTooltip(this);
-
-                // End capture: service warps to knob center, unhides, releases
-                // confinement — in that order.
-                if (m_platformBridge) {
-                    m_platformBridge->endCursorCapture(
-                        static_cast<int>(m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f),
-                        static_cast<int>(m_volumeKnobBounds.y + m_volumeKnobBounds.height * 0.5f));
-                }
-
-                if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-                handledByControls = true;
-            } else if (m_isDraggingVolumeKnob && event.button == AestraUI::NUIMouseButton::None) {
-                // Dragging: service-owned delta (up = louder). event.delta.y is
-                // down-positive, so negate to keep up = louder.
-                float dy = -event.delta.y;
-                float delta = dy * 0.008f;
-                if (event.modifiers & AestraUI::NUIModifiers::Shift) {
-                    delta *= 0.25f;
-                }
-                float newValue = std::clamp(m_volumeKnobValue + delta, 0.0f, 1.5f);
-                if (std::abs(newValue - m_volumeKnobValue) > 1e-5f) {
-                    m_volumeKnobValue = newValue;
-                    if (m_channel && m_trackManager) {
-                        m_trackManager->getCommandHistory().pushAndExecute(
-                            std::make_shared<Aestra::Audio::SetVolumeCommand>(*m_trackManager, *m_channel, newValue));
-                    }
-                    // Show tooltip at knob position
-                    int pct = static_cast<int>(std::round(newValue * 100.0f));
-                    AestraUI::NUIPoint tipPos(
-                        m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f,
-                        m_volumeKnobBounds.y - 4.0f);
-                    AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", tipPos, this, true);
-                    if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-                }
-                handledByControls = true;
-            }
-        }
-
-        if (m_volumeFader) {
-            const bool isOver = m_volumeFader->getBounds().contains(event.position);
-            if (!event.cursorCaptured && m_volumeFader->isHovered() != isOver) {
-                m_volumeFader->setHovered(isOver);
-            }
-            handledByControls = m_volumeFader->onMouseEvent(event) || handledByControls;
-        }
         handledByControls = routeControlButton(m_muteButton) || handledByControls;
         handledByControls = routeControlButton(m_soloButton) || handledByControls;
         handledByControls = routeControlButton(m_recordButton) || handledByControls;
 
         if (!event.cursorCaptured && isInsideBounds) {
-            if (m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
-                AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
-            } else if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
+            if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
                 const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
                 const std::string tooltip =
                     lane && lane->muted && lane->solo ? "Muted • Solo is held (M)" : "Mute Track (M)";
@@ -2041,12 +1934,6 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
                 AestraUI::NUIComponent::showRemoteTooltip(recordButtonTooltipText(), event.position, this);
-            } else if (m_volumeKnobHovered) {
-                int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
-                AestraUI::NUIPoint tipPos(
-                    m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f,
-                    m_volumeKnobBounds.y - 4.0f);
-                AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", tipPos, this, true);
             } else {
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
             }

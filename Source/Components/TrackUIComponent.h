@@ -241,7 +241,6 @@ private:
  
     // Automation Interaction State (v3.1)
     bool m_isDraggingPoint = false;
-    bool m_isDraggingVolumeFader = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
     // Point position at drag start; a release that never moved the point
@@ -261,22 +260,15 @@ private:
 
     // UI Components
     std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
-    std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
+    std::shared_ptr<AestraUI::NUILabel> m_laneCountLabel;
+    std::shared_ptr<AestraUI::NUIIcon> m_laneCountIcon;
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_soloButton;
     std::shared_ptr<AestraUI::NUIButton> m_recordButton;
     std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
     std::shared_ptr<AestraUI::NUIContextMenu> m_clipRoutingMenu;
 
-    // Volume Knob (replaces route button)
-    float m_volumeKnobValue = 1.0f;
-    bool m_isDraggingVolumeKnob = false;
-    bool m_volumeKnobHovered = false;
-    AestraUI::NUIPoint m_volumeKnobDragStartPos;
-    float m_volumeKnobDragStartValue = 0.0f;
-    AestraUI::NUIRect m_volumeKnobBounds;
-
-    // Cursor capture state for volume knob (hidden cursor + lock-on)
+    // Cursor capture state for drag interactions (hidden cursor + lock-on).
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     AestraUI::NUIPoint m_volumeWarpOrigin;
     float m_volumeLastDragY = 0.0f;

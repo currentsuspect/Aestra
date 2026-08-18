@@ -27,4 +27,9 @@ inline constexpr const char* kRecordIconSvg =
 inline constexpr const char* kMonitorIconSvg =
     R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3.2l2.2-5.5 3.4 11 2.2-5.5H21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
 
+// FD-14 scope §10: lane-stack glyph for the track-header lane count
+// (three lane rows; drawn paths, so no font-glyph dependency).
+inline constexpr const char* kLaneStackIconSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4.6" width="18" height="4.2" rx="1.1" fill="currentColor"/><rect x="3" y="9.9" width="18" height="4.2" rx="1.1" fill="currentColor"/><rect x="3" y="15.2" width="18" height="4.2" rx="1.1" fill="currentColor"/></svg>)";
+
 } // namespace AestraUI
