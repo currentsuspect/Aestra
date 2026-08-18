@@ -205,7 +205,11 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_muteButton->setText("");
     configureFlatTrackButton(m_muteButton);
     m_muteButton->setToggleable(true);
-    m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
+    m_muteButton->setOnToggle([this](bool on) {
+        Log::debug("[RecArm] mute onToggle fired on=" + std::to_string(on) +
+                   " isToggled=" + std::to_string(m_muteButton->isToggled()));
+        onMuteToggled();
+    });
     m_muteButton->setTooltip("Mute Track (M)");
     addChild(m_muteButton);
 
@@ -227,7 +231,11 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_recordButton->setText("");
     configureFlatTrackButton(m_recordButton);
     m_recordButton->setToggleable(true);
-    m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
+    m_recordButton->setOnToggle([this](bool on) {
+        Log::debug("[RecArm] rec onToggle fired on=" + std::to_string(on) +
+                   " isToggled=" + std::to_string(m_recordButton->isToggled()));
+        onRecordToggled();
+    });
     addChild(m_recordButton);
 
     updateUI();
@@ -389,14 +397,24 @@ void TrackUIComponent::onSoloToggled() {
 
 
 void TrackUIComponent::onRecordToggled() {
-    if (!m_trackManager) return;
+    if (!m_trackManager) {
+        Log::debug("[RecArm] bail: no trackManager");
+        return;
+    }
+    const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+    Log::debug("[RecArm] lane=" + m_laneId.toString() + " laneTrackId=" + std::to_string(lane ? lane->trackId : 0));
     auto* track = m_trackManager->getTrackForLane(m_laneId);
+    Log::debug("[RecArm] resolvedTrack=" + std::to_string(track ? track->trackId : 0) +
+               " armedPre=" + std::to_string(track ? track->armed : false));
     if (!track) return;
     const bool armed = m_recordButton && m_recordButton->isToggled();
+    Log::debug("[RecArm] setting armed=" + std::to_string(armed));
     m_trackManager->setTrackArmed(track->trackId, armed);
     m_trackManager->markModified();
     Log::info("Track " + std::to_string(track->trackId) + " armed: " + (armed ? "ON" : "OFF"));
     updateUI();
+    Log::debug("[RecArm] post-updateUI modelArmed=" + std::to_string(track->armed) +
+               " btnToggled=" + std::to_string(m_recordButton->isToggled()));
     repaint();
     if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
 }
@@ -493,6 +511,18 @@ void TrackUIComponent::updateUI() {
     configureStatusButton(m_muteButton, lane && lane->muted, themeManager.getColor("muted"));
     configureStatusButton(m_soloButton, lane && lane->solo, themeManager.getColor("soloed"));
     configureStatusButton(m_recordButton, track && track->armed, themeManager.getColor("armed"));
+
+    // [RecArm] diagnostic: fire only when button toggle and model disagree —
+    // that is the 'snap-back' moment that makes rec a visual no-op.
+    const bool recModelArmed = track && track->armed;
+    if (m_recordButton->isToggled() != recModelArmed) {
+        Log::debug("[RecArm] updateUI rec snap: btn=" + std::to_string(m_recordButton->isToggled()) +
+                   " model=" + std::to_string(recModelArmed));
+    }
+    if (m_muteButton->isToggled() != (lane && lane->muted)) {
+        Log::debug("[RecArm] updateUI mute snap: btn=" + std::to_string(m_muteButton->isToggled()) +
+                   " model=" + std::to_string(lane && lane->muted));
+    }
 
     if (m_recordButton) {
         updateRecordTooltip();
