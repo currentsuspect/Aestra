@@ -276,6 +276,44 @@ void testEachTakeCreatesALane() {
     }
 }
 
+/** FD-14 phase-5 (UI notification + nesting): the take-commit path notifies
+ *  the UI layer with the committed lane id so take lane rows become visible
+ *  and reachable without a manual refresh action. */
+void testTakeCommitFiresUiHook() {
+    std::cout << "[A] take commit fires the UI-refresh hook with ownership intact\n";
+    auto tm = makeRecorder();
+    int fireCount = 0;
+    PlaylistLaneID lastTakeLane;
+    tm->setOnTakeCommitted([&](PlaylistLaneID laneId) {
+        ++fireCount;
+        lastTakeLane = laneId;
+    });
+
+    const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
+    check(trackId != 0, "track created and armed");
+    if (trackId == 0) {
+        return;
+    }
+
+    tm->record();
+    recordTake(*tm, 0.5);
+    recordTake(*tm, 0.5);
+
+    check(fireCount == 2, "hook fired once per committed take");
+
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr, "track still resolvable");
+    if (track) {
+        const PlaylistLaneID takeLane = takeLaneOf(*tm, trackId);
+        check(takeLane.isValid(), "take lane resolved");
+        if (takeLane.isValid()) {
+            auto* lane = tm->getPlaylistModel().getLane(takeLane);
+            check(lane != nullptr && lane->trackId == trackId, "take lane owned by the recording track");
+        }
+        check(lastTakeLane == track->laneIds.back(), "hook delivered the last committed take's lane id");
+    }
+}
+
 // ===========================================================================
 // SECTION B — post-migration acceptance (the Phase 2 RED assertions now hold)
 // ===========================================================================
@@ -534,6 +572,7 @@ int main() {
     testMultipleArmedTracksCaptureIndependently();
     testTwoArmedTracksSharingChannelCaptureIndependently();
     testEachTakeCreatesALane();
+    testTakeCommitFiresUiHook();
 
     std::cout << "Section B: post-migration acceptance\n";
     testRecordingIdentityIsTrackBased();

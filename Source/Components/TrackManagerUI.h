@@ -154,6 +154,13 @@ public:
     void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) {
         m_onSendToAudition = cb;
     }
+
+    // Destructive-action confirmation, routed to the app's ConfirmationDialog.
+    // When unset, destructive actions proceed without confirmation.
+    using ConfirmDialogRequest =
+        std::function<void(const std::string& title, const std::string& message, const std::string& confirmLabel,
+                           std::function<void(bool confirmed)> onResult)>;
+    void setOnConfirmDialogRequest(ConfirmDialogRequest cb) { m_onConfirmDialogRequest = std::move(cb); }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) {
         m_onSendSelectionToAudition = cb;
     }
@@ -173,6 +180,7 @@ public:
 
     // Context Menu Helpers (v4.0)
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control
     void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
@@ -280,6 +288,14 @@ public:
         layoutTracks();
     }
 
+    // FD-14 §10/§11: per-track lane collapse state (session-local, not
+    // serialized). Collapsed tracks render only their primary lane row.
+    bool isTrackCollapsed(uint64_t trackId) const { return m_collapsedTrackIds.count(trackId) > 0; }
+    void toggleTrackCollapsed(uint64_t trackId);
+    void expandTrack(uint64_t trackId) { m_collapsedTrackIds.erase(trackId); }
+    /** Expand the lane's owning track, rebuild rows, and scroll it into view. */
+    void revealLane(PlaylistLaneID laneId);
+
 protected:
     void onRender(::AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
@@ -307,6 +323,7 @@ private:
     int m_trackSpacing{3};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
+    std::unordered_set<uint64_t> m_collapsedTrackIds;
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
 
@@ -517,6 +534,7 @@ private:
     std::function<void(double, double)>
         m_onLoopRegionUpdate; // Called when loop region needs update (Project auto-update)
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition; // Called for "Send to Audition"
+    ConfirmDialogRequest m_onConfirmDialogRequest;
     std::function<void(double, double)> m_onSendSelectionToAudition;      // Called for "Send Selection to Audition"
     std::function<void()> m_onClipLibraryChanged;
     bool m_dragPatternPreviewActive = false;
@@ -586,6 +604,11 @@ private:
     void clearDropPreview();                         // Clear drop preview state
     double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
+
+    // Resolve a lane to its first pattern's mixer channel position, falling
+    // back to fallbackIndex when the lane is missing or unresolved. Shared by
+    // the per-track audition button and the toolbar's "Send Track to Audition".
+    uint32_t resolveLaneToChannelIndex(const Audio::PlaylistLane* lane, uint32_t fallbackIndex) const;
 
     // Tool icons initialization and rendering
     void createToolIcons();

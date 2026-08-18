@@ -10,7 +10,8 @@
 #include "AudioFileValidator.h"
 #include "ClipSource.h"
 #include "Commands/AddClipCommand.h"
-#include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
+#include "Commands/DeleteLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -132,21 +133,21 @@ void TrackManagerUI::addTrack(const std::string& name) {
         return;
 
     // Playlist lanes are created independently from mixer inserts.
-    auto laneCmd = std::make_shared<CreateLaneCommand>(m_trackManager->getPlaylistModel(), name);
+    //
+    // FD-14: the lane AND its owning Track are one operation — "add a track" is
+    // a lane plus ownership, and undoing it removes both. A bare createTrack()
+    // after a CreateLaneCommand push left an empty Track behind on undo.
+    auto laneCmd = std::make_shared<CreateTrackWithLaneCommand>(*m_trackManager, name);
     m_trackManager->getCommandHistory().pushAndExecute(laneCmd);
 
-    // FD-14: every lane belongs to a Track. The app's add-track creates the
-    // lane AND its owning Track in one operation (ownership by stable id).
     if (laneCmd->getLaneId().isValid()) {
-        m_trackManager->createTrack(laneCmd->getLaneId(), name);
+        // Rebuild UI from model state
+        refreshTracks();
+        layoutTracks();
+        scheduleTimelineMinimapRebuild();
+        invalidateCache();
+        Log::info("Added Playlist lane via command: " + name);
     }
-
-    // Rebuild UI from model state
-    refreshTracks();
-    layoutTracks();
-    scheduleTimelineMinimapRebuild();
-    invalidateCache();
-    Log::info("Added Playlist lane via command: " + name);
 }
 
 void TrackManagerUI::refreshTracks() {
@@ -172,8 +173,44 @@ void TrackManagerUI::refreshTracks() {
         removeChild(trackUI);
     }
     m_trackUIComponents.clear();
+
+    // FD-14 §10/§11: render lanes grouped by owning Track — the primary lane
+    // row first, then (when expanded) the track's owned lanes nested directly
+    // under it. Collapsed tracks show only the primary row; unowned lanes
+    // stay in playlist order.
+    std::vector<PlaylistLaneID> orderedLaneIds;
+    orderedLaneIds.reserve(laneCount);
+    std::unordered_set<uint64_t> seenTracks;
     for (size_t i = 0; i < laneCount; ++i) {
-        auto laneId = playlist.getLaneId(i);
+        const auto laneId = playlist.getLaneId(i);
+        const auto* lane = playlist.getLane(laneId);
+        if (!lane) {
+            continue;
+        }
+        const auto* track = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+        if (!track) {
+            orderedLaneIds.push_back(laneId);
+            continue;
+        }
+        if (track->laneIds.empty() || laneId != track->laneIds.front()) {
+            continue; // Owned lane: rendered nested under its track's primary row.
+        }
+        if (seenTracks.count(track->trackId)) {
+            continue;
+        }
+        seenTracks.insert(track->trackId);
+        orderedLaneIds.push_back(laneId);
+        if (!isTrackCollapsed(track->trackId)) {
+            for (const auto& owned : track->laneIds) {
+                if (owned != laneId) {
+                    orderedLaneIds.push_back(owned);
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < orderedLaneIds.size(); ++i) {
+        auto laneId = orderedLaneIds[i];
         auto lane = playlist.getLane(laneId);
         if (!lane) {
             Log::warning("refreshTracks: lane " + std::to_string(i) + " is null!");
@@ -183,6 +220,20 @@ void TrackManagerUI::refreshTracks() {
         // Playlist lanes are arrangement-only; mixer inserts are managed in
         // the mixer and sources keep their own stable destinations.
         auto trackUI = std::make_shared<TrackUIComponent>(laneId, nullptr, m_trackManager.get());
+
+        // FD-14 §10 nesting: mark owned non-primary rows as nested (no record
+        // arm, indented "Lane N" label) and mirror the track's collapse state
+        // for the chevron glyph. The expansion toggle lives on the primary
+        // row of a multi-lane track.
+        const auto* owningTrack = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+        const bool isPrimaryRow = owningTrack && !owningTrack->laneIds.empty() && owningTrack->laneIds.front() == laneId;
+        trackUI->setIsNestedLane(owningTrack != nullptr && !isPrimaryRow);
+        trackUI->setTrackCollapsed(isTrackCollapsed(lane->trackId));
+        if (owningTrack && isPrimaryRow && owningTrack->laneIds.size() > 1) {
+            trackUI->setOnExpandToggled(
+                [this, trackId = owningTrack->trackId]() { this->toggleTrackCollapsed(trackId); });
+        }
+        trackUI->updateUI();
 
         // Register callbacks
         trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) { this->onTrackSoloToggled(soloedTrack); });
@@ -231,29 +282,10 @@ void TrackManagerUI::refreshTracks() {
 
         trackUI->setOnSendToAudition([this, i, lane]() {
             if (this->m_onSendToAudition) {
-                // Resolve the lane to a mixer channel position: lanes and mixer
-                // channels are separate domains (a lane can be arrangement-only
-                // or its clips routed to any channel), so the lane index is not
-                // a valid channel position (#761 review). Use the first clip's
-                // mixer channel; fall back to the lane index when unresolved.
-                uint32_t channelIndex = static_cast<uint32_t>(i);
-                for (const auto& clip : lane->clips) {
-                    if (!clip.patternId.isValid())
-                        continue;
-                    auto* pattern = this->m_trackManager->getPatternManager().getPattern(clip.patternId);
-                    if (!pattern)
-                        continue;
-                    const uint32_t channelId = pattern->getMixerChannelId();
-                    for (size_t c = 0; c < this->m_trackManager->getChannelCount(); ++c) {
-                        if (const auto* channel = this->m_trackManager->getChannel(c)) {
-                            if (channel->getChannelId() == channelId) {
-                                channelIndex = static_cast<uint32_t>(c);
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
+                // Lanes and mixer channels are separate domains (#761 review);
+                // resolve through the shared helper so the row button and the
+                // toolbar menu audition the same channel.
+                const uint32_t channelIndex = this->resolveLaneToChannelIndex(lane, static_cast<uint32_t>(i));
                 this->m_onSendToAudition(channelIndex, lane->name);
             }
         });
@@ -297,6 +329,60 @@ void TrackManagerUI::refreshTracks() {
     invalidateCache(); // Invalidate cache when tracks refreshed
 
     Log::info("refreshTracks: completed, created " + std::to_string(m_trackUIComponents.size()) + " TrackUIs");
+}
+
+uint32_t TrackManagerUI::resolveLaneToChannelIndex(const Audio::PlaylistLane* lane, uint32_t fallbackIndex) const {
+    // Lanes and mixer channels are separate domains (a lane can be
+    // arrangement-only or its clips routed to any channel), so the lane index
+    // is not a valid channel position (#761 review). Use the first clip's
+    // mixer channel; fall back to the lane index when unresolved.
+    if (!lane) {
+        return fallbackIndex;
+    }
+    for (const auto& clip : lane->clips) {
+        if (!clip.patternId.isValid()) {
+            continue;
+        }
+        auto* pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
+        if (!pattern) {
+            continue;
+        }
+        const uint32_t channelId = pattern->getMixerChannelId();
+        for (size_t c = 0; c < m_trackManager->getChannelCount(); ++c) {
+            if (const auto* channel = m_trackManager->getChannel(c)) {
+                if (channel->getChannelId() == channelId) {
+                    return static_cast<uint32_t>(c);
+                }
+            }
+        }
+        break;
+    }
+    return fallbackIndex;
+}
+
+void TrackManagerUI::toggleTrackCollapsed(uint64_t trackId) {
+    if (isTrackCollapsed(trackId)) {
+        m_collapsedTrackIds.erase(trackId);
+    } else {
+        m_collapsedTrackIds.insert(trackId);
+    }
+    refreshTracks();
+}
+
+void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
+    // Phase-5: a committed take must be discoverable. Expand the owning track
+    // so its lanes render, rebuild rows, then scroll the take lane into view.
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(laneId) : nullptr;
+    if (lane && lane->trackId != 0) {
+        expandTrack(lane->trackId);
+    }
+    refreshTracks();
+    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+        if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
+            setVerticalScroll(static_cast<float>(i) * (m_trackHeight + m_trackSpacing));
+            break;
+        }
+    }
 }
 
 void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
@@ -450,6 +536,9 @@ void TrackManagerUI::layoutTracks() {
 
         // Fix: Use absolute coordinates (bounds.x, yPos).
         // AestraUI components use absolute screen coordinates.
+        // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid
+        // must stay globally aligned across lanes (a row-x indent would shift
+        // clip snapping); nesting is expressed in the chrome instead.
         float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
         trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
@@ -641,6 +730,17 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
             }
         });
         menu->addSeparator();
+
+        // FD-14 phase-5: take lanes accumulate with no escape hatch. Only the
+        // LAST owned lane is protected — a track must keep at least one lane;
+        // unowned lanes are always deletable.
+        const uint64_t owningTrackId = lane->trackId;
+        const auto* owningTrack = owningTrackId != 0 ? m_trackManager->getTrack(owningTrackId) : nullptr;
+        const bool deletable = owningTrack == nullptr || owningTrack->laneIds.size() > 1;
+        auto deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        deleteLaneItem->setEnabled(deletable);
+        deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
+        menu->addItem(deleteLaneItem);
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -654,6 +754,43 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     menu->addItem(selectAllItem);
 
     attachAndShowContextMenu(this, menu, position);
+}
+
+void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {
+    if (!m_trackManager) {
+        return;
+    }
+    const auto* lane = m_trackManager->getPlaylistModel().getLane(laneId);
+    if (!lane) {
+        return;
+    }
+    const auto* track = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+    if (track && track->laneIds.size() <= 1) {
+        return;
+    }
+    const auto executeDelete = [this, laneId]() {
+        m_trackManager->getCommandHistory().pushAndExecute(std::make_shared<DeleteLaneCommand>(*m_trackManager, laneId));
+        refreshTracks();
+        invalidateCache();
+        scheduleTimelineMinimapRebuild();
+    };
+
+    // Deleting a lane that still holds clips is destructive: ask first when a
+    // dialog channel is wired. Headless callers without one proceed directly.
+    if (!lane->clips.empty() && m_onConfirmDialogRequest) {
+        m_onConfirmDialogRequest(
+            "Delete Lane",
+            "This lane still contains " + std::to_string(lane->clips.size()) +
+                (lane->clips.size() == 1 ? " clip" : " clips") +
+                ". Deleting the lane removes them. This can be undone.",
+            "Delete Lane", [executeDelete](bool confirmed) {
+                if (confirmed) {
+                    executeDelete();
+                }
+            });
+        return;
+    }
+    executeDelete();
 }
 
 } // namespace Audio

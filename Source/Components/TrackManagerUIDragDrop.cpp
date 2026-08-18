@@ -14,7 +14,7 @@
 #include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
 #include "Commands/CommandTransaction.h"
-#include "Commands/CreateLaneCommand.h"
+#include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -63,7 +63,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& dat
     m_dropTargetTime = getTimeAtPosition(position.x);
 
     // Allow dropping on existing tracks OR appending a new track
-    int trackCount = static_cast<int>(m_trackManager->getTrackCount());
+    int trackCount = static_cast<int>(m_trackUIComponents.size());
 
     // If dragging below last track, target the next available slot
     if (m_dropTargetTrack >= trackCount) {
@@ -123,7 +123,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
     double snappedBeats = snapBeatToGrid(rawTimeBeats);
     double newTime = m_trackManager->getPlaylistModel().beatToSeconds(snappedBeats);
 
-    int trackCount = static_cast<int>(m_trackManager->getTrackCount());
+    int trackCount = static_cast<int>(m_trackUIComponents.size());
 
     // If dragging below last track, target the next available slot
     if (newTrack >= trackCount) {
@@ -173,12 +173,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     double timePositionBeats = snapBeatToGrid(rawTimeBeats);
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    size_t laneCount = playlist.getLaneCount();
+    const int displayRows = static_cast<int>(m_trackUIComponents.size());
 
     Log::info("[TrackManagerUI] onDrop: position.y=" + std::to_string(position.y) +
-              ", laneIndex=" + std::to_string(laneIndex) + ", laneCount=" + std::to_string(laneCount));
+              ", laneIndex=" + std::to_string(laneIndex) + ", displayRows=" + std::to_string(displayRows));
 
-    if (laneIndex < 0 || laneIndex > static_cast<int>(laneCount)) {
+    if (laneIndex < 0 || laneIndex > displayRows) {
         result.accepted = false;
         result.message = "Invalid track position";
         clearDropPreview();
@@ -207,17 +207,27 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         clearDropPreview();
         return result;
     }
+    // Catch-all for every payload the playlist cannot handle (None, Custom,
+    // AudioSourceRoute): the append branch below would otherwise create a lane
+    // and a Track for a payload no handler consumes, and a rejected drop must
+    // leave no objects behind. This must run BEFORE the lane-creation branch.
+    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::Pattern) {
+        result.accepted = false;
+        result.message = "Unsupported drop payload";
+        clearDropPreview();
+        return result;
+    }
 
     // 2. Resolve target lane
     //
     // A drop that has to append a lane must undo as ONE step: the lane is part of
-    // the edit, not scaffolding around it. Creating it through CreateLaneCommand
+    // the edit, not scaffolding around it. Creating it through CreateTrackWithLaneCommand
     // rather than calling playlist.createLane() directly is what lets it join the
     // clip in a single transaction — otherwise Ctrl+Z removes the clip and leaves
     // an empty orphan lane the user never asked for and cannot undo away.
     PlaylistLaneID targetLaneId;
-    std::shared_ptr<CreateLaneCommand> laneCommand;
-    if (laneIndex == static_cast<int>(laneCount)) {
+    std::shared_ptr<CreateTrackWithLaneCommand> laneCommand;
+    if (laneIndex == displayRows) {
         // When a new lane is created for a file drop, name it from the sample
         // rather than "Track N" — the moment a clip lands on a track, the track
         // should inherit the content name.  MIDI patterns keep the sequential
@@ -227,7 +237,10 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             namespace fs = std::filesystem;
             laneName = fs::path(data.filePath).stem().string();
         }
-        laneCommand = std::make_shared<CreateLaneCommand>(playlist, laneName);
+        // FD-14: the lane and its owning Track are ONE command, so a failed
+        // import rolls both back and an undo removes both — never an orphaned
+        // Track left behind when its lane disappears.
+        laneCommand = std::make_shared<CreateTrackWithLaneCommand>(*m_trackManager, laneName);
         laneCommand->execute();
         targetLaneId = laneCommand->getLaneId();
         if (!targetLaneId.isValid()) {
@@ -237,12 +250,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             clearDropPreview();
             return result;
         }
-        // FD-14: a new lane belongs to a new Track (ownership by stable id).
-        m_trackManager->createTrack(targetLaneId, laneName);
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
     } else {
-        targetLaneId = playlist.getLaneId(laneIndex);
+        // Display-row index, not playlist index: rows are track-grouped
+        // (FD-14 §10), so the lane must come from the row widget itself.
+        targetLaneId = m_trackUIComponents[laneIndex]->getLaneId();
     }
 
     // Undo the appended lane without recording anything: a drop that failed is not

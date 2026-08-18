@@ -383,6 +383,25 @@ public:
         return track.trackId;
     }
 
+    /** @brief Remove a Track entirely. Owned lanes are detached (trackId=0)
+     *  and remain in the playlist. Returns false when the track is missing.
+     *  Used by CreateTrackWithLaneCommand::undo() so a dropped or added track
+     *  never survives the undo of the lane it was created with. */
+    bool removeTrack(uint64_t trackId) {
+        auto it = m_tracks.find(trackId);
+        if (it == m_tracks.end()) {
+            return false;
+        }
+        for (const auto& laneId : it->second.laneIds) {
+            if (auto* lane = m_playlistModel.getLane(laneId)) {
+                lane->trackId = 0;
+            }
+        }
+        m_tracks.erase(it);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+        return true;
+    }
+
     /** @brief Find a Track by stable ID. */
     Track* getTrack(uint64_t trackId) {
         auto it = m_tracks.find(trackId);
@@ -435,6 +454,29 @@ public:
         if (track->activeLaneId == laneId) {
             track->activeLaneId = lanes.empty() ? PlaylistLaneID{} : lanes.back();
         }
+        return true;
+    }
+
+    /** @brief Move an owned lane to a position within its track's lane order
+     *  (undo position fidelity for DeleteLaneCommand). The lane must already
+     *  be owned by the track. Out-of-range targets clamp. */
+    bool moveLaneWithinTrack(uint64_t trackId, PlaylistLaneID laneId, size_t targetIndex) {
+        auto* track = getTrack(trackId);
+        if (!track) {
+            return false;
+        }
+        auto& laneIds = track->laneIds;
+        auto it = std::find(laneIds.begin(), laneIds.end(), laneId);
+        if (it == laneIds.end()) {
+            return false;
+        }
+        const size_t from = static_cast<size_t>(it - laneIds.begin());
+        targetIndex = std::min(targetIndex, laneIds.size() - 1);
+        if (from == targetIndex) {
+            return true;
+        }
+        laneIds.erase(it);
+        laneIds.insert(laneIds.begin() + targetIndex, laneId);
         return true;
     }
 
@@ -1263,6 +1305,14 @@ public:
      * Used by the application layer to forward dirty state to AutosaveManager.
      */
     void setOnModified(std::function<void()> callback) { m_onModified = std::move(callback); }
+    /**
+     * @brief Register a callback invoked once a recorded take has committed.
+     * Fires after the take lane, clip, and ownership transaction are final, on
+     * the same (control) thread the commit ran on. The application layer uses
+     * this to refresh view-only state such as track rows.
+     * @param callback Receives the lane id the take was committed onto.
+     */
+    void setOnTakeCommitted(std::function<void(PlaylistLaneID)> callback) { m_onTakeCommitted = std::move(callback); }
 
     using GraphDirtyReason = Aestra::Audio::GraphDirtyReason;
 
@@ -1816,6 +1866,10 @@ private:
                   std::to_string(channelId) + " at beat " + std::to_string(startBeat) + " with raw peak " +
                   std::to_string(rawPeak) + ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
                   std::to_string(playbackGain));
+
+        if (m_onTakeCommitted) {
+            m_onTakeCommitted(laneId);
+        }
     }
 
     std::string buildRecordingTakePath(uint32_t channelId) const {
@@ -2045,6 +2099,7 @@ private:
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_modified{false};
     std::function<void()> m_onModified;
+    std::function<void(PlaylistLaneID)> m_onTakeCommitted;
     std::atomic<bool> m_graphDirty{true}; // Owned by TrackManager, consumed by PlaybackGraphController only
     std::atomic<uint64_t> m_requestGeneration{0};
     std::atomic<GraphDirtyReason> m_lastReason{GraphDirtyReason::TimelineChanged};

@@ -105,7 +105,7 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
     if (trackCount > 0) {
         targetTrackIndex = std::clamp(targetTrackIndex, 0, trackCount - 1);
 
-        auto targetLaneId = playlist.getLaneId(targetTrackIndex);
+        auto targetLaneId = m_trackUIComponents[targetTrackIndex]->getLaneId();
         if (targetLaneId.isValid()) {
             playlist.moveClip(m_draggedClipId, newStartBeat, targetLaneId);
         }

@@ -22,6 +22,10 @@ constexpr float kTimelineRulerHeight = 28.0f;
 constexpr float kTimelineHorizontalScrollbarHeight = 24.0f;
 constexpr float kTimelineScrollbarWidth = 15.0f;
 
+// FD-14 §10: nested lane rows (owned lanes of an expanded track) indent this
+// far inside the track's primary row, leaving a gutter that reads as nesting.
+constexpr float kNestedLaneIndent = 24.0f;
+
 /**
  * @brief Gap between the track-controls column and the first grid pixel.
  *

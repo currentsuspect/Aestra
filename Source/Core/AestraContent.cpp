@@ -153,9 +153,10 @@ AestraContent::~AestraContent() {
         m_audioEngine->setPreviewEngine(nullptr);
     }
 
-    // TrackManager may be shared outside this component; clear the stored owner callback before member teardown.
+    // TrackManager may be shared outside this component; clear the stored owner callbacks before member teardown.
     if (m_trackManager) {
         m_trackManager->setStopPreviewCallback(nullptr);
+        m_trackManager->setOnTakeCommitted(nullptr);
     }
 
     // Cancel any running plugin scan to prevent callbacks from accessing dead pointers
@@ -239,6 +240,15 @@ AestraContent::AestraContent()
 
     // TrackManager is owned by AestraContent, and the destructor clears this stored callback before teardown.
     m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
+
+    // A committed take creates a new track-owned lane in the model; expand the
+    // recording track, rebuild the track view, and scroll the take lane into
+    // view (FD-14 phase-5: take lanes must be discoverable, not silent rows).
+    m_trackManager->setOnTakeCommitted([this](PlaylistLaneID laneId) {
+        if (m_trackManagerUI) {
+            m_trackManagerUI->revealLane(laneId);
+        }
+    });
 
     addDemoTracks();
 

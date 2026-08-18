@@ -79,6 +79,8 @@ using AestraUI::kMuteIconSvg;
 using AestraUI::kRecordIconSvg;
 using AestraUI::kSoloIconSvg;
 using AestraUI::kLaneStackIconSvg;
+using AestraUI::kChevronUpSvg;
+using AestraUI::kChevronDownSvg;
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -241,6 +243,17 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     m_recordButton->setToggleable(true);
     m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
     addChild(m_recordButton);
+
+    // FD-14 §10 expansion toggle: hit target only, glyph drawn in the control
+    // overlay. Visible on the track's primary row when it owns multiple lanes.
+    m_expandButton = std::make_shared<AestraUI::NUIButton>();
+    m_expandButton->setVisible(false);
+    m_expandButton->setOnClick([this]() {
+        if (m_onExpandToggled) {
+            m_onExpandToggled();
+        }
+    });
+    addChild(m_expandButton);
 
     updateUI();
 }
@@ -510,10 +523,25 @@ void TrackUIComponent::updateUI() {
         updateRecordTooltip();
     }
 
+    // FD-14 §10 nesting: record arm is track-exclusive, so nested lane rows
+    // carry M/S only; the expansion chevron lives on the primary row of a
+    // multi-lane track.
+    if (m_recordButton) {
+        m_recordButton->setVisible(!m_isNestedLane);
+    }
+
     if (m_laneCountLabel && m_laneCountIcon) {
         const bool isPrimaryRow = track && !track->laneIds.empty() && track->laneIds.front() == m_laneId;
-        if (isPrimaryRow && track->laneIds.size() > 1) {
-            m_laneCountLabel->setText(std::to_string(track->laneIds.size()));
+        const bool multiLaneTrack = track && track->laneIds.size() > 1;
+        if (m_expandButton) {
+            m_expandButton->setVisible(isPrimaryRow && multiLaneTrack);
+        }
+        if (isPrimaryRow && multiLaneTrack) {
+            // FD-14 §10: the counter counts the lanes NESTED under the primary
+            // row — what the stack glyph depicts and what the chevron reveals.
+            // A 3-take track reads "≡ 3", not "≡ 4" (laneIds includes the
+            // primary row itself, which is never "inside" the chevron).
+            m_laneCountLabel->setText(std::to_string(track->laneIds.size() - 1));
             m_laneCountLabel->setTextColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
             m_laneCountLabel->setVisible(true);
             m_laneCountIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
@@ -1659,22 +1687,57 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
         drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
-        auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
-        const bool isArmed = armTrack && armTrack->armed;
-        drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
+        // Record arm is track-exclusive (FD-14): nested lane rows carry M/S only.
+        if (!m_isNestedLane) {
+            auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
+            const bool isArmed = armTrack && armTrack->armed;
+            drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
+        }
+    }
+
+    // FD-14 §10 expansion chevron; visibility set during updateUI (primary row
+    // of a multi-lane track only).
+    if (m_expandButton && m_expandButton->isVisible()) {
+        const auto* doc = trackControlIcon(m_trackCollapsed ? kChevronDownSvg : kChevronUpSvg);
+        if (doc) {
+            const auto rect = m_expandButton->getBounds();
+            const float iconSize = 12.0f;
+            const AestraUI::NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
+                                             std::round(rect.y + (rect.height - iconSize) * 0.5f),
+                                             iconSize, iconSize);
+            AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect,
+                                             themeManager.getColor("textSecondary").withAlpha(0.42f));
+        }
+    }
+
+    // Lane-count indicator (FD-14 scope §10): TrackUIComponent::onRender does
+    // not call NUIComponent::renderChildren, so the icon/label widgets never
+    // auto-draw. Render them explicitly, like the name label and buttons.
+    if (m_laneCountIcon && m_laneCountIcon->isVisible()) {
+        m_laneCountIcon->onRender(renderer);
+    }
+    if (m_laneCountLabel && m_laneCountLabel->isVisible()) {
+        m_laneCountLabel->onRender(renderer);
     }
 
     // Track number marker (left of name): recedes as quiet metadata (Level 4).
     if (m_nameLabel && lane) {
         constexpr float stripWidth = 3.0f;
-        uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
-        const auto laneName = m_nameLabel->getText();
-        uint32_t parsedNumber = 0;
-        if (parseTrailingTrackNumber(laneName, parsedNumber)) {
-            trackNumber = parsedNumber;
-        }
         const auto nameBounds = m_nameLabel->getBounds();
-        renderer.drawText(std::to_string(trackNumber),
+        std::string numberText;
+        if (m_isNestedLane) {
+            const auto* nestedTrack = m_trackManager ? m_trackManager->getTrack(lane->trackId) : nullptr;
+            numberText = "Lane " + std::to_string(nestedTrack ? nestedTrack->laneNumber(m_laneId) : 0);
+        } else {
+            uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
+            const auto laneName = m_nameLabel->getText();
+            uint32_t parsedNumber = 0;
+            if (parseTrailingTrackNumber(laneName, parsedNumber)) {
+                trackNumber = parsedNumber;
+            }
+            numberText = std::to_string(trackNumber);
+        }
+        renderer.drawText(numberText,
                           AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
                           themeManager.getFontSize("xs"),
                           themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.58f : 0.36f));
@@ -1775,8 +1838,13 @@ void TrackUIComponent::onResize(int width, int height) {
     const float trackNumberWidth = 14.0f;
     const float numberNameGap = 6.0f;
 
+    // FD-14 §10: nested rows pull their chrome inward so the lane reads as
+    // indented while the timeline grid stays globally aligned across lanes —
+    // a row-x indent would shift clip snapping against the other rows.
+    const float chromeIndent = m_isNestedLane ? kNestedLaneIndent : 0.0f;
+
     // Position relative to component origin, then add absolute offset
-    const float localButtonsXStart = controlAreaWidth - rightPad - buttonsTotalW;
+    const float localButtonsXStart = controlAreaWidth - rightPad - buttonsTotalW - chromeIndent;
     const float localButtonsY = (bounds.height - buttonH) * 0.5f;
 
     // Lane-count indicator (FD-14 scope §10) sits just left of the buttons on
@@ -1785,9 +1853,31 @@ void TrackUIComponent::onResize(int width, int height) {
     const float laneIndicatorGap = 6.0f;
     const float laneIndicatorX = localButtonsXStart - laneIndicatorGap - laneIndicatorWidth;
 
+    // FD-14 §10 expansion chevron sits between the indicator and the buttons.
+    const float expandButtonW = 20.0f;
+    const float expandButtonX = laneIndicatorX - laneIndicatorGap - expandButtonW;
+    if (m_expandButton) {
+        m_expandButton->setBounds(
+            AestraUI::NUIRect(bounds.x + expandButtonX, bounds.y + localButtonsY, expandButtonW, buttonH));
+    }
+
     // Keep track number + name anchored to the left, with flexible space to buttons.
-    const float localLabelLeft = leftPad + trackNumberWidth + numberNameGap;
-    const float localInlineRight = laneIndicatorX - 8.0f;
+    // Nested lane rows (FD-14 §10) indent for the "Lane N" prefix.
+    const float laneNumberPrefixWidth = 48.0f;
+    const float localLabelLeft = leftPad + trackNumberWidth + numberNameGap + (m_isNestedLane ? laneNumberPrefixWidth : 0.0f);
+    // Reserve space only for widgets actually visible on this row: the
+    // indicator/chevron only exist on multi-lane primary rows, so hidden ones
+    // must not starve the name label down to its 40px floor.
+    const float inlineRightEdge = [&]() {
+        if (m_expandButton && m_expandButton->isVisible()) {
+            return expandButtonX;
+        }
+        if (m_laneCountIcon && m_laneCountIcon->isVisible()) {
+            return laneIndicatorX;
+        }
+        return localButtonsXStart;
+    }();
+    const float localInlineRight = inlineRightEdge - 8.0f;
     const float localInlineWidth = std::max(0.0f, localInlineRight - localLabelLeft);
     const float localNameHeight = std::max(14.0f, layout.trackLabelHeight - 2.0f);
     const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
@@ -1920,6 +2010,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         handledByControls = routeControlButton(m_muteButton) || handledByControls;
         handledByControls = routeControlButton(m_soloButton) || handledByControls;
         handledByControls = routeControlButton(m_recordButton) || handledByControls;
+        handledByControls = routeControlButton(m_expandButton) || handledByControls;
 
         if (!event.cursorCaptured && isInsideBounds) {
             if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
@@ -1934,6 +2025,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 AestraUI::NUIComponent::showRemoteTooltip(tooltip, event.position, this);
             } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
                 AestraUI::NUIComponent::showRemoteTooltip(recordButtonTooltipText(), event.position, this);
+            } else if (m_expandButton && m_expandButton->getBounds().contains(event.position)) {
+                AestraUI::NUIComponent::showRemoteTooltip(m_trackCollapsed ? "Expand lanes" : "Collapse lanes",
+                                                          event.position, this);
             } else {
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
             }
