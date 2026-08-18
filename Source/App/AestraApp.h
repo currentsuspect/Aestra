@@ -137,6 +137,13 @@ private:
     void applyUIState(const ProjectSerializer::UIState& state);
     void updateWindowTitle();
     void startExport();
+    /** @brief Delete recording files this session can no longer reference
+     *  (discarded takes in unsaved projects). Runs at project New/Open
+     *  boundaries, where no crash recovery is pending and the on-disk project
+     *  is the keeper — never at shutdown, which may still serve recovery.
+     *  Files referenced by a live clip or by the saved project on disk are
+     *  always kept. */
+    void cleanupUnreferencedRecordings();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

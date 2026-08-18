@@ -31,6 +31,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <chrono>
 #include "../Core/AudioSettingsStore.h"
 #include "PlaylistMixer.h"
@@ -66,6 +67,26 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, con
     if (auto trackManager = content->getTrackManager()) {
         trackManager->setRecordingProjectPath(projectPath);
     }
+}
+
+/** @brief True when @p filePath's text contains @p needle (generic path form).
+ *
+ *  Project/autosave JSON stores recording paths as generic (forward-slash)
+ *  strings. A contains-check is deliberately permissive: a false positive
+ *  merely keeps a recording file, never deletes one. */
+bool pathAppearsInFile(const std::string& filePath, const std::string& needle) {
+    std::error_code ec;
+    if (!std::filesystem::exists(filePath, ec)) {
+        return false;
+    }
+    std::ifstream in(filePath, std::ios::in | std::ios::binary);
+    if (!in) {
+        return false;
+    }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    const std::string generic = std::filesystem::path(needle).generic_string();
+    return buffer.str().find(generic) != std::string::npos;
 }
 
 }
@@ -606,6 +627,8 @@ void AestraApp::buildMenuBar() {
 
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
+            // Leave the old session: discards its unsaved/unreferenced takes.
+            cleanupUnreferencedRecordings();
             if (m_content) m_content->resetToDefaultProject();
             clearProjectLoadReport();
             m_documentState.startUntitled(autosavePathOrEmpty());
@@ -622,6 +645,10 @@ void AestraApp::buildMenuBar() {
                                                        sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
                 const std::string pickedPath = utils->openFileDialog("Open Project", filter);
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
+                    // Leaving the current session: discard its unsaved takes
+                    // BEFORE the document path switch (the keep-check below
+                    // still sees the old project file).
+                    cleanupUnreferencedRecordings();
                     auto result = loadProjectFromPath(pickedPath);
                     if (!result.ok) {
                         Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
@@ -1157,6 +1184,17 @@ void AestraApp::run() {
 
         {
             AESTRA_ZONE("UI_Update");
+
+            // AestraContent is the root content (a raw pointer on the root
+            // component, not a child in the NUI tree), so nothing else pumps
+            // its per-frame update. Without this full-cadence call nothing
+            // drives updatePendingCountIn (count-in → recording start),
+            // sound-preview pumping, or the mixer view-model resync — and it
+            // must live here (not in render), because render is idle-elided.
+            if (m_content) {
+                m_content->onUpdate(m_windowManager ? m_windowManager->getDeltaTime() : (1.0 / 60.0));
+            }
+
             // Sync Transport State
             if (m_audioController->getEngine() && m_content && m_content->getTrackManager()) {
                 auto engine = m_audioController->getEngine();
@@ -1336,6 +1374,27 @@ void AestraApp::startMuseSocketIfConfigured() {
     }
 }
 
+void AestraApp::cleanupUnreferencedRecordings() {
+    if (!m_content) {
+        return;
+    }
+    auto trackManager = m_content->getTrackManager();
+    if (!trackManager) {
+        return;
+    }
+    // A saved project owns its recording assets: anything the on-disk project
+    // file still references is kept. For an unsaved session the keeper is
+    // absent, so discarded takes become cleanup candidates.
+    const std::string projectPath = m_documentState.canonicalPath();
+    std::function<bool(const std::string&)> keepCheck;
+    if (!projectPath.empty()) {
+        keepCheck = [projectPath](const std::string& path) {
+            return pathAppearsInFile(projectPath, path);
+        };
+    }
+    trackManager->cleanupOrphanedRecordings(keepCheck);
+}
+
 void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
@@ -1354,6 +1413,13 @@ void AestraApp::shutdown() {
         m_autoSaveManager.forceAutosave();
     }
     m_autoSaveManager.shutdown();
+
+    // NOTE: recording cleanup intentionally does NOT run here. Shutdown still
+    // serves crash recovery until clearCrashFlag() (below) — deleting discarded
+    // takes now would leave the just-written emergency autosave referencing
+    // files that no longer exist if this process dies before the flag clears.
+    // Discarded takes are removed at the next project new/open transition,
+    // where no recovery is pending and the on-disk project is the keeper.
 
     // Save preferences and UI state (Issue #120)
     Preferences::instance().save();

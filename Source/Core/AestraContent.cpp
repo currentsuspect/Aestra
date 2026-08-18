@@ -7,6 +7,12 @@
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
 #include "AestraContent.h"
 
+namespace {
+// Frames (≈1s at 60fps) the app waits for the engine to actually start the
+// count-in metronome before degrading to plain playback (e.g. no live stream).
+constexpr int kCountInStartupFrameLimit = 60;
+} // namespace
+
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "../AestraUI/Widgets/PluginUIController.h"
 #include "../AestraUI/Widgets/UIMixerInspector.h"
@@ -477,14 +483,29 @@ void AestraContent::setupTransportBar() {
         stopSoundPreview();
     });
     m_transportBar->setOnRecord([this](bool recording) {
-        if (m_trackManager) {
-            bool isRecordArmed = m_trackManager->isRecordArmed();
-            if (recording != isRecordArmed) {
-                m_trackManager->record();
+        if (!m_trackManager) {
+            return;
+        }
+        const bool isRecordArmed = m_trackManager->isRecordArmed();
+        if (recording != isRecordArmed) {
+            m_trackManager->record();
+        }
+        if (recording && !m_trackManager->hasArmedTracks()) {
+            showToast("No armed tracks — recording will capture nothing. Arm a track in the playlist.");
+            return;
+        }
+        if (!recording) {
+            // Disarming cancels any pending count-in so the transport does not
+            // start rolling (and "record") after the count-in finishes.
+            if (m_trackManager->isCountInPending()) {
+                clearPendingCountIn();
             }
-            if (recording && !m_trackManager->hasArmedTracks()) {
-                showToast("No armed tracks — recording will capture nothing. Arm a track in the playlist.");
-            }
+            return;
+        }
+        // Count-in enabled: pressing Record enters the count-in phase and
+        // recording begins automatically at the post-count-in position.
+        if (m_countInEnabled && !isTransportRolling()) {
+            handleTransportPlayRequest();
         }
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {
@@ -2889,13 +2910,13 @@ PatternID AestraContent::getActivePatternID() const {
 
 void AestraContent::clearPendingCountIn() {
     if (m_trackManager) {
-        m_trackManager->clearDeferredRecordingStartBeat();
-        m_trackManager->clearDisplayPositionOverride();
-        m_trackManager->clearNextCapturePlacementStartBeat();
+        m_trackManager->cancelCountIn();
     }
     if (m_audioEngine) {
         m_audioEngine->stopMetronomeCountIn();
     }
+    m_countInFullyStarted = false;
+    m_countInStartupFrames = 0;
 
     if (m_forcedMetronomeForCountIn && m_trackManager) {
         m_trackManager->enableMetronome(false);
@@ -2908,8 +2929,6 @@ void AestraContent::clearPendingCountIn() {
     }
 
     m_forcedMetronomeForCountIn = false;
-    m_pendingCountIn = false;
-    m_pendingCountInTargetSeconds = 0.0;
 }
 
 void AestraContent::startPatternClipPreview(PatternID patternId) {
@@ -2995,26 +3014,41 @@ ViewFocus AestraContent::resolveTransportFocus() const {
 }
 
 bool AestraContent::isTransportRolling() const {
-    if (m_pendingCountIn || (m_audioEngine && m_audioEngine->isMetronomeCountInActive())) {
+    if (m_trackManager && (m_trackManager->isCountInPending() || m_trackManager->isPlaying())) {
         return true;
     }
-
-    const bool trackManagerPlaying = m_trackManager && m_trackManager->isPlaying();
+    if (m_audioEngine && m_audioEngine->isMetronomeCountInActive()) {
+        return true;
+    }
     const bool transportBarPlaying = m_transportBar && m_transportBar->getState() == TransportState::Playing;
-    return trackManagerPlaying || transportBarPlaying;
+    return transportBarPlaying;
 }
 
 void AestraContent::updatePendingCountIn() {
-    if (!m_pendingCountIn || !m_trackManager) {
+    if (!m_trackManager || !m_trackManager->isCountInPending()) {
         return;
     }
 
-    if (m_audioEngine && m_audioEngine->isMetronomeCountInActive()) {
+    // The count-in command travels to the engine through the audio command
+    // queue, so isMetronomeCountInActive() stays false for a block or two
+    // after beginCountIn. Treating "still false" as "finished" made the
+    // transport start immediately with no count-in at all. Instead: wait
+    // until the engine has actually started clicking, then complete once it
+    // stops (with a degrade timer in case the stream never applies it).
+    const bool countInActive = m_audioEngine && m_audioEngine->isMetronomeCountInActive();
+    if (countInActive) {
+        m_countInFullyStarted = true;
+        m_countInStartupFrames = 0;
         return;
     }
 
-    m_trackManager->clearDisplayPositionOverride();
-    m_trackManager->clearNextCapturePlacementStartBeat();
+    if (!m_countInFullyStarted) {
+        if (++m_countInStartupFrames <= kCountInStartupFrameLimit) {
+            return; // engine may not have applied the command yet
+        }
+        AESTRA_LOG_WARNING("[AestraContent] Count-in never started on the engine; degrading to plain playback.");
+    }
+
     if (m_forcedMetronomeForCountIn) {
         m_trackManager->enableMetronome(false);
         if (m_audioEngine) {
@@ -3025,9 +3059,9 @@ void AestraContent::updatePendingCountIn() {
         }
         m_forcedMetronomeForCountIn = false;
     }
-    m_pendingCountIn = false;
-    m_pendingCountInTargetSeconds = 0.0;
-    m_trackManager->play();
+    m_countInFullyStarted = false;
+    m_countInStartupFrames = 0;
+    m_trackManager->completeCountIn();
     stopSoundPreview();
 }
 
@@ -3083,35 +3117,32 @@ void AestraContent::handleTransportPlayRequest() {
         return;
     }
 
-    if (!isTransportRolling()) {
+    // Engine truth only: TransportBar::play() latches its button state BEFORE
+    // firing this callback, so isTransportRolling() (which includes the bar
+    // latch) is already true here on a fresh press. Consulting it would make
+    // the count-in branch below dead — the transport would latch "playing"
+    // and neither count in nor start (#count-in).
+    const bool engineRolling = m_trackManager->isPlaying() || m_trackManager->isCountInPending() ||
+                               (m_audioEngine && m_audioEngine->isMetronomeCountInActive());
+    if (!engineRolling) {
+        m_trackManager->cancelCountIn();
         if (m_audioEngine) {
             m_audioEngine->stopMetronomeCountIn();
         }
-        m_trackManager->clearDeferredRecordingStartBeat();
-        m_trackManager->clearDisplayPositionOverride();
-        m_trackManager->clearNextCapturePlacementStartBeat();
-        m_pendingCountIn = false;
-        m_pendingCountInTargetSeconds = 0.0;
     }
 
-    if (!m_countInEnabled || !m_trackManager->isRecordArmed() || !m_trackManager->hasArmedTracks()) {
+    if (!m_countInEnabled) {
         clearPendingCountIn();
         playFromCurrentFocus();
         return;
     }
 
-    const int beatsPerBar = m_transportBar ? std::max(1, m_transportBar->getTimeSignature()) : 4;
-    const double requestedStartSeconds = std::max(0.0, m_trackManager->getPosition());
-
-    if (isTransportRolling()) {
+    if (engineRolling) {
         return;
     }
 
-    m_pendingCountIn = true;
-    m_pendingCountInTargetSeconds = requestedStartSeconds;
-    m_trackManager->setPlayStartPosition(requestedStartSeconds);
-    m_trackManager->setPosition(requestedStartSeconds);
-    m_trackManager->setDisplayPositionOverride(requestedStartSeconds);
+    const int beatsPerBar = m_transportBar ? std::max(1, m_transportBar->getTimeSignature()) : 4;
+    const double requestedStartSeconds = std::max(0.0, m_trackManager->getPosition());
 
     if (m_audioEngine && !m_audioEngine->isMetronomeEnabled()) {
         m_trackManager->enableMetronome(true);
@@ -3124,11 +3155,12 @@ void AestraContent::handleTransportPlayRequest() {
         m_forcedMetronomeForCountIn = false;
     }
 
-    if (m_audioEngine) {
-        m_audioEngine->stopMetronomeCountIn();
-        m_audioEngine->startMetronomeCountIn(static_cast<uint32_t>(beatsPerBar));
-    } else {
-        m_pendingCountIn = false;
+    // The count-in machine (TrackManager) pins the position, defers recording
+    // capture to the post-count-in beat, and starts the engine metronome.
+    m_countInFullyStarted = false;
+    m_countInStartupFrames = 0;
+    if (!m_trackManager->beginCountIn(static_cast<uint32_t>(beatsPerBar), requestedStartSeconds)) {
+        clearPendingCountIn();
         playFromCurrentFocus();
     }
 }
@@ -3334,6 +3366,12 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     }
     if (m_pianoRollPanel) {
         m_pianoRollPanel->setPlatformBridge(bridge);
+    }
+    if (m_fileBrowser) {
+        m_fileBrowser->setPlatformBridge(bridge);
+    }
+    if (m_transportBar) {
+        m_transportBar->setPlatformBridge(bridge);
     }
 }
 

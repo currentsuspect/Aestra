@@ -482,9 +482,12 @@ private:
     bool m_patternClipPreviewActive{false};
     Aestra::Audio::PatternID m_previewPatternId{};
     bool m_countInEnabled{false};
-    bool m_pendingCountIn{false};
     bool m_forcedMetronomeForCountIn{false};
-    double m_pendingCountInTargetSeconds{0.0};
+    // Count-in completion gate: the engine applies the start command
+    // asynchronously (a block or two), so the app waits for the metronome to
+    // be observed ACTIVE before treating its absence as "finished".
+    bool m_countInFullyStarted{false};
+    int m_countInStartupFrames{0};
 
     std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
     std::shared_ptr<Aestra::Audio::AudioClipEditorPanel> m_audioClipEditorPanel;
