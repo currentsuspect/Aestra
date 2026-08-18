@@ -220,6 +220,8 @@ void NUISlider::onMouseEnter()
 {
     if (platformBridge_ && platformBridge_->getCursorStyle() == NUICursorStyle::Hidden) return;
     isHovered_ = true;
+    // Hand/grab affordance: the control is draggable.
+    if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Grab);
     setDirty(true);
 }
 
@@ -227,6 +229,7 @@ void NUISlider::onMouseLeave()
 {
     if (platformBridge_ && platformBridge_->getCursorStyle() == NUICursorStyle::Hidden) return;
     isHovered_ = false;
+    if (platformBridge_ && !isDragging_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
     setDirty(true);
 }
 

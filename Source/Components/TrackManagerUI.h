@@ -126,6 +126,9 @@ public:
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
     bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
+    /** @brief True while the timeline ruler row is the interaction (playhead
+     *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
+    bool isRulerPointerActive() const;
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -362,6 +365,9 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
+    std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
+    std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
+    std::shared_ptr<::AestraUI::NUIIcon> m_grabCursorIcon; // Canonical hand glyph (ruler/minimap-pan grab)
 
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
 

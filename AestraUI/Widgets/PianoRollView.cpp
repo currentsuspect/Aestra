@@ -69,7 +69,22 @@ PianoRollView::PianoRollView()
     // Initial default layout config
     m_minimap->setVisible(true);
     m_vScroll->setVisible(true);
-    
+
+    m_hScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Horizontal);
+    m_hScroll->setOrientation(NUIScrollbar::Orientation::Horizontal);
+    {
+        auto& theme = NUIThemeManager::getInstance();
+        m_hScroll->setArrowSize(0.0f);
+        m_hScroll->setBorderWidth(0.0f);
+        m_hScroll->setBorderRadius(8.0f);
+        m_hScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
+        m_hScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
+        m_hScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
+        m_hScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
+        m_hScroll->setMinimumThumbSize(0.06);
+        m_hScroll->setVisible(true);
+    }
+
     // Ruler Zoom Callback
     m_ruler->onZoomRequested = [this](float delta, float mouseX) {
         const float zoomDelta = std::clamp(delta, -4.0f, 4.0f);
@@ -105,6 +120,13 @@ PianoRollView::PianoRollView()
         float maxScroll = std::max(0.0f, totalH - visibleH);
         m_targetScrollY = safeClampRange(static_cast<float>(val), 0.0f, maxScroll);
     });
+
+    // Horizontal scrollbar drives the target scroll across the scrollable
+    // domain (16-bar empty floor, growing with content — Track Manager parity).
+    m_hScroll->setOnScroll([this](double val) {
+        const float maxScrollX = horizontalScrollMax();
+        m_targetScrollX = safeClampRange(static_cast<float>(val), 0.0f, maxScrollX);
+    });
     
     addChild(m_keys);
     addChild(m_ruler);
@@ -113,6 +135,7 @@ PianoRollView::PianoRollView()
     addChild(m_controls);
     addChild(m_minimap);
     addChild(m_vScroll);
+    addChild(m_hScroll);
     addChild(m_toolbar); // Top (Render Last)
 }
 
@@ -316,7 +339,7 @@ void PianoRollView::onUpdate(double deltaTime) {
     const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
     const float maxScrollY = std::max(0.0f, totalH - visibleH);
     m_targetScrollY = safeClampRange(m_targetScrollY, 0.0f, maxScrollY);
-    m_targetScrollX = std::max(0.0f, m_targetScrollX);
+    m_targetScrollX = safeClampRange(m_targetScrollX, 0.0f, horizontalScrollMax());
 
     bool changed = false;
     const float ease = 1.0f - std::exp(-static_cast<float>(deltaTime) * 18.0f);
@@ -365,8 +388,9 @@ void PianoRollView::layoutChildren() {
     float topTotalH = toolbarH + miniMapH + minimapGap + rulerH;
 
     float keyW = std::max(40.0f, m_keyLaneWidth);
+    const float hScrollH = 12.0f; // Horizontal scrollbar row below the grid
     float contentW = std::max(0.0f, b.width - keyW - sbSize);
-    float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight); // Subtract control panel
+    float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight - hScrollH); // Subtract control panel
 
     // 1. Minimap (Top)
     m_minimap->setVisible(m_showLocalMinimap);
@@ -387,17 +411,62 @@ void PianoRollView::layoutChildren() {
     
     // 5. V-Scroll (Right, spans Grid height only)
     m_vScroll->setBounds(NUIRect(b.x + b.width - sbSize, b.y + topTotalH, sbSize, contentH));
+
+    // 5b. H-Scroll (below the grid, spans the content width)
+    if (m_hScroll) {
+        m_hScroll->setBounds(NUIRect(b.x + keyW, b.y + topTotalH + contentH, contentW, hScrollH));
+    }
     
     // 6. Control Panel (Bottom) - Spans Full Width (Keys + Content)
     // Ensures "Control" sidebar aligns with Keys
-    m_controls->setBounds(NUIRect(b.x, b.y + topTotalH + contentH, b.width, m_controlPanelHeight));
+    m_controls->setBounds(NUIRect(b.x, b.y + topTotalH + contentH + hScrollH, b.width, m_controlPanelHeight));
     
     updateScrollbars();
     syncChildren();
 }
 
+float PianoRollView::horizontalScrollMax() const {
+    const float visibleW = m_grid ? m_grid->getWidth() : 0.0f;
+    const float totalW = static_cast<float>(std::max(0.0, m_scrollDomainEndBeats)) * m_pixelsPerBeat;
+    return std::max(0.0f, totalW - visibleW);
+}
+
+void PianoRollView::updateScrollbarDomain() {
+    // Track Manager parity: 16 bars when empty, dynamic padding with content.
+    const double beatsPerBarD = static_cast<double>(std::max(1, m_beatsPerBar));
+    const double contentEnd = std::max(0.0, m_totalDurationBeats);
+    const bool hasContent = m_notes && !m_notes->getNotes().empty();
+
+    double requiredEnd;
+    if (!hasContent) {
+        // Empty: fixed 16-bar floor (matches the Track Manager timeline).
+        requiredEnd = beatsPerBarD * 16.0;
+    } else {
+        const double clipBars = contentEnd / beatsPerBarD;
+        double padBars;
+        if (clipBars < 16.0) {
+            padBars = 8.0;
+        } else if (clipBars < 64.0) {
+            padBars = clipBars * 0.25;
+        } else {
+            padBars = clipBars * 0.125;
+        }
+        requiredEnd = contentEnd + beatsPerBarD * padBars;
+    }
+
+    if (m_scrollDomainEndBeats <= 0.0 || requiredEnd > m_scrollDomainEndBeats + 1e-3) {
+        m_scrollDomainEndBeats = requiredEnd;
+    } else if (requiredEnd < m_scrollDomainEndBeats - 1e-3) {
+        // Shrink is allowed once content exists (Track Manager parity); the
+        // 16-bar floor applies to the empty case only.
+        m_scrollDomainEndBeats = std::max(requiredEnd, 0.0);
+    }
+}
+
 void PianoRollView::updateScrollbars() {
-    float totalBeats = static_cast<float>(std::max(4.0, m_totalDurationBeats));
+    updateScrollbarDomain();
+
+    float totalBeats = static_cast<float>(m_scrollDomainEndBeats);
     float visibleW = m_grid->getWidth();
     double viewDur = visibleW / m_pixelsPerBeat;
     double start = m_scrollX / m_pixelsPerBeat;
@@ -405,6 +474,12 @@ void PianoRollView::updateScrollbars() {
     if (m_minimap && m_showLocalMinimap) {
         m_minimap->setTotalDuration(totalBeats);
         m_minimap->setView(start, viewDur);
+    }
+
+    if (m_hScroll) {
+        const double totalW = static_cast<double>(m_scrollDomainEndBeats) * m_pixelsPerBeat;
+        m_hScroll->setRangeLimit(0.0, totalW);
+        m_hScroll->setCurrentRange(m_scrollX, visibleW);
     }
 
     // Vertical
@@ -527,10 +602,13 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         if (ctrl) {
             // Zoom (Fallback) — same anchored, multiplicative semantics as the ruler.
             // The ruler passes grid-local X (its bounds start after the key lane);
-            // mirror that basis or the beat under the cursor drifts with the lane width.
+            // mirror that basis or the beat under the cursor drifts with the lane
+            // width. Bounds are window-absolute, so grid-local X is the event X
+            // minus the grid's own origin — subtracting getBounds() as well would
+            // double-count the view position and desync the anchor whenever the
+            // piano-roll panel sits away from the window origin.
             const float zoomDelta = std::clamp(event.wheelDelta, -4.0f, 4.0f);
-            applyZoom(std::pow(1.15f, zoomDelta),
-                      event.position.x - getBounds().x - m_grid->getBounds().x);
+            applyZoom(std::pow(1.15f, zoomDelta), event.position.x - m_grid->getBounds().x);
         } else if (shift) {
             // H-Scroll
             m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * 40.0f);
@@ -576,6 +654,8 @@ void PianoRollView::setNotes(const std::vector<MidiNote>& notes) {
     if (m_minimap) {
         m_minimap->setNotes(notes);
     }
+    // Content changed → the scrollable domain floor/growth may change.
+    updateScrollbars();
 }
 
 void PianoRollView::setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts) {
@@ -626,10 +706,12 @@ void PianoRollView::setPixelsPerBeat(float ppb) {
 }
 
 void PianoRollView::setBeatsPerBar(int bpb) {
+    m_beatsPerBar = std::max(1, bpb);
     if (m_grid) m_grid->setBeatsPerBar(bpb);
     if (m_ruler) m_ruler->setBeatsPerBar(bpb);
     if (m_notes) m_notes->setBeatsPerBar(bpb);
     if (m_controls) m_controls->setBeatsPerBar(bpb);
+    updateScrollbarDomain();
 }
 
 void PianoRollView::setTool(GlobalTool tool) {
@@ -668,6 +750,7 @@ void PianoRollView::setOnHarmonyContextChanged(std::function<void(int, ScaleType
 
 void PianoRollView::setPlatformBridge(NUIPlatformBridge* bridge) {
     if (m_notes) m_notes->setPlatformBridge(bridge);
+    if (m_minimap) m_minimap->setPlatformBridge(bridge);
 }
 
 void PianoRollView::setPatternName(const std::string& name) {
@@ -806,10 +889,7 @@ void PianoRollView::applyEdgeAutoScroll(float scrollX, float scrollY) {
     const float totalH = 128.0f * m_keyHeight;
     const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
     const float maxScrollY = std::max(0.0f, totalH - visibleH);
-    const float visibleW = m_grid ? m_grid->getWidth() : 0.0f;
-    const double dynamicTotalBeats = std::max(std::max(4.0, m_totalDurationBeats), getViewDurationBeats() + 8.0);
-    const float totalW = static_cast<float>(dynamicTotalBeats) * m_pixelsPerBeat;
-    const float maxScrollX = std::max(0.0f, totalW - visibleW);
+    const float maxScrollX = horizontalScrollMax();
 
     m_scrollX = safeClampScroll(scrollX, maxScrollX);
     m_scrollY = safeClampScroll(scrollY, maxScrollY);

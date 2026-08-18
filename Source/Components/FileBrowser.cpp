@@ -2004,6 +2004,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 hoveredIndex_ = -1;
                 setDirty(true); // hover overlay only — no cache rebuild
             }
+            if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
             if (!browserLayout.navPane.contains(event.position)) {
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
             }
@@ -2051,6 +2052,12 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 if (item && item->isTruncated) {
                     AestraUI::NUIComponent::showRemoteTooltip(item->name, event.position, this);
                 }
+            }
+
+            // Grabbable row: file/dir rows are draggable into the timeline and
+            // clickable — surface the hand tool (Track Manager minimap parity).
+            if (m_platformBridge) {
+                m_platformBridge->setCursorStyle(hoveredIndex_ >= 0 ? NUICursorStyle::Grab : NUICursorStyle::Arrow);
             }
 
 	        // Context menu (right-click)
@@ -2418,6 +2425,7 @@ void FileBrowser::onMouseLeave() {
         setDirty(true); // hover overlay only — no cache rebuild
     }
     NUIComponent::hideRemoteTooltip(this);
+    if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
     NUIComponent::onMouseLeave();
 }
 

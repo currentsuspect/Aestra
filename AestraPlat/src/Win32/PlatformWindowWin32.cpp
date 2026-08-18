@@ -755,9 +755,25 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
     case WM_MOUSEMOVE: {
         int x = GET_X_LPARAM(lParam);
         int y = GET_Y_LPARAM(lParam);
+        // Arm mouse-leave tracking the first time the pointer is inside so
+        // WM_MOUSELEAVE fires when it exits (TrackMouseEvent is one-shot).
+        if (!m_mouseTrackingLeave) {
+            TRACKMOUSEEVENT tme{sizeof(tme), TME_LEAVE, m_hwnd, 0};
+            TrackMouseEvent(&tme);
+            m_mouseTrackingLeave = true;
+            if (m_mouseEnterCallback)
+                m_mouseEnterCallback();
+        }
         if (m_mouseMoveCallback) {
             m_mouseMoveCallback(x, y);
         }
+        return 0;
+    }
+
+    case WM_MOUSELEAVE: {
+        m_mouseTrackingLeave = false;
+        if (m_mouseLeaveCallback)
+            m_mouseLeaveCallback();
         return 0;
     }
 

@@ -12,6 +12,8 @@
 
 namespace AestraUI {
 
+class NUIPlatformBridge; // forward decl (platform bridge for cursor styling)
+
 using PianoRollTool = GlobalTool;
 
 // -----------------------------------------------------------------------------
@@ -66,6 +68,11 @@ public:
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
+
+    /** @brief Set the platform bridge for hover cursor styling (rubberband). */
+    void setPlatformBridge(NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
 
     /** @brief Set the visible beat window represented by the viewport. */
     void setView(double startBeat, double durationBeat, bool preserveEdge = false);
@@ -80,6 +87,8 @@ public:
     std::function<void(double start, double duration)> onViewChanged; // For Pan/Zoom
 
 private:
+    void updateHoverCursor(const NUIMouseEvent& event);
+
     std::vector<MidiNote> notes_;
     double startBeat_ = 0.0;
     double viewDuration_ = 4.0;
@@ -95,6 +104,8 @@ private:
     double dragStartDuration_;
     
     bool isHovered_ = false;
+
+    NUIPlatformBridge* m_platformBridge = nullptr;
     
     // Helpers
     float beatToX(double beat) const;
@@ -716,6 +727,9 @@ public:
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);
+    /** @brief Scrollable domain end in beats (16-bar empty floor, dynamic with
+     *  content — Track Manager parity). */
+    double getScrollDomainEndBeats() const { return m_scrollDomainEndBeats; }
 
     // Global Control API
     void setTool(GlobalTool tool);
@@ -739,6 +753,7 @@ private:
     std::shared_ptr<PianoRollToolbar> m_toolbar;
     
     std::shared_ptr<NUIScrollbar> m_vScroll; // Vertical Scrollbar still standard
+    std::shared_ptr<NUIScrollbar> m_hScroll; // Horizontal Scrollbar (timeline parity)
 
     float m_keyLaneWidth;
     float m_rulerHeight;
@@ -754,6 +769,10 @@ private:
     double m_playheadBeat = 0.0;
     double m_totalDurationBeats = 400.0;
     double m_patternLengthBeats = 8.0;
+    // Scrollable domain (bars the user can traverse), mirroring the Track
+    // Manager's smart domain: 16 bars when empty, growing with content.
+    double m_scrollDomainEndBeats = 0.0;
+    int m_beatsPerBar = 4;
     bool m_showLocalMinimap = true;
     bool m_showShortcutHelp = false;
 
@@ -768,6 +787,8 @@ private:
     void syncChildren();
     void layoutChildren();
     void updateScrollbars(); // Renamed to updateNavigation?
+    void updateScrollbarDomain();
+    float horizontalScrollMax() const;
     void renderShortcutHelp(NUIRenderer& renderer);
     void applyZoom(float factor, float anchorX);
 };

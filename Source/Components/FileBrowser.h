@@ -21,6 +21,7 @@ namespace AestraUI {
 
 class NUIContextMenu;
 class NUITextInput;
+class NUIPlatformBridge;
 
 /**
  * File type enumeration for proper icon display
@@ -105,6 +106,9 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
     void onMouseLeave() override;
+
+    /** @brief Set the platform bridge for hover cursor styling (grab on rows). */
+    void setPlatformBridge(NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
     
     // File browser functionality
     void setCurrentPath(const std::string& path);
@@ -422,6 +426,7 @@ public:
 	    // Hover state
 	    int hoveredIndex_;
 	    NUIPoint lastMousePos_{0.0f, 0.0f};
+	    NUIPlatformBridge* m_platformBridge = nullptr;
     
 	    // Search/filter state
 	    std::shared_ptr<NUITextInput> searchInput_; // Replaced searchQuery_, searchBoxFocused_, searchCaretBlinkTime_, searchCaretVisible_

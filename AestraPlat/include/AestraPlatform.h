@@ -281,6 +281,10 @@ public:
     virtual void setHitTestCallback(HitTestCallback callback) = 0;
     /** @brief Set the mouse-move callback. */
     virtual void setMouseMoveCallback(std::function<void(int x, int y)> callback) = 0;
+    /** @brief Set the callback fired when the mouse enters the window. Default no-op. */
+    virtual void setMouseEnterCallback(std::function<void()> callback) {}
+    /** @brief Set the callback fired when the mouse leaves the window. Default no-op. */
+    virtual void setMouseLeaveCallback(std::function<void()> callback) {}
     /** @brief Set the mouse-button callback. */
     virtual void
     setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) = 0;

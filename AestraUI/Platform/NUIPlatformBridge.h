@@ -3,6 +3,7 @@
 
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "NUICursorService.h"
+#include "NUICursorStyle.h"
 #include "NUITypes.h"
 #include <functional>
 
@@ -11,27 +12,6 @@ namespace AestraUI {
 // Forward declarations
 class NUIRenderer;
 class NUIComponent;
-
-/**
- * Cursor styles for setCursorStyle()
- */
-enum class NUICursorStyle {
-    Arrow,          // Default arrow cursor
-    Hand,           // Pointing hand (for clickable elements)
-    IBeam,          // Text input cursor
-    Wait,           // Loading/busy cursor (hourglass/spinner)
-    WaitArrow,      // Arrow with loading indicator
-    Crosshair,      // Precision crosshair
-    ResizeNS,       // North-South resize (vertical)
-    ResizeEW,       // East-West resize (horizontal)
-    ResizeNESW,     // Diagonal resize (NE-SW)
-    ResizeNWSE,     // Diagonal resize (NW-SE)
-    ResizeAll,      // Move/all directions
-    NotAllowed,     // Disabled/not allowed
-    Grab,           // Open hand (ready to grab)
-    Grabbing,       // Closed hand (currently grabbing)
-    Hidden          // No cursor visible
-};
 
 /**
  * Bridge between AestraPlat and AestraUI
@@ -82,6 +62,8 @@ public:
     
     // Event callbacks (AestraUI-style - simplified)
     void setMouseMoveCallback(std::function<void(int, int)> callback);
+    void setMouseEnterCallback(std::function<void()> callback);
+    void setMouseLeaveCallback(std::function<void()> callback);
     void setMouseButtonCallback(std::function<void(int, bool)> callback);
     void setMouseWheelCallback(std::function<void(float)> callback);
     /** Block root-component pointer/text dispatch while an external modal owns input. */
@@ -146,6 +128,8 @@ public:
     bool isCursorCaptureOwner(const NUIComponent* c) const {
         return m_cursorService.isCaptured() && m_cursorCaptureOwner == c;
     }
+    /** True while a drag capture is active (the pointer is intentionally hidden). */
+    bool isCursorCaptured() const { return m_cursorService.isCaptured(); }
 
 private:
     // NUICursorHost backing for m_cursorService: hide/show ride the existing
@@ -219,6 +203,8 @@ private:
     
     // AestraUI-style callbacks
     std::function<void(int, int)> m_mouseMoveCallback;
+    std::function<void()> m_mouseEnterCallback;
+    std::function<void()> m_mouseLeaveCallback;
     std::function<void(int, bool)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
     std::function<bool()> m_rootInputBlockedCallback;

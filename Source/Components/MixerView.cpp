@@ -84,6 +84,9 @@ ChannelStrip::ChannelStrip(std::shared_ptr<MixerChannel> track, TrackManager* tr
 void ChannelStrip::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge)
 {
     m_platformBridge = bridge;
+    if (m_volumeFader) {
+        m_volumeFader->setPlatformBridge(bridge);
+    }
     if (m_panKnob) {
         m_panKnob->setPlatformBridge(bridge);
     }

@@ -592,4 +592,17 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
     return false;
 }
 
+void UIMixerFader::onMouseEnter()
+{
+    // Hand/grab affordance: the fader is draggable (mixer hand-tool parity).
+    if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Grab);
+    NUIComponent::onMouseEnter();
+}
+
+void UIMixerFader::onMouseLeave()
+{
+    if (m_platformBridge && !m_dragging) m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+    NUIComponent::onMouseLeave();
+}
+
 } // namespace AestraUI

@@ -31,14 +31,17 @@ namespace {
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
-    // Technical master readouts are contextual (meter hover/interaction), not
-    // a permanent dashboard below the signal controls.
+    // Technical master readouts (held peak dBFS, integrated LUFS, gain) are a
+    // permanent fixture under the master's meter/fader columns — the master
+    // strip has no footer, so this is the strip's live level dashboard.
     constexpr float MASTER_LABEL_H = 12.0f;
     constexpr float MASTER_VALUE_H = 14.0f;
     constexpr float MASTER_BLOCK_H = MASTER_LABEL_H + MASTER_VALUE_H;  // 26
-    // Two stacked blocks plus bottom slack. With only 4px of slack the second
-    // value landed on the strip's bottom edge and was not drawn at all.
-    constexpr float MASTER_READOUT_H = 0.0f;
+    // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
+    // strip (its footer is hidden, so the space is otherwise dead). Two stacked
+    // blocks plus bottom slack: with only 4px of slack the second value landed
+    // on the strip's bottom edge and was not drawn at all.
+    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
