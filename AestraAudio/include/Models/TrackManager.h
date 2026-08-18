@@ -1263,6 +1263,13 @@ public:
      * Used by the application layer to forward dirty state to AutosaveManager.
      */
     void setOnModified(std::function<void()> callback) { m_onModified = std::move(callback); }
+    /**
+     * @brief Register a callback invoked once a recorded take has committed.
+     * Fires after the take lane, clip, and ownership transaction are final, on
+     * the same (control) thread the commit ran on. The application layer uses
+     * this to refresh view-only state such as track rows.
+     */
+    void setOnTakeCommitted(std::function<void()> callback) { m_onTakeCommitted = std::move(callback); }
 
     using GraphDirtyReason = Aestra::Audio::GraphDirtyReason;
 
@@ -1816,6 +1823,10 @@ private:
                   std::to_string(channelId) + " at beat " + std::to_string(startBeat) + " with raw peak " +
                   std::to_string(rawPeak) + ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
                   std::to_string(playbackGain));
+
+        if (m_onTakeCommitted) {
+            m_onTakeCommitted();
+        }
     }
 
     std::string buildRecordingTakePath(uint32_t channelId) const {
@@ -2045,6 +2056,7 @@ private:
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_modified{false};
     std::function<void()> m_onModified;
+    std::function<void()> m_onTakeCommitted;
     std::atomic<bool> m_graphDirty{true}; // Owned by TrackManager, consumed by PlaybackGraphController only
     std::atomic<uint64_t> m_requestGeneration{0};
     std::atomic<GraphDirtyReason> m_lastReason{GraphDirtyReason::TimelineChanged};

@@ -240,6 +240,14 @@ AestraContent::AestraContent()
     // TrackManager is owned by AestraContent, and the destructor clears this stored callback before teardown.
     m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
 
+    // A committed take creates a new track-owned lane in the model; refresh the
+    // track view so the take lane row appears without a manual refresh action.
+    m_trackManager->setOnTakeCommitted([this]() {
+        if (m_trackManagerUI) {
+            m_trackManagerUI->refreshTracks();
+        }
+    });
+
     addDemoTracks();
 
     // Building the default project is not an edit (#653). addDemoTracks() calls
