@@ -58,6 +58,10 @@ public:
     // Primary/Secondary lane status - primary draws controls, secondary only draws clip
     void setIsPrimaryForLane(bool isPrimary) { m_isPrimaryForLane = isPrimary; }
     bool isPrimaryForLane() const { return m_isPrimaryForLane; }
+    void setIsNestedLane(bool nested) { m_isNestedLane = nested; }
+    bool isNestedLane() const { return m_isNestedLane; }
+    void setTrackCollapsed(bool collapsed) { m_trackCollapsed = collapsed; }
+    void setOnExpandToggled(std::function<void()> callback) { m_onExpandToggled = std::move(callback); }
     
     // Callback for when solo is toggled (so parent can update all track UIs)
     void setOnSoloToggled(std::function<void(TrackUIComponent*)> callback) { m_onSoloToggledCallback = callback; }
@@ -173,6 +177,9 @@ private:
     bool m_selected = false; // Track selection state
     ClipInstanceID m_selectedClipId; // Persistent clip selection supplied by TrackManagerUI
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
+    bool m_isNestedLane = false; // Owned non-primary lane row (FD-14 §10 nesting)
+    bool m_trackCollapsed = false; // Owning track's collapse state (chevron glyph)
+    std::function<void()> m_onExpandToggled;
     bool m_anyPlaylistLaneSoloed = false;
     bool m_isLoading = false;
     float m_loadProgress = 0.0f;
@@ -265,6 +272,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_soloButton;
     std::shared_ptr<AestraUI::NUIButton> m_recordButton;
+    std::shared_ptr<AestraUI::NUIButton> m_expandButton;
     std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
     std::shared_ptr<AestraUI::NUIContextMenu> m_clipRoutingMenu;
 

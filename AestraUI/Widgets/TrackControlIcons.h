@@ -32,4 +32,11 @@ inline constexpr const char* kMonitorIconSvg =
 inline constexpr const char* kLaneStackIconSvg =
     R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4.6" width="18" height="4.2" rx="1.1" fill="currentColor"/><rect x="3" y="9.9" width="18" height="4.2" rx="1.1" fill="currentColor"/><rect x="3" y="15.2" width="18" height="4.2" rx="1.1" fill="currentColor"/></svg>)";
 
+// FD-14 scope §10: expansion chevrons for the track header. Up = expanded
+// (reveal lanes), down = collapsed (primary lane only).
+inline constexpr const char* kChevronUpSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 14.5 12 8.5 18 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
+inline constexpr const char* kChevronDownSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 9.5 12 15.5 18 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
+
 } // namespace AestraUI
