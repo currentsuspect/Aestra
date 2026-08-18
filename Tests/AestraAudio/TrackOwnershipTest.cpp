@@ -211,6 +211,33 @@ void testLegacyFileMigration() {
     std::filesystem::remove_all(dir);
 }
 
+void testResolveLaneChannelId() {
+    std::cout << "[model] lane channel resolves through track identity, never position\n";
+    TrackManager tm;
+    PlaylistLaneID laneId = tm.getPlaylistModel().createLane("Lane 1");
+
+    check(tm.resolveLaneChannelId(laneId) == 0, "unowned lane resolves to 0 (caller falls back to master)");
+
+    MixerChannel* channel = tm.addChannelWithId("Insert 7", 7);
+    check(channel != nullptr && channel->getChannelId() == 7, "test channel 7 exists");
+    uint64_t trackId = tm.createTrack(laneId, "Track 1", 7);
+    check(trackId != 0, "track created routing to channel 7");
+    check(tm.resolveLaneChannelId(laneId) == 7, "owned lane resolves through track channelId — not position");
+
+    // Track exists but its channelId does not resolve to a MixerChannel:
+    // the resolver must return 0, never hand a dead id to the caller as if
+    // it were live (branch shared with the serializer's channel state save).
+    PlaylistLaneID deadLaneId = tm.getPlaylistModel().createLane("Lane 2");
+    uint64_t deadTrackId = tm.createTrack(deadLaneId, "Track 2", 99);
+    check(deadTrackId != 0, "track with nonexistent channel created");
+    check(tm.resolveLaneChannelId(deadLaneId) == 0, "track with dead channel resolves to 0");
+
+    tm.removeTrack(trackId);
+    check(tm.resolveLaneChannelId(laneId) == 0, "lane outliving its removed track resolves to 0");
+
+    check(tm.resolveLaneChannelId(PlaylistLaneID::generate()) == 0, "missing lane resolves to 0");
+}
+
 } // namespace
 
 int main() {
@@ -221,6 +248,7 @@ int main() {
     testRestoreTrackExactIds();
     testSerializeRoundtrip();
     testLegacyFileMigration();
+    testResolveLaneChannelId();
 
     if (g_failures == 0) {
         std::cout << "Track ownership: all green.\n";

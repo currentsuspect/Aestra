@@ -423,6 +423,20 @@ public:
         return getTrack(lane->trackId);
     }
 
+    /**
+     * @brief Stable routing channel for a lane's automation defaults:
+     * lane → owning Track → track channelId (FD-14 §15 — never by lane
+     * position). Returns 0 when the lane is unowned, its Track is gone, or
+     * the track's channel does not exist; callers fall back to master.
+     */
+    uint32_t resolveLaneChannelId(PlaylistLaneID laneId) {
+        const Track* track = getTrackForLane(laneId);
+        if (!track) {
+            return 0;
+        }
+        return getChannelById(track->channelId) ? track->channelId : 0;
+    }
+
     /** @brief Attach an existing lane to a Track (lane created after the
      *  track, e.g. a recorded take). Returns false when either is invalid. */
     bool attachLaneToTrack(uint64_t trackId, PlaylistLaneID laneId) {
