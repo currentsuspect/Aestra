@@ -1664,6 +1664,16 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
     }
 
+    // Lane-count indicator (FD-14 scope §10): TrackUIComponent::onRender does
+    // not call NUIComponent::renderChildren, so the icon/label widgets never
+    // auto-draw. Render them explicitly, like the name label and buttons.
+    if (m_laneCountIcon && m_laneCountIcon->isVisible()) {
+        m_laneCountIcon->onRender(renderer);
+    }
+    if (m_laneCountLabel && m_laneCountLabel->isVisible()) {
+        m_laneCountLabel->onRender(renderer);
+    }
+
     // Track number marker (left of name): recedes as quiet metadata (Level 4).
     if (m_nameLabel && lane) {
         constexpr float stripWidth = 3.0f;
