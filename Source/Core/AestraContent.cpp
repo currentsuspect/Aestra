@@ -3457,7 +3457,16 @@ void AestraContent::addDemoTracks() {
         // "Channel", not "Insert": an insert is an effect slot living *on* this
         // strip, so naming the strip itself "Insert 1" produced instructions
         // like "add an insert to Insert 1".
-        m_trackManager->addChannel("Channel " + std::to_string(i));
+        auto* channel = m_trackManager->addChannel("Channel " + std::to_string(i));
+
+        // FD-14 ownership: the default project must be born fully owned, not
+        // legacy. Every lane belongs to a Track, and the Track carries the
+        // routing — its own channel preserves the historical pairing. Without
+        // this, record arm is a silent no-op (getTrackForLane returns null for
+        // unowned lanes) until a project file is loaded.
+        if (channel) {
+            m_trackManager->createTrack(laneId, laneName, channel->getChannelId());
+        }
 
         if (auto* lane = playlist.getLane(laneId)) {
             // Cycle the shared track palette so the lane strip matches the
@@ -3817,6 +3826,9 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     if (!targetLaneId.isValid()) {
         if (playlist.getLaneCount() == 0) {
             targetLaneId = playlist.createLane("Sample Lane");
+            // FD-14 ownership: a lane created in-session must own a Track too,
+            // or record arm / monitoring have no ownership to bind to.
+            m_trackManager->createTrack(targetLaneId, "Sample Lane");
         } else {
             targetLaneId = playlist.getLaneId(0);
         }
