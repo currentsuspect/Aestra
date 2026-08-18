@@ -280,6 +280,14 @@ public:
         layoutTracks();
     }
 
+    // FD-14 §10/§11: per-track lane collapse state (session-local, not
+    // serialized). Collapsed tracks render only their primary lane row.
+    bool isTrackCollapsed(uint64_t trackId) const { return m_collapsedTrackIds.count(trackId) > 0; }
+    void toggleTrackCollapsed(uint64_t trackId);
+    void expandTrack(uint64_t trackId) { m_collapsedTrackIds.erase(trackId); }
+    /** Expand the lane's owning track, rebuild rows, and scroll it into view. */
+    void revealLane(PlaylistLaneID laneId);
+
 protected:
     void onRender(::AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
@@ -307,6 +315,7 @@ private:
     int m_trackSpacing{3};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
+    std::unordered_set<uint64_t> m_collapsedTrackIds;
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
 

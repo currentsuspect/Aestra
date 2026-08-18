@@ -172,8 +172,44 @@ void TrackManagerUI::refreshTracks() {
         removeChild(trackUI);
     }
     m_trackUIComponents.clear();
+
+    // FD-14 §10/§11: render lanes grouped by owning Track — the primary lane
+    // row first, then (when expanded) the track's owned lanes nested directly
+    // under it. Collapsed tracks show only the primary row; unowned lanes
+    // stay in playlist order.
+    std::vector<PlaylistLaneID> orderedLaneIds;
+    orderedLaneIds.reserve(laneCount);
+    std::unordered_set<uint64_t> seenTracks;
     for (size_t i = 0; i < laneCount; ++i) {
-        auto laneId = playlist.getLaneId(i);
+        const auto laneId = playlist.getLaneId(i);
+        const auto* lane = playlist.getLane(laneId);
+        if (!lane) {
+            continue;
+        }
+        const auto* track = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+        if (!track) {
+            orderedLaneIds.push_back(laneId);
+            continue;
+        }
+        if (laneId != track->laneIds.front()) {
+            continue; // Owned lane: rendered nested under its track's primary row.
+        }
+        if (seenTracks.count(track->trackId)) {
+            continue;
+        }
+        seenTracks.insert(track->trackId);
+        orderedLaneIds.push_back(laneId);
+        if (!isTrackCollapsed(track->trackId)) {
+            for (const auto& owned : track->laneIds) {
+                if (owned != laneId) {
+                    orderedLaneIds.push_back(owned);
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < orderedLaneIds.size(); ++i) {
+        auto laneId = orderedLaneIds[i];
         auto lane = playlist.getLane(laneId);
         if (!lane) {
             Log::warning("refreshTracks: lane " + std::to_string(i) + " is null!");
@@ -183,6 +219,20 @@ void TrackManagerUI::refreshTracks() {
         // Playlist lanes are arrangement-only; mixer inserts are managed in
         // the mixer and sources keep their own stable destinations.
         auto trackUI = std::make_shared<TrackUIComponent>(laneId, nullptr, m_trackManager.get());
+
+        // FD-14 §10 nesting: mark owned non-primary rows as nested (no record
+        // arm, indented "Lane N" label) and mirror the track's collapse state
+        // for the chevron glyph. The expansion toggle lives on the primary
+        // row of a multi-lane track.
+        const auto* owningTrack = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+        const bool isPrimaryRow = owningTrack && !owningTrack->laneIds.empty() && owningTrack->laneIds.front() == laneId;
+        trackUI->setIsNestedLane(owningTrack != nullptr && !isPrimaryRow);
+        trackUI->setTrackCollapsed(isTrackCollapsed(lane->trackId));
+        if (owningTrack && isPrimaryRow && owningTrack->laneIds.size() > 1) {
+            trackUI->setOnExpandToggled(
+                [this, trackId = owningTrack->trackId]() { this->toggleTrackCollapsed(trackId); });
+        }
+        trackUI->updateUI();
 
         // Register callbacks
         trackUI->setOnSoloToggled([this](TrackUIComponent* soloedTrack) { this->onTrackSoloToggled(soloedTrack); });
@@ -297,6 +347,31 @@ void TrackManagerUI::refreshTracks() {
     invalidateCache(); // Invalidate cache when tracks refreshed
 
     Log::info("refreshTracks: completed, created " + std::to_string(m_trackUIComponents.size()) + " TrackUIs");
+}
+
+void TrackManagerUI::toggleTrackCollapsed(uint64_t trackId) {
+    if (isTrackCollapsed(trackId)) {
+        m_collapsedTrackIds.erase(trackId);
+    } else {
+        m_collapsedTrackIds.insert(trackId);
+    }
+    refreshTracks();
+}
+
+void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
+    // Phase-5: a committed take must be discoverable. Expand the owning track
+    // so its lanes render, rebuild rows, then scroll the take lane into view.
+    const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(laneId) : nullptr;
+    if (lane && lane->trackId != 0) {
+        expandTrack(lane->trackId);
+    }
+    refreshTracks();
+    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+        if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
+            setVerticalScroll(static_cast<float>(i) * (m_trackHeight + m_trackSpacing));
+            break;
+        }
+    }
 }
 
 void TrackManagerUI::onTrackSoloToggled(TrackUIComponent* soloedTrack) {
@@ -448,10 +523,15 @@ void TrackManagerUI::layoutTracks() {
 
         float yPos = trackAreaTop + (i * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
 
+        // FD-14 §10: nested lane rows (owned lanes of an expanded track) sit
+        // visibly inside their track — whole-row indent, leaving a gutter and
+        // offsetting the row border so the nesting reads at a glance.
+        const float rowIndent = trackUI->isNestedLane() ? kNestedLaneIndent : 0.0f;
+
         // Fix: Use absolute coordinates (bounds.x, yPos).
         // AestraUI components use absolute screen coordinates.
-        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
-        trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
+        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f - rowIndent);
+        trackUI->setBounds(bounds.x + rowIndent, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
 
         // Zebra Striping: Ensure index is set during layout (critical for refresh persistence)
