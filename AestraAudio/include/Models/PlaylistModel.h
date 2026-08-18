@@ -858,9 +858,14 @@ public:
         // Remove the lane
         m_lanes.erase(m_lanes.begin() + laneIdx);
 
-        // Rebuild lane map with correct indices
+        // Rebuild lane map with correct indices. PlaylistLane::index is
+        // display metadata consumed by the track-number marker and the
+        // automation-curve default channel pairing; after an erasure it must
+        // stay positional or a later lane reads a stale index (wrong channel,
+        // colliding numbers — #816 follow-up).
         m_laneMap.clear();
         for (size_t i = 0; i < m_lanes.size(); ++i) {
+            m_lanes[i].index = static_cast<int>(i);
             m_laneMap[m_lanes[i].id] = i;
         }
 

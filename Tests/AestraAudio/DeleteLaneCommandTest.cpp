@@ -179,6 +179,52 @@ int main() {
         require(playlist.getLaneCount() == lanesBefore, "Undo of a no-op delete changed the playlist");
     }
 
+    // --- lane display indices stay positional across delete/create -------------
+    {
+        auto tracksOwner = std::make_unique<TrackManager>();
+        auto& tracks = *tracksOwner;
+        auto& playlist = tracks.getPlaylistModel();
+        auto& history = tracks.getCommandHistory();
+
+        // Three lanes, indices 0/1/2.
+        auto mk = [&](const std::string& name) {
+            auto cmd = std::make_shared<CreateLaneCommand>(playlist, name);
+            cmd->execute();
+            return cmd->getLaneId();
+        };
+        const PlaylistLaneID l0 = mk("Track 1");
+        const PlaylistLaneID l1 = mk("Take 2");
+        const PlaylistLaneID l2 = mk("Take 3");
+        require(playlist.getLane(l0)->index == 0 && playlist.getLane(l1)->index == 1 &&
+                    playlist.getLane(l2)->index == 2,
+                "Fixture lane indices are wrong");
+
+        // Deleting the first lane must shift the survivors' indices: the UI
+        // reads lane->index for the track number marker and for the automation
+        // curve's default channel pairing — a stale index pairs a lane with
+        // the wrong mixer channel.
+        history.pushAndExecute(std::make_shared<DeleteLaneCommand>(tracks, l0));
+        require(playlist.getLane(l1)->index == 0 && playlist.getLane(l2)->index == 1,
+                "Surviving lanes kept stale indices after a delete");
+
+        // A new lane gets index == size; with reindexing it can no longer
+        // collide with a survivor's stale index (two lanes, one channel).
+        const PlaylistLaneID l3 = mk("Take 4");
+        require(playlist.getLane(l3)->index == 2 && playlist.getLane(l2)->index == 1,
+                "New lane collided with a survivor's stale index");
+
+        // Undo restores the deleted lane to its original row; indices follow.
+        require(history.undo(), "Undo of the delete failed");
+        require(playlist.getLane(l0)->index == 0 && playlist.getLane(l1)->index == 1 &&
+                    playlist.getLane(l2)->index == 2 && playlist.getLane(l3)->index == 3,
+                "Indices are wrong after undo");
+
+        require(history.redo(), "Redo of the delete failed");
+        require(playlist.getLane(l1)->index == 0 && playlist.getLane(l2)->index == 1 &&
+                    playlist.getLane(l3)->index == 2,
+                "Indices are wrong after redo");
+    }
+
     std::cout << "[PASS] DeleteLaneCommandTest\n";
     return 0;
 }
