@@ -439,14 +439,17 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
                 this->hideActiveMenu();
             }
 
-            // Shortcuts (Undo/Redo)
+            // Shortcuts (Undo/Redo) — fallback only: AestraContent consumes these
+            // chords (and refreshes) when the history actually changed.
             bool ctrl = (currentMods & static_cast<int>(NM::Ctrl));
             if (ctrl) {
                 if (key == static_cast<int>(Aestra::KeyCode::Z) && m_content && m_content->getTrackManager()) { // Z
-                    m_content->getTrackManager()->getCommandHistory().undo();
+                    if (m_content->getTrackManager()->getCommandHistory().undo())
+                        m_content->refreshAfterHistoryChange();
                 }
                 if (key == static_cast<int>(Aestra::KeyCode::Y) && m_content && m_content->getTrackManager()) { // Y
-                    m_content->getTrackManager()->getCommandHistory().redo();
+                    if (m_content->getTrackManager()->getCommandHistory().redo())
+                        m_content->refreshAfterHistoryChange();
                 }
             }
         }

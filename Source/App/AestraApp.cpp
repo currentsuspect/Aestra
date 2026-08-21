@@ -712,6 +712,7 @@ void AestraApp::buildMenuBar() {
         undoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().undo();
+                m_content->refreshAfterHistoryChange();
             }
         });
         menu->addItem(undoItem);
@@ -723,6 +724,7 @@ void AestraApp::buildMenuBar() {
         redoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().redo();
+                m_content->refreshAfterHistoryChange();
             }
         });
         menu->addItem(redoItem);

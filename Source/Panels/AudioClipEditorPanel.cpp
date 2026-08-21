@@ -333,11 +333,14 @@ void AudioClipEditorPanel::buildUI() {
         m_speedSlider,
         [](ClipEdits& edits, double value) { edits.playbackRate = static_cast<float>(value); },
         true);
-    wireSlider(m_sourceStartSlider, [this](ClipEdits& edits, double value) {
-        const double projectRate =
-            m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
-        edits.sourceStart = value * projectRate;
-    });
+    wireSlider(
+        m_sourceStartSlider,
+        [this](ClipEdits& edits, double value) {
+            const double projectRate =
+                m_trackManager ? std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate()) : 48000.0;
+            edits.sourceStart = value * projectRate;
+        },
+        true);
 
     m_muteButton->setOnToggle([this](bool muted) {
         if (m_suppressCallbacks)
@@ -671,6 +674,10 @@ void AudioClipEditorPanel::commitEditGesture() {
         auto command = std::make_shared<SetClipEditsCommand>(m_trackManager->getPlaylistModel(), m_clipId,
                                                              m_gestureStartEdits, m_workingEdits, true);
         m_trackManager->getCommandHistory().pushExecuted(command);
+        // The graph rebuild alone doesn't repaint the arrangement: without this
+        // the playlist FBO keeps drawing the pre-edit waveform indefinitely.
+        if (m_onClipEditsCommitted)
+            m_onClipEditsCommitted();
     }
 }
 
@@ -681,6 +688,8 @@ void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {
     m_trackManager->getCommandHistory().pushAndExecute(command);
     m_trackManager->markModified();
     syncControlsFromModel();
+    if (m_onClipEditsCommitted)
+        m_onClipEditsCommitted();
 }
 
 void AudioClipEditorPanel::selectRoute(uint32_t routeId) {

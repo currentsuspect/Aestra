@@ -472,6 +472,10 @@ public:
     /** @brief Record an undo step for an edit applied externally (e.g. velocity lane). */
     void pushExternalEdit(const std::vector<MidiNote>& before, const std::string& description) {
         pushUndo(description, before, notes_);
+        // External edits must reach the model like every other gesture: without
+        // commitNotes() the onNotesChanged_ chain never runs, so PatternManager
+        // keeps the old value until an unrelated committing event flushes it.
+        commitNotes();
     }
 
     /** @brief Merge overlapping/touching selected notes on the same pitch into one. */

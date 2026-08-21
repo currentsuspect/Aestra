@@ -6,6 +6,7 @@
 #include "WindowPanel.h"
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -35,6 +36,9 @@ public:
     bool openClip(ClipInstanceID clipId);
     ClipInstanceID getClipId() const { return m_clipId; }
 
+    /** @brief Fired after committed clip edits reach the model (slider commit or discrete edit). */
+    void setOnClipEditsCommitted(std::function<void()> callback) { m_onClipEditsCommitted = std::move(callback); }
+
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
@@ -43,6 +47,7 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     ClipInstanceID m_clipId;
     PatternID m_patternId;
+    std::function<void()> m_onClipEditsCommitted;
     ClipEdits m_workingEdits;
     ClipEdits m_gestureStartEdits;
     bool m_editGestureActive{false};
