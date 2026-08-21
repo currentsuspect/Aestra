@@ -209,6 +209,18 @@ public:
     void rewindScheduledInstances();
 
     /**
+     * @brief Pattern content changed while playing (RT-safe producer-side flag).
+     *
+     * Steps placed or removed in the Arsenal / Piano Roll call this instead of
+     * rewindScheduledInstances(): the next refill re-queues from the playhead with
+     * current note data — deletions silence immediately and additions enter at their
+     * exact frame — WITHOUT resetting the entry state. A full rewind here re-fired
+     * every currently-sounding note (audible flam on each edit) and made fresh
+     * placements sound before the playhead reached them (#823).
+     */
+    void patternContentEdited();
+
+    /**
      * @brief Remove every scheduled instance and queued event.
      *
      * For transitions that must not carry pattern content forward — leaving Arsenal, or
@@ -267,6 +279,12 @@ private:
 
     // RT-safe flush: audio thread sets this flag, non-RT maintenance drains the queue.
     std::atomic<bool> m_flushRequested{false};
+
+    // RT-safe content-edit notification: set by editors (Arsenal grid, Piano Roll)
+    // when pattern notes change during playback. refillWindow pulls each instance's
+    // scheduling frontier back to the playhead and re-queues from live data, without
+    // arming the entry catch-up.
+    std::atomic<bool> m_contentEditRequested{false};
 
     // Pre-allocated scratch buffer for refillWindow (reserved at init, never reallocates)
     std::vector<ScheduledEvent> m_scratchEvents;

@@ -1626,6 +1626,15 @@ public:
     }
 
     /**
+     * @brief Pattern notes changed while playing (Arsenal grid / Piano Roll edits).
+     *
+     * Unlike preparePatternForArsenal() this is NOT a rewind: queued events for
+     * deleted steps drop out and additions enter at their exact frame, without
+     * re-firing notes that are currently sounding (#823).
+     */
+    void patternContentEdited() { m_patternPlaybackEngine.patternContentEdited(); }
+
+    /**
      * @brief Clear solo state across all mixer channels.
      */
     void clearAllSolos() {

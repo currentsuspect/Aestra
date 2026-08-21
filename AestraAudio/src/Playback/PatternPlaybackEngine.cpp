@@ -177,6 +177,20 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     }
     m_lastRefillFrame = currentFrame;
 
+    // Content edit while playing: pull each instance's frontier back to the
+    // playhead so this pass re-queues from live pattern data. Deletions drop
+    // out of the queue immediately and additions ahead of the playhead enter
+    // at their exact frame. The frontier stays > 0, so the entry catch-up in
+    // the loop below stays dormant — a full rewind here re-fired every
+    // currently-sounding note (flam on each grid edit) and made fresh
+    // placements sound before the playhead reached them (#823).
+    if (m_contentEditRequested.exchange(false, std::memory_order_acq_rel)) {
+        for (auto& inst : m_activeInstances) {
+            inst.scheduledThroughFrame = std::min(inst.scheduledThroughFrame, currentFrame);
+        }
+        m_rtQueue.forceDrain();
+    }
+
     m_scratchEvents.clear();
 
     for (auto& inst : m_activeInstances) {
@@ -425,6 +439,13 @@ void PatternPlaybackEngine::rewindScheduledInstances() {
     // Resetting m_head to m_tail is safe because the consumer (audio thread)
     // only reads m_tail, and any events pushed after this reset are legitimate.
     m_rtQueue.forceDrain();
+}
+
+void PatternPlaybackEngine::patternContentEdited() {
+    // Producer-side flag only — same safety contract as rewindScheduledInstances().
+    // Deliberately NOT a rewind: refillWindow() handles it by pulling the
+    // scheduling frontier back to the playhead with entry catch-up left dormant.
+    m_contentEditRequested.store(true, std::memory_order_release);
 }
 
 } // namespace Audio

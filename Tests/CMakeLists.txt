@@ -732,6 +732,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RoutingRenderSemanticsTest.cp
     set_tests_properties(RoutingRenderSemanticsTest PROPERTIES LABELS "audio;routing;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlaybackTest.cpp")
+    add_executable(PatternContentEditDuringPlaybackTest AestraAudio/PatternContentEditDuringPlaybackTest.cpp)
+    target_link_libraries(PatternContentEditDuringPlaybackTest PRIVATE AestraAudio)
+    target_include_directories(PatternContentEditDuringPlaybackTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternContentEditDuringPlaybackTest COMMAND PatternContentEditDuringPlaybackTest)
+    set_tests_properties(PatternContentEditDuringPlaybackTest
+        PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
     target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)

@@ -1246,13 +1246,14 @@ void AestraContent::setupArsenalPanels() {
             m_trackManagerUI->refreshTracks();
             m_trackManagerUI->invalidateCache();
         }
-        // Re-prepare the pattern so the playback engine re-schedules the notes
-        // just edited in the Arsenal grid. Without this, newly placed steps stay
-        // silent during pattern playback until some other path rewinds the
-        // scheduler (e.g. editing the same pattern in the Piano Roll). Mirrors
-        // setActivePattern.
+        // Re-queue the pattern from the playhead so the playback engine picks up
+        // the notes just edited in the Arsenal grid: deletions silence at once,
+        // additions enter at their exact frame. Deliberately NOT
+        // preparePatternForArsenal() — a full rewind here re-fired every note
+        // currently sounding (audible flam on each edit) and made fresh
+        // placements sound before the playhead reached them (#823).
         if (m_trackManager) {
-            m_trackManager->preparePatternForArsenal(patternId);
+            m_trackManager->patternContentEdited();
         }
         // Update audio engine loop length to match actual pattern length
         updatePatternLoopLength(patternId);
