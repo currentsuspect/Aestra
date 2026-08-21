@@ -36,6 +36,8 @@ public:
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
 
     void setRangeDb(float minDb, float maxDb);
     void setDefaultDb(float db) { m_defaultDb = db; }

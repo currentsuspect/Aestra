@@ -438,6 +438,10 @@ void TrackManagerUI::duplicateSelectedClip() {
         }
     }
 
+    // While playing, the scheduler's instance set was built at play() time —
+    // without a reschedule the duplicated pattern stays silent until loop wrap.
+    m_trackManager->refreshTimelinePatternInstances();
+
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
@@ -456,6 +460,10 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
     auto cmd = std::make_shared<Aestra::Audio::AddClipCommand>(m_trackManager->getPlaylistModel(),
                                                                trackComp->getLaneId(), newClip);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
+
+    // Painted clips must be audible immediately while playing (same scheduler
+    // refresh as duplication).
+    m_trackManager->refreshTimelinePatternInstances();
 
     refreshTracks();
     invalidateCache();

@@ -169,6 +169,14 @@ bool PlatformWindowLinux::pollEvents() {
                     }
                     rememberRestoreBoundsIfNormal();
                     break;
+                case SDL_WINDOWEVENT_ENTER:
+                    if (m_mouseEnterCallback)
+                        m_mouseEnterCallback();
+                    break;
+                case SDL_WINDOWEVENT_LEAVE:
+                    if (m_mouseLeaveCallback)
+                        m_mouseLeaveCallback();
+                    break;
                 }
             }
             break;

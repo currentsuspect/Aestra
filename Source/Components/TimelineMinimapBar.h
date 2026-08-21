@@ -40,6 +40,13 @@ public:
     const TimelineMinimapModel& getModel() const { return model_; }
     /** @brief Get the current cursor hint for the host UI. */
     TimelineMinimapCursorHint getCursorHint() const { return cursorHint_; }
+    /** @brief True while the viewport bar body is the interaction (pan/grab)
+     *  — hover inside the bar, or actively dragging it. Resize edges are
+     *  excluded (their hint is ResizeHorizontal). Gated on visibility: a hidden
+     *  minimap stops receiving events and its hover state freezes. */
+    bool isViewportPanActive() const {
+        return isVisible() && (dragKind_ == DragKind::Viewport || hoverOnViewport_);
+    }
     /** @brief Enable or disable the top-left mode toggles. */
     void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }
     /** @brief Set an additional leading inset applied before the minimap content. */
@@ -86,6 +93,7 @@ private:
     TimelineMinimapCursorHint cursorHint_{TimelineMinimapCursorHint::Default};
     TimelineMinimapResizeEdge hoverResizeEdge_{TimelineMinimapResizeEdge::Left};
     bool hoverOnResizeEdge_ = false;
+    bool hoverOnViewport_ = false;
 
     DragKind dragKind_ = DragKind::None;
     NUIPoint dragStartPos_{};

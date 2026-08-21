@@ -150,6 +150,10 @@ public:
     void setWidth(float width);
     /** @brief Get stereo width. */
     float getWidth() const { return m_width.load(); }
+    /** @brief Set the channel trim offset (dB, pre-fader gain stage). */
+    void setTrimDb(float trimDb) { m_trimDb.store(trimDb); }
+    /** @brief Get the channel trim offset in dB. */
+    float getTrimDb() const { return m_trimDb.load(); }
     /** @brief Set mute state. */
     void setMute(bool mute);
     /** @brief Check mute state. */
@@ -273,6 +277,7 @@ private:
     std::atomic<float> m_volume{1.0f};
     std::atomic<float> m_pan{0.0f};
     std::atomic<float> m_width{1.0f};
+    std::atomic<float> m_trimDb{0.0f};
     std::atomic<bool> m_muted{false};
     std::atomic<bool> m_soloed{false};
     std::atomic<bool> m_soloSafe{false};

@@ -26,6 +26,8 @@
 #include <functional>
 #include <string>
 
+namespace AestraUI { class NUIPlatformBridge; }
+
 namespace Aestra {
 
 /**
@@ -104,6 +106,11 @@ public:
         The KEYS status pill hides instead of rendering underneath them. */
     void setRightReservedWidth(float width);
 
+    /** @brief Set the platform bridge for hover cursor styling (hand on buttons). */
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
+    /** @brief Release hover cursor + tooltip when the pointer leaves the bar. */
+    void onMouseLeave() override;
+
 private:
     // UI Components
     std::shared_ptr<AestraUI::NUIButton> m_playButton;
@@ -152,6 +159,7 @@ private:
     std::function<void(float)> m_onTempoChange;
     std::function<void(bool)> m_onMetronomeToggle;
     std::function<void(int)> m_onTimeSignatureChange;
+    AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     
     // Tool/Scale Callbacks
     std::function<void(AestraUI::GlobalTool)> m_onToolChanged;

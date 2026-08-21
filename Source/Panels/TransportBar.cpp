@@ -7,6 +7,7 @@
 #include "TransportBar.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
@@ -211,9 +212,12 @@ void TransportBar::createIcons() {
     m_stopIcon->setColorFromTheme("primary");
     
     // Record icon (Solid Circle) - Vibrant Red
+    // Shrunk from r=9 (18px, ~4× the visual area of Play/Stop) to a 12px
+    // footprint that matches the Stop square, so the transport controls read
+    // as one intentionally-weighted set rather than a dominant red dot.
     const char* recordSvg = R"(
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="9"/>
+            <circle cx="12" cy="12" r="6"/>
         </svg>
     )";
     m_recordIcon = std::make_shared<AestraUI::NUIIcon>(recordSvg);
@@ -603,8 +607,6 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     float spacing = layout.transportButtonSpacing;
     float centerOffsetY = (bounds.height - buttonSize) / 2.0f;
     float x = padding;
-    
-    const float iconSize = 18.0f; // Reduced from 24 to 18 for better padding in 28px button
 
     // Helper to render universal Glass Box button. Passing a label switches it
     // to the inline "tiny icon + micro-label" form used by DAW-specific
@@ -1020,12 +1022,27 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     for (const auto& [button, text] : tooltipButtons) {
         if (updateTooltipForButton(button, text)) {
             AestraUI::NUIComponent::showRemoteTooltip(text, event.position, this);
+            // Hand tool on clickable transport controls (consistent with the
+            // grab-affordance sweep across draggable surfaces).
+            if (m_platformBridge) m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hand);
             return handled;
         }
     }
 
+    if (m_platformBridge) m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
     AestraUI::NUIComponent::hideRemoteTooltip(this);
     return handled;
+}
+
+void TransportBar::onMouseLeave() {
+    // Release the hand cursor when the pointer leaves the bar, so it cannot
+    // linger app-wide (the window-manager bridge override otherwise keeps the
+    // last style until another component claims it).
+    if (m_platformBridge) {
+        m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+    }
+    AestraUI::NUIComponent::hideRemoteTooltip(this);
+    AestraUI::NUIComponent::onMouseLeave();
 }
 
 } // namespace Aestra

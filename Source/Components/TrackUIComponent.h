@@ -176,6 +176,7 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
     ClipInstanceID m_selectedClipId; // Persistent clip selection supplied by TrackManagerUI
+    ClipInstanceID m_hoveredClipId; // Clip under the pointer (hamburger affordance)
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
     bool m_isNestedLane = false; // Owned non-primary lane row (FD-14 §10 nesting)
     bool m_trackCollapsed = false; // Owning track's collapse state (chevron glyph)

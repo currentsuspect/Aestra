@@ -65,6 +65,8 @@ public:
     std::function<void(bool muted)> onMuteChanged;
     std::function<void(bool soloed)> onSoloChanged;
     std::function<void(float pan)> onPanChanged;
+    /** @brief Trim knob moved: (trimDb, slotIndex). Wired to SetTrimCommand. */
+    std::function<void(float db, uint32_t slotIndex)> onTrimChanged;
     std::function<void(bool monitored)> onMonitorToggled;
 
 private:

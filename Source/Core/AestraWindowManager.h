@@ -206,6 +206,10 @@ private:
     // Cursor
     bool m_useCustomCursor{true};
     bool m_windowFocused{true};
+    /** @brief Centre cursor-state resolution: every frame the cursor resolves to
+     *  exactly one known state, and a hidden native pointer without a drawn
+     *  custom cursor (the invisible-cursor failure) self-heals. */
+    void resolveCursorState();
     std::shared_ptr<AestraUI::NUIIcon> m_cursorArrow;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorHandPointing;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorHand;
@@ -216,6 +220,7 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNESW;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNWSE;
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
+    bool m_cachedNativeCursorHidden{false};
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;

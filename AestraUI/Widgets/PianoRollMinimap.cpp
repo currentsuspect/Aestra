@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include "PianoRollWidgetShared.h"
 #include <algorithm>
 #include <cmath>
@@ -82,7 +83,7 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     
-    const auto panelBg = theme.getColor("backgroundPrimary").darkened(0.03f);
+    const auto panelBg = theme.getColor("recessedPanel");
     const auto border = theme.getColor("border").withAlpha(0.48f);
     renderer.fillRoundedRect(NUIRect(b.x + 4.0f, b.y + 3.0f, b.width - 8.0f, b.height - 6.0f), 5.0f, panelBg);
     renderer.strokeRoundedRect(NUIRect(b.x + 4.0f, b.y + 3.0f, b.width - 8.0f, b.height - 6.0f), 5.0f, 1.0f, border);
@@ -92,11 +93,14 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     float w = beatToX(viewDuration_);
     NUIRect viewRect(x1, b.y + 2, w, b.height - 4);
     
-    auto thumbCol = theme.getColor("accentPrimary").withAlpha(0.13f);
-    auto borderCol = theme.getColor("accentPrimary").withAlpha(0.72f);
+    // Navigation chrome, matching the Track Manager minimap: the viewport is a
+    // neutral frame (transparent fill, grey outline, light edge grips) — not a
+    // purple range. Semantic accent colors are reserved for musical content.
+    const auto viewOutline = NUIColor(0.31f, 0.33f, 0.37f, 1.0f);
+    const auto viewHandle = NUIColor(0.62f, 0.64f, 0.68f, 0.92f);
     
-    renderer.fillRoundedRect(viewRect, 5.0f, thumbCol);
-    renderer.strokeRoundedRect(viewRect, 5.0f, 1.0f, borderCol);
+    renderer.fillRoundedRect(viewRect, 5.0f, NUIColor::transparent());
+    renderer.strokeRoundedRect(viewRect, 5.0f, 1.0f, viewOutline);
 
     renderer.setClipRect(NUIRect(b.x + 2.0f, b.y + 2.0f, b.width - 4.0f, b.height - 4.0f));
     int minPitch = 127;
@@ -138,23 +142,28 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     }
     renderer.clearClipRect();
 
-    const auto playheadColor = NUIThemeManager::getInstance().getColor("accentPrimary");
+    const auto playheadColor = theme.getColor("textPrimary").withAlpha(0.85f);
+    const auto playheadDark = theme.getColor("shadow").withAlpha(0.75f);
     const float playheadX = b.x + beatToX(playheadBeat_);
     if (playheadX >= b.x && playheadX <= b.x + b.width) {
         renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
                           NUIPoint(playheadX, b.y + b.height - 1.0f),
-                          2.0f,
-                          playheadColor.withAlpha(0.9f));
+                          3.0f,
+                          playheadDark);
+        renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
+                          NUIPoint(playheadX, b.y + b.height - 1.0f),
+                          1.0f,
+                          playheadColor);
     }
     
-    // Handles (Visual only, logic in mouse)
-    const float handleW = 4.0f;
-    const float handleH = std::max(8.0f, b.height - 8.0f);
-    const auto handleFill = borderCol.withAlpha(0.5f);
-    NUIRect leftHandle(x1 + 2.0f, b.y + 4.0f, handleW, handleH);
-    NUIRect rightHandle(x1 + w - 6.0f, b.y + 4.0f, handleW, handleH);
-    renderer.fillRoundedRect(leftHandle, 2.0f, handleFill);
-    renderer.fillRoundedRect(rightHandle, 2.0f, handleFill);
+    // Edge grips — rubberband handles, styled like the Track Manager minimap:
+    // slim vertical bars just inside the viewport frame, vertically centred.
+    const float gripW = 2.0f;
+    const float gripH = std::min(10.0f, std::max(4.0f, viewRect.height - 4.0f));
+    const float gripY = viewRect.y + (viewRect.height - gripH) * 0.5f;
+    const auto gripColor = viewHandle;
+    renderer.fillRoundedRect(NUIRect(viewRect.x + 2.0f, gripY, gripW, gripH), 1.0f, gripColor);
+    renderer.fillRoundedRect(NUIRect(viewRect.right() - gripW - 2.0f, gripY, gripW, gripH), 1.0f, gripColor);
 
     // Bottom border to anchor the overview visually to the ruler beneath it.
     // Color-matched to the ruler tick marks (use the theme border with stronger alpha).
@@ -164,7 +173,55 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
                       theme.getColor("border").withAlpha(0.82f));
 }
 
+void PianoRollMinimap::updateHoverCursor(const NUIMouseEvent& event) {
+    if (!m_platformBridge) {
+        return;
+    }
+    if (isDragging_) {
+        return; // keep the interaction cursor while dragging; next move re-resolves
+    }
+    if (!getBounds().contains(event.position)) {
+        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        return;
+    }
+
+    const auto b = getBounds();
+    const float localX = event.position.x - b.x;
+    const float localY = event.position.y - b.y;
+    const float x1 = beatToX(startBeat_);
+    const float w = beatToX(viewDuration_);
+    constexpr float kHandleW = 10.0f;
+    const NUIRect leftGrip(x1 + 2.0f, 4.0f, kHandleW, b.height - 8.0f);
+    const NUIRect rightGrip(x1 + w - kHandleW - 2.0f, 4.0f, kHandleW, b.height - 8.0f);
+    const NUIRect bar(x1, 2.0f, w, b.height - 4.0f);
+    const NUIPoint localPos(localX, localY);
+
+    // Rubberband affordance: resize cursor on the edge grips, grab on the bar,
+    // default elsewhere (Track Manager minimap behavior).
+    if (leftGrip.contains(localPos) || rightGrip.contains(localPos)) {
+        m_platformBridge->setCursorStyle(NUICursorStyle::ResizeEW);
+    } else if (bar.contains(localPos)) {
+        m_platformBridge->setCursorStyle(NUICursorStyle::Grab);
+    } else {
+        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+    }
+}
+
+void PianoRollMinimap::onMouseEnter() {
+    NUIComponent::onMouseEnter();
+}
+
+void PianoRollMinimap::onMouseLeave() {
+    // Preserve the interaction cursor while a drag is active; only a parked
+    // pointer yields to the default.
+    if (m_platformBridge && !isDragging_) {
+        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+    }
+    NUIComponent::onMouseLeave();
+}
+
 bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
+    updateHoverCursor(event);
     if (!getBounds().contains(event.position) && !isDragging_) return false;
 
     auto b = getBounds();
@@ -174,7 +231,9 @@ bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
     float x1 = beatToX(startBeat_);
     float w = beatToX(viewDuration_);
     float x2 = x1 + w;
-    const float handleW = 8.0f;
+    // Rubbery edge grips: generous hit area (~10px) so resizing the viewport
+    // is easy to grab, mirroring the Track Manager minimap handles.
+    const float handleW = 10.0f;
     const float handleH = std::max(8.0f, b.height - 8.0f);
     const NUIRect leftHandleRect(x1 + 2.0f, 4.0f, handleW, handleH);
     const NUIRect rightHandleRect(x1 + w - handleW - 2.0f, 4.0f, handleW, handleH);
@@ -216,6 +275,9 @@ bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
         isDragging_ = false;
         isResizingL_ = false;
         isResizingR_ = false;
+        // Re-resolve the cursor for the release position now that the drag
+        // flags are clear (updateHoverCursor skips while dragging).
+        updateHoverCursor(event);
         return true;
     }
     else if (!event.pressed && isDragging_) {

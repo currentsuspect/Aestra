@@ -385,6 +385,7 @@ void TimelineMinimapBar::onMouseLeave()
     hoverInMap_ = false;
     hoverToggleIndex_ = -1;
     hoverOnResizeEdge_ = false;
+    hoverOnViewport_ = false;
     AestraUI::NUIComponent::hideRemoteTooltip(this);
     if (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight) {
         cursorHint_ = TimelineMinimapCursorHint::ResizeHorizontal;
@@ -408,6 +409,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
         hoverInMap_ = false;
         hoverToggleIndex_ = -1;
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
         AestraUI::NUIComponent::hideRemoteTooltip(this);
         repaint();
@@ -480,6 +482,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     const TimelineSummary* s = (model_.summary) ? model_.summary->summary : nullptr;
     if (!s) {
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight)
                           ? TimelineMinimapCursorHint::ResizeHorizontal
                           : TimelineMinimapCursorHint::Default;
@@ -492,6 +495,9 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (!layout.mapRect.contains(event.position) && dragKind_ == DragKind::None) {
+        hoverOnViewport_ = false;
+        hoverOnResizeEdge_ = false;
+        cursorHint_ = TimelineMinimapCursorHint::Default;
         return NUIComponent::onMouseEvent(event);
     }
 
@@ -500,6 +506,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     const double denom = domainEnd - domainStart;
     if (!(denom > 1e-9)) {
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
         if (dragKind_ != DragKind::None && event.released && event.button == NUIMouseButton::Left) {
             dragKind_ = DragKind::None;
@@ -541,6 +548,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
 
     // Edge hover (resize affordance + cursor hint).
     hoverOnResizeEdge_ = false;
+    hoverOnViewport_ = false;
     if (!viewRect.isEmpty() && layout.mapRect.contains(event.position)) {
         if (event.position.y >= viewRect.y && event.position.y <= viewRect.bottom()) {
             const float dxL = std::fabs(event.position.x - viewRect.x);
@@ -550,6 +558,9 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
                 hoverOnResizeEdge_ = true;
                 hoverResizeEdge_ =
                     (dxL <= dxR) ? TimelineMinimapResizeEdge::Left : TimelineMinimapResizeEdge::Right;
+            } else if (viewRect.contains(event.position)) {
+                // Bar body: the viewport itself is the pan/grab interaction.
+                hoverOnViewport_ = true;
             }
         }
     }

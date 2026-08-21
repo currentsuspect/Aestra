@@ -349,8 +349,15 @@ static void test_zoom_anchor_preserves_beat() {
 // anchor makes the beat under the cursor drift by the lane width per zoom.
 // ---------------------------------------------------------------------------
 static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
+    // Regression: the Ctrl+wheel zoom must anchor to the beat under the cursor
+    // even when the piano-roll panel sits AWAY from the window origin. Bounds
+    // are window-absolute, so the grid-local anchor is the event X minus the
+    // grid's own origin — subtracting the view position as well double-counted
+    // it and desynced the anchor by the panel's offset (bar 2 → bar 7 on
+    // zoom-out). The view at x=0 could never catch that.
     PianoRollView view;
-    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    constexpr float kViewOffsetX = 412.0f; // panel sits 412 px into the window
+    view.setBounds({kViewOffsetX, 0.0f, 900.0f, 600.0f});
     view.onResize(900, 600);
     // startBeat 1.25 at 80 ppb over an 810 px grid: scrollX = 100.
     view.setViewWindow(1.25, 810.0 / 80.0);
@@ -358,17 +365,18 @@ static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
     // Default layout: key lane 76 px, vertical scrollbar 14 px.
     const float keyLaneWidth = 76.0f;
     const float gridWidthPx = 900.0f - keyLaneWidth - 14.0f;
-    const float cursorViewX = 500.0f;
+    const float gridLocalCursorX = 500.0f; // 500 px into the grid
+    const float cursorWindowX = kViewOffsetX + keyLaneWidth + gridLocalCursorX;
 
     const auto beatAtCursor = [&]() {
         const double ppb = static_cast<double>(gridWidthPx) / view.getViewDurationBeats();
-        return view.getViewStartBeat() + static_cast<double>(cursorViewX - keyLaneWidth) / ppb;
+        return view.getViewStartBeat() + static_cast<double>(gridLocalCursorX) / ppb;
     };
     const double beatBefore = beatAtCursor();
 
     NUIMouseEvent zoom;
     zoom.type = NUIMouseEventType::Scroll;
-    zoom.position = {cursorViewX, 300.0f};
+    zoom.position = {cursorWindowX, 300.0f};
     zoom.modifiers = NUIModifiers::Ctrl;
     zoom.wheelDelta = 1.0f;
     view.onMouseEvent(zoom);
@@ -378,6 +386,14 @@ static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
     const double beatAfter = beatAtCursor();
     ASSERT(std::abs(beatAfter - beatBefore) < 0.001,
            "ctrl-wheel zoom keeps the beat under the cursor stationary (grid-local anchor)");
+
+    // Zoom out from the same anchor and check again.
+    zoom.wheelDelta = -1.0f;
+    view.onMouseEvent(zoom);
+    ASSERT(view.getViewDurationBeats() > 10.0, "ctrl-wheel zoom-out fired");
+    const double beatAfterOut = beatAtCursor();
+    ASSERT(std::abs(beatAfterOut - beatBefore) < 0.001,
+           "ctrl-wheel zoom-out keeps the beat under the cursor stationary");
 
     // Invalid pixels-per-beat must be rejected, not stored.
     view.setPixelsPerBeat(120.0f);
@@ -389,7 +405,7 @@ static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
     ASSERT(std::abs(static_cast<double>(gridWidthPx) / view.getViewDurationBeats() - 120.0) < 0.001,
            "non-positive or non-finite pixels-per-beat is rejected");
 
-    PASS("ctrl-wheel zoom anchors on grid-local X");
+    PASS("ctrl-wheel zoom anchors on grid-local X (off-origin panel)");
 }
 
 // ---------------------------------------------------------------------------
@@ -475,6 +491,47 @@ static void test_grid_tiers_follow_snap() {
 }
 
 // ---------------------------------------------------------------------------
+// Scrollable-domain parity with the Track Manager timeline
+// ---------------------------------------------------------------------------
+
+static void test_scroll_domain_floor_and_growth() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+
+    // Empty: fixed 16-bar floor (64 beats @ 4/4), regardless of the (short)
+    // default pattern length.
+    view.setTotalDurationBeats(16.0);
+    view.setNotes({});
+    ASSERT(std::abs(view.getScrollDomainEndBeats() - 64.0) < 0.001,
+           "empty piano roll scroll domain is 16 bars");
+
+    // Content appears: dynamic padding (short content < 16 bars → +8 bars),
+    // matching the Track Manager's smart domain. A 4-bar pattern becomes 12.
+    AestraUI::MidiNote n;
+    n.startBeat = 0.0; n.durationBeats = 1.0; n.pitch = 60; n.velocity = 100;
+    view.setNotes({n});
+    ASSERT(std::abs(view.getScrollDomainEndBeats() - 48.0) < 0.001,
+           "content-bearing domain is pattern end + 8 bars");
+
+    // Long content (>= 64 bars) pads by 12.5%: 80 bars → 90 bars.
+    view.setTotalDurationBeats(320.0);
+    view.setNotes({n});
+    ASSERT(std::abs(view.getScrollDomainEndBeats() - 360.0) < 0.001,
+           "long content grows the domain by 12.5%");
+
+    // Time signature changes recompute the empty floor (3/4 → 48 beats).
+    view.setTotalDurationBeats(12.0);
+    view.setNotes({});
+    view.setBeatsPerBar(3);
+    ASSERT(std::abs(view.getScrollDomainEndBeats() - 48.0) < 0.001,
+           "empty floor follows the beat-per-bar count");
+
+    PASS("scroll domain: 16-bar empty floor + dynamic content growth");
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 int main() {
@@ -502,6 +559,7 @@ int main() {
     test_ctrl_wheel_zoom_uses_grid_local_anchor();
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
+    test_scroll_domain_floor_and_growth();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

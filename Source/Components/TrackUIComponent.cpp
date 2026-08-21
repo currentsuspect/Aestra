@@ -11,6 +11,7 @@
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 #include "NUIContextMenu.h"
+#include "Commands/MakeClipPatternUniqueCommand.h"
 #include "Commands/SetVolumeCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetMuteCommand.h"
@@ -303,6 +304,20 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+        if (pattern && m_trackManager) {
+            // Break shared pattern identity for this clip only (Extra Session
+            // 2026-08-21: duplicate → make unique workflow).
+            addAction("Make Unique", "", [this, clipId]() {
+                if (!m_trackManager)
+                    return;
+                auto cmd = std::make_shared<Aestra::Audio::MakeClipPatternUniqueCommand>(*m_trackManager, clipId);
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                repaint();
+                if (m_onCacheInvalidationCallback) {
+                    m_onCacheInvalidationCallback();
+                }
+            });
+        }
     }
 
     if (pattern && pattern->isAudio()) {
@@ -1013,8 +1028,10 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
                                    ? (metrics.ascent + metrics.descent)
                                    : kClipLabelFontSize;
         const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
+        // Name starts after the hamburger affordance zone (top-left glyph).
+        constexpr float kHamburgerOffset = 15.0f;
         renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
+                          AestraUI::NUIPoint(clipBounds.x + 6.0f + kHamburgerOffset, textY),
                           kClipLabelFontSize,
                           themeManager.getCurrentTheme().textPrimary.withAlpha(clipSelected ? 0.95f : 0.85f));
     }
@@ -1144,6 +1161,26 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawPianoRollStyleSelection(renderer, insetClippedClipBounds,
                                                 AestraUI::NUIThemeManager::getInstance().getRadius("s"));
                 }
+
+                // Hamburger affordance (top-left of the clip): opens the full
+                // contextual menu — the home for the actions right-click used
+                // to carry before right-click became fast-delete.
+                {
+                    const auto& theme = AestraUI::NUIThemeManager::getInstance();
+                    const AestraUI::NUIRect burgerRect(insetClippedClipBounds.x + 3.0f, insetClippedClipBounds.y + 2.0f,
+                                             13.0f, 12.0f);
+                    if (burgerRect.width > 0.0f && insetClippedClipBounds.width > 20.0f) {
+                        const bool hot = m_hoveredClipId == clip.id || clip.id == m_selectedClipId;
+                        const auto lineColor = theme.getColor("textPrimary")
+                                                   .withAlpha(hot ? 0.9f : 0.45f);
+                        for (int i = 0; i < 3; ++i) {
+                            const float ly = burgerRect.y + 2.0f + i * 3.5f;
+                            renderer.drawLine(AestraUI::NUIPoint(burgerRect.x + 1.5f, ly),
+                                              AestraUI::NUIPoint(burgerRect.x + burgerRect.width - 1.5f, ly),
+                                              1.4f, lineColor);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1211,9 +1248,11 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         // Centred in the header band rather than offset from the clip's top edge:
         // headerHeight is clamped, so a fixed offset drifts as the band resizes and
         // left the label flush against the band's lower edge at short clip heights.
+        // Name starts after the hamburger affordance zone (top-left glyph).
         constexpr float kClipLabelFontSize = 9.5f;
+        constexpr float kHamburgerOffset = 15.0f;
         renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 10.0f,
+                          AestraUI::NUIPoint(clipBounds.x + 10.0f + kHamburgerOffset,
                                              renderer.calculateTextY(headerRect, kClipLabelFontSize)),
                           kClipLabelFontSize, themeManager.getCurrentTheme().textPrimary);
     }
@@ -1963,6 +2002,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (!clipBounds.contains(event.position)) continue;
             
+            m_hoveredClipId = clipId;
+
             float leftEdge = clipBounds.x;
             float rightEdge = clipBounds.x + clipBounds.width;
             
@@ -1983,10 +2024,16 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
         
+        if (newHoverEdge == TrimEdge::None) {
+            m_hoveredClipId = ClipInstanceID{};
+        }
+
         if (m_hoverTrimEdge != newHoverEdge) {
             m_hoverTrimEdge = newHoverEdge;
             repaint(); // Trigger redraw for cursor feedback
         }
+    } else if (!isInsideBounds && !m_isTrimming) {
+        m_hoveredClipId = ClipInstanceID{};
     }
     
     // Keep button hover/press state accurate even when leaving the track row.
@@ -2508,6 +2555,29 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Check if clicking on any clip for drag initiation or trimming
             if (clickedClipId.isValid()) {
+                // Hamburger affordance (top-left corner): opens the full
+                // contextual menu — checked before trim/drag/open so the
+                // affordance always wins inside its generous hit zone. Gated by
+                // the same visible-width condition as the rendered glyph, so
+                // narrow/partially-clipped clips keep drag + editor gestures.
+                if (clickedClipBounds.width > 20.0f) {
+                    const auto& clipBounds = m_allClipBounds[clickedClipId];
+                    const AestraUI::NUIRect burgerRect(clipBounds.x + 3.0f - 4.0f, clipBounds.y + 2.0f - 3.0f,
+                                             13.0f + 8.0f, 12.0f + 6.0f);
+                    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
+                        burgerRect.contains(event.position)) {
+                        m_activeClipId = clickedClipId;
+                        if (m_onTrackSelectedCallback) {
+                            m_onTrackSelectedCallback(this, selectionIntentFor(event));
+                        }
+                        if (m_onClipSelectedCallback) {
+                            m_onClipSelectedCallback(this, clickedClipId);
+                        }
+                        showClipRoutingMenu(clickedClipId, event.position);
+                        return true;
+                    }
+                }
+
                 auto now = std::chrono::steady_clock::now();
                 const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
                 const bool manualDoubleClick =
@@ -2672,7 +2742,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
 
-            showClipRoutingMenu(clickedClipId, event.position);
+            if (event.modifiers & AestraUI::NUIModifiers::Shift) {
+                // Shift+right-click keeps the full contextual menu (routing,
+                // cut/copy/duplicate, editors) while plain right-click takes
+                // the fast path: immediate undoable delete.
+                showClipRoutingMenu(clickedClipId, event.position);
+            } else if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+                parentMgr->deleteSelectedClip();
+            }
             return true;
         }
 

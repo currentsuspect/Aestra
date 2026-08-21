@@ -671,6 +671,9 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     drawCommandHeader(renderer);
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
 
+    // Drag-hover ghost draws above the panel surfaces.
+    renderDragPreview(renderer);
+
     // The custom header surfaces are drawn after WindowPanel's child pass.
     if (m_addUnitBtn) m_addUnitBtn->onRender(renderer);
 
@@ -1279,7 +1282,20 @@ AestraUI::DropFeedback ArsenalPanel::onDragEnter(const AestraUI::DragData& data,
 }
 
 AestraUI::DropFeedback ArsenalPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
-    (void)position;
+    // Drag-hover ghost state: a sample over empty Arsenal space previews the
+    // new unit it would create.
+    m_dragPreviewActive = isAudioFileDrag(data);
+    m_dragPreviewPos = position;
+    if (isAudioFileDrag(data)) {
+        const auto lastSlash = data.filePath.find_last_of("/\\");
+        std::string filename = data.filePath.substr(lastSlash + 1);
+        const auto lastDot = filename.find_last_of('.');
+        if (lastDot != std::string::npos) {
+            filename = filename.substr(0, lastDot);
+        }
+        m_dragPreviewName = filename;
+    }
+    repaint();
     if (isInstrumentPluginDrag(data) || isAudioFileDrag(data)) {
         return AestraUI::DropFeedback::Copy;
     }
@@ -1287,6 +1303,51 @@ AestraUI::DropFeedback ArsenalPanel::onDragOver(const AestraUI::DragData& data, 
 }
 
 void ArsenalPanel::onDragLeave() {
+    m_dragPreviewActive = false;
+    repaint();
+}
+
+void ArsenalPanel::renderDragPreview(AestraUI::NUIRenderer& renderer) {
+    if (!m_dragPreviewActive) {
+        return;
+    }
+    // Suppress the ghost where an existing unit row would receive the drop
+    // (replacement target — rows show their own feedback).
+    for (const auto& row : m_unitRows) {
+        if (row && row->isVisible() && row->getBounds().contains(m_dragPreviewPos)) {
+            return;
+        }
+    }
+
+    auto& theme = NUIThemeManager::getInstance();
+    const float ghostW = std::max(160.0f, getBounds().width - 48.0f);
+    const NUIRect ghost(m_dragPreviewPos.x - 8.0f, m_dragPreviewPos.y - 24.0f, ghostW, 52.0f);
+
+    // Dashed outline reads as "proposed", not existing content.
+    const auto outline = theme.getColor("accentPrimary").withAlpha(0.85f);
+    constexpr float kDash = 7.0f;
+    constexpr float kGap = 5.0f;
+    auto dashedH = [&](float x0, float x1, float y) {
+        for (float x = x0; x < x1; x += kDash + kGap) {
+            renderer.drawLine(NUIPoint(x, y), NUIPoint(std::min(x + kDash, x1), y), 1.6f, outline);
+        }
+    };
+    auto dashedV = [&](float y0, float y1, float x) {
+        for (float y = y0; y < y1; y += kDash + kGap) {
+            renderer.drawLine(NUIPoint(x, y), NUIPoint(x, std::min(y + kDash, y1)), 1.6f, outline);
+        }
+    };
+    dashedH(ghost.x, ghost.right(), ghost.y);
+    dashedH(ghost.x, ghost.right(), ghost.bottom());
+    dashedV(ghost.y, ghost.bottom(), ghost.x);
+    dashedV(ghost.y, ghost.bottom(), ghost.right());
+
+    const std::string label = "+ New Sampler Unit — " + m_dragPreviewName;
+    const auto textSize = renderer.measureText(label, 10.5f);
+    renderer.drawText(label,
+                      NUIPoint(ghost.x + (ghost.width - textSize.width) * 0.5f,
+                               ghost.y + (ghost.height - textSize.height) * 0.5f),
+                      10.5f, theme.getColor("textPrimary").withAlpha(0.9f));
 }
 
 AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
@@ -1311,17 +1372,42 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             return result;
         }
 
-        if (targetUnit == 0) {
-            result.accepted = false;
-            result.message = "No Arsenal unit available";
-            return result;
-        }
-
         auto& unitMgr = m_trackManager->getUnitManager();
         std::string filename = data.filePath.substr(data.filePath.find_last_of("/\\") + 1);
         const auto lastDot = filename.find_last_of('.');
         if (lastDot != std::string::npos) {
             filename = filename.substr(0, lastDot);
+        }
+
+        // Drop resolution by POSITION: over a unit row → replace that unit's
+        // sound (new sound, old unit). Over empty space → create a new sampler
+        // unit for the sample (new sound, new unit).
+        targetUnit = 0;
+        const bool pointerInListViewport = m_listViewportRect.contains(position);
+        for (const auto& row : m_unitRows) {
+            // Visibility alone isn't enough: a scrolled-out row's bounds can
+            // still contain the pointer. Require the row inside the visible
+            // list viewport so drops on empty space never replace an
+            // off-screen unit.
+            if (row && row->isVisible() && pointerInListViewport && row->getBounds().contains(position)) {
+                targetUnit = row->getUnitId();
+                break;
+            }
+        }
+        if (targetUnit == 0) {
+            targetUnit = unitMgr.createUnit(filename, UnitType::Sampler);
+            if (targetUnit == 0) {
+                result.accepted = false;
+                result.message = "Could not create an Arsenal unit";
+                return result;
+            }
+            unitMgr.setUnitEnabled(targetUnit, true);
+            // Route the fresh unit like every other creation path — otherwise
+            // the dropped sample loads into a unit with no mixer destination.
+            if (const auto* unit = unitMgr.getUnit(targetUnit)) {
+                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                routeUnitToFirstFreeMixerChannel(*m_trackManager, targetUnit, destinationName, unit->color);
+            }
         }
 
         unitMgr.setUnitName(targetUnit, filename);

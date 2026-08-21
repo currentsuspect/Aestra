@@ -74,6 +74,8 @@ public:
     // Event callbacks
     void setHitTestCallback(HitTestCallback callback) override { m_hitTestCallback = callback; }
     void setMouseMoveCallback(std::function<void(int x, int y)> callback) override { m_mouseMoveCallback = callback; }
+    void setMouseEnterCallback(std::function<void()> callback) override { m_mouseEnterCallback = callback; }
+    void setMouseLeaveCallback(std::function<void()> callback) override { m_mouseLeaveCallback = callback; }
     void setMouseButtonCallback(std::function<void(MouseButton button, bool pressed, int x, int y)> callback) override {
         m_mouseButtonCallback = callback;
     }
@@ -119,6 +121,8 @@ private:
     // Callbacks
     HitTestCallback m_hitTestCallback;
     std::function<void(int, int)> m_mouseMoveCallback;
+    std::function<void()> m_mouseEnterCallback;
+    std::function<void()> m_mouseLeaveCallback;
     std::function<void(MouseButton, bool, int, int)> m_mouseButtonCallback;
     std::function<void(float)> m_mouseWheelCallback;
     std::function<void(KeyCode, bool, const KeyModifiers&)> m_keyCallback;

@@ -120,7 +120,6 @@ void NUIPlatformBridge::setupEventBridges() {
         if (rootInputBlocked) {
             return;
         }
-
         // Forward to root component for hover effects
         if (m_rootComponent) {
             NUIMouseEvent event;
@@ -217,6 +216,20 @@ void NUIPlatformBridge::setupEventBridges() {
             } else {
                 NUIComponent::dispatchMouseEvent(m_rootComponent, event);
             }
+        }
+    });
+
+    // Window enter/leave: forwarded to the app layer (AestraWindowManager) so
+    // it can release component cursor styles and stranded drag captures when
+    // the pointer exits the window.
+    m_window->setMouseEnterCallback([this]() {
+        if (m_mouseEnterCallback) {
+            m_mouseEnterCallback();
+        }
+    });
+    m_window->setMouseLeaveCallback([this]() {
+        if (m_mouseLeaveCallback) {
+            m_mouseLeaveCallback();
         }
     });
 
@@ -528,6 +541,14 @@ bool NUIPlatformBridge::makeContextCurrent() {
 
 void NUIPlatformBridge::setMouseMoveCallback(std::function<void(int, int)> callback) {
     m_mouseMoveCallback = callback;
+}
+
+void NUIPlatformBridge::setMouseEnterCallback(std::function<void()> callback) {
+    m_mouseEnterCallback = std::move(callback);
+}
+
+void NUIPlatformBridge::setMouseLeaveCallback(std::function<void()> callback) {
+    m_mouseLeaveCallback = std::move(callback);
 }
 
 void NUIPlatformBridge::setMouseButtonCallback(std::function<void(int, bool)> callback) {
