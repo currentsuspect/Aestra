@@ -271,6 +271,9 @@ private:
     float m_velEditStartY = 0.0f;
     float m_velEditBaseVelocity = kDefaultStepVelocity;
     bool m_stepGestureChanged = false;
+    // Notes snapshot taken when the gesture starts; on release the whole drag
+    // becomes one EditPatternNotesCommand (single undo step per gesture).
+    std::vector<Aestra::Audio::MidiNote> m_gestureNotesBefore;
 
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
     int m_lastClipClickStep = -1;        // Step of the last grid press; -1 = miss / non-grid
@@ -296,6 +299,11 @@ private:
     bool placeStepNote(int step);                          // place at root + default velocity
     bool removeStepNote(int step);                         // remove note at step
     void setStepNoteVelocity(int step, float velocity);    // set velocity of note at step
+
+    // Snapshot of the pattern's MIDI notes for undo bookkeeping (#822).
+    std::vector<Aestra::Audio::MidiNote> currentPatternNotes() const;
+    // Wrap a completed gesture's before/after snapshots into one undoable command.
+    void pushNotesEditCommand(std::vector<Aestra::Audio::MidiNote> before, const char* name);
 
     // Selection-based editing helpers.
     bool isStepSelected(int step) const;
