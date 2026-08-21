@@ -151,6 +151,15 @@ public:
     /** @brief Release notes held by computer-keyboard musical typing. */
     void releaseMusicalTypingNotes();
 
+    /**
+     * @brief Refresh every panel after an undo/redo/history mutation.
+     *
+     * Single source of truth for the post-history refresh: the keyboard
+     * shortcut path, the Edit-menu items, the window-manager shortcuts and the
+     * history panel must all invalidate the same surfaces.
+     */
+    void refreshAfterHistoryChange();
+
     /** @brief Open or close a specific workspace overlay. */
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
     /** @brief Toggle visibility for a specific workspace overlay. */

@@ -1097,6 +1097,10 @@ void AestraContent::setupArsenalPanels() {
 
     m_audioClipEditorPanel = std::make_shared<AudioClipEditorPanel>(m_trackManager);
     m_audioClipEditorPanel->setVisible(false);
+    m_audioClipEditorPanel->setOnClipEditsCommitted([this]() {
+        if (m_trackManagerUI)
+            m_trackManagerUI->invalidateCache();
+    });
     m_audioClipEditorPanel->setOnClose([this]() {
         if (m_audioClipEditorPanel) {
             m_audioClipEditorPanel->setVisible(false);
@@ -1312,17 +1316,7 @@ void AestraContent::setupHistoryAndTakesPanels() {
     m_historyPanel->setOnClose([this]() { toggleHistoryPanel(); });
     wireFloatingPanel(m_historyPanel, ViewType::History, &ViewState::historyRect, 240.0f, 220.0f);
     m_historyPanel->setMaximized(false);
-    m_historyPanel->setOnHistoryChanged([this]() {
-        if (m_trackManagerUI) {
-            m_trackManagerUI->refreshTracks();
-            m_trackManagerUI->invalidateCache();
-        }
-        if (m_mixerPanel)
-            m_mixerPanel->refreshChannels();
-        if (m_sequencerPanel)
-            m_sequencerPanel->refreshUnits();
-        m_trackManager->markModified();
-    });
+    m_historyPanel->setOnHistoryChanged([this]() { refreshAfterHistoryChange(); });
     // Create Takes panel — data providers and action callbacks are wired by the
     // app layer (AestraApp) because take operations need the project path and
     // the save/load safety rules that live there.
@@ -4259,6 +4253,21 @@ void AestraContent::refreshProjectViews() {
     setDirty(true);
 }
 
+void AestraContent::refreshAfterHistoryChange() {
+    if (!m_trackManager)
+        return;
+    // Refresh ALL panels — not just timeline
+    if (m_trackManagerUI) {
+        m_trackManagerUI->refreshTracks();
+        m_trackManagerUI->invalidateCache();
+    }
+    if (m_mixerPanel)
+        m_mixerPanel->refreshChannels();
+    if (m_sequencerPanel)
+        m_sequencerPanel->refreshUnits();
+    m_trackManager->markModified();
+}
+
 void AestraContent::toggleHistoryPanel() {
     if (!m_historyPanel)
         return;
@@ -4404,16 +4413,7 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
 
         if (performed) {
-            // Refresh ALL panels — not just timeline
-            if (m_trackManagerUI) {
-                m_trackManagerUI->refreshTracks();
-                m_trackManagerUI->invalidateCache();
-            }
-            if (m_mixerPanel)
-                m_mixerPanel->refreshChannels();
-            if (m_sequencerPanel)
-                m_sequencerPanel->refreshUnits();
-            m_trackManager->markModified();
+            refreshAfterHistoryChange();
             return true; // Consume the event — don't pass to text inputs
         }
     }

@@ -711,7 +711,9 @@ void AestraApp::buildMenuBar() {
         undoItem->setText(canUndo ? trackMgr->getCommandHistory().getUndoName() : "Undo");
         undoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
-                m_content->getTrackManager()->getCommandHistory().undo();
+                // Guard on the result: a failed op must not mark the project modified.
+                if (m_content->getTrackManager()->getCommandHistory().undo())
+                    m_content->refreshAfterHistoryChange();
             }
         });
         menu->addItem(undoItem);
@@ -722,7 +724,9 @@ void AestraApp::buildMenuBar() {
         redoItem->setText(canRedo ? trackMgr->getCommandHistory().getRedoName() : "Redo");
         redoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
-                m_content->getTrackManager()->getCommandHistory().redo();
+                // Guard on the result: a failed op must not mark the project modified.
+                if (m_content->getTrackManager()->getCommandHistory().redo())
+                    m_content->refreshAfterHistoryChange();
             }
         });
         menu->addItem(redoItem);
