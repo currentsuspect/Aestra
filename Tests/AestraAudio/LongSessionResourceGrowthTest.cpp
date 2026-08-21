@@ -95,7 +95,6 @@ bool getRSSBytes(uint64_t& out) {
     return false; // No RSS telemetry on this platform — callers must SKIP.
 #endif
 }
-#endif
 
 double slopeMBPerMinute(const std::vector<Sample>& samples) {
     // Least-squares fit of RSS vs elapsed minutes.
