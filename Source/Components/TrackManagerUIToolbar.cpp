@@ -147,10 +147,15 @@ bool TrackManagerUI::isRulerPointerActive() const {
         return true;
     }
     const AestraUI::NUIRect bounds = getBounds();
-    // Same geometry as the events file's ruler row: below the header +
-    // horizontal scrollbar, ruler-height tall, full width.
-    const AestraUI::NUIRect ruler(bounds.x, bounds.y + kTimelineHeaderHeight + kTimelineHorizontalScrollbarHeight,
-                                  bounds.width, kTimelineRulerHeight);
+    // Same geometry as the events file's ruler row, but starting after the
+    // control-area column: the grab hand belongs over scrubbable ruler only.
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const auto& layout = themeManager.getLayoutDimensions();
+    const float rulerStartX = bounds.x + layout.trackControlsWidth + kTimelineGridInsetX;
+    const AestraUI::NUIRect ruler(rulerStartX,
+                                  bounds.y + kTimelineHeaderHeight + kTimelineHorizontalScrollbarHeight,
+                                  std::max(0.0f, bounds.width - layout.trackControlsWidth - kTimelineGridInsetX),
+                                  kTimelineRulerHeight);
     return ruler.contains(m_lastMousePos);
 }
 

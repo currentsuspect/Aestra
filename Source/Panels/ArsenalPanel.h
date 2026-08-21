@@ -26,6 +26,9 @@ public:
 
     /** @brief Render the Arsenal panel and unit rows. */
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    /** @brief Drag-hover ghost: dashed "new unit" outline while dragging a
+     *  sample over empty Arsenal space. */
+    void renderDragPreview(AestraUI::NUIRenderer& renderer);
     /** @brief Relayout the panel after a resize. */
     void onResize(int width, int height) override;
     /** @brief Advance Arsenal playback state and UI sync. */
@@ -124,6 +127,10 @@ private:
     float m_targetScrollY = 0.0f;
     float m_gridScrollX = 0.0f; // Shared horizontal step-grid scroll (header + all rows)
     bool m_gridFollowSuspended = false; // User scrolled away while playing; stop chasing them
+    // Drag-hover ghost state (sample over empty Arsenal space → new-unit outline)
+    bool m_dragPreviewActive = false;
+    AestraUI::NUIPoint m_dragPreviewPos;
+    std::string m_dragPreviewName;
     bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
