@@ -1028,8 +1028,10 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
                                    ? (metrics.ascent + metrics.descent)
                                    : kClipLabelFontSize;
         const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
+        // Name starts after the hamburger affordance zone (top-left glyph).
+        constexpr float kHamburgerOffset = 15.0f;
         renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
+                          AestraUI::NUIPoint(clipBounds.x + 6.0f + kHamburgerOffset, textY),
                           kClipLabelFontSize,
                           themeManager.getCurrentTheme().textPrimary.withAlpha(clipSelected ? 0.95f : 0.85f));
     }
@@ -1246,9 +1248,11 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         // Centred in the header band rather than offset from the clip's top edge:
         // headerHeight is clamped, so a fixed offset drifts as the band resizes and
         // left the label flush against the band's lower edge at short clip heights.
+        // Name starts after the hamburger affordance zone (top-left glyph).
         constexpr float kClipLabelFontSize = 9.5f;
+        constexpr float kHamburgerOffset = 15.0f;
         renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 10.0f,
+                          AestraUI::NUIPoint(clipBounds.x + 10.0f + kHamburgerOffset,
                                              renderer.calculateTextY(headerRect, kClipLabelFontSize)),
                           kClipLabelFontSize, themeManager.getCurrentTheme().textPrimary);
     }

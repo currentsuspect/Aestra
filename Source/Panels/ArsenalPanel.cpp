@@ -1379,8 +1379,16 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             filename = filename.substr(0, lastDot);
         }
 
-        // Empty Arsenal: dropping a sample creates its own sampler unit
-        // (find sample → drag → playing, no procedural unit setup).
+        // Drop resolution by POSITION: over a unit row → replace that unit's
+        // sound (new sound, old unit). Over empty space → create a new sampler
+        // unit for the sample (new sound, new unit).
+        targetUnit = 0;
+        for (const auto& row : m_unitRows) {
+            if (row && row->isVisible() && row->getBounds().contains(position)) {
+                targetUnit = row->getUnitId();
+                break;
+            }
+        }
         if (targetUnit == 0) {
             targetUnit = unitMgr.createUnit(filename, UnitType::Sampler);
             if (targetUnit == 0) {
