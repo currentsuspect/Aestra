@@ -117,7 +117,7 @@ bool testKeptTakeSurvives() {
     check(wavCount(recordingsDir(projectPath)) == 1, "one WAV written after take");
     check(tm->isRecording() == false, "capture finalized");
 
-    const size_t removed = tm->cleanupOrphanedRecordings({});
+    const size_t removed = tm->cleanupOrphanedRecordings({}).value();
     check(removed == 0, "no orphaned recordings removed");
     check(wavCount(recordingsDir(projectPath)) == 1, "kept take's WAV still on disk");
 
@@ -159,7 +159,7 @@ bool testDiscardedTakeRemoved() {
     check(tm->getSourceManager().findSourceByPath(realWavPath).isValid(), "WAV registered as a source");
 
     // Session boundary: history is being discarded, so the take is unreachable.
-    const size_t removed = tm->cleanupOrphanedRecordings({});
+    const size_t removed = tm->cleanupOrphanedRecordings({}).value();
     check(removed == 1, "discarded take's WAV removed");
     check(wavCount(recordingsDir(projectPath)) == 0, "no recording files remain");
 
@@ -217,7 +217,7 @@ bool testProjectReferenceKeeps() {
         buffer << in.rdbuf();
         return buffer.str().find(generic) != std::string::npos;
     };
-    const size_t removed = tm->cleanupOrphanedRecordings(keeper);
+    const size_t removed = tm->cleanupOrphanedRecordings(keeper).value();
     check(removed == 0, "project-referenced discard kept");
     check(wavCount(recordingsDir(projectPath)) == 1, "WAV still on disk");
 
@@ -239,8 +239,9 @@ bool testNoCleanupWhileCapturing() {
     tm->record();
     tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
     check(tm->isRecording(), "capture in progress");
-    const size_t removed = tm->cleanupOrphanedRecordings({});
-    check(removed == 0, "cleanup refused during capture");
+    const auto removed = tm->cleanupOrphanedRecordings({});
+    check(!removed.has_value() || *removed == 0,
+          "cleanup refused or no-op while capture is in progress (never a partial run)");
 
     tm->onTransportStateApplied(false, static_cast<uint64_t>(0.5 * kSampleRate), static_cast<double>(kSampleRate));
     std::cout << "PASSED\n";
@@ -260,7 +261,7 @@ bool testScopedToRecordingRoot() {
         std::ofstream out(outsider, std::ios::binary | std::ios::trunc);
         out << "not a recording";
     }
-    const size_t removed = tm->cleanupOrphanedRecordings({});
+    const size_t removed = tm->cleanupOrphanedRecordings({}).value();
     check(removed == 0, "no recordings to remove");
     check(std::filesystem::exists(outsider), "unrelated WAV untouched");
 

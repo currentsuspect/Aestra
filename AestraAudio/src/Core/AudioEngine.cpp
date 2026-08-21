@@ -314,12 +314,18 @@ void AudioEngine::applyPendingCommands() {
         case AudioQueueCommandType::SetMetronomeEnabled:
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
             break;
-        case AudioQueueCommandType::MetronomeCountInStart:
+        case AudioQueueCommandType::MetronomeCountInStart: {
             // Clamp before the float→unsigned narrowing: negative/NaN/oversized
             // value1 on the shared command surface must not reach the cast or
-            // the RT metronome unchanged.
-            startMetronomeCountIn(static_cast<uint32_t>(std::clamp(cmd.value1, 1.0f, 1024.0f)));
+            // the RT metronome unchanged (std::clamp propagates NaN).
+            const float requestedBeats = cmd.value1;
+            const uint32_t beats =
+                (std::isfinite(requestedBeats) && requestedBeats >= 1.0f)
+                    ? static_cast<uint32_t>(std::min(requestedBeats, 1024.0f))
+                    : 1u;
+            startMetronomeCountIn(beats);
             break;
+        }
         case AudioQueueCommandType::MetronomeCountInStop:
             stopMetronomeCountIn();
             break;

@@ -36,6 +36,7 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <mutex>
 #include <sstream>
 #include <thread>
@@ -1988,21 +1989,25 @@ private:
      * persists a dangling reference.
      * @param keepCheck Optional external keep predicate (app-supplied project
      *        reference check).
-     * @return Number of recording files removed.
+     * @return std::nullopt when the call was refused as realtime misuse (the
+     *         audio thread must never touch the filesystem — callers should log
+     *         and treat it as "not attempted", distinct from a successful
+     *         cleanup that removed zero files). Otherwise the number of files
+     *         removed.
      */
 public:
-    size_t cleanupOrphanedRecordings(const std::function<bool(const std::string&)>& keepCheck = {}) {
+    std::optional<size_t> cleanupOrphanedRecordings(const std::function<bool(const std::string&)>& keepCheck = {}) {
         namespace fs = std::filesystem;
         if (reportRealtimeMisuse("TrackManager::cleanupOrphanedRecordings")) {
-            return 0;
+            return std::nullopt;
         }
         if (m_isCapturing.load(std::memory_order_relaxed)) {
-            return 0;
+            return size_t{0};
         }
         const fs::path root = recordingRootDirectory();
         std::error_code ec;
         if (!fs::exists(root, ec) || !fs::is_directory(root, ec)) {
-            return 0;
+            return size_t{0};
         }
 
         auto normalized = [](const std::string& p) { return fs::path(p).lexically_normal().generic_string(); };

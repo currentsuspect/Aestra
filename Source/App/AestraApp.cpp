@@ -1399,7 +1399,17 @@ void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPa
             return pathAppearsInFile(projectPath, path);
         };
     }
-    trackManager->cleanupOrphanedRecordings(keepCheck);
+    const auto removed = trackManager->cleanupOrphanedRecordings(keepCheck);
+    if (!removed.has_value()) {
+        // Realtime misuse: refused rather than attempted (never expected on the
+        // UI thread). Observable instead of silently conflated with a
+        // zero-file cleanup.
+        Log::warning("[AestraApp] Recording cleanup refused: called from the realtime thread");
+        return;
+    }
+    if (*removed > 0) {
+        Log::info("[AestraApp] Removed " + std::to_string(*removed) + " orphaned recording file(s)");
+    }
 }
 
 void AestraApp::shutdown() {

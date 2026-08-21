@@ -496,6 +496,8 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
 
     if (!layout.mapRect.contains(event.position) && dragKind_ == DragKind::None) {
         hoverOnViewport_ = false;
+        hoverOnResizeEdge_ = false;
+        cursorHint_ = TimelineMinimapCursorHint::Default;
         return NUIComponent::onMouseEvent(event);
     }
 
