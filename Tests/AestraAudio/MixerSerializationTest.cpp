@@ -32,7 +32,7 @@ void check(bool condition, const std::string& label) {
     }
 }
 
-bool near(float a, float b, float eps = 0.001f) {
+bool valuesClose(float a, float b, float eps = 0.001f) {
     return std::abs(a - b) < eps;
 }
 
@@ -75,10 +75,10 @@ int main() {
         auto* loadedChannel = loaded->getChannel(0);
         check(loadedChannel != nullptr, "loaded channel resolvable");
         if (loadedChannel) {
-            check(near(loadedChannel->getTrimDb(), kTrimDb), "trim survives save/reopen");
-            check(near(loadedChannel->getPan(), kPan), "pan survives save/reopen");
-            check(near(loadedChannel->getWidth(), kWidth), "width survives save/reopen");
-            check(near(loadedChannel->getVolume(), kVolume), "volume survives save/reopen");
+            check(valuesClose(loadedChannel->getTrimDb(), kTrimDb), "trim survives save/reopen");
+            check(valuesClose(loadedChannel->getPan(), kPan), "pan survives save/reopen");
+            check(valuesClose(loadedChannel->getWidth(), kWidth), "width survives save/reopen");
+            check(valuesClose(loadedChannel->getVolume(), kVolume), "volume survives save/reopen");
         }
     }
 
