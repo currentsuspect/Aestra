@@ -2,6 +2,8 @@
 #include "ArsenalPanel.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/EditPatternNotesCommand.h"
+#include "Commands/SetPatternLengthCommand.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "NUIButton.h"
@@ -974,9 +976,8 @@ void ArsenalPanel::adjustPatternBars(int deltaBars) {
         return;
     }
 
-    patternManager.applyPatch(m_activePatternID, [nextLengthBeats](PatternSource& source) {
-        source.lengthBeats = nextLengthBeats;
-    });
+    auto lengthCommand = std::make_shared<SetPatternLengthCommand>(patternManager, m_activePatternID, nextLengthBeats);
+    m_trackManager->getCommandHistory().pushAndExecute(lengthCommand);
     m_trackManager->preparePatternForArsenal(m_activePatternID);
     refreshUnits();
     repaint();
@@ -1016,9 +1017,8 @@ void ArsenalPanel::adjustPatternSteps(int deltaBars) {
         return;
     }
 
-    patternManager.applyPatch(m_activePatternID, [nextLengthBeats](PatternSource& source) {
-        source.lengthBeats = nextLengthBeats;
-    });
+    auto lengthCommand = std::make_shared<SetPatternLengthCommand>(patternManager, m_activePatternID, nextLengthBeats);
+    m_trackManager->getCommandHistory().pushAndExecute(lengthCommand);
     m_trackManager->preparePatternForArsenal(m_activePatternID);
     refreshUnits();
     repaint();
@@ -1518,6 +1518,12 @@ void ArsenalPanel::pastePattern() {
     
     auto& pm = m_trackManager->getPatternManager();
     
+    std::vector<MidiNote> notesBefore;
+    if (const auto* pattern = pm.getPattern(m_activePatternID)) {
+        if (pattern->isMidi())
+            notesBefore = std::get<MidiPayload>(pattern->payload).notes;
+    }
+
     pm.applyPatch(m_activePatternID, [this](PatternSource& p) {
         if (!p.isMidi()) return;
         auto& midi = std::get<MidiPayload>(p.payload);
@@ -1528,7 +1534,16 @@ void ArsenalPanel::pastePattern() {
             midi.notes.push_back(note);
         }
     });
-    
+
+    std::vector<MidiNote> notesAfter;
+    if (const auto* pattern = pm.getPattern(m_activePatternID)) {
+        if (pattern->isMidi())
+            notesAfter = std::get<MidiPayload>(pattern->payload).notes;
+    }
+    auto command = std::make_shared<EditPatternNotesCommand>(pm, m_activePatternID, std::move(notesBefore),
+                                                             std::move(notesAfter), "Paste Notes");
+    m_trackManager->getCommandHistory().pushExecuted(command);
+
     refreshUnits();
     if (m_onPatternEdited) {
         m_onPatternEdited(m_activePatternID);

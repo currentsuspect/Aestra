@@ -58,6 +58,17 @@ target_include_directories(NoteCommandsTest PRIVATE
 add_test(NAME NoteCommandsTest COMMAND NoteCommandsTest)
 set_tests_properties(NoteCommandsTest PROPERTIES LABELS "commands;phase2;contract:application")
 
+# EditPatternNotesCommand (#822): Arsenal grid gestures push one whole-vector
+# notes command per gesture so Ctrl+Z restores them.
+add_executable(EditPatternNotesCommandTest Commands/EditPatternNotesCommandTest.cpp)
+target_link_libraries(EditPatternNotesCommandTest PRIVATE AestraAudioCore)
+target_include_directories(EditPatternNotesCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EditPatternNotesCommandTest COMMAND EditPatternNotesCommandTest)
+set_tests_properties(EditPatternNotesCommandTest PROPERTIES LABELS "commands;phase2;regression;contract:application")
+
 # NoteDiff Test (headless diffing logic for piano roll save path)
 add_executable(NoteDiffTest Commands/NoteDiffTest.cpp)
 target_link_libraries(NoteDiffTest PRIVATE AestraAudioCore)

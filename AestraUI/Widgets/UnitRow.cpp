@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -920,6 +921,15 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     m_selectedSteps.end());
                 notifyStepSelectionChanged();
             }
+            if (m_stepGestureChanged && m_trackManager && m_patternId.isValid()) {
+                const char* label = m_stepGestureMode == StepGestureMode::Velocity ? "Step Velocity"
+                                    : m_stepGestureMode == StepGestureMode::Erase ? "Erase Steps"
+                                    : m_stepGestureMode == StepGestureMode::Paint ? "Paint Steps"
+                                                                                  : "Place Step";
+                // One command per gesture: the whole drag undoes in a single step.
+                pushNotesEditCommand(std::move(m_gestureNotesBefore), label);
+            }
+            m_gestureNotesBefore.clear();
             if (m_stepGestureChanged && m_onPatternEdited && m_patternId.isValid()) {
                 m_onPatternEdited(m_patternId);
             }
@@ -1026,6 +1036,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                             }
                             float vel = kDefaultStepVelocity;
                             const bool active = stepHasNote(step, vel);
+                            m_gestureNotesBefore = currentPatternNotes();
                             m_velEditStep = step;
                             m_stepGestureLastStep = step;
                             m_stepGestureStartX = event.position.x;
@@ -1068,6 +1079,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
                     if (stepIndex >= 0 && stepIndex < m_stepCount) {
                         float velocity = kDefaultStepVelocity;
+                        m_gestureNotesBefore = currentPatternNotes();
                         m_velEditStep = stepIndex;
                         m_stepGestureLastStep = stepIndex;
                         m_stepGestureStartX = event.position.x;
@@ -1228,6 +1240,7 @@ void UnitRow::duplicateSelection() {
 
     std::vector<int> newSelection;
     bool changed = false;
+    const auto notesBefore = currentPatternNotes();
     m_trackManager->getPatternManager().applyPatch(m_patternId,
         [this, span, &newSelection, &changed](Aestra::Audio::PatternSource& p) {
             if (!p.isMidi()) {
@@ -1271,6 +1284,7 @@ void UnitRow::duplicateSelection() {
     if (!changed) {
         return;
     }
+    pushNotesEditCommand(notesBefore, "Duplicate Steps");
     m_selectedSteps = std::move(newSelection); // sorted: constant offset over a sorted selection
     notifyStepSelectionChanged();
     invalidateVisuals();
@@ -1283,6 +1297,7 @@ void UnitRow::deleteSelection() {
     if (m_selectedSteps.empty() || !m_patternId.isValid() || !m_trackManager) {
         return;
     }
+    const auto notesBefore = currentPatternNotes();
     bool changed = false;
     m_trackManager->getPatternManager().applyPatch(m_patternId,
         [this, &changed](Aestra::Audio::PatternSource& p) {
@@ -1307,6 +1322,9 @@ void UnitRow::deleteSelection() {
             midi.notes.erase(std::remove_if(midi.notes.begin(), midi.notes.end(), stepCovered), midi.notes.end());
             changed = midi.notes.size() != before;
         });
+    if (changed) {
+        pushNotesEditCommand(notesBefore, "Delete Steps");
+    }
     m_selectedSteps.clear();
     notifyStepSelectionChanged();
     invalidateVisuals();
@@ -1322,6 +1340,7 @@ void UnitRow::moveSelection(int stepDelta) {
     const int dir = stepDelta > 0 ? 1 : -1;
     bool changed = false;
     std::vector<int> newSelection;
+    const auto notesBefore = currentPatternNotes();
     m_trackManager->getPatternManager().applyPatch(m_patternId,
         [this, dir, &newSelection, &changed](Aestra::Audio::PatternSource& p) {
             if (!p.isMidi()) {
@@ -1380,6 +1399,9 @@ void UnitRow::moveSelection(int stepDelta) {
     std::sort(newSelection.begin(), newSelection.end());
     const bool selectionChanged = newSelection != m_selectedSteps;
     m_selectedSteps = std::move(newSelection);
+    if (changed) {
+        pushNotesEditCommand(notesBefore, "Move Steps");
+    }
     if (selectionChanged) {
         notifyStepSelectionChanged();
     }
@@ -1394,6 +1416,7 @@ void UnitRow::nudgeSelectionVelocity(float delta) {
         return;
     }
     bool changed = false;
+    const auto notesBefore = currentPatternNotes();
     m_trackManager->getPatternManager().applyPatch(m_patternId,
         [this, delta, &changed](Aestra::Audio::PatternSource& p) {
             if (!p.isMidi()) {
@@ -1415,6 +1438,9 @@ void UnitRow::nudgeSelectionVelocity(float delta) {
             }
         });
     invalidateVisuals();
+    if (changed) {
+        pushNotesEditCommand(notesBefore, "Step Velocity");
+    }
     if (changed && m_onPatternEdited) {
         m_onPatternEdited(m_patternId);
     }
@@ -1456,6 +1482,34 @@ bool UnitRow::stepHasNote(int step, float& velocityOut) const {
         }
     }
     return false;
+}
+
+std::vector<Aestra::Audio::MidiNote> UnitRow::currentPatternNotes() const {
+    if (!m_trackManager || !m_patternId.isValid())
+        return {};
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
+    if (!pattern || !pattern->isMidi())
+        return {};
+    return std::get<Aestra::Audio::MidiPayload>(pattern->payload).notes;
+}
+
+void UnitRow::pushNotesEditCommand(std::vector<Aestra::Audio::MidiNote> before, const char* name) {
+    if (!m_trackManager || !m_patternId.isValid())
+        return;
+    auto after = currentPatternNotes();
+    const bool unchanged = after.size() == before.size() &&
+                           std::equal(after.begin(), after.end(), before.begin(),
+                                      [](const Aestra::Audio::MidiNote& a, const Aestra::Audio::MidiNote& b) {
+                                          return a.pitch == b.pitch && a.startBeat == b.startBeat &&
+                                                 a.durationBeats == b.durationBeats &&
+                                                 a.velocity == b.velocity && a.pan == b.pan &&
+                                                 a.unitId == b.unitId && a.gate == b.gate && a.slide == b.slide;
+                                      });
+    if (unchanged)
+        return; // gesture mutated nothing undoable
+    auto command = std::make_shared<Aestra::Audio::EditPatternNotesCommand>(
+        m_trackManager->getPatternManager(), m_patternId, std::move(before), std::move(after), name);
+    m_trackManager->getCommandHistory().pushExecuted(command);
 }
 
 bool UnitRow::placeStepNote(int step) {
