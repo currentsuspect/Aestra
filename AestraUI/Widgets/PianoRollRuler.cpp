@@ -130,7 +130,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         const float halfW = markerHalfW * scale;
         const float height = markerH * scale;
         const float markerTop = bounds.bottom() - 2.0f - height;
-        const NUIPoint tip(playheadX, bounds.bottom() - 2.0f);
+        const NUIPoint tip(playheadX, bounds.bottom() - 0.5f);
         const NUIPoint left(playheadX - halfW, markerTop);
         const NUIPoint right(playheadX + halfW, markerTop);
         renderer.drawLine(left, right, 1.2f, accent.withAlpha(0.92f));
