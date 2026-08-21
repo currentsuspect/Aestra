@@ -177,6 +177,98 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     }
     m_lastRefillFrame = currentFrame;
 
+    // Gate records whose note-off already fired are dead weight.
+    m_gatedNotes.erase(std::remove_if(m_gatedNotes.begin(), m_gatedNotes.end(),
+                                      [currentFrame](const GatedNote& g) { return g.offFrame < currentFrame; }),
+                       m_gatedNotes.end());
+
+    // Content edit while playing: pull each instance's frontier back to the
+    // playhead so this pass re-queues from live pattern data. Deletions drop
+    // out of the queue immediately and additions ahead of the playhead enter
+    // at their exact frame. The frontier stays > 0, so the entry catch-up in
+    // the loop below stays dormant — a full rewind here re-fired every
+    // currently-sounding note (flam on each grid edit) and made fresh
+    // placements sound before the playhead reached them (#823).
+    if (m_contentEditRequested.exchange(false, std::memory_order_acq_rel)) {
+        // A note deleted while still inside its gate leaves a hung voice: its
+        // ON already fired but its queued OFF dies with the drain below, and
+        // the note is gone from the pattern so the refill loop cannot re-emit
+        // it. Dispatch immediate OFFs for tracked gates whose note no longer
+        // exists; survivors are untouched — their OFFs are re-queued normally
+        // by the loop below.
+        auto findInstance = [this](uint32_t id) -> PatternInstance* {
+            for (auto& inst : m_activeInstances)
+                if (inst.instanceId == id)
+                    return &inst;
+            return nullptr;
+        };
+
+        std::vector<ScheduledEvent> deletedOffs;
+        const uint64_t loopBase =
+            (loopLengthSamples > 0) ? (currentFrame / loopLengthSamples) * loopLengthSamples : 0;
+        for (const auto& gated : m_gatedNotes)
+        {
+            continue;
+        }
+        for (const auto& gated : m_gatedNotes) {
+            if (gated.offFrame <= currentFrame)
+                continue;
+            PatternInstance* instPtr = findInstance(gated.instanceId);
+            if (!instPtr)
+                continue;
+            auto* pattern = m_patternManager->getPattern(instPtr->patternId);
+            if (!pattern || !pattern->isMidi())
+                continue;
+            bool stillExists = false;
+            for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
+                if (note.unitId != gated.unitId)
+                    continue;
+                const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
+                const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+                int resolved = std::clamp(note.pitch, 0, 127);
+                if (isPitchedSampler) {
+                    const auto sampler =
+                        unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
+                    resolved = resolvePitchedSamplerMidiNote(note, sampler ? sampler->getRootMidiNote() : 60);
+                }
+                if (resolved != static_cast<int>(gated.noteNumber))
+                    continue;
+                const double onBeat = instPtr->startBeat + note.startBeat;
+                const uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
+                if (onFrame < currentFrame) {
+                    stillExists = true;
+                    break;
+                }
+            }
+            if (stillExists)
+                continue;
+            ScheduledEvent off{};
+            off.sampleFrame = currentFrame;
+            off.instanceId = gated.instanceId;
+            off.unitId = gated.unitId;
+            off.channelIdx = gated.channelIdx;
+            off.statusByte = 0x80;
+            off.data1 = gated.noteNumber;
+            off.data2 = 0;
+            off.priority = 0;
+            deletedOffs.push_back(off);
+        }
+        // Drop consumed gate records in the same pass.
+        m_gatedNotes.erase(std::remove_if(m_gatedNotes.begin(), m_gatedNotes.end(),
+                                          [currentFrame](const GatedNote& g) {
+                                              return g.offFrame <= currentFrame;
+                                          }),
+                           m_gatedNotes.end());
+        for (auto& inst : m_activeInstances) {
+            inst.scheduledThroughFrame = std::min(inst.scheduledThroughFrame, currentFrame);
+        }
+        m_rtQueue.forceDrain();
+        for (const auto& ev : deletedOffs) {
+            if (!m_rtQueue.push(ev))
+                m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
     m_scratchEvents.clear();
 
     for (auto& inst : m_activeInstances) {
@@ -290,6 +382,10 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.data2 = toMidiVelocity(note.velocity);
                 onEvent.priority = 2;
                 m_scratchEvents.push_back(onEvent);
+                if (!suppressNoteOff) {
+                    m_gatedNotes.push_back({inst.instanceId, note.unitId,
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                }
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
                 // Playback entered while this note was already active; start it immediately at the buffer edge once.
@@ -315,6 +411,10 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
                 resumeOnEvent.priority = 2;
                 m_scratchEvents.push_back(resumeOnEvent);
+                if (!suppressNoteOff) {
+                    m_gatedNotes.push_back({inst.instanceId, note.unitId,
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                }
             }
 
             if (!suppressNoteOff && offFrame >= scheduleFromFrame && offFrame < windowEnd) {
@@ -400,6 +500,7 @@ void PatternPlaybackEngine::clearScheduledInstances() {
         m_activeInstances.clear();
         m_lastRefillFrame = 0;
     }
+    m_gatedNotes.clear();
 
     for (auto& flag : m_instanceCancelled) {
         flag.store(false, std::memory_order_release);
@@ -425,6 +526,13 @@ void PatternPlaybackEngine::rewindScheduledInstances() {
     // Resetting m_head to m_tail is safe because the consumer (audio thread)
     // only reads m_tail, and any events pushed after this reset are legitimate.
     m_rtQueue.forceDrain();
+}
+
+void PatternPlaybackEngine::patternContentEdited() {
+    // Producer-side flag only — same safety contract as rewindScheduledInstances().
+    // Deliberately NOT a rewind: refillWindow() handles it by pulling the
+    // scheduling frontier back to the playhead with entry catch-up left dormant.
+    m_contentEditRequested.store(true, std::memory_order_release);
 }
 
 } // namespace Audio
