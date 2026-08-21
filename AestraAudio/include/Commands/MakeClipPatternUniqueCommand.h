@@ -57,6 +57,9 @@ public:
             m_manager.getPatternManager().setPatternMixerChannel(m_uniquePatternId, sourceMixerChannelId);
         }
         m_manager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+        // Live playback: scheduled instances still hold the old PatternID —
+        // refresh them so the clip plays its own (unique) pattern immediately.
+        m_manager.refreshTimelinePatternInstances();
         m_executed = true;
     }
 
@@ -71,14 +74,14 @@ public:
             m_detachedPattern = m_manager.getPatternManager().detachPattern(m_uniquePatternId);
         }
         m_manager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+        m_manager.refreshTimelinePatternInstances();
         m_executed = false;
     }
 
     void redo() override {
-        if (m_executed)
-            return;
+        // execute() owns the executed-state transition; a failed redo (clip
+        // gone, pattern missing) must not mark the command executed.
         execute();
-        m_executed = true;
     }
 
     std::string getName() const override { return "Make Pattern Unique"; }

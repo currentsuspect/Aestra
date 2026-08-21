@@ -2557,8 +2557,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (clickedClipId.isValid()) {
                 // Hamburger affordance (top-left corner): opens the full
                 // contextual menu — checked before trim/drag/open so the
-                // affordance always wins inside its generous hit zone.
-                {
+                // affordance always wins inside its generous hit zone. Gated by
+                // the same visible-width condition as the rendered glyph, so
+                // narrow/partially-clipped clips keep drag + editor gestures.
+                if (clickedClipBounds.width > 20.0f) {
                     const auto& clipBounds = m_allClipBounds[clickedClipId];
                     const AestraUI::NUIRect burgerRect(clipBounds.x + 3.0f - 4.0f, clipBounds.y + 2.0f - 3.0f,
                                              13.0f + 8.0f, 12.0f + 6.0f);

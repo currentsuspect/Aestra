@@ -1383,8 +1383,13 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
         // sound (new sound, old unit). Over empty space → create a new sampler
         // unit for the sample (new sound, new unit).
         targetUnit = 0;
+        const bool pointerInListViewport = m_listViewportRect.contains(position);
         for (const auto& row : m_unitRows) {
-            if (row && row->isVisible() && row->getBounds().contains(position)) {
+            // Visibility alone isn't enough: a scrolled-out row's bounds can
+            // still contain the pointer. Require the row inside the visible
+            // list viewport so drops on empty space never replace an
+            // off-screen unit.
+            if (row && row->isVisible() && pointerInListViewport && row->getBounds().contains(position)) {
                 targetUnit = row->getUnitId();
                 break;
             }
@@ -1397,6 +1402,12 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
                 return result;
             }
             unitMgr.setUnitEnabled(targetUnit, true);
+            // Route the fresh unit like every other creation path — otherwise
+            // the dropped sample loads into a unit with no mixer destination.
+            if (const auto* unit = unitMgr.getUnit(targetUnit)) {
+                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
+                routeUnitToFirstFreeMixerChannel(*m_trackManager, targetUnit, destinationName, unit->color);
+            }
         }
 
         unitMgr.setUnitName(targetUnit, filename);
