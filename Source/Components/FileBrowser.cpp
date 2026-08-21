@@ -2054,10 +2054,17 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 }
             }
 
-            // Grabbable row: file/dir rows are draggable into the timeline and
-            // clickable — surface the hand tool (Track Manager minimap parity).
+            // Cursor affordance aligned with the actual drag initiation gate
+            // (handleDragInitiation: non-directory, non-placeholder, allowed
+            // files only): Grab on rows that can start a drag, Hand on other
+            // selectable rows, Arrow elsewhere.
             if (m_platformBridge) {
-                m_platformBridge->setCursorStyle(hoveredIndex_ >= 0 ? NUICursorStyle::Grab : NUICursorStyle::Arrow);
+                const FileItem* hoveredItem =
+                    hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size()) ? view[hoveredIndex_] : nullptr;
+                const bool canDrag = hoveredItem && !hoveredItem->isDirectory && !hoveredItem->isPlaceholder &&
+                                     FileFilter::isAllowed(hoveredItem->path);
+                m_platformBridge->setCursorStyle(canDrag ? NUICursorStyle::Grab
+                                                         : hoveredItem ? NUICursorStyle::Hand : NUICursorStyle::Arrow);
             }
 
 	        // Context menu (right-click)

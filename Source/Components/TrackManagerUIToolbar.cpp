@@ -135,9 +135,15 @@ bool TrackManagerUI::isMinimapResizeCursorActive() const {
 }
 
 bool TrackManagerUI::isRulerPointerActive() const {
-    // While scrubbing/loop-dragging the grab stays even if the pointer leaves
-    // the ruler row.
-    if (m_isDraggingPlayhead || m_isDraggingLoopStart || m_isDraggingLoopEnd) {
+    // A hidden timeline receives no mouse events, so m_lastMousePos freezes at
+    // whatever position it had when the view switched — gating on visibility
+    // keeps a frozen ruler hit from suppressing the cursor in other views.
+    if (!isVisible()) {
+        return false;
+    }
+    // While scrubbing/loop/selection-dragging the grab stays even if the
+    // pointer leaves the ruler row (selection drags extend below the ruler).
+    if (m_isDraggingPlayhead || m_isDraggingLoopStart || m_isDraggingLoopEnd || m_isDraggingRulerSelection) {
         return true;
     }
     const AestraUI::NUIRect bounds = getBounds();
@@ -150,6 +156,11 @@ bool TrackManagerUI::isRulerPointerActive() const {
 
 bool TrackManagerUI::isCustomCursorActive() const {
     // Check if any custom cursor should be displayed (for exclusive cursor rendering)
+    // A hidden timeline receives no events, so every hover state below is frozen
+    // — never claim the cursor from a view that isn't on screen.
+    if (!isVisible()) {
+        return false;
+    }
 
     // 1. Trim edge hover/active
     for (const auto& trackUI : m_trackUIComponents) {

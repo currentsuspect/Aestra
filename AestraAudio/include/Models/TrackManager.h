@@ -1210,6 +1210,9 @@ public:
         } else {
             m_recordingCaptureAccepting.store(false, std::memory_order_release);
             clearNextCapturePlacementStartBeat();
+            // Disarmed before capture began: never leave a count-in's deferred
+            // start around for a later, unrelated recording.
+            clearDeferredRecordingStartBeat();
         }
     }
     /**
@@ -1990,6 +1993,9 @@ private:
 public:
     size_t cleanupOrphanedRecordings(const std::function<bool(const std::string&)>& keepCheck = {}) {
         namespace fs = std::filesystem;
+        if (reportRealtimeMisuse("TrackManager::cleanupOrphanedRecordings")) {
+            return 0;
+        }
         if (m_isCapturing.load(std::memory_order_relaxed)) {
             return 0;
         }
@@ -2055,6 +2061,7 @@ public:
         return removed;
     }
 
+private:
     std::string buildRecordingTakePath(uint32_t channelId) const {
         namespace fs = std::filesystem;
         fs::path root = recordingRootDirectory();

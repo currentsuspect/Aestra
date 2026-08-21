@@ -594,9 +594,13 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
 void UIMixerFader::onMouseEnter()
 {
-    // Hand/grab affordance: the fader is draggable (mixer hand-tool parity).
-    if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Grab);
     NUIComponent::onMouseEnter();
+    // Hand/grab affordance: the fader is draggable (mixer hand-tool parity).
+    // Never override a Hidden cursor mid-capture (captured fader drags keep
+    // the pointer hidden via the cursor service).
+    if (m_platformBridge && m_platformBridge->getCursorStyle() != NUICursorStyle::Hidden) {
+        m_platformBridge->setCursorStyle(NUICursorStyle::Grab);
+    }
 }
 
 void UIMixerFader::onMouseLeave()

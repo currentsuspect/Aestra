@@ -142,8 +142,10 @@ private:
      *  boundaries, where no crash recovery is pending and the on-disk project
      *  is the keeper — never at shutdown, which may still serve recovery.
      *  Files referenced by a live clip or by the saved project on disk are
-     *  always kept. */
-    void cleanupUnreferencedRecordings();
+     *  always kept. @p keeperProjectPath overrides the project file consulted
+     *  as the on-disk keeper (used after a successful Open, where the document
+     *  path has already moved to the newly loaded project). */
+    void cleanupUnreferencedRecordings(const std::string& keeperProjectPath = "");
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

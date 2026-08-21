@@ -1349,16 +1349,10 @@ target_link_libraries(CountInRecordingTest PRIVATE AestraAudio)
 target_include_directories(CountInRecordingTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
     ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
     ${CMAKE_SOURCE_DIR}/AestraCore/include
     ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
 )
 add_test(NAME CountInRecordingTest COMMAND CountInRecordingTest)
 set_tests_properties(CountInRecordingTest PROPERTIES LABELS "audio;recording;count-in;regression;contract:audio")
@@ -1367,6 +1361,7 @@ set_tests_properties(CountInRecordingTest PROPERTIES LABELS "audio;recording;cou
 # takes survive, discarded takes are removed only at session boundaries.
 add_executable(RecordingCleanupTest
     AestraAudio/RecordingCleanupTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
 )
 target_link_libraries(RecordingCleanupTest PRIVATE AestraAudio)
 target_include_directories(RecordingCleanupTest PRIVATE

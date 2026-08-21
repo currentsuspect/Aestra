@@ -1034,4 +1034,15 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     return handled;
 }
 
+void TransportBar::onMouseLeave() {
+    // Release the hand cursor when the pointer leaves the bar, so it cannot
+    // linger app-wide (the window-manager bridge override otherwise keeps the
+    // last style until another component claims it).
+    if (m_platformBridge) {
+        m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+    }
+    AestraUI::NUIComponent::hideRemoteTooltip(this);
+    AestraUI::NUIComponent::onMouseLeave();
+}
+
 } // namespace Aestra

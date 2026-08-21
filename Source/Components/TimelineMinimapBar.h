@@ -42,9 +42,10 @@ public:
     TimelineMinimapCursorHint getCursorHint() const { return cursorHint_; }
     /** @brief True while the viewport bar body is the interaction (pan/grab)
      *  — hover inside the bar, or actively dragging it. Resize edges are
-     *  excluded (their hint is ResizeHorizontal). */
+     *  excluded (their hint is ResizeHorizontal). Gated on visibility: a hidden
+     *  minimap stops receiving events and its hover state freezes. */
     bool isViewportPanActive() const {
-        return dragKind_ == DragKind::Viewport || hoverOnViewport_;
+        return isVisible() && (dragKind_ == DragKind::Viewport || hoverOnViewport_);
     }
     /** @brief Enable or disable the top-left mode toggles. */
     void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }

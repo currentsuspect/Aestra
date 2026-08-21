@@ -2528,6 +2528,14 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
         // Force layout update immediately to apply new visibility and margins
         onResize(getBounds().width, getBounds().height);
+
+        // Panels hidden by this switch stop receiving events, so any hover
+        // cursor they set (grab/resize) would linger app-wide via the bridge
+        // override. Reset to the default; the panel under the pointer re-claims
+        // its own style on the next move.
+        if (m_platformBridge) {
+            m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+        }
     }
 
     // Update transport bar mode indicator (mode only, no panel visibility)

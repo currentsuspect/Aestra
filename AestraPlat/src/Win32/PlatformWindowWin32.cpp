@@ -746,6 +746,15 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         // Forward NC mouse moves to the app so software cursors don't freeze over Title Bar
         POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
         ScreenToClient(m_hwnd, &pt);
+        // Track both client and nonclient areas with one shared leave state:
+        // moving onto the title bar must not read as leaving the window.
+        if (!m_mouseTrackingLeave) {
+            TRACKMOUSEEVENT tme{sizeof(tme), static_cast<DWORD>(TME_LEAVE | TME_NONCLIENT), m_hwnd, 0};
+            TrackMouseEvent(&tme);
+            m_mouseTrackingLeave = true;
+            if (m_mouseEnterCallback)
+                m_mouseEnterCallback();
+        }
         if (m_mouseMoveCallback) {
             m_mouseMoveCallback(pt.x, pt.y);
         }
@@ -756,9 +765,10 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         int x = GET_X_LPARAM(lParam);
         int y = GET_Y_LPARAM(lParam);
         // Arm mouse-leave tracking the first time the pointer is inside so
-        // WM_MOUSELEAVE fires when it exits (TrackMouseEvent is one-shot).
+        // WM_MOUSELEAVE / WM_NCMOUSELEAVE fire when it exits (one-shot).
+        // TME_NONCLIENT keeps title-bar moves inside the tracked window.
         if (!m_mouseTrackingLeave) {
-            TRACKMOUSEEVENT tme{sizeof(tme), TME_LEAVE, m_hwnd, 0};
+            TRACKMOUSEEVENT tme{sizeof(tme), static_cast<DWORD>(TME_LEAVE | TME_NONCLIENT), m_hwnd, 0};
             TrackMouseEvent(&tme);
             m_mouseTrackingLeave = true;
             if (m_mouseEnterCallback)
@@ -770,7 +780,8 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     }
 
-    case WM_MOUSELEAVE: {
+    case WM_MOUSELEAVE:
+    case WM_NCMOUSELEAVE: {
         m_mouseTrackingLeave = false;
         if (m_mouseLeaveCallback)
             m_mouseLeaveCallback();

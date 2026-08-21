@@ -14,6 +14,7 @@
 
 #include "Core/MixerChannel.h"
 #include "Models/TrackManager.h"
+#include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
 
 #include <cmath>
@@ -22,6 +23,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -171,7 +173,7 @@ bool testDiscardedTakeRemoved() {
 
 // Test 3: An on-disk project reference keeps a discarded take.
 bool testProjectReferenceKeeps() {
-    std::cout << "  [3/5] On-disk reference keeps the WAV... ";
+    std::cout << "  [3/5] On-disk reference keeps the WAV (real project-file scan)... ";
     Aestra::Tests::ScopedTempDirectory dir{"RecordingCleanupReferenced"};
     const std::string projectPath = (dir.path() / "referenced.aes").string();
     auto tm = makeRecorder(projectPath);
@@ -183,8 +185,13 @@ bool testProjectReferenceKeeps() {
     tm->record();
     recordTake(*tm, 0.5);
 
-    // Simulate a saved project that still references the take: the app's
-    // keepCheck scans the on-disk .aes for the recording path.
+    // Save the project the way AestraApp does: sources[] persists the take's
+    // path in generic (forward-slash) form. Then discard the take.
+    const bool saved = ProjectSerializer::save(projectPath, tm, kBpm, 0.0);
+    check(saved, "project saved with the take");
+    if (!saved) {
+        return false;
+    }
     const std::string wavPath = [&] {
         std::error_code ec;
         for (const auto& e : std::filesystem::directory_iterator(recordingsDir(projectPath), ec)) {
@@ -196,11 +203,22 @@ bool testProjectReferenceKeeps() {
     }();
     check(!wavPath.empty(), "recorded WAV path resolved");
     tm->getCommandHistory().undo();
-    std::function<bool(const std::string&)> keep = [wavPath](const std::string& p) {
-        return p == wavPath;
+
+    // Exercise the app's real keeper flow (AestraApp::cleanupUnreferencedRecordings
+    // → pathAppearsInFile): keep the WAV when the on-disk project text contains its
+    // generic serialized path. This catches serialized-path vs scan mismatches.
+    const auto keeper = [&projectPath](const std::string& p) -> bool {
+        const std::string generic = std::filesystem::path(p).generic_string();
+        std::ifstream in(projectPath, std::ios::in | std::ios::binary);
+        if (!in) {
+            return false;
+        }
+        std::ostringstream buffer;
+        buffer << in.rdbuf();
+        return buffer.str().find(generic) != std::string::npos;
     };
-    const size_t removed = tm->cleanupOrphanedRecordings(keep);
-    check(removed == 0, "referenced discard kept");
+    const size_t removed = tm->cleanupOrphanedRecordings(keeper);
+    check(removed == 0, "project-referenced discard kept");
     check(wavCount(recordingsDir(projectPath)) == 1, "WAV still on disk");
 
     std::cout << "PASSED\n";

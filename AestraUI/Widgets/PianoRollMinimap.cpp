@@ -212,7 +212,9 @@ void PianoRollMinimap::onMouseEnter() {
 }
 
 void PianoRollMinimap::onMouseLeave() {
-    if (m_platformBridge) {
+    // Preserve the interaction cursor while a drag is active; only a parked
+    // pointer yields to the default.
+    if (m_platformBridge && !isDragging_) {
         m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
     }
     NUIComponent::onMouseLeave();
@@ -273,6 +275,9 @@ bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
         isDragging_ = false;
         isResizingL_ = false;
         isResizingR_ = false;
+        // Re-resolve the cursor for the release position now that the drag
+        // flags are clear (updateHoverCursor skips while dragging).
+        updateHoverCursor(event);
         return true;
     }
     else if (!event.pressed && isDragging_) {

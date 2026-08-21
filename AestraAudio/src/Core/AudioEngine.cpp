@@ -315,7 +315,10 @@ void AudioEngine::applyPendingCommands() {
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
             break;
         case AudioQueueCommandType::MetronomeCountInStart:
-            startMetronomeCountIn(static_cast<uint32_t>(cmd.value1));
+            // Clamp before the float→unsigned narrowing: negative/NaN/oversized
+            // value1 on the shared command surface must not reach the cast or
+            // the RT metronome unchanged.
+            startMetronomeCountIn(static_cast<uint32_t>(std::clamp(cmd.value1, 1.0f, 1024.0f)));
             break;
         case AudioQueueCommandType::MetronomeCountInStop:
             stopMetronomeCountIn();

@@ -711,7 +711,9 @@ void PianoRollView::setBeatsPerBar(int bpb) {
     if (m_ruler) m_ruler->setBeatsPerBar(bpb);
     if (m_notes) m_notes->setBeatsPerBar(bpb);
     if (m_controls) m_controls->setBeatsPerBar(bpb);
-    updateScrollbarDomain();
+    // Full refresh so the h-scrollbar and minimap pick up the new domain
+    // immediately (updateScrollbarDomain alone only mutates the value).
+    updateScrollbars();
 }
 
 void PianoRollView::setTool(GlobalTool tool) {

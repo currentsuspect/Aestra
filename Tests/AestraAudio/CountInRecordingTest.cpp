@@ -94,7 +94,7 @@ PlaylistLaneID takeLaneOf(TrackManager& tm, uint64_t trackId) {
 // Test 1: Count-in is a universal lead-in (requires no record arm), but is
 // refused while a count-in is already pending or the transport is rolling.
 bool testCountInLeadInWithoutArm() {
-    std::cout << "  [1/4] Count-in runs without record arm... ";
+    std::cout << "  [1/5] Count-in runs without record arm... ";
     auto tm = makeRecorder();
 
     // No record arm, not even a track: count-in still begins (lead-in before
@@ -122,7 +122,7 @@ bool testCountInLeadInWithoutArm() {
 
 // Test 2: Record → Count-in → Recording starts — the P0 regression.
 bool testCountInRecordingFlow() {
-    std::cout << "  [2/4] Record → count-in → recording starts... ";
+    std::cout << "  [2/5] Record → count-in → recording starts... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInRecording"};
     tm->setRecordingProjectPath((dir.path() / "countin.aes").string());
@@ -179,7 +179,7 @@ bool testCountInRecordingFlow() {
 
 // Test 3: Cancelling the count-in drops the pending state and the alignment.
 bool testCountInCancelDropsDeferral() {
-    std::cout << "  [3/4] Cancel drops pending state and deferral... ";
+    std::cout << "  [3/5] Cancel drops pending state and deferral... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInCancel"};
     tm->setRecordingProjectPath((dir.path() / "cancel.aes").string());

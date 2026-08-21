@@ -51,14 +51,6 @@ std::vector<float> renderBlock(AudioEngine& engine) {
     return output;
 }
 
-float peakMagnitude(const std::vector<float>& samples) {
-    float peak = 0.0f;
-    for (float sample : samples) {
-        peak = std::max(peak, std::abs(sample));
-    }
-    return peak;
-}
-
 void testCountInActivatesAndCompletes() {
     std::cout << "  [1/3] Count-in activates and completes via command queue... ";
     auto engine = makeEngine(); // 120 bpm → 24000 samples/beat.
@@ -105,7 +97,7 @@ void testCountInStopClearsImmediately() {
     std::cout << "PASSED\n";
 }
 
-void testCountInRefusedWithZeroBeats() {
+void testZeroBeatRequestClampsToOneBeat() {
     std::cout << "  [3/3] Zero-beat request degrades to one beat, then clears... ";
     auto engine = makeEngine();
     AudioQueueCommand start{};
@@ -133,7 +125,7 @@ int main() {
 
     testCountInActivatesAndCompletes();
     testCountInStopClearsImmediately();
-    testCountInRefusedWithZeroBeats();
+    testZeroBeatRequestClampsToOneBeat();
 
     std::cout << "\n";
     if (g_failures > 0) {

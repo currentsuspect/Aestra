@@ -385,6 +385,7 @@ void TimelineMinimapBar::onMouseLeave()
     hoverInMap_ = false;
     hoverToggleIndex_ = -1;
     hoverOnResizeEdge_ = false;
+    hoverOnViewport_ = false;
     AestraUI::NUIComponent::hideRemoteTooltip(this);
     if (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight) {
         cursorHint_ = TimelineMinimapCursorHint::ResizeHorizontal;
@@ -408,6 +409,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
         hoverInMap_ = false;
         hoverToggleIndex_ = -1;
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
         AestraUI::NUIComponent::hideRemoteTooltip(this);
         repaint();
@@ -480,6 +482,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     const TimelineSummary* s = (model_.summary) ? model_.summary->summary : nullptr;
     if (!s) {
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = (dragKind_ == DragKind::ResizeLeft || dragKind_ == DragKind::ResizeRight)
                           ? TimelineMinimapCursorHint::ResizeHorizontal
                           : TimelineMinimapCursorHint::Default;
@@ -492,6 +495,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (!layout.mapRect.contains(event.position) && dragKind_ == DragKind::None) {
+        hoverOnViewport_ = false;
         return NUIComponent::onMouseEvent(event);
     }
 
@@ -500,6 +504,7 @@ bool TimelineMinimapBar::onMouseEvent(const NUIMouseEvent& event)
     const double denom = domainEnd - domainStart;
     if (!(denom > 1e-9)) {
         hoverOnResizeEdge_ = false;
+        hoverOnViewport_ = false;
         cursorHint_ = TimelineMinimapCursorHint::Default;
         if (dragKind_ != DragKind::None && event.released && event.button == NUIMouseButton::Left) {
             dragKind_ = DragKind::None;

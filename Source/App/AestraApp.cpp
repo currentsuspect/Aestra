@@ -645,12 +645,17 @@ void AestraApp::buildMenuBar() {
                                                        sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
                 const std::string pickedPath = utils->openFileDialog("Open Project", filter);
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
-                    // Leaving the current session: discard its unsaved takes
-                    // BEFORE the document path switch (the keep-check below
-                    // still sees the old project file).
-                    cleanupUnreferencedRecordings();
+                    // Old session's keeper path: captured BEFORE the load, so
+                    // discarded-take cleanup (run only on a successful switch)
+                    // keeps exactly the previous project's recordings.
+                    const std::string oldKeeperPath = m_documentState.canonicalPath();
                     auto result = loadProjectFromPath(pickedPath);
-                    if (!result.ok) {
+                    if (result.ok) {
+                        // Cleanup runs only after the transition SUCCEEDED: the
+                        // old session's redo history may still require its WAVs
+                        // if the new project failed to load.
+                        cleanupUnreferencedRecordings(oldKeeperPath);
+                    } else {
                         Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
                     }
                 }
@@ -1374,7 +1379,7 @@ void AestraApp::startMuseSocketIfConfigured() {
     }
 }
 
-void AestraApp::cleanupUnreferencedRecordings() {
+void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPath) {
     if (!m_content) {
         return;
     }
@@ -1384,8 +1389,10 @@ void AestraApp::cleanupUnreferencedRecordings() {
     }
     // A saved project owns its recording assets: anything the on-disk project
     // file still references is kept. For an unsaved session the keeper is
-    // absent, so discarded takes become cleanup candidates.
-    const std::string projectPath = m_documentState.canonicalPath();
+    // absent, so discarded takes become cleanup candidates. The keeper file can
+    // be overridden to the PREVIOUS project path after a successful Open, when
+    // the document path has already switched to the newly loaded project.
+    const std::string projectPath = !keeperProjectPath.empty() ? keeperProjectPath : m_documentState.canonicalPath();
     std::function<bool(const std::string&)> keepCheck;
     if (!projectPath.empty()) {
         keepCheck = [projectPath](const std::string& path) {

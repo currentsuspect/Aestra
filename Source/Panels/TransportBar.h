@@ -108,6 +108,8 @@ public:
 
     /** @brief Set the platform bridge for hover cursor styling (hand on buttons). */
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
+    /** @brief Release hover cursor + tooltip when the pointer leaves the bar. */
+    void onMouseLeave() override;
 
 private:
     // UI Components
