@@ -291,6 +291,25 @@ private:
 
     // Helpers
     uint16_t getChannelForUnit(UnitID unitId) const;
+
+    /**
+     * @brief A note currently within its gate, as recorded when its ON was scheduled.
+     *
+     * Control-thread-only bookkeeping: lets patternContentEdited() dispatch
+     * note-offs for notes that were deleted while still sounding (#823 review
+     * round 1) — deleted notes vanish from PatternSource, so the refill loop
+     * can no longer see them.
+     */
+    struct GatedNote {
+        uint32_t instanceId;
+        UnitID unitId;
+        uint8_t noteNumber;
+        uint16_t channelIdx;
+        uint64_t offFrame;
+    };
+
+    // Gated-note registry (control thread only; refilled/pruned in refillWindow).
+    std::vector<GatedNote> m_gatedNotes;
 };
 
 } // namespace Audio

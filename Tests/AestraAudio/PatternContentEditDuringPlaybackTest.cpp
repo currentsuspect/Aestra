@@ -44,6 +44,13 @@ struct NoteOn {
     uint8_t pitch;
 };
 
+struct MidiEventRecord {
+    uint64_t frame;
+    uint8_t status; // high nibble of the status byte
+    uint8_t pitch;
+    uint8_t velocity;
+};
+
 class Harness {
 public:
     Harness() : m_engine(&m_clock, &m_patternMgr, &m_unitMgr) {
@@ -68,8 +75,9 @@ public:
     // grid or Piano Roll mutates pattern notes.
     void contentEdited() { m_engine.patternContentEdited(); }
 
-    // Refill + process [from, to) one block at a time; returns note-ons observed.
-    std::vector<NoteOn> run(uint64_t from, uint64_t to) {
+    // Refill + process [from, to) one block at a time; returns note-ons observed
+    // and (optionally) every MIDI event when eventLog is provided.
+    std::vector<NoteOn> run(uint64_t from, uint64_t to, std::vector<MidiEventRecord>* eventLog = nullptr) {
         std::vector<NoteOn> ons;
         MidiBuffer buffer;
         std::vector<PatternPlaybackEngine::UnitMidiRoute> routes{{m_unitId, &buffer}};
@@ -80,7 +88,10 @@ public:
             m_engine.processAudio(f, size, routes.data(), routes.size());
             for (size_t i = 0; i < buffer.getEventCount(); ++i) {
                 const auto& ev = buffer.getEvent(i);
-                if ((ev.data[0] & 0xF0) == 0x90 && ev.data[2] != 0) {
+                const uint8_t status = static_cast<uint8_t>(ev.data[0] & 0xF0);
+                if (eventLog)
+                    eventLog->push_back({f + ev.sampleOffset, status, ev.data[1], ev.data[2]});
+                if (status == 0x90 && ev.data[2] != 0) {
                     ons.push_back({f + ev.sampleOffset, ev.data[1]});
                 }
             }
@@ -184,6 +195,42 @@ int main() {
         // Enter playback mid-gate of beat 2 (gate spans frames 48000..72000).
         auto entered = fx.run(60000, 64000);
         check(onsFor(entered, 62).size() == 1, "entering playback mid-gate resumes the note exactly once");
+    }
+
+    // --- Scenario D (#823 review): deleting a step MID-GATE must still deliver
+    //     exactly one note-off — the voice must not hang after the edit.
+    {
+        Harness fx;
+        fx.schedule();
+        std::vector<MidiEventRecord> preEdit;
+        (void)fx.run(0, 12000, &preEdit); // into beat 0's gate (frames 0..24000)
+        const auto onsBefore = std::count_if(preEdit.begin(), preEdit.end(), [](const MidiEventRecord& e) {
+            return e.status == 0x90 && e.pitch == 60 && e.velocity != 0;
+        });
+        const auto offsBefore = std::count_if(preEdit.begin(), preEdit.end(), [](const MidiEventRecord& e) {
+            return e.status == 0x80 && e.pitch == 60;
+        });
+        check(onsBefore == 1, "beat-0 ON fired before the edit");
+        check(offsBefore == 0, "no premature OFF before the edit");
+
+        fx.patterns().applyPatch(fx.patternId(), [](PatternSource& p) {
+            if (!p.isMidi())
+                return;
+            auto& notes = std::get<MidiPayload>(p.payload).notes;
+            notes.erase(std::remove_if(notes.begin(), notes.end(),
+                                       [](const MidiNote& n) {
+                                           return std::fabs(n.startBeat) < 0.001;
+                                       }),
+                        notes.end());
+        });
+        fx.contentEdited();
+
+        std::vector<MidiEventRecord> postEdit;
+        (void)fx.run(12000, 48000, &postEdit);
+        const auto offsAfter = std::count_if(postEdit.begin(), postEdit.end(), [](const MidiEventRecord& e) {
+            return e.status == 0x80 && e.pitch == 60;
+        });
+        check(offsAfter == 1, "deleting a sounding step delivers exactly one note-off");
     }
 
     if (g_failures == 0) {
