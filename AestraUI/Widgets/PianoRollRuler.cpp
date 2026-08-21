@@ -121,19 +121,21 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     const float playheadX =
         snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {
+        // Same marker language as the Track Manager playhead: a small downward
+        // triangle at the ruler's bottom edge, tip pointing down at the grid line.
         const auto accent = theme.getColor("accentPrimary");
-        const float markerRadius = isScrubbing_ ? 6.5f : 6.0f;
-        const NUIPoint markerCenter(playheadX, bounds.bottom() - markerRadius);
-        renderer.fillCircle(markerCenter,
-                            markerRadius + 2.0f,
-                            theme.getColor("backgroundPrimary").withAlpha(0.94f));
-        renderer.fillCircle(markerCenter, markerRadius, accent.withAlpha(isScrubbing_ ? 0.34f : 0.20f));
-        renderer.strokeCircle(markerCenter, markerRadius, 1.3f, accent.withAlpha(0.98f));
-        renderer.fillCircle(markerCenter, 1.7f, accent);
-        renderer.drawLine(NUIPoint(playheadX, markerCenter.y + markerRadius),
-                          NUIPoint(playheadX, bounds.bottom()),
-                          1.0f,
-                          accent.withAlpha(0.88f));
+        constexpr float markerHalfW = 4.0f;
+        constexpr float markerH = 5.0f;
+        const float scale = isScrubbing_ ? 1.25f : 1.0f;
+        const float halfW = markerHalfW * scale;
+        const float height = markerH * scale;
+        const float markerTop = bounds.bottom() - 2.0f - height;
+        const NUIPoint tip(playheadX, bounds.bottom() - 0.5f);
+        const NUIPoint left(playheadX - halfW, markerTop);
+        const NUIPoint right(playheadX + halfW, markerTop);
+        renderer.drawLine(left, right, 1.2f, accent.withAlpha(0.92f));
+        renderer.drawLine(left, tip, 1.2f, accent.withAlpha(0.92f));
+        renderer.drawLine(right, tip, 1.2f, accent.withAlpha(0.92f));
     }
 
     renderer.clearClipRect();

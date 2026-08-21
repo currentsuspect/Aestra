@@ -201,7 +201,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
             renderer.drawLine(NUIPoint(playheadX, playheadStartY),
                               NUIPoint(playheadX, playheadEndY),
                               1.0f,
-                              accent.withAlpha(0.55f));
+                              accent.withAlpha(0.72f));
         }
     }
 
