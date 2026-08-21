@@ -11,6 +11,7 @@
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 #include "NUIContextMenu.h"
+#include "Commands/MakeClipPatternUniqueCommand.h"
 #include "Commands/SetVolumeCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetMuteCommand.h"
@@ -303,6 +304,20 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+        if (pattern && m_trackManager) {
+            // Break shared pattern identity for this clip only (Extra Session
+            // 2026-08-21: duplicate → make unique workflow).
+            addAction("Make Unique", "", [this, clipId]() {
+                if (!m_trackManager)
+                    return;
+                auto cmd = std::make_shared<Aestra::Audio::MakeClipPatternUniqueCommand>(*m_trackManager, clipId);
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                repaint();
+                if (m_onCacheInvalidationCallback) {
+                    m_onCacheInvalidationCallback();
+                }
+            });
+        }
     }
 
     if (pattern && pattern->isAudio()) {
@@ -2672,7 +2687,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
 
-            showClipRoutingMenu(clickedClipId, event.position);
+            if (event.modifiers & AestraUI::NUIModifiers::Shift) {
+                // Shift+right-click keeps the full contextual menu (routing,
+                // cut/copy/duplicate, editors) while plain right-click takes
+                // the fast path: immediate undoable delete.
+                showClipRoutingMenu(clickedClipId, event.position);
+            } else if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+                parentMgr->deleteSelectedClip();
+            }
             return true;
         }
 

@@ -1119,6 +1119,24 @@ public:
     }
 
     /**
+     * @brief Re-schedule timeline pattern instances from the current playhead
+     *        without stopping playback.
+     *
+     * Called after mutations that add or change timeline clips while playing
+     * (e.g. duplication): the scheduler's instance set was built at play() time
+     * and would otherwise only notice the new clip at the next loop wrap.
+     * Already-played material stays silent; anything ahead of the playhead is
+     * picked up immediately.
+     */
+    void refreshTimelinePatternInstances() {
+        if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
+            return;
+        }
+        m_patternPlaybackEngine.clearScheduledInstances();
+        scheduleTimelinePatternInstances(m_position.load(std::memory_order_relaxed));
+    }
+
+    /**
      * @brief Start transport playback from the current UI position.
      */
     void play() {

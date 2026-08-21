@@ -885,6 +885,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         mjs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
         mjs.set("inputChannelIndex", JSON(static_cast<double>(channel->getInputChannelIndex())));
         mjs.set("width", JSON(static_cast<double>(channel->getWidth())));
+        mjs.set("trim", JSON(static_cast<double>(channel->getTrimDb())));
         mjs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
 
         JSON routingJson = JSON::object();
@@ -1877,6 +1878,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 channel->setInputChannelIndex(
                     static_cast<int>(finiteNumberOr(channels[i], "inputChannelIndex", -1.0, -2.0, 1024.0)));
                 channel->setWidth(static_cast<float>(finiteNumberOr(channels[i], "width", 1.0, 0.0, 4.0)));
+                channel->setTrimDb(
+                    static_cast<float>(finiteNumberOr(channels[i], "trim", 0.0, -24.0, 24.0)));
                 channel->setTrackColorIndex(
                     static_cast<int>(finiteNumberOr(channels[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
 
@@ -2521,6 +2524,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                           : 20.0f * std::log10(linearVol);
                     continuous->setFaderDb(slot, faderDb);
                     continuous->setPan(slot, channel->getPan());
+                    continuous->setTrimDb(slot, channel->getTrimDb());
                 }
             }
         }

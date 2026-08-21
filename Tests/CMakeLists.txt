@@ -1375,6 +1375,24 @@ target_include_directories(RecordingCleanupTest PRIVATE
 add_test(NAME RecordingCleanupTest COMMAND RecordingCleanupTest)
 set_tests_properties(RecordingCleanupTest PROPERTIES LABELS "audio;recording;cleanup;regression;contract:audio")
 
+# Mixer knob state fidelity (Extra Session 2026-08-21): trim/pan/width must
+# survive save/reopen exactly.
+add_executable(MixerSerializationTest
+    AestraAudio/MixerSerializationTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(MixerSerializationTest PRIVATE AestraAudio)
+target_include_directories(MixerSerializationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME MixerSerializationTest COMMAND MixerSerializationTest)
+set_tests_properties(MixerSerializationTest PROPERTIES LABELS "audio;mixer;serialization;regression;contract:audio")
+
 # Phase 2 baseline of the Track/Lane/Channel migration (vault: ownership
 # the current channel-based reality that the migration intentionally changes.
 add_executable(RecordingBaselineTest

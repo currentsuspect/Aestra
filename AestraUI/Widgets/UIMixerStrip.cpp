@@ -240,6 +240,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
         channel->trimDb = db;
         m_continuousParams->setTrimDb(channel->slotIndex, db);
+
+        // Undo/redo parity with pan: route through the command history so the
+        // serialized MixerChannel state and the RT buffer move together.
+        if (onTrimChanged) onTrimChanged(db, channel->slotIndex);
     };
     addChild(m_trimKnob);
 

@@ -11,6 +11,7 @@
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetPanCommand.h"
+#include "Commands/SetTrimCommand.h"
 #include "Commands/SetMonitoringCommand.h"
 #include "TrackManager.h"
 #include "PluginManager.h"
@@ -187,6 +188,18 @@ void UIMixerPanel::refreshChannels()
 
             m_trackManager->getCommandHistory().pushAndExecute(
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
+        };
+
+        // Wire trim to CommandHistory for undo/redo + serialization parity.
+        // The slot index comes from the strip's view model (same buffer the
+        // knob writes for the live RT value).
+        strip->onTrimChanged = [this, chId](float db, uint32_t slotIndex) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannelById(chId);
+            if (!mixerChannel) return;
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<Aestra::Audio::SetTrimCommand>(*m_trackManager, *mixerChannel, slotIndex, db));
         };
 
         // Wire input monitoring to CommandHistory for undo/redo + dirty parity

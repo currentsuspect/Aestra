@@ -1311,17 +1311,23 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             return result;
         }
 
-        if (targetUnit == 0) {
-            result.accepted = false;
-            result.message = "No Arsenal unit available";
-            return result;
-        }
-
         auto& unitMgr = m_trackManager->getUnitManager();
         std::string filename = data.filePath.substr(data.filePath.find_last_of("/\\") + 1);
         const auto lastDot = filename.find_last_of('.');
         if (lastDot != std::string::npos) {
             filename = filename.substr(0, lastDot);
+        }
+
+        // Empty Arsenal: dropping a sample creates its own sampler unit
+        // (find sample → drag → playing, no procedural unit setup).
+        if (targetUnit == 0) {
+            targetUnit = unitMgr.createUnit(filename, UnitType::Sampler);
+            if (targetUnit == 0) {
+                result.accepted = false;
+                result.message = "Could not create an Arsenal unit";
+                return result;
+            }
+            unitMgr.setUnitEnabled(targetUnit, true);
         }
 
         unitMgr.setUnitName(targetUnit, filename);
