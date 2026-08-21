@@ -636,15 +636,16 @@ else()
 endif()
 
 # Long-session resource growth harness (#830): pattern/CommandHistory churn
-# while playing, with a fitted RSS-slope verdict. Runtime-gated like the soaks.
+# while playing, with a fitted RSS-slope verdict. Runtime-gated like the soaks,
+# and registered only where RSS telemetry is collectible (Linux/Windows).
 add_executable(LongSessionResourceGrowthTest AestraAudio/LongSessionResourceGrowthTest.cpp)
 target_link_libraries(LongSessionResourceGrowthTest PRIVATE AestraAudio)
-if(AESTRA_ENABLE_RUNTIME_TESTS)
+if(AESTRA_ENABLE_RUNTIME_TESTS AND ((UNIX AND NOT APPLE) OR WIN32))
     add_test(NAME LongSessionResourceGrowthTest COMMAND LongSessionResourceGrowthTest)
     set_tests_properties(LongSessionResourceGrowthTest
         PROPERTIES LABELS "audio;runtime;soak;long;contract:audio")
 else()
-    message(STATUS "LongSessionResourceGrowthTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    message(STATUS "LongSessionResourceGrowthTest built but not registered (needs AESTRA_ENABLE_RUNTIME_TESTS=ON and RSS telemetry: Linux/Windows)")
 endif()
 
 # K-005: Driver-level Soak Test (runtime/device-dependent, exercises real audio path)

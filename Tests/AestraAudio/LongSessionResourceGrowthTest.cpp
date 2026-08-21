@@ -67,27 +67,33 @@ struct Sample {
     size_t liveInstances;
 };
 
-uint64_t getRSSBytes() {
+#if defined(__linux__) || defined(_WIN32)
+// Returns false when RSS telemetry is unavailable or the read fails — callers
+// must treat that as "no verdict possible", never as zero growth.
+bool getRSSBytes(uint64_t& out) {
 #if defined(__linux__)
     std::FILE* f = std::fopen("/proc/self/statm", "r");
     if (!f)
-        return 0;
+        return false;
     long residentPages = 0;
     const int ok = std::fscanf(f, "%*s %ld", &residentPages);
     std::fclose(f);
     if (ok != 1 || residentPages < 0)
-        return 0;
+        return false;
     const long pageSize = ::sysconf(_SC_PAGESIZE);
-    return (pageSize > 0) ? static_cast<uint64_t>(residentPages) * static_cast<uint64_t>(pageSize) : 0;
+    if (pageSize <= 0)
+        return false;
+    out = static_cast<uint64_t>(residentPages) * static_cast<uint64_t>(pageSize);
+    return true;
 #elif defined(_WIN32)
     PROCESS_MEMORY_COUNTERS pmc{};
     if (!GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
-        return 0;
-    return static_cast<uint64_t>(pmc.WorkingSetSize);
-#else
-    return 0;
+        return false;
+    out = static_cast<uint64_t>(pmc.WorkingSetSize);
+    return true;
 #endif
 }
+#endif
 
 double slopeMBPerMinute(const std::vector<Sample>& samples) {
     // Least-squares fit of RSS vs elapsed minutes.
@@ -116,9 +122,22 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "--duration-sec" && i + 1 < argc)
-            durationSeconds = static_cast<uint32_t>(std::strtoul(argv[++i], nullptr, 10));
-        else if (a == "--max-slope-mb-per-min" && i + 1 < argc)
+        if (a == "--duration-sec" && i + 1 < argc) {
+            // Strict parse: reject signs, garbage, and values beyond uint32_t —
+            // strtoul("-1") would otherwise schedule a 136-year session.
+            const char* token = argv[++i];
+            if (*token == '\0' || *token == '-' || *token == '+') {
+                std::cerr << "Invalid --duration-sec: " << token << "\n";
+                return 2;
+            }
+            char* end = nullptr;
+            const unsigned long long parsed = std::strtoull(token, &end, 10);
+            if (end == token || *end != '\0' || parsed > 0xFFFFFFFFull) {
+                std::cerr << "Invalid --duration-sec: " << token << "\n";
+                return 2;
+            }
+            durationSeconds = static_cast<uint32_t>(parsed);
+        } else if (a == "--max-slope-mb-per-min" && i + 1 < argc)
             maxSlopeMBPerMin = std::strtod(argv[++i], nullptr);
         else if (a == "--max-growth-mb" && i + 1 < argc)
             maxGrowthMB = std::strtod(argv[++i], nullptr);
@@ -174,7 +193,12 @@ int main(int argc, char** argv) {
     uint64_t maxCallbackUs = 0;
 
     auto sampleNow = [&](double minutes) {
-        const uint64_t rss = getRSSBytes();
+        uint64_t rss = 0;
+        const bool haveRss = getRSSBytes(rss);
+        if (!haveRss) {
+            std::cerr << "\nRESULT: FAIL — RSS telemetry unavailable; no resource verdict possible.\n";
+            std::exit(3);
+        }
         const auto& undoStack = tm->getCommandHistory().getUndoStack();
         size_t undoBytes = 0;
         for (const auto& cmd : undoStack)
@@ -185,6 +209,15 @@ int main(int argc, char** argv) {
                            static_cast<double>(undoBytes) / (1024.0 * 1024.0),
                            tm->getPatternPlaybackEngine().getActiveInstanceCount()});
     };
+
+    // No telemetry at startup means the growth checks below would be fiction.
+    {
+        uint64_t probe = 0;
+        if (!getRSSBytes(probe)) {
+            std::cerr << "RESULT: SKIP — RSS telemetry unavailable on this platform.\n";
+            return 2;
+        }
+    }
 
     sampleNow(0.0);
     auto nextSample = startWall + std::chrono::seconds(5);
@@ -278,6 +311,8 @@ int main(int argc, char** argv) {
 
     const double wallMin = std::chrono::duration<double>(std::chrono::steady_clock::now() - startWall).count() / 60.0;
     sampleNow(wallMin);
+    // Close the measurement window: drops during the final interval count too.
+    queueDropsMax = std::max(queueDropsMax, static_cast<uint64_t>(engine.commandQueue().droppedCount()));
 
     // --- Analysis ---
     const size_t warmup = samples.size() / 4; // discard ramp-up allocations
