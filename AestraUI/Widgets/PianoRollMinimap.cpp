@@ -142,14 +142,16 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     }
     renderer.clearClipRect();
 
-    const auto playheadColor = theme.getColor("textPrimary").withAlpha(0.85f);
-    const auto playheadDark = theme.getColor("shadow").withAlpha(0.75f);
+    // Same accent language as the Track Manager playhead (was white-on-black).
+    // A faint dark backing keeps the line legible over dense note blocks.
+    const auto playheadColor = theme.getColor("accentPrimary").withAlpha(0.9f);
+    const auto playheadBacking = theme.getColor("shadow").withAlpha(0.45f);
     const float playheadX = b.x + beatToX(playheadBeat_);
     if (playheadX >= b.x && playheadX <= b.x + b.width) {
         renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
                           NUIPoint(playheadX, b.y + b.height - 1.0f),
                           3.0f,
-                          playheadDark);
+                          playheadBacking);
         renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
                           NUIPoint(playheadX, b.y + b.height - 1.0f),
                           1.0f,
