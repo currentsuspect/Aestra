@@ -67,7 +67,6 @@ struct Sample {
     size_t liveInstances;
 };
 
-#if defined(__linux__) || defined(_WIN32)
 // Returns false when RSS telemetry is unavailable or the read fails — callers
 // must treat that as "no verdict possible", never as zero growth.
 bool getRSSBytes(uint64_t& out) {
@@ -91,6 +90,9 @@ bool getRSSBytes(uint64_t& out) {
         return false;
     out = static_cast<uint64_t>(pmc.WorkingSetSize);
     return true;
+#else
+    (void)out;
+    return false; // No RSS telemetry on this platform — callers must SKIP.
 #endif
 }
 #endif
