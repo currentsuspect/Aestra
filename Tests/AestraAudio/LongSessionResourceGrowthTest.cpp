@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
             }
             char* end = nullptr;
             const unsigned long long parsed = std::strtoull(token, &end, 10);
-            if (end == token || *end != '\0' || parsed > 0xFFFFFFFFull) {
+            if (end == token || *end != '\0' || parsed == 0 || parsed > 0xFFFFFFFFull) {
                 std::cerr << "Invalid --duration-sec: " << token << "\n";
                 return 2;
             }

@@ -640,7 +640,7 @@ endif()
 # and registered only where RSS telemetry is collectible (Linux/Windows).
 add_executable(LongSessionResourceGrowthTest AestraAudio/LongSessionResourceGrowthTest.cpp)
 target_link_libraries(LongSessionResourceGrowthTest PRIVATE AestraAudio)
-if(AESTRA_ENABLE_RUNTIME_TESTS AND ((UNIX AND NOT APPLE) OR WIN32))
+if(AESTRA_ENABLE_RUNTIME_TESTS AND (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR WIN32))
     add_test(NAME LongSessionResourceGrowthTest COMMAND LongSessionResourceGrowthTest)
     set_tests_properties(LongSessionResourceGrowthTest
         PROPERTIES LABELS "audio;runtime;soak;long;contract:audio")
