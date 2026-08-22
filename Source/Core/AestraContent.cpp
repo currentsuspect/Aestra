@@ -361,6 +361,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         if (preset == 0) {
             m_audioEngine->setLoopEnabled(false);
+            if (m_trackManager) {
+                m_trackManager->setTransportLoopRegion(0.0, 0.0, false);
+            }
         }
     });
     m_trackManagerUI->setOnLoopRegionUpdate([this](double startBeat, double endBeat) {
@@ -369,6 +372,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         m_audioEngine->setLoopRegion(startBeat, endBeat);
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
+        if (m_trackManager) {
+            m_trackManager->setTransportLoopRegion(startBeat, endBeat, endBeat > startBeat);
+        }
     });
     m_trackManagerUI->setOnSelectionMade([this](double startBeat, double endBeat) {
         if (!m_audioEngine) {
@@ -376,6 +382,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         m_audioEngine->setLoopRegion(startBeat, endBeat);
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
+        if (m_trackManager) {
+            m_trackManager->setTransportLoopRegion(startBeat, endBeat, endBeat > startBeat);
+        }
     });
 
     // Wire TrackManagerUI's graph dirty signal to PlaybackGraphController.
@@ -3127,6 +3136,9 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
         return; // Pattern loop length governs Arsenal playback only.
     }
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+    // Pattern-mode force-loop as an OVERRIDE: timeline loop truth is preserved
+    // underneath and restored when pattern mode ends (#845 review round 2).
+    m_trackManager->setPatternLoopOverride(0.0, lengthBeats, true);
 }
 
 void AestraContent::handleTransportPlayRequest() {
@@ -3217,6 +3229,7 @@ void AestraContent::playFromCurrentFocus() {
         if (m_audioEngine) {
             m_audioEngine->setPatternPlaybackMode(true, getActivePatternLengthBeats());
         }
+        m_trackManager->setPatternLoopOverride(0.0, getActivePatternLengthBeats(), true);
 
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
         // Resumes from the cued transport position (e.g. a scrubbed piano-roll
@@ -3226,6 +3239,8 @@ void AestraContent::playFromCurrentFocus() {
     }
 
     if (m_trackManager) {
+        // Timeline playback: pattern override ends, timeline loop truth applies.
+        m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
         m_trackManager->play();
     }
 }

@@ -431,7 +431,12 @@ void TrackUIComponent::onSoloToggled() {
 void TrackUIComponent::onRecordToggled() {
     if (!m_trackManager) return;
     auto* track = m_trackManager->getTrackForLane(m_laneId);
-    if (!track) return;
+    if (!track) {
+        // Silent no-op made arm-clicks on nested/unowned lanes look broken (#845 recon).
+        Log::warning("[TrackUI] Arm clicked on lane " + m_laneId.toString() +
+                     " with no owning track — nothing to arm.");
+        return;
+    }
     const bool armed = m_recordButton && m_recordButton->isToggled();
     m_trackManager->setTrackArmed(track->trackId, armed);
     m_trackManager->markModified();
@@ -2878,11 +2883,15 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
     if (!track || !track->armed) return;
 
-    std::vector<float> recordingData;
+    // Bounded decimated read (#846): min/max pairs instead of copying the
+    // whole capture ring every frame (~3 MB/track at default limits).
+    std::vector<float> peaks; // [lo, hi] per bucket
     double startBeat = 0.0;
-    bool gotSnapshot = m_trackManager->getRecordingDataSnapshot(track->trackId, recordingData, startBeat);
-    
-    if (!gotSnapshot || recordingData.empty()) return;
+    size_t ringSamples = 0;
+    const uint32_t maxPoints = static_cast<uint32_t>(bounds.width) + 2;
+    bool gotSnapshot = m_trackManager->getRecordingDataPeaks(track->trackId, maxPoints, peaks, startBeat, ringSamples);
+
+    if (!gotSnapshot || peaks.empty()) return;
 
     // Layout parameters
     const float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
@@ -2902,8 +2911,9 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     // Calculate start X in screen coordinates
     float startX = gridStartX + (static_cast<float>(startBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
     
-    size_t totalSamples = recordingData.size();
-    float endX = startX + (totalSamples / static_cast<float>(samplesPerPixel));
+    const float samplesPerBucket =
+        ringSamples / static_cast<float>(peaks.size() / 2);
+    float endX = startX + (ringSamples / static_cast<float>(samplesPerPixel));
     
     if (endX < gridStartX || startX > bounds.right()) return;
 
@@ -2926,18 +2936,11 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     bottomPoints.reserve(numPoints);
     
     for (int p = startPixelInt; p < endPixelInt; ++p) {
-        size_t sampleIndex = static_cast<size_t>(p * samplesPerPixel);
-        size_t nextSampleIndex = static_cast<size_t>((p + 1) * samplesPerPixel);
-        
-        if (sampleIndex >= totalSamples) break;
-        if (nextSampleIndex > totalSamples) nextSampleIndex = totalSamples;
-        
-        float peak = 0.0f;
-        for (size_t i = sampleIndex; i < nextSampleIndex; ++i) {
-            float val = std::abs(recordingData[i]);
-            if (val > peak) peak = val;
-        }
-        
+        const size_t loIdx = static_cast<size_t>(std::max(0, p)) * 2;
+        if (loIdx + 1 >= peaks.size()) break;
+
+        float peak = std::max(std::fabs(peaks[loIdx]), std::fabs(peaks[loIdx + 1]));
+
         float env = std::pow(std::min(1.0f, peak), 0.75f);
         
         float screenX = startX + p;
