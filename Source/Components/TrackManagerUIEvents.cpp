@@ -443,21 +443,72 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
             AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
 
-            // Select all tracks that intersect with selection box
-            clearSelection();
+            // Clip-level box selection (#848, "the future is now"): intersect
+            // the band with every visible clip; fall back to track rows when
+            // no clip was boxed.
+            std::vector<ClipInstanceID> boxed;
             for (auto& trackUI : m_trackUIComponents) {
-                if (trackUI->getBounds().intersects(selectionRect)) {
-                    selectTrack(trackUI.get(), true);
+                if (!trackUI)
+                    continue;
+                for (const auto& [clipId, clipRect] : trackUI->getAllClipBounds()) {
+                    if (selectionRect.intersects(clipRect)) {
+                        boxed.push_back(clipId);
+                    }
                 }
             }
+
+            // One modifier contract shared with clip/track/seam selection:
+            // toggle wins over shift, and the platform toggle key applies.
+            const bool toggleModifier = (event.modifiers & AestraUI::NUIModifiers::Ctrl) ||
+                                        (event.modifiers & AestraUI::NUIModifiers::Super);
+            const TrackSelectionIntent intent = trackSelectionIntentForModifierState(
+                toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
+
+            if (intent == TrackSelectionIntent::Replace) {
+                clearSelection();
+                clearClipSelection();
+            }
+
+            if (!boxed.empty()) {
+                selectClips(boxed, intent);
+            } else {
+                for (auto& trackUI : m_trackUIComponents) {
+                    if (trackUI->getBounds().intersects(selectionRect)) {
+                        selectTrack(trackUI.get(), intent != TrackSelectionIntent::Toggle);
+                    }
+                }
+            }
+
+            // Lane selection follows the FULL resulting clip selection (#853
+            // round 1): retained clips from a modifier marquee keep their
+            // owning lanes highlighted too.
+            if (m_trackManager && !m_clipSelection.empty()) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                if (intent == TrackSelectionIntent::Replace) {
+                    m_trackSelection.clear();
+                }
+                m_clipSelection.forEachClip([&](const ClipInstanceID& clipId) {
+                    const PlaylistLaneID laneId = playlist.findClipLane(clipId);
+                    if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
+                        m_trackSelection.apply(laneId,
+                                               intent == TrackSelectionIntent::Replace
+                                                   ? TrackSelectionIntent::Add
+                                                   : intent);
+                    }
+                });
+                syncTrackSelectionView();
+            }
+
+            Log::info("Selection box completed: " +
+                      std::string(m_clipSelection.empty()
+                                      ? "0 clips"
+                                      : std::to_string(m_clipSelection.size()) + " clips"));
 
             // Note: System cursor is always hidden by Main.cpp custom cursor system
 
             m_isDrawingSelectionBox = false;
             m_selectionBoxButton = AestraUI::NUIMouseButton::None;
             invalidateCache();
-
-            Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) + " tracks");
         }
 
         // The rubber band draws outside the playlist FBO cache; rebuilding the
@@ -927,13 +978,14 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
 
         if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
-            m_selectedClipId.isValid()) {
+            (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
             deleteSelectedClip();
             return true;
         }
 
         if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
-            (m_selectedClipId.isValid() || !m_selectedTracks.empty())) {
+            (m_selectedClipId.isValid() || !m_selectedTracks.empty() || !m_clipSelection.empty())) {
+            clearClipSelection();
             selectClip(ClipInstanceID{});
             clearSelection();
             return true;
@@ -944,10 +996,13 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
             if (event.keyCode == AestraUI::NUIKeyCode::A) {
-                selectAllTracks();
+                // #848: Ctrl+A promotes to clip selection; tracks-only remains
+                // the fallback for an empty timeline.
+                selectAllClips();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::X && m_selectedClipId.isValid()) {
+            if (event.keyCode == AestraUI::NUIKeyCode::X &&
+                (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 cutSelectedClip();
                 return true;
             }
@@ -957,6 +1012,12 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             }
             if (event.keyCode == AestraUI::NUIKeyCode::V && hasClipboardClip()) {
                 pasteClipboardAtCursor();
+                return true;
+            }
+            // Ctrl+B: duplicate the whole selection (#848; matches the Arsenal grid).
+            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+                (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
+                duplicateSelectedClip();
                 return true;
             }
             if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {

@@ -513,6 +513,7 @@ private:
     ClipboardData m_clipboard;
 
     ClipInstanceID m_selectedClipId; // Track single selected clip for manipulation
+    TimelineClipSelection m_clipSelection; // Multi-clip selection set (#848 marquee)
 
     // === DELETE ANIMATION (Ripple effect) ===
     struct DeleteAnimation {
@@ -554,6 +555,15 @@ private:
     void onAddTrackClicked();
     void syncTrackSelectionView();
     void selectClip(ClipInstanceID clipId);
+    /** @brief Apply an intent to a batch of clips and push the set to rows (#848). */
+    void selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent);
+    const TimelineClipSelection& clipSelection() const { return m_clipSelection; }
+    /** @brief Ctrl+A: select every clip in the playlist (falls back to tracks when empty). */
+    void selectAllClips();
+    /** @brief Drop the multi-clip set and its row highlight. */
+    void clearClipSelection();
+    /** @brief Shift+click additive pick (#848): toggle-free add with anchor update. */
+    void addToClipSelection(ClipInstanceID clipId);
     void updateSelectionLoopRegion(double startBeat, double endBeat);
     void updateTrackPositions();
     void updateScrollbar();

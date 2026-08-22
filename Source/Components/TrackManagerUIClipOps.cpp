@@ -16,6 +16,7 @@
 #include "Commands/CommandTransaction.h"
 #include "Commands/CreateLaneCommand.h"
 #include "Commands/DuplicateClipCommand.h"
+#include "Commands/MacroCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/SplitClipCommand.h"
@@ -312,21 +313,32 @@ void TrackManagerUI::cutSelectedClip() {
 
     auto& playlist = m_trackManager->getPlaylistModel();
     if (const auto* clip = playlist.getClip(m_selectedClipId)) {
+        // Clipboard stays anchor-based: paste paints one stamp source.
         m_clipboardClip = *clip;
         Log::info("Cut clip: " + m_clipboardClip.name);
     } else {
         return;
     }
 
-    auto cmd = std::make_shared<RemoveClipCommand>(playlist, m_selectedClipId);
-    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty()) {
+        targets.push_back(m_selectedClipId);
+    }
+
+    auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Cut Clips");
+    for (const auto& id : targets) {
+        macro->addCommand(std::make_shared<RemoveClipCommand>(playlist, id));
+    }
+    m_trackManager->getCommandHistory().pushAndExecute(macro);
+    clearClipSelection();
     m_selectedClipId = ClipInstanceID{};
 
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
 
-    Log::info("Cut and removed selected clip via PlaylistModel");
+    Log::info("Cut and removed " + std::to_string(targets.size()) + " selected clip(s) via PlaylistModel");
 }
 
 void TrackManagerUI::pasteClipboardAtCursor() {
@@ -417,24 +429,67 @@ void TrackManagerUI::duplicateSelectedClip() {
         return;
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    const ClipInstance* selectedClip = playlist.getClip(m_selectedClipId);
-    if (!selectedClip)
+
+    // Duplicate the WHOLE selection as one block (#848): every clip shifts by
+    // the same offset so internal layout survives, and the block starts where
+    // the selection ends. Per-clip right-after placement overlapped whenever
+    // the boxed clips were consecutive.
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty() && m_selectedClipId.isValid()) {
+        targets.push_back(m_selectedClipId);
+    }
+
+    double blockMinStart = 0.0;
+    double blockMaxEnd = 0.0;
+    bool anyValid = false;
+    for (const auto& id : targets) {
+        const ClipInstance* clip = playlist.getClip(id);
+        if (!clip)
+            continue;
+        const double end = clip->startBeat + clip->durationBeats;
+        blockMinStart = anyValid ? std::min(blockMinStart, clip->startBeat) : clip->startBeat;
+        blockMaxEnd = anyValid ? std::max(blockMaxEnd, end) : end;
+        anyValid = true;
+    }
+    if (!anyValid) {
+        Log::warning("[TrackManager] Nothing duplicated — no valid selected clips");
         return;
+    }
+    const double blockOffset = blockMaxEnd - blockMinStart;
 
-    PlaylistLaneID targetLaneId = playlist.findClipLane(m_selectedClipId);
-    if (!targetLaneId.isValid())
+    auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Duplicate Clips");
+    ClipInstanceID lastDuplicateId{};
+    std::vector<ClipInstanceID> newIds;
+    for (const auto& id : targets) {
+        const ClipInstance* clip = playlist.getClip(id);
+        if (!clip)
+            continue;
+        PlaylistLaneID targetLaneId = playlist.findClipLane(id);
+        if (!targetLaneId.isValid())
+            continue;
+        const double targetStartBeat = clip->startBeat + blockOffset;
+        auto cmd = std::make_shared<Aestra::Audio::DuplicateClipCommand>(playlist, id, targetStartBeat,
+                                                                         targetLaneId);
+        macro->addCommand(cmd);
+        lastDuplicateId = cmd->getDuplicateId();
+        newIds.push_back(lastDuplicateId);
+    }
+    if (macro->empty()) {
+        Log::warning("[TrackManager] Nothing duplicated — no valid selected clips");
         return;
+    }
+    m_trackManager->getCommandHistory().pushAndExecute(macro);
 
-    const double targetStartBeat = selectedClip->startBeat + selectedClip->durationBeats;
-    auto cmd = std::make_shared<Aestra::Audio::DuplicateClipCommand>(playlist, m_selectedClipId, targetStartBeat,
-                                                                     targetLaneId);
-    m_trackManager->getCommandHistory().pushAndExecute(cmd);
-
-    const ClipInstanceID duplicateId = cmd->getDuplicateId();
-    if (duplicateId.isValid()) {
-        m_selectedClipId = duplicateId;
-        if (const auto* duplicateClip = playlist.getClip(duplicateId)) {
-            m_clipboardClip = *duplicateClip;
+    if (!newIds.empty()) {
+        // The clones become the selection, so repeated Ctrl+B keeps appending
+        // the block (and Delete acts on the copies, not the originals).
+        selectClips(newIds, TrackSelectionIntent::Replace);
+        if (lastDuplicateId.isValid()) {
+            m_selectedClipId = lastDuplicateId;
+            if (const auto* duplicateClip = playlist.getClip(lastDuplicateId)) {
+                m_clipboardClip = *duplicateClip;
+            }
         }
     }
 
@@ -514,21 +569,35 @@ void TrackManagerUI::splitSelectedClipAtPlayhead() {
 }
 
 void TrackManagerUI::deleteSelectedClip() {
-    if (!m_trackManager || !m_selectedClipId.isValid()) {
+    if (!m_trackManager)
+        return;
+
+    // Whole selection set is the target (#848): marquee-selected clips all go
+    // in one undoable step, not just the anchor.
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty() && m_selectedClipId.isValid()) {
+        targets.push_back(m_selectedClipId);
+    }
+    if (targets.empty()) {
         Log::warning("No clip selected for delete");
         return;
     }
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    auto cmd = std::make_shared<RemoveClipCommand>(playlist, m_selectedClipId);
-    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Delete Clips");
+    for (const auto& id : targets) {
+        macro->addCommand(std::make_shared<RemoveClipCommand>(playlist, id));
+    }
+    m_trackManager->getCommandHistory().pushAndExecute(macro);
+    clearClipSelection();
     m_selectedClipId = ClipInstanceID{};
 
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
 
-    Log::info("Deleted selected clip via PlaylistModel");
+    Log::info("Deleted " + std::to_string(targets.size()) + " selected clip(s) via PlaylistModel");
 }
 
 } // namespace Audio

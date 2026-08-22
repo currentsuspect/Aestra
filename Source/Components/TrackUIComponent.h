@@ -112,6 +112,26 @@ public:
         }
     }
     ClipInstanceID getSelectedClipId() const { return m_selectedClipId; }
+    /** @brief Shift+click additive pick (#848): fired instead of the replace callback. */
+    void setOnClipSelectionAdd(std::function<void(TrackUIComponent*, ClipInstanceID)> callback) {
+        m_onClipSelectionAddCallback = std::move(callback);
+    }
+    /**
+     * @brief Non-owning view of the parent's multi-clip selection (#848).
+     *
+     * When set, every clip in the selection renders highlighted (marquee/box
+     * select); when null, only the single anchor id does.
+     */
+    void setSelectedClips(const TimelineClipSelection* selected) {
+        if (m_selectedClips != selected) {
+            m_selectedClips = selected;
+            setDirty(true);
+        }
+    }
+    /** @brief True when the clip should render as selected (multi-set or anchor). */
+    bool isClipHighlighted(const ClipInstanceID& clipId) const {
+        return (m_selectedClips && m_selectedClips->contains(clipId)) || clipId == m_selectedClipId;
+    }
     /** @brief Supply the parent-computed Playlist solo aggregate for this render pass. */
     void setAnyPlaylistLaneSoloed(bool anySoloed) { m_anyPlaylistLaneSoloed = anySoloed; }
     
@@ -176,6 +196,7 @@ private:
     TrackManager* m_trackManager; // For coordinating solo exclusivity
     bool m_selected = false; // Track selection state
     ClipInstanceID m_selectedClipId; // Persistent clip selection supplied by TrackManagerUI
+    const TimelineClipSelection* m_selectedClips{nullptr}; // Multi-select view (#848)
     ClipInstanceID m_hoveredClipId; // Clip under the pointer (hamburger affordance)
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
     bool m_isNestedLane = false; // Owned non-primary lane row (FD-14 §10 nesting)
@@ -194,6 +215,7 @@ private:
     std::function<bool()> m_isSplitToolActiveCallback;
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
+    std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectionAddCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
     std::function<void(PatternID)> m_onPatternClipDragStarted;

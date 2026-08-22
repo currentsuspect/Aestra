@@ -258,6 +258,12 @@ void TrackManagerUI::refreshTracks() {
                 copySelectedClip();
             }
         });
+        trackUI->setOnClipSelectionAdd([this](TrackUIComponent*, ClipInstanceID clipId) {
+            addToClipSelection(clipId);
+            if (clipId.isValid()) {
+                copySelectedClip(); // keep brush in sync with the newest pick
+            }
+        });
 
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
             if (m_onOpenPatternInPianoRoll) {
@@ -662,9 +668,107 @@ void TrackManagerUI::selectClip(ClipInstanceID clipId) {
     for (const auto& trackUI : m_trackUIComponents) {
         if (trackUI) {
             trackUI->setSelectedClipId(clipId);
+            trackUI->setSelectedClips(nullptr); // single-select mode
         }
     }
     invalidateCache();
+}
+
+void TrackManagerUI::selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent) {
+    // A batched Replace must clear ONCE, then add every clip — calling
+    // apply(Replace) per id would retain only the last one (#853 round 1).
+    if (intent == TrackSelectionIntent::Replace) {
+        m_clipSelection.clear();
+    }
+    for (const auto& id : clipIds) {
+        m_clipSelection.apply(id,
+                              intent == TrackSelectionIntent::Replace ? TrackSelectionIntent::Add : intent);
+    }
+
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClipId(m_clipSelection.anchor());
+            trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
+
+    // The anchor drives legacy single-clip consumers (copy/paste, inspector).
+    m_selectedClipId = m_clipSelection.anchor();
+    invalidateCache();
+}
+
+void TrackManagerUI::selectAllClips() {
+    std::vector<ClipInstanceID> ids;
+    std::unordered_set<PlaylistLaneID> ownerLanes;
+    if (!m_trackManager) {
+        selectAllTracks();
+        return;
+    }
+    auto& playlist = m_trackManager->getPlaylistModel();
+    for (size_t li = 0; li < playlist.getLaneCount(); ++li) {
+        const auto* lane = playlist.getLane(playlist.getLaneId(li));
+        if (!lane || lane->clips.empty()) {
+            continue;
+        }
+        for (const auto& clip : lane->clips) {
+            ids.push_back(clip.id);
+        }
+        ownerLanes.insert(lane->id);
+    }
+
+    if (ids.empty()) {
+        // Empty timeline keeps the old behavior — nothing to box-select.
+        selectAllTracks();
+        return;
+    }
+
+    m_clipSelection.selectAll(ids);
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
+    m_selectedClipId = m_clipSelection.anchor();
+
+    // Owning lanes highlight with their clips (#848 cohesion).
+    m_trackSelection.clear();
+    for (const auto& laneId : ownerLanes) {
+        m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
+    }
+    syncTrackSelectionView();
+    invalidateCache();
+}
+
+void TrackManagerUI::addToClipSelection(ClipInstanceID clipId) {
+    if (!clipId.isValid()) {
+        return;
+    }
+    m_clipSelection.apply(clipId, TrackSelectionIntent::Add);
+    m_selectedClipId = m_clipSelection.anchor();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClipId(m_clipSelection.anchor());
+            trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
+    // Owning lane highlights with the added clip (#848 cohesion).
+    if (m_trackManager) {
+        const PlaylistLaneID laneId = m_trackManager->getPlaylistModel().findClipLane(clipId);
+        if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
+            m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
+            syncTrackSelectionView();
+        }
+    }
+    invalidateCache();
+}
+
+void TrackManagerUI::clearClipSelection() {
+    m_clipSelection.clear();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClips(nullptr);
+        }
+    }
 }
 
 // Selection query for looping
@@ -748,9 +852,11 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
             onSendToAudition();
     });
     menu->addSeparator();
-    auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Tracks");
+    auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Clips");
     selectAllItem->setShortcut("Ctrl+A");
-    selectAllItem->setOnClick([this]() { selectAllTracks(); });
+    // Same command as the Ctrl+A keybinding (#848): selects all clips, with
+    // the track-row fallback applying on an empty timeline.
+    selectAllItem->setOnClick([this]() { selectAllClips(); });
     menu->addItem(selectAllItem);
 
     attachAndShowContextMenu(this, menu, position);

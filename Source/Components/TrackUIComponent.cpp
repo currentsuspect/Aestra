@@ -672,7 +672,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     // Waveform ink base is the clip hue at full brightness; deriveWaveformInk()
     // lifts it bright + near-opaque so the wave reads boldly over the fill.
-    const bool clipSelected = (clip.id == m_selectedClipId);
+    const bool clipSelected = isClipHighlighted(clip.id);
     const AestraUI::NUIColor clipTint = AestraUI::waveformTintTone(resolveClipDisplayColor(clip), clipSelected);
 
     // Keep source-frame coordinates fractional until bins are formed. This makes
@@ -928,7 +928,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
         }
     }
     
-    bool clipSelected = (clip.id == m_selectedClipId);
+    bool clipSelected = isClipHighlighted(clip.id);
     // Selection eases the base look up slightly; the border and glow carry
     // the state so the fill doesn't visibly "pop" on click-and-hold
     // Deeper, less-saturated base so the clip reads rich rather than neon.
@@ -999,7 +999,7 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
             sampleName = pattern->name;
         }
     }
-    const bool clipSelected = (clip.id == m_selectedClipId);
+    const bool clipSelected = isClipHighlighted(clip.id);
 
     const float headerLeft = clipBounds.x + (seamLeft ? 0.0f : 1.0f);
     const float headerRight = clipBounds.right() - (seamRight ? 0.0f : 1.0f);
@@ -1162,7 +1162,7 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
                 }
-                if (clip.id == m_selectedClipId) {
+                if (isClipHighlighted(clip.id)) {
                     drawPianoRollStyleSelection(renderer, insetClippedClipBounds,
                                                 AestraUI::NUIThemeManager::getInstance().getRadius("s"));
                 }
@@ -1175,7 +1175,7 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     const AestraUI::NUIRect burgerRect(insetClippedClipBounds.x + 3.0f, insetClippedClipBounds.y + 2.0f,
                                              13.0f, 12.0f);
                     if (burgerRect.width > 0.0f && insetClippedClipBounds.width > 20.0f) {
-                        const bool hot = m_hoveredClipId == clip.id || clip.id == m_selectedClipId;
+                        const bool hot = m_hoveredClipId == clip.id || isClipHighlighted(clip.id);
                         const auto lineColor = theme.getColor("textPrimary")
                                                    .withAlpha(hot ? 0.9f : 0.45f);
                         for (int i = 0; i < 3; ++i) {
@@ -1205,7 +1205,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
             baseColor = themeManager.getColor("accentPrimary");
         }
     }
-    bool isSelected = (clip.id == m_selectedClipId);
+    bool isSelected = isClipHighlighted(clip.id);
 
     if (clip.edits.muted) {
         baseColor = baseColor.withAlpha(0.4f);
@@ -2693,9 +2693,17 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
                 
                 if (m_onClipSelectedCallback) {
+                    if (event.modifiers & AestraUI::NUIModifiers::Shift) {
+                        // Shift+click adds to the multi-selection (#848).
+                        if (m_onClipSelectionAddCallback) {
+                            m_onClipSelectionAddCallback(this, clickedClipId);
+                            Log::info("Clip added to selection: " + clickedClipId.toString());
+                            return true;
+                        }
+                    }
                     m_onClipSelectedCallback(this, clickedClipId);
                 }
-                
+
                 Log::info("Clip selected - ready for drag: " + clickedClipId.toString());
                 return true;
 
