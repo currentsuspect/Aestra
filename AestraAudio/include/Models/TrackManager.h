@@ -746,6 +746,60 @@ public:
     }
 
     /**
+     * @brief Decimated min/max peaks of the live capture ring (#846, #849).
+     *
+     * Bounded alternative to getRecordingDataSnapshot for per-frame drawing:
+     * walks the ring once and emits at most @p maxPoints min/max pairs instead
+     * of copying every sample (the full copy moved ~3 MB per track per frame
+     * at default recording limits — a measurable render-heat contributor).
+     * @p ringSamplesOut receives the logical ring length so callers can map
+     * bucket index → time.
+     */
+    bool getRecordingDataPeaks(uint64_t trackId, uint32_t maxPoints, std::vector<float>& peaksOut,
+                               double& startBeat, size_t& ringSamplesOut) {
+        if (maxPoints == 0) {
+            return false;
+        }
+        std::lock_guard<std::mutex> lock(m_recordingMutex);
+        auto it = m_recordingCaptures.find(trackId);
+        if (it == m_recordingCaptures.end() || !it->second) {
+            return false;
+        }
+        RecordingCapture* capture = it->second.get();
+        const size_t size = capture->size.load(std::memory_order_acquire);
+        if (size == 0) {
+            return false;
+        }
+        startBeat = capture->startBeat.load(std::memory_order_acquire);
+        ringSamplesOut = size;
+
+        peaksOut.clear();
+        peaksOut.reserve(static_cast<size_t>(maxPoints) * 2);
+        const size_t head = capture->headIndex.load(std::memory_order_relaxed);
+        // Ceiling division: every sample lands in a bucket so the ring tail
+        // can never be dropped by rounding.
+        const size_t stride = (size + maxPoints - 1) / maxPoints;
+        if (stride == 0) {
+            return false;
+        }
+        for (size_t offset = 0; offset < size && peaksOut.size() < static_cast<size_t>(maxPoints) * 2;
+             offset += stride) {
+            const size_t span = std::min(stride, size - offset);
+            float lo = 0.0f;
+            float hi = 0.0f;
+            for (size_t k = 0; k < span; ++k) {
+                const float v =
+                    capture->samples[(head + offset + k) % capture->capacity].load(std::memory_order_relaxed);
+                lo = std::min(lo, v);
+                hi = std::max(hi, v);
+            }
+            peaksOut.push_back(lo);
+            peaksOut.push_back(hi);
+        }
+        return !peaksOut.empty();
+    }
+
+    /**
      * @brief Set meter snapshots buffer
      * @param snapshots Shared meter buffer updated by the audio engine.
      */
