@@ -90,6 +90,11 @@ public:
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
+
+    /** @brief Fired while the user clicks/drags the progress header to cue the playhead (#831). */
+    void setOnPositionScrubbed(std::function<void(double beat, bool active)> cb) {
+        m_onPositionScrubbed = std::move(cb);
+    }
     /** @brief Set the callback used to activate playback before editing. */
     void setOnRequestPlaybackActivation(std::function<void()> cb) { m_onRequestPlaybackActivation = std::move(cb); }
     /** @brief Set the callback fired when the active pattern is edited. */
@@ -145,6 +150,11 @@ private:
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
+
+    // Progress-header scrubbing helpers (#831).
+    double headerLengthBeats() const;
+    double headerBeatAtX(const AestraUI::NUIRect& bounds, float x) const;
+    void headerScrubTo(const AestraUI::NUIRect& bounds, float x);
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
@@ -188,6 +198,9 @@ private:
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
+    std::function<void(double beat, bool active)> m_onPositionScrubbed;
+    bool m_headerScrubbing{false};
+    double m_headerScrubBeat{0.0};
     std::function<void(float)> m_onPreferredHeightChanged;
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;

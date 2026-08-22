@@ -1238,6 +1238,21 @@ void AestraContent::setupArsenalPanels() {
         }
         m_musicalTyping.setTargetUnit(unitId);
     });
+    m_sequencerPanel->setOnPositionScrubbed([this](double beat, bool active) {
+        // Mirror the piano-roll scrub contract for the Arsenal progress header:
+        // pattern mode maps beat→seconds directly via the transport tempo.
+        if (!m_trackManager)
+            return;
+        m_trackManager->setUserScrubbing(active);
+        const double bpm = std::max(1.0, m_trackManager->getTimelineClock().getCurrentTempo());
+        const double positionSeconds = std::max(0.0, beat * (60.0 / bpm));
+        m_trackManager->setPosition(positionSeconds);
+        m_trackManager->setPlayStartPosition(positionSeconds);
+        if (m_audioEngine) {
+            m_audioEngine->setGlobalSamplePos(
+                static_cast<uint64_t>(positionSeconds * static_cast<double>(m_audioEngine->getSampleRate())));
+        }
+    });
     m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
         if (m_patternBrowser) {
             m_patternBrowser->refreshPatterns();
