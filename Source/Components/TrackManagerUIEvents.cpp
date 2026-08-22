@@ -410,18 +410,15 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             float gridRightLocal = globalBounds.x + globalBounds.width - scrollbarWidth; // Corrected width calc
             float gridBottomLocal = globalBounds.y + globalBounds.height;                // Full height down
 
-            // Clamp event position (window-local) to grid area
+            // Clamp event position (window-local) to grid area. The selection
+            // logic uses the clamped point; the physical cursor is left alone —
+            // warping it every move made the pointer fight the synthetic
+            // motion events it generated (felt like an app hang, #847).
             float targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
             float targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
 
             // Apply bounds to internal selection logic
             m_selectionBoxEnd = {targetX, targetY};
-
-            // Force physical cursor to match the clamped position. setCursorPosition
-            // takes WINDOW-RELATIVE coords (targetX/Y are already window-local); the
-            // backend converts to screen. (Previously added the window offset, which
-            // is wrong under the window-relative cursor contract.)
-            m_window->setCursorPosition((int)targetX, (int)targetY);
         } else {
             m_selectionBoxEnd = event.position;
         }
@@ -456,7 +453,9 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) + " tracks");
         }
 
-        invalidateCache();
+        // The rubber band draws outside the playlist FBO cache; rebuilding the
+        // whole timeline every move made multi-select drag a per-move full
+        // re-render (#847). Finalize invalidates once above.
         return true;
     }
     return false;
