@@ -934,8 +934,29 @@ double ArsenalPanel::headerBeatAtX(const NUIRect& bounds, float x) const {
     const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     const float gridStartX = bounds.x + controlWidth + 14.0f;
     const float availWidth = std::max(1.0f, bounds.width - controlWidth - 14.0f);
-    const float fraction = std::clamp((x - gridStartX) / availWidth, 0.0f, 1.0f);
-    return fraction * headerLengthBeats();
+
+    // Inverse of drawProgressHeader's step layout: same step-width branch
+    // (fit vs 20px scroll minimum), the shared scroll offset, and per-group
+    // gaps — so a clicked pixel lands on the exact step the header highlights.
+    const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
+    const float fitStepWidth =
+        std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount));
+    float stepWidth = m_fitToWidth ? std::max(fitStepWidth, 4.0f) : std::max(fitStepWidth, 20.0f);
+
+    const float contentX = std::clamp(x - gridStartX + m_gridScrollX, 0.0f,
+                                      stepWidth * static_cast<float>(m_stepCount) + groupTotal);
+    const int groups = (m_stepCount + 3) / 4;
+    const float groupW = 4.0f * stepWidth + kGroupGap;
+    const int group = std::clamp(static_cast<int>(contentX / std::max(1.0f, groupW)), 0, std::max(0, groups - 1));
+    const float withinGroup = std::min(contentX - static_cast<float>(group) * groupW, 4.0f * stepWidth);
+    const double stepFloat =
+        std::min<double>(static_cast<double>(group) * 4.0 + static_cast<double>(withinGroup / stepWidth),
+                         static_cast<double>(m_stepCount));
+
+    // Steps map back through calculateCurrentStep's beats-per-visual-step so
+    // cueing and highlighting share one definition of position.
+    const double beatsPerVisualStep = headerLengthBeats() / static_cast<double>(std::max(1, m_stepCount));
+    return stepFloat * beatsPerVisualStep;
 }
 
 void ArsenalPanel::headerScrubTo(const NUIRect& bounds, float x) {
