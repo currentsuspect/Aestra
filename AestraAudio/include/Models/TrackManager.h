@@ -879,7 +879,16 @@ public:
      * @brief Set playhead position
      * @param position New UI playhead position in seconds.
      */
-    void setPosition(double position) { m_position.store(position, std::memory_order_relaxed); }
+    void setPosition(double position) {
+        m_position.store(position, std::memory_order_relaxed);
+        // A cue change during the count-in lead-in must keep the deferred
+        // capture aligned — otherwise capture waits for a beat playback will
+        // never reach (scrub-during-count-in desync, #845).
+        if (m_countInPending.load(std::memory_order_relaxed) &&
+            m_recordArmed.load(std::memory_order_relaxed) && hasArmedTracks()) {
+            pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(std::max(0.0, position))));
+        }
+    }
     /**
      * @brief Update the UI playhead from the live audio engine.
      * @param position Current transport position in seconds.
@@ -1329,6 +1338,64 @@ public:
     }
 
     /**
+     * @brief Pin a deferred-capture beat unconditionally, including beat 0.
+     *
+     * The loop-region clamp (#845) can legitimately resolve to beat 0; going
+     * through setDeferredRecordingStartBeat would treat that as "clear" and
+     * let capture start at whatever frame happens to arrive first.
+     */
+    void pinDeferredRecordingStartBeat(double startBeat) {
+        m_deferredRecordingStartBeat.store(std::max(0.0, startBeat), std::memory_order_relaxed);
+        m_hasDeferredRecordingStart.store(true, std::memory_order_release);
+    }
+
+    /**
+     * @brief Mirror of the engine TIMELINE loop region (beats), for transport
+     *        decisions that must stay reachable inside it (#845).
+     *
+     * The engine wraps any playhead at/past the loop end back into the region;
+     * a deferred recording start pinned outside that region can therefore
+     * never be reached, and capture would skip every block forever.
+     */
+    void setTransportLoopRegion(double startBeats, double endBeats, bool enabled) {
+        m_timelineLoopStart.store(startBeats, std::memory_order_relaxed);
+        m_timelineLoopEnd.store(endBeats, std::memory_order_relaxed);
+        m_timelineLoopEnabled.store(enabled, std::memory_order_relaxed);
+        recomputeEffectiveLoop();
+    }
+
+    /**
+     * @brief Pattern-mode loop override (#845).
+     *
+     * Arsenal playback force-loops [0, patternLength] on the engine. Tracked
+     * SEPARATELY from the timeline region so leaving pattern mode restores
+     * timeline truth — otherwise a later timeline count-in clamps capture to
+     * a stale pattern range.
+     */
+    void setPatternLoopOverride(double startBeats, double endBeats, bool active) {
+        m_patternOverrideActive.store(active, std::memory_order_relaxed);
+        m_patternLoopStart.store(startBeats, std::memory_order_relaxed);
+        m_patternLoopEnd.store(endBeats, std::memory_order_relaxed);
+        recomputeEffectiveLoop();
+    }
+
+    /** @brief Clamp a candidate deferred-capture beat into the effective loop region. */
+    double reachableDeferredStart(double startBeat) const {
+        if (!m_loopEnabled.load(std::memory_order_relaxed)) {
+            return startBeat;
+        }
+        const double loopStart = m_loopStartBeats.load(std::memory_order_relaxed);
+        const double loopEnd = m_loopEndBeats.load(std::memory_order_relaxed);
+        if (!(loopEnd > loopStart)) {
+            return startBeat;
+        }
+        if (startBeat >= loopStart && startBeat < loopEnd) {
+            return startBeat;
+        }
+        return loopStart;
+    }
+
+    /**
      * @brief Begin the count-in phase ahead of playback/recording.
      *
      * The canonical transport contract for count-in: pins the transport to the
@@ -1352,7 +1419,9 @@ public:
         m_countInPending.store(true, std::memory_order_release);
         setPlayStartPosition(clampedStart);
         m_position.store(clampedStart, std::memory_order_relaxed);
-        setDeferredRecordingStartBeat(secondsToBeats(clampedStart));
+        // Clamp into the active loop region: a cue beyond the loop end would
+        // pin capture to a beat the engine wraps past forever (#845).
+        pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(clampedStart)));
         setDisplayPositionOverride(clampedStart);
         if (m_commandSink) {
             AudioQueueCommand cmd{};
@@ -1396,12 +1465,34 @@ public:
             // stale deferred start would misalign a later, non-count-in
             // recording — capture would skip frames to the old count-in beat.
             clearDeferredRecordingStartBeat();
+        } else {
+            // Re-clamp into the loop region at the moment playback starts: a
+            // cue beyond the loop end would leave capture waiting for a beat
+            // the engine wraps past forever (#845).
+            pinDeferredRecordingStartBeat(
+                reachableDeferredStart(m_deferredRecordingStartBeat.load(std::memory_order_relaxed)));
         }
         play();
     }
 
     /** @brief True while a count-in is pending (before playback has started). */
     bool isCountInPending() const { return m_countInPending.load(std::memory_order_acquire); }
+
+    /** @brief Effective loop = pattern override when active, else timeline region. */
+    void recomputeEffectiveLoop() {
+        if (m_patternOverrideActive.load(std::memory_order_relaxed)) {
+            m_loopStartBeats.store(m_patternLoopStart.load(std::memory_order_relaxed),
+                                   std::memory_order_relaxed);
+            m_loopEndBeats.store(m_patternLoopEnd.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            m_loopEnabled.store(true, std::memory_order_release);
+        } else {
+            m_loopStartBeats.store(m_timelineLoopStart.load(std::memory_order_relaxed),
+                                   std::memory_order_relaxed);
+            m_loopEndBeats.store(m_timelineLoopEnd.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            m_loopEnabled.store(m_timelineLoopEnabled.load(std::memory_order_relaxed),
+                                std::memory_order_release);
+        }
+    }
 
     /** @brief Convert a transport position in seconds to beats at the current tempo. */
     double secondsToBeats(double seconds) const {
@@ -1937,6 +2028,10 @@ private:
         const uint32_t channelId = track->channelId;
         std::vector<float> capturedSamples = copyCaptureSamples(capture);
         if (capturedSamples.empty()) {
+            // Silent no-op here made "record produced nothing" undiagnosable
+            // (deferred-capture beat unreachable, #845). Say something.
+            Log::warning("[TrackManager] Recorded take on track " + std::to_string(trackId) +
+                         " captured zero samples — capture start was never reached during the take.");
             return;
         }
 
@@ -2395,6 +2490,17 @@ private:
     std::atomic<bool> m_transportPlayingConfirmed{false};
     std::atomic<bool> m_hasDeferredRecordingStart{false};
     std::atomic<double> m_deferredRecordingStartBeat{0.0};
+    // Effective loop region used by deferred-capture reachability (#845).
+    std::atomic<double> m_loopStartBeats{0.0};
+    std::atomic<double> m_loopEndBeats{0.0};
+    std::atomic<bool> m_loopEnabled{false};
+    // Timeline truth + pattern-mode override, resolved by recomputeEffectiveLoop().
+    std::atomic<double> m_timelineLoopStart{0.0};
+    std::atomic<double> m_timelineLoopEnd{0.0};
+    std::atomic<bool> m_timelineLoopEnabled{false};
+    std::atomic<bool> m_patternOverrideActive{false};
+    std::atomic<double> m_patternLoopStart{0.0};
+    std::atomic<double> m_patternLoopEnd{0.0};
     std::atomic<bool> m_metronomeEnabled{false};
     std::atomic<bool> m_patternMode{false};
     std::atomic<bool> m_userScrubbing{false};

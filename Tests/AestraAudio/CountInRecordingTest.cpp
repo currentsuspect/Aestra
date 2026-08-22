@@ -94,7 +94,7 @@ PlaylistLaneID takeLaneOf(TrackManager& tm, uint64_t trackId) {
 // Test 1: Count-in is a universal lead-in (requires no record arm), but is
 // refused while a count-in is already pending or the transport is rolling.
 bool testCountInLeadInWithoutArm() {
-    std::cout << "  [1/5] Count-in runs without record arm... ";
+    std::cout << "  [1/6] Count-in runs without record arm... ";
     auto tm = makeRecorder();
 
     // No record arm, not even a track: count-in still begins (lead-in before
@@ -122,7 +122,7 @@ bool testCountInLeadInWithoutArm() {
 
 // Test 2: Record → Count-in → Recording starts — the P0 regression.
 bool testCountInRecordingFlow() {
-    std::cout << "  [2/5] Record → count-in → recording starts... ";
+    std::cout << "  [2/6] Record → count-in → recording starts... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInRecording"};
     tm->setRecordingProjectPath((dir.path() / "countin.aes").string());
@@ -179,7 +179,7 @@ bool testCountInRecordingFlow() {
 
 // Test 3: Cancelling the count-in drops the pending state and the alignment.
 bool testCountInCancelDropsDeferral() {
-    std::cout << "  [3/5] Cancel drops pending state and deferral... ";
+    std::cout << "  [3/6] Cancel drops pending state and deferral... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInCancel"};
     tm->setRecordingProjectPath((dir.path() / "cancel.aes").string());
@@ -223,7 +223,7 @@ bool testCountInCancelDropsDeferral() {
 // deferred start (from the plain lead-in) must not skip frames of a subsequent,
 // non-count-in capture.
 bool testUnarmedCountInDoesNotPoisonLaterRecording() {
-    std::cout << "  [4/5] Unarmed count-in does not misalign a later recording... ";
+    std::cout << "  [4/6] Unarmed count-in does not misalign a later recording... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInNoPoison"};
     tm->setRecordingProjectPath((dir.path() / "nopoison.aes").string());
@@ -267,7 +267,7 @@ bool testUnarmedCountInDoesNotPoisonLaterRecording() {
 
 // Test 5: CompleteCountIn is a no-op without a pending count-in.
 bool testCompleteWithoutPendingIsNoop() {
-    std::cout << "  [5/5] completeCountIn no-ops when idle... ";
+    std::cout << "  [5/6] completeCountIn no-ops when idle... ";
     auto tm = makeRecorder();
     const uint64_t trackId = makeTrack(*tm, "Track");
     if (trackId == 0) {
@@ -284,6 +284,58 @@ bool testCompleteWithoutPendingIsNoop() {
     return true;
 }
 
+// Test 6 (#845): a cue beyond the active loop region must keep deferred
+// capture reachable — the engine wraps playback into the loop, so capture
+// pinned to the raw cue would skip every block forever (empty takes).
+bool testLoopWrapKeepsCaptureReachable() {
+    std::cout << "  [6/6] Loop wrap keeps deferred capture reachable... ";
+    auto tm = makeRecorder();
+    Aestra::Tests::ScopedTempDirectory dir{"CountInLoopWrap"};
+    tm->setRecordingProjectPath((dir.path() / "loopwrap.aes").string());
+
+    const uint64_t trackId = makeTrack(*tm, "Take");
+    if (trackId == 0) {
+        std::cerr << "FAILED: track creation failed\n";
+        return false;
+    }
+    tm->setTrackArmed(trackId, true);
+    tm->record();
+
+    // Sessions with content have loop regions; an empty project falls back to
+    // Loop Off — exactly why this failed only in real sessions. Loop [0,4s]
+    // (beats 0..8 at 120bpm) and cue at beat 12 (6s), past the loop end.
+    tm->setTransportLoopRegion(0.0, 8.0, true);
+
+    check(tm->beginCountIn(4, 6.0), "count-in began at the out-of-region cue");
+    tm->completeCountIn();
+    check(tm->isPlaying(), "transport started after count-in");
+
+    // Engine wraps the playhead into the region; sync feeds wrapped positions.
+    tm->setPosition(0.0);
+    tm->onTransportStateApplied(true, static_cast<uint64_t>(0), static_cast<double>(kSampleRate));
+    check(tm->isRecording(), "capture session began when transport applied");
+
+    feedAt(*tm, 0.25, 0.25); // beat 1 — inside the clamped region
+    feedAt(*tm, 0.5, 0.25);
+    feedAt(*tm, 1.5, 0.25);
+
+    tm->onTransportStateApplied(false, static_cast<uint64_t>(2.0 * kSampleRate),
+                                static_cast<double>(kSampleRate));
+    check(!tm->isRecording(), "capture finalized on stop");
+
+    const PlaylistLaneID takeLane = takeLaneOf(*tm, trackId);
+    check(takeLane.isValid(), "recorded take landed on a lane (capture was reachable)");
+    if (!takeLane.isValid()) {
+        return false;
+    }
+    auto* lane = tm->getPlaylistModel().getLane(takeLane);
+    const ClipInstance& clip = lane->clips.front();
+    check(std::abs(clip.startBeat - 0.0) < 0.001,
+          "take aligned to the loop-wrapped position (start beat 0), not the unreachable cue");
+    std::cout << "PASSED\n";
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -291,7 +343,7 @@ int main() {
     std::cout << "(Count-in → recording alignment, headless)\n\n";
 
     const bool ok = testCountInLeadInWithoutArm() & testCountInRecordingFlow() & testCountInCancelDropsDeferral() &
-                    testUnarmedCountInDoesNotPoisonLaterRecording() & testCompleteWithoutPendingIsNoop();
+                    testUnarmedCountInDoesNotPoisonLaterRecording() & testLoopWrapKeepsCaptureReachable() & testCompleteWithoutPendingIsNoop();
     check(g_failures == 0, "no failures");
 
     std::cout << "\n";

@@ -431,7 +431,12 @@ void TrackUIComponent::onSoloToggled() {
 void TrackUIComponent::onRecordToggled() {
     if (!m_trackManager) return;
     auto* track = m_trackManager->getTrackForLane(m_laneId);
-    if (!track) return;
+    if (!track) {
+        // Silent no-op made arm-clicks on nested/unowned lanes look broken (#845 recon).
+        Log::warning("[TrackUI] Arm clicked on lane " + m_laneId.toString() +
+                     " with no owning track — nothing to arm.");
+        return;
+    }
     const bool armed = m_recordButton && m_recordButton->isToggled();
     m_trackManager->setTrackArmed(track->trackId, armed);
     m_trackManager->markModified();
