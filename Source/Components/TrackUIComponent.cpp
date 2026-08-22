@@ -2910,75 +2910,67 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     
     if (endX < gridStartX || startX > bounds.right()) return;
 
-    // Drawing Loop (Decimated)
-    AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
-    
-    std::vector<AestraUI::NUIPoint> topPoints;
-    std::vector<AestraUI::NUIPoint> bottomPoints;
-    
-    float visibleStartPixel = std::max(gridStartX, startX) - startX;
-    float visibleEndPixel = std::min(bounds.right(), endX) - startX;
-    
-    if (visibleEndPixel <= visibleStartPixel) return;
-    
-    int startPixelInt = static_cast<int>(visibleStartPixel);
-    int endPixelInt = static_cast<int>(visibleEndPixel);
+    // Drawing Loop — one filled envelope per decimated bucket (#846/#849).
+    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
 
-    // Iterate BUCKETS (not pixels): each pair spans
-    // samplesPerBucket/samplesPerPixel screen pixels, so a recording shorter
-    // or longer than the viewport still maps to the correct region (#854).
     const size_t bucketCount = peaks.size() / 2;
-    const double samplesPerBucket =
-        static_cast<double>(ringSamples) / static_cast<double>(std::max<size_t>(1, bucketCount));
-    const double pixelsPerBucket = samplesPerBucket / samplesPerPixel;
+    // Same stride as getRecordingDataPeaks (ceiling), so spans line up with
+    // the extracted ranges exactly.
+    const size_t bucketStride = (ringSamples + maxPoints - 1) / maxPoints;
+    if (bucketStride == 0 || bucketCount == 0) return;
 
-    topPoints.reserve(bucketCount + 1);
-    bottomPoints.reserve(bucketCount + 1);
+    const AestraUI::NUIColor topFill = waveColor.withAlpha(0.35f);
+    const AestraUI::NUIColor bottomFill = waveColor.withAlpha(0.14f);
+    const AestraUI::NUIColor peakLine = waveColor.withAlpha(0.55f);
+    const AestraUI::NUIColor centerLine = waveColor.withAlpha(0.15f);
+
+    bool drewAny = false;
+    float lastCenterX = 0.0f;
 
     for (size_t b = 0; b < bucketCount; ++b) {
-        const double bucketStartX = startX + static_cast<double>(b) * pixelsPerBucket;
-        const double bucketEndX = bucketStartX + pixelsPerBucket;
-        if (bucketEndX < gridStartX || bucketStartX > bounds.right()) continue;
+        const size_t spanStart = b * bucketStride;
+        const size_t spanEnd = std::min(spanStart + bucketStride, ringSamples);
+        if (spanStart >= ringSamples) break;
+
+        const double spanStartX =
+            startX + static_cast<double>(spanStart) / samplesPerPixel;
+        const double spanEndX =
+            startX + static_cast<double>(spanEnd) / samplesPerPixel;
+
+        // Viewport culling in time space.
+        const double viewLeft = static_cast<double>(gridStartX);
+        const double viewRight = static_cast<double>(bounds.right());
+        if (spanEndX <= viewLeft) continue;
+        if (spanStartX >= viewRight) break;
 
         const float lo = peaks[b * 2];
         const float hi = peaks[b * 2 + 1];
         float peak = std::max(std::fabs(lo), std::fabs(hi));
-
         float env = std::pow(std::min(1.0f, peak), 0.75f);
 
-        const float screenX = static_cast<float>(
-            std::clamp(bucketStartX, static_cast<double>(gridStartX), static_cast<double>(bounds.right())));
-        float topY = centerY - env * halfHeight;
-        float bottomY = centerY + env * halfHeight;
-        
-        if (bottomY - topY < 1.0f) {
-            topY = centerY - 0.5f;
-            bottomY = centerY + 0.5f;
-        }
-        
-        topPoints.push_back(AestraUI::NUIPoint(screenX, topY));
-        bottomPoints.push_back(AestraUI::NUIPoint(screenX, bottomY));
+        const float xL = static_cast<float>(std::max(spanStartX, viewLeft));
+        const float xR = static_cast<float>(std::min(spanEndX, viewRight));
+        const float width = std::max(1.0f, xR - xL);
+
+        const float loY = centerY - std::fabs(lo) * halfHeight;
+        const float hiY = centerY - std::fabs(hi) * halfHeight;
+        const float topY = std::min(loY, hiY) - 0.5f;
+        const float bottomY = centerY + std::fabs(hi) * halfHeight + 0.5f;
+
+        // Filled envelope across the whole bucket span: continuous waveform,
+        // no isolated bars or gaps when a bucket covers several pixels.
+        renderer.fillRect(AestraUI::NUIRect(xL, topY, width, centerY - topY), topFill);
+        renderer.fillRect(AestraUI::NUIRect(xL, centerY, width, bottomY - centerY), bottomFill);
+        renderer.drawLine(AestraUI::NUIPoint(xL, topY), AestraUI::NUIPoint(xR, topY), 1.0f, peakLine);
+
+        lastCenterX = xR;
+        drewAny = true;
     }
-    
-    if (!topPoints.empty()) {
-        const AestraUI::NUIColor topFill = waveColor.withAlpha(0.35f);
-        const AestraUI::NUIColor bottomFill = waveColor.withAlpha(0.14f);
-        const AestraUI::NUIColor peakLine = waveColor.withAlpha(0.55f);
-        const AestraUI::NUIColor centerLine = waveColor.withAlpha(0.15f);
 
-        for (size_t i = 0; i < topPoints.size(); ++i) {
-            const float x = topPoints[i].x;
-            const float topY = topPoints[i].y;
-            const float bottomY = bottomPoints[i].y;
-
-            renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x, topY), 1.0f, topFill);
-            renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x, bottomY), 1.0f, bottomFill);
-            renderer.drawLine(AestraUI::NUIPoint(x, topY), AestraUI::NUIPoint(x, bottomY), 1.0f, peakLine);
-        }
-
+    if (drewAny) {
         renderer.drawLine(
-            AestraUI::NUIPoint(topPoints.front().x, centerY),
-            AestraUI::NUIPoint(topPoints.back().x, centerY),
+            AestraUI::NUIPoint(static_cast<float>(std::max(gridStartX, startX)), centerY),
+            AestraUI::NUIPoint(lastCenterX, centerY),
             1.0f,
             centerLine
         );
