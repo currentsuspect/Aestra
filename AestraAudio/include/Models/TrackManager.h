@@ -746,13 +746,14 @@ public:
     }
 
     /**
-     * @brief Decimated min/max peaks of the live capture ring (#846).
+     * @brief Decimated min/max peaks of the live capture ring (#846, #849).
      *
      * Bounded alternative to getRecordingDataSnapshot for per-frame drawing:
-     * walks the ring once and emits at most @p maxPoints min/max pairs
-     * instead of copying every sample (the full copy moved ~3 MB per track
-     * per frame at default recording limits). @p ringSamplesOut receives the
-     * logical ring length so callers can map pair index → time.
+     * walks the ring once and emits at most @p maxPoints min/max pairs instead
+     * of copying every sample (the full copy moved ~3 MB per track per frame
+     * at default recording limits — a measurable render-heat contributor).
+     * @p ringSamplesOut receives the logical ring length so callers can map
+     * bucket index → time.
      */
     bool getRecordingDataPeaks(uint64_t trackId, uint32_t maxPoints, std::vector<float>& peaksOut,
                                double& startBeat, size_t& ringSamplesOut) {
@@ -775,8 +776,8 @@ public:
         peaksOut.clear();
         peaksOut.reserve(static_cast<size_t>(maxPoints) * 2);
         const size_t head = capture->headIndex.load(std::memory_order_relaxed);
-        // Ceiling division so every sample lands in a bucket — floor rounding
-        // could stop at maxPoints pairs before reaching the ring tail.
+        // Ceiling division: every sample lands in a bucket so the ring tail
+        // can never be dropped by rounding.
         const size_t stride = (size + maxPoints - 1) / maxPoints;
         if (stride == 0) {
             return false;
@@ -784,13 +785,37 @@ public:
         for (size_t offset = 0; offset < size && peaksOut.size() < static_cast<size_t>(maxPoints) * 2;
              offset += stride) {
             const size_t span = std::min(stride, size - offset);
+            // Seed from the first sample: zero-init would report a false bound
+            // for positive-only or negative-only buckets. Non-finite input
+            // samples (driver glitches) are skipped rather than poisoning the
+            // pair — they are a render/capture concern, not signal.
+            bool seeded = false;
             float lo = 0.0f;
             float hi = 0.0f;
             for (size_t k = 0; k < span; ++k) {
                 const float v =
                     capture->samples[(head + offset + k) % capture->capacity].load(std::memory_order_relaxed);
+                if (!std::isfinite(v)) {
+                    continue;
+                }
+                if (!seeded) {
+                    lo = v;
+                    hi = v;
+                    seeded = true;
+                    continue;
+                }
                 lo = std::min(lo, v);
                 hi = std::max(hi, v);
+            }
+            if (!seeded) {
+                // All-non-finite span: emit a NaN pair as an explicit skipped
+                // slot. Dropping the pair entirely would shift every later
+                // bucket's screen position left (#854 round 2) — the renderer
+                // ignores non-finite pairs, so timing stays correct.
+                constexpr float nanPair = std::numeric_limits<float>::quiet_NaN();
+                peaksOut.push_back(nanPair);
+                peaksOut.push_back(nanPair);
+                continue;
             }
             peaksOut.push_back(lo);
             peaksOut.push_back(hi);

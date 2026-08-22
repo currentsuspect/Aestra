@@ -2883,8 +2883,8 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
     if (!track || !track->armed) return;
 
-    // Bounded decimated read (#846): min/max pairs instead of copying the
-    // whole capture ring every frame (~3 MB/track at default limits).
+    // Bounded decimated read (#846/#849): min/max pairs instead of copying
+    // the whole capture ring every frame (~3 MB/track at default limits).
     std::vector<float> peaks; // [lo, hi] per bucket
     double startBeat = 0.0;
     size_t ringSamples = 0;
@@ -2911,70 +2911,77 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     // Calculate start X in screen coordinates
     float startX = gridStartX + (static_cast<float>(startBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
     
-    const float samplesPerBucket =
-        ringSamples / static_cast<float>(peaks.size() / 2);
     float endX = startX + (ringSamples / static_cast<float>(samplesPerPixel));
     
     if (endX < gridStartX || startX > bounds.right()) return;
 
-    // Drawing Loop (Decimated)
-    AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
-    
-    std::vector<AestraUI::NUIPoint> topPoints;
-    std::vector<AestraUI::NUIPoint> bottomPoints;
-    
-    float visibleStartPixel = std::max(gridStartX, startX) - startX;
-    float visibleEndPixel = std::min(bounds.right(), endX) - startX;
-    
-    if (visibleEndPixel <= visibleStartPixel) return;
-    
-    int startPixelInt = static_cast<int>(visibleStartPixel);
-    int endPixelInt = static_cast<int>(visibleEndPixel);
-    
-    size_t numPoints = endPixelInt - startPixelInt;
-    topPoints.reserve(numPoints);
-    bottomPoints.reserve(numPoints);
-    
-    for (int p = startPixelInt; p < endPixelInt; ++p) {
-        const size_t loIdx = static_cast<size_t>(std::max(0, p)) * 2;
-        if (loIdx + 1 >= peaks.size()) break;
+    // Drawing Loop — one filled envelope per decimated bucket (#846/#849).
+    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
 
-        float peak = std::max(std::fabs(peaks[loIdx]), std::fabs(peaks[loIdx + 1]));
+    const size_t bucketCount = peaks.size() / 2;
+    // Same stride as getRecordingDataPeaks (ceiling), so spans line up with
+    // the extracted ranges exactly.
+    const size_t bucketStride = (ringSamples + maxPoints - 1) / maxPoints;
+    if (bucketStride == 0 || bucketCount == 0) return;
 
-        float env = std::pow(std::min(1.0f, peak), 0.75f);
-        
-        float screenX = startX + p;
-        float topY = centerY - env * halfHeight;
-        float bottomY = centerY + env * halfHeight;
-        
-        if (bottomY - topY < 1.0f) {
-            topY = centerY - 0.5f;
-            bottomY = centerY + 0.5f;
+    const AestraUI::NUIColor topFill = waveColor.withAlpha(0.35f);
+    const AestraUI::NUIColor bottomFill = waveColor.withAlpha(0.14f);
+    const AestraUI::NUIColor peakLine = waveColor.withAlpha(0.55f);
+    const AestraUI::NUIColor centerLine = waveColor.withAlpha(0.15f);
+
+    bool drewAny = false;
+    float lastCenterX = 0.0f;
+
+    for (size_t b = 0; b < bucketCount; ++b) {
+        const size_t spanStart = b * bucketStride;
+        const size_t spanEnd = std::min(spanStart + bucketStride, ringSamples);
+        if (spanStart >= ringSamples) break;
+
+        const double spanStartX =
+            startX + static_cast<double>(spanStart) / samplesPerPixel;
+        const double spanEndX =
+            startX + static_cast<double>(spanEnd) / samplesPerPixel;
+
+        // Viewport culling in time space.
+        const double viewLeft = static_cast<double>(gridStartX);
+        const double viewRight = static_cast<double>(bounds.right());
+        if (spanEndX <= viewLeft) continue;
+        if (spanStartX >= viewRight) break;
+
+        // Signed envelope (#854 round 2): render the bucket's TRUE interval
+        // [min, max] — clamped to ±1 — without mirroring to center.
+        // Non-finite pairs are skipped slots from the reader: they keep their
+        // timing slot but draw nothing (#845/#846).
+        const float loRaw = peaks[b * 2];
+        const float hiRaw = peaks[b * 2 + 1];
+        if (!std::isfinite(loRaw) || !std::isfinite(hiRaw)) {
+            continue;
         }
-        
-        topPoints.push_back(AestraUI::NUIPoint(screenX, topY));
-        bottomPoints.push_back(AestraUI::NUIPoint(screenX, bottomY));
+
+        const float hiC = std::clamp(std::max(loRaw, hiRaw), -1.0f, 1.0f);
+        const float loC = std::clamp(std::min(loRaw, hiRaw), -1.0f, 1.0f);
+
+        const float xL = static_cast<float>(std::max(spanStartX, viewLeft));
+        const float xR = static_cast<float>(std::min(spanEndX, viewRight));
+        const float width = std::max(1.0f, xR - xL);
+
+        // True interval band: top edge at the max extent, bottom edge at the
+        // min extent. Extends to centerY only when the interval crosses zero.
+        const float yHi = centerY - hiC * halfHeight;
+        const float yLo = centerY - loC * halfHeight;
+
+        renderer.fillRect(AestraUI::NUIRect(xL, yHi, width, yLo - yHi), topFill);
+        renderer.drawLine(AestraUI::NUIPoint(xL, yHi), AestraUI::NUIPoint(xR, yHi), 1.0f, peakLine);
+        renderer.drawLine(AestraUI::NUIPoint(xL, yLo), AestraUI::NUIPoint(xR, yLo), 1.0f, peakLine);
+
+        lastCenterX = xR;
+        drewAny = true;
     }
-    
-    if (!topPoints.empty()) {
-        const AestraUI::NUIColor topFill = waveColor.withAlpha(0.35f);
-        const AestraUI::NUIColor bottomFill = waveColor.withAlpha(0.14f);
-        const AestraUI::NUIColor peakLine = waveColor.withAlpha(0.55f);
-        const AestraUI::NUIColor centerLine = waveColor.withAlpha(0.15f);
 
-        for (size_t i = 0; i < topPoints.size(); ++i) {
-            const float x = topPoints[i].x;
-            const float topY = topPoints[i].y;
-            const float bottomY = bottomPoints[i].y;
-
-            renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x, topY), 1.0f, topFill);
-            renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x, bottomY), 1.0f, bottomFill);
-            renderer.drawLine(AestraUI::NUIPoint(x, topY), AestraUI::NUIPoint(x, bottomY), 1.0f, peakLine);
-        }
-
+    if (drewAny) {
         renderer.drawLine(
-            AestraUI::NUIPoint(topPoints.front().x, centerY),
-            AestraUI::NUIPoint(topPoints.back().x, centerY),
+            AestraUI::NUIPoint(static_cast<float>(std::max(gridStartX, startX)), centerY),
+            AestraUI::NUIPoint(lastCenterX, centerY),
             1.0f,
             centerLine
         );
