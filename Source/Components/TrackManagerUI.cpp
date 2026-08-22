@@ -852,9 +852,11 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
             onSendToAudition();
     });
     menu->addSeparator();
-    auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Tracks");
+    auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Clips");
     selectAllItem->setShortcut("Ctrl+A");
-    selectAllItem->setOnClick([this]() { selectAllTracks(); });
+    // Same command as the Ctrl+A keybinding (#848): selects all clips, with
+    // the track-row fallback applying on an empty timeline.
+    selectAllItem->setOnClick([this]() { selectAllClips(); });
     menu->addItem(selectAllItem);
 
     attachAndShowContextMenu(this, menu, position);
