@@ -112,6 +112,13 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return AestraUI::NUIComponent::onMouseEvent(event);
     }
 
+    // Active marquee owns every mouse event until release (#847 review):
+    // root dispatch stops at the first child that handles an event, so a
+    // sibling could otherwise consume the release and strand the gesture.
+    if (m_isDrawingSelectionBox) {
+        return handleSelectionBoxMouse(event, localPos);
+    }
+
     // Handle instant clip dragging
     if (m_isDraggingClipInstant) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
