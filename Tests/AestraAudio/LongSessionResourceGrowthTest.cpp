@@ -277,10 +277,10 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            // The editor-side notification path as it exists on develop today.
-            // NOTE: when PR #840 (patternContentEdited) merges, switch this to
-            // tm->patternContentEdited() so the harness exercises post-fix semantics.
-            tm->preparePatternForArsenal(pid);
+            // The editor-side notification path as it exists since #840:
+            // patternContentEdited() re-queues from the playhead WITHOUT the
+            // entry-catch-up rewind, matching what ArsenalPanel does now.
+            tm->patternContentEdited();
             ++edits;
 
             // Rotate which pattern is armed: slot re-arm must REPLACE, never stack up.
