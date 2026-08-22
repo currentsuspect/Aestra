@@ -969,7 +969,8 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
 
         if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
-            (m_selectedClipId.isValid() || !m_selectedTracks.empty())) {
+            (m_selectedClipId.isValid() || !m_selectedTracks.empty() || !m_clipSelection.empty())) {
+            clearClipSelection();
             selectClip(ClipInstanceID{});
             clearSelection();
             return true;
@@ -980,7 +981,9 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
             if (event.keyCode == AestraUI::NUIKeyCode::A) {
-                selectAllTracks();
+                // #848: Ctrl+A promotes to clip selection; tracks-only remains
+                // the fallback for an empty timeline.
+                selectAllClips();
                 return true;
             }
             if (event.keyCode == AestraUI::NUIKeyCode::X && m_selectedClipId.isValid()) {

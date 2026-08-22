@@ -111,6 +111,16 @@ public:
     const ClipInstanceID& anchor() const { return m_anchorClipId; }
     const std::unordered_set<ClipInstanceID>& clips() const { return m_clipIds; }
 
+    void selectAll(const std::vector<ClipInstanceID>& clipIds) {
+        m_clipIds.clear();
+        for (const auto& clipId : clipIds) {
+            if (clipId.isValid()) {
+                m_clipIds.insert(clipId);
+            }
+        }
+        m_anchorClipId = m_clipIds.empty() ? ClipInstanceID{} : *m_clipIds.begin();
+    }
+
 private:
     std::unordered_set<ClipInstanceID> m_clipIds;
     ClipInstanceID m_anchorClipId;

@@ -685,6 +685,58 @@ void TrackManagerUI::selectClips(const std::vector<ClipInstanceID>& clipIds, Tra
     invalidateCache();
 }
 
+void TrackManagerUI::selectAllClips() {
+    std::vector<ClipInstanceID> ids;
+    std::unordered_set<PlaylistLaneID> ownerLanes;
+    if (!m_trackManager) {
+        selectAllTracks();
+        return;
+    }
+    auto& playlist = m_trackManager->getPlaylistModel();
+    for (size_t li = 0; li < playlist.getLaneCount(); ++li) {
+        const auto* lane = playlist.getLane(playlist.getLaneId(li));
+        if (!lane || lane->clips.empty()) {
+            continue;
+        }
+        for (const auto& clip : lane->clips) {
+            ids.push_back(clip.id);
+        }
+        ownerLanes.insert(lane->id);
+    }
+
+    if (ids.empty()) {
+        // Empty timeline keeps the old behavior — nothing to box-select.
+        selectAllTracks();
+        return;
+    }
+
+    m_clipSelection.selectAll(ids);
+    const auto& clips = m_clipSelection.clips();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClips(&clips);
+        }
+    }
+    m_selectedClipId = m_clipSelection.anchor();
+
+    // Owning lanes highlight with their clips (#848 cohesion).
+    m_trackSelection.clear();
+    for (const auto& laneId : ownerLanes) {
+        m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
+    }
+    syncTrackSelectionView();
+    invalidateCache();
+}
+
+void TrackManagerUI::clearClipSelection() {
+    m_clipSelection.clear();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClips(nullptr);
+        }
+    }
+}
+
 // Selection query for looping
 std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
     // Priority 1: Ruler selection (for looping)

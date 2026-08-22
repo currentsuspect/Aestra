@@ -558,6 +558,10 @@ private:
     /** @brief Apply an intent to a batch of clips and push the set to rows (#848). */
     void selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent);
     const TimelineClipSelection& clipSelection() const { return m_clipSelection; }
+    /** @brief Ctrl+A: select every clip in the playlist (falls back to tracks when empty). */
+    void selectAllClips();
+    /** @brief Drop the multi-clip set and its row highlight. */
+    void clearClipSelection();
     void updateSelectionLoopRegion(double startBeat, double endBeat);
     void updateTrackPositions();
     void updateScrollbar();
