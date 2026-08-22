@@ -662,8 +662,26 @@ void TrackManagerUI::selectClip(ClipInstanceID clipId) {
     for (const auto& trackUI : m_trackUIComponents) {
         if (trackUI) {
             trackUI->setSelectedClipId(clipId);
+            trackUI->setSelectedClips(nullptr); // single-select mode
         }
     }
+    invalidateCache();
+}
+
+void TrackManagerUI::selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent) {
+    for (const auto& id : clipIds) {
+        m_clipSelection.apply(id, intent);
+    }
+
+    const auto& clips = m_clipSelection.clips();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClips(&clips);
+        }
+    }
+
+    // The anchor drives legacy single-clip consumers (copy/paste, inspector).
+    m_selectedClipId = m_clipSelection.anchor();
     invalidateCache();
 }
 

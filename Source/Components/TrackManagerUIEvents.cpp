@@ -439,12 +439,57 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
             AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
 
-            // Select all tracks that intersect with selection box
-            clearSelection();
+            // Clip-level box selection (#848, "the future is now"): intersect
+            // the band with every visible clip; fall back to track rows when
+            // no clip was boxed.
+            std::vector<ClipInstanceID> boxed;
             for (auto& trackUI : m_trackUIComponents) {
-                if (trackUI->getBounds().intersects(selectionRect)) {
-                    selectTrack(trackUI.get(), true);
+                if (!trackUI)
+                    continue;
+                for (const auto& [clipId, clipRect] : trackUI->getAllClipBounds()) {
+                    if (selectionRect.intersects(clipRect)) {
+                        boxed.push_back(clipId);
+                    }
                 }
+            }
+
+            const TrackSelectionIntent intent =
+                (event.modifiers & AestraUI::NUIModifiers::Shift)   ? TrackSelectionIntent::Add
+                : (event.modifiers & AestraUI::NUIModifiers::Ctrl) ? TrackSelectionIntent::Toggle
+                                                                   : TrackSelectionIntent::Replace;
+
+            clearSelection();
+
+            if (!boxed.empty()) {
+                selectClips(boxed, intent);
+                // Lanes owning selected clips highlight too (#848 cohesion).
+                if (m_trackManager) {
+                    auto& playlist = m_trackManager->getPlaylistModel();
+                    std::unordered_set<PlaylistLaneID> lanes;
+                    for (const auto& id : boxed) {
+                        const PlaylistLaneID laneId = playlist.findClipLane(id);
+                        if (laneId.isValid())
+                            lanes.insert(laneId);
+                    }
+                    // Plain drags replace lane selection with the owners;
+                    // modifier drags add/toggle per intent.
+                    for (const auto& laneId : lanes) {
+                        m_trackSelection.apply(laneId,
+                                               intent == TrackSelectionIntent::Replace
+                                                   ? TrackSelectionIntent::Add
+                                                   : intent);
+                    }
+                    syncTrackSelectionView();
+                }
+                Log::info("Selection box completed, selected " + std::to_string(boxed.size()) + " clips");
+            } else {
+                for (auto& trackUI : m_trackUIComponents) {
+                    if (trackUI->getBounds().intersects(selectionRect)) {
+                        selectTrack(trackUI.get(), true);
+                    }
+                }
+                Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) +
+                          " tracks");
             }
 
             // Note: System cursor is always hidden by Main.cpp custom cursor system
@@ -452,11 +497,8 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             m_isDrawingSelectionBox = false;
             m_selectionBoxButton = AestraUI::NUIMouseButton::None;
             invalidateCache();
-
-            Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) + " tracks");
         }
 
-        invalidateCache();
         return true;
     }
     return false;

@@ -69,6 +69,53 @@ private:
     std::unordered_set<PlaylistLaneID> m_laneIds;
 };
 
+/**
+ * @brief Multi-clip selection authority for the timeline (#848, marquee select).
+ *
+ * Intent-based like TimelineTrackSelection: Replace clears the set first,
+ * Toggle flips membership, Add keeps existing entries. The anchor clip
+ * (last non-toggle selection) stays available for single-clip operations.
+ */
+class TimelineClipSelection {
+public:
+    void apply(const ClipInstanceID& clipId, TrackSelectionIntent intent) {
+        if (!clipId.isValid()) {
+            return;
+        }
+
+        if (intent == TrackSelectionIntent::Replace) {
+            m_clipIds.clear();
+            m_anchorClipId = clipId;
+        } else if (intent == TrackSelectionIntent::Toggle) {
+            if (m_clipIds.erase(clipId) != 0) {
+                if (m_anchorClipId == clipId && !m_clipIds.empty()) {
+                    m_anchorClipId = *m_clipIds.begin();
+                }
+                return;
+            }
+            m_anchorClipId = clipId;
+        } else {
+            m_anchorClipId = clipId; // Add updates the anchor too.
+        }
+        m_clipIds.insert(clipId);
+    }
+
+    void clear() {
+        m_clipIds.clear();
+        m_anchorClipId = ClipInstanceID{};
+    }
+
+    bool contains(const ClipInstanceID& clipId) const { return m_clipIds.find(clipId) != m_clipIds.end(); }
+    size_t size() const { return m_clipIds.size(); }
+    bool empty() const { return m_clipIds.empty(); }
+    const ClipInstanceID& anchor() const { return m_anchorClipId; }
+    const std::unordered_set<ClipInstanceID>& clips() const { return m_clipIds; }
+
+private:
+    std::unordered_set<ClipInstanceID> m_clipIds;
+    ClipInstanceID m_anchorClipId;
+};
+
 enum class TimelineLoopPreset : int {
     Off = 0,
     OneBar = 1,
