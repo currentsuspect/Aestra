@@ -453,44 +453,52 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
                 }
             }
 
-            const TrackSelectionIntent intent =
-                (event.modifiers & AestraUI::NUIModifiers::Shift)   ? TrackSelectionIntent::Add
-                : (event.modifiers & AestraUI::NUIModifiers::Ctrl) ? TrackSelectionIntent::Toggle
-                                                                   : TrackSelectionIntent::Replace;
+            // One modifier contract shared with clip/track/seam selection:
+            // toggle wins over shift, and the platform toggle key applies.
+            const bool toggleModifier = (event.modifiers & AestraUI::NUIModifiers::Ctrl) ||
+                                        (event.modifiers & AestraUI::NUIModifiers::Super);
+            const TrackSelectionIntent intent = trackSelectionIntentForModifierState(
+                toggleModifier, event.modifiers & AestraUI::NUIModifiers::Shift);
 
-            clearSelection();
+            if (intent == TrackSelectionIntent::Replace) {
+                clearSelection();
+                clearClipSelection();
+            }
 
             if (!boxed.empty()) {
                 selectClips(boxed, intent);
-                // Lanes owning selected clips highlight too (#848 cohesion).
-                if (m_trackManager) {
-                    auto& playlist = m_trackManager->getPlaylistModel();
-                    std::unordered_set<PlaylistLaneID> lanes;
-                    for (const auto& id : boxed) {
-                        const PlaylistLaneID laneId = playlist.findClipLane(id);
-                        if (laneId.isValid())
-                            lanes.insert(laneId);
+            } else {
+                for (auto& trackUI : m_trackUIComponents) {
+                    if (trackUI->getBounds().intersects(selectionRect)) {
+                        selectTrack(trackUI.get(), intent != TrackSelectionIntent::Toggle);
                     }
-                    // Plain drags replace lane selection with the owners;
-                    // modifier drags add/toggle per intent.
-                    for (const auto& laneId : lanes) {
+                }
+            }
+
+            // Lane selection follows the FULL resulting clip selection (#853
+            // round 1): retained clips from a modifier marquee keep their
+            // owning lanes highlighted too.
+            if (m_trackManager && !m_clipSelection.empty()) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                if (intent == TrackSelectionIntent::Replace) {
+                    m_trackSelection.clear();
+                }
+                m_clipSelection.forEachClip([&](const ClipInstanceID& clipId) {
+                    const PlaylistLaneID laneId = playlist.findClipLane(clipId);
+                    if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
                         m_trackSelection.apply(laneId,
                                                intent == TrackSelectionIntent::Replace
                                                    ? TrackSelectionIntent::Add
                                                    : intent);
                     }
-                    syncTrackSelectionView();
-                }
-                Log::info("Selection box completed, selected " + std::to_string(boxed.size()) + " clips");
-            } else {
-                for (auto& trackUI : m_trackUIComponents) {
-                    if (trackUI->getBounds().intersects(selectionRect)) {
-                        selectTrack(trackUI.get(), true);
-                    }
-                }
-                Log::info("Selection box completed, selected " + std::to_string(m_selectedTracks.size()) +
-                          " tracks");
+                });
+                syncTrackSelectionView();
             }
+
+            Log::info("Selection box completed: " +
+                      std::string(m_clipSelection.empty()
+                                      ? "0 clips"
+                                      : std::to_string(m_clipSelection.size()) + " clips"));
 
             // Note: System cursor is always hidden by Main.cpp custom cursor system
 

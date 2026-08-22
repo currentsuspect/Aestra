@@ -669,14 +669,20 @@ void TrackManagerUI::selectClip(ClipInstanceID clipId) {
 }
 
 void TrackManagerUI::selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent) {
+    // A batched Replace must clear ONCE, then add every clip — calling
+    // apply(Replace) per id would retain only the last one (#853 round 1).
+    if (intent == TrackSelectionIntent::Replace) {
+        m_clipSelection.clear();
+    }
     for (const auto& id : clipIds) {
-        m_clipSelection.apply(id, intent);
+        m_clipSelection.apply(id,
+                              intent == TrackSelectionIntent::Replace ? TrackSelectionIntent::Add : intent);
     }
 
-    const auto& clips = m_clipSelection.clips();
     for (const auto& trackUI : m_trackUIComponents) {
         if (trackUI) {
-            trackUI->setSelectedClips(&clips);
+            trackUI->setSelectedClipId(m_clipSelection.anchor());
+            trackUI->setSelectedClips(&m_clipSelection);
         }
     }
 
@@ -711,10 +717,9 @@ void TrackManagerUI::selectAllClips() {
     }
 
     m_clipSelection.selectAll(ids);
-    const auto& clips = m_clipSelection.clips();
     for (const auto& trackUI : m_trackUIComponents) {
         if (trackUI) {
-            trackUI->setSelectedClips(&clips);
+            trackUI->setSelectedClips(&m_clipSelection);
         }
     }
     m_selectedClipId = m_clipSelection.anchor();

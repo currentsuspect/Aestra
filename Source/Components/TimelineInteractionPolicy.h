@@ -88,7 +88,9 @@ public:
             m_anchorClipId = clipId;
         } else if (intent == TrackSelectionIntent::Toggle) {
             if (m_clipIds.erase(clipId) != 0) {
-                if (m_anchorClipId == clipId && !m_clipIds.empty()) {
+                if (m_clipIds.empty()) {
+                    m_anchorClipId = ClipInstanceID{};
+                } else if (m_anchorClipId == clipId) {
                     m_anchorClipId = *m_clipIds.begin();
                 }
                 return;
@@ -109,7 +111,14 @@ public:
     size_t size() const { return m_clipIds.size(); }
     bool empty() const { return m_clipIds.empty(); }
     const ClipInstanceID& anchor() const { return m_anchorClipId; }
-    const std::unordered_set<ClipInstanceID>& clips() const { return m_clipIds; }
+
+    /** @brief Visit selected clips without exposing the container type. */
+    template <typename Fn>
+    void forEachClip(Fn&& fn) const {
+        for (const auto& clipId : m_clipIds) {
+            fn(clipId);
+        }
+    }
 
     void selectAll(const std::vector<ClipInstanceID>& clipIds) {
         m_clipIds.clear();
