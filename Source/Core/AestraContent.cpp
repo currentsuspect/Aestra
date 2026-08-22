@@ -361,6 +361,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         if (preset == 0) {
             m_audioEngine->setLoopEnabled(false);
+            if (m_trackManager) {
+                m_trackManager->setTransportLoopRegion(0.0, 0.0, false);
+            }
         }
     });
     m_trackManagerUI->setOnLoopRegionUpdate([this](double startBeat, double endBeat) {
@@ -369,6 +372,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         m_audioEngine->setLoopRegion(startBeat, endBeat);
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
+        if (m_trackManager) {
+            m_trackManager->setTransportLoopRegion(startBeat, endBeat, endBeat > startBeat);
+        }
     });
     m_trackManagerUI->setOnSelectionMade([this](double startBeat, double endBeat) {
         if (!m_audioEngine) {
@@ -376,6 +382,9 @@ void AestraContent::setupTrackManagerUI() {
         }
         m_audioEngine->setLoopRegion(startBeat, endBeat);
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
+        if (m_trackManager) {
+            m_trackManager->setTransportLoopRegion(startBeat, endBeat, endBeat > startBeat);
+        }
     });
 
     // Wire TrackManagerUI's graph dirty signal to PlaybackGraphController.
@@ -3127,6 +3136,10 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
         return; // Pattern loop length governs Arsenal playback only.
     }
     m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+    // Mirror the pattern-mode force-loop so deferred count-in capture stays
+    // reachable: the engine loops [0, lengthBeats] in this mode, and a cue
+    // pinned beyond it would never be reached by capture (#845).
+    m_trackManager->setTransportLoopRegion(0.0, lengthBeats, true);
 }
 
 void AestraContent::handleTransportPlayRequest() {
