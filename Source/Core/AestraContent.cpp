@@ -3864,7 +3864,10 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
             buffer->sampleRate = sampleRate;
             buffer->numChannels = numChannels;
             buffer->numFrames = buffer->interleavedData.size() / numChannels;
-            source->setBuffer(buffer);
+            // Canonical attach: bumps SourceManager's revision when this flips
+            // the source ready, so the UI's waveform-cache sweep re-runs even
+            // though path dedupe meant no new source id was minted.
+            sourceManager.attachBuffer(source, std::move(buffer));
         }
     }
 

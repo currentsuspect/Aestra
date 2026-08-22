@@ -1187,6 +1187,48 @@ void AestraApp::run() {
     // so the UI feels instant even if the stream takes a second.
     finalizeAudioSetup();
 
+    // TEMP DEBUG PROBE (#845) — env-gated live record-path driver. REMOVE BEFORE PR.
+    if (std::getenv("AESTRA_RECORD_PROBE") && m_content && m_content->getTrackManager()) {
+        auto* tm = m_content->getTrackManager().get();
+        std::thread([tm]() {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(4s); // let session + audio settle
+            Log::info("[RecordProbe] === START ===");
+            const auto tracks = tm->getTracks();
+            Log::info("[RecordProbe] tracks=" + std::to_string(tracks.size()));
+            if (!tracks.empty()) {
+                tm->setTrackArmed(tracks.front()->trackId, true);
+                Log::info("[RecordProbe] armed track " + std::to_string(tracks.front()->trackId) +
+                          " hasArmed=" + std::to_string(tm->hasArmedTracks() ? 1 : 0));
+            }
+            tm->record();
+            std::this_thread::sleep_for(500ms);
+            const double cue = tm->getPosition();
+            const bool countingIn = tm->beginCountIn(4, cue);
+            Log::info("[RecordProbe] cue=" + std::to_string(cue) + "s countInStarted=" +
+                      std::to_string(countingIn ? 1 : 0));
+            if (countingIn) {
+                const double bpm = std::max(1.0, tm->getPlaylistModel().getBPM());
+                std::this_thread::sleep_for(std::chrono::milliseconds(
+                    static_cast<long long>(4 * 60000.0 / bpm) + 500)); // metronome lead-in
+                tm->completeCountIn();
+            } else {
+                tm->play();
+            }
+            Log::info("[RecordProbe] rolling=" + std::to_string(tm->isPlaying() ? 1 : 0));
+            for (int i = 1; i <= 8; ++i) {
+                std::this_thread::sleep_for(1s);
+                Log::info("[RecordProbe] t+" + std::to_string(i) + "s recording=" +
+                          std::to_string(tm->isRecording() ? 1 : 0) + " pos=" +
+                          std::to_string(tm->getPosition()));
+            }
+            Log::info("[RecordProbe] stopping");
+            tm->stop();
+            std::this_thread::sleep_for(800ms);
+            Log::info("[RecordProbe] === END ===");
+        }).detach();
+    }
+
     while (m_running && m_windowManager->processEvents()) {
         UnifiedProfiler::getInstance().beginFrame();
         m_windowManager->beginFrame(); // Start timing

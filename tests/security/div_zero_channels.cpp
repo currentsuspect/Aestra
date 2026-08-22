@@ -1,5 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved.
-// SEC-003: ProjectSerializer must guard numChannels == 0 from malformed WAV input
+// SEC-003: ProjectSerializer must guard numChannels == 0 from malformed WAV
+// input — the load must not crash, and a failed decode leaves the source
+// genuinely unready (no fallback buffer), keeping it retryable.
 
 #include "ProjectSerializer.h"
 #include "TrackManager.h"
@@ -102,19 +104,32 @@ int main() {
     }
 
     const auto* source = trackManager->getSourceManager().getSource(sourceIds.front());
-    if (!source || !source->getBuffer()) {
-        std::cout << "  [FAIL] decoded source buffer missing" << std::endl;
+    if (!source) {
+        std::cout << "  [FAIL] source not registered" << std::endl;
         fs::remove_all(tempDir);
         return 1;
     }
 
-    if (source->getNumChannels() != 1) {
-        std::cout << "  [FAIL] expected fallback to mono, got " << source->getNumChannels() << " channels" << std::endl;
+    // Decode-failure contract: the loader installs NO fallback buffer. The
+    // source stays genuinely unready (draw path early-outs on !isReady(), the
+    // load loop's !isReady() retry guard stays satisfied) instead of carrying
+    // a poisoned empty buffer. The load itself must still succeed without a
+    // crash — the original SEC-003/RTM-001 SIGFPE guard.
+    if (source->getRawBuffer() != nullptr || source->isReady()) {
+        std::cout << "  [FAIL] failed decode must leave the source unready with no installed buffer" << std::endl;
         fs::remove_all(tempDir);
         return 1;
     }
 
-    std::cout << "  [PASS] Zero-channel WAV loaded safely with mono fallback and no crash." << std::endl;
+    if (result.missingAssets.empty()) {
+        std::cout << "  [FAIL] decode failure must be reported in missingAssets" << std::endl;
+        fs::remove_all(tempDir);
+        return 1;
+    }
+
+    std::cout << "  [PASS] Zero-channel WAV handled safely: load ok, no crash, "
+                 "source left unready and retryable."
+              << std::endl;
     fs::remove_all(tempDir);
     return 0;
 }

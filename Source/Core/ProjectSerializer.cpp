@@ -1672,14 +1672,17 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     } else {
                         warningLimiter.warning(
                             ProjectLoadWarningCategory::MissingAssetDecode,
-                            "[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback",
+                            "[ProjectLoad] Failed to decode: " + filePath + " — leaving source unloaded (retryable)",
                             "[ProjectLoad] Additional audio decode failure warnings suppressed.");
                         result.missingAssets.push_back(storedPath);
-                        auto fallback = std::make_shared<AudioBufferData>();
-                        fallback->numChannels = 1;
-                        fallback->sampleRate = 44100;
-                        fallback->numFrames = 0;
-                        source->setBuffer(fallback);
+                        // Deliberately NO fallback buffer: setBuffer with an
+                        // empty one would hand the render snapshot a non-null
+                        // but 0-frame buffer (PlaylistModel only null-checks the
+                        // shared pointer), while the source still reports
+                        // !isReady(). Leaving it genuinely unready keeps the
+                        // draw path's early-out authoritative and lets a later
+                        // decode attempt retry — the load guard above skips
+                        // ready sources only.
                     }
                 }
             }

@@ -148,3 +148,17 @@ target_include_directories(SourceManagerRevisionTest PRIVATE
 )
 add_test(NAME SourceManagerRevisionTest COMMAND SourceManagerRevisionTest)
 set_tests_properties(SourceManagerRevisionTest PROPERTIES LABELS "audio;waveform;contract:application")
+
+# Readiness invariant, end to end: any buffer attachment that flips a managed
+# ClipSource to ready must move the revision the waveform-cache sweep watches
+# (canonical attach AND plain setBuffer), and a failed project-load decode must
+# leave its source genuinely unready — retryable — instead of poisoning it with
+# an empty fallback buffer.
+add_executable(SourceReadinessInvariantTest AestraAudio/SourceReadinessInvariantTest.cpp)
+target_link_libraries(SourceReadinessInvariantTest PRIVATE AestraAudioCore)
+target_include_directories(SourceReadinessInvariantTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SourceReadinessInvariantTest COMMAND SourceReadinessInvariantTest)
+set_tests_properties(SourceReadinessInvariantTest PROPERTIES LABELS "audio;waveform;contract:application")
