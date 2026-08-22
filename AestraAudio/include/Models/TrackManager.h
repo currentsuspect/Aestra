@@ -775,7 +775,12 @@ public:
         peaksOut.clear();
         peaksOut.reserve(static_cast<size_t>(maxPoints) * 2);
         const size_t head = capture->headIndex.load(std::memory_order_relaxed);
-        const size_t stride = std::max<size_t>(1, size / maxPoints);
+        // Ceiling division so every sample lands in a bucket — floor rounding
+        // could stop at maxPoints pairs before reaching the ring tail.
+        const size_t stride = (size + maxPoints - 1) / maxPoints;
+        if (stride == 0) {
+            return false;
+        }
         for (size_t offset = 0; offset < size && peaksOut.size() < static_cast<size_t>(maxPoints) * 2;
              offset += stride) {
             const size_t span = std::min(stride, size - offset);
