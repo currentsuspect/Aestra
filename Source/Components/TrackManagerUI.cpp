@@ -82,7 +82,9 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     m_scrollbar->setOnScroll([this](double position) { onScroll(position); });
     addChild(m_scrollbar);
 
-    // Timeline minimap (replaces top horizontal scrollbar).
+    // Timeline minimap (overview band above the ruler). The surface starts at
+    // the track-controls boundary so it no longer spans the toolbar corner;
+    // the bar's internal 5px offset keeps its content on the plane/grid edge.
     m_timelineMinimap = std::make_shared<AestraUI::TimelineMinimapBar>();
     m_timelineMinimap->onRequestCenterView = [this](double centerBeat) { centerTimelineViewAtBeat(centerBeat); };
     m_timelineMinimap->onRequestSetViewStart = [this](double viewStartBeat, bool isFinal) {
@@ -100,8 +102,8 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
         setDirty(true);
     };
     m_timelineMinimap->setShowModeToggles(false);
-    m_timelineMinimap->setLeadingInset(
-        AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
+    // Cropped: bounds start at the corner boundary, so no leading inset is needed.
+    m_timelineMinimap->setLeadingInset(0.0f);
     addChild(m_timelineMinimap);
 
     // Defer track UI creation to first render for instant startup.
@@ -295,6 +297,7 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setBeatsPerBar(m_beatsPerBar);
         trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
         trackUI->setSnapSetting(m_snapSetting); // Sync snap setting for resize
+        trackUI->setSnapEnabled(m_snapEnabled); // Sync master snap toggle for resize
 
         // Pass platform bridge for cursor capture (volume knob)
         trackUI->setPlatformBridge(m_window);
@@ -495,28 +498,27 @@ void TrackManagerUI::layoutTracks() {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    float headerHeight = 40.0f;
     float scrollbarWidth = kTimelineScrollbarWidth;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    float rulerHeight = kTimelineRulerHeight;
 
-    float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
+    float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
 
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
 
-    // Layout timeline minimap (top, right after header, before ruler)
+    // Layout timeline minimap (top of the time band, above the ruler).
+    // Cropped to the plane column: starts where the track-controls boundary
+    // ends so the surface never spans the toolbar corner.
     if (m_timelineMinimap) {
-        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth);
-        float minimapY = headerHeight;
+        const float minimapX = layout.trackControlsWidth;
+        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth - minimapX);
         m_timelineMinimap->setBounds(
-            AestraUI::NUIAbsolute(bounds, 0, minimapY, minimapWidth, horizontalScrollbarHeight));
+            AestraUI::NUIAbsolute(bounds, minimapX, 0.0f, minimapWidth, kTimelineMinimapHeight));
         updateTimelineMinimap(0.0);
     }
 
-    // Layout vertical scrollbar (right side, below header, horizontal scrollbar, and ruler)
+    // Layout vertical scrollbar (right side, below the time band)
     if (m_scrollbar) {
-        float scrollbarY = headerHeight + horizontalScrollbarHeight + rulerHeight;
+        float scrollbarY = kTimelineTimeBandHeight;
         float scrollbarX = std::max(0.0f, bounds.width - scrollbarWidth);
         m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
         updateScrollbar();
@@ -524,7 +526,7 @@ void TrackManagerUI::layoutTracks() {
 
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + kTimelineGridInsetX);
-    float trackAreaTop = bounds.y + std::max(0.0f, headerHeight + horizontalScrollbarHeight + rulerHeight);
+    float trackAreaTop = bounds.y + std::max(0.0f, kTimelineTimeBandHeight);
 
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {

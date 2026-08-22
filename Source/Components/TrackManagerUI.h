@@ -186,7 +186,16 @@ public:
     void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control
-    void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
+    // Choke point: propagates to every row so trim/resize honors the same
+    // master switch as move/drag.
+    void setSnapEnabled(bool enabled) {
+        if (m_snapEnabled == enabled) return;
+        m_snapEnabled = enabled;
+        for (auto& track : m_trackUIComponents) {
+            if (track) track->setSnapEnabled(enabled);
+        }
+        invalidateCache();
+    }
     bool isSnapEnabled() const { return m_snapEnabled; }
     void setSnapDivision(int division) { m_snapDivision = division; } // 1=bar, 4=beat, 16=16th
     int getSnapDivision() const { return m_snapDivision; }
@@ -322,8 +331,10 @@ private:
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
-    int m_trackHeight{46};
-    int m_trackSpacing{3};
+    int m_trackHeight{42};
+    // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
+    // so rows carry no seam — a quiet separator line marks each boundary.
+    int m_trackSpacing{0};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     std::unordered_set<uint64_t> m_collapsedTrackIds;
@@ -385,6 +396,9 @@ private:
     ::AestraUI::NUIRect m_paintToolBounds;
     ::AestraUI::NUIRect m_followPlayheadBounds; // Toggle button bounds
     ::AestraUI::NUIRect m_toolbarBounds;
+    // Content-sized union of every corner button (add-track through menu) in
+    // the ruler row's left cell — the hit-testable extent of the toolbar.
+    ::AestraUI::NUIRect m_toolbarCornerBounds;
 
     bool m_menuHovered = false;
     bool m_selectToolHovered = false;
@@ -638,10 +652,10 @@ private:
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
-    // Rows render m_trackHeight tall on an m_trackHeight+m_trackSpacing stride,
-    // leaving an m_trackSpacing-px seam between them that lands inside no track's
-    // bounds. Map an otherwise-unhandled left press in that seam back to its row
-    // and select it, so clicks between rows are not silently swallowed.
+    // Rows are contiguous (m_trackSpacing == 0), but the seam handler stays:
+    // sub-pixel row boundaries can still land a press inside no track's exact
+    // bounds. Map an otherwise-unhandled left press in that sliver back to its
+    // row and select it, so clicks between rows are not silently swallowed.
     bool handleTrackSeamSelect(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 

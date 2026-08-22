@@ -364,6 +364,9 @@ double TrackUIComponent::getSnapGridSizeBeats() const {
 }
 
 double TrackUIComponent::snapBeatToGrid(double beat) const {
+    // Same master switch the move/drop path honors — trim must not snap when
+    // snapping is off, even though the last setting is still remembered.
+    if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) return beat;
     double gridSize = getSnapGridSizeBeats();
     if (gridSize <= 0.0) return beat; // No snap
     return std::round(beat / gridSize) * gridSize;
@@ -1444,7 +1447,10 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
 
         // Keep separator clean and flat; no extra chrome shadow strip.
 
-        drawPlaylistGrid(renderer, bounds);
+        // NOTE: no grid here. The beat/bar grid is drawn ONCE by
+        // TrackManagerUI across the whole viewport — the timeline is a single
+        // coordinate plane; per-row grids are what made it read as a stack of
+        // boxed cells.
     }
 
     // Render Clips (Heavy part)
@@ -1786,31 +1792,6 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                           themeManager.getFontSize("xs"),
                           themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.58f : 0.36f));
     }
-}
-
-// Draw playlist grid (beat/bar grid)
-void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds) {
-    AESTRA_ZONE("TrackUI_Grid");
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-    const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
-    const float desiredGap = 5.0f;
-    const float gridGap = std::min(desiredGap, std::max(0.0f, bounds.width - controlAreaWidth));
-    const float gridStartX = bounds.x + controlAreaWidth + gridGap;
-    const float gridEndX = bounds.right();
-
-    // The arrangement is a large empty canvas much more often than the Piano
-    // Roll, so its infrastructure recedes further while retaining the same
-    // bar > beat > subdivision grammar.
-    const AestraUI::TimelineGridStyle timelineStyle{
-        0.018f, // bars
-        0.004f, // beats
-        0.0015f, // subdivisions
-        0.0f    // no empty-canvas zebra
-    };
-    AestraUI::renderTimelineGrid(
-        renderer, bounds, gridStartX, gridEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar,
-        themeManager.getCurrentTheme().textPrimary, timelineStyle);
 }
 
 void TrackUIComponent::onMouseEnter() {
