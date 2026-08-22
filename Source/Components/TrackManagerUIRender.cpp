@@ -5,9 +5,11 @@
 
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
+#include "../AestraUI/Common/MusicHelpers.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Helpers/TimelineGridRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioFileValidator.h"
 #include "ClipSource.h"
@@ -115,18 +117,15 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // IMPORTANT: This pass must be clipped to the track viewport; otherwise partially-visible
     // tracks can draw "above" the viewport and bleed into the ruler/corner region.
     if (m_playlistVisible) {
-        const float headerHeight = kTimelineHeaderHeight;
-        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        const float rulerHeight = kTimelineRulerHeight;
+        const float timeBandHeight = kTimelineTimeBandHeight;
         const float scrollbarWidth = kTimelineScrollbarWidth;
 
         // Since panels are overlays, we render the playlist underneath them.
-        // If we want clipping to stop at panel borders, we'd need to subtract them here.
+        // If we want clipping to stop at panel borders, we'd have to subtract them here.
         // For v3.1 simplicity, we just fill the workspace and let overlays cover it.
 
-        const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        const float viewportHeight =
-            std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
+        const float viewportTop = bounds.y + timeBandHeight;
+        const float viewportHeight = std::max(0.0f, bounds.height - timeBandHeight);
         const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
         const AestraUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
 
@@ -199,16 +198,14 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
 
-        float headerHeight = kTimelineHeaderHeight;
-        float rulerHeight = kTimelineRulerHeight;
-        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+        float timeBandHeight = kTimelineTimeBandHeight;
         float controlAreaWidth = layout.trackControlsWidth;
         float scrollbarWidth = kTimelineScrollbarWidth;
 
-        float gridTop = getBounds().y + headerHeight + rulerHeight + horizontalScrollbarHeight;
+        float gridTop = getBounds().y + timeBandHeight;
         float gridLeft = getBounds().x + controlAreaWidth + kTimelineGridInsetX; // gap between the controls column and the first grid pixel
         float gridWidth = getBounds().width - (controlAreaWidth + kTimelineGridInsetX) - scrollbarWidth;
-        float gridHeight = getBounds().height - (headerHeight + rulerHeight + horizontalScrollbarHeight);
+        float gridHeight = getBounds().height - timeBandHeight;
 
         AestraUI::NUIRect gridBounds(gridLeft, gridTop, gridWidth, gridHeight);
 
@@ -248,7 +245,6 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
     // Draw background (control area + full grid area - no bounds restriction)
-    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
     const AestraUI::NUIColor gridBgColor = themeManager.getColor("timelineBed"); // pure black on dark (owner direction), recessed on light
 
     if (m_playlistVisible) {
@@ -268,60 +264,57 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         renderer.strokeRect(bounds, 1, borderColor.withAlpha(0.24f));
     }
 
-    // Header/Track Count (Static)
-    float headerAvailableWidth = bounds.width;
-    if (m_playlistVisible) {
-        std::string infoText =
-            "Tracks: " + std::to_string(m_trackManager ? m_trackManager->getTrackCount() -
-                                                             (m_trackManager->getTrackCount() > 0 ? 1 : 0)
-                                                       : 0); // Exclude preview track
-        const auto& themeProps = themeManager.getCurrentTheme();
-        const float infoFont = themeProps.fontSizeXS;
-        auto infoSize = renderer.measureText(infoText, infoFont);
-
-        // Ensure text doesn't exceed available width and position with proper margin
-        float margin = layout.panelMargin;
-        float maxTextWidth = headerAvailableWidth - 2 * margin;
-        if (infoSize.width > maxTextWidth) {
-            std::string truncatedText = infoText;
-            while (!truncatedText.empty() && renderer.measureText(truncatedText, infoFont).width > maxTextWidth) {
-                truncatedText = truncatedText.substr(0, truncatedText.length() - 1);
-            }
-            infoText = truncatedText + "...";
-            infoSize = renderer.measureText(infoText, infoFont);
-        }
-
-        const float headerHeight = kTimelineHeaderHeight;
-        const AestraUI::NUIRect headerBounds(bounds.x, bounds.y, headerAvailableWidth, headerHeight);
-        const float rightPad = layout.panelMargin + 18.0f;
-        const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
-        const float textY = std::round(renderer.calculateTextY(headerBounds, infoFont));
-
-        renderer.drawText(infoText, AestraUI::NUIPoint(textX, textY), infoFont, themeManager.getColor("textSecondary").withAlpha(0.55f));
-    }
-
     // Render Static Track Content (with Viewport Culling AND Clipping)
-    constexpr float kHeaderHeight = kTimelineHeaderHeight;
-    constexpr float kHScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    constexpr float kRulerHeight = kTimelineRulerHeight;
     constexpr float kScrollbarWidth = kTimelineScrollbarWidth;
-    const float headerHeight = kHeaderHeight;
-    const float horizontalScrollbarHeight = kHScrollbarHeight;
-    const float rulerHeight = kRulerHeight;
     const float scrollbarWidth = kScrollbarWidth;
 
     // Calculate viewport bounds for culling
-    const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-    const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
+    const float viewportTop = bounds.y + kTimelineTimeBandHeight;
+    const float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
     const float viewportBottom = viewportTop + viewportHeight;
     const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
 
-    // Set clip rect to prevent tracks from rendering behind ruler/header
+    // Set clip rect to prevent tracks from rendering behind the time band
     AestraUI::NUIRect trackClipRect(bounds.x, viewportTop, trackWidth, viewportHeight);
     bool clipEnabled = false;
     if (!trackClipRect.isEmpty()) {
         renderer.setClipRect(trackClipRect);
         clipEnabled = true;
+    }
+
+    // ONE continuous grid across the entire track viewport. The timeline is a
+    // single coordinate plane: vertical bar/beat lines belong to the plane,
+    // never to individual tracks, so they are drawn once (into the FBO cache)
+    // and the rows — control areas, clips, separators — are laid over them.
+    // Restarting the lines per row is what made the arrangement read as a
+    // stack of boxed cells instead of a workspace.
+    if (m_playlistVisible && viewportHeight > 0.0f) {
+        const float planeStartX = bounds.x + gridStartX;
+        const float planeEndX = std::max(planeStartX, bounds.x + trackWidth - kTimelineGridInsetX);
+        // The plane begins at the ruler's top edge so the bar lines run
+        // through the ruler row itself — numbers read as labels attached to
+        // the grid, not a separate strip. The minimap row above stays its own
+        // surface.
+        const float planeTop = bounds.y + kTimelineMinimapHeight;
+        const float planeHeight = viewportBottom - planeTop;
+        // Same quiet arrangement grammar the per-track grid used, with bars
+        // carrying the continuity: majors obvious, beats/subdivisions whispers.
+        const AestraUI::TimelineGridStyle planeStyle{
+            0.028f, // bars
+            0.005f, // beats
+            0.0016f, // subdivisions
+            0.0f    // no empty-canvas zebra
+        };
+        // Snap drives the drawn tiers (same contract as the piano roll): a
+        // tier finer than or misaligned with the active snap is hidden, and
+        // the snap's own tier is drawn so clips land on visible lines.
+        const double planeSnapBeats = (m_snapEnabled && m_snapSetting != AestraUI::SnapGrid::None)
+                                          ? static_cast<double>(AestraUI::MusicTheory::getSnapDuration(m_snapSetting))
+                                          : 0.0;
+        AestraUI::renderTimelineGrid(renderer,
+                                     AestraUI::NUIRect(planeStartX, planeTop, planeEndX - planeStartX, planeHeight),
+                                     planeStartX, planeEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar,
+                                     themeManager.getCurrentTheme().textPrimary, planeStyle, planeSnapBeats);
     }
 
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
@@ -334,70 +327,40 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom)
             continue;
 
-        // Uniform row base (owner direction: no row zebra; the bar zebra
-        // inside drawPlaylistGrid provides the only alternation). Pure black
-        // on dark themes, recessed light bed on light themes.
-        renderer.fillRect(trackBounds, themeManager.getColor("timelineBed"));
-
         // FD-14 §10: nested lane rows carry a faint containment tint so the
-        // expanded lanes read as one block under their track.
+        // expanded lanes read as one block under their track. Translucent, so
+        // the shared grid plane shows through.
         if (track->isNestedLane()) {
             renderer.fillRect(trackBounds, themeManager.getColor("accentSecondary").withAlpha(0.05f));
         }
 
         track->renderStatic(renderer);
 
-        // One pixel is enough to locate the next lane; filling the whole gap
-        // made empty arrangements read as a wall of outlined rectangles.
-        const AestraUI::NUIRect gapRect(bounds.x + gridStartX, trackBounds.bottom(),
-                                        std::max(0.0f, trackWidth - gridStartX),
-                                        static_cast<float>(m_trackSpacing));
-        renderer.fillRect(gapRect, themeManager.getColor("timelineBed"));
-        renderer.drawLine({gapRect.x, gapRect.y}, {gapRect.right(), gapRect.y}, 1.0f,
-                          themeManager.getCurrentTheme().textPrimary.withAlpha(0.006f));
+        // Row separators sit ON the plane: a quiet full-width line that says
+        // "another track" without cutting the vertical grid or forming cells.
+        renderer.drawLine({bounds.x + gridStartX, trackBounds.bottom()},
+                          {bounds.x + trackWidth, trackBounds.bottom()}, 1.0f,
+                          themeManager.getCurrentTheme().textPrimary.withAlpha(0.018f));
     }
 
-    // Clear clip rect before drawing header/ruler (they should draw fully)
+    // Clear clip rect before drawing the time band (it should draw fully)
     if (clipEnabled) {
         renderer.clearClipRect();
     }
 
-    // Header Bar (Static overlay)
-    float headerWidth = bounds.width;
+    // Time band (Static overlay): minimap row + ruler row rendered as one
+    // coherent strip. The band's bottom hairline is the single "everything
+    // below this is the timeline" cue.
     if (m_playlistVisible) {
-        AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-        AestraUI::NUIColor borderColor = themeManager.getColor("border");
-
-        float headerHeight = kTimelineHeaderHeight;
-        AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
-        // Elevated header: base fill + soft vertical gradient + glass top edge.
-        // Rendered into the playlist FBO cache, so the richness is free per frame.
-        renderer.fillRect(headerRect, themeManager.getColor("recessedPanel"));
-        // Shade-only elevation — any white component reads as a sheen on this
-        // near-black chrome (owner direction: no light gradients anywhere).
-        renderer.fillRectGradient(headerRect, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
-                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.075f),
-                                  /*vertical=*/true);
-        // Soft drop below the header so it reads as a raised surface.
-        const float shadowH = 7.0f;
-        renderer.fillRectGradient(AestraUI::NUIRect(headerRect.x, headerRect.bottom(), headerRect.width, shadowH),
-                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.22f),
-                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
-                                  /*vertical=*/true);
-        const auto headerBorder = borderColor.withAlpha(0.50f);
-        renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, headerBorder);
-        renderer.drawLine({headerRect.right(), headerRect.y}, {headerRect.right(), headerRect.bottom()}, 1.0f,
-                          headerBorder);
-        renderer.drawLine({headerRect.x, headerRect.bottom()}, {headerRect.right(), headerRect.bottom()}, 1.0f,
-                          headerBorder);
-
-        // Draw time ruler below header
-        float rulerHeight = kTimelineRulerHeight;
-        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, headerWidth,
-                                    rulerHeight);
+        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineMinimapHeight, bounds.width,
+                                    kTimelineRulerHeight);
         renderTimeRuler(renderer, rulerRect);
         renderLoopMarkers(renderer, rulerRect);
+
+        const auto borderColor = themeManager.getColor("border");
+        renderer.drawLine({bounds.x, bounds.y + kTimelineTimeBandHeight},
+                          {bounds.x + bounds.width - kTimelineScrollbarWidth, bounds.y + kTimelineTimeBandHeight},
+                          1.0f, borderColor.withAlpha(0.24f));
     }
 }
 
@@ -408,18 +371,11 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
     const auto& layout = themeManager.getLayoutDimensions();
 
     if (m_playlistVisible) {
-        constexpr float kHeaderHeight = kTimelineHeaderHeight;
-        constexpr float kHScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        constexpr float kRulerHeight = kTimelineRulerHeight;
         constexpr float kScrollbarWidth = kTimelineScrollbarWidth;
-        const float headerHeight = kHeaderHeight;
-        const float horizontalScrollbarHeight = kHScrollbarHeight;
-        const float rulerHeight = kRulerHeight;
         const float scrollbarWidth = kScrollbarWidth;
 
-        const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        const float viewportHeight =
-            std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
+        const float viewportTop = bounds.y + kTimelineTimeBandHeight;
+        const float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
         const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
         const AestraUI::NUIRect viewportClip(bounds.x, viewportTop, trackWidth, viewportHeight);
 
@@ -470,11 +426,8 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
         float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
         float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
 
-        float headerHeight = kTimelineHeaderHeight;
-        float rulerHeight = kTimelineRulerHeight;
-        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
-        float trackAreaHeight = bounds.height - (headerHeight + horizontalScrollbarHeight + rulerHeight);
+        float trackAreaTop = bounds.y + kTimelineTimeBandHeight;
+        float trackAreaHeight = bounds.height - kTimelineTimeBandHeight;
 
         float scrollbarWidth = kTimelineScrollbarWidth;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5.0f;
@@ -511,13 +464,10 @@ void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     AestraUI::NUIRect bounds = getBounds();
 
-    const float headerHeight = kTimelineHeaderHeight;
-    const float rulerHeight = kTimelineRulerHeight;
-    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     const float scrollbarWidth = kTimelineScrollbarWidth;
 
-    const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
-    const float viewportTopAbs = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    const float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
+    const float viewportTopAbs = bounds.y + kTimelineTimeBandHeight;
     const float viewportBottomAbs = viewportTopAbs + viewportHeight;
     const float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth);
 
@@ -880,9 +830,10 @@ void TrackManagerUI::onResize(int width, int height) {
     invalidateCache(); // Full invalidation on resize for immediate repaint
 
     layoutTracks();
+    // Cropped minimap: bounds already start at the track-controls boundary,
+    // so no leading inset — keep this site in sync with the constructor.
     if (m_timelineMinimap) {
-        m_timelineMinimap->setLeadingInset(
-            AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
+        m_timelineMinimap->setLeadingInset(0.0f);
     }
     // Zebra Striping: Assign row index to tracks
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
@@ -896,11 +847,6 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     auto borderColor = themeManager.getColor("borderSubtle");
     auto accentColor = themeManager.getColor("accentPrimary");
-
-    // Opaque near-black ruler material — identical across the full row and the
-    // grid shell so the corner over the track controls is flush by construction.
-    auto glassBg = themeManager.getColor("recessedPanel");
-    auto glassHighlight = themeManager.getColor("textPrimary").withAlpha(0.014f);
 
     auto textCol = themeManager.getColor("textSecondary").withAlpha(0.68f);
     auto majorTickCol = themeManager.getColor("gridMajor");
@@ -919,22 +865,14 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     AestraUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
 
-    // One material across the whole ruler row: fill the full row (including the
-    // corner over the track controls) with the ruler base so the left edge is
-    // flush with the rest of the ruler instead of showing the layer beneath.
-    renderer.fillRect(rulerBounds, glassBg);
-
-    float cornerRadius = 3.0f;
-    renderer.fillRoundedRect(gridRulerRect, cornerRadius, glassBg);
-
-    // Subtle top highlight on grid area only
-    AestraUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
-    renderer.fillRect(highlightRect, glassHighlight);
-
-    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.28f));
-    renderer.drawLine(AestraUI::NUIPoint(gridRulerRect.x, gridRulerRect.bottom() - 1.0f),
-                      AestraUI::NUIPoint(gridRulerRect.right(), gridRulerRect.bottom() - 1.0f), 1.0f,
-                      AestraUI::NUIColor::white().withAlpha(0.035f));
+    // The ruler is part of the coordinate plane, not a strip bolted onto it:
+    // the continuous grid's bar lines already run through this row, so the
+    // grid area gets no shell of its own — the numbers are labels attached to
+    // the grid. Only the left corner cell (the toolbar dock) gets material.
+    renderer.fillRect(AestraUI::NUIRect(rulerBounds.x, rulerBounds.y, gridStartX - rulerBounds.x, rulerBounds.height),
+                      themeManager.getColor("recessedPanel"));
+    renderer.drawLine({rulerBounds.x, rulerBounds.bottom()}, {gridStartX, rulerBounds.bottom()}, 1.0f,
+                      borderColor.withAlpha(0.24f));
 
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
     renderer.setClipRect(gridRulerRect);
@@ -1166,10 +1104,7 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float gridEndX = gridStartX + gridWidth;
 
     // Calculate playhead boundaries
-    float headerHeight = kTimelineHeaderHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float playheadStartY = bounds.y + kTimelineTimeBandHeight;
 
     // In v3.1, overlays are hit-test transparent and don't affect playhead line culling directly.
     // We just cull against the workspace grid area.
@@ -1279,19 +1214,10 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     renderer.drawLine({textureBounds.x, textureBounds.bottom()}, {textureBounds.right(), textureBounds.bottom()}, 1.0f,
                       borderColor);
 
-    // Draw header bar
-    float headerHeight = kTimelineHeaderHeight;
-    AestraUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
-    renderer.fillRect(headerRect, bgColor);
-    renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, borderColor);
-    renderer.drawLine({headerRect.right(), headerRect.y}, {headerRect.right(), headerRect.bottom()}, 1.0f, borderColor);
-    renderer.drawLine({headerRect.x, headerRect.bottom()}, {headerRect.right(), headerRect.bottom()}, 1.0f,
-                      borderColor);
-
-    // Draw time ruler
+    // Draw time ruler (no header strip — the time band starts with the
+    // minimap row, cropped to the plane column, then the ruler)
     float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
+    AestraUI::NUIRect rulerRect(0, kTimelineMinimapHeight, static_cast<float>(width), rulerHeight);
 
     // Render ruler ticks (static part only - no moving elements)
     double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);
@@ -1441,12 +1367,9 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    float headerHeight = kTimelineHeaderHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = getBounds().x + controlAreaWidth + kTimelineGridInsetX;
-    float trackAreaTop = getBounds().y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float trackAreaTop = getBounds().y + kTimelineTimeBandHeight;
 
     // Tech/Holo Colors
     AestraUI::NUIColor cyan = themeManager.getColor("accentCyan");

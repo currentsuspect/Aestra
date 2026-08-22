@@ -39,12 +39,9 @@ void TrackManagerUI::updateScrollbar() {
         return;
 
     AestraUI::NUIRect bounds = getBounds();
-    float headerHeight = kTimelineHeaderHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
 
     // In v3.1, panels are floating overlays and do not affect the scrollbar's viewport directly.
-    float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
+    float viewportHeight = bounds.height - kTimelineTimeBandHeight;
 
     const float laneCount = static_cast<float>(m_trackUIComponents.size());
     float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
@@ -71,8 +68,10 @@ float TrackManagerUI::getTimelineGridWidthPixels() const {
     const auto& layout = themeManager.getLayoutDimensions();
 
     const float controlAreaWidth = layout.trackControlsWidth;
-    const float trackWidth = m_timelineMinimap ? m_timelineMinimap->getBounds().width : getBounds().width;
-    float gridWidth = trackWidth - controlAreaWidth - 10.0f; // Match TrackUIComponent grid width
+    // Grid width is derived from the component bounds, not the minimap surface —
+    // the minimap is a cropped overview and no longer defines the plane width.
+    const float trackWidth = getBounds().width;
+    float gridWidth = trackWidth - kTimelineScrollbarWidth - controlAreaWidth - 10.0f; // Match TrackUIComponent grid width
     return std::max(0.0f, gridWidth);
 }
 

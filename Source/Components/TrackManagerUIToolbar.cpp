@@ -147,13 +147,19 @@ bool TrackManagerUI::isRulerPointerActive() const {
         return true;
     }
     const AestraUI::NUIRect bounds = getBounds();
+    // Hovering a loop handle claims the grab hand anywhere in the ruler row —
+    // handles may sit over the toolbar corner's dead zone when scrolled.
+    if ((m_hoveringLoopStart || m_hoveringLoopEnd) && m_lastMousePos.y >= bounds.y + kTimelineMinimapHeight &&
+        m_lastMousePos.y < bounds.y + kTimelineTimeBandHeight) {
+        return true;
+    }
     // Same geometry as the events file's ruler row, but starting after the
     // control-area column: the grab hand belongs over scrubbable ruler only.
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
     const float rulerStartX = bounds.x + layout.trackControlsWidth + kTimelineGridInsetX;
     const AestraUI::NUIRect ruler(rulerStartX,
-                                  bounds.y + kTimelineHeaderHeight + kTimelineHorizontalScrollbarHeight,
+                                  bounds.y + kTimelineMinimapHeight,
                                   std::max(0.0f, bounds.width - layout.trackControlsWidth - kTimelineGridInsetX),
                                   kTimelineRulerHeight);
     return ruler.contains(m_lastMousePos);
@@ -189,13 +195,10 @@ bool TrackManagerUI::isCustomCursorActive() const {
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
-        const float headerHeight = kTimelineHeaderHeight;
-        const float rulerHeight = kTimelineRulerHeight;
-        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+        const float trackAreaTop = bounds.y + kTimelineTimeBandHeight;
 
         AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
-                                     bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
+                                     bounds.height - kTimelineTimeBandHeight);
         if (gridBounds.contains(m_lastMousePos)) {
             return true;
         }
@@ -247,32 +250,35 @@ void TrackManagerUI::updateToolbarBounds() {
     const auto& layout = themeManager.getLayoutDimensions();
     AestraUI::NUIRect bounds = getBounds();
 
-    constexpr float headerHeight = 40.0f;                // Unified playlist header strip (Standardized)
+    // The toolbar lives in the ruler row's left corner — the cell where the
+    // track-controls column meets the time band. It is sized by its contents
+    // (no reserved region): if the button count ever outgrows the corner, the
+    // overflow answer is a flyout, never a second row or a taller band.
+    const float rulerY = bounds.y + kTimelineMinimapHeight;
     const float innerPad = themeManager.getSpacing("s"); // 8px from edge
     const float buttonSpacing = 6.0f;                    // Standardized gap for Aestra UI philosophy
+    const float cornerWidth = layout.trackControlsWidth - innerPad;
 
     // Secondary toolbar controls are intentionally smaller than primary transport controls.
     const float buttonSize = 22.0f;
     const float iconSize = buttonSize;
 
-    // Vertical centering for 24px button in 40px header (8px top/bottom padding)
+    // Vertical centering for 22px button in the 28px ruler row.
     float currentX = bounds.x + innerPad;
-    float currentY = bounds.y + (headerHeight - buttonSize) * 0.5f;
+    float iconY = rulerY + (kTimelineRulerHeight - buttonSize) * 0.5f;
 
     // 2. Add Track (leftmost)
-    m_addTrackBounds = AestraUI::NUIRect(currentX, currentY, iconSize, iconSize);
+    m_addTrackBounds = AestraUI::NUIRect(currentX, iconY, iconSize, iconSize);
     float iconX = currentX + iconSize + buttonSpacing;
-    float iconY = currentY;
 
     // 3. Tools Module
     float toolbarX = iconX;
-    float toolbarY = iconY;
 
     const int numTools = 4; // Select, Split, MultiSelect, Paint
     float toolbarWidth = (iconSize * numTools) + (buttonSpacing * (numTools - 1));
     float toolbarHeight = iconSize;
 
-    m_toolbarBounds = AestraUI::NUIRect(toolbarX, toolbarY, toolbarWidth, toolbarHeight);
+    m_toolbarBounds = AestraUI::NUIRect(toolbarX, iconY, toolbarWidth, toolbarHeight);
 
     m_selectToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + buttonSpacing;
@@ -290,6 +296,13 @@ void TrackManagerUI::updateToolbarBounds() {
 
     // 5. Menu (rightmost)
     m_menuIconBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
+
+    // Content-sized corner container: the union of every button, so hover and
+    // hit testing describe what is actually drawn, not a reserved plate.
+    const float contentWidth = (iconX + iconSize) - currentX;
+    m_toolbarCornerBounds = AestraUI::NUIRect(
+        currentX, rulerY, std::min(contentWidth, cornerWidth), kTimelineRulerHeight);
+
     if (m_addTrackBtn) {
         m_addTrackBtn->setBounds(m_addTrackBounds);
     }
@@ -726,13 +739,10 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
-    float headerHeight = kTimelineHeaderHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float trackAreaTop = bounds.y + kTimelineTimeBandHeight;
 
     AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
-                                 bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
+                                 bounds.height - kTimelineTimeBandHeight);
 
     // If mouse is outside grid, don't render tool cursor (Main.cpp renders default arrow)
     if (!gridBounds.contains(position)) {
@@ -841,13 +851,10 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
-        const float headerHeight = kTimelineHeaderHeight;
-        const float rulerHeight = kTimelineRulerHeight;
-        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+        const float trackAreaTop = bounds.y + kTimelineTimeBandHeight;
 
         AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
-                                     bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight);
+                                     bounds.height - kTimelineTimeBandHeight);
         if (gridBounds.contains(position)) {
             return; // Tool cursor takes priority in grid area
         }

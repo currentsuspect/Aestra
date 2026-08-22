@@ -84,6 +84,11 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     // Handle toolbar clicks (icons only, not dropdowns - they handled themselves above)
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        // Loop markers outrank toolbar icons (their grab zones can overlap a
+        // button when a handle is scrolled over the corner column).
+        if (tryBeginLoopHandleDrag(event, localPos)) {
+            return true;
+        }
         if (handleToolbarClick(event.position)) {
             return true;
         }
@@ -142,17 +147,23 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return true;
     }
 
-    // Layout constants
-    float headerHeight = kTimelineHeaderHeight;
+    // Layout constants — the time band is minimap row + ruler row.
     float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
+    float minimapHeight = kTimelineMinimapHeight;
+    AestraUI::NUIRect rulerRect(0, minimapHeight, bounds.width, rulerHeight);
 
     // Track area (below ruler)
-    float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float trackAreaTop = kTimelineTimeBandHeight;
     AestraUI::NUIRect trackArea(0, trackAreaTop, bounds.width, bounds.height - trackAreaTop);
 
-    bool isInRuler = rulerRect.contains(localPos);
+    // The toolbar dock occupies the ruler row's left corner; presses there are
+    // button hits, never ruler scrub/loop gestures. The corner cell's empty
+    // remainder is dead space too: ruler gestures start at the plane edge, so
+    // a click between the last button and the grid cannot scrub the playhead.
+    const float rulerContentStartX = timelineGridStartX(
+        0.0f, AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
+    const bool isInRuler = rulerRect.contains(localPos) && localPos.x >= rulerContentStartX &&
+                           !m_toolbarCornerBounds.contains(event.position);
     bool isInTrackArea = trackArea.contains(localPos);
 
     if (handleTimelineWheel(event, localPos, isInRuler, isInTrackArea)) {
@@ -205,12 +216,9 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false;
     }
 
-    const float headerHeight = kTimelineHeaderHeight;
-    const float rulerHeight = kTimelineRulerHeight;
-    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    const float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+    const float trackAreaTop = kTimelineTimeBandHeight;
     if (localPos.y < trackAreaTop) {
-        return false; // header / ruler / horizontal scrollbar
+        return false; // ruler / minimap band
     }
 
     const float stride = static_cast<float>(m_trackHeight + m_trackSpacing);
@@ -378,10 +386,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
                                    m_currentTool == PlaylistTool::MultiSelect;
 
     if (startSelectionBox && !m_isDrawingSelectionBox) {
-        float headerHeight = kTimelineHeaderHeight;
-        float rulerHeight = kTimelineRulerHeight;
-        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+        float trackAreaTop = kTimelineTimeBandHeight;
 
         // Only start selection box in track area
         if (localPos.y > trackAreaTop) {
@@ -402,9 +407,6 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             const auto& layout = themeManager.getLayoutDimensions();
 
-            float headerHeight = kTimelineHeaderHeight;
-            float rulerHeight = kTimelineRulerHeight;
-            float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
             float controlAreaWidth = layout.trackControlsWidth;
             float scrollbarWidth = kTimelineScrollbarWidth;
 
@@ -412,7 +414,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
 
 
-            float gridTopLocal = globalBounds.y + headerHeight + rulerHeight + horizontalScrollbarHeight;
+            float gridTopLocal = globalBounds.y + kTimelineTimeBandHeight;
             float gridLeftLocal = globalBounds.x + controlAreaWidth + kTimelineGridInsetX;
             float gridRightLocal = globalBounds.x + globalBounds.width - scrollbarWidth; // Corrected width calc
             float gridBottomLocal = globalBounds.y + globalBounds.height;                // Full height down
@@ -521,9 +523,6 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
 bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler, bool isInTrackArea) {
     const AestraUI::NUIRect bounds = getBounds();
-    const float headerHeight = kTimelineHeaderHeight;
-    const float rulerHeight = kTimelineRulerHeight;
-    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     // Mouse wheel handling
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
         const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
@@ -599,7 +598,7 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             m_targetScrollOffset += scrollDelta;
 
             // Clamp scroll offset
-            float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
+            float viewportHeight = bounds.height - kTimelineTimeBandHeight;
 
             const float laneCount = static_cast<float>(m_trackUIComponents.size());
             float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
@@ -619,46 +618,31 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
 
 bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
     // === RULER INTERACTION: Loop markers, Playhead scrubbing OR timeline selection ===
-    if (isInRuler) {
+    // Loop handles may sit left of the plane edge when scrolled (the range can
+    // intersect the viewport while a handle renders over the toolbar corner's
+    // dead zone). They stay hoverable/grabbable anywhere in the ruler row;
+    // scrub, selection, and click-seek remain confined to right of that edge.
+    const bool inRulerRow =
+        localPos.y >= kTimelineMinimapHeight && localPos.y < kTimelineTimeBandHeight;
+    if (isInRuler || (inRulerRow && m_hasRulerSelection)) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // === LOOP MARKER INTERACTION (highest priority) ===
+        // Hover tracking lives in tryBeginLoopHandleDrag so the pre-toolbar
+        // dispatch path and this path share one hit-test/grab contract.
         if (m_hasRulerSelection) {
-            // Calculate marker positions
-            float loopStartX =
-                gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float loopEndX =
-                gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-
-            const float hitZone = 12.0f; // Hit zone around markers
-            bool nearLoopStart = std::abs(localPos.x - loopStartX) < hitZone;
-            bool nearLoopEnd = std::abs(localPos.x - loopEndX) < hitZone;
-
-            // Update hover states
-            bool wasHoveringStart = m_hoveringLoopStart;
-            bool wasHoveringEnd = m_hoveringLoopEnd;
-            m_hoveringLoopStart = nearLoopStart;
-            m_hoveringLoopEnd = nearLoopEnd;
-
-            if (wasHoveringStart != m_hoveringLoopStart || wasHoveringEnd != m_hoveringLoopEnd) {
-                invalidateCache(); // Hover state changed
+            updateLoopHandleHover(localPos, gridStartX);
+            if (tryBeginLoopHandleDrag(event, localPos)) {
+                return true;
             }
-
-            // Start dragging loop marker
-            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
-                if (nearLoopStart) {
-                    m_isDraggingLoopStart = true;
-                    m_loopDragStartBeat = m_loopStartBeat;
-                    return true;
-                } else if (nearLoopEnd) {
-                    m_isDraggingLoopEnd = true;
-                    m_loopDragStartBeat = m_loopEndBeat;
-                    return true;
-                }
-            }
+        }
+        // Corner dead zone: only marker hover/grab (handled above) is allowed
+        // here — a click in the toolbar cell's empty remainder must never seek.
+        if (!isInRuler) {
+            return false;
         }
 
         // Right-click or Ctrl+Left-click starts ruler selection for looping
@@ -721,8 +705,71 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
     return false;
 }
 
+// Shared loop-handle hit test. Returns true when localPos sits inside a
+// handle's grab zone; hitStart reports which one. Pure — no state mutation.
+bool TrackManagerUI::hitLoopHandle(const AestraUI::NUIPoint& localPos, float gridStartX, bool& hitStart) const {
+    const float loopStartX =
+        gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+    const float loopEndX =
+        gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+
+    constexpr float hitZone = 12.0f; // Hit zone around markers
+    const bool nearLoopStart = std::abs(localPos.x - loopStartX) < hitZone;
+    const bool nearLoopEnd = std::abs(localPos.x - loopEndX) < hitZone;
+    if (nearLoopStart == nearLoopEnd) {
+        return false; // neither zone, or ambiguous double overlap
+    }
+    hitStart = nearLoopStart;
+    return true;
+}
+
+void TrackManagerUI::updateLoopHandleHover(const AestraUI::NUIPoint& localPos, float gridStartX) {
+    bool hitStart = false;
+    const bool hit = hitLoopHandle(localPos, gridStartX, hitStart);
+    const bool wasHoveringStart = m_hoveringLoopStart;
+    const bool wasHoveringEnd = m_hoveringLoopEnd;
+    m_hoveringLoopStart = hit && hitStart;
+    m_hoveringLoopEnd = hit && !hitStart;
+    if (wasHoveringStart != m_hoveringLoopStart || wasHoveringEnd != m_hoveringLoopEnd) {
+        invalidateCache(); // Hover state changed
+    }
+}
+
+bool TrackManagerUI::tryBeginLoopHandleDrag(const AestraUI::NUIMouseEvent& event,
+                                            const AestraUI::NUIPoint& localPos) {
+    // Loop markers outrank toolbar icons: a handle scrolled over the corner
+    // must stay draggable even where its grab zone overlaps a button.
+    if (!event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+        return false;
+    }
+    if (!m_playlistVisible || !m_hasRulerSelection) {
+        return false;
+    }
+    if (localPos.y < kTimelineMinimapHeight || localPos.y >= kTimelineTimeBandHeight) {
+        return false;
+    }
+
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    float gridStartX = controlAreaWidth + kTimelineGridInsetX;
+
+    updateLoopHandleHover(localPos, gridStartX);
+
+    bool hitStart = false;
+    if (!hitLoopHandle(localPos, gridStartX, hitStart)) {
+        return false;
+    }
+    if (hitStart) {
+        m_isDraggingLoopStart = true;
+        m_loopDragStartBeat = m_loopStartBeat;
+    } else {
+        m_isDraggingLoopEnd = true;
+        m_loopDragStartBeat = m_loopEndBeat;
+    }
+    return true;
+}
+
 bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
-    // Handle ruler selection dragging
     if (m_isDraggingRulerSelection) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -927,10 +974,7 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
-        float headerHeight = kTimelineHeaderHeight;
-        float rulerHeight = kTimelineRulerHeight;
-        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-        float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+        float trackAreaTop = kTimelineTimeBandHeight;
 
         AestraUI::NUIRect gridBounds(bounds.x + gridStartX, bounds.y + trackAreaTop,
                                      bounds.width - controlAreaWidth - 20.0f, bounds.height - trackAreaTop);

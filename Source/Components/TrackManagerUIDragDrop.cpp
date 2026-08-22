@@ -684,12 +684,8 @@ int TrackManagerUI::getTrackAtPosition(float y) const {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
     // Get ruler height and track area start
-    // MUST match renderTrackManagerDirect layout exactly:
-    // header(38) + horizontalScrollbar(24) + ruler(28)
-    float headerHeight = kTimelineHeaderHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float trackAreaY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    // MUST match the render layout exactly: minimap(24) + ruler(28)
+    float trackAreaY = bounds.y + kTimelineTimeBandHeight;
 
     // Relative Y position in track area
     float relativeY = y - trackAreaY + m_scrollOffset;
@@ -746,11 +742,8 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
     // Calculate track Y position - MUST match layoutTracks() calculation exactly
-    // layoutTracks uses: headerHeight(38) + horizontalScrollbarHeight(24) + rulerHeight(28)
-    float headerHeight = kTimelineHeaderHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float trackAreaStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    // layoutTracks uses: minimapHeight(24) + rulerHeight(28)
+    float trackAreaStartY = bounds.y + kTimelineTimeBandHeight;
     float trackY = trackAreaStartY + (m_dropTargetTrack * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
 
     // Calculate X position from time

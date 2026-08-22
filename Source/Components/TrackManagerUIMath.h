@@ -17,9 +17,16 @@ namespace Audio {
 
 // Shared by layout, rendering, hit testing, and drag math so visible and
 // interactive geometry cannot drift independently.
-constexpr float kTimelineHeaderHeight = 38.0f;
+//
+// Above the track rows sits ONE time band, top to bottom: the overview
+// minimap row (cropped to start at the track-controls boundary — it must not
+// span the toolbar corner), then the ruler row (whose left corner carries the
+// timeline toolbar). There is no separate header strip — the header died with
+// the 2026-08 plane redesign, and `timelineTrackAreaTopY` is the single place
+// that knows the band's total height.
 constexpr float kTimelineRulerHeight = 28.0f;
-constexpr float kTimelineHorizontalScrollbarHeight = 24.0f;
+constexpr float kTimelineMinimapHeight = 24.0f;
+constexpr float kTimelineTimeBandHeight = kTimelineMinimapHeight + kTimelineRulerHeight;
 constexpr float kTimelineScrollbarWidth = 15.0f;
 
 // FD-14 §10: nested lane rows (owned lanes of an expanded track) indent this
@@ -54,7 +61,7 @@ inline float timelineGridEndX(float basisOriginX, float boundsWidth) {
 
 /** @brief Resolve the first track-row pixel in the caller's stated y basis. */
 inline float timelineTrackAreaTopY(float basisOriginY) {
-    return basisOriginY + kTimelineHeaderHeight + kTimelineHorizontalScrollbarHeight + kTimelineRulerHeight;
+    return basisOriginY + kTimelineTimeBandHeight;
 }
 
 /** @brief Convert a distance from the grid origin to an unclamped beat. */

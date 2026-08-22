@@ -151,6 +151,7 @@ public:
     void setTimelineScrollOffset(float offset) { m_timelineScrollOffset = offset; }
     void setMaxTimelineExtent(double extent) { m_maxTimelineExtent = extent; }
     void setSnapSetting(AestraUI::SnapGrid snap) { m_snapSetting = snap; }
+    void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
     
     // Loop state for visual rendering
     void setLoopEnabled(bool enabled) { m_loopEnabled = enabled; }
@@ -233,6 +234,9 @@ private:
     
     // Snap Setting
     AestraUI::SnapGrid m_snapSetting = AestraUI::SnapGrid::Bar;
+    // Mirrors TrackManagerUI's master snap toggle. Trim/resize must honor the
+    // same switch move/drag does, or clips "have a mind of their own".
+    bool m_snapEnabled = true;
     
     // Loop state for visual rendering
     bool m_loopEnabled = false;
@@ -363,10 +367,6 @@ private:
     PlaylistLaneID m_laneId;
     std::shared_ptr<MixerChannel> m_channel;
 
-    
-    // Playlist grid rendering
-    void drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
-    
     void showClipRoutingMenu(const ClipInstanceID& clipId, const AestraUI::NUIPoint& position);
     // Helper to draw a single clip (waveform + container) at calculated position
     void drawClipAtPosition(AestraUI::NUIRenderer& renderer, const ClipInstance& clip,
