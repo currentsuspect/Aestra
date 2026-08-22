@@ -2943,25 +2943,33 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
         if (spanEndX <= viewLeft) continue;
         if (spanStartX >= viewRight) break;
 
-        const float lo = peaks[b * 2];
-        const float hi = peaks[b * 2 + 1];
-        float peak = std::max(std::fabs(lo), std::fabs(hi));
-        float env = std::pow(std::min(1.0f, peak), 0.75f);
+        // Signed envelope (#854 round 2): a bucket pair is [min, max] around
+        // the center line, so each side renders only the portion that actually
+        // extends beyond center. The old abs() math pushed a positive-only
+        // bucket's envelope BELOW center and mirrored it wrongly.
+        const float loRaw = peaks[b * 2];
+        const float hiRaw = peaks[b * 2 + 1];
+        if (!std::isfinite(loRaw) || !std::isfinite(hiRaw)) continue;
+
+        const float hiC = std::clamp(std::max(loRaw, hiRaw), -1.0f, 1.0f); // upper extent
+        const float loC = std::clamp(std::min(loRaw, hiRaw), -1.0f, 1.0f); // lower extent
 
         const float xL = static_cast<float>(std::max(spanStartX, viewLeft));
         const float xR = static_cast<float>(std::min(spanEndX, viewRight));
         const float width = std::max(1.0f, xR - xL);
 
-        const float loY = centerY - std::fabs(lo) * halfHeight;
-        const float hiY = centerY - std::fabs(hi) * halfHeight;
-        const float topY = std::min(loY, hiY) - 0.5f;
-        const float bottomY = centerY + std::fabs(hi) * halfHeight + 0.5f;
-
-        // Filled envelope across the whole bucket span: continuous waveform,
-        // no isolated bars or gaps when a bucket covers several pixels.
-        renderer.fillRect(AestraUI::NUIRect(xL, topY, width, centerY - topY), topFill);
-        renderer.fillRect(AestraUI::NUIRect(xL, centerY, width, bottomY - centerY), bottomFill);
-        renderer.drawLine(AestraUI::NUIPoint(xL, topY), AestraUI::NUIPoint(xR, topY), 1.0f, peakLine);
+        if (hiC > 0.0f) {
+            const float height = hiC * halfHeight;
+            renderer.fillRect(AestraUI::NUIRect(xL, centerY - height, width, height), topFill);
+            renderer.drawLine(AestraUI::NUIPoint(xL, centerY - height),
+                              AestraUI::NUIPoint(xR, centerY - height), 1.0f, peakLine);
+        }
+        if (loC < 0.0f) {
+            const float depth = -loC * halfHeight;
+            renderer.fillRect(AestraUI::NUIRect(xL, centerY, width, depth), bottomFill);
+            renderer.drawLine(AestraUI::NUIPoint(xL, centerY + depth),
+                              AestraUI::NUIPoint(xR, centerY + depth), 1.0f, peakLine);
+        }
 
         lastCenterX = xR;
         drewAny = true;

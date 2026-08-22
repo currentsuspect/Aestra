@@ -786,16 +786,29 @@ public:
              offset += stride) {
             const size_t span = std::min(stride, size - offset);
             // Seed from the first sample: zero-init would report a false bound
-            // for positive-only or negative-only buckets.
-            const float first =
-                capture->samples[(head + offset) % capture->capacity].load(std::memory_order_relaxed);
-            float lo = first;
-            float hi = first;
-            for (size_t k = 1; k < span; ++k) {
+            // for positive-only or negative-only buckets. Non-finite input
+            // samples (driver glitches) are skipped rather than poisoning the
+            // pair — they are a render/capture concern, not signal.
+            bool seeded = false;
+            float lo = 0.0f;
+            float hi = 0.0f;
+            for (size_t k = 0; k < span; ++k) {
                 const float v =
                     capture->samples[(head + offset + k) % capture->capacity].load(std::memory_order_relaxed);
+                if (!std::isfinite(v)) {
+                    continue;
+                }
+                if (!seeded) {
+                    lo = v;
+                    hi = v;
+                    seeded = true;
+                    continue;
+                }
                 lo = std::min(lo, v);
                 hi = std::max(hi, v);
+            }
+            if (!seeded) {
+                continue; // all-non-finite bucket contributes no pair
             }
             peaksOut.push_back(lo);
             peaksOut.push_back(hi);
