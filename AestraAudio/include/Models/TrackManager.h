@@ -785,9 +785,13 @@ public:
         for (size_t offset = 0; offset < size && peaksOut.size() < static_cast<size_t>(maxPoints) * 2;
              offset += stride) {
             const size_t span = std::min(stride, size - offset);
-            float lo = 0.0f;
-            float hi = 0.0f;
-            for (size_t k = 0; k < span; ++k) {
+            // Seed from the first sample: zero-init would report a false bound
+            // for positive-only or negative-only buckets.
+            const float first =
+                capture->samples[(head + offset) % capture->capacity].load(std::memory_order_relaxed);
+            float lo = first;
+            float hi = first;
+            for (size_t k = 1; k < span; ++k) {
                 const float v =
                     capture->samples[(head + offset + k) % capture->capacity].load(std::memory_order_relaxed);
                 lo = std::min(lo, v);

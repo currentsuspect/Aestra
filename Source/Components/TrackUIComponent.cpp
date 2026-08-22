@@ -2923,20 +2923,31 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     
     int startPixelInt = static_cast<int>(visibleStartPixel);
     int endPixelInt = static_cast<int>(visibleEndPixel);
-    
-    size_t numPoints = endPixelInt - startPixelInt;
-    topPoints.reserve(numPoints);
-    bottomPoints.reserve(numPoints);
-    
-    for (int p = startPixelInt; p < endPixelInt; ++p) {
-        const size_t loIdx = static_cast<size_t>(std::max(0, p)) * 2;
-        if (loIdx + 1 >= peaks.size()) break;
 
-        float peak = std::max(std::fabs(peaks[loIdx]), std::fabs(peaks[loIdx + 1]));
+    // Iterate BUCKETS (not pixels): each pair spans
+    // samplesPerBucket/samplesPerPixel screen pixels, so a recording shorter
+    // or longer than the viewport still maps to the correct region (#854).
+    const size_t bucketCount = peaks.size() / 2;
+    const double samplesPerBucket =
+        static_cast<double>(ringSamples) / static_cast<double>(std::max<size_t>(1, bucketCount));
+    const double pixelsPerBucket = samplesPerBucket / samplesPerPixel;
+
+    topPoints.reserve(bucketCount + 1);
+    bottomPoints.reserve(bucketCount + 1);
+
+    for (size_t b = 0; b < bucketCount; ++b) {
+        const double bucketStartX = startX + static_cast<double>(b) * pixelsPerBucket;
+        const double bucketEndX = bucketStartX + pixelsPerBucket;
+        if (bucketEndX < gridStartX || bucketStartX > bounds.right()) continue;
+
+        const float lo = peaks[b * 2];
+        const float hi = peaks[b * 2 + 1];
+        float peak = std::max(std::fabs(lo), std::fabs(hi));
 
         float env = std::pow(std::min(1.0f, peak), 0.75f);
-        
-        float screenX = startX + p;
+
+        const float screenX = static_cast<float>(
+            std::clamp(bucketStartX, static_cast<double>(gridStartX), static_cast<double>(bounds.right())));
         float topY = centerY - env * halfHeight;
         float bottomY = centerY + env * halfHeight;
         
