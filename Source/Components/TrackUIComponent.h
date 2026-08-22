@@ -112,6 +112,10 @@ public:
         }
     }
     ClipInstanceID getSelectedClipId() const { return m_selectedClipId; }
+    /** @brief Shift+click additive pick (#848): fired instead of the replace callback. */
+    void setOnClipSelectionAdd(std::function<void(TrackUIComponent*, ClipInstanceID)> callback) {
+        m_onClipSelectionAddCallback = std::move(callback);
+    }
     /**
      * @brief Non-owning view of the parent's multi-clip selection (#848).
      *
@@ -211,6 +215,7 @@ private:
     std::function<bool()> m_isSplitToolActiveCallback;
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
+    std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectionAddCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
     std::function<void(PatternID)> m_onPatternClipDragStarted;

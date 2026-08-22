@@ -562,6 +562,8 @@ private:
     void selectAllClips();
     /** @brief Drop the multi-clip set and its row highlight. */
     void clearClipSelection();
+    /** @brief Shift+click additive pick (#848): toggle-free add with anchor update. */
+    void addToClipSelection(ClipInstanceID clipId);
     void updateSelectionLoopRegion(double startBeat, double endBeat);
     void updateTrackPositions();
     void updateScrollbar();

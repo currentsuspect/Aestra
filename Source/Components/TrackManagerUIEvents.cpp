@@ -971,7 +971,7 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
 
         if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
-            m_selectedClipId.isValid()) {
+            (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
             deleteSelectedClip();
             return true;
         }
@@ -994,7 +994,8 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 selectAllClips();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::X && m_selectedClipId.isValid()) {
+            if (event.keyCode == AestraUI::NUIKeyCode::X &&
+                (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 cutSelectedClip();
                 return true;
             }
@@ -1004,6 +1005,12 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             }
             if (event.keyCode == AestraUI::NUIKeyCode::V && hasClipboardClip()) {
                 pasteClipboardAtCursor();
+                return true;
+            }
+            // Ctrl+B: duplicate the whole selection (#848; matches the Arsenal grid).
+            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+                (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
+                duplicateSelectedClip();
                 return true;
             }
             if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {

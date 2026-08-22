@@ -258,6 +258,12 @@ void TrackManagerUI::refreshTracks() {
                 copySelectedClip();
             }
         });
+        trackUI->setOnClipSelectionAdd([this](TrackUIComponent*, ClipInstanceID clipId) {
+            addToClipSelection(clipId);
+            if (clipId.isValid()) {
+                copySelectedClip(); // keep brush in sync with the newest pick
+            }
+        });
 
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
             if (m_onOpenPatternInPianoRoll) {
@@ -730,6 +736,29 @@ void TrackManagerUI::selectAllClips() {
         m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
     }
     syncTrackSelectionView();
+    invalidateCache();
+}
+
+void TrackManagerUI::addToClipSelection(ClipInstanceID clipId) {
+    if (!clipId.isValid()) {
+        return;
+    }
+    m_clipSelection.apply(clipId, TrackSelectionIntent::Add);
+    m_selectedClipId = m_clipSelection.anchor();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI) {
+            trackUI->setSelectedClipId(m_clipSelection.anchor());
+            trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
+    // Owning lane highlights with the added clip (#848 cohesion).
+    if (m_trackManager) {
+        const PlaylistLaneID laneId = m_trackManager->getPlaylistModel().findClipLane(clipId);
+        if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
+            m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
+            syncTrackSelectionView();
+        }
+    }
     invalidateCache();
 }
 

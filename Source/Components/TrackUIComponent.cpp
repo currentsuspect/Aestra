@@ -2688,9 +2688,17 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
                 
                 if (m_onClipSelectedCallback) {
+                    if (event.modifiers & AestraUI::NUIModifiers::Shift) {
+                        // Shift+click adds to the multi-selection (#848).
+                        if (m_onClipSelectionAddCallback) {
+                            m_onClipSelectionAddCallback(this, clickedClipId);
+                            Log::info("Clip added to selection: " + clickedClipId.toString());
+                            return true;
+                        }
+                    }
                     m_onClipSelectedCallback(this, clickedClipId);
                 }
-                
+
                 Log::info("Clip selected - ready for drag: " + clickedClipId.toString());
                 return true;
 
