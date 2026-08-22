@@ -2943,33 +2943,31 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
         if (spanEndX <= viewLeft) continue;
         if (spanStartX >= viewRight) break;
 
-        // Signed envelope (#854 round 2): a bucket pair is [min, max] around
-        // the center line, so each side renders only the portion that actually
-        // extends beyond center. The old abs() math pushed a positive-only
-        // bucket's envelope BELOW center and mirrored it wrongly.
+        // Signed envelope (#854 round 2): render the bucket's TRUE interval
+        // [min, max] — clamped to ±1 — without mirroring to center.
+        // Non-finite pairs are skipped slots from the reader: they keep their
+        // timing slot but draw nothing (#845/#846).
         const float loRaw = peaks[b * 2];
         const float hiRaw = peaks[b * 2 + 1];
-        if (!std::isfinite(loRaw) || !std::isfinite(hiRaw)) continue;
+        if (!std::isfinite(loRaw) || !std::isfinite(hiRaw)) {
+            continue;
+        }
 
-        const float hiC = std::clamp(std::max(loRaw, hiRaw), -1.0f, 1.0f); // upper extent
-        const float loC = std::clamp(std::min(loRaw, hiRaw), -1.0f, 1.0f); // lower extent
+        const float hiC = std::clamp(std::max(loRaw, hiRaw), -1.0f, 1.0f);
+        const float loC = std::clamp(std::min(loRaw, hiRaw), -1.0f, 1.0f);
 
         const float xL = static_cast<float>(std::max(spanStartX, viewLeft));
         const float xR = static_cast<float>(std::min(spanEndX, viewRight));
         const float width = std::max(1.0f, xR - xL);
 
-        if (hiC > 0.0f) {
-            const float height = hiC * halfHeight;
-            renderer.fillRect(AestraUI::NUIRect(xL, centerY - height, width, height), topFill);
-            renderer.drawLine(AestraUI::NUIPoint(xL, centerY - height),
-                              AestraUI::NUIPoint(xR, centerY - height), 1.0f, peakLine);
-        }
-        if (loC < 0.0f) {
-            const float depth = -loC * halfHeight;
-            renderer.fillRect(AestraUI::NUIRect(xL, centerY, width, depth), bottomFill);
-            renderer.drawLine(AestraUI::NUIPoint(xL, centerY + depth),
-                              AestraUI::NUIPoint(xR, centerY + depth), 1.0f, peakLine);
-        }
+        // True interval band: top edge at the max extent, bottom edge at the
+        // min extent. Extends to centerY only when the interval crosses zero.
+        const float yHi = centerY - hiC * halfHeight;
+        const float yLo = centerY - loC * halfHeight;
+
+        renderer.fillRect(AestraUI::NUIRect(xL, yHi, width, yLo - yHi), topFill);
+        renderer.drawLine(AestraUI::NUIPoint(xL, yHi), AestraUI::NUIPoint(xR, yHi), 1.0f, peakLine);
+        renderer.drawLine(AestraUI::NUIPoint(xL, yLo), AestraUI::NUIPoint(xR, yLo), 1.0f, peakLine);
 
         lastCenterX = xR;
         drewAny = true;

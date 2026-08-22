@@ -808,7 +808,14 @@ public:
                 hi = std::max(hi, v);
             }
             if (!seeded) {
-                continue; // all-non-finite bucket contributes no pair
+                // All-non-finite span: emit a NaN pair as an explicit skipped
+                // slot. Dropping the pair entirely would shift every later
+                // bucket's screen position left (#854 round 2) — the renderer
+                // ignores non-finite pairs, so timing stays correct.
+                constexpr float nanPair = std::numeric_limits<float>::quiet_NaN();
+                peaksOut.push_back(nanPair);
+                peaksOut.push_back(nanPair);
+                continue;
             }
             peaksOut.push_back(lo);
             peaksOut.push_back(hi);
