@@ -84,6 +84,11 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     // Handle toolbar clicks (icons only, not dropdowns - they handled themselves above)
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        // Loop markers outrank toolbar icons (their grab zones can overlap a
+        // button when a handle is scrolled over the corner column).
+        if (tryBeginLoopHandleDrag(event, localPos)) {
+            return true;
+        }
         if (handleToolbarClick(event.position)) {
             return true;
         }
@@ -575,41 +580,14 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
         float gridStartX = controlAreaWidth + kTimelineGridInsetX;
 
         // === LOOP MARKER INTERACTION (highest priority) ===
+        // Hover tracking lives in tryBeginLoopHandleDrag so the pre-toolbar
+        // dispatch path and this path share one hit-test/grab contract.
         if (m_hasRulerSelection) {
-            // Calculate marker positions
-            float loopStartX =
-                gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float loopEndX =
-                gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-
-            const float hitZone = 12.0f; // Hit zone around markers
-            bool nearLoopStart = std::abs(localPos.x - loopStartX) < hitZone;
-            bool nearLoopEnd = std::abs(localPos.x - loopEndX) < hitZone;
-
-            // Update hover states
-            bool wasHoveringStart = m_hoveringLoopStart;
-            bool wasHoveringEnd = m_hoveringLoopEnd;
-            m_hoveringLoopStart = nearLoopStart;
-            m_hoveringLoopEnd = nearLoopEnd;
-
-            if (wasHoveringStart != m_hoveringLoopStart || wasHoveringEnd != m_hoveringLoopEnd) {
-                invalidateCache(); // Hover state changed
-            }
-
-            // Start dragging loop marker
-            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
-                if (nearLoopStart) {
-                    m_isDraggingLoopStart = true;
-                    m_loopDragStartBeat = m_loopStartBeat;
-                    return true;
-                } else if (nearLoopEnd) {
-                    m_isDraggingLoopEnd = true;
-                    m_loopDragStartBeat = m_loopEndBeat;
-                    return true;
-                }
+            updateLoopHandleHover(localPos, gridStartX);
+            if (tryBeginLoopHandleDrag(event, localPos)) {
+                return true;
             }
         }
-
         // Corner dead zone: only marker hover/grab (handled above) is allowed
         // here — a click in the toolbar cell's empty remainder must never seek.
         if (!isInRuler) {
@@ -676,8 +654,71 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
     return false;
 }
 
+// Shared loop-handle hit test. Returns true when localPos sits inside a
+// handle's grab zone; hitStart reports which one. Pure — no state mutation.
+bool TrackManagerUI::hitLoopHandle(const AestraUI::NUIPoint& localPos, float gridStartX, bool& hitStart) const {
+    const float loopStartX =
+        gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+    const float loopEndX =
+        gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+
+    constexpr float hitZone = 12.0f; // Hit zone around markers
+    const bool nearLoopStart = std::abs(localPos.x - loopStartX) < hitZone;
+    const bool nearLoopEnd = std::abs(localPos.x - loopEndX) < hitZone;
+    if (nearLoopStart == nearLoopEnd) {
+        return false; // neither zone, or ambiguous double overlap
+    }
+    hitStart = nearLoopStart;
+    return true;
+}
+
+void TrackManagerUI::updateLoopHandleHover(const AestraUI::NUIPoint& localPos, float gridStartX) {
+    bool hitStart = false;
+    const bool hit = hitLoopHandle(localPos, gridStartX, hitStart);
+    const bool wasHoveringStart = m_hoveringLoopStart;
+    const bool wasHoveringEnd = m_hoveringLoopEnd;
+    m_hoveringLoopStart = hit && hitStart;
+    m_hoveringLoopEnd = hit && !hitStart;
+    if (wasHoveringStart != m_hoveringLoopStart || wasHoveringEnd != m_hoveringLoopEnd) {
+        invalidateCache(); // Hover state changed
+    }
+}
+
+bool TrackManagerUI::tryBeginLoopHandleDrag(const AestraUI::NUIMouseEvent& event,
+                                            const AestraUI::NUIPoint& localPos) {
+    // Loop markers outrank toolbar icons: a handle scrolled over the corner
+    // must stay draggable even where its grab zone overlaps a button.
+    if (!event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+        return false;
+    }
+    if (!m_playlistVisible || !m_hasRulerSelection) {
+        return false;
+    }
+    if (localPos.y < kTimelineMinimapHeight || localPos.y >= kTimelineTimeBandHeight) {
+        return false;
+    }
+
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+    float gridStartX = controlAreaWidth + kTimelineGridInsetX;
+
+    updateLoopHandleHover(localPos, gridStartX);
+
+    bool hitStart = false;
+    if (!hitLoopHandle(localPos, gridStartX, hitStart)) {
+        return false;
+    }
+    if (hitStart) {
+        m_isDraggingLoopStart = true;
+        m_loopDragStartBeat = m_loopStartBeat;
+    } else {
+        m_isDraggingLoopEnd = true;
+        m_loopDragStartBeat = m_loopEndBeat;
+    }
+    return true;
+}
+
 bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
-    // Handle ruler selection dragging
     if (m_isDraggingRulerSelection) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();

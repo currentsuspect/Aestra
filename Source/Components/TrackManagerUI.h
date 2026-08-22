@@ -644,6 +644,9 @@ private:
     bool handleSelectionBoxMouse(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleTimelineWheel(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
                              bool isInRuler, bool isInTrackArea);
+    bool hitLoopHandle(const ::AestraUI::NUIPoint& localPos, float gridStartX, bool& hitStart) const;
+    void updateLoopHandleHover(const ::AestraUI::NUIPoint& localPos, float gridStartX);
+    bool tryBeginLoopHandleDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
                           bool isInRuler);
     bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);

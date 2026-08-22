@@ -147,6 +147,12 @@ bool TrackManagerUI::isRulerPointerActive() const {
         return true;
     }
     const AestraUI::NUIRect bounds = getBounds();
+    // Hovering a loop handle claims the grab hand anywhere in the ruler row —
+    // handles may sit over the toolbar corner's dead zone when scrolled.
+    if ((m_hoveringLoopStart || m_hoveringLoopEnd) && m_lastMousePos.y >= bounds.y + kTimelineMinimapHeight &&
+        m_lastMousePos.y < bounds.y + kTimelineTimeBandHeight) {
+        return true;
+    }
     // Same geometry as the events file's ruler row, but starting after the
     // control-area column: the grab hand belongs over scrubbable ruler only.
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();

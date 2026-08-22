@@ -1978,7 +1978,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
     float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
-    float gridEndX = bounds.x + bounds.width - 5;
+    // Rows span width - scrollbar - 5; ending interaction at bounds.right()
+    // aligns clip grab/trim with the plane's last gridline (width - scrollbar
+    // - inset) instead of leaving a 5px strip lines draw but clips can't use.
+    float gridEndX = bounds.right();
     
     // === HOVER EDGE DETECTION (for resize cursor) ===
     // Update hover state on every mouse move (not just press)
