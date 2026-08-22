@@ -102,6 +102,14 @@ public:
         if (!source) {
             return;
         }
+        // Reject invalid payloads before they can clobber ready content: a
+        // failed attach must never discard valid audio and its cache.
+        if (!buffer || !buffer->isValid()) {
+            return;
+        }
+        // First manager to attach owns the source; a later attach through a
+        // different manager still proceeds (single-manager process today),
+        // and this manager's revision is what the sweep watches.
         source->setOwner(this);
         const bool wasReady = source->isValid();
         source->setBuffer(std::move(buffer)); // bumps itself on a readiness flip
