@@ -690,6 +690,9 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     m_waveformPeaksL.clear();
     m_waveformPeaksR.clear();
 
+    static const bool waveTrace = std::getenv("AESTRA_WAVE_TRACE") != nullptr;
+    const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
+
     if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
         // Zoomed past the finest mip level: compute peaks directly from the
         // buffer. Bounded work — at most base-mip samples per visible pixel.
@@ -702,6 +705,12 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         auto waveformCache = source->getWaveformCache();
         if (!waveformCache || !waveformCache->isReady()) {
             // Fallback: faint center line
+            if (waveTrace) {
+                std::printf("[WaveZoom] spp=%.1f path=fallback transition=%d req=[%.0f,%.0f) got=0 visible=0 "
+                            "contentRev=%llu src=%p\n",
+                            samplesPerPixel, pathId != 1 ? 1 : 0, sourceStart, sourceEnd,
+                            static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
+            }
             float centerY = audibleBounds.y + height * 0.5f;
             renderer.drawLine(AestraUI::NUIPoint(audibleBounds.x, centerY),
                               AestraUI::NUIPoint(audibleBounds.x + audibleBounds.width, centerY), 1.0f,
@@ -713,6 +722,30 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         if (numChannels > 1) {
             waveformCache->getPeaksForRangePrecise(1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
+    }
+
+    if (waveTrace) {
+        // #858 zoom instrumentation: path, requested range, returned vs
+        // visible peak counts, per source revision. transition=true marks the
+        // first frame after a path switch (direct<->cache<->fallback), where a
+        // cache/path handoff race would surface. Env-gated: AESTRA_WAVE_TRACE=1
+        static std::unordered_map<const void*, int> lastPath;
+        const char* pathName = (samplesPerPixel <
+                                static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK))
+                                   ? "direct" : "cache";
+        bool transition = false;
+        auto it = lastPath.find(source);
+        if (it != lastPath.end() && it->second != pathId) transition = true;
+        lastPath[source] = pathId;
+        size_t visible = 0;
+        for (const auto& pk : m_waveformPeaksL) {
+            if (pk.max != 0.0f || pk.min != 0.0f) ++visible;
+        }
+        std::printf("[WaveZoom] spp=%.1f path=%s transition=%d req=[%.0f,%.0f) got=%zu visible=%zu "
+                    "contentRev=%llu src=%p\n",
+                    samplesPerPixel, pathName, transition ? 1 : 0, sourceStart, sourceEnd,
+                    m_waveformPeaksL.size(), visible,
+                    static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
     }
 
     // Always one combined waveform. Split L/R lanes read as a thin "doubled"
