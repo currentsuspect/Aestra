@@ -669,11 +669,26 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     // remainder empty instead of stretching the old waveform across silence.
     AestraUI::NUIRect audibleBounds = bounds;
     const double visibleOutputFrames = visibleOutputEnd - visibleOutputStart;
+    static const bool waveTrace = [] {
+        const char* v = std::getenv("AESTRA_WAVE_TRACE");
+        return v && v[0] != '\0' && v[0] != '0';
+    }();
+    static std::unordered_map<const void*, int> lastPath;
     const double availableOutputEnd =
         (static_cast<double>(totalFrames) - scaledSourceOffset) / varispeed;
     if (visibleOutputFrames > 0.0 && availableOutputEnd < visibleOutputEnd) {
         const double audibleOutputFrames = std::max(0.0, availableOutputEnd - visibleOutputStart);
-        audibleBounds.width *= static_cast<float>(std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0));
+        const double shrinkFraction = std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0);
+        audibleBounds.width *= static_cast<float>(shrinkFraction);
+        if (waveTrace) {
+            // #858: the source-audio-exhausted clamp bit. If blank tails
+            // correlate with this line, the clip's timeline extent overhangs
+            // its actual source audio at this viewport position.
+            std::printf("[WaveShrink] shrinkFraction=%.4f availOutEnd=%.0f visOutEnd=%.0f "
+                        "tlFrames=%.0f srcOff=%.0f vspeed=%.3f totalFrames=%zu\n",
+                        shrinkFraction, availableOutputEnd, visibleOutputEnd, timelineFrames,
+                        scaledSourceOffset, varispeed, totalFrames);
+        }
     }
     if (audibleBounds.width <= 0.0f)
         return;
@@ -695,11 +710,6 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     m_waveformPeaksL.clear();
     m_waveformPeaksR.clear();
 
-    static const bool waveTrace = [] {
-        const char* v = std::getenv("AESTRA_WAVE_TRACE");
-        return v && v[0] != '\0' && v[0] != '0';
-    }();
-    static std::unordered_map<const void*, int> lastPath;
     const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
 
     if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
@@ -787,6 +797,27 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
                     m_waveformPeaksL.size(), visible, ampMax, spanTop, spanBottom,
                     audibleBounds.y, audibleBounds.height,
                     static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
+        // #858 blank-tail chain: the right edge through every transformation,
+        // beats -> output frames -> source samples -> screen px. first wrong
+        // value localizes the layer. clipRight/audibleRight are the clip rect
+        // and the (possibly shrunk) drawable rect right edges in screen px.
+        const double clipStartBeat = static_cast<double>(clip.startBeat);
+        const double clipEndBeat = clipStartBeat + static_cast<double>(clip.durationBeats);
+        const double visStartBeat = clipStartBeat + static_cast<double>(offsetRatio) * static_cast<double>(clip.durationBeats);
+        const double visEndBeat = visStartBeat + static_cast<double>(visibleRatio) * static_cast<double>(clip.durationBeats);
+        const double pxPerSample = (sourceEnd > sourceStart)
+                                       ? static_cast<double>(audibleBounds.width) / (sourceEnd - sourceStart)
+                                       : 0.0;
+        std::printf("[WaveChain] clipBeats=[%.3f,%.3f] visBeats=[%.3f,%.3f] offR=%.4f visR=%.4f "
+                    "tlFrames=%.0f availOutEnd=%.0f visOutEnd=%.0f srcOff=%.0f vspeed=%.3f "
+                    "totalFrames=%zu dur=%.2fs req=[%.0f,%.0f) numBars=%d got=%zu "
+                    "pxPerSmp=%.4f destX=%.1f destW=%.1f clipRight=%.1f audibleRight=%.1f path=%s\n",
+                    clipStartBeat, clipEndBeat, visStartBeat, visEndBeat,
+                    static_cast<double>(offsetRatio), static_cast<double>(visibleRatio),
+                    timelineFrames, availableOutputEnd, visibleOutputEnd, scaledSourceOffset, varispeed,
+                    totalFrames, totalFrames / std::max(1.0, sampleRate), sourceStart, sourceEnd, numBars,
+                    m_waveformPeaksL.size(), pxPerSample, audibleBounds.x, audibleBounds.width,
+                    bounds.x + bounds.width, audibleBounds.x + audibleBounds.width, pathName);
     }
 
     // Always one combined waveform. Split L/R lanes read as a thin "doubled"
