@@ -690,7 +690,11 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     m_waveformPeaksL.clear();
     m_waveformPeaksR.clear();
 
-    static const bool waveTrace = std::getenv("AESTRA_WAVE_TRACE") != nullptr;
+    static const bool waveTrace = [] {
+        const char* v = std::getenv("AESTRA_WAVE_TRACE");
+        return v && v[0] != '\0' && v[0] != '0';
+    }();
+    static std::unordered_map<const void*, int> lastPath;
     const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
 
     if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
@@ -706,9 +710,13 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         if (!waveformCache || !waveformCache->isReady()) {
             // Fallback: faint center line
             if (waveTrace) {
+                bool transition = false;
+                auto it = lastPath.find(source);
+                if (it != lastPath.end() && it->second != 2) transition = true;
+                lastPath[source] = 2;
                 std::printf("[WaveZoom] spp=%.1f path=fallback transition=%d req=[%.0f,%.0f) got=0 visible=0 "
                             "contentRev=%llu src=%p\n",
-                            samplesPerPixel, pathId != 1 ? 1 : 0, sourceStart, sourceEnd,
+                            samplesPerPixel, transition ? 1 : 0, sourceStart, sourceEnd,
                             static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
             }
             float centerY = audibleBounds.y + height * 0.5f;
@@ -729,7 +737,6 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         // visible peak counts, per source revision. transition=true marks the
         // first frame after a path switch (direct<->cache<->fallback), where a
         // cache/path handoff race would surface. Env-gated: AESTRA_WAVE_TRACE=1
-        static std::unordered_map<const void*, int> lastPath;
         const char* pathName = (samplesPerPixel <
                                 static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK))
                                    ? "direct" : "cache";
