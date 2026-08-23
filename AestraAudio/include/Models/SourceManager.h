@@ -32,6 +32,7 @@ public:
         ClipSourceID id{nextId++};
         auto source = std::make_unique<ClipSource>(id, displayName.empty() ? makeDisplayName(filePath) : displayName);
         source->setFilePath(filePath);
+        source->setOwner(this); // so a later readiness flip can bump the revision
 
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
@@ -74,12 +75,47 @@ public:
 
         auto source = std::make_unique<ClipSource>(id, displayName.empty() ? makeDisplayName(filePath) : displayName);
         source->setFilePath(filePath);
+        source->setOwner(this); // so a later readiness flip can bump the revision
 
         m_sources[id.value] = std::move(source);
         m_pathToId[filePath] = id;
         ++m_revision;
 
         return id;
+    }
+
+    /**
+     * @brief Canonical entry point for handing decoded audio to a managed source.
+     *
+     * Wraps ClipSource::setBuffer with the bookkeeping callers must not be able
+     * to forget: (re)binding ownership and moving the revision counter the
+     * timeline's waveform-cache sweep watches (TrackManagerUIRender compares it
+     * once per frame). A not-ready -> ready flip bumps through the ClipSource
+     * back-pointer; replacing the buffer of an already-ready source bumps here,
+     * because its old waveform cache was just discarded without any readiness
+     * change. A failed attach — no source, or a buffer that leaves the source
+     * unready — bumps nothing and leaves the retryable state untouched.
+     * @param source Managed source receiving the buffer (null is a no-op).
+     * @param buffer Decoded audio to attach.
+     */
+    void attachBuffer(ClipSource* source, std::shared_ptr<AudioBufferData> buffer) {
+        if (!source) {
+            return;
+        }
+        // Reject invalid payloads before they can clobber ready content: a
+        // failed attach must never discard valid audio and its cache.
+        if (!buffer || !buffer->isValid()) {
+            return;
+        }
+        // First manager to attach owns the source; a later attach through a
+        // different manager still proceeds (single-manager process today),
+        // and this manager's revision is what the sweep watches.
+        source->setOwner(this);
+        const bool wasReady = source->isValid();
+        source->setBuffer(std::move(buffer)); // bumps itself on a readiness flip
+        if (wasReady && source->isValid()) {
+            ++m_revision; // ready -> ready replacement still discards the cache
+        }
     }
 
     /**
@@ -101,11 +137,10 @@ public:
             return ClipSourceID{};
         }
 
-        source->setBuffer(std::move(buffer));
-        // Bumped unconditionally: an existing source deduped by path does not
-        // mint a new ID, but attaching a buffer still flips it to ready, which
-        // is the transition waveform-cache builders watch for.
-        ++m_revision;
+        // Canonical attach: bumps the revision whether this flips an existing
+        // path-deduped source to ready or replaces an earlier take's buffer —
+        // both are transitions waveform-cache builders watch for.
+        attachBuffer(source, std::move(buffer));
         return id;
     }
 
@@ -197,6 +232,16 @@ public:
         m_pathToId.clear();
         ++m_revision;
     }
+
+    /**
+     * @brief Wake every revision watcher (the timeline's waveform-cache sweep).
+     *
+     * Called by ClipSource::setBuffer when a buffer attachment flips a managed
+     * source from not-ready to ready — the transition that makes a cache build
+     * necessary. Watchers compare snapshots, so an extra bump only costs one
+     * redundant sweep pass, never a missed one.
+     */
+    void bumpRevision() { ++m_revision; }
 
     /**
      * @brief Monotonic counter bumped whenever the source set or a source's

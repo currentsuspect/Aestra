@@ -7,9 +7,10 @@
 namespace Aestra {
 namespace Audio {
 
-// Forward declaration
+// Forward declarations
 struct AudioBufferData;
 class WaveformCache;
+class SourceManager;
 
 /**
  * @brief Type-safe identifier for clip sources
@@ -78,12 +79,11 @@ public:
     void setName(const std::string& name) { m_name = name; }
     void setFilePath(const std::string& path) { m_filePath = path; }
 
-    void setBuffer(std::shared_ptr<AudioBufferData> buffer) {
-        m_buffer = std::move(buffer);
-        m_waveformCache.reset();
-        ++m_contentRevision;
-        clearFilteredVariant(); // new content invalidates any anti-aliased copy
-    }
+    // Defined in ClipSource.cpp (it needs the complete SourceManager type, and
+    // SourceManager.h already includes this header): attaching audio that flips
+    // the source from not-ready to ready must bump the owning SourceManager's
+    // revision so the timeline's waveform-cache sweep re-runs.
+    void setBuffer(std::shared_ptr<AudioBufferData> buffer);
 
     std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
     void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
@@ -129,12 +129,22 @@ public:
     bool hasFilteredVariant() const { return m_filteredBuffer != nullptr; }
 
 private:
+    // Owning manager, bound at creation time inside SourceManager. Null for
+    // sources minted elsewhere (e.g. AuditionEngine's standalone preview
+    // source) — those have no sweep to wake, so a null owner simply skips the
+    // notification in setBuffer. Friendship rather than a public setter:
+    // ownership is a creation-time fact, not something callers rewire.
+    friend class SourceManager;
+
+    void setOwner(SourceManager* owner) { m_owner = owner; }
+
     ClipSourceID m_id;
     std::string m_name;
     std::string m_filePath;
     std::shared_ptr<AudioBufferData> m_buffer;
     std::shared_ptr<WaveformCache> m_waveformCache;
     uint64_t m_contentRevision{0};
+    SourceManager* m_owner{nullptr};
 
     // Filtered-variant slot (see threading contract above).
     std::shared_ptr<AudioBufferData> m_filteredBuffer;
