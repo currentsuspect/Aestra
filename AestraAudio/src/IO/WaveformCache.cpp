@@ -163,35 +163,69 @@ void WaveformCache::getPeaksForRangePrecise(uint32_t channel, double startSample
         return;
     }
 
-    // Calculate samples per pixel
     const double samplesPerPixel = (endSample - startSample) / static_cast<double>(numPixels);
+    const WaveformMipLevel& level = m_levels[selectLevel(samplesPerPixel)];
+    mergePixelRange(level, channel, startSample, samplesPerPixel, numPixels, outPeaks);
+}
 
-    // Select appropriate mip level: coarsest where samplesPerPeak <= samplesPerPixel
-    size_t levelIdx = 0;
-    for (size_t i = 0; i < m_levels.size(); ++i) {
-        if (m_levels[i].samplesPerPeak <= samplesPerPixel) {
-            levelIdx = i;
-        } else {
-            break;
-        }
+void WaveformCache::getPeaksForRangePreciseStereo(uint32_t channelLeft, uint32_t channelRight, double startSample,
+                                                  double endSample, uint32_t numPixels,
+                                                  std::vector<WaveformPeak>& outLeft,
+                                                  std::vector<WaveformPeak>& outRight) const {
+    std::shared_lock<std::shared_mutex> lock(m_mutex);
+
+    outLeft.clear();
+    outLeft.resize(numPixels);
+    outRight.clear();
+    outRight.resize(numPixels);
+
+    if (!m_ready.load(std::memory_order_acquire) || m_levels.empty() || numPixels == 0 ||
+        !std::isfinite(startSample) || !std::isfinite(endSample)) {
+        return;
     }
 
-    const WaveformMipLevel& level = m_levels[levelIdx];
+    const double sourceFrames = static_cast<double>(m_sourceFrames);
+    startSample = std::clamp(startSample, 0.0, sourceFrames);
+    endSample = std::clamp(endSample, 0.0, sourceFrames);
+    if (channelLeft >= m_numChannels || channelRight >= m_numChannels || startSample >= endSample) {
+        return;
+    }
 
-    // Generate peaks for each pixel by merging LOD entries overlapping the pixel's sample range.
-    // This avoids interpolation of min/max (which is physically meaningless) and ensures
-    // deterministic, source-anchored mapping. The fractional range is retained until the
-    // cache level is queried, so a clip split cannot reset the pixel grid at its seam.
+    const double samplesPerPixel = (endSample - startSample) / static_cast<double>(numPixels);
+    const WaveformMipLevel& level = m_levels[selectLevel(samplesPerPixel)];
+    mergePixelRange(level, channelLeft, startSample, samplesPerPixel, numPixels, outLeft);
+    mergePixelRange(level, channelRight, startSample, samplesPerPixel, numPixels, outRight);
+}
+
+void WaveformCache::mergePixelRange(const WaveformMipLevel& level, uint32_t channel, double startSample,
+                                    double samplesPerPixel, uint32_t numPixels,
+                                    std::vector<WaveformPeak>& outPeaks) const {
+    // Raw-pointer walk over the level's interleaved peak storage. Same math as
+    // getPeakRange(), minus the per-entry bounds check and 16-byte by-value
+    // return that dominated profiles on wide clips.
+    const WaveformPeak* peaks = level.peaks.data();
+    const size_t stride = level.numChannels;
+    const size_t ch = channel;
+
     for (uint32_t pixel = 0; pixel < numPixels; ++pixel) {
         const double pixelStart = startSample + static_cast<double>(pixel) * samplesPerPixel;
         const double pixelEnd = startSample + static_cast<double>(pixel + 1) * samplesPerPixel;
-        const double startPeakF = pixelStart / level.samplesPerPeak;
-        const double endPeakF = pixelEnd / level.samplesPerPeak;
-
-        SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
-        SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
+        SampleIndex startPeak = static_cast<SampleIndex>(std::floor(pixelStart / level.samplesPerPeak));
+        SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(pixelEnd / level.samplesPerPeak));
         endPeak = std::max(endPeak, startPeak + 1);
-        outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
+
+        SampleIndex s = std::max<SampleIndex>(startPeak, 0);
+        SampleIndex e = std::min<SampleIndex>(endPeak, level.numPeaks);
+        if (s >= e) {
+            outPeaks[pixel] = WaveformPeak();
+            continue;
+        }
+
+        WaveformPeak acc = peaks[static_cast<size_t>(s) * stride + ch];
+        for (SampleIndex i = s + 1; i < e; ++i) {
+            acc.merge(peaks[static_cast<size_t>(i) * stride + ch]);
+        }
+        outPeaks[pixel] = acc;
     }
 }
 

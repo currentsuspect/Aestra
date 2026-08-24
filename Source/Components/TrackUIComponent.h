@@ -16,6 +16,7 @@
 #include "NUIDragDrop.h"
 #include <memory>
 #include <map>
+#include <unordered_map>
 
 namespace AestraUI {
 class NUIPlatformBridge;
@@ -332,11 +333,8 @@ private:
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
                              const std::vector<Aestra::Audio::WaveformPeak>& peaks,
-                             const AestraUI::NUIColor& tint);
-    void drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                              const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
-                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels,
-                              const AestraUI::NUIColor& tint);
+                             const AestraUI::NUIColor& tint,
+                             const std::vector<Aestra::Audio::WaveformPeak>* peaksR = nullptr);
 
     // Deep-zoom helper: render finer than the peak cache's base mip level using the
     // same fractional source-frame bins as the cached path.
@@ -360,9 +358,30 @@ private:
     // Reusable peak buffers to avoid per-frame allocations
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksL;
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksR;
-    std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksMerged;
     std::vector<AestraUI::NUIPoint> m_waveformTopPts;
     std::vector<AestraUI::NUIPoint> m_waveformBottomPts;
+    std::vector<float> m_waveformRmsVals;
+
+    // Per-source memo of the last waveform query. Repaints that don't change a
+    // clip's (revision, source range, pixel width, path) skip the cache lock +
+    // per-pixel merge entirely — hover/selection/playhead frames reuse columns.
+    // Keyed by live source pointer; hits re-validate against the LIVE source's
+    // revision/frame count, so stale entries are never dereferenced.
+    struct WaveQueryMemo {
+        bool valid = false;
+        uint64_t revision = 0;
+        uint64_t totalFrames = 0;
+        size_t numChannels = 0;
+        double start = 0.0;
+        double end = 0.0;
+        int width = 0;
+        int pathId = -1;
+        uint64_t lastSeenFrame = 0;
+        std::vector<Aestra::Audio::WaveformPeak> l;
+        std::vector<Aestra::Audio::WaveformPeak> r;
+    };
+    std::unordered_map<const void*, WaveQueryMemo> m_waveQueryMemo;
+    uint64_t m_paintFrame = 0;
     
     PlaylistLaneID m_laneId;
     std::shared_ptr<MixerChannel> m_channel;

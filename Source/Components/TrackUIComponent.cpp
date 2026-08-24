@@ -712,18 +712,36 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
 
-    if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
+    const void* srcKey = source;
+    const uint64_t contentRev = source->getContentRevision();
+    WaveQueryMemo& memo = m_waveQueryMemo[srcKey];
+    memo.lastSeenFrame = m_paintFrame;
+    const bool memoHit = memo.valid && memo.revision == contentRev && memo.totalFrames == totalFrames &&
+                         memo.numChannels == numChannels && memo.start == sourceStart && memo.end == sourceEnd &&
+                         memo.width == numBars && memo.pathId == pathId;
+    if (memoHit) {
+        m_waveformPeaksL = memo.l;
+        m_waveformPeaksR = memo.r;
+        if (waveTrace) {
+            std::printf("[WaveZoom] spp=%.1f path=%s memo=H rev=%llu\n", samplesPerPixel,
+                        pathId == 0 ? "direct" : "cache", static_cast<unsigned long long>(contentRev));
+        }
+    } else if (pathId == 0) {
         // Zoomed past the finest mip level: compute peaks directly from the
         // buffer. Bounded work — at most base-mip samples per visible pixel.
         computeDirectPeaks(audioData, 0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         if (numChannels > 1) {
             computeDirectPeaks(audioData, 1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
+        memo.l = m_waveformPeaksL;
+        memo.r = m_waveformPeaksR;
+        memo.valid = true;
     } else {
         // Normal zoom: precomputed mip peaks only; no per-render scanning
         auto waveformCache = source->getWaveformCache();
         if (!waveformCache || !waveformCache->isReady()) {
-            // Fallback: faint center line
+            // Fallback: faint center line. Memo untouched — next successful
+            // query refreshes it.
             if (waveTrace) {
                 bool transition = false;
                 auto it = lastPath.find(source);
@@ -741,10 +759,16 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
             return;
         }
 
-        waveformCache->getPeaksForRangePrecise(0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         if (numChannels > 1) {
-            waveformCache->getPeaksForRangePrecise(1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
+            // One lock pass fills both channels from the same level + binning.
+            waveformCache->getPeaksForRangePreciseStereo(0, 1, sourceStart, sourceEnd, numBars, m_waveformPeaksL,
+                                                         m_waveformPeaksR);
+        } else {
+            waveformCache->getPeaksForRangePrecise(0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         }
+        memo.l = m_waveformPeaksL;
+        memo.r = m_waveformPeaksR;
+        memo.valid = true;
     }
 
     if (waveTrace) {
@@ -783,8 +807,8 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         const float traceHalfH = std::max(1.0f, audibleBounds.height * 0.5f - 2.0f);
         float spanTop = std::numeric_limits<float>::max();
         float spanBottom = std::numeric_limits<float>::lowest();
-        // Span must reflect what drawCombinedWaveform paints: the merged
-        // L+R envelope, not L alone (a loud-R/silent-L clip reported a
+        // Span must reflect what drawChannelWaveform paints: the combined
+        // L+R envelope, not L alone (loud-R/silent-L clips reported a
         // left-only span and misdiagnosed mapping problems).
         const bool stereoSpan = numChannels > 1 && m_waveformPeaksR.size() == m_waveformPeaksL.size();
         for (size_t i = 0; i < m_waveformPeaksL.size(); ++i) {
@@ -837,12 +861,15 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     // texture at clip heights; a single filled waveform is clearer. The
     // deep-zoom path above combines too, so layout never jumps across the LOD
     // threshold.
-    drawCombinedWaveform(renderer, audibleBounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
+    const bool stereoLanes = numChannels > 1 && !m_waveformPeaksR.empty();
+    drawChannelWaveform(renderer, audibleBounds.x, audibleBounds.y, audibleBounds.width, audibleBounds.height,
+                        m_waveformPeaksL, clipTint, stereoLanes ? &m_waveformPeaksR : nullptr);
 }
 
 void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
                                             const std::vector<Aestra::Audio::WaveformPeak>& peaks,
-                                            const AestraUI::NUIColor& tint) {
+                                            const AestraUI::NUIColor& tint,
+                                            const std::vector<Aestra::Audio::WaveformPeak>* peaksR) {
     if (peaks.empty() || w <= 0.0f || h <= 0.0f) return;
 
     const float centerY = y + h * 0.5f;
@@ -858,11 +885,35 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     const AestraUI::NUIColor& rmsColor = ink.rms;
     const AestraUI::NUIColor& centerLineColor = ink.centerLine;
 
+    // Combined per-column stats (L merged with R when present). Same math as
+    // WaveformPeak::merge, computed inline so stereo lanes render without
+    // materializing a merged peak vector every frame.
+    auto combinedMin = [&](int i) {
+        float v = peaks[i].min;
+        if (peaksR && i < static_cast<int>(peaksR->size())) v = std::min(v, (*peaksR)[i].min);
+        return v;
+    };
+    auto combinedMax = [&](int i) {
+        float v = peaks[i].max;
+        if (peaksR && i < static_cast<int>(peaksR->size())) v = std::max(v, (*peaksR)[i].max);
+        return v;
+    };
+    auto combinedRms = [&](int i) {
+        const auto& l = peaks[i];
+        double sumSq = static_cast<double>(l.rms) * l.rms * l.count;
+        uint64_t total = l.count;
+        if (peaksR && i < static_cast<int>(peaksR->size())) {
+            const auto& r = (*peaksR)[i];
+            sumSq += static_cast<double>(r.rms) * r.rms * r.count;
+            total += r.count;
+        }
+        return total > 0 ? static_cast<float>(std::sqrt(sumSq / static_cast<double>(total))) : 0.0f;
+    };
+
     // A strip needs two columns; degenerate spans draw a single bar
     if (numPoints < 2) {
-        const auto& peak = peaks[0];
-        float normMin = std::max(-1.0f, std::min(1.0f, peak.min));
-        float normMax = std::max(-1.0f, std::min(1.0f, peak.max));
+        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(0)));
+        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(0)));
         float topY = centerY - normMax * halfDrawH;
         float bottomY = centerY - normMin * halfDrawH;
         renderer.fillRect(AestraUI::NUIRect(x, topY, std::max(1.0f, w), std::max(1.0f, bottomY - topY)),
@@ -875,15 +926,16 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     // Layer 1: min/max envelope as a filled strip
     m_waveformTopPts.clear();
     m_waveformBottomPts.clear();
+    m_waveformRmsVals.clear();
     m_waveformTopPts.reserve(static_cast<size_t>(numPoints));
     m_waveformBottomPts.reserve(static_cast<size_t>(numPoints));
+    m_waveformRmsVals.reserve(static_cast<size_t>(numPoints));
 
     // Display gain is the file-scope kWaveDisplayGain, shared with the
     // AESTRA_WAVE_TRACE span assertion so both map peaks identically.
     for (int i = 0; i < numPoints; ++i) {
-        const auto& peak = peaks[i];
-        float normMin = std::max(-1.0f, std::min(1.0f, peak.min * kWaveDisplayGain));
-        float normMax = std::max(-1.0f, std::min(1.0f, peak.max * kWaveDisplayGain));
+        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(i) * kWaveDisplayGain));
+        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(i) * kWaveDisplayGain));
 
         float topY = centerY - normMax * halfDrawH;
         float bottomY = centerY - normMin * halfDrawH;
@@ -899,6 +951,7 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
         float px = x + (static_cast<float>(i) + 0.5f) * step;
         m_waveformTopPts.emplace_back(px, topY);
         m_waveformBottomPts.emplace_back(px, bottomY);
+        m_waveformRmsVals.push_back(std::max(0.0f, std::min(1.0f, combinedRms(i) * kWaveDisplayGain)));
     }
 
     renderer.fillWaveformGradient(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, envTopColor,
@@ -908,7 +961,7 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     // have symmetric ±rms poke past the true min/max edge). Reuses the same
     // point buffers in place: envelope Y is read before being overwritten.
     for (int i = 0; i < numPoints; ++i) {
-        float rms = std::max(0.0f, std::min(1.0f, peaks[i].rms * kWaveDisplayGain));
+        float rms = m_waveformRmsVals[i];
         float rmsTopY = std::max(m_waveformTopPts[i].y, centerY - rms * halfDrawH);
         float rmsBottomY = std::min(m_waveformBottomPts[i].y, centerY + rms * halfDrawH);
         if (rmsBottomY < rmsTopY) rmsBottomY = rmsTopY;
@@ -919,25 +972,6 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     renderer.fillWaveform(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, rmsColor);
 
     renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x + w, centerY), 1.0f, centerLineColor);
-}
-
-void TrackUIComponent::drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                                             const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
-                                             const std::vector<Aestra::Audio::WaveformPeak>& peaksR,
-                                             size_t numChannels, const AestraUI::NUIColor& tint) {
-    if (peaksL.empty() || bounds.width <= 0.0f || bounds.height <= 0.0f) return;
-
-    if (numChannels > 1 && !peaksR.empty()) {
-        // Merge channels per column (weighted-RMS merge), then render as one lane
-        m_waveformPeaksMerged = peaksL;
-        const size_t n = std::min(m_waveformPeaksMerged.size(), peaksR.size());
-        for (size_t i = 0; i < n; ++i) {
-            m_waveformPeaksMerged[i].merge(peaksR[i]);
-        }
-        drawChannelWaveform(renderer, bounds.x, bounds.y, bounds.width, bounds.height, m_waveformPeaksMerged, tint);
-    } else {
-        drawChannelWaveform(renderer, bounds.x, bounds.y, bounds.width, bounds.height, peaksL, tint);
-    }
 }
 
 void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
@@ -955,10 +989,6 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
     const float* data = buffer.interleavedData.data();
     const size_t stride = buffer.numChannels;
     const double framesPerColumn = (endFrame - startFrame) / static_cast<double>(numColumns);
-    const auto readSample = [data, stride, channel](size_t frame) {
-        const float sample = data[frame * stride + channel];
-        return std::isfinite(sample) ? sample : 0.0f;
-    };
 
     outPeaks.reserve(static_cast<size_t>(numColumns));
     for (int col = 0; col < numColumns; ++col) {
@@ -969,11 +999,11 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
         f0 = std::min(f0, static_cast<size_t>(buffer.numFrames) - 1);
         f1 = std::max(std::min(f1, static_cast<size_t>(buffer.numFrames)), f0 + 1);
 
-        float minVal = readSample(f0);
+        float minVal = data[f0 * stride + channel];
         float maxVal = minVal;
         double sumSq = 0.0;
         for (size_t f = f0; f < f1; ++f) {
-            const float s = readSample(f);
+            const float s = data[f * stride + channel];
             minVal = std::min(minVal, s);
             maxVal = std::max(maxVal, s);
             sumSq += static_cast<double>(s) * s;
@@ -983,6 +1013,8 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
             std::min<size_t>(f1 - f0, std::numeric_limits<uint32_t>::max()));
         const float rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(count)));
         outPeaks.emplace_back(minVal, maxVal, rms, count);
+        // NaN/Inf scrub happens here once per column — NOT per sample above.
+        // Per-sample isfinite dominated this loop's profile on zoomed-in clips.
         outPeaks.back().sanitize();
     }
 }
@@ -1635,6 +1667,14 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
 
 void TrackUIComponent::onRender(AestraUI::NUIRenderer& renderer) {
     AESTRA_ZONE("TrackUI_Render");
+    ++m_paintFrame;
+    // Bound the memo: entries not touched for a few frames are dead clips.
+    if (m_waveQueryMemo.size() > 48) {
+        for (auto it = m_waveQueryMemo.begin(); it != m_waveQueryMemo.end();) {
+            if (m_paintFrame - it->second.lastSeenFrame > 8) it = m_waveQueryMemo.erase(it);
+            else ++it;
+        }
+    }
     renderStatic(renderer);
     renderDynamic(renderer);
 }

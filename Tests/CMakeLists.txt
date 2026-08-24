@@ -581,6 +581,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
+# Waveform Query Benchmark
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/WaveformQueryBenchmark.cpp")
+    add_executable(WaveformQueryBenchmark Integration/WaveformQueryBenchmark.cpp)
+    target_link_libraries(WaveformQueryBenchmark PRIVATE AestraAudio)
+    target_include_directories(WaveformQueryBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Resampler War Test: deterministic SRC quality gate with optional references.
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
