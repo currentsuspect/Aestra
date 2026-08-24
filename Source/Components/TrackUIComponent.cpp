@@ -783,9 +783,19 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         const float traceHalfH = std::max(1.0f, audibleBounds.height * 0.5f - 2.0f);
         float spanTop = std::numeric_limits<float>::max();
         float spanBottom = std::numeric_limits<float>::lowest();
-        for (const auto& pk : m_waveformPeaksL) {
-            const float normMin = std::max(-1.0f, std::min(1.0f, pk.min * kWaveDisplayGain));
-            const float normMax = std::max(-1.0f, std::min(1.0f, pk.max * kWaveDisplayGain));
+        // Span must reflect what drawCombinedWaveform paints: the merged
+        // L+R envelope, not L alone (a loud-R/silent-L clip reported a
+        // left-only span and misdiagnosed mapping problems).
+        const bool stereoSpan = numChannels > 1 && m_waveformPeaksR.size() == m_waveformPeaksL.size();
+        for (size_t i = 0; i < m_waveformPeaksL.size(); ++i) {
+            float srcMin = m_waveformPeaksL[i].min;
+            float srcMax = m_waveformPeaksL[i].max;
+            if (stereoSpan) {
+                srcMin = std::min(srcMin, m_waveformPeaksR[i].min);
+                srcMax = std::max(srcMax, m_waveformPeaksR[i].max);
+            }
+            const float normMin = std::max(-1.0f, std::min(1.0f, srcMin * kWaveDisplayGain));
+            const float normMax = std::max(-1.0f, std::min(1.0f, srcMax * kWaveDisplayGain));
             spanTop = std::min(spanTop, traceCenterY - normMax * traceHalfH);
             spanBottom = std::max(spanBottom, traceCenterY - normMin * traceHalfH);
         }
