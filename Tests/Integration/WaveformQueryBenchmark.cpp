@@ -91,7 +91,8 @@ int main() {
         cache.getPeaksForRangePreciseStereo(0, 1, c.start, c.end, c.width, l, r);
         for (uint32_t p = 0; p < c.width; ++p) {
             if (l[p].min != lRef[p].min || l[p].max != lRef[p].max || l[p].rms != lRef[p].rms ||
-                r[p].min != rRef[p].min || r[p].max != rRef[p].max || r[p].rms != rRef[p].rms) {
+                l[p].count != lRef[p].count || r[p].min != rRef[p].min || r[p].max != rRef[p].max ||
+                r[p].rms != rRef[p].rms || r[p].count != rRef[p].count) {
                 std::printf("FAIL %s: column %u diverges\n", c.name, p);
                 ok = false;
                 break;
