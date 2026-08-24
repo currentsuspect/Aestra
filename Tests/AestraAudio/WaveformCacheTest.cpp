@@ -376,10 +376,11 @@ bool testCoarseMipScalePreserved() {
         referenceMaxAbs = std::max(referenceMaxAbs, std::fabs(data[i]));
     }
 
-    // Zoomed-out query: spp ~ 600 over 80 px selects the coarsest mip bucketing
+    // Coarsest-level query: spp = 48000/10 = 4800 >= samplesPerPeak of level 3
+    // (4096), so selectLevel must reach the coarsest mip bucketing
     std::vector<WaveformPeak> coarse;
-    cache.getPeaksForRangePrecise(0, 0.0, static_cast<double>(numFrames), 80, coarse);
-    if (coarse.size() != 80) return fail("coarse mip: expected 80 peaks");
+    cache.getPeaksForRangePrecise(0, 0.0, static_cast<double>(numFrames), 10, coarse);
+    if (coarse.size() != 10) return fail("coarse mip: expected 10 peaks");
 
     float coarseMaxAbs = 0.0f;
     for (const auto& pk : coarse) {

@@ -671,7 +671,7 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     const double visibleOutputFrames = visibleOutputEnd - visibleOutputStart;
     static const bool waveTrace = [] {
         const char* v = std::getenv("AESTRA_WAVE_TRACE");
-        return v && v[0] != '\0' && v[0] != '0';
+        return v && v[0] == '1';
     }();
     static std::unordered_map<const void*, int> lastPath;
     const double availableOutputEnd =
@@ -762,9 +762,17 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         lastPath[source] = pathId;
         size_t visible = 0;
         float ampMax = 0.0f;
-        for (const auto& pk : m_waveformPeaksL) {
-            if (pk.max != 0.0f || pk.min != 0.0f) ++visible;
-            ampMax = std::max(ampMax, std::max(std::fabs(pk.min), std::fabs(pk.max)));
+        const bool stereo = numChannels > 1 && m_waveformPeaksR.size() == m_waveformPeaksL.size();
+        for (size_t i = 0; i < m_waveformPeaksL.size(); ++i) {
+            const auto& l = m_waveformPeaksL[i];
+            bool active = l.max != 0.0f || l.min != 0.0f;
+            if (stereo) {
+                const auto& r = m_waveformPeaksR[i];
+                active = active || r.max != 0.0f || r.min != 0.0f;
+                ampMax = std::max(ampMax, std::max(std::fabs(r.min), std::fabs(r.max)));
+            }
+            if (active) ++visible;
+            ampMax = std::max(ampMax, std::max(std::fabs(l.min), std::fabs(l.max)));
         }
         // #858 amplitude-vs-mapping discriminator: ampMax is the largest |min|/|max|
         // among returned peaks; span is the vertical pixel range drawChannelWaveform
@@ -775,11 +783,6 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         const float traceHalfH = std::max(1.0f, audibleBounds.height * 0.5f - 2.0f);
         float spanTop = std::numeric_limits<float>::max();
         float spanBottom = std::numeric_limits<float>::lowest();
-        if (numChannels > 1) {
-            for (const auto& pk : m_waveformPeaksR) {
-                ampMax = std::max(ampMax, std::max(std::fabs(pk.min), std::fabs(pk.max)));
-            }
-        }
         for (const auto& pk : m_waveformPeaksL) {
             const float normMin = std::max(-1.0f, std::min(1.0f, pk.min * kWaveDisplayGain));
             const float normMax = std::max(-1.0f, std::min(1.0f, pk.max * kWaveDisplayGain));
