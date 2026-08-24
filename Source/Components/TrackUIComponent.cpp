@@ -1200,6 +1200,13 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
             if (waveformStartX + waveformWidthInPixels > gridEndX) {
                 float endRatio = (gridEndX - waveformStartX) / waveformWidthInPixels;
                 visibleRatio = endRatio - offsetRatio;
+            } else if (offsetRatio > 0.0f) {
+                // Left edge cut off, right edge on-screen: the visible fraction
+                // is what remains after the left cutoff. Leaving the 1.0f
+                // default here made the draw path read past the source end
+                // (offR + 1.0 > 1.0), and the source-exhausted clamp then
+                // squeezed the waveform and blanked the tail (#858).
+                visibleRatio = 1.0f - offsetRatio;
             }
             
             // Clip bounds for drawing
