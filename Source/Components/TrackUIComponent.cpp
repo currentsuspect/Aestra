@@ -105,6 +105,11 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
     return text.substr(0, maxChars - 2) + "..";
 }
 
+// Display gain so moderate-level audio fills the clip height rather than a thin
+// band; clamped so it never overshoots the lane. Lives at file scope so the
+// AESTRA_WAVE_TRACE span assertion maps peaks exactly like drawChannelWaveform().
+constexpr float kWaveDisplayGain = 1.45f;
+
 TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
     const bool toggleModifier =
         (event.modifiers & AestraUI::NUIModifiers::Ctrl) || (event.modifiers & AestraUI::NUIModifiers::Super);
@@ -664,11 +669,26 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     // remainder empty instead of stretching the old waveform across silence.
     AestraUI::NUIRect audibleBounds = bounds;
     const double visibleOutputFrames = visibleOutputEnd - visibleOutputStart;
+    static const bool waveTrace = [] {
+        const char* v = std::getenv("AESTRA_WAVE_TRACE");
+        return v && v[0] == '1';
+    }();
+    static std::unordered_map<const void*, int> lastPath;
     const double availableOutputEnd =
         (static_cast<double>(totalFrames) - scaledSourceOffset) / varispeed;
     if (visibleOutputFrames > 0.0 && availableOutputEnd < visibleOutputEnd) {
         const double audibleOutputFrames = std::max(0.0, availableOutputEnd - visibleOutputStart);
-        audibleBounds.width *= static_cast<float>(std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0));
+        const double shrinkFraction = std::clamp(audibleOutputFrames / visibleOutputFrames, 0.0, 1.0);
+        audibleBounds.width *= static_cast<float>(shrinkFraction);
+        if (waveTrace) {
+            // #858: the source-audio-exhausted clamp bit. If blank tails
+            // correlate with this line, the clip's timeline extent overhangs
+            // its actual source audio at this viewport position.
+            std::printf("[WaveShrink] shrinkFraction=%.4f availOutEnd=%.0f visOutEnd=%.0f "
+                        "tlFrames=%.0f srcOff=%.0f vspeed=%.3f totalFrames=%zu\n",
+                        shrinkFraction, availableOutputEnd, visibleOutputEnd, timelineFrames,
+                        scaledSourceOffset, varispeed, totalFrames);
+        }
     }
     if (audibleBounds.width <= 0.0f)
         return;
@@ -690,6 +710,8 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     m_waveformPeaksL.clear();
     m_waveformPeaksR.clear();
 
+    const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
+
     if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
         // Zoomed past the finest mip level: compute peaks directly from the
         // buffer. Bounded work — at most base-mip samples per visible pixel.
@@ -702,6 +724,16 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         auto waveformCache = source->getWaveformCache();
         if (!waveformCache || !waveformCache->isReady()) {
             // Fallback: faint center line
+            if (waveTrace) {
+                bool transition = false;
+                auto it = lastPath.find(source);
+                if (it != lastPath.end() && it->second != 2) transition = true;
+                lastPath[source] = 2;
+                std::printf("[WaveZoom] spp=%.1f path=fallback transition=%d req=[%.0f,%.0f) got=0 visible=0 "
+                            "contentRev=%llu src=%p\n",
+                            samplesPerPixel, transition ? 1 : 0, sourceStart, sourceEnd,
+                            static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
+            }
             float centerY = audibleBounds.y + height * 0.5f;
             renderer.drawLine(AestraUI::NUIPoint(audibleBounds.x, centerY),
                               AestraUI::NUIPoint(audibleBounds.x + audibleBounds.width, centerY), 1.0f,
@@ -713,6 +745,92 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         if (numChannels > 1) {
             waveformCache->getPeaksForRangePrecise(1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
+    }
+
+    if (waveTrace) {
+        // #858 zoom instrumentation: path, requested range, returned vs
+        // visible peak counts, peak amplitude and the mapped pixel span, per
+        // source revision. transition=true marks the first frame after a path
+        // switch (direct<->cache<->fallback), where a cache/path handoff race
+        // would surface. Env-gated: AESTRA_WAVE_TRACE=1
+        const char* pathName = (samplesPerPixel <
+                                static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK))
+                                   ? "direct" : "cache";
+        bool transition = false;
+        auto it = lastPath.find(source);
+        if (it != lastPath.end() && it->second != pathId) transition = true;
+        lastPath[source] = pathId;
+        size_t visible = 0;
+        float ampMax = 0.0f;
+        const bool stereo = numChannels > 1 && m_waveformPeaksR.size() == m_waveformPeaksL.size();
+        for (size_t i = 0; i < m_waveformPeaksL.size(); ++i) {
+            const auto& l = m_waveformPeaksL[i];
+            bool active = l.max != 0.0f || l.min != 0.0f;
+            if (stereo) {
+                const auto& r = m_waveformPeaksR[i];
+                active = active || r.max != 0.0f || r.min != 0.0f;
+                ampMax = std::max(ampMax, std::max(std::fabs(r.min), std::fabs(r.max)));
+            }
+            if (active) ++visible;
+            ampMax = std::max(ampMax, std::max(std::fabs(l.min), std::fabs(l.max)));
+        }
+        // #858 amplitude-vs-mapping discriminator: ampMax is the largest |min|/|max|
+        // among returned peaks; span is the vertical pixel range drawChannelWaveform
+        // will paint for them (same gain/clamp/center mapping). ampMax ~ 0 with a
+        // ~1px span means the peak data collapsed; full-scale ampMax with a tiny
+        // span means the Y mapping or bounds collapsed.
+        const float traceCenterY = audibleBounds.y + audibleBounds.height * 0.5f;
+        const float traceHalfH = std::max(1.0f, audibleBounds.height * 0.5f - 2.0f);
+        float spanTop = std::numeric_limits<float>::max();
+        float spanBottom = std::numeric_limits<float>::lowest();
+        // Span must reflect what drawCombinedWaveform paints: the merged
+        // L+R envelope, not L alone (a loud-R/silent-L clip reported a
+        // left-only span and misdiagnosed mapping problems).
+        const bool stereoSpan = numChannels > 1 && m_waveformPeaksR.size() == m_waveformPeaksL.size();
+        for (size_t i = 0; i < m_waveformPeaksL.size(); ++i) {
+            float srcMin = m_waveformPeaksL[i].min;
+            float srcMax = m_waveformPeaksL[i].max;
+            if (stereoSpan) {
+                srcMin = std::min(srcMin, m_waveformPeaksR[i].min);
+                srcMax = std::max(srcMax, m_waveformPeaksR[i].max);
+            }
+            const float normMin = std::max(-1.0f, std::min(1.0f, srcMin * kWaveDisplayGain));
+            const float normMax = std::max(-1.0f, std::min(1.0f, srcMax * kWaveDisplayGain));
+            spanTop = std::min(spanTop, traceCenterY - normMax * traceHalfH);
+            spanBottom = std::max(spanBottom, traceCenterY - normMin * traceHalfH);
+        }
+        if (spanTop > spanBottom) { // no peaks: report an empty span at rect center
+            spanTop = traceCenterY;
+            spanBottom = traceCenterY;
+        }
+        std::printf("[WaveZoom] spp=%.1f path=%s transition=%d req=[%.0f,%.0f) got=%zu visible=%zu "
+                    "ampMax=%.4f span=[%.1f..%.1f]px rect=[y=%.1f h=%.1f] "
+                    "contentRev=%llu src=%p\n",
+                    samplesPerPixel, pathName, transition ? 1 : 0, sourceStart, sourceEnd,
+                    m_waveformPeaksL.size(), visible, ampMax, spanTop, spanBottom,
+                    audibleBounds.y, audibleBounds.height,
+                    static_cast<unsigned long long>(source->getContentRevision()), (void*)source);
+        // #858 blank-tail chain: the right edge through every transformation,
+        // beats -> output frames -> source samples -> screen px. first wrong
+        // value localizes the layer. clipRight/audibleRight are the clip rect
+        // and the (possibly shrunk) drawable rect right edges in screen px.
+        const double clipStartBeat = static_cast<double>(clip.startBeat);
+        const double clipEndBeat = clipStartBeat + static_cast<double>(clip.durationBeats);
+        const double visStartBeat = clipStartBeat + static_cast<double>(offsetRatio) * static_cast<double>(clip.durationBeats);
+        const double visEndBeat = visStartBeat + static_cast<double>(visibleRatio) * static_cast<double>(clip.durationBeats);
+        const double pxPerSample = (sourceEnd > sourceStart)
+                                       ? static_cast<double>(audibleBounds.width) / (sourceEnd - sourceStart)
+                                       : 0.0;
+        std::printf("[WaveChain] clipBeats=[%.3f,%.3f] visBeats=[%.3f,%.3f] offR=%.4f visR=%.4f "
+                    "tlFrames=%.0f availOutEnd=%.0f visOutEnd=%.0f srcOff=%.0f vspeed=%.3f "
+                    "totalFrames=%zu dur=%.2fs req=[%.0f,%.0f) numBars=%d got=%zu "
+                    "pxPerSmp=%.4f destX=%.1f destW=%.1f clipRight=%.1f audibleRight=%.1f path=%s\n",
+                    clipStartBeat, clipEndBeat, visStartBeat, visEndBeat,
+                    static_cast<double>(offsetRatio), static_cast<double>(visibleRatio),
+                    timelineFrames, availableOutputEnd, visibleOutputEnd, scaledSourceOffset, varispeed,
+                    totalFrames, totalFrames / std::max(1.0, sampleRate), sourceStart, sourceEnd, numBars,
+                    m_waveformPeaksL.size(), pxPerSample, audibleBounds.x, audibleBounds.width,
+                    bounds.x + bounds.width, audibleBounds.x + audibleBounds.width, pathName);
     }
 
     // Always one combined waveform. Split L/R lanes read as a thin "doubled"
@@ -760,9 +878,8 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
     m_waveformTopPts.reserve(static_cast<size_t>(numPoints));
     m_waveformBottomPts.reserve(static_cast<size_t>(numPoints));
 
-    // Display gain so moderate-level audio fills the clip height rather than a
-    // thin band; clamped so it never overshoots the lane.
-    constexpr float kWaveDisplayGain = 1.45f;
+    // Display gain is the file-scope kWaveDisplayGain, shared with the
+    // AESTRA_WAVE_TRACE span assertion so both map peaks identically.
     for (int i = 0; i < numPoints; ++i) {
         const auto& peak = peaks[i];
         float normMin = std::max(-1.0f, std::min(1.0f, peak.min * kWaveDisplayGain));
@@ -1008,9 +1125,9 @@ void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, con
     const float headerRight = clipBounds.right() - (seamRight ? 0.0f : 1.0f);
     const AestraUI::NUIRect headerRect(headerLeft, clipBounds.y + 1.0f,
                                        std::max(0.0f, headerRight - headerLeft), kClipHeaderHeight);
-    // Own opaque title strip (the waveform lives below it, not behind it), with a
-    // divider so the label band reads as its own section.
-    const auto headerFill = themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.98f : 0.94f);
+    // Translucent scrim: the filename must read over the full-height waveform
+    // behind it while the wave stays visible through the label zone.
+    const auto headerFill = themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.80f : 0.68f);
     renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, headerFill);
     constexpr float kSeamOverlap = 1.0f;
     const float seamFillWidth = clipRadius + kSeamOverlap;
@@ -1093,6 +1210,13 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
             if (waveformStartX + waveformWidthInPixels > gridEndX) {
                 float endRatio = (gridEndX - waveformStartX) / waveformWidthInPixels;
                 visibleRatio = endRatio - offsetRatio;
+            } else if (offsetRatio > 0.0f) {
+                // Left edge cut off, right edge on-screen: the visible fraction
+                // is what remains after the left cutoff. Leaving the 1.0f
+                // default here made the draw path read past the source end
+                // (offR + 1.0 > 1.0), and the source-exhausted clamp then
+                // squeezed the waveform and blanked the tail (#858).
+                visibleRatio = 1.0f - offsetRatio;
             }
             
             // Clip bounds for drawing
@@ -1148,19 +1272,22 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawPatternClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
                 } else {
                     drawSampleClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip, seamLeft, seamRight);
-                    // The label gets its own reserved strip at the top; the waveform
-                    // fills the whole area BELOW it (bold + gained, so it's full, not
-                    // squashed under the label).
-                    constexpr float kHeaderStripH = 16.0f;
+                    // The waveform spans the FULL clip body; the header renders as
+                    // a translucent scrim over it (see drawSampleClipHeader).
+                    // Reserving a strip below the label boxed the wave into the
+                    // leftover ~18px, where moderate-level audio rendered as a
+                    // thin band pinned under the filename instead of a clip-body
+                    // waveform (#858).
                     const float waveformPadLeft = seamLeft ? 0.0f : 3.0f;
                     const float waveformPadRight = seamRight ? 0.0f : 3.0f;
+                    constexpr float waveformPadTop = 2.0f;
                     constexpr float waveformPadBottom = 3.0f;
-                    const float waveTop = insetClippedClipBounds.y + kHeaderStripH;
                     const AestraUI::NUIRect waveformInsideClip(
                         insetClippedClipBounds.x + waveformPadLeft,
-                        waveTop + 1.0f,
+                        insetClippedClipBounds.y + waveformPadTop,
                         std::max(1.0f, insetClippedClipBounds.width - waveformPadLeft - waveformPadRight),
-                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) - (waveTop + 1.0f))
+                        std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) -
+                                           (insetClippedClipBounds.y + waveformPadTop))
                     );
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
