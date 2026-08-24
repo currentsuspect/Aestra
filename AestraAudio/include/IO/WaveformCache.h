@@ -228,6 +228,17 @@ public:
     void getPeaksForRangePrecise(uint32_t channel, double startSample, double endSample, uint32_t numPixels,
                                  std::vector<WaveformPeak>& outPeaks) const;
 
+    /**
+     * @brief Two-channel variant of getPeaksForRangePrecise under one lock pass
+     *
+     * Both output vectors are filled from the same level selection and pixel binning,
+     * so callers rendering L+R avoid two lock acquisitions and duplicate bin math.
+     * Results are identical to calling the single-channel version per channel.
+     */
+    void getPeaksForRangePreciseStereo(uint32_t channelLeft, uint32_t channelRight, double startSample,
+                                       double endSample, uint32_t numPixels,
+                                       std::vector<WaveformPeak>& outLeft, std::vector<WaveformPeak>& outRight) const;
+
     /// Get a single peak for quick display
     WaveformPeak getQuickPeak(uint32_t channel, SampleIndex startSample, SampleIndex numSamples) const;
 
@@ -247,6 +258,8 @@ private:
     void buildLevel(const float* data, SampleIndex numFrames, uint32_t numChannels, uint32_t samplesPerPeak,
                     WaveformMipLevel& outLevel);
     void buildNextLevel(const WaveformMipLevel& source, WaveformMipLevel& dest);
+    void mergePixelRange(const WaveformMipLevel& level, uint32_t channel, double startSample, double samplesPerPixel,
+                         uint32_t numPixels, std::vector<WaveformPeak>& outPeaks) const;
 };
 
 // =============================================================================

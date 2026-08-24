@@ -332,11 +332,8 @@ private:
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
                              const std::vector<Aestra::Audio::WaveformPeak>& peaks,
-                             const AestraUI::NUIColor& tint);
-    void drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
-                              const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
-                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels,
-                              const AestraUI::NUIColor& tint);
+                             const AestraUI::NUIColor& tint,
+                             const std::vector<Aestra::Audio::WaveformPeak>* peaksR = nullptr);
 
     // Deep-zoom helper: render finer than the peak cache's base mip level using the
     // same fractional source-frame bins as the cached path.
@@ -360,9 +357,9 @@ private:
     // Reusable peak buffers to avoid per-frame allocations
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksL;
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksR;
-    std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksMerged;
     std::vector<AestraUI::NUIPoint> m_waveformTopPts;
     std::vector<AestraUI::NUIPoint> m_waveformBottomPts;
+    std::vector<float> m_waveformRmsVals;
     
     PlaylistLaneID m_laneId;
     std::shared_ptr<MixerChannel> m_channel;

@@ -407,6 +407,41 @@ bool testCoarseMipScalePreserved() {
     return true;
 }
 
+bool testStereoQueryMatchesMono() {
+    const SampleIndex numFrames = 24000;
+    const uint32_t numChannels = 2;
+    std::vector<float> data(static_cast<size_t>(numFrames) * numChannels, 0.0f);
+    for (SampleIndex f = 0; f < numFrames; ++f) {
+        const double t = static_cast<double>(f) / 48000.0;
+        // Asymmetric, channel-divergent content so min/max/rms all diverge.
+        data[static_cast<size_t>(f) * numChannels + 0] = static_cast<float>(0.7 * std::sin(2.0 * 3.14159265358979 * 190.0 * t) - 0.1);
+        data[static_cast<size_t>(f) * numChannels + 1] = static_cast<float>(0.4 * std::sin(2.0 * 3.14159265358979 * 410.0 * t + 1.1));
+    }
+
+    WaveformCache cache;
+    cache.buildFromRaw(data.data(), numFrames, numChannels);
+    if (!cache.isReady()) return fail("stereo query: cache should be ready");
+
+    for (uint32_t pixels : {1u, 7u, 64u, 300u}) {
+        std::vector<WaveformPeak> l, r, lRef, rRef;
+        // Stereo single-pass API...
+        cache.getPeaksForRangePreciseStereo(0, 1, 100.0, 12000.0, pixels, l, r);
+        // ...must equal the two single-channel queries exactly.
+        cache.getPeaksForRangePrecise(0, 100.0, 12000.0, pixels, lRef);
+        cache.getPeaksForRangePrecise(1, 100.0, 12000.0, pixels, rRef);
+
+        if (l.size() != lRef.size() || r.size() != rRef.size())
+            return fail("stereo query: size mismatch vs mono queries");
+        for (size_t i = 0; i < lRef.size(); ++i) {
+            if (l[i].min != lRef[i].min || l[i].max != lRef[i].max || l[i].rms != lRef[i].rms || l[i].count != lRef[i].count)
+                return fail("stereo query: L column diverges from mono query");
+            if (r[i].min != rRef[i].min || r[i].max != rRef[i].max || r[i].rms != rRef[i].rms || r[i].count != rRef[i].count)
+                return fail("stereo query: R column diverges from mono query");
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -426,6 +461,7 @@ int main() {
     ok &= testSilentAudio();
     ok &= testAsymmetricWaveform();
     ok &= testCoarseMipScalePreserved();
+    ok &= testStereoQueryMatchesMono();
 
     if (ok) {
         std::cout << "AestraWaveformCacheTest: PASS\n";
