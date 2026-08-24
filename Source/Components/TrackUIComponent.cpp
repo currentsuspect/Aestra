@@ -712,18 +712,36 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     const int pathId = (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) ? 0 : 1;
 
-    if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
+    const void* srcKey = source;
+    const uint64_t contentRev = source->getContentRevision();
+    WaveQueryMemo& memo = m_waveQueryMemo[srcKey];
+    memo.lastSeenFrame = m_paintFrame;
+    const bool memoHit = memo.valid && memo.revision == contentRev && memo.totalFrames == totalFrames &&
+                         memo.numChannels == numChannels && memo.start == sourceStart && memo.end == sourceEnd &&
+                         memo.width == numBars && memo.pathId == pathId;
+    if (memoHit) {
+        m_waveformPeaksL = memo.l;
+        m_waveformPeaksR = memo.r;
+        if (waveTrace) {
+            std::printf("[WaveZoom] spp=%.1f path=%s memo=H rev=%llu\n", samplesPerPixel,
+                        pathId == 0 ? "direct" : "cache", static_cast<unsigned long long>(contentRev));
+        }
+    } else if (pathId == 0) {
         // Zoomed past the finest mip level: compute peaks directly from the
         // buffer. Bounded work — at most base-mip samples per visible pixel.
         computeDirectPeaks(audioData, 0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         if (numChannels > 1) {
             computeDirectPeaks(audioData, 1, sourceStart, sourceEnd, numBars, m_waveformPeaksR);
         }
+        memo.l = m_waveformPeaksL;
+        memo.r = m_waveformPeaksR;
+        memo.valid = true;
     } else {
         // Normal zoom: precomputed mip peaks only; no per-render scanning
         auto waveformCache = source->getWaveformCache();
         if (!waveformCache || !waveformCache->isReady()) {
-            // Fallback: faint center line
+            // Fallback: faint center line. Memo untouched — next successful
+            // query refreshes it.
             if (waveTrace) {
                 bool transition = false;
                 auto it = lastPath.find(source);
@@ -748,7 +766,12 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
         } else {
             waveformCache->getPeaksForRangePrecise(0, sourceStart, sourceEnd, numBars, m_waveformPeaksL);
         }
-    }    if (waveTrace) {
+        memo.l = m_waveformPeaksL;
+        memo.r = m_waveformPeaksR;
+        memo.valid = true;
+    }
+
+    if (waveTrace) {
         // #858 zoom instrumentation: path, requested range, returned vs
         // visible peak counts, peak amplitude and the mapped pixel span, per
         // source revision. transition=true marks the first frame after a path
@@ -1634,6 +1657,14 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
 
 void TrackUIComponent::onRender(AestraUI::NUIRenderer& renderer) {
     AESTRA_ZONE("TrackUI_Render");
+    ++m_paintFrame;
+    // Bound the memo: entries not touched for a few frames are dead clips.
+    if (m_waveQueryMemo.size() > 48) {
+        for (auto it = m_waveQueryMemo.begin(); it != m_waveQueryMemo.end();) {
+            if (m_paintFrame - it->second.lastSeenFrame > 8) it = m_waveQueryMemo.erase(it);
+            else ++it;
+        }
+    }
     renderStatic(renderer);
     renderDynamic(renderer);
 }
