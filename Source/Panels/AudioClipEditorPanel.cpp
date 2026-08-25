@@ -277,12 +277,12 @@ void AudioClipEditorPanel::buildUI() {
                                0.0, true);
     m_speedSlider = makeSlider("Speed", 0.25, 4.0, 1.0);
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
-    m_fitLabel = makeLabel("Fit to bars");
+    m_fitLabel = makeLabel("Fit");
     for (size_t i = 0; i < m_fitButtons.size(); ++i) {
         const int bars = static_cast<int>(1 << i); // 1, 2, 4, 8
         m_fitButtons[i] = std::make_shared<NUIButton>(std::to_string(bars));
         styleButton(m_fitButtons[i]);
-        m_fitButtons[i]->setTooltip("Varispeed fit — pitch follows tempo (FD-13: no time-stretch)");
+        m_fitButtons[i]->setTooltip("Varispeed fit — pitch follows tempo");
         m_fitButtons[i]->setOnClick([this, bars]() { applyFitToBars(bars); });
     }
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
