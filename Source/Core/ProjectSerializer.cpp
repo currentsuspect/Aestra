@@ -1620,6 +1620,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         sourceManager.clear();
         patternManager.clear();
         trackManager->clearAllChannels();
+        trackManager->clearAllTracks();
         playlist.setPatternManager(&patternManager);
         playlist.setBPM(result.tempo);
     

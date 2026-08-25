@@ -1722,6 +1722,23 @@ public:
     }
 
     /**
+     * @brief Clear all Tracks and reset the id counter (project-load reset).
+     *
+     * Loading a project must start from an empty track table: restoreTrack()
+     * rejects ids already present, so surviving default/previous tracks made
+     * every restored ownership entry collide — the loader's migration then
+     * re-created each track under a fresh id, doubling the table on every
+     * recovery load (found via 50× "Failed to restore track" on a 50-lane
+     * autosave, 2026-08-25). Lanes are cleared separately by the playlist;
+     * call this before restoring a file's tracks.
+     */
+    void clearAllTracks() {
+        m_tracks.clear();
+        m_nextTrackId = 1;
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
+    }
+
+    /**
      * @brief Access the transport clock used by timeline and pattern playback.
      * @return Mutable timeline clock.
      */
