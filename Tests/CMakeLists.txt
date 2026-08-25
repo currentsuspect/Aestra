@@ -2099,6 +2099,32 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# FD-16 seam test: persisted lane curves must reach ChannelViewModel through
+# MixerViewModel::syncFromEngine — the path the routing-map badge reads.
+if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+    add_executable(MixerViewModelAutomationPresenceTest
+        AestraAudio/MixerViewModelAutomationPresenceTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(MixerViewModelAutomationPresenceTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraAudio
+    )
+    target_include_directories(MixerViewModelAutomationPresenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerViewModelAutomationPresenceTest
+             COMMAND MixerViewModelAutomationPresenceTest)
+    set_tests_properties(MixerViewModelAutomationPresenceTest PROPERTIES
+        LABELS "audio;automation;mixer;contract:automation")
+endif()
+
 # Panel resize/layout regression (triage 2026-08-14): audio clip editor
 # waveform/card overlap + slider widths, Arsenal row label bounds.
 if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
