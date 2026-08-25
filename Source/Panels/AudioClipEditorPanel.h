@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -90,6 +91,8 @@ private:
     std::shared_ptr<AestraUI::NUISlider> m_pitchSlider;
     std::shared_ptr<AestraUI::NUISlider> m_speedSlider;
     std::shared_ptr<AestraUI::NUISlider> m_sourceStartSlider;
+    std::shared_ptr<AestraUI::NUILabel> m_fitLabel;
+    std::array<std::shared_ptr<AestraUI::NUIButton>, 4> m_fitButtons; // 1 / 2 / 4 / 8 bars
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_normalizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_resetButton;
@@ -99,6 +102,7 @@ private:
 
     void buildUI();
     bool resolveClip(ClipInstance*& clip, PatternSource*& pattern) const;
+    void applyFitToBars(int bars);
     void rebuildWaveform();
     void rebuildRoutes(bool force);
     uint64_t calculateRouteFingerprint() const;

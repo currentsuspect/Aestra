@@ -6,6 +6,9 @@
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetClipEditsCommand.h"
+#include "Commands/TrimClipCommand.h"
+#include "Commands/CommandTransaction.h"
+#include "Models/ClipFit.h"
 #include "Models/ClipRenderService.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
@@ -274,6 +277,14 @@ void AudioClipEditorPanel::buildUI() {
                                0.0, true);
     m_speedSlider = makeSlider("Speed", 0.25, 4.0, 1.0);
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
+    m_fitLabel = makeLabel("Fit to bars");
+    for (size_t i = 0; i < m_fitButtons.size(); ++i) {
+        const int bars = static_cast<int>(1 << i); // 1, 2, 4, 8
+        m_fitButtons[i] = std::make_shared<NUIButton>(std::to_string(bars));
+        styleButton(m_fitButtons[i]);
+        m_fitButtons[i]->setTooltip("Varispeed fit — pitch follows tempo (FD-13: no time-stretch)");
+        m_fitButtons[i]->setOnClick([this, bars]() { applyFitToBars(bars); });
+    }
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
     m_normalizeButton = std::make_shared<NUIButton>("Normalize");
@@ -400,6 +411,8 @@ void AudioClipEditorPanel::buildUI() {
         m_speedValueLabel,    m_sourceStartValueLabel, m_gainSlider,             m_panSlider,
         m_fadeInSlider,       m_fadeOutSlider,         m_pitchSlider,            m_speedSlider,
         m_sourceStartSlider,  m_muteButton,
+        m_fitLabel,           m_fitButtons[0],         m_fitButtons[1],
+        m_fitButtons[2],      m_fitButtons[3],
         m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
         m_reverseButton,      m_commitButton};
     for (const auto& child : children) {
@@ -681,8 +694,54 @@ void AudioClipEditorPanel::commitEditGesture() {
     }
 }
 
-void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {
+void AudioClipEditorPanel::applyFitToBars(int bars) {
     if (!m_trackManager || !m_clipId.isValid())
+        return;
+    ClipInstance* clip = nullptr;
+    PatternSource* pattern = nullptr;
+    if (!resolveClip(clip, pattern))
+        return;
+    const auto* payload = std::get_if<AudioSlicePayload>(&pattern->payload);
+    if (!payload)
+        return;
+    const auto* source = m_trackManager->getSourceManager().getSource(payload->audioSourceId);
+    const auto* buffer = source ? source->getRawBuffer() : nullptr;
+    if (!source || !buffer || !buffer->isValid())
+        return;
+
+    // Region-aware content seconds: what the render path actually consumes
+    // after trim/offset — same authority rebuildWaveform draws from.
+    const double sampleRate = std::max(1.0, m_trackManager->getPlaylistModel().getProjectSampleRate());
+    const auto region =
+        ClipRenderService(m_trackManager->getSourceManager(), m_trackManager->getPatternManager())
+            .resolveClipRegion(*clip, sampleRate);
+    if (!region.isValid())
+        return;
+    const double contentSeconds = static_cast<double>(region.frameCount) / static_cast<double>(buffer->sampleRate);
+
+    const auto fit = Audio::computeFitToBars(contentSeconds, m_trackManager->getPlaylistModel().getBPM(), bars);
+    if (!fit)
+        return;
+
+    // Span and rate land as ONE undoable step: TrimClipCommand moves the right
+    // edge (start pinned), SetClipEditsCommand carries the derived varispeed.
+    auto& history = m_trackManager->getCommandHistory();
+    history.beginTransaction(std::make_shared<CommandTransaction>("Fit clip to bars"));
+    history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
+        m_trackManager->getPlaylistModel(), m_clipId, -1.0, clip->startBeat + fit->durationBeats));
+    ClipEdits edits = clip->edits;
+    edits.playbackRate = fit->playbackRate;
+    history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(
+        m_trackManager->getPlaylistModel(), m_clipId, edits));
+    history.commitTransaction();
+
+    m_trackManager->markModified();
+    syncControlsFromModel();
+    if (m_onClipEditsCommitted)
+        m_onClipEditsCommitted();
+}
+
+void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {    if (!m_trackManager || !m_clipId.isValid())
         return;
     auto command = std::make_shared<SetClipEditsCommand>(m_trackManager->getPlaylistModel(), m_clipId, edits);
     m_trackManager->getCommandHistory().pushAndExecute(command);
@@ -789,6 +848,17 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     layoutControl(right, controlsTop + 78.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
     layoutControl(right, controlsTop + 124.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
     layoutControl(right, controlsTop + 170.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
+
+    // Fit-to-bars row (#747): free slot under Source start in the right column.
+    m_fitLabel->setBounds({right + 9.0f, controlsTop + 221.0f, labelWidth, 16.0f});
+    {
+        float fitX = right + 9.0f + labelWidth + 8.0f;
+        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 3.0f * buttonGap) / 4.0f);
+        for (const auto& fitButton : m_fitButtons) {
+            fitButton->setBounds({fitX, controlsTop + 216.0f, fitW, 24.0f});
+            fitX += fitW + buttonGap;
+        }
+    }
 }
 
 void AudioClipEditorPanel::onUpdate(double deltaTime) {
