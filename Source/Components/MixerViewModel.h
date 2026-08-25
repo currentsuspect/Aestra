@@ -68,6 +68,10 @@ struct ChannelViewModel {
     };
     std::vector<InsertViewModel> inserts; // Fixed size usually, or dynamic
     int fxCount{0};                      ///< Number of insert effects
+    // Automation presence (FD-16): read-only exposure of persisted curves
+    // addressing this channel. Derived each syncFromEngine; never authored here.
+    int automationCurveCount{0};         ///< Curves targeting this channel (unassigned id 0 never counts)
+    uint32_t automationTargetMask{0};    ///< bit0 Volume · bit1 Pan · bit2 custom/other
 
     // Meter state (UI-side smoothing, stored in dB)
     float envPeakL{MixerMath::DB_MIN};       ///< Fast peak envelope (dB)
