@@ -20,7 +20,11 @@ namespace AestraUI {
 /**
  * @brief Routing map visualizer — minimap and full panel modes.
  *
- * v1: read-only visualization. Auto-layout. Nodes are not draggable.
+ * Interactive graph of the mixer routing state: drag-to-reroute main paths,
+ * drag-to-add sends (audio or sidechain), node repositioning, edge selection
+ * and send-level editing, hover-to-trace, search, live signal pulses.
+ * Automation presence per channel is indicated read-only (FD-16); curve
+ * authoring stays out of this widget.
  */
 class UIRoutingMap : public NUIComponent {
 public:
@@ -90,6 +94,11 @@ private:
 
         // Routing warning for this channel
         bool hasRoutingWarning{false};
+
+        // Automation presence (FD-16): derived from persisted curves addressing
+        // this channel. bit0 Volume · bit1 Pan · bit2 custom/other.
+        int automationCurveCount{0};
+        uint32_t automationTargetMask{0};
 
         // Insert names for mini dots (up to 4)
         std::vector<std::string> insertNames;

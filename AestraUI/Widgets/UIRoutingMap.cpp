@@ -126,6 +126,8 @@ void UIRoutingMap::rebuildGraph() {
         masterNode.label = "MASTER";
         masterNode.color = 0xFF808080;
         masterNode.insertCount = master->fxCount;
+        masterNode.automationCurveCount = master->automationCurveCount;
+        masterNode.automationTargetMask = master->automationTargetMask;
         m_nodes.push_back(masterNode);
     }
 
@@ -140,6 +142,8 @@ void UIRoutingMap::rebuildGraph() {
         node.label = channelDisplayName(ch->id, ch->name);
         node.color = paletteIndexToARGB(ch->trackColorIndex);
         node.insertCount = ch->fxCount;
+        node.automationCurveCount = ch->automationCurveCount;
+        node.automationTargetMask = ch->automationTargetMask;
         node.muted = ch->muted;
         node.soloed = ch->soloed;
         node.peakDb = std::max(ch->smoothedPeakL, ch->smoothedPeakR);
@@ -1225,9 +1229,9 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
             const bool showSubLabel = nh >= 40.0f && nw > 50.0f;
             const bool showMeter = nh >= 30.0f && nw > 60.0f;
 
-            // Reserve right edge for M/S badges
+            // Reserve right edge for M/S/A badges
             float rightPad = 8.0f;
-            if (node.muted || node.soloed) rightPad += 20.0f;
+            if (node.muted || node.soloed || node.automationCurveCount > 0) rightPad += 20.0f;
             if (node.muted && node.soloed) rightPad += 18.0f;
 
             if (showName) {
@@ -1260,6 +1264,15 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                 NUIRect bRect{badgeX - 16.0f, ny + 6.0f, 16.0f, 16.0f};
                 renderer.fillRoundedRect(bRect, 4.0f, m_error.withAlpha(0.85f));
                 renderer.drawTextCentered("M", bRect, 10.0f, NUIColor::white());
+            }
+
+            // Automation presence badge (FD-16): read-only indicator that
+            // persisted curves target this channel. Details in hover tooltip.
+            if (node.automationCurveCount > 0) {
+                NUIRect bRect{badgeX - 16.0f, ny + 6.0f, 16.0f, 16.0f};
+                renderer.fillRoundedRect(bRect, 4.0f, m_accent.withAlpha(0.85f));
+                renderer.drawTextCentered("A", bRect, 10.0f, NUIColor::black());
+                badgeX -= 20.0f;
             }
 
             // Routing warning badge (top-left, overlapping the color strip)
@@ -1640,8 +1653,25 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         for (auto& e : m_edges) e.hovered = false;
         if (m_hoveredNodeIdx >= 0) {
             m_nodes[m_hoveredNodeIdx].hovered = true;
-            setTooltip(m_nodes[m_hoveredNodeIdx].label +
-                       "\n" + std::to_string(m_nodes[m_hoveredNodeIdx].insertCount) + " inserts");
+            const auto& hovered = m_nodes[m_hoveredNodeIdx];
+            std::string tip = hovered.label +
+                              "\n" + std::to_string(hovered.insertCount) + " inserts";
+            if (hovered.automationCurveCount > 0) {
+                tip += "\n" + std::to_string(hovered.automationCurveCount) +
+                       (hovered.automationCurveCount == 1 ? " automation curve"
+                                                          : " automation curves");
+                tip += "\nTargets: ";
+                bool firstTarget = true;
+                const auto append = [&](const char* name) {
+                    if (!firstTarget) tip += ", ";
+                    tip += name;
+                    firstTarget = false;
+                };
+                if (hovered.automationTargetMask & 1u) append("Volume");
+                if (hovered.automationTargetMask & 2u) append("Pan");
+                if (hovered.automationTargetMask & 4u) append("Custom");
+            }
+            setTooltip(tip);
         } else if (m_hoveredEdgeIdx >= 0) {
             m_edges[m_hoveredEdgeIdx].hovered = true;
             // Tooltip for edge type clarity

@@ -245,6 +245,19 @@ target_include_directories(EffectChainInstanceIdentityTest PRIVATE
 add_test(NAME EffectChainInstanceIdentityTest COMMAND EffectChainInstanceIdentityTest)
 set_tests_properties(EffectChainInstanceIdentityTest PROPERTIES LABELS "audio;plugins;automation;regression;contract:plugins")
 
+# FD-16: read-only automation presence aggregation (per-channel curve counts
+# and target masks over playlist lanes). Unassigned mixerChannelId 0 matches
+# nothing — zero is unassigned, never master.
+add_executable(AutomationPresenceTest AestraAudio/AutomationPresenceTest.cpp)
+target_link_libraries(AutomationPresenceTest PRIVATE AestraAudio)
+target_include_directories(AutomationPresenceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AutomationPresenceTest COMMAND AutomationPresenceTest)
+set_tests_properties(AutomationPresenceTest PROPERTIES LABELS "audio;automation;mixer;contract:automation")
+
 # Automation Identity Resolution Test (contract I2/I3/I8/I10)
 add_executable(AutomationIdentityResolutionTest AestraAudio/AutomationIdentityResolutionTest.cpp)
 target_link_libraries(AutomationIdentityResolutionTest PRIVATE AestraAudio)

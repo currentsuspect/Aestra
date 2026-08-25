@@ -173,6 +173,18 @@ public:
     }
 
     /**
+     * @brief Run a read-only visitor over all lanes under the lane lock.
+     *
+     * FD-16 automation-presence aggregation uses this; keeps m_lanes private
+     * without copying lane data per query.
+     */
+    template <typename Fn>
+    auto withLanes(Fn&& fn) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return fn(m_lanes);
+    }
+
+    /**
      * @brief Get the number of playlist lanes.
      * @return Lane count.
      */

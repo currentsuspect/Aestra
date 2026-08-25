@@ -8,6 +8,7 @@
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
 #include "../../AestraUI/Widgets/TrackColorPalette.h"
+#include "Models/AutomationPresence.h"
 #include <cstdio>
 #include <unordered_map>
 
@@ -109,6 +110,13 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     auto continuousParams = trackManager.getContinuousParams();
 
+    // FD-16: curves address channels by stable mixerChannelId; unassigned (0)
+    // matches nothing by construction, so master needs its own lookup below.
+    const auto automationPresence = trackManager.getPlaylistModel().withLanes(
+        [](const std::vector<Audio::PlaylistLane>& lanes) {
+            return Audio::computeAutomationPresence(lanes);
+        });
+
     if (m_master && continuousParams) {
         continuousParams->read(Audio::ChannelSlotMap::MASTER_SLOT_INDEX,
                                m_master->faderGainDb,
@@ -126,6 +134,14 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         // master inserts silently no-oping) whenever the buffer was absent.
         if (auto* masterChannel = trackManager.getMasterChannel()) {
             m_master->channel = masterChannel;
+            if (auto presenceIt = automationPresence.find(masterChannel->getChannelId());
+                presenceIt != automationPresence.end()) {
+                m_master->automationCurveCount = presenceIt->second.curveCount;
+                m_master->automationTargetMask = presenceIt->second.targetMask;
+            } else {
+                m_master->automationCurveCount = 0;
+                m_master->automationTargetMask = 0;
+            }
             if (m_master->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
                 m_master->inserts.resize(Audio::EffectChain::MAX_SLOTS);
             }
@@ -191,6 +207,8 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         bool armed{false};
         bool monitored{false};
         int fxCount{0};
+        int automationCurveCount{0};
+        uint32_t automationTargetMask{0};
     };
     std::vector<ChannelInfo> channelInfo;
     auto channels = trackManager.getChannelsSnapshot();
@@ -211,6 +229,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             info.armed = channel->isArmed();
             info.monitored = channel->isMonitoringEnabled();
             info.fxCount = static_cast<int>(channel->getEffectChain().getActiveSlotCount());
+            if (auto presenceIt = automationPresence.find(id); presenceIt != automationPresence.end()) {
+                info.automationCurveCount = presenceIt->second.curveCount;
+                info.automationTargetMask = presenceIt->second.targetMask;
+            }
             channelInfo.push_back(std::move(info));
         }
     }
@@ -249,6 +271,8 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             existing->armed = info.armed;
             existing->monitored = info.monitored;
             existing->fxCount = info.fxCount;
+            existing->automationCurveCount = info.automationCurveCount;
+            existing->automationTargetMask = info.automationTargetMask;
             if (auto* mc = info.channel) {
                 existing->inputChannelIndex = mc->getInputChannelIndex();
                 existing->width = mc->getWidth();
@@ -289,6 +313,8 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->armed = info.armed;
             channel->monitored = info.monitored;
             channel->fxCount = info.fxCount;
+            channel->automationCurveCount = info.automationCurveCount;
+            channel->automationTargetMask = info.automationTargetMask;
             if (auto* mc = info.channel) {
                 channel->inputChannelIndex = mc->getInputChannelIndex();
                 channel->width = mc->getWidth();
