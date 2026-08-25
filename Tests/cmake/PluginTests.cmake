@@ -256,7 +256,7 @@ target_include_directories(AutomationPresenceTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AutomationPresenceTest COMMAND AutomationPresenceTest)
-set_tests_properties(AutomationPresenceTest PROPERTIES LABELS "audio;automation;mixer;contract:automation")
+set_tests_properties(AutomationPresenceTest PROPERTIES LABELS "audio;automation;mixer;contract:audio")
 
 # Automation Identity Resolution Test (contract I2/I3/I8/I10)
 add_executable(AutomationIdentityResolutionTest AestraAudio/AutomationIdentityResolutionTest.cpp)

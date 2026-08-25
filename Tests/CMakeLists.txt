@@ -2122,7 +2122,7 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_test(NAME MixerViewModelAutomationPresenceTest
              COMMAND MixerViewModelAutomationPresenceTest)
     set_tests_properties(MixerViewModelAutomationPresenceTest PROPERTIES
-        LABELS "audio;automation;mixer;contract:automation")
+        LABELS "audio;automation;mixer;contract:audio")
 endif()
 
 # Panel resize/layout regression (triage 2026-08-14): audio clip editor
