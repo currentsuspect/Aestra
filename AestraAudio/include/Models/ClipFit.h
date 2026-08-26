@@ -1,7 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ClipInstance.h"
+
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <optional>
 
@@ -21,7 +24,7 @@ namespace Audio {
  * overrides it), so beats-per-bar is a named constant here rather than a
  * parameter pretending there is a meter source.
  */
-constexpr int kFitBarsBeatsPerBar = 4;
+constexpr int FIT_BARS_BEATS_PER_BAR = 4;
 
 struct FitToBarsResult {
     double durationBeats{0.0};
@@ -42,18 +45,35 @@ struct FitToBarsResult {
  */
 inline std::optional<FitToBarsResult> computeFitToBars(
     double sourceRegionSeconds, double bpm, int bars) {
-    if (!(sourceRegionSeconds > 0.0) || !(bpm > 0.0) || bars <= 0) {
+    if (!(sourceRegionSeconds > 0.0) || !std::isfinite(sourceRegionSeconds) ||
+        !(bpm > 0.0) || !std::isfinite(bpm) || bars <= 0) {
         return std::nullopt;
     }
 
     FitToBarsResult result;
-    result.durationBeats = static_cast<double>(bars) * kFitBarsBeatsPerBar;
+    result.durationBeats = static_cast<double>(bars) * FIT_BARS_BEATS_PER_BAR;
     result.durationSeconds = result.durationBeats * 60.0 / bpm;
+    if (!(result.durationSeconds > 0.0) || !std::isfinite(result.durationSeconds)) {
+        return std::nullopt;
+    }
 
     const double rawRate = sourceRegionSeconds / result.durationSeconds;
     result.rateClamped = rawRate < 0.25 || rawRate > 4.0;
     result.playbackRate = static_cast<float>(std::clamp(rawRate, 0.25, 4.0));
     return result;
+}
+
+/**
+ * @brief Base playbackRate that makes a pitched clip fill its fitted span.
+ *
+ * The render authority is ClipEdits::effectiveVarispeed() —
+ * playbackRate x 2^(pitch/12), clamped to 0.25x-4x. A fit's rate expresses
+ * the required EFFECTIVE varispeed, so the stored base rate must be divided
+ * by the pitch factor, or a pitched clip finishes early (e.g. +12 semitones
+ * at a nominal 1.0x fit plays at 2.0x and empties in half the span).
+ */
+inline float fitPlaybackRateAtPitch(float fitRate, float pitchSemitones) noexcept {
+    return fitRate / ClipEdits::playbackRateFromSemitones(pitchSemitones);
 }
 
 } // namespace Audio

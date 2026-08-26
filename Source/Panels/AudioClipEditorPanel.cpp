@@ -730,7 +730,7 @@ void AudioClipEditorPanel::applyFitToBars(int bars) {
     history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
         m_trackManager->getPlaylistModel(), m_clipId, -1.0, clip->startBeat + fit->durationBeats));
     ClipEdits edits = clip->edits;
-    edits.playbackRate = fit->playbackRate;
+    edits.playbackRate = Audio::fitPlaybackRateAtPitch(fit->playbackRate, clip->edits.pitchSemitones);
     history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(
         m_trackManager->getPlaylistModel(), m_clipId, edits));
     history.commitTransaction();
@@ -741,7 +741,8 @@ void AudioClipEditorPanel::applyFitToBars(int bars) {
         m_onClipEditsCommitted();
 }
 
-void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {    if (!m_trackManager || !m_clipId.isValid())
+void AudioClipEditorPanel::applyDiscreteEdit(const ClipEdits& edits) {
+    if (!m_trackManager || !m_clipId.isValid())
         return;
     auto command = std::make_shared<SetClipEditsCommand>(m_trackManager->getPlaylistModel(), m_clipId, edits);
     m_trackManager->getCommandHistory().pushAndExecute(command);

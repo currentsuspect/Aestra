@@ -1,12 +1,19 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 // #747: varispeed tempo-fit math. Pitch follows tempo by definition — these
-// cases pin the span/rate relationship, the varispeed clamp, and input guards.
+// cases pin the span/rate relationship, the varispeed clamp, the input guards,
+// the pitch-folded base rate, and the command-level fit transaction.
 
+#include "Commands/CommandTransaction.h"
+#include "Commands/SetClipEditsCommand.h"
+#include "Commands/TrimClipCommand.h"
 #include "Models/ClipFit.h"
+#include "Models/TrackManager.h"
 
 #include <cmath>
 #include <iostream>
+#include <limits>
+#include <memory>
 #include <string>
 
 namespace {
@@ -101,6 +108,118 @@ int main() {
         expect(!Audio::computeFitToBars(2.0, -5.0, 1).has_value(), "negative bpm rejected");
         expect(!Audio::computeFitToBars(2.0, 120.0, 0).has_value(), "zero bars rejected");
         expect(!Audio::computeFitToBars(2.0, 120.0, -2).has_value(), "negative bars rejected");
+    }
+
+    // Non-finite inputs are rejected, not clamped into a bogus fit.
+    {
+        const double inf = std::numeric_limits<double>::infinity();
+        expect(!Audio::computeFitToBars(inf, 120.0, 1).has_value(), "infinite content rejected");
+        expect(!Audio::computeFitToBars(-inf, 120.0, 1).has_value(), "negative-infinite content rejected");
+        expect(!Audio::computeFitToBars(2.0, inf, 1).has_value(), "infinite bpm rejected");
+        expect(!Audio::computeFitToBars(2.0, -inf, 1).has_value(), "negative-infinite bpm rejected");
+        // Tiny bpm passes the >0 gate but makes the span seconds overflow.
+        expect(!Audio::computeFitToBars(2.0, 1e-320, 1).has_value(), "overflowing span seconds rejected");
+    }
+
+    // Pitch-folded base rate: effective varispeed must equal the fit rate.
+    {
+        // +12 st: the renderer plays base x 2^(12/12), so the base must be halved.
+        const float base12 = Audio::fitPlaybackRateAtPitch(1.0f, 12.0f);
+        expect(std::abs(base12 - 0.5f) < 1e-6, "+12 st halves the base rate");
+        Audio::ClipEdits pitched;
+        pitched.playbackRate = base12;
+        pitched.pitchSemitones = 12.0f;
+        expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
+               "effective varispeed equals the fit rate at +12 st");
+
+        const float baseNeg12 = Audio::fitPlaybackRateAtPitch(1.0f, -12.0f);
+        expect(std::abs(baseNeg12 - 2.0f) < 1e-6, "-12 st doubles the base rate");
+        pitched.playbackRate = baseNeg12;
+        pitched.pitchSemitones = -12.0f;
+        expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
+               "effective varispeed equals the fit rate at -12 st");
+
+        // Envelope-edge fits stay exact: effective still lands on the fit rate.
+        Audio::ClipEdits clampedEdge;
+        clampedEdge.playbackRate = Audio::fitPlaybackRateAtPitch(4.0f, 24.0f);
+        clampedEdge.pitchSemitones = 24.0f;
+        expect(std::abs(clampedEdge.effectiveVarispeed() - 4.0f) < 1e-6,
+               "4x fit at +24 st renders at 4x effective");
+        expect(std::abs(Audio::fitPlaybackRateAtPitch(1.0f, 0.0f) - 1.0f) < 1e-6, "0 st keeps the fit rate");
+    }
+
+    // Clip-level regression: the fit OPERATION, not just the math helper.
+    // The trim and the rate edit land as ONE undoable transaction, and a
+    // pitched clip's effective varispeed still fills the fitted span.
+    {
+        Audio::TrackManager tm;
+        auto& playlist = tm.getPlaylistModel();
+        auto& history = tm.getCommandHistory();
+        const auto lane = playlist.createLane("fit");
+
+        Audio::ClipInstance clip;
+        clip.id = Audio::ClipInstanceID::generate();
+        clip.name = "Fit";
+        clip.startBeat = 0.0;
+        clip.durationBeats = 2.0; // pre-fit span is deliberately different
+        clip.edits.pitchSemitones = 12.0f; // +12 st: the renderer plays at 2x the base rate
+        const auto clipId = playlist.addClip(lane, clip);
+        expect(clipId.isValid(), "fit clip added");
+        if (!clipId.isValid()) {
+            return 1;
+        }
+
+        // 2 s of content into 1 bar @120 BPM (span 2 s): identity fit, rate 1.0.
+        constexpr double contentSeconds = 2.0;
+        constexpr double bpm = 120.0;
+        constexpr int bars = 1;
+        const auto fit = Audio::computeFitToBars(contentSeconds, bpm, bars);
+        expect(fit.has_value(), "fit computes for the clip scenario");
+        if (!fit) {
+            return 1;
+        }
+
+        auto* modelClip = playlist.getClip(clipId);
+        history.beginTransaction(std::make_shared<Audio::CommandTransaction>("Fit clip to bars"));
+        history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
+            playlist, clipId, -1.0, modelClip->startBeat + fit->durationBeats));
+        Audio::ClipEdits edits = modelClip->edits;
+        edits.playbackRate = Audio::fitPlaybackRateAtPitch(fit->playbackRate, edits.pitchSemitones);
+        history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(playlist, clipId, edits));
+        history.commitTransaction();
+
+        modelClip = playlist.getClip(clipId);
+        expect(modelClip != nullptr, "clip still present after fit");
+        if (modelClip) {
+            expectNear(modelClip->startBeat + modelClip->durationBeats, fit->durationBeats, 1e-9,
+                       "clip end lands on the fitted span (2 beats -> 4 beats)");
+            expect(std::abs(modelClip->edits.playbackRate - 0.5f) < 1e-6,
+                   "base rate halved for +12 st pitch");
+            const float effective = modelClip->edits.effectiveVarispeed();
+            expect(std::abs(effective - fit->playbackRate) < 1e-6,
+                   "effective varispeed equals the fit rate");
+            const double renderedSeconds = contentSeconds / static_cast<double>(effective);
+            expectNear(renderedSeconds, fit->durationSeconds, 1e-9,
+                       "rendered duration fills the fitted span at nonzero pitch");
+        }
+
+        // ONE undo restores edits and trim together; redo reapplies both.
+        expect(history.undo(), "fit transaction undoes in one step");
+        modelClip = playlist.getClip(clipId);
+        if (modelClip) {
+            expect(std::abs(modelClip->edits.playbackRate - 1.0f) < 1e-6, "undo restores the original rate");
+            expect(std::abs(modelClip->edits.pitchSemitones - 12.0f) < 1e-6, "undo keeps the clip's pitch");
+            expectNear(modelClip->startBeat + modelClip->durationBeats, 2.0, 1e-9,
+                       "undo restores the original span");
+        }
+        expect(history.redo(), "fit transaction redoes");
+        modelClip = playlist.getClip(clipId);
+        if (modelClip) {
+            expectNear(modelClip->startBeat + modelClip->durationBeats, fit->durationBeats, 1e-9,
+                       "redo reapplies the fitted span");
+            expect(std::abs(modelClip->edits.effectiveVarispeed() - fit->playbackRate) < 1e-6,
+                   "redo reapplies the fitted effective varispeed");
+        }
     }
 
     if (g_failures == 0) {
