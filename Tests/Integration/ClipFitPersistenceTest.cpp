@@ -206,6 +206,83 @@ int main() {
     require(std::abs(reloaded.durationSeconds - reloadedInvariant) < 1e-9,
             "edited clip canonical invariant did not survive roundtrip");
 
+    // --- Legacy-file legs: files saved BEFORE the canonical invariant.
+    // v3-era writer stored canonical seconds only (stale for rate-edited
+    // clips); v2-era stored beats only. Neither may shift on reload.
+    {
+        auto tmLegacy = std::make_shared<TrackManager>();
+        tmLegacy->getPlaylistModel().setPatternManager(&tmLegacy->getPatternManager());
+        const ClipSourceID srcId = tmLegacy->getSourceManager().getOrCreateSource(wavPath.string());
+        require(srcId.isValid(), "legacy source failed to load");
+        AudioSlicePayload legacyPayload;
+        legacyPayload.audioSourceId = srcId;
+        legacyPayload.slices.push_back({0.0, 48000.0});
+        const PatternID legacyPat =
+            tmLegacy->getPatternManager().createAudioPattern("LegacySrc", 4.0, legacyPayload);
+        auto& playlistL = tmLegacy->getPlaylistModel();
+        playlistL.setBPM(120.0);
+        const auto legacyLane = playlistL.createLane("Legacy");
+        const auto legacyClipId = playlistL.addClipFromPattern(legacyLane, legacyPat, 0.0, 4.0);
+
+        // The pre-invariant stale state: rate changed WITHOUT re-deriving the
+        // canonical (direct field write, as the old slider path did).
+        auto* legacyClip = playlistL.getClip(legacyClipId);
+        legacyClip->edits.playbackRate = 1.5f;
+        legacyClip->durationSeconds = playlistL.beatToSeconds(4.0); // stale: rate-1 value
+        const auto legacyPath = tempDir / "legacy-stale.aes";
+        require(ProjectSerializer::save(legacyPath.string(), tmLegacy, 120.0, 0.0), "legacy save failed");
+
+        // Simulate the v3-era file: strip the beats field (it did not exist).
+        // Key surgery is safe: `"duration":` (quote-colon) cannot match
+        // `"durationSeconds":` in the emitted JSON.
+        {
+            std::ifstream in(legacyPath);
+            std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            std::string stripped = contents;
+            for (;;) {
+                const size_t keyAt = stripped.find("\"duration\":");
+                if (keyAt == std::string::npos) {
+                    break;
+                }
+                size_t begin = keyAt;
+                if (begin > 0 && stripped[begin - 1] == ',') {
+                    --begin;
+                }
+                size_t valueEnd = stripped.find(',', keyAt);
+                if (valueEnd == std::string::npos) {
+                    require(false, "legacy strip failed: malformed duration token");
+                }
+                stripped.erase(begin, valueEnd - begin + 1);
+            }
+            if (stripped.find("\"duration\":") != std::string::npos) {
+                require(false, "legacy strip failed: beats field still present");
+            }
+            std::ofstream out(legacyPath, std::ios::binary | std::ios::trunc);
+            out << stripped;
+            require(stripped.find("\"durationSeconds\":") != std::string::npos,
+                    "legacy strip failed: canonical field lost");
+        }
+
+        auto tmLoad = std::make_shared<TrackManager>();
+        tmLoad->getPlaylistModel().setPatternManager(&tmLoad->getPatternManager());
+        const ProjectSerializer::LoadResult legacyLoad = ProjectSerializer::load(legacyPath.string(), tmLoad);
+        require(legacyLoad.ok, "legacy load failed");
+        const auto* legacyLaneLoaded = tmLoad->getPlaylistModel().getLane(
+            tmLoad->getPlaylistModel().getLaneId(0));
+        require(legacyLaneLoaded != nullptr && legacyLaneLoaded->clips.size() == 1,
+                "legacy clip missing after load");
+        if (!legacyLaneLoaded || legacyLaneLoaded->clips.empty()) {
+            return 1;
+        }
+        const auto& legacyLoaded = legacyLaneLoaded->clips[0];
+        require(std::abs(legacyLoaded.durationBeats - 4.0) < 1e-9,
+                "legacy stale-canonical clip must reload at its historical span");
+        require(std::abs(legacyLoaded.durationSeconds - playlistL.beatToSeconds(4.0)) < 1e-9,
+                "legacy canonical preserved");
+        require(std::abs(legacyLoaded.edits.playbackRate - 1.5f) < 1e-6f,
+                "legacy rate preserved");
+    }
+
     std::cout << "[PASS] ClipFitPersistenceTest\n";
     return 0;
 }
