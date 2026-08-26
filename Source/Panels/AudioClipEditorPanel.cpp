@@ -719,20 +719,25 @@ void AudioClipEditorPanel::applyFitToBars(int bars) {
         return;
     const double contentSeconds = static_cast<double>(region.frameCount) / static_cast<double>(buffer->sampleRate);
 
-    const auto fit = Audio::computeFitToBars(contentSeconds, m_trackManager->getPlaylistModel().getBPM(), bars);
+    const auto fit = Audio::computeFitToBars(contentSeconds, m_trackManager->getPlaylistModel().getBPM(), bars,
+                                             clip->edits.pitchSemitones);
     if (!fit)
         return;
 
-    // Span and rate land as ONE undoable step: TrimClipCommand moves the right
-    // edge (start pinned), SetClipEditsCommand carries the derived varispeed.
+    // Span and rate land as ONE undoable step. SetClipEditsCommand is pushed
+    // FIRST on purpose: TrimClipCommand derives the canonical durationSeconds
+    // from the clip's varispeed live at ITS execute, so the trim must see the
+    // post-fit rate — otherwise durationSeconds keeps the pre-fit varispeed
+    // and every durationSeconds-fed path (serializer, region preview, render
+    // extraction) reads a stale source window.
+    ClipEdits edits = clip->edits;
+    edits.playbackRate = fit->playbackRate;
     auto& history = m_trackManager->getCommandHistory();
     history.beginTransaction(std::make_shared<CommandTransaction>("Fit clip to bars"));
-    history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
-        m_trackManager->getPlaylistModel(), m_clipId, -1.0, clip->startBeat + fit->durationBeats));
-    ClipEdits edits = clip->edits;
-    edits.playbackRate = Audio::fitPlaybackRateAtPitch(fit->playbackRate, clip->edits.pitchSemitones);
     history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(
         m_trackManager->getPlaylistModel(), m_clipId, edits));
+    history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
+        m_trackManager->getPlaylistModel(), m_clipId, -1.0, clip->startBeat + fit->durationBeats));
     history.commitTransaction();
 
     m_trackManager->markModified();

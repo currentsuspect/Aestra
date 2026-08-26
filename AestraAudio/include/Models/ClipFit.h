@@ -29,8 +29,10 @@ constexpr int FIT_BARS_BEATS_PER_BAR = 4;
 struct FitToBarsResult {
     double durationBeats{0.0};
     double durationSeconds{0.0};
-    float playbackRate{1.0f};
-    bool rateClamped{false}; ///< True when content/span fell outside 0.25×–4×; span still applied, content will not exactly fill it.
+    float playbackRate{1.0f}; ///< Stored base rate to write into ClipEdits (pitch folded out).
+    bool rateClamped{false}; ///< True when the fit needs a rate outside 0.25x-4x (effective
+                             ///< varispeed or pitch-decomposed base); span still applied, content
+                             ///< will not exactly fill it.
 };
 
 /**
@@ -41,10 +43,16 @@ struct FitToBarsResult {
  *                            region actually consumes).
  * @param bpm                 Project tempo (> 0).
  * @param bars                Target bar count (> 0).
- * @return nullopt on invalid input; otherwise the span + derived rate.
+ * @param pitchSemitones      Current clip pitch (retained by the fit). The
+ *                            renderer plays playbackRate x 2^(pitch/12)
+ *                            (ClipEdits::effectiveVarispeed, mirrored by
+ *                            ClipRenderKernel), so the derived base rate is
+ *                            the span-filling effective rate divided by the
+ *                            pitch factor.
+ * @return nullopt on invalid input; otherwise the span + derived base rate.
  */
 inline std::optional<FitToBarsResult> computeFitToBars(
-    double sourceRegionSeconds, double bpm, int bars) {
+    double sourceRegionSeconds, double bpm, int bars, float pitchSemitones = 0.0f) {
     if (!(sourceRegionSeconds > 0.0) || !std::isfinite(sourceRegionSeconds) ||
         !(bpm > 0.0) || !std::isfinite(bpm) || bars <= 0) {
         return std::nullopt;
@@ -57,23 +65,20 @@ inline std::optional<FitToBarsResult> computeFitToBars(
         return std::nullopt;
     }
 
-    const double rawRate = sourceRegionSeconds / result.durationSeconds;
-    result.rateClamped = rawRate < 0.25 || rawRate > 4.0;
-    result.playbackRate = static_cast<float>(std::clamp(rawRate, 0.25, 4.0));
+    // Effective varispeed required to fill the span, then decomposed into the
+    // STORED base rate. effectiveVarispeed() clamps BOTH factors to the
+    // envelope, so the base must stay inside [0.25, 4] too: a base like 8.0
+    // at -24 st would render at clamp(8.0) x 0.25 = 1.0, not the requested
+    // 2.0. Either clamp means content cannot exactly fill the span and is
+    // reported on rateClamped.
+    const double effectiveRate = sourceRegionSeconds / result.durationSeconds;
+    const bool effectiveClamped = effectiveRate < 0.25 || effectiveRate > 4.0;
+    const double baseRate = effectiveRate /
+                            static_cast<double>(ClipEdits::playbackRateFromSemitones(pitchSemitones));
+    const bool baseClamped = baseRate < 0.25 || baseRate > 4.0;
+    result.rateClamped = effectiveClamped || baseClamped;
+    result.playbackRate = static_cast<float>(std::clamp(baseRate, 0.25, 4.0));
     return result;
-}
-
-/**
- * @brief Base playbackRate that makes a pitched clip fill its fitted span.
- *
- * The render authority is ClipEdits::effectiveVarispeed() —
- * playbackRate x 2^(pitch/12), clamped to 0.25x-4x. A fit's rate expresses
- * the required EFFECTIVE varispeed, so the stored base rate must be divided
- * by the pitch factor, or a pitched clip finishes early (e.g. +12 semitones
- * at a nominal 1.0x fit plays at 2.0x and empties in half the span).
- */
-inline float fitPlaybackRateAtPitch(float fitRate, float pitchSemitones) noexcept {
-    return fitRate / ClipEdits::playbackRateFromSemitones(pitchSemitones);
 }
 
 } // namespace Audio

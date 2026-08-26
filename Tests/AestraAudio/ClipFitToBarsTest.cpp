@@ -8,6 +8,7 @@
 #include "Commands/SetClipEditsCommand.h"
 #include "Commands/TrimClipCommand.h"
 #include "Models/ClipFit.h"
+#include "Models/ClipRenderService.h"
 #include "Models/TrackManager.h"
 
 #include <cmath>
@@ -124,33 +125,69 @@ int main() {
     // Pitch-folded base rate: effective varispeed must equal the fit rate.
     {
         // +12 st: the renderer plays base x 2^(12/12), so the base must be halved.
-        const float base12 = Audio::fitPlaybackRateAtPitch(1.0f, 12.0f);
-        expect(std::abs(base12 - 0.5f) < 1e-6, "+12 st halves the base rate");
-        Audio::ClipEdits pitched;
-        pitched.playbackRate = base12;
-        pitched.pitchSemitones = 12.0f;
-        expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
-               "effective varispeed equals the fit rate at +12 st");
+        const auto fit12 = Audio::computeFitToBars(2.0, 120.0, 1, 12.0f);
+        expect(fit12.has_value(), "pitched fit computes");
+        if (fit12) {
+            expect(std::abs(fit12->playbackRate - 0.5f) < 1e-6, "+12 st halves the base rate");
+            Audio::ClipEdits pitched;
+            pitched.playbackRate = fit12->playbackRate;
+            pitched.pitchSemitones = 12.0f;
+            expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
+                   "effective varispeed equals the span-filling rate at +12 st");
+            expect(!fit12->rateClamped, "+12 st fit not clamped");
+        }
 
-        const float baseNeg12 = Audio::fitPlaybackRateAtPitch(1.0f, -12.0f);
-        expect(std::abs(baseNeg12 - 2.0f) < 1e-6, "-12 st doubles the base rate");
-        pitched.playbackRate = baseNeg12;
-        pitched.pitchSemitones = -12.0f;
-        expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
-               "effective varispeed equals the fit rate at -12 st");
+        const auto fitNeg12 = Audio::computeFitToBars(2.0, 120.0, 1, -12.0f);
+        expect(fitNeg12.has_value(), "negative-pitch fit computes");
+        if (fitNeg12) {
+            expect(std::abs(fitNeg12->playbackRate - 2.0f) < 1e-6, "-12 st doubles the base rate");
+            Audio::ClipEdits pitched;
+            pitched.playbackRate = fitNeg12->playbackRate;
+            pitched.pitchSemitones = -12.0f;
+            expect(std::abs(pitched.effectiveVarispeed() - 1.0f) < 1e-6,
+                   "effective varispeed equals the fit rate at -12 st");
+            expect(!fitNeg12->rateClamped, "-12 st fit not clamped");
+        }
 
-        // Envelope-edge fits stay exact: effective still lands on the fit rate.
-        Audio::ClipEdits clampedEdge;
-        clampedEdge.playbackRate = Audio::fitPlaybackRateAtPitch(4.0f, 24.0f);
-        clampedEdge.pitchSemitones = 24.0f;
-        expect(std::abs(clampedEdge.effectiveVarispeed() - 4.0f) < 1e-6,
-               "4x fit at +24 st renders at 4x effective");
-        expect(std::abs(Audio::fitPlaybackRateAtPitch(1.0f, 0.0f) - 1.0f) < 1e-6, "0 st keeps the fit rate");
+        // 4x fit at +24 st: base is 1.0, effective lands exactly on 4x — the
+        // envelope edge, not a clamp.
+        const auto fitEdge = Audio::computeFitToBars(8.0, 120.0, 1, 24.0f);
+        expect(fitEdge.has_value(), "envelope-edge fit computes");
+        if (fitEdge) {
+            expect(std::abs(fitEdge->playbackRate - 1.0f) < 1e-6, "4x fit at +24 st base is 1.0");
+            Audio::ClipEdits clampedEdge;
+            clampedEdge.playbackRate = fitEdge->playbackRate;
+            clampedEdge.pitchSemitones = 24.0f;
+            expect(std::abs(clampedEdge.effectiveVarispeed() - 4.0f) < 1e-6,
+                   "4x fit at +24 st renders at 4x effective");
+            expect(!fitEdge->rateClamped, "envelope-edge fit not clamped");
+        }
+
+        // 2.0x fit at -24 st: the needed base is 8.0, but both factors are
+        // envelope-clamped — the stored base caps at 4.0 and the rendered
+        // effective lands on clamp(4.0 x 0.25) = 1.0. Content cannot fill the
+        // span, so rateClamped must report it.
+        const auto fitCapped = Audio::computeFitToBars(4.0, 120.0, 1, -24.0f);
+        expect(fitCapped.has_value(), "base-capped fit computes");
+        if (fitCapped) {
+            expect(std::abs(fitCapped->playbackRate - 4.0f) < 1e-6, "base capped at 4.0, never 8.0");
+            Audio::ClipEdits capped;
+            capped.playbackRate = fitCapped->playbackRate;
+            capped.pitchSemitones = -24.0f;
+            expect(std::abs(capped.effectiveVarispeed() - 1.0f) < 1e-6,
+                   "rendered effective is clamp(4.0 x 0.25) = 1.0");
+            expect(fitCapped->rateClamped, "unreachable base reported via rateClamped");
+        }
+        expect(std::abs(Audio::computeFitToBars(2.0, 120.0, 1, 0.0f)->playbackRate - 1.0f) < 1e-6,
+               "0 st keeps the fit rate");
     }
 
     // Clip-level regression: the fit OPERATION, not just the math helper.
-    // The trim and the rate edit land as ONE undoable transaction, and a
-    // pitched clip's effective varispeed still fills the fitted span.
+    // The rate edit lands BEFORE the trim in the transaction so the trim's
+    // canonical durationSeconds derives from the post-fit varispeed — the #746
+    // invariant (durationSeconds == beatToSeconds(durationBeats) / varispeed)
+    // must survive the fit or every durationSeconds-fed path (serializer,
+    // region preview, render extraction) reads a stale source window.
     {
         Audio::TrackManager tm;
         auto& playlist = tm.getPlaylistModel();
@@ -173,19 +210,19 @@ int main() {
         constexpr double contentSeconds = 2.0;
         constexpr double bpm = 120.0;
         constexpr int bars = 1;
-        const auto fit = Audio::computeFitToBars(contentSeconds, bpm, bars);
+        const auto fit = Audio::computeFitToBars(contentSeconds, bpm, bars, clip.edits.pitchSemitones);
         expect(fit.has_value(), "fit computes for the clip scenario");
         if (!fit) {
             return 1;
         }
 
         auto* modelClip = playlist.getClip(clipId);
+        Audio::ClipEdits edits = modelClip->edits;
+        edits.playbackRate = fit->playbackRate;
         history.beginTransaction(std::make_shared<Audio::CommandTransaction>("Fit clip to bars"));
+        history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(playlist, clipId, edits));
         history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
             playlist, clipId, -1.0, modelClip->startBeat + fit->durationBeats));
-        Audio::ClipEdits edits = modelClip->edits;
-        edits.playbackRate = Audio::fitPlaybackRateAtPitch(fit->playbackRate, edits.pitchSemitones);
-        history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(playlist, clipId, edits));
         history.commitTransaction();
 
         modelClip = playlist.getClip(clipId);
@@ -196,8 +233,8 @@ int main() {
             expect(std::abs(modelClip->edits.playbackRate - 0.5f) < 1e-6,
                    "base rate halved for +12 st pitch");
             const float effective = modelClip->edits.effectiveVarispeed();
-            expect(std::abs(effective - fit->playbackRate) < 1e-6,
-                   "effective varispeed equals the fit rate");
+            expect(std::abs(effective - fit->playbackRate * 2.0f) < 1e-6,
+                   "effective varispeed equals the span-filling fit rate");
             const double renderedSeconds = contentSeconds / static_cast<double>(effective);
             expectNear(renderedSeconds, fit->durationSeconds, 1e-9,
                        "rendered duration fills the fitted span at nonzero pitch");
@@ -217,9 +254,92 @@ int main() {
         if (modelClip) {
             expectNear(modelClip->startBeat + modelClip->durationBeats, fit->durationBeats, 1e-9,
                        "redo reapplies the fitted span");
-            expect(std::abs(modelClip->edits.effectiveVarispeed() - fit->playbackRate) < 1e-6,
+            expect(std::abs(modelClip->edits.effectiveVarispeed() -
+                            fit->playbackRate * std::pow(2.0f, modelClip->edits.pitchSemitones / 12.0f)) < 1e-6,
                    "redo reapplies the fitted effective varispeed");
         }
+    }
+
+    // Trimmed/offset clip at a non-1 rate: the fit must preserve the source
+    // window — same offset, and a rendered span that consumes exactly the
+    // pre-fit content (fit rate x fit span == pre-fit content seconds).
+    {
+        const double kSampleRate = 48000.0;
+        Audio::TrackManager tm;
+        tm.setOutputSampleRate(kSampleRate);
+        auto& playlist = tm.getPlaylistModel();
+        auto& history = tm.getCommandHistory();
+
+        auto sourceBuffer = std::make_shared<Audio::AudioBufferData>();
+        sourceBuffer->sampleRate = kSampleRate;
+        sourceBuffer->numChannels = 1;
+        sourceBuffer->numFrames = 96000; // 2 s of source
+        sourceBuffer->interleavedData.assign(96000, 0.5f);
+
+        const auto sourceId =
+            tm.getSourceManager().createRecordedSource("fit-region.wav", "Fit Region", sourceBuffer);
+        Audio::AudioSlicePayload payload;
+        payload.audioSourceId = sourceId;
+        payload.durationSeconds = 2.0;
+        payload.slices.push_back({0.0, 1.0, 0.0, 96000.0});
+        const auto patternId = tm.getPatternManager().createAudioPattern("Fit Region", 4.0, payload);
+        const auto laneId = playlist.createLane("fit-region");
+        const auto clipId = playlist.addClipFromPattern(laneId, patternId, 0.0, 2.0);
+
+        auto* clip = playlist.getClip(clipId);
+        expect(clip != nullptr, "region-fit clip created");
+        if (!clip) {
+            return 1;
+        }
+
+        // Shape the pre-fit clip: rate 2.0 (non-1), 0.5 s slip into the
+        // source, right-edge trim to 2 beats (0.5 s of source at 2x).
+        Audio::ClipEdits edits = clip->edits;
+        edits.playbackRate = 2.0f;
+        edits.sourceStart = 0.5 * kSampleRate;
+        playlist.setClipEdits(clipId, edits);
+        history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(playlist, clipId, -1.0, 0.0 + 2.0));
+
+        clip = playlist.getClip(clipId);
+        const auto preRegion = Audio::ClipRenderService(tm.getSourceManager(), tm.getPatternManager())
+                                   .resolveClipRegion(*clip, tm.getPlaylistModel().getProjectSampleRate());
+        expect(preRegion.frameCount > 0, "pre-fit region resolves");
+        const double contentSeconds = static_cast<double>(preRegion.frameCount) / kSampleRate;
+
+        const auto fit = Audio::computeFitToBars(contentSeconds, playlist.getBPM(), 1);
+        expect(fit.has_value(), "region fit computes");
+        if (!fit) {
+            return 1;
+        }
+
+        // Fit exactly as the panel does: edit first, then trim.
+        clip = playlist.getClip(clipId);
+        Audio::ClipEdits fitEdits = clip->edits;
+        fitEdits.playbackRate = fit->playbackRate;
+        history.beginTransaction(std::make_shared<Audio::CommandTransaction>("Fit clip to bars"));
+        history.pushAndExecute(std::make_shared<Audio::SetClipEditsCommand>(playlist, clipId, fitEdits));
+        history.pushAndExecute(std::make_shared<Audio::TrimClipCommand>(
+            playlist, clipId, -1.0, clip->startBeat + fit->durationBeats));
+        history.commitTransaction();
+
+        clip = playlist.getClip(clipId);
+        const auto postRegion = Audio::ClipRenderService(tm.getSourceManager(), tm.getPatternManager())
+                                    .resolveClipRegion(*clip, tm.getPlaylistModel().getProjectSampleRate());
+        expect(postRegion.startFrame == preRegion.startFrame,
+               "fit preserves the source offset (start frame)");
+        // The fitted clip consumes exactly the pre-fit content: fit rate x
+        // fitted span == pre-fit content seconds.
+        const double consumed =
+            static_cast<double>(fit->playbackRate) * fit->durationSeconds;
+        expectNear(consumed, contentSeconds, 1e-9,
+                   "fitted clip consumes exactly the pre-fit window");
+        // Canonical invariant under the post-fit varispeed (the stale-rate
+        // bug would leave pre-fit span/v instead).
+        const double durationSecondsExpected =
+            playlist.beatToSeconds(clip->durationBeats) /
+            static_cast<double>(clip->edits.effectiveVarispeed());
+        expectNear(clip->durationSeconds, durationSecondsExpected, 1e-9,
+                   "canonical durationSeconds tracks the post-fit varispeed");
     }
 
     if (g_failures == 0) {
