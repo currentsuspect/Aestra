@@ -327,6 +327,13 @@ int main() {
                                     .resolveClipRegion(*clip, tm.getPlaylistModel().getProjectSampleRate());
         expect(postRegion.startFrame == preRegion.startFrame,
                "fit preserves the source offset (start frame)");
+        // The fitted clip's region window equals the pre-fit window exactly:
+        // resolveClipRegion caps at the kernel consumption (canonical x v^2 =
+        // span x v), and the fit targets span' x v' == pre-fit content.
+        const int64_t preFrames = static_cast<int64_t>(preRegion.frameCount);
+        const int64_t postFrames = static_cast<int64_t>(postRegion.frameCount);
+        expect(std::abs(postFrames - preFrames) <= 1,
+               "region frame count preserved across the fit");
         // The fitted clip consumes exactly the pre-fit content: fit rate x
         // fitted span == pre-fit content seconds.
         const double consumed =

@@ -811,8 +811,16 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     assert(std::abs(loadedLane->clips[0].edits.playbackRate - 1.75f) < 1.0e-7f);
     assert(std::abs(loadedLane->clips[0].edits.pitchSemitones - 5.0f) < 1.0e-7f);
     assert(std::abs(loadedLane->clips[0].edits.sourceStart - 1234.5) < 1.0e-9);
-    assert(std::abs(loadedLane->clips[0].durationSeconds - 1.0) < 1.0e-9);
-    assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
+    // #746 canonical invariant through save/load: durationSeconds ==
+    // beatToSeconds(durationBeats) / effectiveVarispeed. The rate+pitch edit
+    // re-derives the canonical at edit time (setClipEdits), and the loader
+    // re-derives beats WITH the varispeed factor — a fitted/edited clip must
+    // reload at its exact span, not a flat-converted distortion.
+    const auto& loadedClip = loadedLane->clips[0];
+    const double expectedLoadedSeconds = tm2->getPlaylistModel().beatToSeconds(2.0) /
+                                         static_cast<double>(loadedClip.edits.effectiveVarispeed());
+    assert(std::abs(loadedClip.durationSeconds - expectedLoadedSeconds) < 1.0e-9);
+    assert(std::abs(loadedClip.durationBeats - 2.0) < 1.0e-9);
 
     std::cout << "[PASS] Audio clip placement helper persists clip and duration seconds" << std::endl;
 }
