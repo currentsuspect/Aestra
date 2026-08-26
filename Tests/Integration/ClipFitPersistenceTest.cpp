@@ -232,7 +232,9 @@ int main() {
         const auto legacyPath = tempDir / "legacy-stale.aes";
         require(ProjectSerializer::save(legacyPath.string(), tmLegacy, 120.0, 0.0), "legacy save failed");
 
-        // Simulate the v3-era file: strip the beats field (it did not exist).
+        // Simulate the v3-era file: strip the beats field (it did not exist)
+        // and the integrity block (a genuine v3-era file has its own valid
+        // checksum; the mismatch was an artifact of editing post-save).
         // Key surgery is safe: `"duration":` (quote-colon) cannot match
         // `"durationSeconds":` in the emitted JSON.
         {
@@ -254,8 +256,53 @@ int main() {
                 }
                 stripped.erase(begin, valueEnd - begin + 1);
             }
+            const size_t integrityAt = stripped.find("\"integrity\":");
+            if (integrityAt == std::string::npos) {
+                require(false, "legacy strip failed: integrity block missing");
+            }
+            size_t braceAt = stripped.find('{', integrityAt);
+            require(braceAt != std::string::npos, "legacy strip failed: integrity brace missing");
+            int depth = 0;
+            size_t cursor = braceAt;
+            for (; cursor < stripped.size(); ++cursor) {
+                if (stripped[cursor] == '{') {
+                    ++depth;
+                } else if (stripped[cursor] == '}') {
+                    --depth;
+                    if (depth == 0) {
+                        ++cursor;
+                        break;
+                    }
+                }
+            }
+            size_t integrityBegin = integrityAt;
+            while (integrityBegin > 0 &&
+                   (stripped[integrityBegin - 1] == ' ' || stripped[integrityBegin - 1] == '\n' ||
+                    stripped[integrityBegin - 1] == '\r' || stripped[integrityBegin - 1] == '\t')) {
+                --integrityBegin;
+            }
+            if (integrityBegin > 0 && stripped[integrityBegin - 1] == ',') {
+                --integrityBegin;
+            }
+            stripped.erase(integrityBegin, cursor - integrityBegin);
+            // Integrity is the last root key; dropping it leaves a trailing
+            // comma before the closing brace.
+            const size_t lastBrace = stripped.rfind('}');
+            if (lastBrace != std::string::npos) {
+                size_t before = lastBrace;
+                while (before > 0 && (stripped[before - 1] == ' ' || stripped[before - 1] == '\n' ||
+                                      stripped[before - 1] == '\r' || stripped[before - 1] == '\t')) {
+                    --before;
+                }
+                if (before > 0 && stripped[before - 1] == ',') {
+                    stripped.erase(before - 1, 1);
+                }
+            }
             if (stripped.find("\"duration\":") != std::string::npos) {
                 require(false, "legacy strip failed: beats field still present");
+            }
+            if (stripped.find("\"integrity\":") != std::string::npos) {
+                require(false, "legacy strip failed: integrity block still present");
             }
             std::ofstream out(legacyPath, std::ios::binary | std::ios::trunc);
             out << stripped;
@@ -267,6 +314,8 @@ int main() {
         tmLoad->getPlaylistModel().setPatternManager(&tmLoad->getPatternManager());
         const ProjectSerializer::LoadResult legacyLoad = ProjectSerializer::load(legacyPath.string(), tmLoad);
         require(legacyLoad.ok, "legacy load failed");
+        require(legacyLoad.integrity != ProjectSerializer::LoadIntegrity::Mismatch,
+                "a true legacy file (no integrity block) must not load as a mismatch");
         const auto* legacyLaneLoaded = tmLoad->getPlaylistModel().getLane(
             tmLoad->getPlaylistModel().getLaneId(0));
         require(legacyLaneLoaded != nullptr && legacyLaneLoaded->clips.size() == 1,
