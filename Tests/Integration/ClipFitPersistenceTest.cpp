@@ -332,6 +332,88 @@ int main() {
                 "legacy rate preserved");
     }
 
+    // --- Explicit-duration edge cases (#864 round 2): an explicitly present
+    // "duration": 0 must survive reload as 0 (the timeline truth), never be
+    // replaced by a derived positive span; and a constructed non-unit-rate
+    // clip with an unset canonical must get beatToSeconds(span)/varispeed
+    // from the writer fallback, not raw beat seconds.
+    {
+        auto tmEdge = std::make_shared<TrackManager>();
+        tmEdge->getPlaylistModel().setPatternManager(&tmEdge->getPatternManager());
+        const ClipSourceID srcId = tmEdge->getSourceManager().getOrCreateSource(wavPath.string());
+        require(srcId.isValid(), "edge source failed to load");
+        AudioSlicePayload edgePayload;
+        edgePayload.audioSourceId = srcId;
+        edgePayload.slices.push_back({0.0, 48000.0});
+        const PatternID edgePat =
+            tmEdge->getPatternManager().createAudioPattern("EdgeSrc", 4.0, edgePayload);
+        auto& playlistE = tmEdge->getPlaylistModel();
+        playlistE.setBPM(120.0);
+        const auto edgeLane = playlistE.createLane("Edge");
+
+        // Zero-span clip: durationBeats == 0 with a positive canonical.
+        const auto zeroClipId = playlistE.addClipFromPattern(edgeLane, edgePat, 0.0, 2.0);
+        auto* zeroClip = playlistE.getClip(zeroClipId);
+        zeroClip->durationBeats = 0.0;
+        zeroClip->durationSeconds = 2.0;
+        require(ProjectSerializer::save((tempDir / "edge-zero.aes").string(), tmEdge, 120.0, 0.0),
+                "edge-zero save failed");
+        auto tmZeroLoad = std::make_shared<TrackManager>();
+        tmZeroLoad->getPlaylistModel().setPatternManager(&tmZeroLoad->getPatternManager());
+        const ProjectSerializer::LoadResult zeroLoad =
+            ProjectSerializer::load((tempDir / "edge-zero.aes").string(), tmZeroLoad);
+        require(zeroLoad.ok, "edge-zero load failed");
+        const auto* zeroLane = tmZeroLoad->getPlaylistModel().getLane(
+            tmZeroLoad->getPlaylistModel().getLaneId(0));
+        require(zeroLane != nullptr && zeroLane->clips.size() == 1, "edge-zero clip missing");
+        if (!zeroLane || zeroLane->clips.empty()) {
+            return 1;
+        }
+        require(zeroLane->clips[0].durationBeats == 0.0,
+                "explicit \"duration\": 0 must reload as zero, not a derived span");
+        require(std::abs(zeroLane->clips[0].durationSeconds - 2.0) < 1e-9,
+                "explicit-zero clip canonical must survive reload");
+
+        // Constructed rate-edited clip: canonical unset -> writer fallback
+        // must fold the varispeed into durationSeconds.
+        const auto rateClipId = playlistE.addClipFromPattern(edgeLane, edgePat, 0.0, 4.0);
+        auto* rateClip = playlistE.getClip(rateClipId);
+        rateClip->edits.playbackRate = 1.5f;
+        rateClip->durationSeconds = 0.0; // unset canonical, as a constructed clip has
+        const auto fallbackPath = tempDir / "edge-fallback.aes";
+        require(ProjectSerializer::save(fallbackPath.string(), tmEdge, 120.0, 0.0),
+                "edge-fallback save failed");
+        auto tmFallbackLoad = std::make_shared<TrackManager>();
+        tmFallbackLoad->getPlaylistModel().setPatternManager(&tmFallbackLoad->getPatternManager());
+        const ProjectSerializer::LoadResult fallbackLoad =
+            ProjectSerializer::load(fallbackPath.string(), tmFallbackLoad);
+        require(fallbackLoad.ok, "edge-fallback load failed");
+        const auto* fallbackLane = tmFallbackLoad->getPlaylistModel().getLane(
+            tmFallbackLoad->getPlaylistModel().getLaneId(0));
+        require(fallbackLane != nullptr && fallbackLane->clips.size() == 2,
+                "edge-fallback clips missing");
+        if (!fallbackLane || fallbackLane->clips.size() < 2) {
+            return 1;
+        }
+        const ClipInstance* fallbackLoaded = nullptr;
+        for (const auto& laneClip : fallbackLane->clips) {
+            if (std::abs(laneClip.edits.playbackRate - 1.5f) < 1e-6f) {
+                fallbackLoaded = &laneClip;
+                break;
+            }
+        }
+        require(fallbackLoaded != nullptr, "fallback clip missing after load");
+        if (!fallbackLoaded) {
+            return 1;
+        }
+        require(std::abs(fallbackLoaded->durationBeats - 4.0) < 1e-9,
+                "fallback clip span did not roundtrip");
+        const double fallbackInvariant =
+            playlistE.beatToSeconds(4.0) / static_cast<double>(fallbackLoaded->edits.effectiveVarispeed());
+        require(std::abs(fallbackLoaded->durationSeconds - fallbackInvariant) < 1e-9,
+                "writer fallback must emit canonical = beatToSeconds(span)/varispeed");
+    }
+
     std::cout << "[PASS] ClipFitPersistenceTest\n";
     return 0;
 }

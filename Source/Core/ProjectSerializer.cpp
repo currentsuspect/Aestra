@@ -1026,9 +1026,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                     // loader can always round-trip the timeline span verbatim
                     // (the canonical alone cannot: pre-invariant files stored
                     // a stale span/v value for rate-edited clips).
+                    // Constructed clips may carry durationSeconds == 0 while
+                    // their span is nonzero; the fallback keeps the #746
+                    // invariant by folding the effective varispeed in.
                     const double durationSeconds = clip.durationSeconds > 0.0
                                                        ? clip.durationSeconds
-                                                       : clip.durationBeats * 60.0 / std::max(tempo, 1.0);
+                                                       : clip.durationBeats * 60.0 / std::max(tempo, 1.0) /
+                                                             static_cast<double>(clip.edits.effectiveVarispeed());
                     cjs.set("durationSeconds", JSON(durationSeconds));
                     cjs.set("duration", JSON(clip.durationBeats));
                     cjs.set("sourceOffsetSeconds", JSON(clip.sourceOffsetSeconds));
@@ -1620,6 +1624,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         sourceManager.clear();
         patternManager.clear();
         trackManager->clearAllChannels();
+        trackManager->clearAllTracks();
         playlist.setPatternManager(&patternManager);
         playlist.setBPM(result.tempo);
     
@@ -2354,6 +2359,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
                                 const auto* loadedPattern = patternManager.getPattern(clip.patternId);
                                 const bool isAudioClip = loadedPattern && loadedPattern->isAudio();
+                                const bool hasExplicitDuration =
+                                    cj[c].has("duration") && cj[c]["duration"].isNumber() &&
+                                    std::isfinite(cj[c]["duration"].asNumber());
                                 const double fileDurationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
                                 if (isAudioClip) {
                                     clip.durationSeconds =
@@ -2429,16 +2437,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 }
                                 if (isAudioClip) {
                                     // Beats from the file are the timeline truth
-                                    // whenever present (the current writer co-writes
-                                    // them; v2-era files carry beats only). Pre-
-                                    // invariant v3 files carry canonical only — keep
-                                    // the historical flat derivation so a rate-edited
-                                    // clip saved with a stale canonical does NOT
-                                    // reload at a shifted span.
-                                    clip.durationBeats =
-                                        fileDurationBeats > 0.0
-                                            ? fileDurationBeats
-                                            : playlist.secondsToBeats(clip.durationSeconds);
+                                    // whenever the field is PRESENT — including an
+                                    // explicit 0 (a zero-length span is legal state,
+                                    // and replacing it with a derived positive span
+                                    // would shift the timeline on every save cycle).
+                                    // Absent or non-numeric beats mean a pre-
+                                    // co-write era file: keep the historical flat
+                                    // derivation so a rate-edited clip saved with a
+                                    // stale canonical does NOT reload at a shifted
+                                    // span.
+                                    clip.durationBeats = hasExplicitDuration
+                                                             ? fileDurationBeats
+                                                             : playlist.secondsToBeats(clip.durationSeconds);
                                 }
                                 playlist.addClip(laneId, clip);
                             } else {
