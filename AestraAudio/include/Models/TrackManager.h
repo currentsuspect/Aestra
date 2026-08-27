@@ -1261,14 +1261,23 @@ public:
     }
 
     /**
-     * @brief Stop transport playback and return to the stored cue/start position.
+     * @brief Stop transport playback and reset the playhead to 0.
+     *
+     * Single stop lands at 0 authoritatively (v0.7.1 T-8): the reset rides the
+     * transport command itself — the audio-thread drain is the single position
+     * authority, and a UI-side rewind after the fact races it (8714ede9 rule).
+     * The stored cue is dropped (play() cannot resurrect a scrubbed position)
+     * and any display override is cleared (a count-in leftover must not pin
+     * the UI to a stale position on a soft stop).
+     * Pause keeps its own preserve-sentinel path (#590) and is untouched.
      */
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        const double playStartPosition = m_playStartPosition.load(std::memory_order_relaxed);
-        m_position.store(playStartPosition, std::memory_order_relaxed);
-        pushTransportCommand(0.0f, playStartPosition);
+        m_playStartPosition.store(0.0, std::memory_order_relaxed);
+        m_position.store(0.0, std::memory_order_relaxed);
+        clearDisplayPositionOverride();
+        pushTransportCommand(0.0f, 0.0);
     }
 
     /**
@@ -1543,17 +1552,15 @@ public:
      * @brief Pause Arsenal/pattern playback: hard-cut voices while preserving
      *        the playhead for resume.
      *
-     * A plain stop() returns the transport to the stored cue (play start), so
-     * pausing through stop would make play() restart from the old cue instead
-     * of the paused position. Move the cue to the CURRENT position BEFORE the
-     * stop command goes out — the audio thread's drain is authoritative, so a
-     * UI-side store after the fact would race it (same rule as the hard-stop
-     * rewind). playPatternInArsenal() then resumes from the stored playhead.
+     * The engine keeps its own authoritative position via the #590
+     * preserve-sentinel — routing pause through stop() would trigger T-8's
+     * single-stop reset (land at 0) and break resume. The cue and m_position
+     * are deliberately untouched: playPatternInArsenal(-1) resumes from
+     * m_position, which the UI keeps synced to the engine during playback.
      */
     void pauseArsenalPlayback() {
-        const double pausedPosition = m_position.load(std::memory_order_relaxed);
-        m_playStartPosition.store(pausedPosition, std::memory_order_relaxed);
-        stopArsenalPlayback(true);
+        pause();
+        m_patternPlaybackEngine.clearScheduledInstances();
     }
 
     /**
