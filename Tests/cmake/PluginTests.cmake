@@ -258,6 +258,17 @@ target_include_directories(AutomationPresenceTest PRIVATE
 add_test(NAME AutomationPresenceTest COMMAND AutomationPresenceTest)
 set_tests_properties(AutomationPresenceTest PROPERTIES LABELS "audio;automation;mixer;contract:audio")
 
+# #747: varispeed tempo-fit math — span/rate relationship, varispeed clamp,
+# input guards. Pitch-follows-tempo is definitional, not a defect.
+add_executable(ClipFitToBarsTest AestraAudio/ClipFitToBarsTest.cpp)
+target_link_libraries(ClipFitToBarsTest PRIVATE AestraAudio)
+target_include_directories(ClipFitToBarsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ClipFitToBarsTest COMMAND ClipFitToBarsTest)
+set_tests_properties(ClipFitToBarsTest PROPERTIES LABELS "audio;automation;contract:audio")
+
 # Automation Identity Resolution Test (contract I2/I3/I8/I10)
 add_executable(AutomationIdentityResolutionTest AestraAudio/AutomationIdentityResolutionTest.cpp)
 target_link_libraries(AutomationIdentityResolutionTest PRIVATE AestraAudio)

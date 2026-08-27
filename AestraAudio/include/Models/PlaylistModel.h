@@ -288,6 +288,15 @@ public:
                 return false;
             }
             clip->edits = edits;
+            // #746 canonical invariant: durationSeconds == beatToSeconds(
+            // durationBeats) / effectiveVarispeed. A rate/pitch edit that
+            // skips this leaves the serializer's canonical field stale and
+            // every reload re-derives a distorted span (a fitted clip at 0.5x
+            // reloaded at double length). Mirror the trim/split discipline;
+            // the field is audio-specific.
+            if (isAudioClipUnlocked(*clip)) {
+                clip->durationSeconds = beatToSeconds(clip->durationBeats) / edits.effectiveVarispeed();
+            }
         }
         notifyClipChanged(clipId);
         return true;

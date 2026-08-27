@@ -129,6 +129,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
+# Fit-to-bars persistence: the fit writes the serializer-canonical
+# durationSeconds (preferred over beats), so the fitted pitch+rate state and
+# the #746 invariant must survive save -> load.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ClipFitPersistenceTest.cpp")
+    add_executable(ClipFitPersistenceTest
+        Integration/ClipFitPersistenceTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ClipFitPersistenceTest PRIVATE AestraAudio)
+    target_include_directories(ClipFitPersistenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME ClipFitPersistenceTest COMMAND ClipFitPersistenceTest)
+    set_tests_properties(ClipFitPersistenceTest PROPERTIES LABELS "integration;serialization;contract:durability")
+endif()
+
 # Workspace-state roundtrip test (phase-3): the optional viewFocus/pianoRollOpen/
 # sequencerOpen UIState fields roundtrip, legacy files keep default, malformed
 # focus names are dropped. Serialization is AGENTS.md §12 high-risk; this runs

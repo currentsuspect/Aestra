@@ -1021,10 +1021,16 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 const auto* clipPattern = patternManager.getPattern(clip.patternId);
                 const bool isAudioClip = clipPattern && clipPattern->isAudio();
                 if (isAudioClip) {
+                    // Canonical seconds is the field the trim path keeps
+                    // authoritative (#744), but beats are co-written so a
+                    // loader can always round-trip the timeline span verbatim
+                    // (the canonical alone cannot: pre-invariant files stored
+                    // a stale span/v value for rate-edited clips).
                     const double durationSeconds = clip.durationSeconds > 0.0
                                                        ? clip.durationSeconds
                                                        : clip.durationBeats * 60.0 / std::max(tempo, 1.0);
                     cjs.set("durationSeconds", JSON(durationSeconds));
+                    cjs.set("duration", JSON(clip.durationBeats));
                     cjs.set("sourceOffsetSeconds", JSON(clip.sourceOffsetSeconds));
                 } else {
                     cjs.set("duration", JSON(clip.durationBeats));
@@ -2348,6 +2354,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
                                 const auto* loadedPattern = patternManager.getPattern(clip.patternId);
                                 const bool isAudioClip = loadedPattern && loadedPattern->isAudio();
+                                const double fileDurationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
                                 if (isAudioClip) {
                                     clip.durationSeconds =
                                         finiteNumberOr(cj[c], "durationSeconds", 0.0, 0.0, 1000000.0);
@@ -2389,7 +2396,6 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                         clip.sourceOffsetSeconds =
                                             legacySourceOffsetBeats * 60.0 / std::max(result.tempo, 1.0);
                                     }
-                                    clip.durationBeats = playlist.secondsToBeats(clip.durationSeconds);
                                     clip.sourceOffset = playlist.secondsToBeats(clip.sourceOffsetSeconds);
                                 } else {
                                     clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
@@ -2420,6 +2426,19 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
                                     clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
                                     clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
+                                }
+                                if (isAudioClip) {
+                                    // Beats from the file are the timeline truth
+                                    // whenever present (the current writer co-writes
+                                    // them; v2-era files carry beats only). Pre-
+                                    // invariant v3 files carry canonical only — keep
+                                    // the historical flat derivation so a rate-edited
+                                    // clip saved with a stale canonical does NOT
+                                    // reload at a shifted span.
+                                    clip.durationBeats =
+                                        fileDurationBeats > 0.0
+                                            ? fileDurationBeats
+                                            : playlist.secondsToBeats(clip.durationSeconds);
                                 }
                                 playlist.addClip(laneId, clip);
                             } else {

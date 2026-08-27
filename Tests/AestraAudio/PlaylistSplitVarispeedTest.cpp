@@ -166,7 +166,11 @@ bool runTrimCase(const SessionConfig& cfg, float speed, float pitchSemitones, co
     if (restored) {
         out.check(nearEq(restored->startBeat, 0.0), "undo startBeat");
         out.check(nearEq(restored->durationBeats, kBeats), "undo durationBeats");
-        out.check(nearEq(restored->durationSeconds, kBeats * kSecondsPerBeat), "undo durationSeconds");
+        // Apply-via-setClipEdits maintains the #746 canonical invariant, so
+        // the pre-trim canonical is beatToSeconds(kBeats)/varispeed — not the
+        // stale rate-1 value the undo must restore after a trim.
+        out.check(nearEq(restored->durationSeconds, kBeats * kSecondsPerBeat / varispeed),
+                  "undo durationSeconds");
         out.check(nearEq(restored->sourceOffsetSeconds, 0.0), "undo sourceOffsetSeconds");
     }
     return true;

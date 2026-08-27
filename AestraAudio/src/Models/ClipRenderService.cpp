@@ -94,9 +94,14 @@ ClipRenderService::SourceRegion ClipRenderService::resolveClipRegion(const ClipI
 
     // A trimmed clip plays only its own duration, so that is what gets
     // rendered; otherwise reversing a trim would drag in audio the user
-    // cannot hear.
+    // cannot hear. The audible window is what the KERNEL consumes — timeline
+    // span x effective varispeed. durationSeconds is the model's bookkeeping
+    // canonical (span / varispeed, #746), so the window is canonical x v^2;
+    // using canonical x v underreports it by another factor of v and
+    // prematurely truncates varispeed clips (commit/extract regressions).
     if (clip.durationSeconds > 0.0 && std::isfinite(clip.durationSeconds)) {
-        const double audibleFrames = clip.durationSeconds * sourceRate;
+        const double varispeed = static_cast<double>(clip.edits.effectiveVarispeed());
+        const double audibleFrames = clip.durationSeconds * varispeed * varispeed * sourceRate;
         if (audibleFrames >= 1.0) {
             frameCount = std::min(frameCount, static_cast<uint64_t>(audibleFrames));
         }
