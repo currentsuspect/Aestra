@@ -186,11 +186,11 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     }
 
     // Render selection box if currently drawing one
-    if (m_isDrawingSelectionBox) {
-        float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
-        float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);
-        float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
-        float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
+    if (m_marquee.active()) {
+        const float minX = m_marquee.rectMinX();
+        const float maxX = m_marquee.rectMaxX();
+        const float minY = m_marquee.rectMinY();
+        const float maxY = m_marquee.rectMaxY();
 
         AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
 
@@ -725,7 +725,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
 
     // === EDGE-SCROLLING DURING TIMELINE DRAG OPERATIONS ===
     // Keep the timeline moving while dragging clips, selections, loop markers, or the playhead near edges.
-    const bool needsEdgeScroll = m_isDraggingClipInstant || m_isDrawingSelectionBox || m_isDraggingRulerSelection ||
+    const bool needsEdgeScroll = m_isDraggingClipInstant || m_marquee.active() || m_isDraggingRulerSelection ||
                                  m_isDraggingLoopStart || m_isDraggingLoopEnd || m_isDraggingPlayhead;
 
     if (needsEdgeScroll && m_pixelsPerBeat > 0) {
@@ -813,8 +813,12 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 const double positionInSeconds = std::max(0.0, playlist.beatToSeconds(positionInBeats));
                 m_trackManager->setPosition(positionInSeconds);
                 m_trackManager->setPlayStartPosition(positionInSeconds);
-            } else if (m_isDrawingSelectionBox) {
-                m_selectionBoxEnd.x = safeClampFloat(m_lastMousePos.x, gridStartX, gridEndX);
+            } else if (m_marquee.active()) {
+                // The pointer is pinned at the screen edge; the scroll itself
+                // extends the band's beat coverage through the offset change.
+                // No synthetic pointer move is injected — the endpoint only
+                // ever changes through accepted real pointer events (#847),
+                // so a foreign-button position cannot yank the band here.
                 invalidateCache();
             }
         }

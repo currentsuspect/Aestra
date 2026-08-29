@@ -21,6 +21,7 @@
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
+#include "TimelineMarquee.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
@@ -457,10 +458,11 @@ private:
     double m_loopDragStartBeat = 0.0; // Original beat position when drag started
 
     // === SELECTION BOX (left- or right-drag with the Multi-Select tool) ===
-    bool m_isDrawingSelectionBox = false;
-    ::AestraUI::NUIMouseButton m_selectionBoxButton = ::AestraUI::NUIMouseButton::None;
-    ::AestraUI::NUIPoint m_selectionBoxStart;
-    ::AestraUI::NUIPoint m_selectionBoxEnd;
+    // Widget-independent drag state machine (TimelineMarquee.h, #847): it owns
+    // the sequencing rules (ownership until matching-button release, pure
+    // endpoint updates); this widget keeps only the screen mapping and the
+    // selection application on finalize.
+    ::Aestra::Components::TimelineMarqueeDrag m_marquee;
 
     // === SMOOTH ZOOM ANIMATION ===
     float m_targetPixelsPerBeat = 50.0f; // Target zoom level for animation (match initial m_pixelsPerBeat)

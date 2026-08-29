@@ -1966,6 +1966,16 @@ target_include_directories(TimelineInteractionPolicyTest PRIVATE
 add_test(NAME TimelineInteractionPolicyTest COMMAND TimelineInteractionPolicyTest)
 set_tests_properties(TimelineInteractionPolicyTest PROPERTIES LABELS "ui;timeline;selection;regression;contract:application")
 
+# Marquee drag contract (#847): ownership until matching-button release,
+# pure endpoint updates (no per-move invalidation surface). Header-only and
+# widget-free by design — see TimelineMarquee.h.
+add_executable(TimelineMarqueeTest AestraUI/TimelineMarqueeTest.cpp)
+target_include_directories(TimelineMarqueeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineMarqueeTest COMMAND TimelineMarqueeTest)
+set_tests_properties(TimelineMarqueeTest PROPERTIES LABELS "ui;timeline;selection;regression;contract:application")
+
 # Clip contrast contract: waveform ink must stay brighter than the clip body it
 # is drawn on, for every lane identity and both selection states.
 add_executable(TimelineClipContrastTest AestraUI/TimelineClipContrastTest.cpp)

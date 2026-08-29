@@ -46,6 +46,15 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     AestraUI::NUIRect bounds = getBounds();
     AestraUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
 
+    // Active marquee owns every mouse event until release (#847), and routes
+    // before EVERY other gesture handler: the minimap consumes in-bounds
+    // releases even when idle, and a loop-handle press during a foreign-button
+    // marquee would start a loop drag whose release the marquee then eats —
+    // both strand a gesture.
+    if (m_marquee.active()) {
+        return handleSelectionBoxMouse(event, localPos);
+    }
+
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.
     for (auto& track : m_trackUIComponents) {
@@ -115,13 +124,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // The playlist content itself should not consume events in this mode.
     if (!m_playlistVisible) {
         return AestraUI::NUIComponent::onMouseEvent(event);
-    }
-
-    // Active marquee owns every mouse event until release (#847 review):
-    // root dispatch stops at the first child that handles an event, so a
-    // sibling could otherwise consume the release and strand the gesture.
-    if (m_isDrawingSelectionBox) {
-        return handleSelectionBoxMouse(event, localPos);
     }
 
     // Handle instant clip dragging
@@ -380,28 +382,17 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
     // Marquee selection is owned by the visible Multi-Select tool. Supporting
     // both buttons preserves the timeline's established right-drag gesture;
     // outside this tool, right-click remains reserved for context menus.
-    const bool selectionButton = event.button == AestraUI::NUIMouseButton::Left ||
-                                 event.button == AestraUI::NUIMouseButton::Right;
-    const bool startSelectionBox = event.pressed && selectionButton &&
-                                   m_currentTool == PlaylistTool::MultiSelect;
+    const bool selectionButton =
+        event.button == AestraUI::NUIMouseButton::Left || event.button == AestraUI::NUIMouseButton::Right;
+    const auto marqueeButton = static_cast<Aestra::Components::MarqueeButton>(event.button);
 
-    if (startSelectionBox && !m_isDrawingSelectionBox) {
-        float trackAreaTop = kTimelineTimeBandHeight;
-
-        // Only start selection box in track area
-        if (localPos.y > trackAreaTop) {
-            m_isDrawingSelectionBox = true;
-            m_selectionBoxStart = event.position;
-            m_selectionBoxEnd = event.position;
-            m_selectionBoxButton = event.button;
-
-            // Note: System cursor is always hidden by Main.cpp custom cursor system
-            return true;
-        }
-    }
-
-    // Update selection box while dragging
-    if (m_isDrawingSelectionBox) {
+    // An active marquee owns every mouse event until the button that began it
+    // releases (#847): moves, foreign buttons, and hover state cannot escape
+    // or end someone else's drag. The machine filters endpoint changes to
+    // pointer moves and the initiating button's release.
+    if (m_marquee.ownsEvent()) {
+        float targetX = event.position.x;
+        float targetY = event.position.y;
         if (m_window) {
             // Calculate constrained cursor position
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -412,8 +403,6 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
             AestraUI::NUIRect globalBounds = getBounds();
 
-
-
             float gridTopLocal = globalBounds.y + kTimelineTimeBandHeight;
             float gridLeftLocal = globalBounds.x + controlAreaWidth + kTimelineGridInsetX;
             float gridRightLocal = globalBounds.x + globalBounds.width - scrollbarWidth; // Corrected width calc
@@ -423,27 +412,40 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             // logic uses the clamped point; the physical cursor is left alone —
             // warping it every move made the pointer fight the synthetic
             // motion events it generated (felt like an app hang, #847).
-            float targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
-            float targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
-
-            // Apply bounds to internal selection logic
-            m_selectionBoxEnd = {targetX, targetY};
-        } else {
-            m_selectionBoxEnd = event.position;
+            targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
+            targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
         }
 
-        // Only the release matching the button that began the marquee may
-        // finalize it; this prevents the other button from ending a drag.
-        const bool endSelectionBox = event.released && event.button == m_selectionBoxButton;
+        // A bridge-generated event (focus-loss release, re-resolution) ends
+        // the gesture WITHOUT applying a selection the user never made.
+        if (event.synthetic) {
+            m_marquee.finalize();
+            return true;
+        }
 
-        if (endSelectionBox) {
-            // Calculate selection rectangle
-            float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
-            float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);
-            float minY = std::min(m_selectionBoxStart.y, m_selectionBoxEnd.y);
-            float maxY = std::max(m_selectionBoxStart.y, m_selectionBoxEnd.y);
-
-            AestraUI::NUIRect selectionRect(minX, minY, maxX - minX, maxY - minY);
+        // The machine consumes every owned event; endpoint changes only on
+        // Move kinds and the initiating button's Release. Wheel, enter/leave
+        // and synthetic events map to Other and cannot move the band.
+        Aestra::Components::MarqueeEventKind kind;
+        switch (event.type) {
+        case AestraUI::NUIMouseEventType::Move:
+        case AestraUI::NUIMouseEventType::Drag:
+            kind = Aestra::Components::MarqueeEventKind::Move;
+            break;
+        case AestraUI::NUIMouseEventType::Down:
+        case AestraUI::NUIMouseEventType::DoubleClick:
+            kind = Aestra::Components::MarqueeEventKind::Press;
+            break;
+        case AestraUI::NUIMouseEventType::Up:
+            kind = Aestra::Components::MarqueeEventKind::Release;
+            break;
+        default:
+            kind = Aestra::Components::MarqueeEventKind::Other; // Scroll, Enter, Leave, None
+            break;
+        }
+        if (m_marquee.onEvent(kind, marqueeButton, targetX, targetY)) {
+            const AestraUI::NUIRect selectionRect(m_marquee.rectMinX(), m_marquee.rectMinY(), m_marquee.rectWidth(),
+                                                  m_marquee.rectHeight());
 
             // Clip-level box selection (#848, "the future is now"): intersect
             // the band with every visible clip; fall back to track rows when
@@ -508,8 +510,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
             // Note: System cursor is always hidden by Main.cpp custom cursor system
 
-            m_isDrawingSelectionBox = false;
-            m_selectionBoxButton = AestraUI::NUIMouseButton::None;
+            m_marquee.finalize();
             invalidateCache();
         }
 
@@ -517,6 +518,16 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
         // whole timeline every move made multi-select drag a per-move full
         // re-render (#847). Finalize invalidates once above.
         return true;
+    }
+
+    // A marquee-button press in the track area starts a new drag.
+    if (event.pressed && selectionButton && m_currentTool == PlaylistTool::MultiSelect) {
+        const float trackAreaTop = kTimelineTimeBandHeight;
+        if (m_marquee.begin(true, marqueeButton, event.position.x, event.position.y,
+                            localPos.y > trackAreaTop)) {
+            // Note: System cursor is always hidden by Main.cpp custom cursor system
+            return true;
+        }
     }
     return false;
 }

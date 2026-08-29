@@ -347,14 +347,14 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
 
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
 
-    if (m_isDrawingSelectionBox) {
+    if (m_marquee.active()) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartXAbs = getBounds().x + controlAreaWidth + kTimelineGridInsetX;
 
-        const float minX = std::min(m_selectionBoxStart.x, m_selectionBoxEnd.x);
-        const float maxX = std::max(m_selectionBoxStart.x, m_selectionBoxEnd.x);
+        const float minX = m_marquee.rectMinX();
+        const float maxX = m_marquee.rectMaxX();
 
         const double startBeat =
             (static_cast<double>((minX - gridStartXAbs) + m_timelineScrollOffset)) / m_pixelsPerBeat;
