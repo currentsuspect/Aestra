@@ -25,12 +25,13 @@ namespace {
 constexpr uint32_t kSampleRate = 48000;
 constexpr double kBpm = 120.0; // 2 beats/second
 
-int g_failures = 0;
+int g_checkFailures = 0;
+int g_scenarioFailures = 0;
 
 void check(bool condition, const std::string& label) {
     if (!condition) {
         std::cerr << "  FAIL: " << label << "\n";
-        ++g_failures;
+        ++g_checkFailures;
     } else {
         std::cout << "  PASS: " << label << "\n";
     }
@@ -305,11 +306,11 @@ int main() {
     for (const auto& test : tests) {
         if (!test.fn()) {
             std::cerr << "TEST FAILED: " << test.name << "\n";
-            ++g_failures;
+            ++g_scenarioFailures;
         }
     }
-    if (g_failures > 0) {
-        std::cerr << g_failures << " check(s) failed\n";
+    if (g_checkFailures > 0 || g_scenarioFailures > 0) {
+        std::cerr << g_checkFailures << " failed check(s), " << g_scenarioFailures << " aborted scenario(s)\n";
         return 1;
     }
     std::cout << "All recording-with-session-content tests passed\n";
