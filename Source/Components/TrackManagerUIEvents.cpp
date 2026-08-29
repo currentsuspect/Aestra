@@ -417,8 +417,26 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
         }
 
         // The machine consumes every owned event; endpoint changes only on
-        // moves and the initiating button's release. True = finalize now.
-        if (m_marquee.onEvent(event.pressed, event.released, marqueeButton, targetX, targetY)) {
+        // Move kinds and the initiating button's Release. Wheel, enter/leave
+        // and synthetic events map to Other and cannot move the band.
+        Aestra::Components::MarqueeEventKind kind;
+        switch (event.type) {
+        case AestraUI::NUIMouseEventType::Move:
+        case AestraUI::NUIMouseEventType::Drag:
+            kind = Aestra::Components::MarqueeEventKind::Move;
+            break;
+        case AestraUI::NUIMouseEventType::Down:
+        case AestraUI::NUIMouseEventType::DoubleClick:
+            kind = Aestra::Components::MarqueeEventKind::Press;
+            break;
+        case AestraUI::NUIMouseEventType::Up:
+            kind = Aestra::Components::MarqueeEventKind::Release;
+            break;
+        default:
+            kind = Aestra::Components::MarqueeEventKind::Other; // Scroll, Enter, Leave, None
+            break;
+        }
+        if (m_marquee.onEvent(kind, marqueeButton, targetX, targetY)) {
             const AestraUI::NUIRect selectionRect(m_marquee.rectMinX(), m_marquee.rectMinY(), m_marquee.rectWidth(),
                                                   m_marquee.rectHeight());
 

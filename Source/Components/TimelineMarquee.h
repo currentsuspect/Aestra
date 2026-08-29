@@ -30,6 +30,16 @@ namespace Components {
 /// Button identity token; the widget maps NUIMouseButton onto it. 0 = none.
 using MarqueeButton = int;
 
+/// Event classification the widget derives from NUIMouseEventType. The
+/// machine never infers event shape from flag combinations — a wheel event
+/// (pressed=false, released=false) maps to Other, never to Move (#847).
+enum class MarqueeEventKind {
+    Move,    // pointer move/drag: endpoint follows the position
+    Press,   // button down: consumed, no state change
+    Release, // button up: endpoint follows, finalizes when initiating button
+    Other,   // scroll, enter/leave, synthetic: consumed, no state change
+};
+
 struct TimelineMarqueeDrag {
     /// Begin a drag on a marquee-button press inside the track area. Returns
     /// true when a new drag started (the event is consumed).
@@ -49,15 +59,15 @@ struct TimelineMarqueeDrag {
     /// While a drag is active it owns every mouse event (#847).
     bool ownsEvent() const { return m_active; }
 
-    /// Apply one routed event while active. Endpoint moves on pointer moves
-    /// and on the initiating button's release (its position is part of the
-    /// gesture); a foreign button's press/release changes nothing. Returns
-    /// true exactly when this event finalizes the drag.
-    bool onEvent(bool pressed, bool released, MarqueeButton btn, float x, float y) {
+    /// Apply one routed event while active. Endpoint moves on Move events and
+    /// on the initiating button's Release (its position is part of the
+    /// gesture); Press, Other, and a foreign button's Release change nothing.
+    /// Returns true exactly when this event finalizes the drag.
+    bool onEvent(MarqueeEventKind kind, MarqueeButton btn, float x, float y) {
         if (!m_active) {
             return false;
         }
-        if (released) {
+        if (kind == MarqueeEventKind::Release) {
             if (btn != m_button) {
                 return false; // foreign release: consumed, endpoint untouched
             }
@@ -65,12 +75,11 @@ struct TimelineMarqueeDrag {
             m_endY = y;
             return true;
         }
-        if (pressed) {
-            return false; // foreign (or duplicate) press: consumed, no change
+        if (kind == MarqueeEventKind::Move) {
+            m_endX = x;
+            m_endY = y;
         }
-        m_endX = x;
-        m_endY = y;
-        return false;
+        return false; // Press and Other: consumed, no state change
     }
 
     /// End the drag; selection applies outside the machine.
