@@ -416,6 +416,13 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
         }
 
+        // A bridge-generated event (focus-loss release, re-resolution) ends
+        // the gesture WITHOUT applying a selection the user never made.
+        if (event.synthetic) {
+            m_marquee.finalize();
+            return true;
+        }
+
         // The machine consumes every owned event; endpoint changes only on
         // Move kinds and the initiating button's Release. Wheel, enter/leave
         // and synthetic events map to Other and cannot move the band.
