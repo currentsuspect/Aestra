@@ -305,6 +305,7 @@ int main() {
     for (const auto& test : tests) {
         if (!test.fn()) {
             std::cerr << "TEST FAILED: " << test.name << "\n";
+            ++g_failures;
         }
     }
     if (g_failures > 0) {
