@@ -313,21 +313,22 @@ int main() {
         }
     }
 
-    const std::string path = "labs/transient/quality/transient_material_baseline.md";
-    if (!writeMarkdown(path, results)) {
-        return 1;
-    }
-    std::cout << "wrote " << path << " (" << results.size() << " cases)\n";
-
-    int failures = 0;
+    // A failed case must never replace the accepted baseline: failed runs are
+    // written to a .failed sibling instead.
+    std::string failures;
     for (const auto& result : results) {
         if (!result.bypassParityPass || result.nanInfCount != 0 || !result.sane) {
-            std::cout << "[FAIL] " << result.name << "\n";
-            ++failures;
+            failures += std::string("  ") + result.name + "\n";
         }
     }
-    if (failures > 0) {
-        std::cout << failures << " case(s) failed sanity\n";
+    const std::string path = "labs/transient/quality/transient_material_baseline.md";
+    const std::string writePath = failures.empty() ? path : path + ".failed";
+    if (!writeMarkdown(writePath, results)) {
+        return 1;
+    }
+    std::cout << "wrote " << writePath << " (" << results.size() << " cases)\n";
+    if (!failures.empty()) {
+        std::cout << "cases failed sanity, baseline NOT updated:\n" << failures;
         return 1;
     }
     std::cout << "All material cases sane\n";

@@ -314,6 +314,19 @@ bool testLoadStateRejectsGarbage() {
     std::vector<uint8_t> wrongMagic(sizeof(uint32_t) * 2 + sizeof(float) * AestraTransient::kParamCount, 0xAB);
     if (plugin.loadState(wrongMagic))
         return false;
+    // A corrupt (non-finite) parameter value must reject the whole blob
+    // instead of leaving the instance partially updated.
+    std::vector<uint8_t> corrupt(sizeof(uint32_t) * 2 + sizeof(float) * AestraTransient::kParamCount, 0);
+    const uint32_t magic = AestraTransient::kStateMagic;
+    const uint32_t version = 1;
+    std::memcpy(corrupt.data(), &magic, sizeof(magic));
+    std::memcpy(corrupt.data() + sizeof(magic), &version, sizeof(version));
+    const float nan = std::nanf("");
+    std::memcpy(corrupt.data() + sizeof(magic) + sizeof(version) + sizeof(float), &nan, sizeof(nan));
+    if (plugin.loadState(corrupt))
+        return false;
+    if (plugin.getParameter(AestraTransient::kAttack) != 0.5f)
+        return false; // pre-existing values untouched by the rejected blob
     return true;
 }
 

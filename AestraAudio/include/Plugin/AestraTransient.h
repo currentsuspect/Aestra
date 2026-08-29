@@ -118,10 +118,15 @@ public:
         for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kCtrlBlock) {
             const uint32_t blockEnd = std::min(blockStart + kCtrlBlock, numFrames);
 
-            m_attackSmoothed += (getParameter(kAttack) - m_attackSmoothed) * m_smoothCoeff;
-            m_sustainSmoothed += (getParameter(kSustain) - m_sustainSmoothed) * m_smoothCoeff;
-            m_outputSmoothed += (getParameter(kOutput) - m_outputSmoothed) * m_smoothCoeff;
-            m_mixSmoothed += (getParameter(kMix) - m_mixSmoothed) * m_smoothCoeff;
+            // Smoothing coefficient derives from the actual segment length so
+            // the 2 ms time constant holds for partial segments and short
+            // host callbacks alike (block-size independent).
+            const float segSmoothCoeff = 1.0f - std::exp(-static_cast<float>(blockEnd - blockStart) /
+                                                         (0.002f * static_cast<float>(m_sampleRate)));
+            m_attackSmoothed += (getParameter(kAttack) - m_attackSmoothed) * segSmoothCoeff;
+            m_sustainSmoothed += (getParameter(kSustain) - m_sustainSmoothed) * segSmoothCoeff;
+            m_outputSmoothed += (getParameter(kOutput) - m_outputSmoothed) * segSmoothCoeff;
+            m_mixSmoothed += (getParameter(kMix) - m_mixSmoothed) * segSmoothCoeff;
 
             const float amtA = bipolarFromNorm(m_attackSmoothed);
             const float amtS = bipolarFromNorm(m_sustainSmoothed);
@@ -161,7 +166,7 @@ public:
                     outputs[1][i] = stereo ? outR : outL;
                 for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
                     if (outputs[ch])
-                        outputs[ch][i] = readInput(inputs, numInputChannels, ch, i);
+                        outputs[ch][i] = sanitizeSample(readInput(inputs, numInputChannels, ch, i));
                 }
             }
         }
@@ -258,6 +263,12 @@ public:
         std::memcpy(&blob, state.data(), sizeof(blob));
         if (blob.version < 1 || blob.version > 1)
             return false;
+        // Reject the whole blob before touching any parameter: a corrupt
+        // value must not leave the instance half-updated (AGENTS.md §12).
+        for (uint32_t i = 0; i < kParamCount; ++i) {
+            if (!std::isfinite(blob.params[i]))
+                return false;
+        }
         for (uint32_t i = 0; i < kParamCount; ++i) {
             setParameter(i, blob.params[i]);
         }
@@ -305,9 +316,6 @@ private:
         m_slowAttackCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, sr * kSlowAttackSec));
         m_slowReleaseCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, sr * kSlowReleaseSec));
         m_gainSmoothCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, sr * kGainSmoothSec));
-        // Smoothing runs once per control block, so the coefficient is scaled
-        // to the block interval to keep the 2 ms time constant.
-        m_smoothCoeff = 1.0f - std::exp(-static_cast<float>(kCtrlBlock) / (0.002f * sr));
         m_inputLevel.store(0.0f, std::memory_order_relaxed);
         m_outputLevel.store(0.0f, std::memory_order_relaxed);
     }
@@ -326,7 +334,9 @@ private:
                             uint32_t numOutputChannels, uint32_t numFrames) {
         for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
             if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
-                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+                if (inputs[ch] != outputs[ch]) {
+                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+                }
             } else if (outputs[ch]) {
                 std::memset(outputs[ch], 0, numFrames * sizeof(float));
             }
@@ -367,7 +377,6 @@ private:
     float m_slowAttackCoeff = 0.0f;
     float m_slowReleaseCoeff = 0.0f;
     float m_gainSmoothCoeff = 0.0f;
-    float m_smoothCoeff = 0.0f;
 
     float m_attackSmoothed = 0.5f;
     float m_sustainSmoothed = 0.5f;
