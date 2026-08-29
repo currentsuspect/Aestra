@@ -1,12 +1,11 @@
-// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // ArsenalPauseResumeTest — pause in pattern mode must preserve the playhead.
 //
 // Pause hard-cuts active voices (one-shot workflow) but must NOT rewind:
 // playPatternInArsenal() resumes from the stored position by design, so the
-// pause path only needs to keep the cue at the paused position. The cue must
-// be moved BEFORE the stop command goes out — the audio thread's drain is
-// authoritative, so storing after the fact races it (the hard-stop rewind
-// follows the same rule).
+// pause path keeps the playhead via the #590 preserve-sentinel (the engine's
+// own authoritative position). Routing pause through stop() would trigger the
+// T-8 single-stop reset (land at 0) and break resume.
 
 #include "Core/AudioCommandQueue.h"
 #include "Models/TrackManager.h"
@@ -16,6 +15,7 @@
 
 using Aestra::Audio::AudioQueueCommand;
 using Aestra::Audio::AudioQueueCommandType;
+using Aestra::Audio::kTransportPreservePosition;
 using Aestra::Audio::MidiPayload;
 using Aestra::Audio::PatternID;
 using Aestra::Audio::PatternSource;
@@ -72,21 +72,23 @@ int main() {
 
     // Pause: hard-cut voices, preserve the playhead.
     tm.pauseArsenalPlayback();
-
-    // The stop command must carry the PAUSED position (3.0 s), never the
-    // original cue (1.0 s) and never zero — the engine drain is authoritative.
+    // The stop command must carry the #590 preserve-sentinel — never the
+    // paused position (which the UI cache can lag) and never zero (T-8's
+    // single-stop reset is stop's semantic, not pause's). The engine keeps
+    // its own authoritative playhead.
     const uint64_t pausedSamples = static_cast<uint64_t>(3.0 * kSampleRate);
-    bool stopCarriesPausedPosition = false;
+    bool pauseCarriesSentinel = false;
     for (const auto& cmd : log.commands) {
         if (cmd.type == AudioQueueCommandType::SetTransportState && cmd.value1 == 0.0f) {
-            stopCarriesPausedPosition = (cmd.samplePos == pausedSamples);
+            pauseCarriesSentinel =
+                (cmd.samplePos == kTransportPreservePosition && cmd.samplePos != pausedSamples);
         }
     }
-    check(stopCarriesPausedPosition, "pause stop command carries the paused position (3.0 s)");
+    check(pauseCarriesSentinel, "pause command carries the preserve sentinel, not a position");
 
     check(tm.getPosition() == 3.0, "m_position stays at the paused playhead");
     check(tm.isPlaying() == false, "transport is stopped after pause");
-    check(tm.getPlayStartPosition() == 3.0, "cue is the paused playhead (stop-after-resume returns here)");
+    check(tm.getPlayStartPosition() == 1.0, "pause does not move the cue (stop's reset is stop's own)");
 
     // Play again: must resume from the stored playhead, not beat zero and not
     // the original cue.

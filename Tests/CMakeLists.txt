@@ -2505,6 +2505,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportPausePreservesPositi
     set_tests_properties(TransportPausePreservesPositionTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
 endif()
 
+# Transport stop resets to 0 authoritatively (T-8 single-stop playhead)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportStopResetTest.cpp")
+    add_executable(TransportStopResetTest AestraAudio/TransportStopResetTest.cpp)
+    target_link_libraries(TransportStopResetTest PRIVATE AestraAudio)
+    target_include_directories(TransportStopResetTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TransportStopResetTest COMMAND TransportStopResetTest)
+    set_tests_properties(TransportStopResetTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
+endif()
+
 # Arsenal pause/resume test (pattern-mode pause preserves the playhead)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ArsenalPauseResumeTest.cpp")
     add_executable(ArsenalPauseResumeTest AestraAudio/ArsenalPauseResumeTest.cpp)

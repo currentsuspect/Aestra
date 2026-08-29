@@ -15,14 +15,17 @@
 // hit pause: pause preserves the playhead via kTransportPreservePosition, but the stop
 // edge zeroed it anyway, so "pause at 2 → play resumes at 1".
 //
-// The fix: honor the pushed position. Only cues at or past the loop end (a stale
-// timeline position entering pattern mode) are wrapped back into the loop, matching the
-// render path's existing wrap logic. TrackManager::stop() already pushes the stored cue
-// position, so stop-in-pattern-mode returning to the cue (not the loop top) is the
-// consistent semantic.
+// The fix: honor the pushed position on START. Only cues at or past the loop
+// end (a stale timeline position entering pattern mode) are wrapped back into
+// the loop, matching the render path's existing wrap logic. STOP follows the
+// T-8 single-stop contract: TrackManager::stop() pushes 0, so the playhead
+// resets to the loop top authoritatively — the scrubbed cue is honored by
+// playback start, never resurrected by stop.
 //
-// These assertions fail on the pre-fix engine: every pattern-mode play/pause/resume/stop
+// These assertions fail on the pre-fix engine: pattern-mode play/pause/resume
 // lands the playhead at 0 (or one block past it) instead of the cued position.
+// The stop scenario documents the T-8 contract the model now emits (stop push
+// carries 0); the producer-side reset pin lives in TransportStopResetTest.
 
 #include "Core/AudioCommandQueue.h"
 #include "Core/AudioEngine.h"
@@ -181,9 +184,11 @@ void patternResumeFromPausedPosition() {
     engine.setTransportPlaying(false);
 }
 
-// Stop in pattern mode must return to the stored cue position (TrackManager::stop()
-// pushes playStartPosition), not to the loop top.
-void patternStopReturnsToCue() {
+// Stop in pattern mode must reset to the loop top: TrackManager::stop()
+// pushes 0 (T-8 single-stop reset), and the engine lands exactly on the
+// pushed position — the drain is authoritative. A scrubbed cue survives only
+// until the stop; playback start honors it, stop does not resurrect it.
+void patternStopResetsToTop() {
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);
     engine.setBufferConfig(kFrames, kChannels);
@@ -200,13 +205,19 @@ void patternStopReturnsToCue() {
     engine.commandQueue().push(makeTransportCmd(1.0f, kCueSamples));
     engine.processBlock(out.data(), nullptr, kFrames, 0.0);
 
-    // Stop pushes the cue position, as TrackManager::stop() does (playStartPosition).
-    engine.commandQueue().push(makeTransportCmd(0.0f, kCueSamples));
+    // Stop pushes 0, as TrackManager::stop() does after T-8.
+    engine.commandQueue().push(makeTransportCmd(0.0f, 0));
     engine.processBlock(out.data(), nullptr, kFrames, 0.0);
 
-    check(engine.getGlobalSamplePos() == kCueSamples,
-          "pattern-mode stop returns to the stored cue position (got " +
-              std::to_string(engine.getGlobalSamplePos()) + ", expected " + std::to_string(kCueSamples) + ")");
+    check(engine.getGlobalSamplePos() == 0,
+          "pattern-mode stop resets the playhead to 0 (got " +
+              std::to_string(engine.getGlobalSamplePos()) + ", expected 0)");
+
+    // The stopped playhead must not creep while tails render (the
+    // advance/fade interplay half of T-8).
+    engine.processBlock(out.data(), nullptr, kFrames, 0.0);
+    check(engine.getGlobalSamplePos() == 0,
+          "pattern-mode stopped playhead stays at 0 (no advance after stop)");
 
     engine.setTransportPlaying(false);
 }
@@ -308,7 +319,7 @@ int main() {
     patternPlayHonorsScrubbedCue();
     patternPausePreservesPosition();
     patternResumeFromPausedPosition();
-    patternStopReturnsToCue();
+    patternStopResetsToTop();
     patternCuePastLoopEndWrapsIntoLoop();
     schedulerRefillAtCueSkipsPastNotes();
 
