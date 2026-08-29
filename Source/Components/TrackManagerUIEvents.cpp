@@ -97,6 +97,13 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // In v3.1, overlays are handled by OverlayLayer::onMouseEvent.
     // TrackManagerUI only handles clicks that reach the workspace.
 
+    // Active marquee owns every mouse event until release (#847), and routes
+    // BEFORE sibling controls: the minimap consumes in-bounds releases even
+    // when idle, so a release over it would strand the gesture.
+    if (m_marquee.active()) {
+        return handleSelectionBoxMouse(event, localPos);
+    }
+
     // Give the vertical scrollbar priority so it stays usable even with complex track interactions.
     if (m_playlistVisible && m_scrollbar && m_scrollbar->isVisible()) {
         if (m_scrollbar->onMouseEvent(event)) {
@@ -115,13 +122,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // The playlist content itself should not consume events in this mode.
     if (!m_playlistVisible) {
         return AestraUI::NUIComponent::onMouseEvent(event);
-    }
-
-    // Active marquee owns every mouse event until release (#847 review):
-    // root dispatch stops at the first child that handles an event, so a
-    // sibling could otherwise consume the release and strand the gesture.
-    if (m_marquee.active) {
-        return handleSelectionBoxMouse(event, localPos);
     }
 
     // Handle instant clip dragging
@@ -386,8 +386,11 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
     // An active marquee owns every mouse event until the button that began it
     // releases (#847): moves, foreign buttons, and hover state cannot escape
-    // or end someone else's drag.
+    // or end someone else's drag. The machine filters endpoint changes to
+    // pointer moves and the initiating button's release.
     if (m_marquee.ownsEvent()) {
+        float targetX = event.position.x;
+        float targetY = event.position.y;
         if (m_window) {
             // Calculate constrained cursor position
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -407,16 +410,13 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             // logic uses the clamped point; the physical cursor is left alone —
             // warping it every move made the pointer fight the synthetic
             // motion events it generated (felt like an app hang, #847).
-            const float targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
-            const float targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
-            m_marquee.update(targetX, targetY);
-        } else {
-            m_marquee.update(event.position.x, event.position.y);
+            targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
+            targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
         }
 
-        // Only the release matching the button that began the marquee may
-        // finalize it; this prevents the other button from ending a drag.
-        if (m_marquee.shouldFinalize(event.released, marqueeButton)) {
+        // The machine consumes every owned event; endpoint changes only on
+        // moves and the initiating button's release. True = finalize now.
+        if (m_marquee.onEvent(event.pressed, event.released, marqueeButton, targetX, targetY)) {
             const AestraUI::NUIRect selectionRect(m_marquee.rectMinX(), m_marquee.rectMinY(), m_marquee.rectWidth(),
                                                   m_marquee.rectHeight());
 

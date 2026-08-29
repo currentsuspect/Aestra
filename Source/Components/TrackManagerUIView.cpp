@@ -347,7 +347,7 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
 
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
 
-    if (m_marquee.active) {
+    if (m_marquee.active()) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
