@@ -814,7 +814,11 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 m_trackManager->setPosition(positionInSeconds);
                 m_trackManager->setPlayStartPosition(positionInSeconds);
             } else if (m_marquee.active()) {
-                m_marquee.onEvent(false, false, m_marquee.button(), safeClampFloat(m_lastMousePos.x, gridStartX, gridEndX), m_marquee.endY());
+                // The pointer is pinned at the screen edge; the scroll itself
+                // extends the band's beat coverage through the offset change.
+                // No synthetic pointer move is injected — the endpoint only
+                // ever changes through accepted real pointer events (#847),
+                // so a foreign-button position cannot yank the band here.
                 invalidateCache();
             }
         }

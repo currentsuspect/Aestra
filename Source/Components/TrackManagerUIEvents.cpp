@@ -46,6 +46,15 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     AestraUI::NUIRect bounds = getBounds();
     AestraUI::NUIPoint localPos(event.position.x - bounds.x, event.position.y - bounds.y);
 
+    // Active marquee owns every mouse event until release (#847), and routes
+    // before EVERY other gesture handler: the minimap consumes in-bounds
+    // releases even when idle, and a loop-handle press during a foreign-button
+    // marquee would start a loop drag whose release the marquee then eats —
+    // both strand a gesture.
+    if (m_marquee.active()) {
+        return handleSelectionBoxMouse(event, localPos);
+    }
+
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.
     for (auto& track : m_trackUIComponents) {
@@ -96,13 +105,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     // In v3.1, overlays are handled by OverlayLayer::onMouseEvent.
     // TrackManagerUI only handles clicks that reach the workspace.
-
-    // Active marquee owns every mouse event until release (#847), and routes
-    // BEFORE sibling controls: the minimap consumes in-bounds releases even
-    // when idle, so a release over it would strand the gesture.
-    if (m_marquee.active()) {
-        return handleSelectionBoxMouse(event, localPos);
-    }
 
     // Give the vertical scrollbar priority so it stays usable even with complex track interactions.
     if (m_playlistVisible && m_scrollbar && m_scrollbar->isVisible()) {
