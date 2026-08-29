@@ -1008,6 +1008,16 @@ target_include_directories(AestraTransientTest PRIVATE
 add_test(NAME AestraTransientTest COMMAND AestraTransientTest)
 set_tests_properties(AestraTransientTest PROPERTIES LABELS "audio;plugin;contract:audio")
 
+# #845 regression: recording in a session with existing clips + patterns
+add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
+target_link_libraries(RecordingSessionContentTest PRIVATE AestraAudio)
+target_include_directories(RecordingSessionContentTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RecordingSessionContentTest COMMAND RecordingSessionContentTest)
+set_tests_properties(RecordingSessionContentTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
+
 
 # AudioEngineDiagnostics Test
 add_executable(AestraAudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
