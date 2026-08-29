@@ -14,6 +14,7 @@
 #include "Plugin/AestraFilter.h"
 #include "Plugin/AestraLFO.h"
 #include "Plugin/AestraOTT.h"
+#include "Plugin/AestraTransient.h"
 
 #include <mutex>
 
@@ -241,6 +242,26 @@ const PluginInfo& lfoInfo() {
     return info;
 }
 
+const PluginInfo& transientInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.transient";
+        p.name = "Aestra Transient";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Dynamics";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -271,6 +292,8 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         ott->setInfo(info);
     } else if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
         lfo->setInfo(info);
+    } else if (auto transient = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraTransient>(instance)) {
+        transient->setInfo(info);
     }
 }
 
@@ -303,6 +326,7 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraFilter>(filterInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraOTT>(ottInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraLFO>(lfoInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraTransient>(transientInfo()));
     });
 }
 
