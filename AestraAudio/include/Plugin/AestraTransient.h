@@ -161,7 +161,7 @@ public:
                     outputs[1][i] = stereo ? outR : outL;
                 for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
                     if (outputs[ch])
-                        outputs[ch][i] = 0.0f;
+                        outputs[ch][i] = readInput(inputs, numInputChannels, ch, i);
                 }
             }
         }

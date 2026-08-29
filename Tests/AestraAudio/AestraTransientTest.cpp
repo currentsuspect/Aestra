@@ -248,6 +248,46 @@ bool testStereoLinkPreservesImage() {
     return true;
 }
 
+bool testChannelsAboveStereoPassThrough() {
+    // Channels above stereo must behave identically active and bypassed
+    // (pass-through), so the bypass switch never audibly changes them.
+    const auto mono = kickBurst(kSampleRate);
+    std::vector<float> c2(mono.size(), 0.0f);
+    for (size_t i = 0; i < c2.size(); ++i) {
+        c2[i] = 0.3f * std::sin(2.0f * kPi * 880.0f * static_cast<double>(i) / kSampleRate);
+    }
+
+    std::vector<float> outA0(mono.size(), 0.0f), outA1(mono.size(), 0.0f), outA2(mono.size(), 0.0f);
+    AestraTransient active;
+    configure(active, kSampleRate, 0.5f, 0.5f);
+    for (size_t offset = 0; offset < mono.size(); offset += kBlockSize) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<size_t>(kBlockSize, mono.size() - offset));
+        const float* inputs[] = {mono.data() + offset, mono.data() + offset, c2.data() + offset};
+        float* outputs[] = {outA0.data() + offset, outA1.data() + offset, outA2.data() + offset};
+        active.process(inputs, outputs, 3, 3, frames);
+    }
+
+    std::vector<float> outB2(mono.size(), 0.0f);
+    AestraTransient bypassed;
+    configure(bypassed, kSampleRate, 0.5f, 0.5f);
+    bypassed.setParameter(AestraTransient::kBypass, 1.0f);
+    std::vector<float> outB0(mono.size(), 0.0f), outB1(mono.size(), 0.0f);
+    for (size_t offset = 0; offset < mono.size(); offset += kBlockSize) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<size_t>(kBlockSize, mono.size() - offset));
+        const float* inputs[] = {mono.data() + offset, mono.data() + offset, c2.data() + offset};
+        float* outputs[] = {outB0.data() + offset, outB1.data() + offset, outB2.data() + offset};
+        bypassed.process(inputs, outputs, 3, 3, frames);
+    }
+
+    for (size_t i = 0; i < mono.size(); ++i) {
+        if (outA2[i] != outB2[i])
+            return false; // above-stereo channel identical active vs bypass
+        if (outA0[i] != outB0[i] || outA1[i] != outB1[i])
+            return false; // neutral params are unity, so stereo pair matches too
+    }
+    return true;
+}
+
 bool testStateRoundTrip() {
     AestraTransient original;
     configure(original, kSampleRate, 0.8f, 0.2f, 0.75f, 0.4f);
@@ -368,6 +408,7 @@ int main() {
         {"SustainShapesTail", testSustainShapesTail},
         {"SurvivesHostileInput", testSurvivesHostileInput},
         {"StereoLinkPreservesImage", testStereoLinkPreservesImage},
+        {"ChannelsAboveStereoPassThrough", testChannelsAboveStereoPassThrough},
         {"StateRoundTrip", testStateRoundTrip},
         {"LoadStateRejectsGarbage", testLoadStateRejectsGarbage},
         {"ParameterMapping", testParameterMapping},
