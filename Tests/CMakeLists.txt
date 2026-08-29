@@ -998,6 +998,17 @@ target_include_directories(AestraMixerChannelScratchBufferTest PRIVATE
 add_test(NAME AestraMixerChannelScratchBufferTest COMMAND AestraMixerChannelScratchBufferTest)
 set_tests_properties(AestraMixerChannelScratchBufferTest PROPERTIES LABELS "audio;plugin;regression;contract:audio")
 
+# Transient shaper material tests (P-1, TS-3)
+add_executable(AestraTransientTest AestraAudio/AestraTransientTest.cpp)
+target_link_libraries(AestraTransientTest PRIVATE AestraAudio)
+target_include_directories(AestraTransientTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraTransientTest COMMAND AestraTransientTest)
+set_tests_properties(AestraTransientTest PROPERTIES LABELS "audio;plugin;contract:audio")
+
+
 # AudioEngineDiagnostics Test
 add_executable(AestraAudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
 target_link_libraries(AestraAudioEngineDiagnosticsTest PRIVATE AestraAudio)
