@@ -81,7 +81,8 @@ void UIMixerPluginDropdown::setPluginEntries(std::vector<Aestra::Components::Mix
     // The policy is the authority: mixer-insert filtering, category grouping,
     // icons and ordering all come from MixerPluginListPolicy.h.
     m_categories.clear();
-    for (auto& group : Aestra::Components::groupForMixerDropdown(std::move(entries))) {
+    auto groups = Aestra::Components::groupForMixerDropdown(std::move(entries));
+    for (auto& group : groups) {
         Category category;
         category.label = group.label;
         category.items.reserve(group.entries.size());
@@ -116,6 +117,13 @@ void UIMixerPluginDropdown::filter()
 
 void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY)
 {
+    // Defensive: if the catalog is empty when the user opens the dropdown
+    // (because the initial setup-time refresh ran before the async plugin
+    // scan completed), ask the host to republish. The dropdown is
+    // re-shown on the next frame so the user sees the entries.
+    if (m_categories.empty() && onRequestRefresh) {
+        onRequestRefresh();
+    }
     float contentH = SEARCH_H;
     for (const auto& cat : m_categories) {
         contentH += CAT_HEADER_H;
@@ -203,6 +211,10 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     if (!m_open) return;
     auto b = getBounds();
     if (b.isEmpty()) return;
+    // Defensive: if m_filtered is empty but m_categories has data, rebuild.
+    if (m_filtered.empty() && !m_categories.empty()) {
+        filter();
+    }
 
     // Container background
     renderer.fillRoundedRect(b, RADIUS, m_bg);

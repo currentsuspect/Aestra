@@ -40,6 +40,10 @@ public:
     // passed so the host can pre-seed the full browser with the same terms
     // and the user lands on the right results, not a blank search.
     std::function<void(const std::string& searchQuery)> onBrowseAllRequested;
+    // Callback: the host should re-publish the current plugin catalog
+    // (used when the dropdown opens with an empty catalog because the
+    // initial setup-time refresh ran before the async scan completed).
+    std::function<void()> onRequestRefresh;
     // Callback: dropdown was dismissed
     std::function<void()> onDismissed;
 

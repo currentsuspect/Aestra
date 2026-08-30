@@ -77,6 +77,11 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
             onBrowseAllPlugins(searchQuery);
         }
     };
+    m_pluginDropdown->onRequestRefresh = [this]() {
+        if (onCatalogRefresh) {
+            onCatalogRefresh();
+        }
+    };
     addChild(m_pluginDropdown);
 
     // Initial channel refresh

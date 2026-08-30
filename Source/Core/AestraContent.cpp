@@ -655,6 +655,14 @@ void AestraContent::setupBrowserPanels() {
                     if (m_pluginBrowser) {
                         m_pluginBrowser->setPluginList(uiPlugins);
                     }
+                    // The mixer's quick-add dropdown shares this catalog; the
+                    // policy filters to mixer inserts and groups by category.
+                    // The scan completion path is the one that produces the
+                    // real plugin list; setupMixerPanels ran before the scan
+                    // completed, so the catch-up refresh in setupMixerPanels
+                    // saw an empty scanner list. Republish here so the
+                    // dropdown shows what the browser just received.
+                    refreshPluginList();
                     AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
                 } else {
                     AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
@@ -796,6 +804,11 @@ void AestraContent::setupMixerPanels() {
             m_fileBrowser->selectNavAction(AestraUI::FileBrowser::BrowserNavAction::Plugins);
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
         };
+        // Republish the catalog so the dropdown has data even when the
+        // initial setup-time refresh ran before the async plugin scan
+        // completed. The mixer panel calls this when the user opens the
+        // dropdown and finds the catalog empty.
+        mixerUI->onCatalogRefresh = [this]() { refreshPluginList(); };
     }
 
     // setupBrowserPanels() ran before the mixer existed, so the initial
@@ -4265,7 +4278,7 @@ void AestraContent::refreshPluginList() {
         uiPlugins.push_back(m_pluginController->convertToListItem(p));
     }
     m_pluginBrowser->setPluginList(uiPlugins);
-    AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
+    m_pluginBrowser->setPluginList(uiPlugins);
 
     // The mixer's quick-add dropdown shares this catalog; the policy filters
     // to mixer inserts and groups by category (MixerPluginListPolicy.h).
@@ -4273,23 +4286,6 @@ void AestraContent::refreshPluginList() {
         if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
             std::vector<Aestra::Components::MixerPluginEntry> mixerEntries;
             mixerEntries.reserve(scannedPlugins.size());
-            for (const auto& p : scannedPlugins) {
-                const char* typeName = "Effect";
-                switch (p.type) {
-                case Aestra::Audio::PluginType::Instrument:
-                    typeName = "Instrument";
-                    break;
-                case Aestra::Audio::PluginType::MidiEffect:
-                    typeName = "MIDI";
-                    break;
-                case Aestra::Audio::PluginType::Analyzer:
-                    typeName = "Analyzer";
-                    break;
-                case Aestra::Audio::PluginType::Effect:
-                    break;
-                }
-                mixerEntries.push_back({p.id, p.name, p.category, typeName});
-            }
             mixerUI->setPluginEntries(std::move(mixerEntries));
         }
     }
