@@ -146,7 +146,7 @@ void AestraTransientEditor::drawBipolarKnob(NUIRenderer& renderer, const NUIRect
                 accent().withAlpha(0.95f));
     } else {
         const NUIColor cutAccent(0.94f, 0.62f, 0.30f, 0.95f);
-        drawArc(renderer, c, r - 3.0f, kKnobCenter, kKnobCenter - halfSweep * std::min(-bipolar, 1.0f), 4.0f,
+        drawArc(renderer, c, r - 3.0f, kKnobCenter - halfSweep * std::min(-bipolar, 1.0f), kKnobCenter, 4.0f,
                 cutAccent);
     }
 
