@@ -780,6 +780,29 @@ void AestraContent::setupMixerPanels() {
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
     m_mixerPanel->setVisible(false);
     m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
+    if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
+        // The mixer dropdown's "Browse all plugins" opens the full plugin
+        // browser (internal + VST3/CLAP) in the library pane, with the same
+        // search query the user typed so a dead-end search lands on results.
+        mixerUI->onBrowseAllPlugins = [this](const std::string& searchQuery) {
+            if (!m_fileBrowser || !m_pluginBrowser) {
+                return;
+            }
+            m_fileBrowser->setVisible(true);
+            m_pluginBrowser->setVisible(true);
+            if (!searchQuery.empty()) {
+                m_pluginBrowser->setSearchQuery(searchQuery);
+            }
+            m_fileBrowser->selectNavAction(AestraUI::FileBrowser::BrowserNavAction::Plugins);
+            onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+        };
+    }
+
+    // setupBrowserPanels() ran before the mixer existed, so the initial
+    // refreshPluginList() silently skipped mixer publication. Catch up now
+    // that the mixer panel is in place, then mirror future scans the same
+    // way the browser does.
+    refreshPluginList();
     wireFloatingPanel(m_mixerPanel, ViewType::Mixer, &ViewState::mixerRect, 560.0f, 300.0f);
     m_overlayLayer->addChild(m_mixerPanel);
     if (m_platformBridge) {
@@ -4243,6 +4266,33 @@ void AestraContent::refreshPluginList() {
     }
     m_pluginBrowser->setPluginList(uiPlugins);
     AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
+
+    // The mixer's quick-add dropdown shares this catalog; the policy filters
+    // to mixer inserts and groups by category (MixerPluginListPolicy.h).
+    if (m_mixerPanel) {
+        if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
+            std::vector<Aestra::Components::MixerPluginEntry> mixerEntries;
+            mixerEntries.reserve(scannedPlugins.size());
+            for (const auto& p : scannedPlugins) {
+                const char* typeName = "Effect";
+                switch (p.type) {
+                case Aestra::Audio::PluginType::Instrument:
+                    typeName = "Instrument";
+                    break;
+                case Aestra::Audio::PluginType::MidiEffect:
+                    typeName = "MIDI";
+                    break;
+                case Aestra::Audio::PluginType::Analyzer:
+                    typeName = "Analyzer";
+                    break;
+                case Aestra::Audio::PluginType::Effect:
+                    break;
+                }
+                mixerEntries.push_back({p.id, p.name, p.category, typeName});
+            }
+            mixerUI->setPluginEntries(std::move(mixerEntries));
+        }
+    }
 }
 
 void AestraContent::refreshProjectViews() {

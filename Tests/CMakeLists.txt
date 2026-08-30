@@ -1950,6 +1950,15 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
 
+# Mixer plugin dropdown catalog contract: metadata-driven mixer-insert
+# filtering and grouping (header-only policy, no widget link).
+add_executable(MixerPluginListPolicyTest AestraUI/MixerPluginListPolicyTest.cpp)
+target_include_directories(MixerPluginListPolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI
+)
+add_test(NAME MixerPluginListPolicyTest COMMAND MixerPluginListPolicyTest)
+set_tests_properties(MixerPluginListPolicyTest PROPERTIES LABELS "ui;mixer;regression;contract:application")
+
 add_executable(TimelineGeometryTest AestraUI/TimelineGeometryTest.cpp)
 target_include_directories(TimelineGeometryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components

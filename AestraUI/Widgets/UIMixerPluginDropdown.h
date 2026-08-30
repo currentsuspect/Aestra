@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "Helpers/MixerPluginListPolicy.h"
 #include "NUIComponent.h"
 #include "NUITextInput.h"
 #include "NUITypes.h"
@@ -35,10 +36,17 @@ public:
 
     // Callback: plugin ID, display name
     std::function<void(const std::string& pluginId, const std::string& pluginName)> onPluginSelected;
-    // Callback: user clicked "Browse all plugins"
-    std::function<void()> onBrowseAllRequested;
+    // Callback: user clicked "Browse all plugins" — current search query is
+    // passed so the host can pre-seed the full browser with the same terms
+    // and the user lands on the right results, not a blank search.
+    std::function<void(const std::string& searchQuery)> onBrowseAllRequested;
     // Callback: dropdown was dismissed
     std::function<void()> onDismissed;
+
+    /// Replace the dropdown's catalog (app layer injects from the plugin
+    /// scanner: internal registry + VST3/CLAP). Grouping, mixer-insert
+    /// filtering and ordering are the policy's job (MixerPluginListPolicy.h).
+    void setPluginEntries(std::vector<Aestra::Components::MixerPluginEntry> entries);
 
 private:
     struct PluginItem {
@@ -85,7 +93,6 @@ private:
     std::shared_ptr<NUITextInput> m_searchInput;
 
     void cacheThemeColors();
-    void buildPluginList();
     void filter();
     void dismiss();
 

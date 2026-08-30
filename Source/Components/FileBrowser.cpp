@@ -964,6 +964,16 @@ void FileBrowser::setContentViewsEnabled(bool enabled) {
     updateContentViews();
 }
 
+void FileBrowser::selectNavAction(BrowserNavAction action) {
+    activeNavAction_ = action;
+    activeNavPath_.clear();
+    updateContentViews();
+    if (onNavActionSelected_) {
+        onNavActionSelected_(action);
+    }
+    invalidateCache();
+}
+
 void FileBrowser::updateContentViews() {
     const NUIRect contentBounds = getContentViewBounds();
     for (auto& view : contentViews_) {

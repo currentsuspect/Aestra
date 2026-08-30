@@ -5,6 +5,7 @@
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
 #include "NUITypes.h"
+#include "Helpers/MixerPluginListPolicy.h"
 #include "InspectorCollapseState.h"
 #include "UIMixerInspector.h"
 #include "UIMixerMeter.h"
@@ -71,6 +72,23 @@ public:
      * Call when tracks are added/removed to rebuild meter widgets.
      */
     void refreshChannels();
+
+    /**
+     * @brief Replace the plugin dropdown's catalog.
+     *
+     * The app layer injects from the plugin scanner (internal registry +
+     * VST3/CLAP); the policy filters to mixer inserts and groups by category.
+     */
+    void setPluginEntries(std::vector<Aestra::Components::MixerPluginEntry> entries) {
+        if (m_pluginDropdown) {
+            m_pluginDropdown->setPluginEntries(std::move(entries));
+        }
+    }
+
+    /// Fired by the dropdown's "Browse all plugins" footer. The app layer
+    /// opens the full plugin browser; the current search query is passed so
+    /// the browser opens with the same terms the user typed.
+    std::function<void(const std::string& searchQuery)> onBrowseAllPlugins;
 
     /**
      * @brief Get the view model.
