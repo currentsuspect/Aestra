@@ -261,9 +261,9 @@ void AestraTransientEditor::drawEnvelopeSketch(NUIRenderer& renderer, const NUIR
     // Centre marker
     const float cx = plotRect.x + plotRect.width * attackEnd;
     renderer.drawLine({cx, plotRect.y}, {cx, plotRect.bottom()}, 1.0f, editorInk(0.10f));
-    renderer.drawTextCentered(
-        "attack", NUIRect(plotRect.x, plotRect.bottom() - 14.0f, plotRect.width * attackEnd - plotRect.x, 12.0f), 9.0f,
-        theme.getColor("textSecondary").withAlpha(0.55f));
+    renderer.drawTextCentered("attack",
+                              NUIRect(plotRect.x, plotRect.bottom() - 14.0f, plotRect.width * attackEnd, 12.0f), 9.0f,
+                              theme.getColor("textSecondary").withAlpha(0.55f));
     renderer.drawTextCentered("sustain", NUIRect(cx, plotRect.bottom() - 14.0f, plotRect.right() - cx, 12.0f), 9.0f,
                               theme.getColor("textSecondary").withAlpha(0.55f));
 }
@@ -332,7 +332,7 @@ bool AestraTransientEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
     m_bypassHovered = bypassContains(event.position);
 
-    if (m_dragging >= 0) {
+    if (m_dragging >= 0 && m_dragging < 3) {
         if (event.released) {
             endKnobCapture();
             m_dragging = -1;
@@ -373,7 +373,7 @@ bool AestraTransientEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 } // namespace AestraUI
