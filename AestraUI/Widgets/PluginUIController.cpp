@@ -14,6 +14,7 @@
 #include "AestraFilterEditor.h"
 #include "AestraLFOEditor.h"
 #include "AestraOTTEditor.h"
+#include "AestraTransientEditor.h"
 
 #include "Models/TrackManager.h"
 #include "Core/MixerChannel.h"
@@ -444,6 +445,11 @@ void PluginUIController::openPluginEditor(
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
+    } else if (pluginId == "com.Aestrastudios.transient") {
+        auto ed = std::make_shared<AestraTransientEditor>(instance);
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
         wireEditorClose(ed);
@@ -476,6 +482,8 @@ void PluginUIController::openPluginEditor(
             ott->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto lfoEd = std::dynamic_pointer_cast<AestraLFOEditor>(editorComp)) {
             lfoEd->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto transientEd = std::dynamic_pointer_cast<AestraTransientEditor>(editorComp)) {
+            transientEd->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
             generic->onResize();
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
