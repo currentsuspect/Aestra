@@ -67,12 +67,14 @@ void AestraTransientEditor::layoutControls() {
     const auto b = getBounds();
     const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
 
-    // Bypass pill in the title row (right-aligned). The right margin
-    // matches Sat (44px) so the pill never collides with the panel edge
-    // when the popup layer clamps the editor to its preferred size.
+    // Bypass pill in the bottom-right corner — it must NOT overlap any
+    // knob (the top corners collide with Sustain when the panel is at
+    // its preferred 560px width). The bottom band is empty space (the
+    // Output knob is at the left, the Mix slider is in the middle).
     constexpr float kBypassW = 88.0f;
     constexpr float kBypassH = 26.0f;
-    m_bypassRect = NUIRect(b.right() - 44.0f - kBypassW, contentTop + 16.0f, kBypassW, kBypassH);
+    const float bypassY = m_mixRect.bottom() - kBypassH * 0.5f; // vertically center on the Mix slider
+    m_bypassRect = NUIRect(b.right() - 18.0f - kBypassW, bypassY, kBypassW, kBypassH);
 
     // Two large bipolar knobs (Attack left, Sustain right) flanking the
     // envelope sketch in the middle.
@@ -190,9 +192,11 @@ void AestraTransientEditor::drawUnipolarKnob(NUIRenderer& renderer, const NUIRec
     renderer.strokeCircle(c, r + 3.0f, 1.0f, editorInk(0.055f));
 
     // Output trims a bipolar range but is presented as a single sweep with
-    // 12 o'clock = 0 dB, the conventional "trim" affordance.
-    const float sweepStart = kPi * 0.25f;
-    const float sweepEnd = kPi * 1.75f;
+    // 12 o'clock = 0 dB, the conventional "trim" affordance. Sweep midpoint
+    // sits at kPi (180° + 3π/4 in screen-coords y-down) so a normalized
+    // value of 0.5 (i.e. unity gain) renders at 12 o'clock.
+    const float sweepStart = kPi * 0.75f; // 135° (7 o'clock)
+    const float sweepEnd = kPi * 2.25f;   // 405° / 45° (1 o'clock)
     drawArc(renderer, c, r - 2.0f, sweepStart, sweepEnd, 3.0f, editorNeutral(0.199f, 1.0f));
     const float fillEnd = sweepStart + (sweepEnd - sweepStart) * value;
     drawArc(renderer, c, r - 2.0f, sweepStart, fillEnd, 3.0f, accent().withAlpha(0.92f));
