@@ -67,15 +67,11 @@ void AestraTransientEditor::layoutControls() {
     const auto b = getBounds();
     const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
 
-    // Bypass pill in the row immediately below the title bar — the only
-    // spot in the editor that does NOT overlap a control. Sustain starts
-    // at contentTop + 16, the Mix slider lives in the bottom band, so a
-    // thin pill between them has no collision. The AestraPanelWindow
-    // drawContent clip starts at contentTop (= b.y + 32), so the pill
-    // sits inside the clip rect.
+    // Bypass pill sits in the bottom band, just below the Mix slider —
+    // the cleanest real estate in the editor (nothing else lives there).
     constexpr float kBypassW = 88.0f;
-    constexpr float kBypassH = 18.0f;
-    const float bypassY = b.y + AestraPanelWindow::TITLE_BAR_H + 2.0f;
+    constexpr float kBypassH = 22.0f;
+    const float bypassY = m_mixRect.bottom() + 6.0f;
     m_bypassRect = NUIRect(b.right() - 18.0f - kBypassW, bypassY, kBypassW, kBypassH);
 
     // Two large bipolar knobs (Attack left, Sustain right) flanking the
