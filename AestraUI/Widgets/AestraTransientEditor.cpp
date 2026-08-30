@@ -67,29 +67,35 @@ void AestraTransientEditor::layoutControls() {
     const auto b = getBounds();
     const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
 
-    // Bypass pill in the title row (right-aligned)
+    // Bypass pill in the title row (right-aligned). The right margin
+    // matches Sat (44px) so the pill never collides with the panel edge
+    // when the popup layer clamps the editor to its preferred size.
     constexpr float kBypassW = 88.0f;
     constexpr float kBypassH = 26.0f;
-    m_bypassRect = NUIRect(b.right() - 22.0f - kBypassW, contentTop + 3.0f, kBypassW, kBypassH);
+    m_bypassRect = NUIRect(b.right() - 44.0f - kBypassW, contentTop + 16.0f, kBypassW, kBypassH);
 
     // Two large bipolar knobs (Attack left, Sustain right) flanking the
     // envelope sketch in the middle.
-    const float knobRow = contentTop + 44.0f;
+    const float knobRow = contentTop + 16.0f;
     constexpr float kKnobSize = 130.0f;
     m_attackRect = NUIRect(b.x + 28.0f, knobRow, kKnobSize, kKnobSize);
     m_sustainRect = NUIRect(b.right() - 28.0f - kKnobSize, knobRow, kKnobSize, kKnobSize);
 
-    // Envelope sketch sits between the knobs, above the output/mix row.
+    // Envelope sketch sits between the knobs, at the same height so its
+    // top/bottom edges align with the bipolar knob wells.
     const float sketchLeft = m_attackRect.right() + 18.0f;
     const float sketchRight = m_sustainRect.x - 18.0f;
-    m_sketchRect = NUIRect(sketchLeft, knobRow + 6.0f, sketchRight - sketchLeft, kKnobSize + 12.0f);
+    m_sketchRect = NUIRect(sketchLeft, knobRow + 6.0f, sketchRight - sketchLeft, kKnobSize - 12.0f);
 
-    // Output knob (medium) and Mix (horizontal slider) along the bottom.
-    const float bottomRow = m_attackRect.bottom() + 26.0f;
-    constexpr float kOutSize = 70.0f;
+    // Output knob and Mix slider share a bottom band; the band starts below
+    // the bipolar knobs' label/value/range captions so nothing overlaps.
+    // Captions run to bottom + 4 + 14 + 2 + 16 + 2 + 12 = bottom + 50.
+    const float captionBottom = m_attackRect.bottom() + 50.0f;
+    const float bottomRow = captionBottom + 12.0f;
+    constexpr float kOutSize = 64.0f;
     m_outputRect = NUIRect(b.x + 30.0f, bottomRow, kOutSize, kOutSize);
-    const float mixY = bottomRow + 14.0f;
-    m_mixRect = NUIRect(m_outputRect.right() + 30.0f, mixY, b.right() - m_outputRect.right() - 60.0f, 28.0f);
+    m_mixRect =
+        NUIRect(m_outputRect.right() + 30.0f, bottomRow + 18.0f, b.right() - m_outputRect.right() - 60.0f, 28.0f);
 }
 
 void AestraTransientEditor::onResize(int /*width*/, int /*height*/) {

@@ -41,7 +41,7 @@ private:
     static constexpr uint32_t kBypass = 4;
 
     static constexpr float kWinW = 560.0f;
-    static constexpr float kWinH = 320.0f;
+    static constexpr float kWinH = 360.0f;
 
     void layoutControls();
     void drawBipolarKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
