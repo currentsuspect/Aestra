@@ -67,13 +67,6 @@ void AestraTransientEditor::layoutControls() {
     const auto b = getBounds();
     const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
 
-    // Bypass pill sits in the bottom band, just below the Mix slider —
-    // the cleanest real estate in the editor (nothing else lives there).
-    constexpr float kBypassW = 88.0f;
-    constexpr float kBypassH = 22.0f;
-    const float bypassY = m_mixRect.bottom() + 6.0f;
-    m_bypassRect = NUIRect(b.right() - 18.0f - kBypassW, bypassY, kBypassW, kBypassH);
-
     // Two large bipolar knobs (Attack left, Sustain right) flanking the
     // envelope sketch in the middle.
     const float knobRow = contentTop + 16.0f;
@@ -96,6 +89,14 @@ void AestraTransientEditor::layoutControls() {
     m_outputRect = NUIRect(b.x + 30.0f, bottomRow, kOutSize, kOutSize);
     m_mixRect =
         NUIRect(m_outputRect.right() + 30.0f, bottomRow + 18.0f, b.right() - m_outputRect.right() - 60.0f, 28.0f);
+
+    // Bypass pill sits in the bottom band, just below the Mix slider —
+    // the cleanest real estate in the editor (nothing else lives there).
+    // Computed last so m_mixRect is initialised.
+    constexpr float kBypassW = 88.0f;
+    constexpr float kBypassH = 22.0f;
+    const float bypassY = m_mixRect.bottom() + 6.0f;
+    m_bypassRect = NUIRect(b.right() - 18.0f - kBypassW, bypassY, kBypassW, kBypassH);
 }
 
 void AestraTransientEditor::onResize(int /*width*/, int /*height*/) {
