@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPluginDropdown.h"
 
+#include "Helpers/MixerPluginListPolicy.h"
+
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "NUIIcon.h"
@@ -35,7 +37,6 @@ bool icontains(const std::string& haystack, const std::string& needle) {
 UIMixerPluginDropdown::UIMixerPluginDropdown()
 {
     cacheThemeColors();
-    buildPluginList();
     m_filtered = m_categories;
     setVisible(false);
 
@@ -76,25 +77,20 @@ void UIMixerPluginDropdown::cacheThemeColors()
     m_searchBg = theme.getColor("backgroundSecondary");
 }
 
-void UIMixerPluginDropdown::buildPluginList()
-{
+void UIMixerPluginDropdown::setPluginEntries(std::vector<Aestra::Components::MixerPluginEntry> entries) {
+    // The policy is the authority: mixer-insert filtering, category grouping,
+    // icons and ordering all come from MixerPluginListPolicy.h.
     m_categories.clear();
-
-    Category dynamics;
-    dynamics.label = "DYNAMICS";
-    dynamics.items.push_back({"com.Aestrastudios.comp", "Aestra Comp", "Compressor", "DYNAMICS", "chart-bar"});
-    m_categories.push_back(std::move(dynamics));
-
-    Category time;
-    time.label = "TIME";
-    time.items.push_back({"com.Aestrastudios.delay", "Aestra Delay", "Delay", "TIME", "clock"});
-    m_categories.push_back(std::move(time));
-
-    Category spectral;
-    spectral.label = "SPECTRAL";
-    spectral.items.push_back({"com.Aestrastudios.eq",   "Aestra EQ",   "Equalizer", "SPECTRAL", "wave-sine"});
-    spectral.items.push_back({"com.Aestrastudios.verb", "Aestra Verb", "Reverb",    "SPECTRAL", "circles"});
-    m_categories.push_back(std::move(spectral));
+    for (auto& group : Aestra::Components::groupForMixerDropdown(std::move(entries))) {
+        Category category;
+        category.label = group.label;
+        category.items.reserve(group.entries.size());
+        for (auto& entry : group.entries) {
+            category.items.push_back(PluginItem{entry.id, entry.name, group.label, group.label, group.icon});
+        }
+        m_categories.push_back(std::move(category));
+    }
+    filter();
 }
 
 void UIMixerPluginDropdown::filter()
@@ -294,7 +290,12 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
 
     // Browse link
     NUIColor linkColor = (m_hoveredFooter == 0) ? m_textPrimary : m_textSecondary;
-    renderer.drawText("Browse all plugins", {b.x + 12.0f, fy + 10.0f}, 12.0f, linkColor);
+    // Library-aware footer: with no search active it invites the full browser;
+    // with a dead-end search it points at the same browser pre-seeded with the
+    // query, so no plugin is ever unreachable from the mixer.
+    const std::string footerLabel =
+        m_searchQuery.empty() ? "Browse all plugins" : "Search all plugins for '" + m_searchQuery + "'";
+    renderer.drawText(footerLabel, {b.x + 12.0f, fy + 10.0f}, 12.0f, linkColor);
     auto extIcon = getIconCached("external-link");
     if (extIcon) {
         extIcon->setIconSize(13.0f, 13.0f);

@@ -258,6 +258,12 @@ public:
     void setContentViewsEnabled(bool enabled);
     NUIRect getContentViewBounds() const;
 
+    /// Programmatically select a navigation entry — same pipeline as clicking
+    /// it (content view swap, nav callback), minus hit-testing. Lets host
+    /// surfaces (e.g. the mixer plugin dropdown's "Browse all plugins") open a
+    /// specific library section.
+    void selectNavAction(BrowserNavAction action);
+
     void setOnNavActionSelected(std::function<void(BrowserNavAction)> callback) { onNavActionSelected_ = callback; }
 
     // Drop target support for Places section

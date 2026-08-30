@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "Helpers/MixerPluginListPolicy.h"
 #include "NUIComponent.h"
 #include "NUITextInput.h"
 #include "NUITypes.h"
@@ -39,6 +40,11 @@ public:
     std::function<void()> onBrowseAllRequested;
     // Callback: dropdown was dismissed
     std::function<void()> onDismissed;
+
+    /// Replace the dropdown's catalog (app layer injects from the plugin
+    /// scanner: internal registry + VST3/CLAP). Grouping, mixer-insert
+    /// filtering and ordering are the policy's job (MixerPluginListPolicy.h).
+    void setPluginEntries(std::vector<Aestra::Components::MixerPluginEntry> entries);
 
 private:
     struct PluginItem {
@@ -85,7 +91,6 @@ private:
     std::shared_ptr<NUITextInput> m_searchInput;
 
     void cacheThemeColors();
-    void buildPluginList();
     void filter();
     void dismiss();
 

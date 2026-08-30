@@ -73,6 +73,9 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
         if (m_inspector) {
             m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
         }
+        if (onBrowseAllPlugins) {
+            onBrowseAllPlugins();
+        }
     };
     addChild(m_pluginDropdown);
 
