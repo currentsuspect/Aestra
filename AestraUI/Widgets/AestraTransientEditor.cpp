@@ -229,8 +229,10 @@ void AestraTransientEditor::drawEnvelopeSketch(NUIRenderer& renderer, const NUIR
     constexpr int kSamples = 96;
     std::array<NUIPoint, kSamples> polyline{};
     const float attackEnd = 0.18f; // first 18% of the plot is the attack portion
-    const float peak = 0.85f;      // the y-extent of an unboosted peak (in pixels of plot)
-    const float ampA = attackAmt;  // −1…+1
+    // Y-extent of the unboosted peak as a fraction of the plot height, so
+    // the curve uses the real rect rather than a 0.85-pixel line.
+    const float peak = plotRect.height * 0.35f;
+    const float ampA = attackAmt; // −1…+1
     const float ampS = sustainAmt;
 
     for (int i = 0; i < kSamples; ++i) {
@@ -360,17 +362,31 @@ bool AestraTransientEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (mixContains(event.position)) {
             m_dragging = 3; // mix
+            // Jump the value to the press position so a click anywhere on
+            // the track selects, not just a drag from the current thumb.
+            const float t = std::clamp((event.position.x - m_mixRect.x) / m_mixRect.width, 0.0f, 1.0f);
+            m_instance->setParameter(kMix, t);
+            setDirty();
             return true;
         }
     }
 
-    // Mix horizontal drag (delta.x is the service-owned x-delta for the
-    // active drag, set by the platform bridge during cursor capture).
-    if (m_dragging == 3 && !event.released && event.delta.x != 0.0f) {
-        const float t = std::clamp((event.position.x - m_mixRect.x) / m_mixRect.width, 0.0f, 1.0f);
-        m_instance->setParameter(kMix, t);
-        setDirty();
-        return true;
+    // Mix horizontal drag: uses the live cursor x, not the platform's
+    // capture-delta (the horizontal slider does NOT use cursor capture —
+    // that pattern is for knob vertical-drag; capturing here would feel
+    // weird because the cursor moves laterally). Release resets the
+    // drag state so the next press starts fresh.
+    if (m_dragging == 3) {
+        if (event.released) {
+            m_dragging = -1;
+            return true;
+        }
+        if (!event.pressed) {
+            const float t = std::clamp((event.position.x - m_mixRect.x) / m_mixRect.width, 0.0f, 1.0f);
+            m_instance->setParameter(kMix, t);
+            setDirty();
+            return true;
+        }
     }
 
     return consumeInsideBounds(event);
