@@ -86,8 +86,9 @@ public:
     }
 
     /// Fired by the dropdown's "Browse all plugins" footer. The app layer
-    /// opens the full plugin browser.
-    std::function<void()> onBrowseAllPlugins;
+    /// opens the full plugin browser; the current search query is passed so
+    /// the browser opens with the same terms the user typed.
+    std::function<void(const std::string& searchQuery)> onBrowseAllPlugins;
 
     /**
      * @brief Get the view model.

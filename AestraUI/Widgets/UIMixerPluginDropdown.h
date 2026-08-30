@@ -36,8 +36,10 @@ public:
 
     // Callback: plugin ID, display name
     std::function<void(const std::string& pluginId, const std::string& pluginName)> onPluginSelected;
-    // Callback: user clicked "Browse all plugins"
-    std::function<void()> onBrowseAllRequested;
+    // Callback: user clicked "Browse all plugins" — current search query is
+    // passed so the host can pre-seed the full browser with the same terms
+    // and the user lands on the right results, not a blank search.
+    std::function<void(const std::string& searchQuery)> onBrowseAllRequested;
     // Callback: dropdown was dismissed
     std::function<void()> onDismissed;
 

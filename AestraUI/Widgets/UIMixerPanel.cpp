@@ -69,12 +69,12 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
     m_pluginDropdown->onPluginSelected = [this](const std::string& pluginId, const std::string&) {
         loadPluginToSelectedChannel(pluginId);
     };
-    m_pluginDropdown->onBrowseAllRequested = [this]() {
+    m_pluginDropdown->onBrowseAllRequested = [this](const std::string& searchQuery) {
         if (m_inspector) {
             m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
         }
         if (onBrowseAllPlugins) {
-            onBrowseAllPlugins();
+            onBrowseAllPlugins(searchQuery);
         }
     };
     addChild(m_pluginDropdown);

@@ -782,17 +782,27 @@ void AestraContent::setupMixerPanels() {
     m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
     if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
         // The mixer dropdown's "Browse all plugins" opens the full plugin
-        // browser (internal + VST3/CLAP) in the library pane.
-        mixerUI->onBrowseAllPlugins = [this]() {
+        // browser (internal + VST3/CLAP) in the library pane, with the same
+        // search query the user typed so a dead-end search lands on results.
+        mixerUI->onBrowseAllPlugins = [this](const std::string& searchQuery) {
             if (!m_fileBrowser || !m_pluginBrowser) {
                 return;
             }
             m_fileBrowser->setVisible(true);
             m_pluginBrowser->setVisible(true);
+            if (!searchQuery.empty()) {
+                m_pluginBrowser->setSearchQuery(searchQuery);
+            }
             m_fileBrowser->selectNavAction(AestraUI::FileBrowser::BrowserNavAction::Plugins);
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
         };
     }
+
+    // setupBrowserPanels() ran before the mixer existed, so the initial
+    // refreshPluginList() silently skipped mixer publication. Catch up now
+    // that the mixer panel is in place, then mirror future scans the same
+    // way the browser does.
+    refreshPluginList();
     wireFloatingPanel(m_mixerPanel, ViewType::Mixer, &ViewState::mixerRect, 560.0f, 300.0f);
     m_overlayLayer->addChild(m_mixerPanel);
     if (m_platformBridge) {

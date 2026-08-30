@@ -349,7 +349,7 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_hoveredFooter == 0) {
             dismiss();
-            if (onBrowseAllRequested) onBrowseAllRequested();
+            if (onBrowseAllRequested) onBrowseAllRequested(m_searchQuery);
             return true;
         }
         if (m_hoveredRow >= 0) {
