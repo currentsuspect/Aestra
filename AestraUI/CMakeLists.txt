@@ -163,6 +163,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraLimitEditor.cpp
     Widgets/AestraSatEditor.h
     Widgets/AestraSatEditor.cpp
+    Widgets/AestraTransientEditor.h
+    Widgets/AestraTransientEditor.cpp
     Widgets/AestraFilterEditor.h
     Widgets/AestraFilterEditor.cpp
     Widgets/AestraOTTEditor.h
