@@ -222,6 +222,9 @@ AestraContent::AestraContent()
     m_pluginController->setPluginManager(&PluginManager::getInstance());
     m_pluginController->setPluginScanner(&PluginManager::getInstance().getScanner());
     m_pluginController->setPopupLayer(m_overlayLayer.get());
+    // The inspector rack's per-click "+ Add Insert" menu is created on demand,
+    // so it pulls the catalog here instead of via refreshPluginList().
+    m_pluginController->setMixerCatalogProvider([this]() { return buildMixerCatalogEntries(); });
 
     // Scoped subscriptions for playback-critical callbacks
     // Plugin loaded: mark project dirty
@@ -4266,26 +4269,61 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
     AESTRA_LOG_DEBUG("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
 }
 
-void AestraContent::refreshPluginList() {
-    if (!m_pluginBrowser)
-        return;
+std::vector<Aestra::Components::MixerPluginEntry> AestraContent::buildMixerCatalogEntries() const {
+    const auto& scannedPlugins = Aestra::Audio::PluginManager::getInstance().getScanner().getScannedPlugins();
+    std::vector<Aestra::Components::MixerPluginEntry> mixerEntries;
+    mixerEntries.reserve(scannedPlugins.size());
+    for (const auto& plugin : scannedPlugins) {
+        Aestra::Components::MixerPluginEntry entry;
+        entry.id = plugin.id;
+        entry.name = plugin.name;
+        entry.category = plugin.category;
+        switch (plugin.type) {
+        case Aestra::Audio::PluginType::Effect:
+            entry.typeName = "Effect";
+            break;
+        case Aestra::Audio::PluginType::Instrument:
+            entry.typeName = "Instrument";
+            break;
+        case Aestra::Audio::PluginType::MidiEffect:
+            entry.typeName = "MidiEffect";
+            break;
+        case Aestra::Audio::PluginType::Analyzer:
+            entry.typeName = "Analyzer";
+            break;
+        }
+        mixerEntries.push_back(std::move(entry));
+    }
+    return mixerEntries;
+}
 
+void AestraContent::refreshPluginList() {
     auto& pm = Aestra::Audio::PluginManager::getInstance();
+    if (!m_pluginBrowser && !m_mixerPanel) {
+        AESTRA_LOG_WARNING("[AestraContent] Plugin refresh skipped: no plugin UI panels yet");
+        return;
+    }
+
     const auto& scannedPlugins = pm.getScanner().getScannedPlugins();
     std::vector<AestraUI::PluginListItem> uiPlugins;
     uiPlugins.reserve(scannedPlugins.size());
     for (const auto& p : scannedPlugins) {
         uiPlugins.push_back(m_pluginController->convertToListItem(p));
     }
-    m_pluginBrowser->setPluginList(uiPlugins);
-    m_pluginBrowser->setPluginList(uiPlugins);
+    if (m_pluginBrowser) {
+        m_pluginBrowser->setPluginList(uiPlugins);
+    }
+
+    AESTRA_LOG_INFO("[AestraContent] Publishing " + std::to_string(scannedPlugins.size()) +
+                    " scanned plugins to plugin UI");
 
     // The mixer's quick-add dropdown shares this catalog; the policy filters
     // to mixer inserts and groups by category (MixerPluginListPolicy.h).
     if (m_mixerPanel) {
         if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
-            std::vector<Aestra::Components::MixerPluginEntry> mixerEntries;
-            mixerEntries.reserve(scannedPlugins.size());
+            auto mixerEntries = buildMixerCatalogEntries();
+            AESTRA_LOG_INFO("[AestraContent] Publishing " + std::to_string(mixerEntries.size()) +
+                            " mixer catalog entries from " + std::to_string(scannedPlugins.size()) + " plugins");
             mixerUI->setPluginEntries(std::move(mixerEntries));
         }
     }

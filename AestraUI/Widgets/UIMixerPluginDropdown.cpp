@@ -1,11 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPluginDropdown.h"
 
+#include "../../AestraCore/include/AestraLog.h"
 #include "Helpers/MixerPluginListPolicy.h"
-
-#include "NUIThemeSystem.h"
-#include "NUIRenderer.h"
 #include "NUIIcon.h"
+#include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
+
 #include <algorithm>
 #include <cctype>
 
@@ -17,7 +18,22 @@ static std::shared_ptr<NUIIcon> getIconCached(const char* name) {
     static std::unordered_map<std::string, std::shared_ptr<NUIIcon>> cache;
     auto it = cache.find(name);
     if (it != cache.end()) return it->second;
-    auto icon = std::make_shared<NUIIcon>(name);
+
+    static const std::unordered_map<std::string, std::string> icons = {
+        {"search",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="21" y2="21"/></svg>)"},
+        {"external-link",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7"/><path d="M10 14L21 3"/><path d="M21 14v7H3V3h7"/></svg>)"},
+        {"chart-bar",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>)"},
+        {"wave-sine",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c3-10 5 10 8 0s5-10 8 0 5 10 6 0"/></svg>)"},
+        {"circles",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="5"/><circle cx="16" cy="12" r="5"/></svg>)"},
+        {"clock",
+         R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>)"}};
+    const auto svg = icons.find(name);
+    auto icon = std::make_shared<NUIIcon>(svg != icons.end() ? svg->second : icons.at("circles"));
     cache[name] = icon;
     return icon;
 }
@@ -42,7 +58,7 @@ UIMixerPluginDropdown::UIMixerPluginDropdown()
 
     // Real text input — same pattern as the library search bar in FileBrowser.
     m_searchInput = std::make_shared<NUITextInput>();
-    m_searchInput->setPlaceholderText("Search plugins…");
+    m_searchInput->setPlaceholderText("Search plugins...");
     m_searchInput->setShowPlaceholderWhenFocused(true);
     m_searchInput->setBackgroundVisible(false);
     m_searchInput->setBorderWidth(0.0f);
@@ -87,11 +103,38 @@ void UIMixerPluginDropdown::setPluginEntries(std::vector<Aestra::Components::Mix
         category.label = group.label;
         category.items.reserve(group.entries.size());
         for (auto& entry : group.entries) {
-            category.items.push_back(PluginItem{entry.id, entry.name, group.label, group.label, group.icon});
+            category.items.push_back(PluginItem{entry.id, entry.name, entry.typeName, entry.category, group.icon});
         }
         m_categories.push_back(std::move(category));
     }
     filter();
+}
+
+std::vector<UIMixerPluginDropdown::Category> UIMixerPluginDropdown::computeDisplayCategories() const {
+    // Single source of truth for what the user sees: prefers m_filtered but
+    // falls back to m_categories (raw or re-filtered on the fly) when
+    // m_filtered is stale-empty, so render, hit-testing and clicks always
+    // operate on the same rows.
+    if (!m_filtered.empty() || m_categories.empty()) {
+        return m_filtered;
+    }
+    if (m_searchQuery.empty()) {
+        return m_categories;
+    }
+    std::vector<Category> display;
+    for (const auto& cat : m_categories) {
+        Category filteredCat;
+        filteredCat.label = cat.label;
+        for (const auto& item : cat.items) {
+            if (icontains(item.name, m_searchQuery) || icontains(item.typeLabel, m_searchQuery)) {
+                filteredCat.items.push_back(item);
+            }
+        }
+        if (!filteredCat.items.empty()) {
+            display.push_back(std::move(filteredCat));
+        }
+    }
+    return display;
 }
 
 void UIMixerPluginDropdown::filter()
@@ -115,13 +158,13 @@ void UIMixerPluginDropdown::filter()
     }
 }
 
-void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY)
-{
+void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY) {
     // Defensive: if the catalog is empty when the user opens the dropdown
     // (because the initial setup-time refresh ran before the async plugin
     // scan completed), ask the host to republish. The dropdown is
     // re-shown on the next frame so the user sees the entries.
     if (m_categories.empty() && onRequestRefresh) {
+        AESTRA_LOG_WARNING("[UIMixerPluginDropdown] open with empty categories; requesting refresh");
         onRequestRefresh();
     }
     float contentH = SEARCH_H;
@@ -139,14 +182,25 @@ void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottom
     if (y + totalH > panelBottomY) {
         y = triggerRect.y - totalH - 4.0f;
         m_openUpward = true;
+        // Panels clip their children: a flipped box that pokes above the
+        // panel top is invisible. Pin it inside the panel instead — a menu
+        // may overlap the trigger, but it must be on screen.
+        const float minTop = panelTopY + 4.0f;
+        if (y < minTop) {
+            y = minTop;
+        }
     }
 
     setBounds(NUIRect{x, y, DROP_W, totalH});
     m_searchInput->setBounds(NUIRect{x + 32.0f, y + 4.0f, DROP_W - 40.0f, SEARCH_H - 8.0f});
+    // Clear the model before updating the child input: setText() emits the
+    // input callback synchronously, so clearing m_searchQuery afterwards
+    // leaves m_filtered empty while the field is visibly blank.
+    m_searchQuery.clear();
+    m_filtered = m_categories;
     m_searchInput->setText("");
     m_open = true;
     setVisible(true);
-    m_searchQuery.clear();
     m_hoveredRow = -1;
     m_hoveredFooter = -1;
     filter();
@@ -189,7 +243,9 @@ int UIMixerPluginDropdown::hitTestRow(const NUIPoint& p) const
 {
     auto b = getBounds();
     if (!b.contains(p)) return -1;
-    auto rows = flatten(m_filtered);
+    // Same data source as the render path so hit-testing matches the rows
+    // the user can actually see (see onRender for why this fallback exists).
+    auto rows = flatten(computeDisplayCategories());
     for (size_t i = 0; i < rows.size(); ++i) {
         float ry = b.y + rows[i].y;
         if (p.y >= ry && p.y < ry + rows[i].h) {
@@ -242,7 +298,12 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     renderer.drawLine({b.x, b.y + SEARCH_H}, {b.right(), b.y + SEARCH_H}, 0.5f, m_borderTertiary);
 
     // ── Plugin list ──
-    auto rows = flatten(m_filtered);
+    // Render-time safety net: the data path has been observed to leave
+    // m_filtered empty even when m_categories has data. computeDisplayCategories
+    // regenerates the filtered view on the fly so the dropdown is never
+    // visually empty if m_categories is non-empty.
+    const auto displayCategories = computeDisplayCategories();
+    auto rows = flatten(displayCategories);
     float listTop = b.y + SEARCH_H;
     float listH = b.height - SEARCH_H - FOOTER_H;
 
@@ -253,13 +314,10 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
         if (ry + row.h < listTop || ry > listTop + listH) continue;
 
         if (row.isCategory) {
-            renderer.drawText(m_filtered[row.catIndex].label,
-                              {b.x + 12.0f, ry + 6.0f},
-                              10.0f,
-                              m_textTertiary);
+            renderer.drawText(displayCategories[row.catIndex].label, {b.x + 12.0f, ry + 6.0f}, 10.0f, m_textTertiary);
         } else {
             anyItem = true;
-            const auto& item = m_filtered[row.catIndex].items[row.itemIndex];
+            const auto& item = displayCategories[row.catIndex].items[row.itemIndex];
             bool hovered = (static_cast<int>(ri) == m_hoveredRow);
             NUIRect rowRect{b.x + 1.0f, ry, b.width - 2.0f, ROW_H};
             if (hovered) {
@@ -365,10 +423,14 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
             return true;
         }
         if (m_hoveredRow >= 0) {
-            auto rows = flatten(m_filtered);
+            // Same data source as render/hit-test so a click lands on the
+            // row the user actually saw (m_filtered can be stale-empty
+            // while the fallback display path shows m_categories).
+            const auto displayCategories = computeDisplayCategories();
+            auto rows = flatten(displayCategories);
             const auto& row = rows[m_hoveredRow];
             if (!row.isCategory) {
-                const auto& item = m_filtered[row.catIndex].items[row.itemIndex];
+                const auto& item = displayCategories[row.catIndex].items[row.itemIndex];
                 dismiss();
                 if (onPluginSelected) onPluginSelected(item.id, item.name);
                 return true;

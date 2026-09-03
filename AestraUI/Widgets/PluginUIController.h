@@ -1,10 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "GenericPluginEditor.h"
+#include "Helpers/MixerPluginListPolicy.h"
 #include "NUIComponent.h"
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
-#include "GenericPluginEditor.h"
 
 // Forward declaration
 class NUIPlatformBridge;
@@ -81,7 +82,18 @@ public:
      * @param layer Popup-layer component that owns transient menus and editors.
      */
     void setPopupLayer(NUIComponent* layer);
-    
+
+    /**
+     * @brief Provide the current mixer plugin catalog for on-demand popups.
+     *
+     * The quick-add menus created per click for the inspector rack's
+     * "+ Add Insert" slot are throwaway UIMixerPluginDropdown instances —
+     * unlike the mixer strip's persistent dropdown they receive no catalog
+     * republish, so without this provider they open empty. The app layer
+     * owns the scanned-plugin → MixerPluginEntry mapping.
+     */
+    void setMixerCatalogProvider(std::function<std::vector<Aestra::Components::MixerPluginEntry>()> provider);
+
     // ==============================
     // Browser Binding
     // ==============================
@@ -256,6 +268,9 @@ private:
     NUIComponent* m_popupLayer = nullptr;
     std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
+
+    // Catalog source for on-demand popup menus (see setMixerCatalogProvider)
+    std::function<std::vector<Aestra::Components::MixerPluginEntry>()> m_mixerCatalogProvider;
 };
 
 /**

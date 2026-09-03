@@ -55,6 +55,11 @@ void PluginUIController::setPopupLayer(NUIComponent* layer) {
     m_popupLayer = layer;
 }
 
+void PluginUIController::setMixerCatalogProvider(
+    std::function<std::vector<Aestra::Components::MixerPluginEntry>()> provider) {
+    m_mixerCatalogProvider = std::move(provider);
+}
+
 void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
     if (!browser) return;
     m_browser = browser;
@@ -189,6 +194,13 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
 
         // Create new dropdown
         m_activeMenu = std::make_shared<UIMixerPluginDropdown>();
+
+        // This menu is created per click, so it never receives the catalog
+        // republish the mixer strip's persistent dropdown gets — feed it the
+        // current catalog here or it opens with search + footer only.
+        if (m_mixerCatalogProvider) {
+            m_activeMenu->setPluginEntries(m_mixerCatalogProvider());
+        }
 
         // Add to popup layer if available, otherwise fallback to rack's parent
         if (m_popupLayer) {

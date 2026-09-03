@@ -28,9 +28,10 @@ public:
     bool onKeyEvent(const NUIKeyEvent& event) override;
 
     // Position the dropdown anchored to the trigger rect.
-    // If flipIfOverflow is true and the dropdown would extend past panelBottomY,
-    // it opens upward instead of downward.
-    void showAt(const NUIRect& triggerRect, float panelBottomY);
+    // If it would extend past panelBottomY it opens upward; panelTopY bounds
+    // that upward flip so the box is clamped inside the host panel instead of
+    // landing above it (panels clip their children).
+    void showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY = 0.0f);
     void hide();
     bool isOpen() const { return m_open; }
 
@@ -99,6 +100,12 @@ private:
     void cacheThemeColors();
     void filter();
     void dismiss();
+
+    // Display source for render / hit-test / click: prefers m_filtered but
+    // falls back to m_categories (raw or re-filtered on the fly) when
+    // m_filtered is stale-empty, so render, hit-testing and clicks always
+    // operate on the same rows.
+    std::vector<Category> computeDisplayCategories() const;
 
     // Flat row access for hit testing / rendering
     struct FlatRow { bool isCategory; int catIndex; int itemIndex; float y; float h; };

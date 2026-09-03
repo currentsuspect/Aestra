@@ -797,10 +797,13 @@ void UIMixerPanel::showPluginDropdown(uint32_t channelId)
     }
     dropX = std::max(dropX, panelBounds.x);
 
+    // The mixer renders in absolute window coordinates end to end (strips and
+    // their children are laid out with the parent origin included), so the
+    // trigger rect needs no local→global conversion here.
     NUIRect anchor{dropX, fxBounds.y, fxBounds.width, fxBounds.height};
 
     m_pluginDropdown->bringToFront();
-    m_pluginDropdown->showAt(anchor, panelBounds.bottom());
+    m_pluginDropdown->showAt(anchor, panelBounds.bottom(), panelBounds.y);
 }
 
 void UIMixerPanel::loadPluginToSelectedChannel(const std::string& pluginId)
