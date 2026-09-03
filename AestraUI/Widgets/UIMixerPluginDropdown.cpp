@@ -110,31 +110,31 @@ void UIMixerPluginDropdown::setPluginEntries(std::vector<Aestra::Components::Mix
     filter();
 }
 
-std::vector<UIMixerPluginDropdown::Category> UIMixerPluginDropdown::computeDisplayCategories() const {
-    // Single source of truth for what the user sees: prefers m_filtered but
-    // falls back to m_categories (raw or re-filtered on the fly) when
-    // m_filtered is stale-empty, so render, hit-testing and clicks always
-    // operate on the same rows.
+const std::vector<UIMixerPluginDropdown::Category>& UIMixerPluginDropdown::displayCategories() const {
+    // Single source of truth for what the user sees: normally m_filtered,
+    // kept valid by setPluginEntries()/filter()/showAt(). The fallback below
+    // only runs if m_filtered is ever stale-empty while the catalog has rows,
+    // so render/hit-test/click stay copy-free on the per-frame path.
     if (!m_filtered.empty() || m_categories.empty()) {
         return m_filtered;
     }
-    if (m_searchQuery.empty()) {
-        return m_categories;
-    }
-    std::vector<Category> display;
-    for (const auto& cat : m_categories) {
-        Category filteredCat;
-        filteredCat.label = cat.label;
-        for (const auto& item : cat.items) {
-            if (icontains(item.name, m_searchQuery) || icontains(item.typeLabel, m_searchQuery)) {
-                filteredCat.items.push_back(item);
+    m_displayFallback = m_categories;
+    if (!m_searchQuery.empty()) {
+        m_displayFallback.clear();
+        for (const auto& cat : m_categories) {
+            Category filteredCat;
+            filteredCat.label = cat.label;
+            for (const auto& item : cat.items) {
+                if (icontains(item.name, m_searchQuery) || icontains(item.typeLabel, m_searchQuery)) {
+                    filteredCat.items.push_back(item);
+                }
+            }
+            if (!filteredCat.items.empty()) {
+                m_displayFallback.push_back(std::move(filteredCat));
             }
         }
-        if (!filteredCat.items.empty()) {
-            display.push_back(std::move(filteredCat));
-        }
     }
-    return display;
+    return m_displayFallback;
 }
 
 void UIMixerPluginDropdown::filter()
@@ -160,9 +160,9 @@ void UIMixerPluginDropdown::filter()
 
 void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY) {
     // Defensive: if the catalog is empty when the user opens the dropdown
-    // (because the initial setup-time refresh ran before the async plugin
-    // scan completed), ask the host to republish. The dropdown is
-    // re-shown on the next frame so the user sees the entries.
+    // (the setup-time refresh ran before the async plugin scan completed),
+    // ask the host to republish. The menu stays open and fills in place once
+    // the republished setPluginEntries() arrives on the UI thread.
     if (m_categories.empty() && onRequestRefresh) {
         AESTRA_LOG_WARNING("[UIMixerPluginDropdown] open with empty categories; requesting refresh");
         onRequestRefresh();
@@ -245,7 +245,7 @@ int UIMixerPluginDropdown::hitTestRow(const NUIPoint& p) const
     if (!b.contains(p)) return -1;
     // Same data source as the render path so hit-testing matches the rows
     // the user can actually see (see onRender for why this fallback exists).
-    auto rows = flatten(computeDisplayCategories());
+    auto rows = flatten(displayCategories());
     for (size_t i = 0; i < rows.size(); ++i) {
         float ry = b.y + rows[i].y;
         if (p.y >= ry && p.y < ry + rows[i].h) {
@@ -298,12 +298,12 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     renderer.drawLine({b.x, b.y + SEARCH_H}, {b.right(), b.y + SEARCH_H}, 0.5f, m_borderTertiary);
 
     // ── Plugin list ──
-    // Render-time safety net: the data path has been observed to leave
-    // m_filtered empty even when m_categories has data. computeDisplayCategories
-    // regenerates the filtered view on the fly so the dropdown is never
-    // visually empty if m_categories is non-empty.
-    const auto displayCategories = computeDisplayCategories();
-    auto rows = flatten(displayCategories);
+    // Render-time safety net: if the data path ever leaves m_filtered empty
+    // while m_categories has data, displayCategories() regenerates the view
+    // into scratch so the dropdown is never visually empty. Common path is a
+    // reference bind — no per-frame copies.
+    const auto& display = displayCategories();
+    auto rows = flatten(display);
     float listTop = b.y + SEARCH_H;
     float listH = b.height - SEARCH_H - FOOTER_H;
 
@@ -314,10 +314,10 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
         if (ry + row.h < listTop || ry > listTop + listH) continue;
 
         if (row.isCategory) {
-            renderer.drawText(displayCategories[row.catIndex].label, {b.x + 12.0f, ry + 6.0f}, 10.0f, m_textTertiary);
+            renderer.drawText(display[row.catIndex].label, {b.x + 12.0f, ry + 6.0f}, 10.0f, m_textTertiary);
         } else {
             anyItem = true;
-            const auto& item = displayCategories[row.catIndex].items[row.itemIndex];
+            const auto& item = display[row.catIndex].items[row.itemIndex];
             bool hovered = (static_cast<int>(ri) == m_hoveredRow);
             NUIRect rowRect{b.x + 1.0f, ry, b.width - 2.0f, ROW_H};
             if (hovered) {
@@ -426,11 +426,11 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
             // Same data source as render/hit-test so a click lands on the
             // row the user actually saw (m_filtered can be stale-empty
             // while the fallback display path shows m_categories).
-            const auto displayCategories = computeDisplayCategories();
-            auto rows = flatten(displayCategories);
+            const auto& display = displayCategories();
+            auto rows = flatten(display);
             const auto& row = rows[m_hoveredRow];
             if (!row.isCategory) {
-                const auto& item = displayCategories[row.catIndex].items[row.itemIndex];
+                const auto& item = display[row.catIndex].items[row.itemIndex];
                 dismiss();
                 if (onPluginSelected) onPluginSelected(item.id, item.name);
                 return true;

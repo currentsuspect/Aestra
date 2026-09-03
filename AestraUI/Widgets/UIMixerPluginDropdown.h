@@ -101,17 +101,21 @@ private:
     void filter();
     void dismiss();
 
-    // Display source for render / hit-test / click: prefers m_filtered but
-    // falls back to m_categories (raw or re-filtered on the fly) when
-    // m_filtered is stale-empty, so render, hit-testing and clicks always
-    // operate on the same rows.
-    std::vector<Category> computeDisplayCategories() const;
+    // Display source for render / hit-test / click: normally m_filtered,
+    // which setPluginEntries()/filter()/showAt() keep valid. If m_filtered
+    // is ever stale-empty while the catalog has rows, the fallback view is
+    // recomputed into scratch so the dropdown can't render blank — without
+    // copying the catalog on the per-frame paths.
+    const std::vector<Category>& displayCategories() const;
 
     // Flat row access for hit testing / rendering
     struct FlatRow { bool isCategory; int catIndex; int itemIndex; float y; float h; };
     std::vector<FlatRow> flatten(const std::vector<Category>& cats) const;
     int hitTestRow(const NUIPoint& p) const;
     bool hitTestFooter(const NUIPoint& p) const;
+
+    // Scratch for displayCategories()' rare fallback path (const method).
+    mutable std::vector<Category> m_displayFallback;
 };
 
 } // namespace AestraUI

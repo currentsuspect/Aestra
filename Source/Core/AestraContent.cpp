@@ -649,22 +649,10 @@ void AestraContent::setupBrowserPanels() {
                 }
 
                 if (success) {
-                    // Map results to UI items
-                    std::vector<AestraUI::PluginListItem> uiPlugins;
-                    for (const auto& p : results) {
-                        uiPlugins.push_back(m_pluginController->convertToListItem(p));
-                    }
-
-                    if (m_pluginBrowser) {
-                        m_pluginBrowser->setPluginList(uiPlugins);
-                    }
-                    // The mixer's quick-add dropdown shares this catalog; the
-                    // policy filters to mixer inserts and groups by category.
-                    // The scan completion path is the one that produces the
-                    // real plugin list; setupMixerPanels ran before the scan
-                    // completed, so the catch-up refresh in setupMixerPanels
-                    // saw an empty scanner list. Republish here so the
-                    // dropdown shows what the browser just received.
+                    // The scanner has already stored the results by the time
+                    // this callback runs, so one refreshPluginList() covers
+                    // both surfaces: the browser list and the mixer's
+                    // quick-add dropdown (which shares the catalog).
                     refreshPluginList();
                     AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
                 } else {
