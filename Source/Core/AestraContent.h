@@ -18,14 +18,15 @@
 #include "../AestraAudio/include/Models/UnitManager.h"
 #include "../AestraUI/Core/NUIComponent.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Helpers/MixerPluginListPolicy.h"
 #include "../AestraUI/Widgets/UIRoutingMap.h"
 #include "Events/Connection.h"
-#include "NUILabel.h"
 #include "KeyboardNoteInput.h"
+#include "MusicalTypingController.h"
+#include "NUILabel.h"
 #include "NUISegmentedControl.h"
 #include "OverlayLayer.h"
 #include "PatternSource.h"
-#include "MusicalTypingController.h"
 #include "TransportBar.h"
 #include "ViewTypes.h"
 
@@ -345,6 +346,8 @@ public:
 
     /** @brief Refresh the visible plugin list in the browser. */
     void refreshPluginList();
+    /** @brief Map the scanned plugins onto the mixer dropdown's entry type. */
+    std::vector<Aestra::Components::MixerPluginEntry> buildMixerCatalogEntries() const;
     /** @brief Refresh track/pattern/arsenal UI after an external project load. */
     void refreshProjectViews();
 

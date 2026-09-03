@@ -90,6 +90,11 @@ public:
     /// the browser opens with the same terms the user typed.
     std::function<void(const std::string& searchQuery)> onBrowseAllPlugins;
 
+    /// Fired when the dropdown opens with an empty catalog and asks the
+    /// host to republish (used to recover when the initial setup ran
+    /// before the async plugin scan completed).
+    std::function<void()> onCatalogRefresh;
+
     /**
      * @brief Get the view model.
      */
