@@ -53,9 +53,10 @@ void MissingAssetsDialog::markRelinked(const std::string& storedPath) {
 }
 
 void MissingAssetsDialog::markRelinkFailed(const std::string& storedPath) {
-    (void)storedPath;
-    // Keep the row listed: a failed relink (undecodable pick, cancelled
-    // dialog) leaves the source as the retryable placeholder it was.
+    // Tag the failed row: a failed relink (undecodable pick, path taken,
+    // empty decode) leaves the source as the retryable placeholder it was,
+    // and lastRequestedPath() names the entry it happened to.
+    m_lastRequested = storedPath;
     setDirty(true);
 }
 

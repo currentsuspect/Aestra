@@ -147,8 +147,11 @@ void testMissingAssetRoundTrip() {
         std::filesystem::temp_directory_path() / "aestra-relink-test";
     std::filesystem::create_directories(testDir);
 
-    const char* ghostPath = "/tmp/aestra-relink-ghost.wav";
-    const char* realPath = "/tmp/aestra-relink-real.wav";
+    // All paths live under testDir: the ghost is a pure manager key (no file
+    // is ever created for it), the real one is genuinely written and decoded,
+    // and remove_all(testDir) cleans up on every platform.
+    const std::string ghostPath = (testDir / "ghost.wav").string();
+    const std::string realPath = (testDir / "real.wav").string();
 
     // Project A: one source pointing at a file that does not exist.
     {
