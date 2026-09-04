@@ -578,6 +578,10 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
     auto dialog = m_windowManager ? m_windowManager->getMissingAssetsDialog() : nullptr;
     auto trackManager = (m_content && m_content->getTrackManager()) ? m_content->getTrackManager() : nullptr;
     auto queue = m_mainThreadQueue;
+    // Resolved here on the main thread and shared into the worker: the raw
+    // getUtils() pointer is freed by Platform::shutdown(), which can run
+    // while this worker is still blocked inside the native picker.
+    auto utils = Aestra::Platform::getUtilsShared();
     if (!dialog || !trackManager || !queue) {
         return;
     }
@@ -599,7 +603,7 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
     // dialog (all shared_ptr). Quitting mid-picker/mid-decode is safe: the
     // queued UI work is dropped by the shutdown gate and the worker's own
     // state frees itself.
-    std::thread([queue, dialog, tm = trackManager, entry]() {
+    std::thread([queue, dialog, tm = trackManager, entry, utils]() {
         const std::string storedPath = entry.storedPath;
 
         const auto finish = [queue, dialog, storedPath](std::function<void()> uiWork) {
@@ -619,7 +623,7 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
 
         try {
             std::string pickedPath;
-            if (auto* utils = Aestra::Platform::getUtils()) {
+            if (utils) {
                 const std::string filter = std::string(
                     "Audio Files\0*.wav;*.flac;*.ogg;*.mp3;*.aif;*.aiff\0All Files\0*.*\0",
                     sizeof("Audio Files\0*.wav;*.flac;*.ogg;*.mp3;*.aif;*.aiff\0All Files\0*.*\0") - 1);
@@ -2008,7 +2012,19 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
             std::vector<Aestra::MissingAssetsDialog::MissingEntry> entries;
             entries.reserve(result.missingAssets.size());
             for (const auto& storedPath : result.missingAssets) {
-                entries.push_back({storedPath, sourceManager.findSourceByPath(storedPath)});
+                // Only registered sources get a row: the loader records a
+                // missing path before its commit loop skips source records
+                // with id 0, and a row with no source behind it could never
+                // relink (it would fail forever at getSource). The path still
+                // shows in the load log/summary; it just has no rebind target.
+                const auto id = sourceManager.findSourceByPath(storedPath);
+                if (!id.isValid()) {
+                    continue;
+                }
+                entries.push_back({storedPath, id});
+            }
+            if (entries.empty()) {
+                return result;
             }
             dialog->show(std::move(entries), [this](std::size_t stillMissing) {
                 Log::info("[MissingAssets] Dialog dismissed with " + std::to_string(stillMissing) +

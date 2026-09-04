@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace Aestra {
@@ -50,7 +51,7 @@ public:
     void setRelinkRequestedCallback(RelinkRequestedCallback callback) { m_relinkRequested = std::move(callback); }
 
     /// Drop a row after a successful relink; closes the dialog when the last
-    /// one goes. A failed relink stays listed (no-op here beyond a repaint).
+    /// one goes. A failed relink stays listed and renders failed (retryable).
     void markRelinked(const std::string& storedPath);
     void markRelinkFailed(const std::string& storedPath);
 
@@ -71,6 +72,10 @@ private:
     AestraUI::NUIRect m_dialogRect;
     AestraUI::NUIRect m_dismissButtonRect;
     std::string m_lastRequested;
+    // Stored paths whose last relink attempt failed (undecodable pick, taken
+    // path, empty decode). Failed rows stay listed for retry and render
+    // visibly failed; cleared on retry, success, or a fresh show().
+    std::unordered_set<std::string> m_failedPaths;
     int m_hoveredRow{-1};
     bool m_dismissHovered{false};
     bool m_dismissPressed{false};

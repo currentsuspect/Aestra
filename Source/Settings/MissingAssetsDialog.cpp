@@ -23,6 +23,7 @@ void MissingAssetsDialog::show(std::vector<MissingEntry> entries, DismissedCallb
     m_entries = std::move(entries);
     m_onDismissed = std::move(onDismissed);
     m_lastRequested.clear();
+    m_failedPaths.clear();
     m_hoveredRow = -1;
     m_pressedRow = -1;
     m_dismissHovered = false;
@@ -45,6 +46,7 @@ void MissingAssetsDialog::markRelinked(const std::string& storedPath) {
     }
     m_entries.erase(it, m_entries.end());
     m_lastRequested.clear();
+    m_failedPaths.erase(storedPath);
     setDirty(true);
     if (m_entries.empty()) {
         Log::info("[MissingAssets] All missing assets relinked; closing dialog");
@@ -57,6 +59,7 @@ void MissingAssetsDialog::markRelinkFailed(const std::string& storedPath) {
     // empty decode) leaves the source as the retryable placeholder it was,
     // and lastRequestedPath() names the entry it happened to.
     m_lastRequested = storedPath;
+    m_failedPaths.insert(storedPath);
     setDirty(true);
 }
 
@@ -123,16 +126,18 @@ void MissingAssetsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     for (size_t i = 0; i < m_entries.size() && static_cast<float>(i) < MAX_ROWS; ++i) {
         const auto& row = m_rowRects[i];
         const bool hovered = (static_cast<int>(i) == m_hoveredRow);
+        const bool failed = m_failedPaths.count(m_entries[i].storedPath) != 0;
         if (hovered) {
             renderer.fillRoundedRect(row.pathRect, theme.radiusS, theme.hover.withAlpha(0.35f));
         }
         renderer.drawText(m_entries[i].storedPath, {row.pathRect.x + 4.0f, row.pathRect.y + 3.0f}, theme.fontSizeS,
-                          theme.textPrimary);
+                          failed ? theme.error : theme.textPrimary);
 
         const bool pressed = (static_cast<int>(i) == m_pressedRow);
         const auto buttonBg = pressed ? theme.primaryPressed : (hovered ? theme.primaryHover : theme.primary);
         renderer.fillRoundedRect(row.buttonRect, theme.radiusS, buttonBg);
-        renderer.drawTextCentered("Relink...", row.buttonRect, theme.fontSizeS, theme.textOnPrimary);
+        renderer.drawTextCentered(failed ? "Retry..." : "Relink...", row.buttonRect, theme.fontSizeS,
+                                  theme.textOnPrimary);
     }
 
     if (m_entries.size() > static_cast<std::size_t>(MAX_ROWS)) {
@@ -188,6 +193,9 @@ bool MissingAssetsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (armedRow >= 0 && armedRow < static_cast<int>(m_entries.size()) &&
                 m_rowRects[static_cast<std::size_t>(armedRow)].buttonRect.contains(mx, my)) {
                 m_lastRequested = m_entries[static_cast<std::size_t>(armedRow)].storedPath;
+                // A new attempt clears the failed tag; markRelinkFailed
+                // re-tags it if this try also fails.
+                m_failedPaths.erase(m_lastRequested);
                 if (m_relinkRequested) {
                     m_relinkRequested(m_entries[static_cast<std::size_t>(armedRow)]);
                 }
