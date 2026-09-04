@@ -21,6 +21,7 @@
 #include "UnifiedHUD.h"
 #include "RecoveryDialog.h"
 #include "ConfirmationDialog.h"
+#include "../Settings/MissingAssetsDialog.h"
 #include "../Settings/ExportDialog.h"
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
@@ -28,6 +29,7 @@
 #include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
+#include "../../AestraAudio/include/IO/MiniAudioDecoder.h"
 
 #include <iostream>
 #include <fstream>
@@ -379,6 +381,10 @@ bool AestraApp::initialize(const std::string& projectPath) {
         buildRecoveryDialog();
     }
     {
+        StartupTimer t("Missing assets dialog");
+        buildMissingAssetsDialog();
+    }
+    {
         StartupTimer t("Menu bar");
         buildMenuBar();
     }
@@ -534,6 +540,171 @@ void AestraApp::initializeAutosave(bool enabled) {
 
 void AestraApp::buildRecoveryDialog() {
     m_windowManager->setRecoveryDialog(std::make_shared<RecoveryDialog>());
+}
+
+void AestraApp::buildMissingAssetsDialog() {
+    auto dialog = std::make_shared<MissingAssetsDialog>();
+    dialog->setRelinkRequestedCallback([this](const Aestra::MissingAssetsDialog::MissingEntry& entry) {
+        relinkMissingAsset(entry);
+    });
+    m_windowManager->setMissingAssetsDialog(std::move(dialog));
+}
+
+void AestraApp::enqueueMainThreadTask(std::function<void()> task) {
+    if (!task || !m_mainThreadQueue) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mainThreadQueue->mutex);
+    if (m_mainThreadQueue->shuttingDown) {
+        return;
+    }
+    m_mainThreadQueue->tasks.push_back(std::move(task));
+}
+
+void AestraApp::drainMainThreadTasks() {
+    std::vector<std::function<void()>> tasks;
+    if (m_mainThreadQueue) {
+        std::lock_guard<std::mutex> lock(m_mainThreadQueue->mutex);
+        tasks.swap(m_mainThreadQueue->tasks);
+    }
+    for (auto& task : tasks) {
+        if (task) {
+            task();
+        }
+    }
+}
+
+void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEntry& entry) {
+    auto dialog = m_windowManager ? m_windowManager->getMissingAssetsDialog() : nullptr;
+    auto trackManager = (m_content && m_content->getTrackManager()) ? m_content->getTrackManager() : nullptr;
+    auto queue = m_mainThreadQueue;
+    // Resolved here on the main thread and shared into the worker: the raw
+    // getUtils() pointer is freed by Platform::shutdown(), which can run
+    // while this worker is still blocked inside the native picker.
+    auto utils = Aestra::Platform::getUtilsShared();
+    if (!dialog || !trackManager || !queue) {
+        return;
+    }
+    // Session token: if the user dismisses (or a new missing-assets session
+    // starts) while the picker/decoder is still running, the queued
+    // completion must drop instead of rebinding — Escape promised placeholders.
+    const uint64_t dialogGeneration = dialog->generation();
+    // One picker at a time: a second Relink click while the native dialog is
+    // up would stack pickers (and both decode) for the same entry.
+    if (queue->relinkInFlight.exchange(true)) {
+        Log::info("[MissingAssets] Relink already in progress; ignoring extra request");
+        return;
+    }
+
+    // The native file dialog (zenity/qarma/kdialog subprocess) and the decode
+    // both BLOCK. Running either on the UI thread freezes the event loop for
+    // the whole pick — the compositor flags the app unresponsive and the modal
+    // overlay can't repaint. Picker + decode on a worker; only the engine
+    // rebind hops back to the main thread.
+    //
+    // Lifetime: this thread is detached, so it captures NO `this` and no
+    // plain members — only the heap-shared queue, the track manager, and the
+    // dialog (all shared_ptr). Quitting mid-picker/mid-decode is safe: the
+    // queued UI work is dropped by the shutdown gate and the worker's own
+    // state frees itself.
+    std::thread([queue, dialog, tm = trackManager, entry, utils, dialogGeneration]() {
+        const std::string storedPath = entry.storedPath;
+
+        const auto finish = [queue, dialog, dialogGeneration, storedPath](std::function<void()> uiWork) {
+            {
+                std::lock_guard<std::mutex> lock(queue->mutex);
+                if (!queue->shuttingDown && uiWork) {
+                    // Session gate for every completion kind (success, fail,
+                    // cancel): a dismissed or superseded session must not be
+                    // touched — Escape promised placeholders, and a later
+                    // session's same-path rows belong to that session.
+                    uiWork = [dialog, dialogGeneration, storedPath, uiWork = std::move(uiWork)]() {
+                        if (dialog && dialog->generation() == dialogGeneration) {
+                            uiWork();
+                        } else {
+                            Log::info("[MissingAssets] Dropping stale relink completion for '" + storedPath +
+                                      "'");
+                        }
+                    };
+                    queue->tasks.push_back(std::move(uiWork));
+                }
+            }
+            queue->relinkInFlight.store(false);
+        };
+
+        try {
+            std::string pickedPath;
+            if (utils) {
+                const std::string filter = std::string(
+                    "Audio Files\0*.wav;*.flac;*.ogg;*.mp3;*.aif;*.aiff\0All Files\0*.*\0",
+                    sizeof("Audio Files\0*.wav;*.flac;*.ogg;*.mp3;*.aif;*.aiff\0All Files\0*.*\0") - 1);
+                pickedPath = utils->openFileDialog("Relink missing audio file", filter);
+            }
+            if (pickedPath.empty() || !std::filesystem::exists(pickedPath)) {
+                Log::info("[MissingAssets] Relink cancelled for '" + storedPath + "'");
+                finish([dialog, storedPath]() { dialog->markRelinkFailed(storedPath); });
+                return;
+            }
+
+            std::vector<float> decodedData;
+            uint32_t sampleRate = 0;
+            uint32_t numChannels = 0;
+            if (!decodeAudioFile(pickedPath, decodedData, sampleRate, numChannels, nullptr)) {
+                Log::warning("[MissingAssets] Relink decode failed: " + pickedPath);
+                finish([dialog, storedPath]() { dialog->markRelinkFailed(storedPath); });
+                return;
+            }
+            if (numChannels == 0) {
+                numChannels = 1;
+            }
+
+            auto buffer = std::make_shared<AudioBufferData>();
+            buffer->interleavedData = std::move(decodedData);
+            buffer->sampleRate = sampleRate;
+            buffer->numChannels = numChannels;
+            buffer->numFrames = buffer->interleavedData.size() / buffer->numChannels;
+            const uint64_t numFrames = buffer->numFrames;
+
+            finish([tm, dialog, entry, storedPath, pickedPath, buffer = std::move(buffer), numFrames]() {
+                // Validate before rebinding: a decode that "succeeds" with no
+                // audio must not move the path and close the row, stranding a
+                // rebound-but-silent source with no retry affordance.
+                // (Staleness itself is gated in finish(): dismissed or
+                // superseded sessions never reach this closure.)
+                if (!buffer || !buffer->isValid()) {
+                    Log::warning("[MissingAssets] Relink decoded no audio: " + pickedPath);
+                    dialog->markRelinkFailed(storedPath);
+                    return;
+                }
+                auto& sourceManager = tm->getSourceManager();
+                const auto sourceId =
+                    entry.sourceId.isValid() ? entry.sourceId : sourceManager.findSourceByPath(storedPath);
+                if (!sourceManager.getSource(sourceId)) {
+                    Log::warning("[MissingAssets] No source to relink for: " + storedPath);
+                    dialog->markRelinkFailed(storedPath);
+                    return;
+                }
+                if (!sourceManager.relinkSource(sourceId, pickedPath)) {
+                    Log::warning("[MissingAssets] Path already used by another source: " + pickedPath);
+                    dialog->markRelinkFailed(storedPath);
+                    return;
+                }
+                sourceManager.attachBuffer(sourceManager.getSource(sourceId), buffer);
+
+                // The new path must survive save/autosave, not just this session.
+                tm->setModified(true);
+                Log::info("[MissingAssets] Relinked '" + storedPath + "' -> " + pickedPath + " (" +
+                          std::to_string(numFrames) + " frames)");
+                dialog->markRelinked(storedPath);
+            });
+        } catch (const std::exception& e) {
+            Log::warning("[MissingAssets] Relink worker threw for '" + storedPath + "': " + e.what());
+            finish([dialog, storedPath]() { dialog->markRelinkFailed(storedPath); });
+        } catch (...) {
+            Log::warning("[MissingAssets] Relink worker threw for '" + storedPath + "'");
+            finish([dialog, storedPath]() { dialog->markRelinkFailed(storedPath); });
+        }
+    }).detach();
 }
 
 void AestraApp::buildSettingsAndDialogs() {
@@ -1230,6 +1401,10 @@ void AestraApp::run() {
     }
 
     while (m_running && m_windowManager->processEvents()) {
+        // Worker → UI hop (native dialogs/decode off the UI thread); pumped
+        // before UI update so a completed relink lands this frame.
+        drainMainThreadTasks();
+
         UnifiedProfiler::getInstance().beginFrame();
         m_windowManager->beginFrame(); // Start timing
 
@@ -1465,6 +1640,16 @@ void AestraApp::shutdown() {
     // Invalidate lifetime token so any async callbacks that fire during teardown
     // bail out before touching partially-destroyed members.
     if (m_aliveToken) *m_aliveToken = false;
+
+    // Gate the main-thread task queue: detached workers may still be mid-
+    // picker/mid-decode; their queued UI work must not run against a torn-down
+    // app. Workers hold the queue by shared_ptr, so they only ever touch this
+    // heap state after this point — dropping tasks here is sufficient.
+    if (m_mainThreadQueue) {
+        std::lock_guard<std::mutex> lock(m_mainThreadQueue->mutex);
+        m_mainThreadQueue->shuttingDown = true;
+        m_mainThreadQueue->tasks.clear();
+    }
 
     // Stop the Muse socket before anything it references tears down.
     if (m_museSocketServer) m_museSocketServer->stop();
@@ -1823,6 +2008,43 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
     }
     updateWindowTitle();
     Log::info("Project loaded into app state from " + path);
+
+    // T-7 (C-004): missing/moved audio must be loud, not a log line. The
+    // project still loads (sources stay as retryable placeholders); this
+    // tells the user which files vanished and offers a relink per file.
+    // Successful loads only: a failed load never reaches a state whose
+    // sources are safe to rebind.
+    if (result.ok && !result.missingAssets.empty()) {
+        if (auto dialog = m_windowManager ? m_windowManager->getMissingAssetsDialog() : nullptr) {
+            auto trackManager = (m_content) ? m_content->getTrackManager() : nullptr;
+            if (!trackManager) {
+                Log::warning("[MissingAssets] Skipping dialog: no track manager for " + path);
+                return result;
+            }
+            auto& sourceManager = trackManager->getSourceManager();
+            std::vector<Aestra::MissingAssetsDialog::MissingEntry> entries;
+            entries.reserve(result.missingAssets.size());
+            for (const auto& storedPath : result.missingAssets) {
+                // Only registered sources get a row: the loader records a
+                // missing path before its commit loop skips source records
+                // with id 0, and a row with no source behind it could never
+                // relink (it would fail forever at getSource). The path still
+                // shows in the load log/summary; it just has no rebind target.
+                const auto id = sourceManager.findSourceByPath(storedPath);
+                if (!id.isValid()) {
+                    continue;
+                }
+                entries.push_back({storedPath, id});
+            }
+            if (entries.empty()) {
+                return result;
+            }
+            dialog->show(std::move(entries), [this](std::size_t stillMissing) {
+                Log::info("[MissingAssets] Dialog dismissed with " + std::to_string(stillMissing) +
+                          " asset(s) still missing");
+            });
+        }
+    }
     return result;
 }
 

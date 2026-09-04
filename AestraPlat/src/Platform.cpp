@@ -25,7 +25,7 @@
 namespace Aestra {
 
 // Static members
-std::unique_ptr<IPlatformUtils> Platform::s_utils;
+std::shared_ptr<IPlatformUtils> Platform::s_utils;
 
 // =============================================================================
 // Platform Factory
@@ -49,8 +49,12 @@ IPlatformUtils* Platform::getUtils() {
     return s_utils.get();
 }
 
+std::shared_ptr<IPlatformUtils> Platform::getUtilsShared() {
+    return s_utils;
+}
+
 bool Platform::isInitialized() {
-    return s_utils != nullptr; // unique_ptr converts to bool implicitly
+    return s_utils != nullptr; // shared_ptr converts to bool implicitly
 }
 
 bool Platform::initialize() {
@@ -62,7 +66,7 @@ bool Platform::initialize() {
     // Initialize DPI awareness first (must be done before creating windows)
     PlatformDPI::initialize();
 
-    s_utils = std::make_unique<PlatformUtilsWin32>();
+    s_utils = std::make_shared<PlatformUtilsWin32>();
     AESTRA_LOG_INFO("Windows platform initialized");
 #elif AESTRA_PLATFORM_LINUX
 #ifdef AESTRA_HAS_SDL2
@@ -72,7 +76,7 @@ bool Platform::initialize() {
         return false;
     }
 
-    s_utils = std::make_unique<PlatformUtilsLinux>();
+    s_utils = std::make_shared<PlatformUtilsLinux>();
     AESTRA_LOG_INFO("Linux platform initialized (SDL2)");
 #else
     AESTRA_LOG_ERROR("Linux platform not supported without SDL2");

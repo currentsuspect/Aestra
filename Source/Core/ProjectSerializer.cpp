@@ -1491,8 +1491,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // ========================================================================
     // PHASE 3: Validate structure and check assets (non-destructive)
     // ========================================================================
-    
-    // Validate and collect missing audio assets
+
+    // Validate and collect missing audio assets. Dedup happens AFTER the
+    // sources-load phase (which pushes the same paths again when the file is
+    // still gone at decode time) — deduplicating here only sorted the first
+    // wave, and every consumer downstream saw one missing file listed twice.
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
         for (size_t i = 0; i < sj.size(); ++i) {
@@ -1507,18 +1510,6 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     "[ProjectLoad] Additional missing or unreadable audio asset warnings suppressed.");
             }
         }
-    }
-    
-    // Deduplicate missing assets
-    {
-        std::sort(result.missingAssets.begin(), result.missingAssets.end());
-        result.missingAssets.erase(
-            std::unique(result.missingAssets.begin(), result.missingAssets.end()),
-            result.missingAssets.end());
-    }
-    if (!result.missingAssets.empty()) {
-        Log::warning("[ProjectLoad] " + std::to_string(result.missingAssets.size()) + 
-                     " audio file(s) not found - clips will appear without waveforms");
     }
 
 // ========================================================================
@@ -1697,6 +1688,17 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     }
                 }
             }
+        }
+
+        // One authoritative dedup now that every collector has run, then a
+        // single summary with the true count.
+        std::sort(result.missingAssets.begin(), result.missingAssets.end());
+        result.missingAssets.erase(
+            std::unique(result.missingAssets.begin(), result.missingAssets.end()),
+            result.missingAssets.end());
+        if (!result.missingAssets.empty()) {
+            Log::warning("[ProjectLoad] " + std::to_string(result.missingAssets.size()) +
+                         " audio file(s) not found - clips will appear without waveforms");
         }
     
         // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)

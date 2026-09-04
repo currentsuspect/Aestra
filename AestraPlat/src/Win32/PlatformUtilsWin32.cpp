@@ -45,7 +45,11 @@ std::string PlatformUtilsWin32::openFileDialog(const std::string& title, const s
     // If filter is empty or doesn't contain embedded nulls, use a default
     // The filter string must contain the full null-separated format
     const char* defaultFilter = "All Files\0*.*\0";
-    const char* filterPtr = filter.empty() ? defaultFilter : filter.data();
+    std::string normalizedFilter = filter;
+    if (!normalizedFilter.empty() && normalizedFilter.back() != '\0') {
+        normalizedFilter.push_back('\0');
+    }
+    const char* filterPtr = normalizedFilter.empty() ? defaultFilter : normalizedFilter.c_str();
 
     ofn.lStructSize = sizeof(OPENFILENAMEA);
     ofn.hwndOwner = nullptr;

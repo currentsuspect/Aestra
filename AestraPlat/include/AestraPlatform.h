@@ -367,6 +367,9 @@ public:
 
     // Get platform utilities
     static IPlatformUtils* getUtils();
+    // Shared ownership for detached workers (e.g. the relink picker): the
+    // raw pointer from getUtils() can be freed by shutdown() mid-call.
+    static std::shared_ptr<IPlatformUtils> getUtilsShared();
     static bool isInitialized();
 
     // Initialize/shutdown platform
@@ -385,7 +388,7 @@ public:
     static bool setCurrentThreadPriority(ThreadPriority priority);
 
 private:
-    static std::unique_ptr<IPlatformUtils> s_utils;
+    static std::shared_ptr<IPlatformUtils> s_utils;
 
     // RAII scope for Realtime Audio threads (MMCSS on Windows)
     // Usage: Create this ONLY on the main audio callback thread.
