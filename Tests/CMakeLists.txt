@@ -438,6 +438,32 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
     set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;regression;routing;contract:durability")
 endif()
 
+# T-7 relink/recovery: SourceManager path-rebind contract + missing-asset
+# load/save round-trip (the dialog's engine half, headless).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SourceManagerRelinkTest.cpp")
+    add_executable(SourceManagerRelinkTest
+        AestraAudio/SourceManagerRelinkTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(SourceManagerRelinkTest PRIVATE AestraAudio)
+    target_include_directories(SourceManagerRelinkTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME SourceManagerRelinkTest COMMAND SourceManagerRelinkTest)
+    set_tests_properties(SourceManagerRelinkTest PROPERTIES LABELS "audio;recovery;contract:durability")
+endif()
+
 # Project History Cap (issue #274 — .history directory disk-usage bound)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectHistoryCapTest.cpp")
     add_executable(ProjectHistoryCapTest

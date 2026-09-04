@@ -6,6 +6,7 @@
 #include "SettingsDialog.h"
 #include "ConfirmationDialog.h"
 #include "RecoveryDialog.h"
+#include "../Settings/MissingAssetsDialog.h"
 #include "../Settings/ExportDialog.h"
 #include "ViewTypes.h"
 #include "TrackManagerUI.h"
@@ -212,11 +213,13 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     m_window->setRenderer(m_renderer.get());
     m_customWindow->setWindowHandle(m_window.get());
 
-    // Recovery and confirmation dialogs are routed explicitly below. Stop the
-    // bridge from subsequently forwarding the same pointer/text event into the
-    // root tree; the release that closes a modal must remain consumed too.
+    // Recovery, missing-assets, and confirmation dialogs are routed explicitly
+    // below. Stop the bridge from subsequently forwarding the same
+    // pointer/text event into the root tree; the release that closes a modal
+    // must remain consumed too.
     m_window->setRootInputBlockedCallback([this]() {
         return (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) ||
+               (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible()) ||
                (m_confirmationDialog && m_confirmationDialog->isDialogVisible());
     });
 
@@ -261,6 +264,17 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.button = AestraUI::NUIMouseButton::None;
             event.pressed = false;
             AestraUI::NUIComponent::dispatchMouseEvent(m_recoveryDialog.get(), event);
+            return;
+        }
+
+        // MissingAssetsDialog is modal - consume mouse move when visible
+        if (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.type = AestraUI::NUIMouseEventType::Move;
+            event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
+            event.button = AestraUI::NUIMouseButton::None;
+            event.pressed = false;
+            AestraUI::NUIComponent::dispatchMouseEvent(m_missingAssetsDialog.get(), event);
             return;
         }
 
@@ -311,6 +325,20 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.released = !pressed;
             AestraUI::NUIComponent::dispatchMouseEvent(m_recoveryDialog.get(), event);
             return; // Block all other mouse handling while recovery dialog is shown
+        }
+
+        // MissingAssetsDialog is modal - consume all mouse events when visible
+        if (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.type = pressed ? AestraUI::NUIMouseEventType::Down : AestraUI::NUIMouseEventType::Up;
+            event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+            event.button = (button == 0)   ? AestraUI::NUIMouseButton::Left
+                           : (button == 1) ? AestraUI::NUIMouseButton::Right
+                                           : AestraUI::NUIMouseButton::Middle;
+            event.pressed = pressed;
+            event.released = !pressed;
+            AestraUI::NUIComponent::dispatchMouseEvent(m_missingAssetsDialog.get(), event);
+            return; // Block all other mouse handling while missing-assets dialog is shown
         }
 
         if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
@@ -382,6 +410,15 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.pressed = pressed;
             m_recoveryDialog->onKeyEvent(event);
             return; // Block all other key handling while recovery dialog is shown
+        }
+
+        // MissingAssetsDialog is modal - consume all key events when visible
+        if (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible()) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = convertToNUIKeyCode(key);
+            event.pressed = pressed;
+            m_missingAssetsDialog->onKeyEvent(event);
+            return; // Block all other key handling while missing-assets dialog is shown
         }
 
         if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
@@ -500,6 +537,7 @@ void AestraWindowManager::shutdown() {
     m_settingsDialog.reset();
     m_confirmationDialog.reset();
     m_recoveryDialog.reset();
+    m_missingAssetsDialog.reset();
     m_unifiedHUD.reset();
 }
 
@@ -620,6 +658,12 @@ void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDial
     // at the end of the render loop to ensure it appears on top of all UI
 }
 
+void AestraWindowManager::setMissingAssetsDialog(std::shared_ptr<Aestra::MissingAssetsDialog> dialog) {
+    m_missingAssetsDialog = dialog;
+    // Same manual render treatment as RecoveryDialog: drawn last so it sits
+    // on top of everything while visible.
+}
+
 void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) {
     m_exportDialog = std::move(dialog);
     if (m_rootComponent && m_exportDialog) {
@@ -638,6 +682,8 @@ bool AestraWindowManager::requiresContinuousRender() const {
     if (m_activeMenu)
         return true;
     if (m_recoveryDialog && m_recoveryDialog->isDialogVisible())
+        return true;
+    if (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible())
         return true;
     if (m_confirmationDialog && m_confirmationDialog->isDialogVisible())
         return true;
@@ -805,6 +851,14 @@ void AestraWindowManager::render() {
             m_recoveryDialog->setBounds(m_rootComponent->getBounds());
         }
         m_recoveryDialog->onRender(*m_renderer);
+    }
+
+    // Same treatment for the missing-assets dialog (T-7).
+    if (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible()) {
+        if (m_rootComponent) {
+            m_missingAssetsDialog->setBounds(m_rootComponent->getBounds());
+        }
+        m_missingAssetsDialog->onRender(*m_renderer);
     }
 
     if (m_useCustomCursor && m_windowFocused) {

@@ -11,12 +11,17 @@
 #include "Commands/MuseSocketServer.h"
 #include "ProjectDocumentState.h"
 #include "ProjectSerializer.h"
+#include "../Settings/MissingAssetsDialog.h"
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <vector>
 
 /**
  * @brief Main application class
@@ -89,6 +94,12 @@ private:
     std::chrono::seconds resolveAutosaveInterval();
     void initializeAutosave(bool enabled);
     void buildRecoveryDialog(); // lightweight — needed during startup
+    void buildMissingAssetsDialog(); // lightweight — needed before the first project load (T-7)
+    void relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEntry& entry);
+    // Main-thread hop for workers (the dialog's picker+decode run off-thread so
+    // the event loop never blocks behind a native dialog).
+    void enqueueMainThreadTask(std::function<void()> task);
+    void drainMainThreadTasks();
     // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
     bool shouldRenderThisFrame();
     std::chrono::steady_clock::time_point m_lastPresentedFrame{};
@@ -162,6 +173,20 @@ private:
     std::unique_ptr<Aestra::Audio::MuseService> m_museService;
     std::unique_ptr<Aestra::Audio::MuseSocketServer> m_museSocketServer;
     std::optional<Aestra::JSON> m_projectLoadReport;
+
+    // Main-thread task queue (worker → UI hop). Heap-shared so DETACHED
+    // workers (the relink picker+decode run off-thread) never touch a
+    // half-destroyed app: they hold a copy of this shared_ptr, so the mutex,
+    // the queue, and the shutdown gate outlive AestraApp itself. Workers and
+    // their queued UI work must only use this struct plus other shared_ptrs
+    // (track manager, dialog) — never raw `this` or plain members.
+    struct MainThreadQueue {
+        std::mutex mutex;
+        std::vector<std::function<void()>> tasks;
+        bool shuttingDown{false};
+        std::atomic<bool> relinkInFlight{false};
+    };
+    std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();
 
     std::shared_ptr<AestraContent> m_content;

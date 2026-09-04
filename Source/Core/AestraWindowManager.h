@@ -22,6 +22,7 @@ namespace Aestra {
     class SettingsDialog;
     class ConfirmationDialog;
     class RecoveryDialog;
+    class MissingAssetsDialog;
 }
 class UnifiedHUD;
 class AestraRootComponent;
@@ -86,6 +87,8 @@ public:
     void setConfirmationDialog(std::shared_ptr<Aestra::ConfirmationDialog> dialog);
     /** @brief Attach the recovery dialog. */
     void setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog);
+    /** @brief Attach the missing-assets dialog (T-7 relink/recovery). */
+    void setMissingAssetsDialog(std::shared_ptr<Aestra::MissingAssetsDialog> dialog);
     /** @brief Attach the unified HUD overlay. */
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud);
 
@@ -95,6 +98,8 @@ public:
     std::shared_ptr<Aestra::ConfirmationDialog> getConfirmationDialog() { return m_confirmationDialog; }
     /** @brief Get the recovery dialog. */
     std::shared_ptr<Aestra::RecoveryDialog> getRecoveryDialog() { return m_recoveryDialog; }
+    /** @brief Get the missing-assets dialog. */
+    std::shared_ptr<Aestra::MissingAssetsDialog> getMissingAssetsDialog() { return m_missingAssetsDialog; }
     /** @brief Get the export dialog. */
     std::shared_ptr<class ExportDialog> getExportDialog() { return m_exportDialog; }
     /** @brief Attach the export dialog. */
@@ -192,6 +197,7 @@ private:
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
     bool m_confirmationDialogRaised{false};
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
+    std::shared_ptr<Aestra::MissingAssetsDialog> m_missingAssetsDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
     std::shared_ptr<class ExportDialog> m_exportDialog;
 

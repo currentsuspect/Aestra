@@ -68,6 +68,8 @@ set(Aestra_SOURCES
 	Settings/ConfirmationDialog.cpp
 	Settings/RecoveryDialog.h
 	Settings/RecoveryDialog.cpp
+	Settings/MissingAssetsDialog.h
+	Settings/MissingAssetsDialog.cpp
 	Settings/SettingsDialog.h
 	Settings/SettingsDialog.cpp
 	Settings/ISettingsPage.h

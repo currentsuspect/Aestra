@@ -165,6 +165,40 @@ public:
     }
 
     /**
+     * @brief Rebind a source to a new file path (T-7 relink/recovery, C-004).
+     *
+     * For sources whose asset went missing or moved: moves the path-dedupe
+     * key to @p newFilePath (a stale old key would make a later
+     * getOrCreateSource(oldPath) mint a duplicate) and repoints the source.
+     * Rejects a path another source already holds — merging two sources is a
+     * decision, not a side effect of a relink. Buffer attachment stays the
+     * caller's job via attachBuffer(), so a failed decode leaves the source
+     * untouched and retryable.
+     * @return True when the source now lives at @p newFilePath.
+     */
+    bool relinkSource(ClipSourceID id, const std::string& newFilePath) {
+        if (newFilePath.empty()) {
+            return false;
+        }
+        auto it = m_sources.find(id.value);
+        if (it == m_sources.end()) {
+            return false;
+        }
+        auto taken = m_pathToId.find(newFilePath);
+        if (taken != m_pathToId.end() && taken->second != id) {
+            return false;
+        }
+        const std::string oldPath = it->second->getFilePath();
+        it->second->setFilePath(newFilePath);
+        if (oldPath != newFilePath) {
+            m_pathToId.erase(oldPath);
+            m_pathToId[newFilePath] = id;
+            ++m_revision;
+        }
+        return true;
+    }
+
+    /**
      * @brief Get all source IDs
      */
     std::vector<ClipSourceID> getAllSourceIDs() const {
