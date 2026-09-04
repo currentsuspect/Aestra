@@ -149,9 +149,12 @@ void testMissingAssetRoundTrip() {
 
     // All paths live under testDir: the ghost is a pure manager key (no file
     // is ever created for it), the real one is genuinely written and decoded,
-    // and remove_all(testDir) cleans up on every platform.
-    const std::string ghostPath = (testDir / "ghost.wav").string();
-    const std::string realPath = (testDir / "real.wav").string();
+    // and remove_all(testDir) cleans up on every platform. Forward slashes
+    // (generic form) throughout: a backslash path would need JSON escaping
+    // on serialize and comes back lexically different on Windows, breaking
+    // plain string comparison even though it names the same file.
+    const std::string ghostPath = (testDir / "ghost.wav").generic_string();
+    const std::string realPath = (testDir / "real.wav").generic_string();
 
     // Project A: one source pointing at a file that does not exist.
     {
