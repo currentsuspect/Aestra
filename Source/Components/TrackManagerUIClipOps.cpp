@@ -340,6 +340,10 @@ void TrackManagerUI::cutSelectedClip() {
     clearClipSelection();
     m_selectedClipId = ClipInstanceID{};
 
+    // Cut removes clips: reschedule, or the removed clips keep sounding
+    // while playing (same staleness delete refreshes for).
+    m_trackManager->refreshTimelinePatternInstances();
+
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();

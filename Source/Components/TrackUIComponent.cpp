@@ -2505,6 +2505,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_trimOriginalSourceOffsetSeconds, m_trimOriginalDurationSeconds, newStart,
                         newEnd);
                     m_trackManager->getCommandHistory().pushAndExecute(command);
+                    // The trim was live in the model throughout the drag;
+                    // reschedule once at release so the new bounds take
+                    // effect while playing (same staleness split refreshes).
+                    m_trackManager->refreshTimelinePatternInstances();
                 }
             }
             Log::info("Finished trimming clip");

@@ -222,6 +222,27 @@ int main() {
             std::cerr << "FAIL: fixture setup\n";
             return 1;
         }
+        auto& playback = fx.trackManager.getPatternPlaybackEngine();
+        auto& playlist = fx.trackManager.getPlaylistModel();
+
+        // Trim the 4-beat clip to [0, 2): the beat-2.5 note falls outside.
+        // Without a reschedule the stale [0, 4) instance keeps sounding it.
+        fx.trackManager.play();
+        playlist.setClipDuration(fx.clipId, 2.0);
+        fx.trackManager.refreshTimelinePatternInstances();
+        refillFromTop(playback);
+        const auto hits = renderAllNoteOns(playback, 8.0, fx.unitId);
+        check(soundedAt(hits, kPitchA, 0.5), "T-5: kept region still sounds after trim reschedule");
+        check(!soundedAt(hits, kPitchB, 2.5), "T-5: trimmed-away note is silent after reschedule");
+        fx.trackManager.stop();
+    }
+
+    {
+        Fixture fx;
+        if (!fx.build()) {
+            std::cerr << "FAIL: fixture setup\n";
+            return 1;
+        }
         // Stopped transport: refresh is a safe no-op, so wiring it into
         // every edit path cannot disturb the stopped state.
         fx.trackManager.refreshTimelinePatternInstances();
