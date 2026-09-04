@@ -585,6 +585,10 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
     if (!dialog || !trackManager || !queue) {
         return;
     }
+    // Session token: if the user dismisses (or a new missing-assets session
+    // starts) while the picker/decoder is still running, the queued
+    // completion must drop instead of rebinding — Escape promised placeholders.
+    const uint64_t dialogGeneration = dialog->generation();
     // One picker at a time: a second Relink click while the native dialog is
     // up would stack pickers (and both decode) for the same entry.
     if (queue->relinkInFlight.exchange(true)) {
@@ -603,16 +607,23 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
     // dialog (all shared_ptr). Quitting mid-picker/mid-decode is safe: the
     // queued UI work is dropped by the shutdown gate and the worker's own
     // state frees itself.
-    std::thread([queue, dialog, tm = trackManager, entry, utils]() {
+    std::thread([queue, dialog, tm = trackManager, entry, utils, dialogGeneration]() {
         const std::string storedPath = entry.storedPath;
 
-        const auto finish = [queue, dialog, storedPath](std::function<void()> uiWork) {
+        const auto finish = [queue, dialog, dialogGeneration, storedPath](std::function<void()> uiWork) {
             {
                 std::lock_guard<std::mutex> lock(queue->mutex);
                 if (!queue->shuttingDown && uiWork) {
-                    uiWork = [dialog, uiWork = std::move(uiWork)]() {
-                        if (dialog) {
+                    // Session gate for every completion kind (success, fail,
+                    // cancel): a dismissed or superseded session must not be
+                    // touched — Escape promised placeholders, and a later
+                    // session's same-path rows belong to that session.
+                    uiWork = [dialog, dialogGeneration, storedPath, uiWork = std::move(uiWork)]() {
+                        if (dialog && dialog->generation() == dialogGeneration) {
                             uiWork();
+                        } else {
+                            Log::info("[MissingAssets] Dropping stale relink completion for '" + storedPath +
+                                      "'");
                         }
                     };
                     queue->tasks.push_back(std::move(uiWork));
@@ -658,6 +669,8 @@ void AestraApp::relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEnt
                 // Validate before rebinding: a decode that "succeeds" with no
                 // audio must not move the path and close the row, stranding a
                 // rebound-but-silent source with no retry affordance.
+                // (Staleness itself is gated in finish(): dismissed or
+                // superseded sessions never reach this closure.)
                 if (!buffer || !buffer->isValid()) {
                     Log::warning("[MissingAssets] Relink decoded no audio: " + pickedPath);
                     dialog->markRelinkFailed(storedPath);

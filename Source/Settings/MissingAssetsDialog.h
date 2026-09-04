@@ -46,6 +46,11 @@ public:
     void hide();
     bool isDialogVisible() const { return m_isVisible; }
 
+    /// Session generation: bumped on every show() and every dismiss, so
+    /// late-arriving relink completions can tell a stale session (user
+    /// dismissed, new project loaded) from the live one.
+    uint64_t generation() const { return m_generation; }
+
     /// Fired when the user asks to relink an entry; the app opens the native
     /// picker and performs the engine rebind, then reports the outcome back.
     void setRelinkRequestedCallback(RelinkRequestedCallback callback) { m_relinkRequested = std::move(callback); }
@@ -76,6 +81,8 @@ private:
     // path, empty decode). Failed rows stay listed for retry and render
     // visibly failed; cleared on retry, success, or a fresh show().
     std::unordered_set<std::string> m_failedPaths;
+    // Session generation for stale-completion rejection (see generation()).
+    uint64_t m_generation{0};
     int m_hoveredRow{-1};
     bool m_dismissHovered{false};
     bool m_dismissPressed{false};

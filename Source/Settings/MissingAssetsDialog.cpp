@@ -24,6 +24,9 @@ void MissingAssetsDialog::show(std::vector<MissingEntry> entries, DismissedCallb
     m_onDismissed = std::move(onDismissed);
     m_lastRequested.clear();
     m_failedPaths.clear();
+    // New session: any relink worker from a previous session is stale on
+    // arrival, even if it kept the dialog alive via shared_ptr.
+    ++m_generation;
     m_hoveredRow = -1;
     m_pressedRow = -1;
     m_dismissHovered = false;
@@ -223,6 +226,10 @@ bool MissingAssetsDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
 void MissingAssetsDialog::handleDismiss() {
     const std::size_t stillMissing = m_entries.size();
+    // Dismissal ends the session: in-flight relink workers must drop their
+    // completions on arrival (Escape = keep placeholders, and a later show()
+    // starts a session whose same-path rows must not be touched by them).
+    ++m_generation;
     hide();
     if (m_onDismissed) {
         m_onDismissed(stillMissing);
