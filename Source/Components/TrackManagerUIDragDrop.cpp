@@ -326,6 +326,11 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 result.message = "Pattern added: " + pattern->name;
                 Log::info("[TrackManagerUI] Pattern added to timeline: " + pattern->name);
 
+                // A drop that lands while playing must reschedule: the new
+                // clip is not in the play()-time instance set (same staleness
+                // duplicate + paint already refresh for).
+                m_trackManager->refreshTimelinePatternInstances();
+
                 refreshTracks();
                 invalidateCache();
                 scheduleTimelineMinimapRebuild();
