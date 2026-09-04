@@ -4372,6 +4372,10 @@ void AestraContent::refreshAfterHistoryChange() {
     if (m_sequencerPanel)
         m_sequencerPanel->refreshUnits();
     m_trackManager->markModified();
+    // Undo/redo of clip ops (split, delete, duplicate, paint) changes the
+    // timeline under a running transport: reschedule the pattern scheduler
+    // set, which was snapshotted at play() time. No-op when stopped.
+    m_trackManager->refreshTimelinePatternInstances();
 }
 
 void AestraContent::toggleHistoryPanel() {

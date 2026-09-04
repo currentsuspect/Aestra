@@ -252,6 +252,12 @@ void TrackManagerUI::finishInstantClipDrag() {
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
+    // A move that lands while playing must reschedule too: the instance set
+    // still points at the drag origin (per-motion model updates deliberately
+    // do not reschedule — gesture endpoint only).
+    if (m_trackManager) {
+        m_trackManager->refreshTimelinePatternInstances();
+    }
 }
 
 void TrackManagerUI::cancelInstantClipDrag() {
@@ -333,6 +339,10 @@ void TrackManagerUI::cutSelectedClip() {
     m_trackManager->getCommandHistory().pushAndExecute(macro);
     clearClipSelection();
     m_selectedClipId = ClipInstanceID{};
+
+    // Cut removes clips: reschedule, or the removed clips keep sounding
+    // while playing (same staleness delete refreshes for).
+    m_trackManager->refreshTimelinePatternInstances();
 
     refreshTracks();
     invalidateCache();
@@ -561,6 +571,11 @@ void TrackManagerUI::splitSelectedClipAtPlayhead() {
     auto cmd = std::make_shared<SplitClipCommand>(playlist, m_selectedClipId, splitBeat);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
+    // While playing, the scheduler's instance set was built at play() time —
+    // without a reschedule the old bounds keep sounding until loop wrap
+    // (same staleness duplicate + paint already refresh for).
+    m_trackManager->refreshTimelinePatternInstances();
+
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
@@ -592,6 +607,10 @@ void TrackManagerUI::deleteSelectedClip() {
     m_trackManager->getCommandHistory().pushAndExecute(macro);
     clearClipSelection();
     m_selectedClipId = ClipInstanceID{};
+
+    // While playing, a deleted clip keeps sounding until loop wrap unless the
+    // scheduler set is rebuilt (same staleness split refreshes for).
+    m_trackManager->refreshTimelinePatternInstances();
 
     refreshTracks();
     invalidateCache();

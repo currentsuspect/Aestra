@@ -404,6 +404,10 @@ void TrackUIComponent::onMuteToggled() {
         if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             lane->muted = isMuted;
             m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            // Lane mute is baked into the scheduler instance set at schedule
+            // time: without a reschedule, muting/unmuting mid-playback does
+            // not take effect until an unrelated op rebuilds the set.
+            m_trackManager->refreshTimelinePatternInstances();
             m_trackManager->markModified();
         }
 
@@ -421,6 +425,9 @@ void TrackUIComponent::onSoloToggled() {
         if (auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
             lane->solo = newSolo;
             m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+            // Same scheduler-set staleness as mute: solo changes who is
+            // audible, and the set is only rebuilt on reschedule.
+            m_trackManager->refreshTimelinePatternInstances();
             m_trackManager->markModified();
         }
 
@@ -2498,6 +2505,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_trimOriginalSourceOffsetSeconds, m_trimOriginalDurationSeconds, newStart,
                         newEnd);
                     m_trackManager->getCommandHistory().pushAndExecute(command);
+                    // The trim was live in the model throughout the drag;
+                    // reschedule once at release so the new bounds take
+                    // effect while playing (same staleness split refreshes).
+                    m_trackManager->refreshTimelinePatternInstances();
                 }
             }
             Log::info("Finished trimming clip");
