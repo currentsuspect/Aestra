@@ -228,9 +228,10 @@ int main(int argc, char* argv[]) {
     // which explicitly joins the thread during the deterministic shutdown
     // sequence, before static destruction.
     //
-    // Remaining static singletons (AppLifecycle, AudioThreadStats,
-    // Preferences, NUIThemeManager) have trivial or default destructors
-    // and are safe to destroy in unspecified order.
+    // Remaining static singletons (AppLifecycle, Preferences, NUIThemeManager)
+    // have trivial or default destructors and are safe to destroy in
+    // unspecified order. AudioThreadStats was also on this list until T-2
+    // (#257) removed it.
     //
     // If a future shutdown hang reappears, re-enable quick_exit as a
     // last-resort fallback and add targeted diagnostics to identify the
