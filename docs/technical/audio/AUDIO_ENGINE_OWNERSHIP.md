@@ -58,9 +58,15 @@ All non-owning, all injected:
 `AudioSettingsPage` · `ExportDialog` · `PianoRollPanel` · `PerformanceHUD` ·
 `UnifiedHUD` · `UnifiedProfiler` · `AudioExporter` · `AudioRenderer`
 
-Borrowers must not outlive `AestraAudioController`. In the application this holds
-structurally: the controller is owned by `AestraApp` and outlives the UI and service
-objects that borrow from it.
+**A borrower must not outlive the owner of the engine it borrows.** The rule is stated
+against the owner rather than against any one owner, because the same type can borrow
+from different owners: `AudioExporter` takes the controller's engine when the
+application exports, and a stack-local engine when a headless tool does.
+
+In the application this holds structurally — `AestraAudioController` is owned by
+`AestraApp` and outlives the UI and service objects that borrow from it. In headless
+tools it holds by scope: the borrower is created and destroyed inside the frame that
+owns the engine.
 
 ## Enforcement
 
