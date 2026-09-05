@@ -1156,12 +1156,13 @@ void AestraApp::connectAudioToUI() {
             m_content->getTrackManager()->setInputChannelCount(config.numInputChannels);
             m_content->getTrackManager()->setOutputSampleRate(config.sampleRate);
             m_content->getTrackManager()->setInputSampleRate(config.sampleRate);
-            // T-6: same device-latency push as the controller stream-start
-            // path (covers re-sync after the stream is already up).
+            // T-6: same live provider as the controller stream-start path
+            // (covers re-sync after the stream is already up; idempotent).
             if (auto* deviceManager = m_audioController->getDeviceManager()) {
-                double inMs = 0.0, outMs = 0.0;
-                deviceManager->getLatencyCompensationValues(inMs, outMs);
-                m_content->getTrackManager()->setRecordLatencyCompensationMs(inMs, outMs);
+                m_content->getTrackManager()->setRecordLatencyProvider(
+                    [deviceManager](double& inMs, double& outMs) {
+                        deviceManager->getLatencyCompensationValues(inMs, outMs);
+                    });
             }
             Log::info("[AestraApp] TrackManager audio config synced. SampleRate=" + std::to_string(config.sampleRate) +
                       ", InputChannels=" + std::to_string(config.numInputChannels) +

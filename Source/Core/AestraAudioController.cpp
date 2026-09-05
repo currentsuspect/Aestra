@@ -200,6 +200,14 @@ void AestraAudioController::shutdown() {
     }
     m_midiInput.reset();
     m_audioEngine.reset();
+    // T-6: drop the record-latency provider before the device manager dies.
+    // A late take commit after this point falls back to zero compensation
+    // instead of calling into freed memory.
+    if (auto content = m_content.lock()) {
+        if (auto tm = content->getTrackManager()) {
+            tm->setRecordLatencyProvider(nullptr);
+        }
+    }
     m_audioManager.reset();
     m_initialized = false;
 }
@@ -417,13 +425,16 @@ bool AestraAudioController::startStream() {
             tm->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputChannelCount(m_streamConfig.numInputChannels);
-            // T-6: push device latency into take placement. Previously computed
-            // but consumed nowhere, so every take landed late by in+out latency.
-            if (m_audioManager) {
-                double inMs = 0.0, outMs = 0.0;
-                m_audioManager->getLatencyCompensationValues(inMs, outMs);
-                tm->setRecordLatencyCompensationMs(inMs, outMs);
-            }
+            // T-6: take placement pulls device latency live at commit through
+            // this provider, so buffer/device/rate reconfigures from any path
+            // (including settings-page direct manager calls that bypass this
+            // function) are always reflected. Pushing values here instead went
+            // stale on exactly those paths.
+            tm->setRecordLatencyProvider([manager = m_audioManager.get()](double& inMs, double& outMs) {
+                if (manager) {
+                    manager->getLatencyCompensationValues(inMs, outMs);
+                }
+            });
             tm->publishInputMonitoringSnapshot();
             Log::info("AestraAudioController: Updated TrackManager Sample Rate to " + std::to_string(m_streamConfig.sampleRate));
         }

@@ -114,6 +114,7 @@ void recordTakeAt(TrackManager& tm, double positionSeconds, double captureSecond
 
 int main() {
     // --- 1. Device compensation shifts placement earlier, samples intact. ---
+    // Provider stands in for AudioDeviceManager::getLatencyCompensationValues.
     {
         auto tm = makeRecorder();
         const uint64_t trackId = armTrack(*tm);
@@ -121,7 +122,11 @@ int main() {
             std::cerr << "FAIL: fixture setup\n";
             return 1;
         }
-        tm->setRecordLatencyCompensationMs(10.0, 10.0); // 20 ms @120 BPM = 0.04 beats
+        double providerInMs = 10.0, providerOutMs = 10.0; // 20 ms @120 BPM = 0.04 beats
+        tm->setRecordLatencyProvider([&](double& inMs, double& outMs) {
+            inMs = providerInMs;
+            outMs = providerOutMs;
+        });
         tm->record();
         recordTakeAt(*tm, 2.0, 1.0, 0, false);
         tm->record();
@@ -134,6 +139,31 @@ int main() {
             check(near(take->durationBeats, 2.0, 1e-4),
                   "T-6: compensation moves placement, never trims samples (duration intact)");
         }
+
+        // --- 1b. Reconfiguration between takes is reflected at commit. ---
+        // The provider is queried live, so a buffer/device change from any
+        // path (including settings-page calls that bypass stream start)
+        // cannot leave stale values behind.
+        providerInMs = 25.0;
+        providerOutMs = 25.0; // 50 ms @120 BPM = 0.10 beats
+        tm->record();
+        recordTakeAt(*tm, 6.0, 1.0, 0, false);
+        tm->record();
+
+        const ClipInstance* take2 = nullptr;
+        if (auto* track = tm->getTrack(trackId)) {
+            for (const auto& laneId : track->laneIds) {
+                auto* lane = tm->getPlaylistModel().getLane(laneId);
+                if (lane) {
+                    for (const auto& clip : lane->clips) {
+                        if (near(clip.startBeat, 12.0 - 0.10, 1e-4)) {
+                            take2 = &clip;
+                        }
+                    }
+                }
+            }
+        }
+        check(take2 != nullptr, "T-6: take after reconfig uses fresh values (12.0 -> 11.90 beats)");
     }
 
     // --- 2. Zero compensation (default) preserves legacy placement. ---
@@ -163,7 +193,10 @@ int main() {
             std::cerr << "FAIL: fixture setup\n";
             return 1;
         }
-        tm->setRecordLatencyCompensationMs(50.0, 50.0); // 100 ms > capture start
+        tm->setRecordLatencyProvider([](double& inMs, double& outMs) {
+            inMs = 50.0;
+            outMs = 50.0;
+        }); // 100 ms > capture start
         tm->record();
         recordTakeAt(*tm, 0.0, 1.0, 0, false);
         tm->record();

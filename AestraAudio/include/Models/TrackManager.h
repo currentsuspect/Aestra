@@ -687,14 +687,15 @@ public:
      *
      * Takes land late by the input latency (signal arrival) plus the output
      * latency (the backing the performer played along to was late by it).
-     * commitRecordingTake shifts placement earlier by the sum. Sourced from
-     * AudioDeviceManager::getLatencyCompensationValues by the app layer when
-     * the stream config resolves; defaults to zero (no behavior change).
-     * Main thread only (set at config sync, read at take commit).
+     * commitRecordingTake shifts placement earlier by the sum. The provider
+     * is queried live at take commit (main thread) so every reconfiguration
+     * — buffer size, device switch, sample rate, from any caller — is
+     * reflected without per-path push discipline; a push model went stale
+     * on exactly the settings-page paths that bypass the controller.
+     * Unset means zero (no behavior change; headless mains never register).
      */
-    void setRecordLatencyCompensationMs(double inputMs, double outputMs) {
-        m_recordLatencyInputMs = std::max(0.0, inputMs);
-        m_recordLatencyOutputMs = std::max(0.0, outputMs);
+    void setRecordLatencyProvider(std::function<void(double& inputMs, double& outputMs)> provider) {
+        m_recordLatencyProvider = std::move(provider);
     }
 
     /**
@@ -2111,9 +2112,15 @@ private:
         // the output latency, so the take as placed sounds late by the sum.
         // Shift placement earlier (samples intact); clamp at zero — a take
         // starting at the very top can only keep a small residual lateness.
+        // Values are pulled live through the provider so buffer/device/rate
+        // reconfigures from any path are reflected at commit time.
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
-        const double recordLatencyBeats =
-            (m_recordLatencyInputMs + m_recordLatencyOutputMs) / 1000.0 * bpm / 60.0;
+        double latencyInMs = 0.0, latencyOutMs = 0.0;
+        if (m_recordLatencyProvider) {
+            m_recordLatencyProvider(latencyInMs, latencyOutMs);
+        }
+        const double recordLatencyBeats = (std::max(0.0, latencyInMs) + std::max(0.0, latencyOutMs)) / 1000.0 *
+                                          bpm / 60.0;
         startBeat = std::max(0.0, startBeat - recordLatencyBeats);
         const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
         if (durationBeats <= 0.0) {
@@ -2589,8 +2596,7 @@ private:
     std::array<std::atomic<uint32_t>, 2> m_recordingCaptureRouteCounts{};
     std::atomic<uint32_t> m_activeRecordingCaptureSnapshot{0};
     double m_maxRecordingSeconds{15.0};
-    double m_recordLatencyInputMs{0.0};
-    double m_recordLatencyOutputMs{0.0};
+    std::function<void(double& inputMs, double& outputMs)> m_recordLatencyProvider;
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};
