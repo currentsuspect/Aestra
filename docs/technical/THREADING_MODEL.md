@@ -169,22 +169,34 @@ uint64_t pos = m_globalSamplePos.load(std::memory_order_relaxed);
 
 Use `AppLifecycle::instance().getState()` to query current state.
 
-## Debug Checks (B-005)
+## RT Thread Checks (B-005)
 
-In debug builds, use these macros to catch threading violations:
+There is exactly one real-time state flag and one violation-reporting call, both
+in `RealtimeThreadGuard.h`. Do not add a parallel flag or counter: a detection
+surface that only some call sites consult reports "clean" for thread state it
+never observed.
 
 ```cpp
-// Before any allocation
-Aestra_ASSERT_NOT_AUDIO_THREAD();
+// At the start of the audio callback (and in AudioEngine::processBlock).
+// Depth counted, so the two nest correctly.
+Aestra::Audio::ScopedRealtimeAudioThread guard;
 
-// At start of audio callback
-AudioThreadGuard guard;  // Sets thread-local flag
-
-// Check thread context
-if (Aestra::Audio::isAudioThread()) {
+// Query thread context.
+if (Aestra::Audio::isRealtimeAudioThread()) {
     // We're on the audio thread
 }
+
+// Guard a non-real-time API. The return value is the refusal signal:
+// true means "this was called from the audio thread" — bail out.
+void MixerChannel::setMute(bool muted) {
+    if (Aestra::Audio::reportRealtimeMisuse("MixerChannel::setMute")) return;
+    // ...
+}
 ```
+
+Reports dispatch to the handler installed with `setRealtimeMisuseHandler()`;
+`AudioEngine` installs one at startup. In debug builds with no handler
+installed, a report asserts.
 
 ## Best Practices
 
@@ -205,4 +217,4 @@ if (Aestra::Audio::isAudioThread()) {
 - `AppBootstrap.h` - Initialization modules (B-001)
 - `AppLifecycle.h` - Lifecycle states (B-002)
 - `ServiceLocator.h` - Service registry (B-003)
-- `AudioThreadConstraints.h` - Thread safety checks (B-005)
+- `RealtimeThreadGuard.h` - RT thread state and misuse reporting (B-004, B-005)

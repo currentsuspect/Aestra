@@ -2,31 +2,33 @@
 //
 // RTGuardConsolidationTest
 // ─────────────────────────────────────────────────────────────────────────────
-// Regression guard for the real-time-thread-guard consolidation (R1).
+// Regression guard for the real-time-guard consolidation (R1 #553, T-2 #257).
 //
-// Before consolidation there were TWO independent thread-local flags:
-//   • g_realtimeAudioThreadDepth  (RealtimeThreadGuard.h, set by
-//     ScopedRealtimeAudioThread — the engine / processBlock path)
-//   • g_isAudioThread             (AudioThreadConstraints.h, set by the removed
-//     AudioThreadGuard — the app-layer callback path)
+// The hazard this pins is "incomplete detection -> false confidence": a second
+// RT-state flag, or a second violation counter, that only some call sites
+// consult. Such a surface reports "clean" for thread state it never observed,
+// which is worse than having no detection at all.
 //
-// The app-layer constraint macros (AESTRA_ASSERT_AUDIO_THREAD / AESTRA_TRACK_*)
-// keyed off the *app* flag, while the engine's RT-misuse checks keyed off the
-// *engine* flag. A thread marked only by ScopedRealtimeAudioThread would NOT be
-// recognized by the app-layer constraint layer — the "incomplete detection ->
-// false confidence" hazard.
+// Two rounds of consolidation removed the parallel machinery:
 //
-// This test marks the thread using ONLY ScopedRealtimeAudioThread (exactly what
-// AestraAudioController::audioCallback now does) and proves the app-layer
-// constraint macros in AudioThreadConstraints.h recognize it as real-time. If a
-// second parallel flag is ever reintroduced, this test fails.
+//   R1 (#553)  removed g_isAudioThread + AudioThreadGuard, a second thread-local
+//              flag in Source/AudioThreadConstraints.h that the app-layer
+//              callback path set while the engine path set the canonical one.
+//
+//   T-2 (#257) removed the rest of that header — the AudioThreadStats counter
+//              block and the AESTRA_TRACK_ / AESTRA_ASSERT_ macro families —
+//              once the call-site audit showed nothing in production read them.
+//              Callback counting lives on AudioTelemetry; violation reporting
+//              lives on reportRealtimeMisuse.
+//
+// What remains, and what this test pins, is one flag and one reporting call:
+//   • g_realtimeAudioThreadDepth, marked only by ScopedRealtimeAudioThread
+//   • reportRealtimeMisuse(apiName), dispatching to the installed handler
+//
+// If a parallel flag or counter is ever reintroduced, the contract asserted
+// here is the one it would drift from.
 
-// Force the debug constraint macros active regardless of the test build's
-// NDEBUG state, so the allocation/lock/IO detection paths are actually exercised.
-#define AESTRA_AUDIO_DEBUG 1
-
-#include "RealtimeThreadGuard.h"   // canonical: ScopedRealtimeAudioThread / isRealtimeAudioThread
-#include "AudioThreadConstraints.h" // app-layer constraint macros + AudioThreadStats
+#include "RealtimeThreadGuard.h" // canonical: the only RT flag and reporting call
 #include "Core/MixerChannel.h"
 
 #include <cstdio>
@@ -36,8 +38,12 @@ using namespace Aestra::Audio;
 
 static int g_failures = 0;
 static const char* g_firedApi = nullptr;
+static int g_fireCount = 0;
 
-static void onMisuse(const char* apiName) noexcept { g_firedApi = apiName; }
+static void onMisuse(const char* apiName) noexcept {
+    g_firedApi = apiName;
+    ++g_fireCount;
+}
 
 #define CHECK(cond)                                                            \
     do {                                                                       \
@@ -48,44 +54,21 @@ static void onMisuse(const char* apiName) noexcept { g_firedApi = apiName; }
     } while (0)
 
 int main() {
-    auto& stats = AudioThreadStats::instance();
-    stats.reset();
-
     // ── Precondition: worker/UI thread is not real-time ────────────────────
     CHECK(!isRealtimeAudioThread());
-    AESTRA_ASSERT_NOT_AUDIO_THREAD(); // must not fire off the audio thread
-    AESTRA_TRACK_ALLOCATION(128, "off-thread");
-    CHECK(stats.totalAllocations.load() == 1);
-    CHECK(stats.allocationViolations.load() == 0); // no violation off-thread
 
-    // ── Mark the thread with ONLY the canonical engine guard ───────────────
+    // ── The canonical guard marks and unmarks the thread ───────────────────
     {
         ScopedRealtimeAudioThread rtScope;
-
-        // The app-layer constraint layer must recognize this as real-time.
         CHECK(isRealtimeAudioThread());
-        AESTRA_ASSERT_AUDIO_THREAD(); // must pass while marked
-
-        // Allocation / lock / file-IO tracking must flag violations here.
-        AESTRA_TRACK_ALLOCATION(256, "rt-thread");
-        AESTRA_TRACK_LOCK();
-        AESTRA_TRACK_FILE_IO();
-
-        CHECK(stats.totalAllocations.load() == 2);
-        CHECK(stats.allocationViolations.load() == 1);
-        CHECK(stats.lockViolations.load() == 1);
-        CHECK(stats.ioViolations.load() == 1);
-        CHECK(stats.peakAllocationSize.load() == 256);
     }
-
-    // ── Guard exit restores the non-real-time state ────────────────────────
     CHECK(!isRealtimeAudioThread());
-    AESTRA_TRACK_ALLOCATION(64, "post-scope");
-    CHECK(stats.allocationViolations.load() == 1); // unchanged off-thread
 
     // ── Nesting parity with AudioEngine::processBlock's inner guard ────────
-    // The callback guard and processBlock's guard nest; depth-counting (not a
-    // bool) must keep the thread real-time until the OUTERMOST scope exits.
+    // The device-callback guard and processBlock's guard nest; depth-counting
+    // (not a bool) must keep the thread real-time until the OUTERMOST scope
+    // exits. A bool would clear on the inner exit and blind every check that
+    // ran between there and the end of the callback.
     {
         ScopedRealtimeAudioThread outer;
         {
@@ -95,6 +78,35 @@ int main() {
         CHECK(isRealtimeAudioThread()); // still RT after inner exits
     }
     CHECK(!isRealtimeAudioThread());
+
+    // ── reportRealtimeMisuse: the single reporting call ────────────────────
+    // Its return value is the refusal signal call sites branch on, so the
+    // off-thread/on-thread answers are as much a contract as the handler
+    // dispatch is.
+    {
+        g_firedApi = nullptr;
+        g_fireCount = 0;
+        auto* previous = setRealtimeMisuseHandler(onMisuse);
+
+        // Off the audio thread: not misuse, no report, no handler call.
+        CHECK(reportRealtimeMisuse("Test::offThread") == false);
+        CHECK(g_fireCount == 0);
+
+        {
+            ScopedRealtimeAudioThread rtScope;
+            CHECK(reportRealtimeMisuse("Test::onThread") == true);
+            CHECK(g_fireCount == 1);
+            CHECK(g_firedApi != nullptr && std::string(g_firedApi) == "Test::onThread");
+        }
+
+        // Back off-thread: reporting goes quiet again.
+        CHECK(reportRealtimeMisuse("Test::afterScope") == false);
+        CHECK(g_fireCount == 1);
+
+        // The setter returns the previous handler so scopes can restore it.
+        auto* restored = setRealtimeMisuseHandler(previous);
+        CHECK(restored == &onMisuse);
+    }
 
     // ── Mixer mutation tripwires (T-2 coverage audit) ───────────────────────
     // The mixer setter surface must refuse mutations from the audio thread:

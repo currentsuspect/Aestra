@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraAudioController.h"
 #include "AestraContent.h"
-#include "AudioThreadConstraints.h"
+#include "RealtimeThreadGuard.h"
 #include "AudioRT.h"
 #include "AudioTelemetry.h"
 #include "MidiInputService.h"
@@ -505,7 +505,6 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     // Uses the canonical RT flag (RealtimeThreadGuard.h); nests cleanly with the
     // inner ScopedRealtimeAudioThread inside AudioEngine::processBlock.
     Aestra::Audio::ScopedRealtimeAudioThread audioThreadGuard;
-    Aestra::Audio::AudioThreadStats::instance().totalCallbacks.fetch_add(1, std::memory_order_relaxed);
 
     AestraAudioController* controller = static_cast<AestraAudioController*>(userData);
     if (!controller || !outputBuffer) return 1;
