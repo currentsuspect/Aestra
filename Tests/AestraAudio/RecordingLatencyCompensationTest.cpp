@@ -44,7 +44,7 @@ void check(bool cond, const std::string& what) {
     }
 }
 
-bool near(double a, double b, double tol = 1e-6) {
+bool nearEqual(double a, double b, double tol = 1e-6) {
     return std::fabs(a - b) <= tol;
 }
 
@@ -134,9 +134,9 @@ int main() {
         const ClipInstance* take = takeClipOf(*tm, trackId);
         check(take != nullptr, "T-6: compensated take commits a clip");
         if (take) {
-            check(near(take->startBeat, 4.0 - 0.04, 1e-4),
+            check(nearEqual(take->startBeat, 4.0 - 0.04, 1e-4),
                   "T-6: take placed earlier by input+output latency (4.0 -> 3.96 beats)");
-            check(near(take->durationBeats, 2.0, 1e-4),
+            check(nearEqual(take->durationBeats, 2.0, 1e-4),
                   "T-6: compensation moves placement, never trims samples (duration intact)");
         }
 
@@ -156,7 +156,7 @@ int main() {
                 auto* lane = tm->getPlaylistModel().getLane(laneId);
                 if (lane) {
                     for (const auto& clip : lane->clips) {
-                        if (near(clip.startBeat, 12.0 - 0.10, 1e-4)) {
+                        if (nearEqual(clip.startBeat, 12.0 - 0.10, 1e-4)) {
                             take2 = &clip;
                         }
                     }
@@ -181,7 +181,7 @@ int main() {
         const ClipInstance* take = takeClipOf(*tm, trackId);
         check(take != nullptr, "T-6: uncompensated take commits a clip");
         if (take) {
-            check(near(take->startBeat, 4.0, 1e-4), "T-6: default zero compensation keeps legacy placement");
+            check(nearEqual(take->startBeat, 4.0, 1e-4), "T-6: default zero compensation keeps legacy placement");
         }
     }
 
@@ -204,7 +204,7 @@ int main() {
         const ClipInstance* take = takeClipOf(*tm, trackId);
         check(take != nullptr, "T-6: clamped take commits a clip");
         if (take) {
-            check(near(take->startBeat, 0.0, 1e-9), "T-6: placement clamps at zero, never negative");
+            check(nearEqual(take->startBeat, 0.0, 1e-9), "T-6: placement clamps at zero, never negative");
             check(take->durationBeats > 0.0, "T-6: clamped take keeps its audio");
         }
     }
@@ -228,7 +228,7 @@ int main() {
         const ClipInstance* take = takeClipOf(*tm, trackId);
         check(take != nullptr, "T-6: frame-stamped take commits a clip");
         if (take) {
-            check(near(take->startBeat, 4.0, 1e-4),
+            check(nearEqual(take->startBeat, 4.0, 1e-4),
                   "T-6: capture start follows the engine frame, not the stale UI position");
         }
     }
