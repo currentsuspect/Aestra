@@ -380,7 +380,12 @@ bool AestraAudioController::startStream() {
                 auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
                 if (trackManager) {
                     trackManager->updateInputDiagnostics(input, n);
-                    trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
+                    // T-6: hand the engine's authoritative frame to capture
+                    // placement; the UI-cached position lags by buffers.
+                    const uint64_t frame = controller->m_audioEngine
+                                               ? controller->m_audioEngine->getGlobalSamplePos()
+                                               : Aestra::Audio::TrackManager::kUnknownTransportFrame;
+                    trackManager->processInput(input, n, &controller->m_audioEngine->telemetry(), frame);
                 }
             }
         }, this);
@@ -412,6 +417,13 @@ bool AestraAudioController::startStream() {
             tm->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputChannelCount(m_streamConfig.numInputChannels);
+            // T-6: push device latency into take placement. Previously computed
+            // but consumed nowhere, so every take landed late by in+out latency.
+            if (m_audioManager) {
+                double inMs = 0.0, outMs = 0.0;
+                m_audioManager->getLatencyCompensationValues(inMs, outMs);
+                tm->setRecordLatencyCompensationMs(inMs, outMs);
+            }
             tm->publishInputMonitoringSnapshot();
             Log::info("AestraAudioController: Updated TrackManager Sample Rate to " + std::to_string(m_streamConfig.sampleRate));
         }

@@ -683,6 +683,21 @@ public:
     void setMaxRecordingSeconds(double seconds) { m_maxRecordingSeconds = std::max(1.0, seconds); }
 
     /**
+     * @brief Device latency to compensate on the record path (T-6).
+     *
+     * Takes land late by the input latency (signal arrival) plus the output
+     * latency (the backing the performer played along to was late by it).
+     * commitRecordingTake shifts placement earlier by the sum. Sourced from
+     * AudioDeviceManager::getLatencyCompensationValues by the app layer when
+     * the stream config resolves; defaults to zero (no behavior change).
+     * Main thread only (set at config sync, read at take commit).
+     */
+    void setRecordLatencyCompensationMs(double inputMs, double outputMs) {
+        m_recordLatencyInputMs = std::max(0.0, inputMs);
+        m_recordLatencyOutputMs = std::max(0.0, outputMs);
+    }
+
+    /**
      * @brief Set input channel count
      * @param count Number of hardware input channels currently available.
      */
@@ -950,7 +965,19 @@ public:
      */
     bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_relaxed); }
 
-    void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr) {
+    /**
+     * @brief Feed an interleaved hardware input block to armed captures.
+     *
+     * @param transportFrame Engine transport frame this block belongs to, when
+     *        the caller knows it (the audio-thread input callback reads
+     *        AudioEngine::getGlobalSamplePos). The capture start beat is
+     *        derived from it instead of the UI-cached position, which lags by
+     *        buffers. kUnknownTransportFrame keeps the legacy behavior
+     *        (existing callers/tests are unaffected).
+     */
+    static constexpr uint64_t kUnknownTransportFrame = UINT64_MAX;
+    void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr,
+                      uint64_t transportFrame = kUnknownTransportFrame) {
         if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
             return;
         }
@@ -975,11 +1002,16 @@ public:
 
         const auto& routes = m_recordingCaptureSnapshots[snapIdx];
 
-        const double captureBeat = getCurrentTransportBeat();
-        const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_acquire);
-        const double deferredStartBeat = m_deferredRecordingStartBeat.load(std::memory_order_relaxed);
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
         const double sampleRate = std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate);
+        // T-6: prefer the engine's authoritative frame over the UI-cached
+        // position for capture placement; the latter lags by audio buffers.
+        const double captureBeat =
+            (transportFrame != kUnknownTransportFrame)
+                ? (static_cast<double>(transportFrame) / sampleRate) * bpm / 60.0
+                : getCurrentTransportBeat();
+        const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_acquire);
+        const double deferredStartBeat = m_deferredRecordingStartBeat.load(std::memory_order_relaxed);
         bool capturedAnyChannel = false;
         bool startedDeferredCapture = false;
 
@@ -2071,9 +2103,18 @@ private:
         const float conditionedPeak = analyzePeak(conditionedSamples);
 
         const double captureStartBeat = capture.startBeat.load(std::memory_order_acquire);
-        const double startBeat = forcePlacementStartBeat
-                                     ? fallbackStartBeat
-                                     : (captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat);
+        double startBeat = forcePlacementStartBeat
+                               ? fallbackStartBeat
+                               : (captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat);
+        // T-6: compensate device latency. The captured signal arrived late by
+        // the input latency and was performed against backing heard late by
+        // the output latency, so the take as placed sounds late by the sum.
+        // Shift placement earlier (samples intact); clamp at zero — a take
+        // starting at the very top can only keep a small residual lateness.
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        const double recordLatencyBeats =
+            (m_recordLatencyInputMs + m_recordLatencyOutputMs) / 1000.0 * bpm / 60.0;
+        startBeat = std::max(0.0, startBeat - recordLatencyBeats);
         const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
         if (durationBeats <= 0.0) {
             return;
@@ -2548,6 +2589,8 @@ private:
     std::array<std::atomic<uint32_t>, 2> m_recordingCaptureRouteCounts{};
     std::atomic<uint32_t> m_activeRecordingCaptureSnapshot{0};
     double m_maxRecordingSeconds{15.0};
+    double m_recordLatencyInputMs{0.0};
+    double m_recordLatencyOutputMs{0.0};
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};
