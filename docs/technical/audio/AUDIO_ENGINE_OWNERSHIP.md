@@ -110,10 +110,11 @@ assumption inside the class whose contract says otherwise, in exactly the
 configuration `AudioEngineOwnershipTest` blesses. The singleton guard does not catch
 it because the state is counters, not an engine instance.
 
-Related: [#883](https://github.com/currentsuspect/Aestra/issues/883) — those same
-counters are never published, so the violations they record are discarded. A fix that
-moves RT-misuse accounting onto `AudioTelemetry` (a per-engine member) would close
-both this residual and #883.
+Tracked as [#885](https://github.com/currentsuspect/Aestra/issues/885). It shares a
+root with [#883](https://github.com/currentsuspect/Aestra/issues/883) — those same
+counters are never published, so the violations they record are discarded. Moving
+RT-misuse accounting onto `AudioTelemetry` (already a per-engine member) closes both
+in one change. Update this section when it does.
 
 **Copy and move are deleted implicitly, not explicitly.** The suppression is a
 consequence of member types rather than a stated intent, so a future refactor that
