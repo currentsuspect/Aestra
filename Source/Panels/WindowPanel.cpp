@@ -2,6 +2,8 @@
 #include "WindowPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
+#include "../AestraUI/Layout/NUILayoutSpace.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraLog.h"
 
@@ -411,39 +413,52 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 }
 
 void WindowPanel::layoutContent() {
+    using namespace AestraUI::Layout;
+
     auto bounds = getBounds();
     const float panelWidth = std::max(100.0f, bounds.width);
+    // Guarantees the content band below is never under 20px BEFORE the split
+    // even runs — splitVertical's own clamp only refuses a negative height, on
+    // purpose (that clamp is a real invariant; a 20px floor is this panel's
+    // policy, not the algorithm's). Enforcing the floor here, once, is why
+    // the split below needs no separate floor of its own.
     const float panelHeight = std::max(m_titleBarHeight + 20.0f, bounds.height);
     const float buttonSize = std::max(18.0f, m_titleBarHeight - 8.0f);
     const float buttonPadding = 4.0f;
-    float currentX = panelWidth - buttonSize - buttonPadding;
-    
-    // Update title bar bounds for hit testing (absolute coordinates)
-    m_titleBarBounds = NUIAbsolute(bounds, 0, 0, panelWidth, m_titleBarHeight);
-    
-    // Layout buttons right-to-left: Close, Maximize, Minimize
+
+    // bounds_ is window-absolute on this codepath (NUIAbsolute added the
+    // panel's own absolute origin to every child rect); localToWindow is the
+    // typed equivalent of that addition, so this panel's origin is where every
+    // layout-space computation below re-enters window space.
+    const NUIWindowPoint panelOrigin(bounds.x, bounds.y);
+
+    const NUILocalRect titleBar(0.0f, 0.0f, panelWidth, m_titleBarHeight);
+    m_titleBarBounds = localToWindow(titleBar, panelOrigin).raw();
+
+    // Layout buttons right-to-left: Close, Maximize, Minimize — nearest-to-
+    // the-edge first, exactly what arrangeTrailingRow's item order expects.
+    const std::vector<float> buttonWidths{buttonSize, buttonSize, buttonSize};
+    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding);
+
     if (m_closeButton) {
-        m_closeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
-        currentX -= buttonSize + buttonPadding;
+        m_closeButton->setBounds(localToWindow(buttonRects[0], panelOrigin).raw());
     }
-    
     if (m_maximizeButton) {
-        m_maximizeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
-        currentX -= buttonSize + buttonPadding;
+        m_maximizeButton->setBounds(localToWindow(buttonRects[1], panelOrigin).raw());
     }
-    
     if (m_minimizeButton) {
-        m_minimizeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
+        m_minimizeButton->setBounds(localToWindow(buttonRects[2], panelOrigin).raw());
     }
-    
+
     // Layout content (below title bar)
     if (m_content && !m_minimized) {
-        float contentY = m_titleBarHeight;
-        float contentHeight = std::max(20.0f, panelHeight - m_titleBarHeight);
-        m_content->setBounds(NUIAbsolute(bounds, 0, contentY, panelWidth, contentHeight));
-        
+        const NUILocalRect panelLocal(0.0f, 0.0f, panelWidth, panelHeight);
+        const NUIVerticalSplit split = splitVertical(panelLocal, m_titleBarHeight);
+
+        m_content->setBounds(localToWindow(split.trailing, panelOrigin).raw());
+
         // Trigger content's internal layout
-        m_content->onResize(static_cast<int>(panelWidth), static_cast<int>(contentHeight));
+        m_content->onResize(static_cast<int>(split.trailing.width), static_cast<int>(split.trailing.height));
     }
 }
 

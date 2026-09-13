@@ -2868,3 +2868,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUILayoutCoreTest.cpp")
     add_test(NAME NUILayoutCoreTest COMMAND NUILayoutCoreTest)
     set_tests_properties(NUILayoutCoreTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
+
+# V8-X2b, first panel migration: WindowPanel::layoutContent()'s title-bar
+# arithmetic, extracted as reusable algorithms and proven byte-identical to
+# what they replace.
+#
+# Deliberately links nothing. NUILayoutAlgorithms.h is header-only, so this
+# test builds in every configuration — see the NUILayoutCoreTest comment
+# above for why that matters (FD-19's silent-skip pattern).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUILayoutAlgorithmsTest.cpp")
+    add_executable(NUILayoutAlgorithmsTest AestraUI/NUILayoutAlgorithmsTest.cpp)
+    add_test(NAME NUILayoutAlgorithmsTest COMMAND NUILayoutAlgorithmsTest)
+    set_tests_properties(NUILayoutAlgorithmsTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
