@@ -2856,3 +2856,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITransformCompositionTest.cpp"
     add_test(NAME NUITransformCompositionTest COMMAND NUITransformCompositionTest)
     set_tests_properties(NUITransformCompositionTest PROPERTIES LABELS "ui;rendering;regression;contract:application")
 endif()
+
+# V8-X2b Core: coordinate-space typing and the layout trace X2b·4 requires.
+#
+# Deliberately links nothing. NUILayoutSpace.h and NUILayoutNode.h are
+# header-only, so this test builds in every configuration, including
+# AESTRA_CI=ON — see the NUITransformCompositionTest comment above for why
+# that matters (FD-19's silent-skip pattern).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUILayoutCoreTest.cpp")
+    add_executable(NUILayoutCoreTest AestraUI/NUILayoutCoreTest.cpp)
+    add_test(NAME NUILayoutCoreTest COMMAND NUILayoutCoreTest)
+    set_tests_properties(NUILayoutCoreTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
