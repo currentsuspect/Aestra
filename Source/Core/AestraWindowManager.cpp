@@ -142,10 +142,31 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             return false;
         }
 
-        // Linux release builds currently have an optimization-sensitive failure
-        // in the GL widget cache path that can leave the window blank even though
-        // startup completes. Prefer direct rendering until the cache bug is fixed.
 #if defined(__linux__)
+        // V8-C1 (2026-09-13): this used to read "an optimization-sensitive
+        // failure that can leave the window blank" — that claim was never
+        // reproduced when checked. Every FBO the cache creates completes
+        // cleanly, glGetError() is silent through the full render/blit cycle,
+        // and a pixel read back immediately after each on-screen blit matches
+        // the pixel a screenshot shows at that same coordinate, every time —
+        // real project, real clips, active playback, several resizes.
+        //
+        // What IS measured: on this machine, caching these three consumers
+        // (mixer strip, timeline, file browser) costs more than it saves.
+        // Steady-state, a cache hit still does its own full immediate draw —
+        // program switch, uniform sets, a texture bind, a 4-vertex buffer
+        // upload, one draw call — separate from the batching system that
+        // would otherwise fold the widget's mostly-flat content into the
+        // frame's shared draw calls. Measured render-build time, same real
+        // project, real clips, continuous rendering forced by playback:
+        //
+        //   cache on:   13.59 ms/frame avg (σ 2.03), 22 one-second samples
+        //   cache off:  10.07 ms/frame avg (σ 0.93), 50 one-second samples
+        //
+        // ~35% slower with the cache on, and less consistent. See V8-C1 in
+        // Aestra-Internals/13 Agent Work/ for the full methodology and the
+        // per-platform matrix — this default is Linux-specific evidence, not
+        // a claim about the cache mechanism itself, which Windows keeps.
         glRenderer->setCachingEnabled(false);
 #else
         glRenderer->setCachingEnabled(true);
