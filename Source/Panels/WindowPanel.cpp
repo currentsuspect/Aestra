@@ -438,7 +438,7 @@ void WindowPanel::layoutContent() {
     // Layout buttons right-to-left: Close, Maximize, Minimize — nearest-to-
     // the-edge first, exactly what arrangeTrailingRow's item order expects.
     const std::vector<float> buttonWidths{buttonSize, buttonSize, buttonSize};
-    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding);
+    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding, buttonPadding);
 
     if (m_closeButton) {
         m_closeButton->setBounds(localToWindow(buttonRects[0], panelOrigin).raw());

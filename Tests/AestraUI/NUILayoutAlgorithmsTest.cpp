@@ -77,7 +77,7 @@ void testTrailingRowMatchesWindowPanelExactly() {
 
     const NUILocalRect titleBar(0.0f, 0.0f, panelWidth, titleBarHeight);
     const std::vector<float> buttonWidths{ref.buttonSize, ref.buttonSize, ref.buttonSize};
-    const auto rects = arrangeTrailingRow(titleBar, buttonWidths, ref.buttonSize, 4.0f);
+    const auto rects = arrangeTrailingRow(titleBar, buttonWidths, ref.buttonSize, 4.0f, 4.0f);
 
     check(rects.size() == 3, "arrangeTrailingRow returns one rect per item");
 
@@ -101,21 +101,36 @@ void testTrailingRowAtASecondPanelWidth() {
 
     const NUILocalRect titleBar(0.0f, 0.0f, panelWidth, titleBarHeight);
     const std::vector<float> buttonWidths{ref.buttonSize, ref.buttonSize, ref.buttonSize};
-    const auto rects = arrangeTrailingRow(titleBar, buttonWidths, ref.buttonSize, 4.0f);
+    const auto rects = arrangeTrailingRow(titleBar, buttonWidths, ref.buttonSize, 4.0f, 4.0f);
 
     check(nearly(rects[0].x, ref.closeX) && nearly(rects[1].x, ref.maximizeX) && nearly(rects[2].x, ref.minimizeX),
           "the same equivalence holds at a second, narrower panel width");
 }
 
-void testTrailingRowSpacingIsBothMarginAndGap() {
-    // A minimal, hand-checkable case: one 10-wide item in a 100-wide container
-    // with spacing 4. Its right edge must sit 4px from the container's edge —
-    // the same value used as inter-item spacing, not a separate margin.
+void testTrailingRowEdgeMarginEqualToSpacing() {
+    // A minimal, hand-checkable case: one 10-wide item in a 100-wide container,
+    // edgeMargin and spacing both 4. Its right edge must sit 4px from the
+    // container's edge — the title bar's original convention, now expressed
+    // as an explicit choice rather than an implicit rule of the function.
     const NUILocalRect container(0.0f, 0.0f, 100.0f, 20.0f);
-    const auto rects = arrangeTrailingRow(container, {10.0f}, 20.0f, 4.0f);
+    const auto rects = arrangeTrailingRow(container, {10.0f}, 20.0f, 4.0f, 4.0f);
     check(rects.size() == 1, "single-item row returns exactly one rect");
-    check(nearly(rects[0].right(), 96.0f), "the trailing margin equals the spacing value: 100 - 4 = 96");
+    check(nearly(rects[0].right(), 96.0f), "the trailing margin equals edgeMargin: 100 - 4 = 96");
     check(nearly(rects[0].x, 86.0f), "x follows directly from the right edge minus the item's own width: 96 - 10 = 86");
+}
+
+void testTrailingRowEdgeMarginIndependentOfSpacing() {
+    // The mixer's real convention: the master strip sits flush against the
+    // panel edge (edgeMargin 0), but a spacing gap still separates it from
+    // the inspector beside it. Two items, 50 and 30 wide, edgeMargin 0,
+    // spacing 6, in a 200-wide container.
+    const NUILocalRect container(0.0f, 0.0f, 200.0f, 20.0f);
+    const auto rects = arrangeTrailingRow(container, {50.0f, 30.0f}, 20.0f, 6.0f, 0.0f);
+    check(rects.size() == 2, "two-item row returns exactly two rects");
+    check(nearly(rects[0].right(), 200.0f), "the first item is flush against the edge: edgeMargin 0 means no gap at all");
+    check(nearly(rects[0].x, 150.0f), "first item x: 200 - 50 = 150");
+    check(nearly(rects[1].right(), 144.0f), "the second item is offset from the first by spacing alone: 150 - 6 = 144");
+    check(nearly(rects[1].x, 114.0f), "second item x: 144 - 30 = 114");
 }
 
 void testTrailingRowAnchorsToANonZeroOrigin() {
@@ -124,7 +139,7 @@ void testTrailingRowAnchorsToANonZeroOrigin() {
     // a padded parent), and WindowPanel's own zero-origin call site could not
     // have caught a regression here.
     const NUILocalRect container(50.0f, 100.0f, 200.0f, 40.0f);
-    const auto rects = arrangeTrailingRow(container, {30.0f}, 20.0f, 5.0f);
+    const auto rects = arrangeTrailingRow(container, {30.0f}, 20.0f, 5.0f, 5.0f);
 
     check(rects.size() == 1, "single-item row still returns exactly one rect");
     check(nearly(rects[0].y, 110.0f),
@@ -172,6 +187,53 @@ void testSplitVerticalClampsRatherThanGoingNegative() {
     check(nearly(split.trailing.height, 0.0f), "an oversized leading request leaves exactly zero trailing height");
 }
 
+// ---------------------------------------------------------------------------
+// arrangeScrollingRow — UIMixerPanel's channel-strip row (V8-X2b's inspector
+// migration, the contract's own "honest checkpoint")
+// ---------------------------------------------------------------------------
+
+void testScrollingRowAtZeroScrollMatchesMixerPanel() {
+    // UIMixerPanel's real constants: STRIP_WIDTH 110, STRIP_SPACING 6. A
+    // viewport 500px wide holds strips 0-4 fully or partially; strip 5 starts
+    // exactly at the viewport's right edge plus one full step, so it is
+    // entirely outside and must be reported not-visible.
+    const NUILocalRect viewport(0.0f, 0.0f, 500.0f, 220.0f);
+    const auto items = arrangeScrollingRow(viewport, 110.0f, 6.0f, 6, 0.0f);
+
+    check(items.size() == 6, "one item per requested count");
+    check(nearly(items[0].rect.x, 0.0f) && items[0].visible, "strip 0 sits at the viewport's own left edge");
+    check(nearly(items[1].rect.x, 116.0f) && items[1].visible, "strip 1 is one full step (110+6) further right");
+    check(nearly(items[4].rect.x, 464.0f) && items[4].visible,
+          "strip 4 starts inside the viewport even though it extends past its right edge — partially visible still counts as visible");
+    check(nearly(items[5].rect.x, 580.0f) && !items[5].visible,
+          "strip 5 starts entirely past the viewport's right edge (500) and must be reported not-visible");
+}
+
+void testScrollingRowUnderScrollMatchesMixerPanel() {
+    // The same six strips, scrolled right by 200px — the exact scenario a
+    // user panning the mixer produces. Strip 0 scrolls fully off the leading
+    // edge; strip 5 scrolls into view.
+    const NUILocalRect viewport(0.0f, 0.0f, 500.0f, 220.0f);
+    const auto items = arrangeScrollingRow(viewport, 110.0f, 6.0f, 6, 200.0f);
+
+    check(nearly(items[0].rect.x, -200.0f) && !items[0].visible,
+          "strip 0 has scrolled entirely past the leading edge (its right edge at -90 is still left of 0)");
+    check(nearly(items[1].rect.x, -84.0f) && items[1].visible,
+          "strip 1's right edge (26) is inside the viewport even though its left edge (-84) is not — partially visible still counts");
+    check(nearly(items[5].rect.x, 380.0f) && items[5].visible, "strip 5 has scrolled into view");
+}
+
+void testScrollingRowHonorsANonZeroViewportOrigin() {
+    // The mixer's real viewport does not start at x=0 — it starts after the
+    // file-browser/track-header gutter. A non-zero viewport.x must anchor the
+    // row exactly the way arrangeTrailingRow's non-zero-origin case does.
+    const NUILocalRect viewport(260.0f, 0.0f, 300.0f, 220.0f);
+    const auto items = arrangeScrollingRow(viewport, 110.0f, 6.0f, 3, 0.0f);
+
+    check(nearly(items[0].rect.x, 260.0f), "strip 0 is anchored at the viewport's own x, not 0");
+    check(nearly(items[1].rect.x, 376.0f), "strip 1 follows at one step past strip 0: 260 + 116");
+}
+
 } // namespace
 
 int main() {
@@ -179,10 +241,14 @@ int main() {
 
     testTrailingRowMatchesWindowPanelExactly();
     testTrailingRowAtASecondPanelWidth();
-    testTrailingRowSpacingIsBothMarginAndGap();
+    testTrailingRowEdgeMarginEqualToSpacing();
+    testTrailingRowEdgeMarginIndependentOfSpacing();
     testTrailingRowAnchorsToANonZeroOrigin();
     testSplitVerticalMatchesWindowPanelContentBand();
     testSplitVerticalClampsRatherThanGoingNegative();
+    testScrollingRowAtZeroScrollMatchesMixerPanel();
+    testScrollingRowUnderScrollMatchesMixerPanel();
+    testScrollingRowHonorsANonZeroViewportOrigin();
 
     if (failures != 0) {
         std::cout << "\n" << failures << " check(s) failed\n";
