@@ -110,7 +110,17 @@ class NUILayoutNode {
 public:
     virtual ~NUILayoutNode() = default;
 
-    void setAbsolutelyPositioned(bool absolute) { absolutelyPositioned_ = absolute; }
+    void setAbsolutelyPositioned(bool absolute) {
+        if (absolutelyPositioned_ != absolute) {
+            absolutelyPositioned_ = absolute;
+            // Toggling this changes whether the parent's constraint applies to this
+            // node at all, so any existing arrangement is stale. Route through the
+            // guarded setter rather than assigning ArrangeDirty directly — a node
+            // that is currently MeasureDirty must stay MeasureDirty; a positioning
+            // change doesn't relax an already-larger obligation.
+            markArrangeDirty();
+        }
+    }
     bool isAbsolutelyPositioned() const { return absolutelyPositioned_; }
 
     void markMeasureDirty() { dirty_ = NUILayoutDirty::MeasureDirty; }
@@ -152,8 +162,20 @@ public:
     const NUILayoutTrace& lastTrace() const { return trace_; }
 
 protected:
-    /** Overriders call this at the end of measure() so arrange() has the "asked for" half of the trace. */
-    void recordMeasured(const NUIMeasureResult& result) { lastMeasured_ = result; }
+    /**
+     * Overriders call this at the end of measure() so arrange() has the "asked
+     * for" half of the trace. A successful measurement satisfies whatever
+     * MeasureDirty obligation caused it to be called — per this class's own
+     * documented semantics, that leaves exactly ArrangeDirty (the measurement is
+     * now valid; only placement is still owed), never Clean (arrange hasn't run)
+     * and never a lingering MeasureDirty (measurement just happened). This is an
+     * unconditional transition, not the guarded markArrangeDirty() — satisfying
+     * MeasureDirty is precisely the one case that must be allowed to relax it.
+     */
+    void recordMeasured(const NUIMeasureResult& result) {
+        lastMeasured_ = result;
+        dirty_ = NUILayoutDirty::ArrangeDirty;
+    }
 
 private:
     NUILayoutDirty dirty_ = NUILayoutDirty::MeasureDirty;

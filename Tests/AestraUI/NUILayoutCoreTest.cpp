@@ -204,6 +204,12 @@ void testDirtyStateTransitions() {
     check(node.dirtyState() == NUILayoutDirty::MeasureDirty, "a freshly constructed node starts MeasureDirty");
 
     node.measure(NUIConstraint(100.0f, 100.0f));
+    check(node.dirtyState() == NUILayoutDirty::ArrangeDirty,
+          "a successful measurement satisfies MeasureDirty and leaves exactly ArrangeDirty — "
+          "per this class's own documented semantics, the measurement is now valid and only "
+          "placement is still owed; it must not still read MeasureDirty, and arrange() hasn't "
+          "run yet so it must not read Clean either");
+
     node.arrange(NUILocalRect(0.0f, 0.0f, 10.0f, 10.0f), nullptr, NUIConstraint(100.0f, 100.0f));
     check(node.dirtyState() == NUILayoutDirty::Clean, "arrange() clears dirty state to Clean");
 
@@ -236,6 +242,30 @@ void testAbsolutePositioningIsExemptButStillTraced() {
           "but it is not exempt from being traced, which is what keeps the hatch from losing observability");
 }
 
+void testTogglingAbsolutePositioningDirtiesArrangementCorrectly() {
+    FixedSizeNode node(10.0f, 10.0f);
+    node.measure(NUIConstraint(100.0f, 100.0f));
+    node.arrange(NUILocalRect(0.0f, 0.0f, 10.0f, 10.0f), nullptr, NUIConstraint(100.0f, 100.0f));
+    check(node.dirtyState() == NUILayoutDirty::Clean, "setup: node is Clean before any positioning-mode change");
+
+    node.setAbsolutelyPositioned(true);
+    check(node.dirtyState() == NUILayoutDirty::ArrangeDirty,
+          "flipping the positioning mode invalidates the existing arrangement — the parent's "
+          "constraint no longer even applies to this node — but the measurement is still valid, "
+          "so this must land on ArrangeDirty, not MeasureDirty or a lingering Clean");
+
+    node.markClean();
+    node.setAbsolutelyPositioned(true); // same value again — a no-op, not a fresh dirty signal
+    check(node.dirtyState() == NUILayoutDirty::Clean,
+          "setting the SAME value again must not manufacture a spurious dirty signal");
+
+    node.markMeasureDirty();
+    node.setAbsolutelyPositioned(false); // real change, but on a node that already needs full re-measurement
+    check(node.dirtyState() == NUILayoutDirty::MeasureDirty,
+          "a positioning-mode change must route through the guarded markArrangeDirty() — it must "
+          "never downgrade an already MeasureDirty node to merely ArrangeDirty");
+}
+
 } // namespace
 
 int main() {
@@ -246,6 +276,7 @@ int main() {
     testTraceAnswersWhyANodeEndedUpWhereItDid();
     testDirtyStateTransitions();
     testAbsolutePositioningIsExemptButStillTraced();
+    testTogglingAbsolutePositioningDirtiesArrangementCorrectly();
 
     if (failures != 0) {
         std::cout << "\n" << failures << " check(s) failed\n";
