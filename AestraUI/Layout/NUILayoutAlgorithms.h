@@ -37,12 +37,18 @@ namespace Layout {
  * @brief Arranges fixed-height, individually-sized items in a horizontal row,
  * anchored to the trailing (right) edge of `container`.
  *
- * `spacing` is used consistently as both the gap between adjacent items AND the
- * margin between the first item and the container's trailing edge — the
- * convention a title bar's button row already uses, where the same value reads
- * as "how far the close button sits from the corner" and "how far apart the
- * buttons are." Items are listed nearest-to-the-edge first: `itemWidths[0]` is
- * the item closest to the trailing edge.
+ * `spacing` separates adjacent items. `edgeMargin` separates the first item
+ * from the container's trailing edge — a second real consumer (the mixer's
+ * master strip, flush against the panel edge with zero margin, ahead of an
+ * inspector separated from it and from every other item by the same spacing
+ * value) needed a different edge convention than the title bar's, where the
+ * same value happened to serve as both. Pass `spacing` for `edgeMargin` to
+ * get that original behavior back exactly — this is not a new default,
+ * because a default here would silently change every existing caller's
+ * meaning the day a second one needed something else.
+ *
+ * Items are listed nearest-to-the-edge first: `itemWidths[0]` is the item
+ * closest to the trailing edge.
  *
  * Each returned rect is vertically centered within `container`'s height. If an
  * item's width plus its predecessors' widths and spacing would push it past the
@@ -55,7 +61,8 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
     const NUILocalRect& container,
     const std::vector<float>& itemWidths,
     float itemHeight,
-    float spacing) {
+    float spacing,
+    float edgeMargin) {
     std::vector<NUILocalRect> result;
     result.reserve(itemWidths.size());
 
@@ -66,9 +73,13 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
     // splitVertical() already does this correctly; this was the one place it
     // was missed.
     const float y = container.y + ((container.height - itemHeight) * 0.5f);
-    float cursor = container.x + container.width;
+    float cursor = container.x + container.width - edgeMargin;
+    bool first = true;
     for (float width : itemWidths) {
-        cursor -= spacing;
+        if (!first) {
+            cursor -= spacing;
+        }
+        first = false;
         cursor -= width;
         result.emplace_back(cursor, y, width, itemHeight);
     }
@@ -97,6 +108,60 @@ inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadi
     split.leading = NUILocalRect(container.x, container.y, container.width, clampedLeading);
     split.trailing = NUILocalRect(container.x, container.y + clampedLeading, container.width, container.height - clampedLeading);
     return split;
+}
+
+/**
+ * @brief One item's placement within a scrolling row — its rect, in the row's
+ * own local space, and whether it currently falls inside `viewport`.
+ */
+struct NUIScrollItem {
+    NUILocalRect rect;
+    bool visible = false;
+};
+
+/**
+ * @brief Arranges `itemCount` fixed-width, equally-spaced items left to right,
+ * offset by `scrollOffset`, and reports which ones currently fall inside
+ * `viewport` — the mixer's horizontally-scrolling channel-strip row.
+ *
+ * This is the layout system's first encounter with overflow: `viewport` is
+ * not the same thing as the row's own extent, which is typically far wider
+ * than what's currently visible. `visible` is reported rather than acted on —
+ * this function does not clip, hide or reorder anything; it answers "is this
+ * item inside the window right now," and the caller decides what to do with
+ * that (here: skip setVisible(true) and the resulting draw call for anything
+ * the caller wouldn't see anyway). Folding the decision itself into this
+ * function would blur layout, overflow and rendering into one step, which is
+ * exactly the conflation X2b's four-concepts rule refuses.
+ *
+ * `scrollOffset` is not clamped here — an out-of-range value is a real bound
+ * for the CALLER to enforce (typically against `itemCount * (itemWidth +
+ * spacing) - spacing`, the row's total content width), because only the
+ * caller knows whether the scroll position came from a live drag mid-gesture,
+ * where transiently exceeding the bound is expected and will self-correct,
+ * or from a stored value that should never have gotten there.
+ */
+inline std::vector<NUIScrollItem> arrangeScrollingRow(
+    const NUILocalRect& viewport,
+    float itemWidth,
+    float spacing,
+    std::size_t itemCount,
+    float scrollOffset) {
+    std::vector<NUIScrollItem> result;
+    result.reserve(itemCount);
+
+    const float left = viewport.x;
+    const float right = viewport.right();
+    const float step = itemWidth + spacing;
+
+    for (std::size_t i = 0; i < itemCount; ++i) {
+        const float x = left - scrollOffset + (static_cast<float>(i) * step);
+        NUIScrollItem item;
+        item.rect = NUILocalRect(x, viewport.y, itemWidth, viewport.height);
+        item.visible = (x + itemWidth) >= left && x <= right;
+        result.push_back(item);
+    }
+    return result;
 }
 
 } // namespace Layout

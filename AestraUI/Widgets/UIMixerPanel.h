@@ -142,6 +142,19 @@ private:
     /// Recompute the width-driven constraint from the current bounds.
     void updateInspectorWidthConstraint();
 
+    /// The master strip and inspector rects, pinned to the panel's trailing
+    /// (right) edge — the master strip flush against it, the inspector one
+    /// spacing gap further in. V8-X2b: this was seven independent copies of
+    /// the same two-line formula (rendering, hit-testing, drag preview,
+    /// wheel-scroll, layout) before being collapsed to one source of truth
+    /// via arrangeTrailingRow(). Both rects are in window-absolute space,
+    /// matching this panel's own bounds() convention.
+    struct TrailingLayout {
+        NUIRect masterRect;
+        NUIRect inspectorRect;
+    };
+    TrailingLayout trailingLayout() const;
+
     /// Rail/handle that collapses or restores the inspector.
     NUIRect getInspectorToggleRect() const;
 
