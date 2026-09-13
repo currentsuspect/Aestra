@@ -59,8 +59,14 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
     std::vector<NUILocalRect> result;
     result.reserve(itemWidths.size());
 
-    const float y = (container.height - itemHeight) * 0.5f;
-    float cursor = container.width;
+    // container.x/container.y anchor the row at the container's actual origin
+    // rather than (0,0) — a container with a non-zero origin is a real case
+    // (a nested row inside a padded parent, say), and dropping the offset here
+    // would silently place items outside the container that was passed in.
+    // splitVertical() already does this correctly; this was the one place it
+    // was missed.
+    const float y = container.y + ((container.height - itemHeight) * 0.5f);
+    float cursor = container.x + container.width;
     for (float width : itemWidths) {
         cursor -= spacing;
         cursor -= width;

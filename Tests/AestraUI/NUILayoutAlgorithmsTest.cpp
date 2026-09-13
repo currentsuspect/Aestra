@@ -118,6 +118,21 @@ void testTrailingRowSpacingIsBothMarginAndGap() {
     check(nearly(rects[0].x, 86.0f), "x follows directly from the right edge minus the item's own width: 96 - 10 = 86");
 }
 
+void testTrailingRowAnchorsToANonZeroOrigin() {
+    // container.x/container.y must anchor the row, not be silently dropped —
+    // a container with a non-zero origin is a real case (a nested row inside
+    // a padded parent), and WindowPanel's own zero-origin call site could not
+    // have caught a regression here.
+    const NUILocalRect container(50.0f, 100.0f, 200.0f, 40.0f);
+    const auto rects = arrangeTrailingRow(container, {30.0f}, 20.0f, 5.0f);
+
+    check(rects.size() == 1, "single-item row still returns exactly one rect");
+    check(nearly(rects[0].y, 110.0f),
+          "y is anchored at the container's own origin: 100 + (40-20)*0.5 = 110, not 10");
+    check(nearly(rects[0].x, 215.0f),
+          "x is anchored at the container's own origin: (50+200) - 5 - 30 = 215, not 165");
+}
+
 // ---------------------------------------------------------------------------
 // splitVertical
 // ---------------------------------------------------------------------------
@@ -165,6 +180,7 @@ int main() {
     testTrailingRowMatchesWindowPanelExactly();
     testTrailingRowAtASecondPanelWidth();
     testTrailingRowSpacingIsBothMarginAndGap();
+    testTrailingRowAnchorsToANonZeroOrigin();
     testSplitVerticalMatchesWindowPanelContentBand();
     testSplitVerticalClampsRatherThanGoingNegative();
 
