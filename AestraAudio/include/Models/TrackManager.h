@@ -1465,23 +1465,44 @@ public:
         // pin capture to a beat the engine wraps past forever (#845).
         pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(clampedStart)));
         setDisplayPositionOverride(clampedStart);
+        // No sink means no engine to notify (model-level tests, loader): the
+        // local commit stands. A present-but-rejecting sink rolls back below.
+        bool countInAccepted = true;
         if (m_commandSink) {
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::MetronomeCountInStart;
             cmd.value1 = static_cast<float>(std::max<uint32_t>(1, beats));
-            m_commandSink(cmd);
+            countInAccepted = m_commandSink(cmd);
+        }
+        if (!countInAccepted) {
+            // The engine never heard the start: roll back so the caller degrades
+            // (plain playback) instead of waiting on a count-in that cannot
+            // arrive. Position fields keep the requested cue. (#913)
+            m_countInPending.store(false, std::memory_order_release);
+            clearDeferredRecordingStartBeat();
+            clearDisplayPositionOverride();
+            clearNextCapturePlacementStartBeat();
+            return false;
         }
         return true;
     }
 
     /**
      * @brief Cancel a pending count-in and drop its deferred capture alignment.
+     *
+     * When the stop edge is rejected the pending state is retained: the engine
+     * may still be counting in, and the frame pump degrades or completes it.
+     * Clearing would strand the two sides disagreeing with no recovery. (#913)
      */
     void cancelCountIn() {
+        bool stopAccepted = true;
         if (m_commandSink) {
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::MetronomeCountInStop;
-            m_commandSink(cmd);
+            stopAccepted = m_commandSink(cmd);
+        }
+        if (!stopAccepted) {
+            return;
         }
         clearDeferredRecordingStartBeat();
         clearDisplayPositionOverride();
@@ -2530,23 +2551,23 @@ private:
         return result;
     }
 
-    void pushTransportCommand(float playing, double positionSeconds) {
-        pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
+    bool pushTransportCommand(float playing, double positionSeconds) {
+        return pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
     }
 
     // Lower-level transport push that carries an absolute sample position (or the
     // kTransportPreservePosition sentinel) verbatim, without the seconds→samples
-    // conversion that would mangle the sentinel.
-    void pushTransportCommandSamples(float playing, uint64_t samplePos) {
+    // conversion that would mangle the sentinel. True when the sink accepted.
+    bool pushTransportCommandSamples(float playing, uint64_t samplePos) {
         if (!m_commandSink) {
-            return;
+            return false;
         }
 
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing;
         cmd.samplePos = samplePos;
-        m_commandSink(cmd);
+        return m_commandSink(cmd);
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;

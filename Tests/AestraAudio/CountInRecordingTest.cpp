@@ -94,7 +94,7 @@ PlaylistLaneID takeLaneOf(TrackManager& tm, uint64_t trackId) {
 // Test 1: Count-in is a universal lead-in (requires no record arm), but is
 // refused while a count-in is already pending or the transport is rolling.
 bool testCountInLeadInWithoutArm() {
-    std::cout << "  [1/6] Count-in runs without record arm... ";
+    std::cout << "  [1/7] Count-in runs without record arm... ";
     auto tm = makeRecorder();
 
     // No record arm, not even a track: count-in still begins (lead-in before
@@ -122,7 +122,7 @@ bool testCountInLeadInWithoutArm() {
 
 // Test 2: Record → Count-in → Recording starts — the P0 regression.
 bool testCountInRecordingFlow() {
-    std::cout << "  [2/6] Record → count-in → recording starts... ";
+    std::cout << "  [2/7] Record → count-in → recording starts... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInRecording"};
     tm->setRecordingProjectPath((dir.path() / "countin.aes").string());
@@ -179,7 +179,7 @@ bool testCountInRecordingFlow() {
 
 // Test 3: Cancelling the count-in drops the pending state and the alignment.
 bool testCountInCancelDropsDeferral() {
-    std::cout << "  [3/6] Cancel drops pending state and deferral... ";
+    std::cout << "  [3/7] Cancel drops pending state and deferral... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInCancel"};
     tm->setRecordingProjectPath((dir.path() / "cancel.aes").string());
@@ -223,7 +223,7 @@ bool testCountInCancelDropsDeferral() {
 // deferred start (from the plain lead-in) must not skip frames of a subsequent,
 // non-count-in capture.
 bool testUnarmedCountInDoesNotPoisonLaterRecording() {
-    std::cout << "  [4/6] Unarmed count-in does not misalign a later recording... ";
+    std::cout << "  [4/7] Unarmed count-in does not misalign a later recording... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInNoPoison"};
     tm->setRecordingProjectPath((dir.path() / "nopoison.aes").string());
@@ -267,7 +267,7 @@ bool testUnarmedCountInDoesNotPoisonLaterRecording() {
 
 // Test 5: CompleteCountIn is a no-op without a pending count-in.
 bool testCompleteWithoutPendingIsNoop() {
-    std::cout << "  [5/6] completeCountIn no-ops when idle... ";
+    std::cout << "  [5/7] completeCountIn no-ops when idle... ";
     auto tm = makeRecorder();
     const uint64_t trackId = makeTrack(*tm, "Track");
     if (trackId == 0) {
@@ -288,7 +288,7 @@ bool testCompleteWithoutPendingIsNoop() {
 // capture reachable — the engine wraps playback into the loop, so capture
 // pinned to the raw cue would skip every block forever (empty takes).
 bool testLoopWrapKeepsCaptureReachable() {
-    std::cout << "  [6/6] Loop wrap keeps deferred capture reachable... ";
+    std::cout << "  [6/7] Loop wrap keeps deferred capture reachable... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"CountInLoopWrap"};
     tm->setRecordingProjectPath((dir.path() / "loopwrap.aes").string());
@@ -338,12 +338,40 @@ bool testLoopWrapKeepsCaptureReachable() {
 
 } // namespace
 
+// Rejected count-in edges must not strand UI/engine state (#913): a refused
+// start rolls back pending so the caller degrades, and a refused stop retains
+// pending so the frame pump can still degrade or complete it.
+bool testRejectedCountInEdgesKeepStateAligned() {
+    std::cout << "  [7/7] Rejected count-in edges keep state aligned... ";
+    auto tm = makeRecorder();
+    tm->setCommandSink([](const AudioQueueCommand&) { return false; });
+    check(!tm->beginCountIn(4, 0.0), "refused start reports failure");
+    check(!tm->isCountInPending(), "refused start leaves nothing pending");
+    // With no sink the local commit stands (model-level use, no engine).
+    tm->setCommandSink({});
+    check(tm->beginCountIn(4, 0.0), "sinkless begin still succeeds");
+    check(tm->isCountInPending(), "sinkless begin pends");
+    tm->cancelCountIn();
+    check(!tm->isCountInPending(), "sinkless cancel clears");
+    // A refused stop retains pending for the pump instead of stranding it.
+    tm->setCommandSink([](const AudioQueueCommand&) { return false; });
+    tm->setCommandSink({});
+    check(tm->beginCountIn(4, 0.0), "re-begin succeeds");
+    tm->setCommandSink([](const AudioQueueCommand&) { return false; });
+    tm->cancelCountIn();
+    check(tm->isCountInPending(), "refused stop retains pending");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "=== Count-In Recording Tests ===\n";
     std::cout << "(Count-in → recording alignment, headless)\n\n";
 
     const bool ok = testCountInLeadInWithoutArm() & testCountInRecordingFlow() & testCountInCancelDropsDeferral() &
-                    testUnarmedCountInDoesNotPoisonLaterRecording() & testLoopWrapKeepsCaptureReachable() & testCompleteWithoutPendingIsNoop();
+                    testUnarmedCountInDoesNotPoisonLaterRecording() & testLoopWrapKeepsCaptureReachable() &
+                    testCompleteWithoutPendingIsNoop() & testRejectedCountInEdgesKeepStateAligned();
     check(g_failures == 0, "no failures");
 
     std::cout << "\n";

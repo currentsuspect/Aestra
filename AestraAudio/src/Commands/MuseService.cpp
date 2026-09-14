@@ -117,7 +117,7 @@ void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackM
         } else {
             accepted = enginePtr->commandQueue().push(cmd);
         }
-        if (cmd.type == AudioQueueCommandType::SetTransportState) {
+        if (accepted && cmd.type == AudioQueueCommandType::SetTransportState) {
             const double sampleRate =
                 std::max(1.0, static_cast<double>(enginePtr->getSampleRate()));
             // onTransportStateApplied resolves the kTransportPreservePosition pause

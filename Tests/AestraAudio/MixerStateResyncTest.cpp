@@ -33,28 +33,42 @@ void check(bool condition, const std::string& label) {
 }
 
 void dirtyOnRejectedPush() {
+    std::atomic<bool> accept{true};
     MixerChannel ch("T", 7);
-    ch.setCommandSink([](const AudioQueueCommand&) { return false; });
-    check(ch.isStateDirty(), "installing a sink marks the channel dirty");
-    ch.resyncEngineState();
-    check(ch.isStateDirty(), "failed resync keeps the channel dirty");
+    ch.setCommandSink([&](const AudioQueueCommand&) { return accept.load(std::memory_order_relaxed); });
+    check(ch.resyncEngineState(), "initial resync accepted");
+    check(!ch.isStateDirty(), "channel starts clean");
+    accept.store(false, std::memory_order_relaxed);
     ch.setVolume(0.5f);
-    check(ch.isStateDirty(), "rejected volume push keeps the channel dirty");
+    check(ch.isStateDirty(), "rejected volume push marks a clean channel dirty");
+    check(!ch.resyncEngineState(), "resync fails while the sink rejects");
+    check(ch.isStateDirty(), "failed resync keeps the channel dirty");
+    accept.store(true, std::memory_order_relaxed);
+    check(ch.resyncEngineState(), "resync accepted after the sink recovers");
+    check(!ch.isStateDirty(), "channel clean after recovery");
 }
 
 void resyncConvergesToLatest() {
+    std::atomic<bool> accept{true};
     MixerChannel ch("T", 7);
     std::vector<AudioQueueCommand> sent;
-    ch.setCommandSink([&](const AudioQueueCommand&) { return false; });
+    ch.setCommandSink([&](const AudioQueueCommand& cmd) {
+        if (accept.load(std::memory_order_relaxed)) {
+            sent.push_back(cmd);
+            return true;
+        }
+        return false;
+    });
+    check(ch.resyncEngineState(), "initial resync accepted");
+    check(!ch.isStateDirty(), "channel starts clean");
+    sent.clear();
+    accept.store(false, std::memory_order_relaxed);
     ch.setVolume(0.5f);
     ch.setPan(-0.3f);
     ch.setMute(true);
     ch.setSolo(true);
-    ch.setCommandSink([&](const AudioQueueCommand& cmd) {
-        sent.push_back(cmd);
-        return true;
-    });
-    check(ch.isStateDirty(), "channel dirty before resync");
+    check(ch.isStateDirty(), "rejected updates mark a clean channel dirty");
+    accept.store(true, std::memory_order_relaxed);
     check(ch.resyncEngineState(), "resync accepted");
     check(!ch.isStateDirty(), "channel clean after resync");
     check(sent.size() == 4, "resync re-pushes all four state commands");

@@ -68,11 +68,19 @@ void reliableEdgeSurvivesFloodInOrder() {
     }
     check(!q.push(makeCmd(AudioQueueCommandType::SetTrackVolume, 0.5f)), "queue is full after capacity pushes");
 
+    // Hold the drainer shut until the producer is provably inside the reliable
+    // wait: with a full queue and no consumer, pushReliable cannot succeed
+    // without spinning, so this pins the retry contract instead of racing it.
+    std::atomic<bool> releaseDrain{false};
+    std::atomic<bool> producerWaiting{false};
     std::vector<AudioQueueCommand> popped;
     std::mutex poppedMutex;
     std::atomic<size_t> poppedCount{0};
     std::atomic<bool> stopDrain{false};
     std::thread drainer([&] {
+        while (!releaseDrain.load(std::memory_order_acquire)) {
+            std::this_thread::yield();
+        }
         AudioQueueCommand cmd{};
         while (!stopDrain.load(std::memory_order_relaxed)) {
             if (q.pop(cmd)) {
@@ -91,9 +99,23 @@ void reliableEdgeSurvivesFloodInOrder() {
         }
     });
 
-    const bool ok1 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 1.0f, 100));
-    const bool ok2 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 0.0f, 200));
-    const bool ok3 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 1.0f, 300));
+    bool ok1 = false;
+    bool ok2 = false;
+    bool ok3 = false;
+    std::thread producer([&] {
+        producerWaiting.store(true, std::memory_order_release);
+        ok1 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 1.0f, 100));
+        ok2 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 0.0f, 200));
+        ok3 = q.pushReliable(makeCmd(AudioQueueCommandType::SetTransportState, 1.0f, 300));
+    });
+    while (!producerWaiting.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    // The producer has entered the reliable wait against a full, undrained
+    // queue; only the release below can let it succeed.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    releaseDrain.store(true, std::memory_order_release);
+    producer.join();
     check(ok1 && ok2 && ok3, "edges accepted despite flood");
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
