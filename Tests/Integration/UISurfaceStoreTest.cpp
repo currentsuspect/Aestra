@@ -1,11 +1,12 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// V8-C14 step 1 (FD-23): the UISurfaceStore schema has no runtime caller yet
-// (that is a later step), so this proves only the store's own file-format
-// contract in isolation: round-trip fidelity, corruption/absence safety,
-// forward-compat with an unrecognized future field, editor.*-only pruning,
-// and that the store never mutates the explicit maximize preference on its
-// own. Every future step (3, 5, 6) builds against this contract.
+// V8-C14 (FD-23): the UISurfaceStore schema has no runtime caller yet (that is
+// step 3), so this proves only the store's own file-format contract in
+// isolation: round-trip fidelity, corruption/absence safety, forward-compat
+// with an unrecognized future field, editor.*-only pruning, that the store
+// never mutates the explicit maximize preference on its own, and (since step 2)
+// that sizes are pixels validated as pixels while position is an anchor.
+// Every future step (3, 5, 6) builds against this contract.
 
 #include "../../Source/Core/UISurfaceStore.h"
 #include "../Support/TestTempDirectory.h"
@@ -57,19 +58,19 @@ int main() {
         UISurfaceStore store;
 
         UISurfaceGeometry mixer;
-        mixer.x = 0.1;
-        mixer.y = 0.2;
-        mixer.width = 0.6;
-        mixer.height = 0.4;
+        mixer.anchorX = 0.1;
+        mixer.anchorY = 0.2;
+        mixer.width = 960.5;
+        mixer.height = 420.25;
         mixer.maximized = false;
         mixer.lastUsedAt = recentUnixSeconds();
         store.surfaces["panel.mixer"] = mixer;
 
         UISurfaceGeometry editor;
-        editor.x = 0.3;
-        editor.y = 0.25;
-        editor.width = 0.2;
-        editor.height = 0.3;
+        editor.anchorX = 0.3;
+        editor.anchorY = 0.25;
+        editor.width = 520.0;
+        editor.height = 300.0;
         editor.maximized = true;
         editor.lastUsedAt = recentUnixSeconds();
         store.surfaces["editor.some-instance-id"] = editor;
@@ -93,9 +94,9 @@ int main() {
 
         require(loaded.surfaces.count("panel.mixer") == 1, "panel.mixer key present after reload");
         const UISurfaceGeometry& loadedMixer = loaded.surfaces.at("panel.mixer");
-        require(loadedMixer.x == mixer.x && loadedMixer.y == mixer.y && loadedMixer.width == mixer.width &&
-                    loadedMixer.height == mixer.height && loadedMixer.maximized == mixer.maximized &&
-                    loadedMixer.lastUsedAt == mixer.lastUsedAt,
+        require(loadedMixer.anchorX == mixer.anchorX && loadedMixer.anchorY == mixer.anchorY &&
+                    loadedMixer.width == mixer.width && loadedMixer.height == mixer.height &&
+                    loadedMixer.maximized == mixer.maximized && loadedMixer.lastUsedAt == mixer.lastUsedAt,
                 "panel.mixer geometry is field-for-field identical");
 
         require(loaded.surfaces.count("editor.some-instance-id") == 1, "editor.* key present after reload");
@@ -216,7 +217,7 @@ int main() {
 
     // --- 6. Invalid schemaVersion values fall back to defaults, never import as "older". ---
     {
-        const std::string body = ", \"surfaces\": {\"panel.mixer\": {\"x\": 0.25}}}";
+        const std::string body = ", \"surfaces\": {\"panel.mixer\": {\"anchorX\": 0.25}}}";
 
         // Positive control: the identical body under a valid version loads, so the
         // rejections below are caused by the version and cannot pass vacuously.
@@ -241,19 +242,56 @@ int main() {
         for (const char* badTimestamp : {"1e20", "-9.3e18", "-1", "12.5"}) {
             const auto path = (tempDir / "timestamp-bad.json").string();
             require(writeRawFile(path, std::string("{\"schemaVersion\": 1, \"surfaces\": {\"panel.mixer\": "
-                                                   "{\"x\": 0.25, \"lastUsedAt\": ") +
+                                                   "{\"anchorX\": 0.25, \"lastUsedAt\": ") +
                                            badTimestamp + "}}}"),
                     std::string("bad-timestamp fixture written: ") + badTimestamp);
 
             const UISurfaceStore loaded = UISurfaceStore::load(path);
             // panel.* is never pruned, so the entry must survive and only the timestamp is rejected.
             require(loaded.surfaces.count("panel.mixer") == 1, "panel.* entry with a bad timestamp still loads");
-            require(loaded.surfaces.at("panel.mixer").x == 0.25, "the rest of the entry is unaffected");
+            require(loaded.surfaces.at("panel.mixer").anchorX == 0.25, "the rest of the entry is unaffected");
             require(loaded.surfaces.at("panel.mixer").lastUsedAt == 0,
                     std::string("lastUsedAt ") + badTimestamp + " must be rejected to the default 0");
         }
 
         std::cout << "[PASS] out-of-domain lastUsedAt values are rejected, not converted\n";
+    }
+
+    // --- 8. Sizes are pixels (step 2): in-domain values load exactly, out-of-domain keep the default. ---
+    {
+        const UISurfaceGeometry defaults;
+
+        // Positive controls. 1280x720 is exactly what step 1's clamp01 would have
+        // destroyed, and 16384 is the accepted boundary.
+        const auto controlPath = (tempDir / "size-control.json").string();
+        require(writeRawFile(controlPath, "{\"schemaVersion\": 1, \"surfaces\": {\"panel.mixer\": "
+                                          "{\"width\": 1280, \"height\": 720}, \"panel.browser\": "
+                                          "{\"width\": 16384, \"height\": 16384}}}"),
+                "size control fixture written");
+        const UISurfaceStore control = UISurfaceStore::load(controlPath);
+        require(control.surfaces.count("panel.mixer") == 1 && control.surfaces.at("panel.mixer").width == 1280.0 &&
+                    control.surfaces.at("panel.mixer").height == 720.0,
+                "control: a 1280x720 pixel size loads exactly, not clamped to a fraction");
+        require(control.surfaces.count("panel.browser") == 1 &&
+                    control.surfaces.at("panel.browser").width == 16384.0,
+                "control: 16384px, the boundary, is accepted");
+
+        for (const char* badSize : {"0", "-5", "16385", "1e9", "\"NaN\""}) {
+            const auto path = (tempDir / "size-bad.json").string();
+            require(writeRawFile(path, std::string("{\"schemaVersion\": 1, \"surfaces\": {\"panel.mixer\": "
+                                                   "{\"anchorX\": 0.25, \"width\": ") +
+                                           badSize + ", \"height\": " + badSize + "}}}"),
+                    std::string("bad-size fixture written: ") + badSize);
+
+            const UISurfaceStore loaded = UISurfaceStore::load(path);
+            require(loaded.surfaces.count("panel.mixer") == 1, "an entry with a bad size still loads");
+            require(loaded.surfaces.at("panel.mixer").anchorX == 0.25, "the rest of the entry is unaffected");
+            require(loaded.surfaces.at("panel.mixer").width == defaults.width &&
+                        loaded.surfaces.at("panel.mixer").height == defaults.height,
+                    std::string("size ") + badSize + " must keep the default, not be stored");
+        }
+
+        std::cout << "[PASS] pixel sizes validated as pixels; out-of-domain sizes keep the default\n";
     }
 
     std::cout << "\nAll UISurfaceStore tests passed.\n";
