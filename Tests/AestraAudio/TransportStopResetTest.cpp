@@ -60,6 +60,7 @@ void producerStopEmitsZeroReset() {
     tm.setCommandSink([&](const AudioQueueCommand& cmd) {
         lastCmd = cmd;
         sawCommand = true;
+        return true;
     });
 
     // A scrubbed playhead + display override (count-in leftover) pre-stop.
@@ -93,6 +94,7 @@ void producerPauseStillPreserves() {
     tm.setCommandSink([&](const AudioQueueCommand& cmd) {
         lastCmd = cmd;
         sawCommand = true;
+        return true;
     });
 
     tm.setPosition(2.0);
