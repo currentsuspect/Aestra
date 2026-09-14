@@ -62,7 +62,8 @@ UISurfaceGeometry geometryFromJson(const JSON& obj) {
     // Pixels, not fractions. Nothing is clamped to fit: an oversized preference is
     // still the user's preference, and resolution shrinks only what is displayed.
     // Beyond any real display (or non-finite, or not positive) is corrupt data.
-    constexpr double kMaxSurfaceExtent = 16384.0;
+    // static: MSVC rejects using a non-static constexpr local inside a lambda without capturing it (C3493).
+    static constexpr double kMaxSurfaceExtent = 16384.0;
     const auto readExtent = [&obj](const char* key, double& out) {
         if (obj.has(key) && obj[key].isNumber()) {
             const double v = obj[key].asNumber();
