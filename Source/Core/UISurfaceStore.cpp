@@ -67,7 +67,11 @@ UISurfaceGeometry geometryFromJson(const JSON& obj) {
         g.maximized = obj["maximized"].asBool();
     }
     if (obj.has("lastUsedAt") && obj["lastUsedAt"].isNumber()) {
-        g.lastUsedAt = static_cast<int64_t>(obj["lastUsedAt"].asNumber());
+        constexpr double kMaxLastUsedAt = 9007199254740992.0; // 2^53: exact in a double, so no cast UB or prune overflow.
+        const double raw = obj["lastUsedAt"].asNumber();
+        if (std::isfinite(raw) && std::trunc(raw) == raw && raw >= 0.0 && raw <= kMaxLastUsedAt) {
+            g.lastUsedAt = static_cast<int64_t>(raw);
+        }
     }
     return g;
 }
@@ -172,15 +176,16 @@ UISurfaceStore UISurfaceStore::load(const std::string& path) {
         return store;
     }
 
-    int fromVersion = 0;
-    if (root.has("schemaVersion") && root["schemaVersion"].isNumber()) {
-        fromVersion = root["schemaVersion"].asInt();
-    } else {
+    if (!root.has("schemaVersion") || !root["schemaVersion"].isNumber()) {
         return store; // No recognizable version at all: treat as foreign/corrupt.
     }
-    if (fromVersion > kCurrentSchemaVersion) {
-        return store; // From a future build we don't know how to read: defaults.
+    // Validate as a double first: asInt() is a bare static_cast, so 0.5 or -1 would pass as "older".
+    const double rawVersion = root["schemaVersion"].asNumber();
+    if (!std::isfinite(rawVersion) || std::trunc(rawVersion) != rawVersion || rawVersion < 1.0 ||
+        rawVersion > static_cast<double>(kCurrentSchemaVersion)) {
+        return store; // Invalid, pre-history, or from a future build: defaults.
     }
+    const int fromVersion = static_cast<int>(rawVersion);
 
     // Non-const on purpose: JSON::asObject() const always returns a static
     // empty map regardless of content (AestraJSON.h's const overload is a

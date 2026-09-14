@@ -23,7 +23,9 @@ std::string resolveAppDataFilePath(const std::string& appName, const std::string
 
     std::error_code ec;
     std::filesystem::create_directories(appDataDir, ec);
-    if (ec && !std::filesystem::exists(appDataDir)) {
+    // is_directory, not exists: a regular file at this path must not yield a child path.
+    ec.clear();
+    if (!std::filesystem::is_directory(appDataDir, ec) || ec) {
         return {};
     }
 
@@ -77,16 +79,19 @@ bool writeJSONAtomic(const std::string& path, const JSON& root) {
 
     std::error_code ec;
 #ifdef _WIN32
-    if (std::filesystem::exists(path, ec)) {
-        std::filesystem::remove(path, ec);
+    // One-call replace, as ProjectSerializer's writer does: remove-then-rename can lose the file.
+    if (!MoveFileExW(std::filesystem::path(tmpPath).wstring().c_str(), std::filesystem::path(path).wstring().c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        std::filesystem::remove(tmpPath, ec);
+        return false;
     }
-    ec.clear();
-#endif
+#else
     std::filesystem::rename(tmpPath, path, ec);
     if (ec) {
         std::filesystem::remove(tmpPath, ec);
         return false;
     }
+#endif
 
 #ifndef _WIN32
     if (!Aestra::fsyncParentDirectory(path)) {

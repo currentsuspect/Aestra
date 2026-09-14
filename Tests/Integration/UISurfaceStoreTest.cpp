@@ -214,6 +214,48 @@ int main() {
         std::cout << "[PASS] maximize preference is never mutated by the store itself\n";
     }
 
+    // --- 6. Invalid schemaVersion values fall back to defaults, never import as "older". ---
+    {
+        const std::string body = ", \"surfaces\": {\"panel.mixer\": {\"x\": 0.25}}}";
+
+        // Positive control: the identical body under a valid version loads, so the
+        // rejections below are caused by the version and cannot pass vacuously.
+        const auto controlPath = (tempDir / "version-control.json").string();
+        require(writeRawFile(controlPath, "{\"schemaVersion\": 1" + body), "version control fixture written");
+        require(UISurfaceStore::load(controlPath).surfaces.count("panel.mixer") == 1,
+                "control: schemaVersion 1 with the same body loads the entry");
+
+        for (const char* badVersion : {"0", "-1", "0.5", "1.5", "1e300", "\"1\""}) {
+            const auto path = (tempDir / "version-bad.json").string();
+            require(writeRawFile(path, std::string("{\"schemaVersion\": ") + badVersion + body),
+                    std::string("bad-version fixture written: ") + badVersion);
+            require(UISurfaceStore::load(path).surfaces.empty(),
+                    std::string("schemaVersion ") + badVersion + " must fall back to defaults, not be imported");
+        }
+
+        std::cout << "[PASS] invalid schemaVersion values fall back to defaults\n";
+    }
+
+    // --- 7. Out-of-domain lastUsedAt is rejected to the default, never converted. ---
+    {
+        for (const char* badTimestamp : {"1e20", "-9.3e18", "-1", "12.5"}) {
+            const auto path = (tempDir / "timestamp-bad.json").string();
+            require(writeRawFile(path, std::string("{\"schemaVersion\": 1, \"surfaces\": {\"panel.mixer\": "
+                                                   "{\"x\": 0.25, \"lastUsedAt\": ") +
+                                           badTimestamp + "}}}"),
+                    std::string("bad-timestamp fixture written: ") + badTimestamp);
+
+            const UISurfaceStore loaded = UISurfaceStore::load(path);
+            // panel.* is never pruned, so the entry must survive and only the timestamp is rejected.
+            require(loaded.surfaces.count("panel.mixer") == 1, "panel.* entry with a bad timestamp still loads");
+            require(loaded.surfaces.at("panel.mixer").x == 0.25, "the rest of the entry is unaffected");
+            require(loaded.surfaces.at("panel.mixer").lastUsedAt == 0,
+                    std::string("lastUsedAt ") + badTimestamp + " must be rejected to the default 0");
+        }
+
+        std::cout << "[PASS] out-of-domain lastUsedAt values are rejected, not converted\n";
+    }
+
     std::cout << "\nAll UISurfaceStore tests passed.\n";
     return 0;
 }

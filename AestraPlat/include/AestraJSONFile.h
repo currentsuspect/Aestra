@@ -45,10 +45,11 @@ std::string resolveAppDataFilePath(const std::string& appName, const std::string
 std::optional<JSON> readJSONStrict(const std::string& path);
 
 /// Write @p root to @p path via the house crash-safe pattern: write to a
-/// "<path>.tmp" sibling, flush + fsync that file (Aestra::syncOfstream),
-/// rename over the destination, then fsync the parent directory — the same
-/// sequence Source/Core/UIState::save() already uses correctly. Returns
-/// false, leaving the original file untouched, if any step fails.
+/// "<path>.tmp" sibling, flush + fsync that file (Aestra::syncOfstream), then
+/// replace the destination in a single step — rename plus a parent-directory
+/// fsync on POSIX, MoveFileExW(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)
+/// on Windows, matching ProjectSerializer's writer. Returns false, leaving the
+/// original file untouched, if any step fails.
 bool writeJSONAtomic(const std::string& path, const JSON& root);
 
 } // namespace Aestra
