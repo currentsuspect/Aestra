@@ -1404,6 +1404,12 @@ void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
     updatePendingCountIn();
 
+    // Heal dropped mixer-state pushes: cheap when clean (one atomic per
+    // channel), converges when a queue flood ends (#913).
+    if (m_trackManager) {
+        m_trackManager->resyncDirtyChannels();
+    }
+
     // PluginManager may start an initial asynchronous scan when no valid cache
     // exists. Its bootstrap scan has no UI callback, so observe the transition
     // here and publish the completed result on the main thread.
@@ -3472,10 +3478,13 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
         if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
             m_audioEngine->setChannelSlotMap(slotMap);
         }
-        m_trackManager->setCommandSink([this](const AudioQueueCommand& cmd) {
+        m_trackManager->setCommandSink([this](const AudioQueueCommand& cmd) -> bool {
             if (m_audioEngine) {
                 if (cmd.type == AudioQueueCommandType::SetTransportState) {
-                    m_audioEngine->commandQueue().push(cmd);
+                    if (!m_audioEngine->commandQueue().pushReliable(cmd)) {
+                        AESTRA_LOG_ERROR("[AestraContent] Transport command dropped after retry: queue full");
+                        return false;
+                    }
                     if (m_trackManager) {
                         const double engineSampleRate =
                             std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
@@ -3486,9 +3495,20 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                                                                 engineSampleRate);
                     }
                 } else {
-                    m_audioEngine->commandQueue().push(cmd);
+                    // Edges (count-in start/stop) deliver reliably; state keeps
+                    // best-effort drop-newest semantics (#913).
+                    if (AudioCommandQueue::isEdgeCommand(cmd.type)) {
+                        if (!m_audioEngine->commandQueue().pushReliable(cmd)) {
+                            AESTRA_LOG_ERROR("[AestraContent] Edge command dropped after retry: queue full");
+                            return false;
+                        }
+                    } else if (!m_audioEngine->commandQueue().push(cmd)) {
+                        return false;
+                    }
                 }
+                return true;
             }
+            return false;
         });
     }
     AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");

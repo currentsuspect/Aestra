@@ -55,6 +55,7 @@ void producerPauseSendsPreserveSentinel() {
     tm.setCommandSink([&](const AudioQueueCommand& cmd) {
         lastCmd = cmd;
         sawCommand = true;
+        return true;
     });
 
     // Model UI lag: the audio thread has advanced well past the UI cache, but the

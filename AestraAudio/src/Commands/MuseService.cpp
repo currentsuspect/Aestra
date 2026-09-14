@@ -108,8 +108,15 @@ void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackM
     // engine through this sink — the same relay AestraContent installs.
     TrackManager* tm = trackManager.get();
     AudioEngine* enginePtr = &engine;
-    tm->setCommandSink([enginePtr, tm](const AudioQueueCommand& cmd) {
-        enginePtr->commandQueue().push(cmd);
+    tm->setCommandSink([enginePtr, tm](const AudioQueueCommand& cmd) -> bool {
+        // Edges deliver reliably (bounded wait, counted in edgeDroppedCount()
+        // on failure); state keeps best-effort drop-newest semantics (#913).
+        bool accepted = false;
+        if (AudioCommandQueue::isEdgeCommand(cmd.type)) {
+            accepted = enginePtr->commandQueue().pushReliable(cmd);
+        } else {
+            accepted = enginePtr->commandQueue().push(cmd);
+        }
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
             const double sampleRate =
                 std::max(1.0, static_cast<double>(enginePtr->getSampleRate()));
@@ -117,6 +124,7 @@ void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackM
             // sentinel and the seconds conversion in one place (#590).
             tm->onTransportStateApplied(cmd.value1 != 0.0f, cmd.samplePos, sampleRate);
         }
+        return accepted;
     });
 }
 
@@ -532,6 +540,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             const uint64_t underruns = telemetry.getUnderruns();
             const uint64_t overruns = telemetry.getOverruns();
             const uint64_t queueDrops = m_engine->commandQueue().droppedCount();
+            const uint64_t queueEdgeDrops = m_engine->commandQueue().edgeDroppedCount();
             const uint64_t rtAllocations = telemetry.getRtAllocationViolations();
             const uint64_t rtLocks = telemetry.getRtLockViolations();
             const uint64_t rtLogs = telemetry.getRtLogViolations();
@@ -548,6 +557,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             addIssue(underruns > 0, "underruns");
             addIssue(overruns > 0, "callback_deadline_overruns");
             addIssue(queueDrops > 0, "command_queue_drops");
+            addIssue(queueEdgeDrops > 0, "command_queue_edge_drops");
             addIssue(rtAllocations > 0, "rt_allocation_violations");
             addIssue(rtLocks > 0, "rt_lock_violations");
             addIssue(rtLogs > 0, "rt_log_violations");
@@ -599,6 +609,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                              JSON(static_cast<double>(m_engine->commandQueue().maxDepth())));
             commandQueue.set("capacity", JSON(static_cast<double>(AudioCommandQueue::capacity())));
             commandQueue.set("dropped", JSON(static_cast<double>(queueDrops)));
+            commandQueue.set("edgeDropped", JSON(static_cast<double>(queueEdgeDrops)));
 
             const uint64_t srcBlocks = telemetry.getSrcActiveBlocks();
             JSON resampling = JSON::object();

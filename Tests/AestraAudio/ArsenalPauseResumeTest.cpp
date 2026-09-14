@@ -45,7 +45,10 @@ int main() {
     tm.setOutputSampleRate(kSampleRate);
 
     CommandLog log;
-    tm.setCommandSink([&log](const AudioQueueCommand& cmd) { log.commands.push_back(cmd); });
+    tm.setCommandSink([&log](const AudioQueueCommand& cmd) {
+        log.commands.push_back(cmd);
+        return true;
+    });
 
     auto& patternManager = tm.getPatternManager();
     PatternID patternId = patternManager.createPattern();

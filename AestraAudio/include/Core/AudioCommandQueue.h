@@ -2,9 +2,12 @@
 #pragma once
 
 #include "AestraThreading.h"
+#include "RealtimeThreadGuard.h"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <thread>
 
 namespace Aestra {
 namespace Audio {
@@ -66,6 +69,16 @@ class AudioCommandQueue {
 public:
     static constexpr size_t kQueueCapacity = 1024;
 
+    // Edge commands carry transitions the audio thread cannot reconstruct from
+    // persistent state (play/stop/seek, count-in start/stop). They must not
+    // disappear silently; state commands (volume/pan/mute/solo) may drop, with
+    // the engine converging on the next update. See #913.
+    static constexpr bool isEdgeCommand(AudioQueueCommandType type) noexcept {
+        return type == AudioQueueCommandType::SetTransportState ||
+               type == AudioQueueCommandType::MetronomeCountInStart ||
+               type == AudioQueueCommandType::MetronomeCountInStop;
+    }
+
     bool push(const AudioQueueCommand& cmd) {
         const bool ok = m_queue.push(cmd);
         if (!ok) {
@@ -81,6 +94,42 @@ public:
         return true;
     }
 
+    // Bounded reliable delivery for edge commands. Non-RT producers only: spins
+    // up to timeoutMs waiting for space, so a transient flood delays the edge
+    // instead of losing it. True means accepted into the FIFO (ordered drain
+    // still applies); false means dropped after the deadline and counted in
+    // both droppedCount() and edgeDroppedCount() — callers must fail loudly.
+    // The 200 ms default covers draining a fully flooded queue at 16 cmds per
+    // ~10 ms block; it only ever engages when the queue is pathologically
+    // full, never on the hot path. Never call from the audio thread: misuse
+    // degrades to a single non-blocking attempt.
+    bool pushReliable(const AudioQueueCommand& cmd, uint32_t timeoutMs = 200) {
+        if (reportRealtimeMisuse("AudioCommandQueue::pushReliable")) {
+            if (m_queue.push(cmd)) {
+                return true;
+            }
+            m_dropped.fetch_add(1, std::memory_order_relaxed);
+            m_edgeDropped.fetch_add(1, std::memory_order_relaxed);
+            return false;
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+        for (;;) {
+            if (push(cmd)) {
+                return true;
+            }
+            // push() already counted this attempt in m_dropped; rewind it so a
+            // retried edge is counted exactly once, on final failure below.
+            m_dropped.fetch_sub(1, std::memory_order_relaxed);
+            if (std::chrono::steady_clock::now() >= deadline) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        m_dropped.fetch_add(1, std::memory_order_relaxed);
+        m_edgeDropped.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
     bool pop(AudioQueueCommand& outCmd) { return m_queue.pop(outCmd); }
 
     bool empty() const { return m_queue.isEmpty(); }
@@ -91,6 +140,8 @@ public:
 
     uint64_t droppedCount() const noexcept { return m_dropped.load(std::memory_order_relaxed); }
 
+    uint64_t edgeDroppedCount() const noexcept { return m_edgeDropped.load(std::memory_order_relaxed); }
+
     static constexpr uint32_t capacity() noexcept {
         return static_cast<uint32_t>(Aestra::LockFreeRingBuffer<AudioQueueCommand, kQueueCapacity>::capacity());
     }
@@ -98,6 +149,7 @@ public:
 private:
     Aestra::LockFreeRingBuffer<AudioQueueCommand, kQueueCapacity> m_queue;
     std::atomic<uint64_t> m_dropped{0};
+    std::atomic<uint64_t> m_edgeDropped{0};
     std::atomic<uint32_t> m_maxDepth{0};
 };
 

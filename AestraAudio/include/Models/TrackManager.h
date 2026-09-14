@@ -1553,7 +1553,30 @@ public:
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
             cmd.value1 = enabled ? 1.0f : 0.0f;
-            m_commandSink(cmd);
+            if (!m_commandSink(cmd)) {
+                m_metronomeDirty.store(true, std::memory_order_relaxed);
+            }
+        } else {
+            m_metronomeDirty.store(true, std::memory_order_relaxed);
+        }
+    }
+
+    // Re-push latest mixer/metronome state for anything a dropped queue push
+    // left stale. Pumped from the UI frame update; cheap when clean (one
+    // atomic per channel) and converges when a flood ends (#913).
+    void resyncDirtyChannels() {
+        for (auto& channel : m_channels) {
+            if (channel) {
+                channel->resyncEngineState();
+            }
+        }
+        if (m_metronomeDirty.load(std::memory_order_relaxed) && m_commandSink) {
+            AudioQueueCommand cmd{};
+            cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
+            cmd.value1 = m_metronomeEnabled.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
+            if (m_commandSink(cmd)) {
+                m_metronomeDirty.store(false, std::memory_order_relaxed);
+            }
         }
     }
 
@@ -1687,7 +1710,7 @@ public:
      * @brief Install the audio-command sink used to talk to the live engine.
      * @param sink Callback that forwards commands to the audio thread.
      */
-    void setCommandSink(std::function<void(const AudioQueueCommand&)> sink) {
+    void setCommandSink(MixerChannel::CommandSink sink) {
         m_commandSink = std::move(sink);
         for (auto& channel : m_channels) {
             channel->setCommandSink(m_commandSink);
@@ -2551,7 +2574,8 @@ private:
     std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
-    std::function<void(const AudioQueueCommand&)> m_commandSink;
+    std::function<bool(const AudioQueueCommand&)> m_commandSink;
+    std::atomic<bool> m_metronomeDirty{false};
     std::function<void(MixerChannel&)> m_channelPrepareCallback;
     std::function<void()> m_stopPreviewCallback;
     std::atomic<bool> m_isPlaying{false};

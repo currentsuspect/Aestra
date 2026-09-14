@@ -2580,6 +2580,32 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportStopResetTest.cpp")
     set_tests_properties(TransportStopResetTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio")
 endif()
 
+# Command-queue delivery contract (#913): state is best-effort drop-newest,
+# edges (transport/count-in) deliver via bounded reliable push in FIFO order.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioCommandQueueReliabilityTest.cpp")
+    add_executable(AudioCommandQueueReliabilityTest AestraAudio/AudioCommandQueueReliabilityTest.cpp)
+    target_link_libraries(AudioCommandQueueReliabilityTest PRIVATE AestraAudio)
+    target_include_directories(AudioCommandQueueReliabilityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AudioCommandQueueReliabilityTest COMMAND AudioCommandQueueReliabilityTest)
+    set_tests_properties(AudioCommandQueueReliabilityTest PROPERTIES LABELS "audio;engine;transport;rt-safety;contract:audio" TIMEOUT 120)
+endif()
+
+# Mixer-state resync contract (#913, state half): rejected state pushes mark
+# channels dirty and the UI pump re-pushes latest values until accepted.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/MixerStateResyncTest.cpp")
+    add_executable(MixerStateResyncTest AestraAudio/MixerStateResyncTest.cpp)
+    target_link_libraries(MixerStateResyncTest PRIVATE AestraAudio)
+    target_include_directories(MixerStateResyncTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerStateResyncTest COMMAND MixerStateResyncTest)
+    set_tests_properties(MixerStateResyncTest PROPERTIES LABELS "audio;engine;mixer;rt-safety;contract:audio" TIMEOUT 120)
+endif()
+
 # Arsenal pause/resume test (pattern-mode pause preserves the playhead)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ArsenalPauseResumeTest.cpp")
     add_executable(ArsenalPauseResumeTest AestraAudio/ArsenalPauseResumeTest.cpp)

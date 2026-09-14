@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "AestraLog.h"
 #include "AestraThreading.h"
 #include "AudioCommandQueue.h"
 #include "AudioDriverTypes.h"
@@ -210,7 +211,11 @@ public:
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing ? 1.0f : 0.0f;
         cmd.samplePos = pos;
-        m_commandQueue.push(cmd);
+        // Transport is an edge, not state: a dropped stop leaves audio running
+        // against user intent, so deliver it reliably and fail loudly (#913).
+        if (!m_commandQueue.pushReliable(cmd)) {
+            Aestra::Log::error("[AudioEngine] setTransportPlaying dropped after retry: queue full");
+        }
     }
     /** @brief Check whether transport playback is active. */
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }

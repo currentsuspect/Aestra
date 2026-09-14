@@ -49,7 +49,9 @@ void MixerChannel::setVolume(float volume) {
         cmd.type = AudioQueueCommandType::SetTrackVolume;
         cmd.channelId = m_channelId;
         cmd.value1 = volume;
-        m_commandSink(cmd);
+        if (!m_commandSink(cmd)) {
+            markStateDirty();
+        }
     }
 }
 
@@ -64,7 +66,9 @@ void MixerChannel::setPan(float pan) {
         cmd.type = AudioQueueCommandType::SetTrackPan;
         cmd.channelId = m_channelId;
         cmd.value1 = pan;
-        m_commandSink(cmd);
+        if (!m_commandSink(cmd)) {
+            markStateDirty();
+        }
     }
 }
 
@@ -87,7 +91,9 @@ void MixerChannel::setMute(bool mute) {
         cmd.type = AudioQueueCommandType::SetTrackMute;
         cmd.channelId = m_channelId;
         cmd.value1 = mute ? 1.0f : 0.0f;
-        m_commandSink(cmd);
+        if (!m_commandSink(cmd)) {
+            markStateDirty();
+        }
     }
 }
 
@@ -102,8 +108,48 @@ void MixerChannel::setSolo(bool solo) {
         cmd.type = AudioQueueCommandType::SetTrackSolo;
         cmd.channelId = m_channelId;
         cmd.value1 = solo ? 1.0f : 0.0f;
-        m_commandSink(cmd);
+        if (!m_commandSink(cmd)) {
+            markStateDirty();
+        }
     }
+}
+
+bool MixerChannel::resyncEngineState() {
+    if (reportRealtimeMisuse("MixerChannel::resyncEngineState")) return false;
+    if (!isStateDirty()) {
+        return true;
+    }
+    if (!m_commandSink || m_channelId == 0) {
+        return false;
+    }
+    const float volume = m_volume.load(std::memory_order_relaxed);
+    const float pan = m_pan.load(std::memory_order_relaxed);
+    const bool mute = m_muted.load(std::memory_order_relaxed);
+    const bool solo = m_soloed.load(std::memory_order_relaxed);
+    AudioQueueCommand cmd{};
+    cmd.channelId = m_channelId;
+    cmd.type = AudioQueueCommandType::SetTrackVolume;
+    cmd.value1 = volume;
+    if (!m_commandSink(cmd)) {
+        return false;
+    }
+    cmd.type = AudioQueueCommandType::SetTrackPan;
+    cmd.value1 = pan;
+    if (!m_commandSink(cmd)) {
+        return false;
+    }
+    cmd.type = AudioQueueCommandType::SetTrackMute;
+    cmd.value1 = mute ? 1.0f : 0.0f;
+    if (!m_commandSink(cmd)) {
+        return false;
+    }
+    cmd.type = AudioQueueCommandType::SetTrackSolo;
+    cmd.value1 = solo ? 1.0f : 0.0f;
+    if (!m_commandSink(cmd)) {
+        return false;
+    }
+    m_stateDirty.store(false, std::memory_order_relaxed);
+    return true;
 }
 
 void MixerChannel::setSoloSafe(bool safe) {
