@@ -36,8 +36,8 @@ double clamp01(double v) {
 
 JSON geometryToJson(const UISurfaceGeometry& g) {
     JSON obj = JSON::object();
-    obj.set("x", JSON(g.x));
-    obj.set("y", JSON(g.y));
+    obj.set("anchorX", JSON(g.anchorX));
+    obj.set("anchorY", JSON(g.anchorY));
     obj.set("width", JSON(g.width));
     obj.set("height", JSON(g.height));
     obj.set("maximized", JSON(g.maximized));
@@ -48,21 +48,32 @@ JSON geometryToJson(const UISurfaceGeometry& g) {
 /// Type-checked, not merely present — a wrong-typed field falls back to the
 /// UISurfaceGeometry default for that field, the same "absent and
 /// wrong-typed land in the same bucket" policy MixerUIPreferences::load uses,
-/// so a stray {"x": "nan"} cannot corrupt geometry silently.
+/// so a stray {"anchorX": "nan"} cannot corrupt geometry silently.
 UISurfaceGeometry geometryFromJson(const JSON& obj) {
     UISurfaceGeometry g;
-    if (obj.has("x") && obj["x"].isNumber()) {
-        g.x = clamp01(obj["x"].asNumber());
-    }
-    if (obj.has("y") && obj["y"].isNumber()) {
-        g.y = clamp01(obj["y"].asNumber());
-    }
-    if (obj.has("width") && obj["width"].isNumber()) {
-        g.width = clamp01(obj["width"].asNumber());
-    }
-    if (obj.has("height") && obj["height"].isNumber()) {
-        g.height = clamp01(obj["height"].asNumber());
-    }
+    const auto readAnchor = [&obj](const char* key, double& out) {
+        if (obj.has(key) && obj[key].isNumber() && std::isfinite(obj[key].asNumber())) {
+            out = clamp01(obj[key].asNumber());
+        }
+    };
+    readAnchor("anchorX", g.anchorX);
+    readAnchor("anchorY", g.anchorY);
+
+    // Pixels, not fractions. Nothing is clamped to fit: an oversized preference is
+    // still the user's preference, and resolution shrinks only what is displayed.
+    // Beyond any real display (or non-finite, or not positive) is corrupt data.
+    constexpr double kMaxSurfaceExtent = 16384.0;
+    const auto readExtent = [&obj](const char* key, double& out) {
+        if (obj.has(key) && obj[key].isNumber()) {
+            const double v = obj[key].asNumber();
+            if (std::isfinite(v) && v > 0.0 && v <= kMaxSurfaceExtent) {
+                out = v;
+            }
+        }
+    };
+    readExtent("width", g.width);
+    readExtent("height", g.height);
+
     if (obj.has("maximized") && obj["maximized"].isBool()) {
         g.maximized = obj["maximized"].asBool();
     }

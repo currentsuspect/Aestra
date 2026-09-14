@@ -2903,3 +2903,31 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/UISurfaceStoreTest.cpp")
     add_test(NAME UISurfaceStoreTest COMMAND UISurfaceStoreTest)
     set_tests_properties(UISurfaceStoreTest PROPERTIES LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# V8-C14 step 2 (FD-23): the layout half of the resolution contract — resolve and
+# capture never feed each other, so region churn cannot rewrite a preference.
+#
+# Deliberately links nothing. NUIAnchoredPlacement.h is header-only, so this test
+# builds in every configuration, including AESTRA_CI=ON (FD-19's silent-skip
+# pattern — see the NUITransformCompositionTest comment above).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIAnchoredPlacementTest.cpp")
+    add_executable(NUIAnchoredPlacementTest AestraUI/NUIAnchoredPlacementTest.cpp)
+    add_test(NAME NUIAnchoredPlacementTest COMMAND NUIAnchoredPlacementTest)
+    set_tests_properties(NUIAnchoredPlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
+
+# V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
+# UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
+# surface restores it, absent entries resolve from defaults without writing.
+#
+# Links nothing: UISurfaceResolution.h, UISurfaceStore.h's types and AestraJSON.h
+# are all header-only, so this also builds under AESTRA_CI=ON.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/UISurfaceResolutionTest.cpp")
+    add_executable(UISurfaceResolutionTest Integration/UISurfaceResolutionTest.cpp)
+    target_include_directories(UISurfaceResolutionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME UISurfaceResolutionTest COMMAND UISurfaceResolutionTest)
+    set_tests_properties(UISurfaceResolutionTest PROPERTIES LABELS "preferences;layout;regression;contract:durability")
+endif()
