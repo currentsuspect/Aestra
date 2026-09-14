@@ -12,10 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Common sources
 set(AESTRA_PLAT_SOURCES
     src/Platform.cpp
+    src/AestraJSONFile.cpp
 )
 
 set(AESTRA_PLAT_HEADERS
     include/AestraPlatform.h
+    include/AestraJSONFile.h
 )
 
 set(AESTRA_PLAT_PRIVATE_DEFINITIONS)

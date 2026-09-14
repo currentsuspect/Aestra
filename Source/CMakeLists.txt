@@ -37,7 +37,9 @@ set(Aestra_SOURCES
 	Core/Preferences.cpp
 	Core/UIState.h
 	Core/UIState.cpp
-	
+	Core/UISurfaceStore.h
+	Core/UISurfaceStore.cpp
+
 	# Panels
 	Panels/TransportBar.h
 	Panels/TransportBar.cpp

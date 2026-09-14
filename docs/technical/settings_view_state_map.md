@@ -154,6 +154,20 @@ the two four-line ends are missing. Note it is **not** dead code to delete —
 panel geometry is worth persisting. It is an unfinished feature that looks
 finished from either end.
 
+> [!note] Superseded 2026-09-14 by FD-23 — "finish the two ends" is no longer
+> the right fix
+> FD-23 (`Aestra-Internals`, ruled 2026-09-13, seven weeks after this was
+> written and never cross-referenced against it until now) settles panel
+> geometry's ownership the opposite way this entry assumed: it is a **user
+> preference**, never project state — "an editor's position is not a property
+> of the music... opening the same project on a laptop, on a 4K desktop or
+> with a different monitor arrangement would make an imported pixel position
+> actively wrong." Wiring `captureUIState()`/`applyUIState()` to populate
+> `PanelState` would put geometry inside the `.aes` project file, which is now
+> the wrong store. `PanelState` is left dead on purpose (V8-C14 step 1,
+> `UISurfaceStore` — see `Source/Core/UISurfaceStore.h`) and is a deletion
+> candidate for a dedicated follow-up PR, not something to finish.
+
 ---
 
 ## Settings

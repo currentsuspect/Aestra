@@ -2881,3 +2881,25 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUILayoutAlgorithmsTest.cpp")
     add_test(NAME NUILayoutAlgorithmsTest COMMAND NUILayoutAlgorithmsTest)
     set_tests_properties(NUILayoutAlgorithmsTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
+
+# V8-C14 step 1 (FD-23): the UISurfaceStore schema's own file-format contract
+# in isolation -- round-trip fidelity, corruption/absence safety,
+# forward-compat with an unrecognized future schemaVersion, editor.*-only
+# pruning, and that the store never mutates the maximize preference on its
+# own. Nothing in the app consumes UISurfaceStore yet (later steps); this
+# only proves the contract every future step builds against.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/UISurfaceStoreTest.cpp")
+    add_executable(UISurfaceStoreTest
+        Integration/UISurfaceStoreTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(UISurfaceStoreTest PRIVATE AestraPlat)
+    target_include_directories(UISurfaceStoreTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Tests
+    )
+    add_test(NAME UISurfaceStoreTest COMMAND UISurfaceStoreTest)
+    set_tests_properties(UISurfaceStoreTest PROPERTIES LABELS "serialization;preferences;regression;contract:durability")
+endif()
