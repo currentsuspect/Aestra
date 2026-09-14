@@ -228,11 +228,12 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer) {
     }
     const NUIPoint needle{center.x + std::cos(angle) * (radius - 35.0f), center.y + std::sin(angle) * (radius - 35.0f)};
     renderer.drawLine(center, needle, 2.3f, pitchAccent().withAlpha(0.88f));
-    renderer.fillCircle(center, 28.0f, editorNeutral(NUIColor(0.048f, 0.045f, 0.060f, 1.0f)));
-    renderer.strokeCircle(center, 28.0f, 1.0f, pitchAccent().withAlpha(0.30f));
-    renderer.drawTextCentered(pitchValueString(), {center.x - 34.0f, center.y - 11.0f, 68.0f, 22.0f}, 18.0f,
+    // Readout disc sized so "SEMITONES" fits inside its edge (chord at +22 is ~52px).
+    renderer.fillCircle(center, 34.0f, editorNeutral(NUIColor(0.048f, 0.045f, 0.060f, 1.0f)));
+    renderer.strokeCircle(center, 34.0f, 1.0f, pitchAccent().withAlpha(0.30f));
+    renderer.drawTextCentered(pitchValueString(), {center.x - 34.0f, center.y - 15.0f, 68.0f, 22.0f}, 18.0f,
                               pitchAccent());
-    renderer.drawTextCentered("SEMITONES", {center.x - 42.0f, center.y + 17.0f, 84.0f, 11.0f}, 7.0f,
+    renderer.drawTextCentered("SEMITONES", {center.x - 42.0f, center.y + 11.0f, 84.0f, 11.0f}, 7.0f,
                               theme.getColor("textSecondary").withAlpha(0.54f));
 }
 

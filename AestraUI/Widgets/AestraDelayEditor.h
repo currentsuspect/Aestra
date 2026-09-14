@@ -67,6 +67,7 @@ private:
     NUIRect m_stereoRect;
     NUIRect m_pingPongRect;
     NUIRect m_bypassRect;
+    NUIRect mixTrackRect() const;
     NUIRect m_mixSliderRect;
     NUIRect m_syncReadoutRect;
     NUIRect m_timingSectionRect;

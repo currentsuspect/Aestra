@@ -315,7 +315,8 @@ void AestraFilterEditor::drawBypassPill(NUIRenderer& renderer) {
 }
 
 NUIRect AestraFilterEditor::mixTrackRect() const {
-    return NUIRect(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 78.0f, m_mixRect.height - 12.0f);
+    // Stops short of the right-aligned percentage so the thumb never covers it.
+    return NUIRect(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 104.0f, m_mixRect.height - 12.0f);
 }
 
 void AestraFilterEditor::drawMixSlider(NUIRenderer& renderer) {
