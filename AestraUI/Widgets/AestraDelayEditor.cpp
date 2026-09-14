@@ -469,8 +469,8 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     const float mix = m_instance ? m_instance->getParameter(Delay::kMix) : 0.0f;
     NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);
-    // Track stops short of the right-aligned percentage so the thumb never covers it.
-    const NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 130.0f, 8.0f);
+    const NUIRect hit = offsetRect(mixTrackRect(), wx, wy);
+    const NUIRect track(hit.x, mixRect.y + 12.0f, hit.width, 8.0f);
     renderer.fillRoundedRect(mixRect, 10.0f, NUIThemeManager::getInstance().getColor("editorControl"));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
@@ -621,6 +621,13 @@ void AestraDelayEditor::applySyncSelection() {
     setDirty(true);
 }
 
+NUIRect AestraDelayEditor::mixTrackRect() const {
+    // Stops short of the right-aligned percentage so the thumb never covers it.
+    // Local coordinates, like m_mixSliderRect; drawing offsets it to the window.
+    return NUIRect(m_mixSliderRect.x + 58.0f, m_mixSliderRect.y + 6.0f,
+                   m_mixSliderRect.width - 130.0f, m_mixSliderRect.height - 12.0f);
+}
+
 bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible())
         return false;
@@ -693,11 +700,13 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
                     return true;
                 }
             }
-            if (m_mixSliderRect.contains({mx, my})) {
+            // Press only on the track itself: the "Mix" label and the percentage
+            // readout share m_mixSliderRect but must not start a drag (a click on
+            // the readout used to snap Mix to 100%). Same geometry as the drawn track.
+            if (mixTrackRect().contains({mx, my})) {
                 m_draggingMix = true;
-                const float sliderX = m_mixSliderRect.x + 58.0f;
-                const float sliderW = m_mixSliderRect.width - 130.0f;
-                m_instance->setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));
+                const NUIRect track = mixTrackRect();
+                m_instance->setParameter(Delay::kMix, std::clamp((mx - track.x) / track.width, 0.0f, 1.0f));
                 setDirty(true);
                 return true;
             }
@@ -709,9 +718,8 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_draggingMix = false;
             return true;
         }
-        const float sliderX = m_mixSliderRect.x + 58.0f;
-        const float sliderW = m_mixSliderRect.width - 130.0f;
-        m_instance->setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));
+        const NUIRect track = mixTrackRect();
+        m_instance->setParameter(Delay::kMix, std::clamp((mx - track.x) / track.width, 0.0f, 1.0f));
         setDirty(true);
         return true;
     }
