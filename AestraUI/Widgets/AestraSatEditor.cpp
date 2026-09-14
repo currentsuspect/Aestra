@@ -76,11 +76,14 @@ void AestraSatEditor::layoutControls() {
 
     // Large drive knob on the left, tone/output stacked on the right
     const float knobTop = contentTop + 56.0f;
-    m_driveRect = NUIRect(b.x + 52.0f, knobTop, 128.0f, 128.0f);
+    // 116 (was 128) so knob + label (+4, 14) + value (+19, 13) end at +148 and the
+    // Mix slider fits below them inside the 300px window. x shifts 6 to keep the centre.
+    m_driveRect = NUIRect(b.x + 58.0f, knobTop, 116.0f, 116.0f);
     m_toneRect = NUIRect(b.x + 232.0f, knobTop + 4.0f, 84.0f, 84.0f);
     m_outputRect = NUIRect(b.x + 344.0f, knobTop + 4.0f, 84.0f, 84.0f);
 
-    const float sliderY = std::min(knobTop + 140.0f, b.bottom() - 44.0f);
+    // Below the Drive value (ends knobTop + 148), with a gap.
+    const float sliderY = std::min(knobTop + 154.0f, b.bottom() - 34.0f);
     m_mixRect = NUIRect(b.x + 58.0f, sliderY, b.width - 116.0f, 34.0f);
 }
 
@@ -173,7 +176,8 @@ void AestraSatEditor::drawBypassPill(NUIRenderer& renderer) {
 void AestraSatEditor::drawMixSlider(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const float mix = m_instance ? m_instance->getParameter(AestraSat::kMix) : 1.0f;
-    const NUIRect track(m_mixRect.x + 38.0f, m_mixRect.y + 12.0f, m_mixRect.width - 78.0f, 8.0f);
+    // Track stops short of the right-aligned percentage so the thumb never covers it.
+    const NUIRect track(m_mixRect.x + 38.0f, m_mixRect.y + 12.0f, m_mixRect.width - 104.0f, 8.0f);
 
     renderer.fillRoundedRect(m_mixRect, 10.0f, insetSurface());
     renderer.strokeRoundedRect(m_mixRect, 10.0f, 1.0f, accent().withAlpha(m_draggingMix ? 0.62f : 0.34f));
@@ -259,7 +263,7 @@ bool AestraSatEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     // Mix slider drag
-    const NUIRect mixTrack(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 78.0f, m_mixRect.height - 12.0f);
+    const NUIRect mixTrack(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 104.0f, m_mixRect.height - 12.0f);
     if (m_draggingMix) {
         if (event.released) {
             m_draggingMix = false;

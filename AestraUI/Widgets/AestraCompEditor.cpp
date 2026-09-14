@@ -446,23 +446,25 @@ void AestraCompEditor::drawMeters(NUIRenderer& renderer, NUIColor accent) {
         renderer.fillRoundedRect(meterBounds, 5.0f, editorNeutral(0.008f, 1.0f));
         renderer.strokeRoundedRect(meterBounds, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));
 
-        // Fill
+        char valBuf[16]{};
+        const float db = norm > 1.0e-8f ? 20.0f * std::log10(norm) : -60.0f;
+        std::snprintf(valBuf, sizeof(valBuf), "%.1f dB", db);
+        const NUISize valSize = renderer.measureText(valBuf, 8.0f);
+        const float valX = x + thirdW - valSize.width - 14.0f;
+
+        // Fill — scaled into the space left of the value, so the number always
+        // sits on the meter background instead of on top of the bar.
         const float fillNorm = levelToNorm(norm);
-        if (fillNorm > 0.001f) {
-            renderer.fillRoundedRect({meterBounds.x, meterBounds.y, meterBounds.width * fillNorm, meterBounds.height},
+        const float fillSpan = std::max(0.0f, valX - 8.0f - meterBounds.x);
+        if (fillNorm > 0.001f && fillSpan > 0.0f) {
+            renderer.fillRoundedRect({meterBounds.x, meterBounds.y, fillSpan * fillNorm, meterBounds.height},
                                      5.0f, color.withAlpha(0.88f));
         }
 
         // Text overlaid on the meter
         const float textY = b.y + (b.height - 8.0f) * 0.5f;
         renderer.drawText(label, {x + 8.0f, textY}, 8.0f, NUIColor(1, 1, 1, 0.50f));
-
-        char valBuf[16]{};
-        const float db = norm > 1.0e-8f ? 20.0f * std::log10(norm) : -60.0f;
-        std::snprintf(valBuf, sizeof(valBuf), "%.1f dB", db);
-        const NUISize valSize = renderer.measureText(valBuf, 8.0f);
-        renderer.drawText(valBuf, {x + thirdW - valSize.width - 14.0f, textY}, 8.0f,
-                          NUIColor(1, 1, 1, 0.90f));
+        renderer.drawText(valBuf, {valX, textY}, 8.0f, NUIColor(1, 1, 1, 0.90f));
     };
 
     drawMeter(b.x, "IN", m_inputDisplay, purple());

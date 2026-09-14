@@ -469,7 +469,8 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     const float mix = m_instance ? m_instance->getParameter(Delay::kMix) : 0.0f;
     NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);
-    const NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 104.0f, 8.0f);
+    // Track stops short of the right-aligned percentage so the thumb never covers it.
+    const NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 130.0f, 8.0f);
     renderer.fillRoundedRect(mixRect, 10.0f, NUIThemeManager::getInstance().getColor("editorControl"));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
@@ -695,7 +696,7 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
             if (m_mixSliderRect.contains({mx, my})) {
                 m_draggingMix = true;
                 const float sliderX = m_mixSliderRect.x + 58.0f;
-                const float sliderW = m_mixSliderRect.width - 104.0f;
+                const float sliderW = m_mixSliderRect.width - 130.0f;
                 m_instance->setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));
                 setDirty(true);
                 return true;
@@ -709,7 +710,7 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         const float sliderX = m_mixSliderRect.x + 58.0f;
-        const float sliderW = m_mixSliderRect.width - 104.0f;
+        const float sliderW = m_mixSliderRect.width - 130.0f;
         m_instance->setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));
         setDirty(true);
         return true;
