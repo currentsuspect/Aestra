@@ -87,7 +87,7 @@ After successfully building Aestra:
 ### Minimum Requirements
 - **OS:** Windows 10 64-bit (build 1809+) or Linux with the required development libraries
 - **CPU:** Intel Core i5 (4th gen) or AMD Ryzen 3
-- **RAM:** 8 GB
+- **RAM:** 4 GB
 - **GPU:** OpenGL 3.3+ compatible with 1 GB VRAM
 - **Audio:** WASAPI-compatible audio interface (Windows) or ALSA-compatible device stack (Linux)
 
