@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <vector>
 #include "NUIComponent.h"
 #include "NUIButton.h"
 #include "NUIDropdown.h"
@@ -74,7 +75,11 @@ public:
     void setOnTempoChange(std::function<void(float)> callback) { m_onTempoChange = callback; }
     void setOnMetronomeToggle(std::function<void(bool)> callback) { m_onMetronomeToggle = callback; }
     void setOnTimeSignatureChange(std::function<void(int)> callback) { m_onTimeSignatureChange = callback; }
-    void setMetronomeActive(bool active) { m_metronomeActive = active; setDirty(true); }
+    void setMetronomeActive(bool active) {
+        m_metronomeActive = active;
+        updateMetronomePose();
+        setDirty(true);
+    }
     void setTimeSignature(int beatsPerBar) { m_beatsPerBar = beatsPerBar; setDirty(true); }
     int getTimeSignature() const { return m_beatsPerBar; }
     
@@ -138,8 +143,12 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_pauseIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_stopIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_recordIcon;
-    std::shared_ptr<AestraUI::NUIIcon> m_metronomeIcon;
-    
+    std::shared_ptr<AestraUI::NUIIcon> m_metronomeIcon; // Current pendulum pose (one of m_metronomePoses)
+    // Pre-built pendulum poses. While the metronome is on and the transport plays,
+    // updateMetronomePose() swings the arm so it reaches a side on every beat.
+    std::vector<std::shared_ptr<AestraUI::NUIIcon>> m_metronomePoses;
+    int m_metronomePose = -1;
+
     // Transport Extras Icons
     std::shared_ptr<AestraUI::NUIIcon> m_countInIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_waitIcon;
@@ -194,6 +203,8 @@ private:
     
     void createIcons();
     void createButtons();
+    /** @brief Pick the pendulum pose for the current beat; repaints only on change. */
+    void updateMetronomePose();
     void updateButtonStates();
     void layoutComponents();
     void renderButtonIcons(AestraUI::NUIRenderer& renderer);
