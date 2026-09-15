@@ -170,8 +170,12 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
     // Render tool cursor (Split, Paint, AND trim resize cursor)
     // renderToolCursor handles: trim edges, split tool, paint tool
-    // Skip custom tool/minimap cursor rendering during hidden-cursor drag
-    if (!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) {
+    // Skip custom tool/minimap cursor rendering during hidden-cursor drag, and
+    // draw only while isCustomCursorActive() claims the cursor: the same answer
+    // the window manager uses to skip its arrow, so exactly one cursor draws.
+    // Without this gate a stale hover claim (pointer over a context menu) kept a
+    // frozen tool glyph on screen after the arrow had been restored.
+    if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive()) {
         // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
         // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
         // Suppressed here rather than through cursor abstraction — intentional.

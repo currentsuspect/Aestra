@@ -173,11 +173,19 @@ bool TrackManagerUI::isCustomCursorActive() const {
         return false;
     }
 
-    // 1. Trim edge hover/active
+    // Hover claims below are made from m_lastMousePos, which only moves when a
+    // mouse event reaches the timeline. A popup above it (a clip context menu, a
+    // dialog) consumes those events and freezes that position where the pointer
+    // left from. Honouring a claim from a frozen position hid the real pointer
+    // and drew a stale tool glyph instead: the invisible cursor over context
+    // menus. Active drags own the pointer and are exempt.
+    const bool hoverCurrent = isHoverPointerCurrent();
+
+    // 1. Trim edge active, or hovered from a current pointer position
     for (const auto& trackUI : m_trackUIComponents) {
         if (!trackUI)
             continue;
-        if (trackUI->isHoveringTrimEdge() || trackUI->isTrimming()) {
+        if (trackUI->isTrimming() || (hoverCurrent && trackUI->isHoveringTrimEdge())) {
             return true;
         }
     }
@@ -189,7 +197,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     // already window-absolute, so getGlobalBounds() double-counts the parent
     // offset and shifts the region down, leaving a top strip where the arrow is
     // not suppressed while the tool cursor still draws (both cursors visible).
-    if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
+    if (hoverCurrent && (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint)) {
         AestraUI::NUIRect bounds = getBounds();
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -205,7 +213,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     // 3. Minimap resize cursor
-    if (m_timelineMinimap && m_timelineMinimap->isVisible()) {
+    if (hoverCurrent && m_timelineMinimap && m_timelineMinimap->isVisible()) {
         AestraUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
         if (minimapBounds.contains(m_lastMousePos) &&
             m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal) {
@@ -219,11 +227,21 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     // 5. Ruler scrub/loop/selection zone → grab hand.
-    if (isRulerPointerActive()) {
+    if (hoverCurrent && isRulerPointerActive()) {
         return true;
     }
 
     return false;
+}
+
+void TrackManagerUI::setWindowPointerPosition(float x, float y) {
+    m_windowPointerPos = AestraUI::NUIPoint(x, y);
+    m_hasWindowPointerPos = true;
+}
+
+bool TrackManagerUI::isHoverPointerCurrent() const {
+    return isTimelineHoverPointerCurrent(m_lastMousePos.x, m_lastMousePos.y, m_windowPointerPos.x,
+                                         m_windowPointerPos.y, m_hasWindowPointerPos);
 }
 
 void TrackManagerUI::setSnapSetting(AestraUI::SnapGrid snap) {

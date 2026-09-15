@@ -260,6 +260,13 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         m_lastMouseX = x;
         m_lastMouseY = y;
 
+        // The timeline's hover cursor claim is checked against this position:
+        // the window sees every move, including ones a popup (clip context menu)
+        // consumes before the timeline hears about them.
+        if (m_content && m_content->getTrackManagerUI()) {
+            m_content->getTrackManagerUI()->setWindowPointerPosition(static_cast<float>(x), static_cast<float>(y));
+        }
+
         if (m_content) {
             m_activeCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
