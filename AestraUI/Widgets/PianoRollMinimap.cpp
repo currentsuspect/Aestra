@@ -258,6 +258,9 @@ bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
             dragStartDuration_ = viewDuration_;
         } else if (viewportRect.contains(localPos)) {
             isDragging_ = true;
+            // Hover showed the open hand; the drag closes it. updateHoverCursor
+            // leaves the cursor alone until release re-resolves it.
+            if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Grabbing);
             dragStartPos_ = event.position;
             dragStartStart_ = startBeat_;
             dragStartDuration_ = viewDuration_;

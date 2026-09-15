@@ -7,10 +7,20 @@
 // artwork.
 //
 // - nuiCursorSvg(style): the overlay cursor glyphs (drawn by the app's custom
-//   cursor renderer). High-contrast white-on-black by default.
+//   cursor renderer). White fill, near-black outline and a soft drop shadow, so
+//   every glyph reads on dark, mid and light surfaces alike.
 // - nuiTrimResizeCursorSvg(): a tintable horizontal-stretch glyph for
 //   components that paint their own cursor (e.g. the track trim edge), using
 //   currentColor so NUIIcon::setColor drives the tone.
+//
+// Glyphs mean what they say:
+//   Hand     — a pointing hand: something clickable.
+//   Grab     — an open hand: something draggable, hovered.
+//   Grabbing — the same hand closed: something being dragged right now.
+//
+// Hotspots (24x24 viewBox; the renderer offsets each glyph so the hotspot sits
+// on the pointer — keep AestraWindowManager::renderCustomCursor in step):
+//   Arrow (2, 2) · Hand fingertip (9, 2) · everything else centred at (12, 12).
 
 #pragma once
 
@@ -23,48 +33,68 @@ namespace AestraUI {
 inline const char* nuiCursorSvg(NUICursorStyle style) {
     switch (style) {
     case NUICursorStyle::Arrow:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M5 2L5 18L9 14L12 21L14 20L11 13L17 13L5 2Z\" fill=\"white\" stroke=\"black\" stroke-width=\"1.5\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M2 2 L2 17.6 L6.2 13.7 L9 20.1 C9.22 20.62 9.8 20.86 10.32 20.64 L12.08 19.9 C12.6 19.68 12.84 19.1 12.62 18.58 L9.92 12.2 L15.6 12.2 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M2 2 L2 17.6 L6.2 13.7 L9 20.1 C9.22 20.62 9.8 20.86 10.32 20.64 L12.08 19.9 C12.6 19.68 12.84 19.1 12.62 18.58 L9.92 12.2 L15.6 12.2 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::Hand:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M7 12.5V9.5C7 8.95 7.45 8.5 8 8.5C8.55 8.5 9 8.95 9 9.5V12.2H9.6V5C9.6 4.45 10.05 4 10.6 4C11.15 4 11.6 4.45 11.6 5V12.2H12.2V3.2C12.2 2.65 12.65 2.2 13.2 2.2C13.75 2.2 14.2 2.65 14.2 3.2V12.2H14.8V6.2C14.8 5.65 15.25 5.2 15.8 5.2C16.35 5.2 16.8 5.65 16.8 6.2V14.1C16.8 17.35 14.15 20 10.9 20H10.6C7.9 20 5.7 17.8 5.7 15.1V12.5C5.7 11.95 6.15 11.5 6.7 11.5C6.93 11.5 7.14 11.58 7.3 11.72C7.32 11.74 7.33 11.75 7.35 11.77C7.56 11.96 7.7 12.22 7.7 12.5H7Z\" fill=\"white\" stroke=\"black\" stroke-width=\"1.15\" stroke-linejoin=\"round\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M9 2.2 C9.9 2.2 10.6 2.9 10.6 3.8 V9.6 C10.9 9.2 11.4 9 12 9 C12.8 9 13.4 9.6 13.4 10.4 C13.7 10 14.2 9.8 14.7 9.8 C15.5 9.8 16.1 10.4 16.1 11.2 C16.4 10.9 16.8 10.8 17.2 10.8 C18 10.8 18.6 11.4 18.6 12.2 V15.6 C18.6 18.6 16.2 21 13.2 21 H11.6 C9.6 21 8.1 20.1 7 18.6 L4.3 14.9 C3.8 14.2 4 13.3 4.7 12.9 C5.4 12.5 6.3 12.7 6.8 13.3 L7.4 14.1 V3.8 C7.4 2.9 8.1 2.2 9 2.2 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M9 2.2 C9.9 2.2 10.6 2.9 10.6 3.8 V9.6 C10.9 9.2 11.4 9 12 9 C12.8 9 13.4 9.6 13.4 10.4 C13.7 10 14.2 9.8 14.7 9.8 C15.5 9.8 16.1 10.4 16.1 11.2 C16.4 10.9 16.8 10.8 17.2 10.8 C18 10.8 18.6 11.4 18.6 12.2 V15.6 C18.6 18.6 16.2 21 13.2 21 H11.6 C9.6 21 8.1 20.1 7 18.6 L4.3 14.9 C3.8 14.2 4 13.3 4.7 12.9 C5.4 12.5 6.3 12.7 6.8 13.3 L7.4 14.1 V3.8 C7.4 2.9 8.1 2.2 9 2.2 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(<path d="M10.6 9.6 V12.8 M13.4 10.4 V13 M16.1 11.2 V13.2" stroke="#141416" stroke-width="1" stroke-linecap="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::Grab:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M12 6V3C12 2.45 12.45 2 13 2C13.55 2 14 2.45 14 3V10H15V4C15 3.45 15.45 3 16 3C16.55 3 17 3.45 17 4V10H18V5C18 4.45 18.45 4 19 4C19.55 4 20 4.45 20 5V15C20 18.31 17.31 21 14 21H12C8.69 21 6 18.31 6 15V12C6 11.45 6.45 11 7 11C7.55 11 8 11.45 8 12V14H9V6C9 5.45 9.45 5 10 5C10.55 5 11 5.45 11 6V10H12V6Z\" fill=\"white\" stroke=\"black\" stroke-width=\"1\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M8.4 14.2 V6.3 C8.4 5.5 9 4.9 9.8 4.9 C10.6 4.9 11.2 5.5 11.2 6.3 V4.9 C11.2 4.1 11.8 3.5 12.6 3.5 C13.4 3.5 14 4.1 14 4.9 V5.8 C14 5 14.6 4.4 15.4 4.4 C16.2 4.4 16.8 5 16.8 5.8 V7.6 C16.8 6.9 17.3 6.4 18 6.4 C18.7 6.4 19.2 6.9 19.2 7.6 V14.6 C19.2 18.2 16.6 21 13.2 21 H12.4 C10.4 21 8.8 20 7.7 18.4 L4.9 14.3 C4.5 13.7 4.6 13 5.3 12.6 C6 12.2 6.9 12.4 7.4 13 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M8.4 14.2 V6.3 C8.4 5.5 9 4.9 9.8 4.9 C10.6 4.9 11.2 5.5 11.2 6.3 V4.9 C11.2 4.1 11.8 3.5 12.6 3.5 C13.4 3.5 14 4.1 14 4.9 V5.8 C14 5 14.6 4.4 15.4 4.4 C16.2 4.4 16.8 5 16.8 5.8 V7.6 C16.8 6.9 17.3 6.4 18 6.4 C18.7 6.4 19.2 6.9 19.2 7.6 V14.6 C19.2 18.2 16.6 21 13.2 21 H12.4 C10.4 21 8.8 20 7.7 18.4 L4.9 14.3 C4.5 13.7 4.6 13 5.3 12.6 C6 12.2 6.9 12.4 7.4 13 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(<path d="M11.2 6.3 V11.6 M14 5.8 V11.4 M16.8 7.6 V11.7" stroke="#141416" stroke-width="1" stroke-linecap="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::Grabbing:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M9.5 5.8C9.5 5.14 10.04 4.6 10.7 4.6C11.36 4.6 11.9 5.14 11.9 5.8V9.1H12.5V4.7C12.5 4.04 13.04 3.5 13.7 3.5C14.36 3.5 14.9 4.04 14.9 4.7V9.1H15.5V6.4C15.5 5.74 16.04 5.2 16.7 5.2C17.36 5.2 17.9 5.74 17.9 6.4V11.7C17.9 15.73 14.63 19 10.6 19C7.51 19 5 16.49 5 13.4V10.7C5 10.04 5.54 9.5 6.2 9.5C6.86 9.5 7.4 10.04 7.4 10.7V12.9H8V7C8 6.34 8.54 5.8 9.2 5.8H9.5Z\" fill=\"white\" stroke=\"black\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/>"
-               "<path d=\"M7.9 14.3C8.05 15.72 9.25 16.8 10.7 16.8C12.28 16.8 13.56 15.52 13.56 13.94V12.7H7.8V13.5C7.8 13.77 7.84 14.04 7.9 14.3Z\" fill=\"black\" fill-opacity=\"0.16\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M5.6 12.2 V9.4 C5.6 8.46 6.36 7.7 7.3 7.7 C8.24 7.7 9 8.46 9 9.4 V8.3 C9 7.36 9.76 6.6 10.7 6.6 C11.64 6.6 12.4 7.36 12.4 8.3 V8 C12.4 7.06 13.16 6.3 14.1 6.3 C15.04 6.3 15.8 7.06 15.8 8 V8.8 C15.8 7.86 16.56 7.1 17.5 7.1 C18.44 7.1 19.2 7.86 19.2 8.8 V14.4 C19.2 18.3 16.3 21.2 12.6 21.2 H11.8 C8.4 21.2 5.6 18.5 5.6 15.2 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M5.6 12.2 V9.4 C5.6 8.46 6.36 7.7 7.3 7.7 C8.24 7.7 9 8.46 9 9.4 V8.3 C9 7.36 9.76 6.6 10.7 6.6 C11.64 6.6 12.4 7.36 12.4 8.3 V8 C12.4 7.06 13.16 6.3 14.1 6.3 C15.04 6.3 15.8 7.06 15.8 8 V8.8 C15.8 7.86 16.56 7.1 17.5 7.1 C18.44 7.1 19.2 7.86 19.2 8.8 V14.4 C19.2 18.3 16.3 21.2 12.6 21.2 H11.8 C8.4 21.2 5.6 18.5 5.6 15.2 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(<path d="M9 9.4 V11.8 M12.4 8.3 V11.6 M15.8 8 V11.8" stroke="#141416" stroke-width="1.05" stroke-linecap="round"/>)SVG"
+               R"SVG(<path d="M5.9 14.6 C7.5 13.1 10 12.8 12.2 13.5" stroke="#141416" stroke-width="1.15" stroke-linecap="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::IBeam:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M9 4H11M15 4H13M11 4V20M13 4V20M11 4C11 4 11 4 12 4C13 4 13 4 13 4M11 20H9M15 20H13M11 20C11 20 11 20 12 20C13 20 13 20 13 20\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\"/>"
-               "<path d=\"M9 4H11M15 4H13M11 4V20M13 4V20M11 4C11 4 11 4 12 4C13 4 13 4 13 4M11 20H9M15 20H13M11 20C11 20 11 20 12 20C13 20 13 20 13 20\" stroke=\"black\" stroke-width=\"3\" stroke-linecap=\"round\" opacity=\"0.3\"/></svg>";
+        // Wide white stem with a thin outline: the white has to dominate or the
+        // beam reads as a faint grey line on dark surfaces.
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M8 3 H9.9 C10.75 3 11.5 3.3 12 3.8 C12.5 3.3 13.25 3 14.1 3 H16 V4.9 H14.2 C13.7 4.9 13.3 5.3 13.3 5.8 V18.2 C13.3 18.7 13.7 19.1 14.2 19.1 H16 V21 H14.1 C13.25 21 12.5 20.7 12 20.2 C11.5 20.7 10.75 21 9.9 21 H8 V19.1 H9.8 C10.3 19.1 10.7 18.7 10.7 18.2 V5.8 C10.7 5.3 10.3 4.9 9.8 4.9 H8 Z" fill="#000" fill-opacity="0.32" transform="translate(0.6 0.9)"/>)SVG"
+               R"SVG(<path d="M8 3 H9.9 C10.75 3 11.5 3.3 12 3.8 C12.5 3.3 13.25 3 14.1 3 H16 V4.9 H14.2 C13.7 4.9 13.3 5.3 13.3 5.8 V18.2 C13.3 18.7 13.7 19.1 14.2 19.1 H16 V21 H14.1 C13.25 21 12.5 20.7 12 20.2 C11.5 20.7 10.75 21 9.9 21 H8 V19.1 H9.8 C10.3 19.1 10.7 18.7 10.7 18.2 V5.8 C10.7 5.3 10.3 4.9 9.8 4.9 H8 Z" fill="#fff" stroke="#141416" stroke-width="1" stroke-linejoin="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::ResizeEW:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M18 12L22 12M22 12L19 9M22 12L19 15M6 12L2 12M2 12L5 9M2 12L5 15M12 6V18\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
-               "<path d=\"M18 12L22 12M22 12L19 9M22 12L19 15M6 12L2 12M2 12L5 9M2 12L5 15M12 6V18\" stroke=\"black\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.3\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(</svg>)SVG";
     case NUICursorStyle::ResizeNS:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M12 6L12 2M12 2L9 5M12 2L15 5M12 18L12 22M12 22L9 19M12 22L15 19M6 12H18\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
-               "<path d=\"M12 6L12 2M12 2L9 5M12 2L15 5M12 18L12 22M12 22L9 19M12 22L15 19M6 12H18\" stroke=\"black\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.3\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(90 12 12)">)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#000" fill-opacity="0.32" transform="translate(1 -0.7)"/>)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(</g></svg>)SVG";
     case NUICursorStyle::ResizeNESW:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M16 8L22 2M22 2H18M22 2V6M8 16L2 22M2 22H6M2 22V18M9 15L15 9\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
-               "<path d=\"M16 8L22 2M22 2H18M22 2V6M8 16L2 22M2 22H6M2 22V18M9 15L15 9\" stroke=\"black\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.3\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(-45 12 12)">)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#000" fill-opacity="0.32" transform="translate(-0.2 1.2)"/>)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(</g></svg>)SVG";
     case NUICursorStyle::ResizeNWSE:
-        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-               "<path d=\"M8 8L2 2M2 2H6M2 2V6M16 16L22 22M22 22H18M22 22V18M9 9L15 15\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
-               "<path d=\"M8 8L2 2M2 2H6M2 2V6M16 16L22 22M22 22H18M22 22V18M9 9L15 15\" stroke=\"black\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.3\"/></svg>";
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(45 12 12)">)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#000" fill-opacity="0.32" transform="translate(1.2 0.2)"/>)SVG"
+               R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(</g></svg>)SVG";
     default:
         return nullptr;
     }
 }
 
-/** @brief Tintable horizontal-stretch glyph for component-drawn cursors
- *  (currentColor follows NUIIcon::setColor). */
+/** @brief Tintable clip-edge trim glyph for component-drawn cursors: an edge bar
+ *  with solid arrowheads either side (currentColor follows NUIIcon::setColor). */
 inline const char* nuiTrimResizeCursorSvg() {
-    return "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">"
-           "<path d=\"M18 12L22 12M22 12L19 9M22 12L19 15M6 12L2 12M2 12L5 9M2 12L5 15M12 6V18\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
+    return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+           R"SVG(<path d="M12 4.5V19.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>)SVG"
+           R"SVG(<path d="M2.6 12 L7.2 8.2 V10.9 H9.8 V13.1 H7.2 V15.8 Z M21.4 12 L16.8 8.2 V10.9 H14.2 V13.1 H16.8 V15.8 Z" fill="currentColor"/>)SVG"
+           R"SVG(</svg>)SVG";
 }
 
 } // namespace AestraUI

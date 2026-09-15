@@ -13,6 +13,7 @@ the freedoms typically associated with open source licenses (e.g., MIT, GPL, Apa
 
 Third-Party Components:
 - FreeType (SIL Open Font License, Version 2.13.1)
+- Geist typeface v1.7.2 by Vercel (SIL Open Font License 1.1; AestraAssets/fonts/Geist/OFL.txt)
 - GLAD (MIT License) 
 - ThorVG (MIT License)
 - MiniAudio (MIT License)

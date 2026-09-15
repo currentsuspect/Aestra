@@ -130,6 +130,10 @@ public:
     /** @brief True while the timeline ruler row is the interaction (playhead
      *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
     bool isRulerPointerActive() const;
+    /** @brief Latest pointer position the window saw, including moves a popup
+     *  consumed before they reached the timeline. Hover cursor claims are only
+     *  honoured while it matches the timeline's own last-seen position. */
+    void setWindowPointerPosition(float x, float y);
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -380,6 +384,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
     std::shared_ptr<::AestraUI::NUIIcon> m_grabCursorIcon; // Canonical hand glyph (ruler/minimap-pan grab)
+    std::shared_ptr<::AestraUI::NUIIcon> m_grabbingCursorIcon; // Closed hand while a ruler/minimap drag is live
 
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
 
@@ -437,6 +442,9 @@ private:
     float m_splitCursorX = 0.0f;
     bool m_showSplitCursor = false;
     ::AestraUI::NUIPoint m_lastMousePos; // Track mouse for split cursor rendering
+    ::AestraUI::NUIPoint m_windowPointerPos; // Every window move, including ones a popup consumed
+    bool m_hasWindowPointerPos = false;
+    bool isHoverPointerCurrent() const; // m_lastMousePos still matches the real pointer
 
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;

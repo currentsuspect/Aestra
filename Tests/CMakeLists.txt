@@ -1989,6 +1989,15 @@ target_include_directories(TimelineGeometryTest PRIVATE
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
 set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
+# Invisible pointer over clip context menus: a hover cursor claim made from a
+# position a popup froze must not hide the real pointer (header-only rule).
+add_executable(TimelineCursorClaimTest AestraUI/TimelineCursorClaimTest.cpp)
+target_include_directories(TimelineCursorClaimTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineCursorClaimTest COMMAND TimelineCursorClaimTest)
+set_tests_properties(TimelineCursorClaimTest PROPERTIES LABELS "ui;timeline;cursor;regression;contract:application")
+
 add_executable(TimelineInteractionPolicyTest AestraUI/TimelineInteractionPolicyTest.cpp)
 target_include_directories(TimelineInteractionPolicyTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components

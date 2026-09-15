@@ -87,13 +87,18 @@ void TrackManagerUI::createToolIcons() {
         R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.05 2.2h1.9v19.6h-1.9z"/><path d="M2.2 11.05h19.6v1.9H2.2z"/><path d="M12 1 15.1 5.2H8.9L12 1zm0 22-3.1-4.2h6.2L12 23zM1 12l4.2-3.1v6.2L1 12zm22 0-4.2 3.1V8.9L23 12z"/></svg>)";
     m_moveCursorIcon = std::make_shared<AestraUI::NUIIcon>(moveSvg);
 
-    // Trim-edge stretch cursor: the canonical registry glyph (tinted at render
-    // time), replacing the old ad-hoc drawLine arrow construction.
-    m_trimCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiTrimResizeCursorSvg());
+    // Trim-edge stretch cursor: the same white, outlined ResizeEW glyph every
+    // other resize uses. It is drawn untinted — a grey tint read as a disabled,
+    // second-class cursor next to the white overlay cursors.
+    m_trimCursorIcon =
+        std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::ResizeEW));
     // Minimap window-resize cursor: the canonical high-contrast ResizeEW glyph.
     m_resizeCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::ResizeEW));
     // Ruler / minimap-pan hand cursor: the canonical grab glyph.
     m_grabCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::Grab));
+    // The same hand closed, shown only while the drag is actually happening.
+    m_grabbingCursorIcon =
+        std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::Grabbing));
 
     if (!m_addTrackBtn) {
         m_addTrackBtn = std::make_shared<AestraUI::NUIButton>("");
@@ -173,11 +178,19 @@ bool TrackManagerUI::isCustomCursorActive() const {
         return false;
     }
 
-    // 1. Trim edge hover/active
+    // Hover claims below are made from m_lastMousePos, which only moves when a
+    // mouse event reaches the timeline. A popup above it (a clip context menu, a
+    // dialog) consumes those events and freezes that position where the pointer
+    // left from. Honouring a claim from a frozen position hid the real pointer
+    // and drew a stale tool glyph instead: the invisible cursor over context
+    // menus. Active drags own the pointer and are exempt.
+    const bool hoverCurrent = isHoverPointerCurrent();
+
+    // 1. Trim edge active, or hovered from a current pointer position
     for (const auto& trackUI : m_trackUIComponents) {
         if (!trackUI)
             continue;
-        if (trackUI->isHoveringTrimEdge() || trackUI->isTrimming()) {
+        if (trackUI->isTrimming() || (hoverCurrent && trackUI->isHoveringTrimEdge())) {
             return true;
         }
     }
@@ -189,7 +202,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     // already window-absolute, so getGlobalBounds() double-counts the parent
     // offset and shifts the region down, leaving a top strip where the arrow is
     // not suppressed while the tool cursor still draws (both cursors visible).
-    if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
+    if (hoverCurrent && (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint)) {
         AestraUI::NUIRect bounds = getBounds();
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -205,7 +218,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     // 3. Minimap resize cursor
-    if (m_timelineMinimap && m_timelineMinimap->isVisible()) {
+    if (hoverCurrent && m_timelineMinimap && m_timelineMinimap->isVisible()) {
         AestraUI::NUIRect minimapBounds = m_timelineMinimap->getBounds();
         if (minimapBounds.contains(m_lastMousePos) &&
             m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal) {
@@ -219,11 +232,21 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     // 5. Ruler scrub/loop/selection zone → grab hand.
-    if (isRulerPointerActive()) {
+    if (hoverCurrent && isRulerPointerActive()) {
         return true;
     }
 
     return false;
+}
+
+void TrackManagerUI::setWindowPointerPosition(float x, float y) {
+    m_windowPointerPos = AestraUI::NUIPoint(x, y);
+    m_hasWindowPointerPos = true;
+}
+
+bool TrackManagerUI::isHoverPointerCurrent() const {
+    return isTimelineHoverPointerCurrent(m_lastMousePos.x, m_lastMousePos.y, m_windowPointerPos.x,
+                                         m_windowPointerPos.y, m_hasWindowPointerPos);
 }
 
 void TrackManagerUI::setSnapSetting(AestraUI::SnapGrid snap) {
@@ -699,14 +722,11 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     }
 
     if (isHoveringTrimEdge) {
-        // Render horizontal resize cursor — the canonical registry glyph,
-        // tinted for the neutral/trimming states.
-        auto& theme = AestraUI::NUIThemeManager::getInstance();
-        AestraUI::NUIColor cursorColor =
-            isTrimming ? theme.getColor("accentCyan") : theme.getColor("textPrimary").withAlpha(0.78f);
-
+        // Render horizontal resize cursor — the canonical white ResizeEW glyph,
+        // drawn untinted so it matches every other resize cursor. Hover and an
+        // active trim share it; the clip edge itself shows the trim in progress.
+        (void)isTrimming;
         if (m_trimCursorIcon) {
-            m_trimCursorIcon->setColor(cursorColor);
             AestraUI::NUIRect iconRect(position.x - 9, position.y - 9, 18, 18);
             m_trimCursorIcon->setBounds(iconRect);
             m_trimCursorIcon->onRender(renderer);
@@ -720,9 +740,15 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     // resize all take precedence over this.
     if (isRulerPointerActive() || (m_timelineMinimap && m_timelineMinimap->isVisible() &&
                                    m_timelineMinimap->isViewportPanActive())) {
-        if (m_grabCursorIcon) {
-            m_grabCursorIcon->setBounds(AestraUI::NUIRect(position.x - 9, position.y - 9, 18, 18));
-            m_grabCursorIcon->onRender(renderer);
+        // Open hand while hovering a draggable surface, closed hand while the
+        // drag is live: the cursor should say what the pointer is doing.
+        const bool dragging = m_isDraggingPlayhead || m_isDraggingLoopStart || m_isDraggingLoopEnd ||
+                              m_isDraggingRulerSelection ||
+                              (m_timelineMinimap && m_timelineMinimap->isViewportDragActive());
+        const auto& handIcon = (dragging && m_grabbingCursorIcon) ? m_grabbingCursorIcon : m_grabCursorIcon;
+        if (handIcon) {
+            handIcon->setBounds(AestraUI::NUIRect(position.x - 9, position.y - 9, 18, 18));
+            handIcon->onRender(renderer);
         }
         return;
     }

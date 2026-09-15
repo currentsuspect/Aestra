@@ -138,5 +138,27 @@ inline float safeClampFloat(float value, float a, float b) {
     return value;
 }
 
+/**
+ * @brief Whether a hover-based timeline cursor claim is still current.
+ *
+ * The timeline learns the pointer position only from mouse events that reach
+ * it. A popup above it (a clip context menu, a dialog) consumes those events, so
+ * the timeline's position freezes where the pointer left it. The window sees
+ * every move, so the two positions disagree exactly when something above the
+ * timeline took the event, and a claim made from the frozen position must not
+ * hide the real pointer.
+ *
+ * Both positions are the same window-space integers converted to float, so they
+ * match exactly when current; the tolerance only absorbs float noise. Before the
+ * window has reported any position there is nothing to compare against, and the
+ * claim stands.
+ */
+inline bool isTimelineHoverPointerCurrent(float timelineX, float timelineY, float windowX, float windowY,
+                                          bool haveWindowPointer) {
+    if (!haveWindowPointer)
+        return true;
+    return std::abs(timelineX - windowX) < 0.5f && std::abs(timelineY - windowY) < 0.5f;
+}
+
 } // namespace Audio
 } // namespace Aestra

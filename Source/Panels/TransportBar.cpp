@@ -4,6 +4,9 @@
  * @brief Transport bar implementation
  */
 
+#include <string>
+#include <cstdio>
+#include <algorithm>
 #include "TransportBar.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -127,6 +130,48 @@ inline TransportLayoutTier transportTierFor(float availWidth) {
 // =============================================================================
 // SECTION: Construction & Setup
 // =============================================================================
+
+
+namespace {
+
+// Metronome pendulum. The arm is knocked out of the solid body (SVG mask) so it
+// reads over the trapezoid in one flat colour, and pivots at the base.
+constexpr int kMetronomePoseCount = 9;
+constexpr float kMetronomeSwingDegrees = 28.0f;
+constexpr int kMetronomeRestPose = 6; // a gentle right lean when idle
+
+float metronomePoseAngle(int pose) {
+    const float step = (2.0f * kMetronomeSwingDegrees) / static_cast<float>(kMetronomePoseCount - 1);
+    return -kMetronomeSwingDegrees + step * static_cast<float>(pose);
+}
+
+std::string metronomeSvgForAngle(float angleDegrees) {
+    char rot[48];
+    std::snprintf(rot, sizeof(rot), "rotate(%.1f 12 18.6)", angleDegrees);
+    const std::string r(rot);
+    return std::string(R"SVG(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">)SVG") +
+           R"SVG(<defs><mask id="arm"><rect width="24" height="24" fill="#fff"/>)SVG" +
+           R"SVG(<g transform=")SVG" + r + R"SVG(">)SVG" +
+           R"SVG(<path d="M12 18.6 V3.4" stroke="#000" stroke-width="3" stroke-linecap="round"/>)SVG" +
+           R"SVG(<rect x="9.7" y="6.9" width="4.6" height="4" rx="1" fill="#000"/></g></mask></defs>)SVG" +
+           R"SVG(<g mask="url(#arm)"><path fill="currentColor" d="M9.1 4.2 H14.9 L19.4 19.4 H4.6 Z"/>)SVG" +
+           R"SVG(<rect x="3.8" y="19.2" width="16.4" height="2.2" rx="1.1" fill="currentColor"/></g>)SVG" +
+           R"SVG(<g transform=")SVG" + r + R"SVG(">)SVG" +
+           R"SVG(<path d="M12 18.6 V3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>)SVG" +
+           R"SVG(<rect x="10.4" y="7.6" width="3.2" height="2.6" rx="0.6" fill="currentColor"/></g></svg>)SVG";
+}
+
+/** Pose for a transport beat position. The click sounds on each beat, so the
+ *  arm reaches a side exactly then, alternating sides, and crosses centre
+ *  half-way between clicks. */
+int metronomePoseForBeat(double beat) {
+    constexpr double kPi = 3.14159265358979323846;
+    const double swing = std::cos(kPi * beat); // +1 on even beats, -1 on odd beats
+    const long pose = std::lround((swing + 1.0) * 0.5 * static_cast<double>(kMetronomePoseCount - 1));
+    return static_cast<int>(std::clamp(pose, 0L, static_cast<long>(kMetronomePoseCount - 1)));
+}
+
+} // namespace
 
 TransportBar::TransportBar()
     : AestraUI::NUIComponent()
@@ -269,21 +314,18 @@ void TransportBar::createIcons() {
     m_pianoRollIcon->setIconSize(AestraUI::NUIIconSize::Medium);
     m_pianoRollIcon->setColorFromTheme("textSecondary");
 
-    // Metronome — solid trapezoid body with the pendulum arm and its weight
-    // rising clear of it. The previous outline version stacked a full-height
-    // trapezoid, a crossbar and a rod all in 1.8px strokes, which collapsed
-    // into a smudge at 16px. Keeping the arm entirely outside the body means
-    // it still reads when the whole glyph is one flat colour.
-    const char* metronomeSvg = R"(
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor" d="M9.6 12.2 H14.4 L19.8 20.6 H4.2 Z"/>
-            <path d="M12.6 12.4 L17 3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <circle cx="14.8" cy="7.9" r="1.7" fill="currentColor"/>
-        </svg>
-    )";
-    m_metronomeIcon = std::make_shared<AestraUI::NUIIcon>(metronomeSvg);
-    m_metronomeIcon->setIconSize(AestraUI::NUIIconSize::Medium);
-    m_metronomeIcon->setColorFromTheme("textSecondary");
+    // Metronome — one pendulum pose per NUIIcon (the icon cannot rotate), built
+    // once. At rest the arm leans gently right; updateMetronomePose() swings it
+    // while the metronome is on and the transport plays.
+    m_metronomePoses.clear();
+    for (int pose = 0; pose < kMetronomePoseCount; ++pose) {
+        auto icon = std::make_shared<AestraUI::NUIIcon>(metronomeSvgForAngle(metronomePoseAngle(pose)));
+        icon->setIconSize(AestraUI::NUIIconSize::Medium);
+        icon->setColorFromTheme("textSecondary");
+        m_metronomePoses.push_back(std::move(icon));
+    }
+    m_metronomePose = kMetronomeRestPose;
+    m_metronomeIcon = m_metronomePoses[static_cast<size_t>(kMetronomeRestPose)];
 
     // Count-In icon (3-2-1 dots style)
     // Three swelling beats — a count-in building to the downbeat. Shapes only:
@@ -367,6 +409,7 @@ void TransportBar::createButtons() {
     // Metronome toggle button
     createBtn(m_metronomeButton, [this]() {
         m_metronomeActive = !m_metronomeActive;
+        updateMetronomePose();
         if (m_onMetronomeToggle) {
             m_onMetronomeToggle(m_metronomeActive);
         }
@@ -501,6 +544,7 @@ void TransportBar::togglePlayPause() {
 
 void TransportBar::setTempo(float bpm) {
     m_tempo = std::max(20.0f, std::min(999.0f, bpm));
+    updateMetronomePose();
     if (m_infoContainer) {
         m_infoContainer->getBPMDisplay()->setBPM(m_tempo);
     }
@@ -513,6 +557,23 @@ void TransportBar::setPosition(double seconds) {
     m_position = std::max(0.0, seconds);
     if (m_infoContainer) {
         m_infoContainer->getTimerDisplay()->setTime(m_position);
+    }
+    updateMetronomePose();
+}
+
+void TransportBar::updateMetronomePose() {
+    if (m_metronomePoses.empty()) {
+        return;
+    }
+    int pose = kMetronomeRestPose;
+    if (m_metronomeActive && m_state == TransportState::Playing && m_tempo > 0.0f) {
+        const double beat = m_position * static_cast<double>(m_tempo) / 60.0;
+        pose = metronomePoseForBeat(beat);
+    }
+    if (pose != m_metronomePose) {
+        m_metronomePose = pose;
+        m_metronomeIcon = m_metronomePoses[static_cast<size_t>(pose)];
+        setDirty(true);
     }
 }
 
@@ -539,6 +600,8 @@ void TransportBar::syncTransportState(bool playing, bool paused, bool recordArme
         m_state = newState;
         updateButtonStates();
     }
+
+    updateMetronomePose();
 
     if (m_infoContainer) {
         m_infoContainer->getTimerDisplay()->setPlaying(newState == TransportState::Playing);

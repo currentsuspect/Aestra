@@ -1,11 +1,12 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// Guards the timeline clip contrast contract: a clip is a surface with audio
-// drawn on it, so the waveform ink must stay meaningfully brighter than the clip
-// body it sits on, for every lane identity and in both selection states.
+// Guards the timeline clip contrast contract: a clip is a flat surface in its
+// identity hue with content drawn on it, so the waveform/note ink must stay
+// meaningfully darker than the clip body it sits on, for every lane identity and
+// in both selection states.
 //
 // Deliberately does NOT assert the brightness constants themselves. Those are
-// taste values the owner is expected to retune; a test that restates 0.68f only
+// taste values the owner is expected to retune; a test that restates 0.95f only
 // duplicates the literal and turns every future tweak into a test edit. What
 // must not regress is the *ordering and margin* between the two tones — that is
 // what makes a waveform readable, and it is what silently breaks if someone
@@ -56,9 +57,15 @@ float contrastRatio(const NUIColor& a, const NUIColor& b) {
 }
 
 // Below this the waveform stops reading as a distinct shape over its fill. Set
-// under the current measured value so ordinary retuning does not trip it, but
-// far enough above 1.0 that a collapse is caught.
-constexpr float kMinInkOverBody = 1.35f;
+// under the current measured minimum (~3.0:1, purple) so ordinary retuning does
+// not trip it, but far enough above 1.0 that a collapse is caught.
+constexpr float kMinInkBodyContrast = 2.5f;
+
+float saturation(const NUIColor& c) {
+    const float mx = std::max(c.r, std::max(c.g, c.b));
+    const float mn = std::min(c.r, std::min(c.g, c.b));
+    return (mx <= 0.0f) ? 0.0f : (mx - mn) / mx;
+}
 
 std::string describe(const NUIColor& c) {
     return "(" + std::to_string(static_cast<int>(c.r * 255.0f)) + "," +
@@ -68,10 +75,9 @@ std::string describe(const NUIColor& c) {
 
 // The core contract, over every palette identity plus the unset-colour grey
 // fallback, in both selection states.
-void testInkOutranksBodyForEveryIdentity() {
+void testInkStaysDeeperThanBodyForEveryIdentity() {
     for (int i = 0; i <= PALETTE_SIZE; ++i) {
-        // One past the palette exercises paletteIndexToARGB's out-of-range grey,
-        // which is what an uncoloured clip actually renders with.
+        // One past the palette exercises paletteIndexToARGB's out-of-range grey.
         const NUIColor identity = NUIColor::fromARGB(paletteIndexToARGB(i));
 
         for (const bool selected : {false, true}) {
@@ -80,14 +86,43 @@ void testInkOutranksBodyForEveryIdentity() {
             const std::string where =
                 "lane " + std::to_string(i) + (selected ? " (selected)" : " (unselected)");
 
-            check(relativeLuminance(ink) > relativeLuminance(body),
-                  where + ": waveform ink " + describe(ink) + " must be brighter than body " +
+            check(relativeLuminance(ink) < relativeLuminance(body),
+                  where + ": waveform ink " + describe(ink) + " must be darker than body " +
                       describe(body));
 
             const float ratio = contrastRatio(ink, body);
-            check(ratio >= kMinInkOverBody,
-                  where + ": ink-over-body contrast " + std::to_string(ratio) + ":1 fell below the " +
-                      std::to_string(kMinInkOverBody) + ":1 floor");
+            check(ratio >= kMinInkBodyContrast,
+                  where + ": ink-vs-body contrast " + std::to_string(ratio) + ":1 fell below the " +
+                      std::to_string(kMinInkBodyContrast) + ":1 floor");
+        }
+    }
+}
+
+// Clip bodies carry the same hue the mixer strips paint. Desaturating them again
+// is what made clips read dull and out of place, so guard against it returning.
+void testBodyKeepsPaletteSaturation() {
+    for (int i = 0; i < PALETTE_SIZE; ++i) {
+        const NUIColor raw = NUIColor::fromARGB(paletteIndexToARGB(i));
+        const float bodySat = saturation(clipBodyTone(raw, false));
+        check(bodySat >= saturation(raw) * 0.95f,
+              "lane " + std::to_string(i) + ": clip body saturation " + std::to_string(bodySat) +
+                  " drifted below the palette hue's " + std::to_string(saturation(raw)));
+    }
+}
+
+// Labels pick dark or light text per clip; whichever is picked must be the more
+// readable of the two on that clip's body.
+void testLabelTextRulePicksTheMoreReadableColour() {
+    const NUIColor darkText(0.04f, 0.04f, 0.05f, 1.0f);
+    const NUIColor lightText(0.95f, 0.95f, 0.96f, 1.0f);
+    for (int i = 0; i <= PALETTE_SIZE; ++i) {
+        const NUIColor identity = NUIColor::fromARGB(paletteIndexToARGB(i));
+        for (const bool selected : {false, true}) {
+            const NUIColor body = clipBodyTone(identity, selected);
+            const bool dark = AestraUI::clipSurfacePrefersDarkText(body);
+            const float picked = contrastRatio(dark ? darkText : lightText, body);
+            const float other = contrastRatio(dark ? lightText : darkText, body);
+            check(picked >= other, "lane " + std::to_string(i) + ": label rule picked the less readable text colour");
         }
     }
 }
@@ -112,7 +147,7 @@ void testBodyStaysVisibleAgainstCanvas() {
         const NUIColor identity = NUIColor::fromARGB(paletteIndexToARGB(i));
         const NUIColor body = clipBodyTone(identity, false);
         const float ratio = contrastRatio(body, canvas);
-        check(ratio >= 2.0f, "lane " + std::to_string(i) + ": body-vs-canvas contrast " +
+        check(ratio >= 3.0f, "lane " + std::to_string(i) + ": body-vs-canvas contrast " +
                                  std::to_string(ratio) + ":1 is too low to see the clip");
     }
 }
@@ -126,11 +161,6 @@ void testLaneIdentityRestraintIsNotAnIdentityFunction() {
         check(relativeLuminance(restrained) < relativeLuminance(raw),
               "lane " + std::to_string(i) + ": restrained identity must be darker than the raw palette hue");
 
-        const auto saturation = [](const NUIColor& c) {
-            const float mx = std::max(c.r, std::max(c.g, c.b));
-            const float mn = std::min(c.r, std::min(c.g, c.b));
-            return (mx <= 0.0f) ? 0.0f : (mx - mn) / mx;
-        };
         check(saturation(restrained) < saturation(raw),
               "lane " + std::to_string(i) + ": restrained identity must be less saturated than raw");
     }
@@ -139,7 +169,9 @@ void testLaneIdentityRestraintIsNotAnIdentityFunction() {
 } // namespace
 
 int main() {
-    testInkOutranksBodyForEveryIdentity();
+    testInkStaysDeeperThanBodyForEveryIdentity();
+    testBodyKeepsPaletteSaturation();
+    testLabelTextRulePicksTheMoreReadableColour();
     testSelectionLiftsRatherThanDarkens();
     testBodyStaysVisibleAgainstCanvas();
     testLaneIdentityRestraintIsNotAnIdentityFunction();

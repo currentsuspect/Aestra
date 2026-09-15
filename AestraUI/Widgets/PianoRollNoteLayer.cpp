@@ -673,12 +673,17 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 
         // Selected notes retain subtle resize handles; hovered edges intensify them.
         if (n.selected || (isHovered && (hoverOnRightEdge_ || hoverOnLeftEdge_))) {
-            const NUIColor affordanceColor = NUIColor::white().withAlpha(0.72f);
+            // White, like the resize cursor they pair with: 72% white read as a
+            // grey, disabled-looking grip. The edge under the pointer goes full.
+            const NUIColor idleGrip = NUIColor::white().withAlpha(0.9f);
+            const NUIColor activeGrip = NUIColor::white();
             if (n.selected || hoverOnRightEdge_) {
-                renderer.fillRoundedRect(NUIRect(r.right() - 3.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, affordanceColor);
+                const NUIColor grip = (isHovered && hoverOnRightEdge_) ? activeGrip : idleGrip;
+                renderer.fillRoundedRect(NUIRect(r.right() - 3.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, grip);
             }
             if (n.selected || hoverOnLeftEdge_) {
-                renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, affordanceColor);
+                const NUIColor grip = (isHovered && hoverOnLeftEdge_) ? activeGrip : idleGrip;
+                renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, grip);
             }
         }
 
