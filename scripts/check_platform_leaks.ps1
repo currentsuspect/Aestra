@@ -1,166 +1,28 @@
-# Platform Abstraction Leak Detection Script
-# This script checks for Windows-specific code leaks outside AestraPlat/src/Win32/
-
+# Thin wrapper — the canonical implementation is scripts/check_platform_leaks.py
+# (v0.8.0 FD-18: Python is the one implementation of each script check).
+# This wrapper contains no check logic: it locates Python, runs the .py next
+# to it (translating the legacy -Fix switch to --fix), and exits with its code.
 param(
     [switch]$Fix = $false
 )
 
-$ErrorActionPreference = "Stop"
-$violations = @()
-$allowedPaths = @(
-    "AestraPlat\src\Win32",
-    "AestraPlat\src\Win32\WinHeaders.h",
-    "AestraAudio\src\Win32",
-    "AestraUI\External",  # External libraries (glad, rtaudio) may have Windows code
-    "AestraAudio\External"
-)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pyScript = Join-Path $scriptDir "check_platform_leaks.py"
 
-# Forbidden Windows includes
-$forbiddenIncludes = @(
-    "windows\.h",
-    "winuser\.h",
-    "dwmapi\.h",
-    "mmdeviceapi\.h",
-    "audioclient\.h",
-    "shellapi\.h",
-    "shlobj\.h",
-    "wrl\.h",
-    "combaseapi\.h",
-    "objbase\.h",
-    "ole2\.h"
-)
+$pyArgs = @($pyScript)
+if ($Fix) { $pyArgs += "--fix" }
 
-# Forbidden Windows types in headers (outside Win32 implementation)
-$forbiddenTypes = @(
-    "HWND",
-    "HINSTANCE",
-    "HRESULT",
-    "DWORD",
-    "HANDLE",
-    "LRESULT",
-    "WPARAM",
-    "LPARAM",
-    "GUID",
-    "RECT",
-    "POINT",
-    "MSG"
-)
-
-# Forbidden Windows macros
-$forbiddenMacros = @(
-    "WINAPI",
-    "CALLBACK",
-    "__stdcall",
-    "__declspec"
-)
-
-function Test-IsAllowedPath {
-    param([string]$filePath)
-    
-    foreach ($allowed in $allowedPaths) {
-        if ($filePath -like "*\$allowed\*" -or $filePath -like "$allowed\*") {
-            return $true
-        }
-    }
-    return $false
+if (Get-Command "python3" -ErrorAction SilentlyContinue) {
+    & python3 @pyArgs
+    exit $LASTEXITCODE
 }
-
-function Test-IsHeaderFile {
-    param([string]$filePath)
-    return $filePath -match '\.(h|hpp)$'
+if (Get-Command "python" -ErrorAction SilentlyContinue) {
+    & python @pyArgs
+    exit $LASTEXITCODE
 }
-
-Write-Host "Scanning for Windows platform leaks..." -ForegroundColor Cyan
-
-# Check for forbidden includes
-Write-Host "`nChecking for forbidden Windows includes..." -ForegroundColor Yellow
-Get-ChildItem -Recurse -Include *.cpp,*.h,*.hpp | Where-Object {
-    -not (Test-IsAllowedPath $_.FullName)
-} | ForEach-Object {
-    $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-    if ($content) {
-        foreach ($pattern in $forbiddenIncludes) {
-            if ($content -match "#include\s*[<`"]\s*$pattern\s*[>`"]") {
-                $violations += [PSCustomObject]@{
-                    File = $_.FullName.Replace($PWD, ".")
-                    Line = ($content -split "`n").IndexOf(($content -split "`n" | Where-Object { $_ -match $pattern })) + 1
-                    Category = "Include"
-                    Issue = "Windows include: $pattern"
-                }
-            }
-        }
-    }
+if (Get-Command "py" -ErrorAction SilentlyContinue) {
+    & py -3 @pyArgs
+    exit $LASTEXITCODE
 }
-
-# Check for forbidden types in headers (outside Win32)
-Write-Host "Checking for forbidden Windows types in headers..." -ForegroundColor Yellow
-Get-ChildItem -Recurse -Include *.h,*.hpp | Where-Object {
-    -not (Test-IsAllowedPath $_.FullName) -and (Test-IsHeaderFile $_.FullName)
-} | ForEach-Object {
-    $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-    if ($content) {
-        foreach ($type in $forbiddenTypes) {
-            # Check for type usage (but not in comments)
-            $lines = $content -split "`n"
-            for ($i = 0; $i -lt $lines.Count; $i++) {
-                $line = $lines[$i]
-                # Skip comments
-                if ($line -match "^\s*//" -or $line -match "/\*") { continue }
-                if ($line -match "\b$type\b") {
-                    $violations += [PSCustomObject]@{
-                        File = $_.FullName.Replace($PWD, ".")
-                        Line = $i + 1
-                        Category = "Type"
-                        Issue = "Windows type: $type"
-                    }
-                }
-            }
-        }
-    }
-}
-
-# Check for forbidden macros in headers
-Write-Host "Checking for forbidden Windows macros in headers..." -ForegroundColor Yellow
-Get-ChildItem -Recurse -Include *.h,*.hpp | Where-Object {
-    -not (Test-IsAllowedPath $_.FullName) -and (Test-IsHeaderFile $_.FullName)
-} | ForEach-Object {
-    $content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
-    if ($content) {
-        foreach ($macro in $forbiddenMacros) {
-            $lines = $content -split "`n"
-            for ($i = 0; $i -lt $lines.Count; $i++) {
-                $line = $lines[$i]
-                if ($line -match "^\s*//" -or $line -match "/\*") { continue }
-                if ($line -match "\b$macro\b") {
-                    $violations += [PSCustomObject]@{
-                        File = $_.FullName.Replace($PWD, ".")
-                        Line = $i + 1
-                        Category = "Macro"
-                        Issue = "Windows macro: $macro"
-                    }
-                }
-            }
-        }
-    }
-}
-
-# Report results
-Write-Host "`n" -NoNewline
-if ($violations.Count -eq 0) {
-    Write-Host "[OK] No platform leaks detected!" -ForegroundColor Green
-    exit 0
-} else {
-    Write-Host "[FAIL] Found $($violations.Count) violation(s):" -ForegroundColor Red
-    Write-Host ""
-    $violations | Group-Object Category | ForEach-Object {
-        Write-Host "  $($_.Name): $($_.Count) violation(s)" -ForegroundColor Yellow
-    }
-    Write-Host ""
-    Write-Host "Details:" -ForegroundColor Yellow
-    foreach ($v in $violations) {
-        $msg = '  {0}:{1} - {2}' -f $v.File, $v.Line, $v.Issue
-        Write-Host $msg -ForegroundColor Red
-    }
-    exit 1
-}
-
+Write-Error "No Python 3 interpreter found (tried python3, python, py -3). Cannot run check_platform_leaks.py."
+exit 1
