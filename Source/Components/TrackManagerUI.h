@@ -384,6 +384,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
     std::shared_ptr<::AestraUI::NUIIcon> m_grabCursorIcon; // Canonical hand glyph (ruler/minimap-pan grab)
+    std::shared_ptr<::AestraUI::NUIIcon> m_grabbingCursorIcon; // Closed hand while a ruler/minimap drag is live
 
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
 

@@ -175,7 +175,8 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // the window manager uses to skip its arrow, so exactly one cursor draws.
     // Without this gate a stale hover claim (pointer over a context menu) kept a
     // frozen tool glyph on screen after the arrow had been restored.
-    if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive()) {
+    if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive() &&
+        !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
         // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
         // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
         // Suppressed here rather than through cursor abstraction — intentional.

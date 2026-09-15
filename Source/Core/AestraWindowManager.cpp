@@ -283,6 +283,14 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
                 m_activeCursorStyle = bridgeStyle;
             }
         }
+
+        // A drag-and-drop in flight (a file from the browser, a sample onto a
+        // lane) is something being carried: the closed hand, wherever the pointer
+        // travels. The source only set the open hand on hover, and nothing else
+        // owns the cursor between drag start and drop.
+        if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+            m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
+        }
         
         // RecoveryDialog is modal - consume mouse move when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
@@ -898,8 +906,10 @@ void AestraWindowManager::render() {
         // Ensure cursor is not clipped by previous UI elements
         m_renderer->clearClipRect();
 
+        // An active drag-and-drop shows the closed hand; no tool cursor claims it.
         bool trackManagerHasCustomCursor = false;
-        if (m_content && m_content->getTrackManagerUI()) {
+        if (m_content && m_content->getTrackManagerUI() &&
+            !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
             trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
         }
 
@@ -930,7 +940,7 @@ void AestraWindowManager::resolveCursorState() {
 
     const AestraUI::NUICursorStyle style = m_window->getCursorStyle();
     bool trackManagerHasCustomCursor = false;
-    if (m_content && m_content->getTrackManagerUI()) {
+    if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
         trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
     }
 
@@ -983,17 +993,19 @@ void AestraWindowManager::renderCustomCursor() {
     float size = 24.0f;
 
     switch (m_activeCursorStyle) {
+        // Offsets put each glyph's hotspot on the pointer (see NUICursorRegistry.h):
+        // the pointing fingertip for Hand, the palm centre for Grab/Grabbing.
         case AestraUI::NUICursorStyle::Hand:
             cursorIcon = m_cursorHandPointing ? m_cursorHandPointing : m_cursorHand;
-            offsetX = -7.0f; offsetY = -3.0f;
+            offsetX = -9.0f; offsetY = -2.0f;
             break;
         case AestraUI::NUICursorStyle::Grab:
             cursorIcon = m_cursorHand;
-            offsetX = -7.0f; offsetY = -3.0f;
+            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
             break;
         case AestraUI::NUICursorStyle::Grabbing:
             cursorIcon = m_cursorHandGrabbing ? m_cursorHandGrabbing : m_cursorHand;
-            offsetX = -7.0f; offsetY = -3.0f;
+            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
             break;
         case AestraUI::NUICursorStyle::IBeam:
             cursorIcon = m_cursorIBeam;
@@ -1016,8 +1028,9 @@ void AestraWindowManager::renderCustomCursor() {
             offsetX = -size / 2.0f; offsetY = -size / 2.0f;
             break;
         default:
+            // The arrow tip sits at (2, 2) in its glyph; align it with the click point.
             cursorIcon = m_cursorArrow;
-            offsetX = 0.0f; offsetY = 0.0f;
+            offsetX = -2.0f; offsetY = -2.0f;
             break;
     }
 
