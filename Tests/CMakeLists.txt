@@ -2037,16 +2037,32 @@ target_include_directories(SettingsPersistencePolicyTest PRIVATE
 add_test(NAME SettingsPersistencePolicyTest COMMAND SettingsPersistencePolicyTest)
 set_tests_properties(SettingsPersistencePolicyTest PROPERTIES LABELS "ui;settings;regression;contract:application")
 
-if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
+# V8-G3b: UI tests are gated on the option that owns the AestraUI subtree, not
+# on target existence, so a missing UI target fails configure instead of
+# silently dropping coverage (FD-19: the absence of failures is not the
+# presence of coverage).
+function(aestra_require_ui_targets test_name)
+    foreach(_target IN LISTS ARGN)
+        if(NOT TARGET ${_target})
+            message(FATAL_ERROR "${test_name} requires ${_target}, but it is not defined although AESTRA_ENABLE_UI is ON")
+        endif()
+    endforeach()
+endfunction()
+if(NOT AESTRA_ENABLE_UI)
+    message(STATUS "UI tests not configured: AESTRA_ENABLE_UI is OFF")
+endif()
+
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIThemeConsistencyTest AestraUI_Core)
     add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
     target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
     add_test(NAME NUIThemeConsistencyTest COMMAND NUIThemeConsistencyTest)
     set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency;contract:application")
-else()
-    message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIContextMenuInteractionTest AestraUI_Core)
+    aestra_require_ui_targets(ModalDialogInteractionTest AestraUI_Core)
     add_executable(NUIContextMenuInteractionTest AestraUI/NUIContextMenuInteractionTest.cpp)
     target_link_libraries(NUIContextMenuInteractionTest PRIVATE AestraUI_Core)
     target_include_directories(NUIContextMenuInteractionTest PRIVATE
@@ -2072,8 +2088,6 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME ModalDialogInteractionTest COMMAND ModalDialogInteractionTest)
     set_tests_properties(ModalDialogInteractionTest PROPERTIES LABELS "ui;modal;input;regression;contract:application")
-else()
-    message(STATUS "NUIContextMenuInteractionTest and ModalDialogInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no
@@ -2089,8 +2103,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
 endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
-# Guard on target presence because headless/CI disables AestraUI targets.
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+# Guarded on AESTRA_ENABLE_UI: headless/CI disables the AestraUI subtree.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollInteractionTest AestraUI_Core AestraUI_Platform)
     add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
     target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollInteractionTest PRIVATE
@@ -2099,13 +2114,12 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     )
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
-else()
-    message(STATUS "PianoRollInteractionTest skipped (AestraUI targets unavailable in this build mode)")
 endif()
 
 # Piano Roll harmony edits must traverse the real panel/view callback into
 # PatternManager and reload as one complete context.
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollPanelPersistenceTest AestraUI_Core AestraUI_Platform)
     add_executable(PianoRollPanelPersistenceTest
         AestraUI/PianoRollPanelPersistenceTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
@@ -2134,7 +2148,8 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
         LABELS "ui;pianoroll;persistence;regression;contract:application")
 endif()
 
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollStrokeInteractionTest AestraUI_Core AestraUI_Platform)
     add_executable(PianoRollStrokeInteractionTest AestraUI/PianoRollStrokeInteractionTest.cpp)
     target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollStrokeInteractionTest PRIVATE
@@ -2145,13 +2160,12 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_test(NAME PianoRollStrokeInteractionTest COMMAND PianoRollStrokeInteractionTest)
     set_tests_properties(PianoRollStrokeInteractionTest
         PROPERTIES LABELS "ui;interaction;pianoroll;regression;contract:application")
-else()
-    message(STATUS "PianoRollStrokeInteractionTest skipped (AestraUI targets unavailable in this build mode)")
 endif()
 
 # Regression for #829: external lane edits (velocity/pan) must commit through
 # onNotesChanged_ so PatternManager and the refresh chain see them immediately.
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollExternalEditCommitTest AestraUI_Core AestraUI_Platform)
     add_executable(PianoRollExternalEditCommitTest AestraUI/PianoRollExternalEditCommitTest.cpp)
     target_link_libraries(PianoRollExternalEditCommitTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollExternalEditCommitTest PRIVATE
@@ -2162,13 +2176,12 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     add_test(NAME PianoRollExternalEditCommitTest COMMAND PianoRollExternalEditCommitTest)
     set_tests_properties(PianoRollExternalEditCommitTest
         PROPERTIES LABELS "ui;interaction;pianoroll;regression;contract:application")
-else()
-    message(STATUS "PianoRollExternalEditCommitTest skipped (AestraUI targets unavailable in this build mode)")
 endif()
 
 # Editor-close deferred-destruction regression (#475): removeChild() during
 # event dispatch must defer and free safely (no iterator invalidation / UAF).
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(EditorCloseDeferredTest AestraUI_Core)
     add_executable(EditorCloseDeferredTest AestraUI/EditorCloseDeferredTest.cpp)
     target_link_libraries(EditorCloseDeferredTest PRIVATE AestraUI_Core)
     target_include_directories(EditorCloseDeferredTest PRIVATE
@@ -2177,14 +2190,13 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME EditorCloseDeferredTest COMMAND EditorCloseDeferredTest)
     set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression;contract:application")
-else()
-    message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Panel-window click-swallow regression: a floating plugin editor must consume
 # clicks over its own empty area so they don't fall through to widgets behind it
 # (click-through + spurious dismiss).
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelWindowClickSwallowTest AestraUI_Core AestraUI_Platform)
     add_executable(PanelWindowClickSwallowTest AestraUI/PanelWindowClickSwallowTest.cpp)
     target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PanelWindowClickSwallowTest PRIVATE
@@ -2194,13 +2206,12 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
     set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression;contract:application")
-else()
-    message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # FD-16 seam test: persisted lane curves must reach ChannelViewModel through
 # MixerViewModel::syncFromEngine — the path the routing-map badge reads.
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MixerViewModelAutomationPresenceTest AestraUI_Core AestraUI_Platform)
     add_executable(MixerViewModelAutomationPresenceTest
         AestraAudio/MixerViewModelAutomationPresenceTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
@@ -2226,7 +2237,8 @@ endif()
 
 # Panel resize/layout regression (triage 2026-08-14): audio clip editor
 # waveform/card overlap + slider widths, Arsenal row label bounds.
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelResizeLayoutTest AestraUI_Core AestraUI_Platform)
     add_executable(PanelResizeLayoutTest
         AestraUI/PanelResizeLayoutTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
@@ -2250,13 +2262,12 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     )
     add_test(NAME PanelResizeLayoutTest COMMAND PanelResizeLayoutTest)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
-else()
-    message(STATUS "PanelResizeLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Selection-based step editing regression: click-to-select grammar, Ctrl+B
 # span duplication, Delete/Backspace removal (2026-08-17).
-if(TARGET AestraUI_Core AND TARGET AestraAudio)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UnitRowStepSelectionTest AestraUI_Core)
     add_executable(UnitRowStepSelectionTest AestraUI/UnitRowStepSelectionTest.cpp)
     target_link_libraries(UnitRowStepSelectionTest PRIVATE AestraUI_Core AestraAudio)
     target_include_directories(UnitRowStepSelectionTest PRIVATE
@@ -2269,15 +2280,14 @@ if(TARGET AestraUI_Core AND TARGET AestraAudio)
     )
     add_test(NAME UnitRowStepSelectionTest COMMAND UnitRowStepSelectionTest)
     set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
-else()
-    message(STATUS "UnitRowStepSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
 # (three SEGVs in one day — getPlugin() from refreshRackDisplay on a frame).
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PluginRackBindingLifecycleTest AestraUI_Core AestraUI_Platform)
     add_executable(PluginRackBindingLifecycleTest
         AestraUI/PluginRackBindingLifecycleTest.cpp
     )
@@ -2296,7 +2306,8 @@ endif()
 # Floating panels must only raise themselves on presses inside their bounds:
 # the overlay forwards every press to every visible panel, so a transport-bar
 # click must not pop panels to the front (the Arsenal-mode double-stop bug).
-if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(WindowPanelRaiseTest AestraUI_Core AestraUI_Platform)
     add_executable(WindowPanelRaiseTest
         AestraUI/WindowPanelRaiseTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
@@ -2311,13 +2322,12 @@ if(TARGET AestraUI_Core AND TARGET AestraUI_Platform)
     )
     add_test(NAME WindowPanelRaiseTest COMMAND WindowPanelRaiseTest)
     set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
-else()
-    message(STATUS "WindowPanelRaiseTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Takes/History workspace panels: command-timeline presentation + navigation,
 # takes manifest listing, actions, inline rename, non-destructive branching.
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TakesHistoryPanelTest AestraUI_Core)
     add_executable(TakesHistoryPanelTest
         AestraUI/TakesHistoryPanelTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
@@ -2350,13 +2360,12 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
     set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression;contract:application")
-else()
-    message(STATUS "TakesHistoryPanelTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Plugin-browser filtering must preserve selection by stable plugin ID rather
 # than silently selecting whichever row inherits the old numeric index.
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PluginBrowserSelectionTest AestraUI_Core AestraUI_Platform)
     add_executable(PluginBrowserSelectionTest AestraUI/PluginBrowserSelectionTest.cpp)
     target_link_libraries(PluginBrowserSelectionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PluginBrowserSelectionTest PRIVATE
@@ -2366,11 +2375,10 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME PluginBrowserSelectionTest COMMAND PluginBrowserSelectionTest)
     set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression;contract:application")
-else()
-    message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIInsertRoutePickerTest AestraUI_Core)
     add_executable(UIInsertRoutePickerTest AestraUI/UIInsertRoutePickerTest.cpp)
     target_link_libraries(UIInsertRoutePickerTest PRIVATE AestraUI_Core AestraPlat)
     target_include_directories(UIInsertRoutePickerTest PRIVATE
@@ -2380,13 +2388,12 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME UIInsertRoutePickerTest COMMAND UIInsertRoutePickerTest)
     set_tests_properties(UIInsertRoutePickerTest PROPERTIES LABELS "ui;routing;regression;contract:application")
-else()
-    message(STATUS "UIInsertRoutePickerTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput Layout / Caret / Selection regression tests
-# Guard on target presence because headless/CI disables AestraUI targets.
-if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")
+# Guarded on AESTRA_ENABLE_UI: headless/CI disables the AestraUI subtree.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUITextInputLayoutTest AestraUI_Core)
     add_executable(NUITextInputLayoutTest AestraUI/NUITextInputLayoutTest.cpp)
     target_link_libraries(NUITextInputLayoutTest PRIVATE AestraUI_Core AestraPlat)
     target_include_directories(NUITextInputLayoutTest PRIVATE
@@ -2397,14 +2404,13 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIText
     add_test(NAME NUITextInputLayoutTest COMMAND NUITextInputLayoutTest)
     set_tests_properties(NUITextInputLayoutTest PROPERTIES LABELS "ui;textinput;regression;contract:application")
     message(STATUS "NUITextInputLayoutTest added - multiline layout/caret regression tests")
-else()
-    message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput editing semantics — typing over a selection must replace it,
 # matching the paste path. Kept separate from the layout tests so the
 # behavioural regression stays legible.
-if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputEditingTest.cpp")
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUITextInputEditingTest AestraUI_Core)
     add_executable(NUITextInputEditingTest AestraUI/NUITextInputEditingTest.cpp)
     target_link_libraries(NUITextInputEditingTest PRIVATE AestraUI_Core AestraPlat)
     target_include_directories(NUITextInputEditingTest PRIVATE
@@ -2415,8 +2421,6 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIText
     add_test(NAME NUITextInputEditingTest COMMAND NUITextInputEditingTest)
     set_tests_properties(NUITextInputEditingTest PROPERTIES LABELS "ui;textinput;regression;contract:application")
     message(STATUS "NUITextInputEditingTest added - selection-replace editing regression tests")
-else()
-    message(STATUS "NUITextInputEditingTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # Mixer inspector collapse — explicit preference vs. width-derived constraint.
@@ -2433,7 +2437,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InspectorCollapseStateTest.cpp")
     message(STATUS "InspectorCollapseStateTest added - inspector collapse preference/constraint tests")
 endif()
 
-if(TARGET AestraUI_Core)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIDropdownInteractionTest AestraUI_Core)
+    aestra_require_ui_targets(NUIComponentTooltipTest AestraUI_Core)
+    aestra_require_ui_targets(NUIHiddenChildDispatchTest AestraUI_Core)
+    aestra_require_ui_targets(NUIWidgetHiddenInputTest AestraUI_Core)
     add_executable(NUIDropdownInteractionTest AestraUI/NUIDropdownInteractionTest.cpp)
     target_link_libraries(NUIDropdownInteractionTest PRIVATE AestraUI_Core)
     target_include_directories(NUIDropdownInteractionTest PRIVATE
@@ -2470,8 +2478,42 @@ if(TARGET AestraUI_Core)
     )
     add_test(NAME NUIWidgetHiddenInputTest COMMAND NUIWidgetHiddenInputTest)
     set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression;contract:application")
-else()
-    message(STATUS "Dropdown/tooltip interaction tests skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# V8-G3b (FD-19): the absence of failures is not the presence of coverage.
+# This list names every UI test that must be configured whenever
+# AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
+if(AESTRA_ENABLE_UI)
+    set(AESTRA_REQUIRED_UI_TESTS
+        NUIThemeConsistencyTest
+        NUIContextMenuInteractionTest
+        ModalDialogInteractionTest
+        PianoRollInteractionTest
+        PianoRollPanelPersistenceTest
+        PianoRollStrokeInteractionTest
+        PianoRollExternalEditCommitTest
+        EditorCloseDeferredTest
+        PanelWindowClickSwallowTest
+        MixerViewModelAutomationPresenceTest
+        PanelResizeLayoutTest
+        UnitRowStepSelectionTest
+        PluginRackBindingLifecycleTest
+        WindowPanelRaiseTest
+        TakesHistoryPanelTest
+        PluginBrowserSelectionTest
+        UIInsertRoutePickerTest
+        NUITextInputLayoutTest
+        NUITextInputEditingTest
+        NUIDropdownInteractionTest
+        NUIComponentTooltipTest
+        NUIHiddenChildDispatchTest
+        NUIWidgetHiddenInputTest
+    )
+    foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
+        if(NOT TARGET ${_t})
+            message(FATAL_ERROR "Required UI test '${_t}' is not configured (V8-G3b)")
+        endif()
+    endforeach()
 endif()
 
 # No EXISTS guard: a missing committed test source must fail configure, not
