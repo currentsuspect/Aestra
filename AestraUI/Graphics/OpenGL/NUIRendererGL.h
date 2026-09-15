@@ -26,8 +26,8 @@ namespace AestraUI {
  * Features:
  * - Shader-based rendering
  * - Batched draw calls
- * - SDF text rendering
- * - Post-processing effects
+ * - FreeType bitmap glyph-atlas text
+ * - Render-to-texture (FBO) support for the widget render cache
  */
 class NUIRendererGL : public NUIRenderer {
 public:

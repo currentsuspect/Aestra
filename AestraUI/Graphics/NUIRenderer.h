@@ -17,7 +17,7 @@ namespace AestraUI {
  * Abstract renderer interface for the Aestra UI framework.
  * 
  * This provides a platform-agnostic API for rendering UI elements.
- * Implementations exist for OpenGL and Vulkan.
+ * The only implementation is NUIRendererGL (OpenGL).
  */
 class NUIRenderer {
 public:

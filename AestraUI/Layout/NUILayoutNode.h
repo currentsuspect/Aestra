@@ -15,8 +15,10 @@ namespace Layout {
  * file comment on NUILayoutSpace.h for why a test built against this must not need
  * that target to exist.
  *
- * Not wired into NUIComponent. That is the next migration phase (a simple panel),
- * not this one — see the V8-X2b Core Spec Reconstruction doc for the scope line.
+ * Not wired into NUIComponent, and no surface consumes it yet: the migrated surfaces
+ * (WindowPanel's title-bar buttons; the mixer's master/inspector placement and strip
+ * row) use NUILayoutAlgorithms.h and NUILayoutSpace.h only — see the V8-X2b Core Spec
+ * Reconstruction doc for the scope line.
  */
 
 /**
