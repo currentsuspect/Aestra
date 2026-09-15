@@ -3,6 +3,7 @@
 #include "../Core/NUITypes.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <climits>
 
@@ -69,35 +70,52 @@ inline NUIColor restrainLaneIdentityColor(const NUIColor& color, float alpha) {
 }
 
 // ---------------------------------------------------------------------------
-// Clip contrast contract
+// Clip colour contract
 //
-// A clip is a surface with audio drawn on it. The body is deliberately toned
-// well down; the waveform keeps the identity hue near full strength and is then
-// lifted toward white. Both halves live here, together, because the thing that
-// matters is not either constant but the *gap* between them — separate the two
-// derivations and a later edit can quietly invert the hierarchy, which is the
-// bug this pairing exists to prevent. TimelineClipContrastTest guards the gap.
+// A clip is a flat, opaque surface in its identity hue — the same hue the mixer
+// strips paint — with its content (waveform, notes) drawn as a deep shade of that
+// hue on top. Owner direction 2026-09-15: expressive, Ableton-style clips. The
+// earlier toned-down bodies (68% brightness, 56% saturation, blended over the bed)
+// read as dull and out of place next to the mixer's colours.
+//
+// Body and ink live here together because what matters is the *gap* between them
+// and its direction; separate the two derivations and a later edit can quietly
+// collapse or invert it. TimelineClipContrastTest guards both.
 // ---------------------------------------------------------------------------
 
-/** @brief The clip body: a deep, desaturated surface that must stay the quieter half. */
+/** @brief The clip body: the identity hue at near full strength. Selection lifts it. */
 inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
-    return restrainDawColor(identity, selected ? 0.78f : 0.68f, selected ? 0.62f : 0.56f, 1.0f);
+    return restrainDawColor(identity, selected ? 1.0f : 0.95f, 1.0f, 1.0f);
 }
 
-/** @brief The identity tint the waveform is lifted from — kept bright so it has headroom. */
+/** @brief The tint clip content is deepened from — the body hue itself. */
 inline NUIColor waveformTintTone(const NUIColor& identity, bool selected) {
-    const NUIColor tint = restrainDawColor(identity, 1.0f, 0.92f, 1.0f);
-    return selected ? tint.lightened(0.12f) : tint;
+    return clipBodyTone(identity, selected);
 }
 
-/** @brief Lift a waveform tint toward white. Sole authority for the lift amount. */
-inline NUIColor liftWaveformInk(const NUIColor& tint) {
-    return NUIColor::lerp(tint, NUIColor::white(), 0.52f);
+/** @brief Deepen a tint toward black. Sole authority for the ink depth. */
+inline NUIColor deepenClipInk(const NUIColor& tint) {
+    return NUIColor::lerp(tint, NUIColor(0.0f, 0.0f, 0.0f, 1.0f), 0.62f);
 }
 
-/** @brief The ink actually drawn over the body. Must stay brighter than clipBodyTone(). */
+/** @brief The ink drawn over the body (waveform, notes). Must stay darker than clipBodyTone(). */
 inline NUIColor waveformInkTone(const NUIColor& identity, bool selected) {
-    return liftWaveformInk(waveformTintTone(identity, selected));
+    return deepenClipInk(waveformTintTone(identity, selected));
+}
+
+/**
+ * @brief True when near-black text out-contrasts near-white text on a clip surface.
+ *
+ * Clip hues span light (amber, sage) to dark (purple, indigo), so no single label
+ * colour reads on all of them. Uses WCAG relative luminance: contrast against
+ * black and against white are equal at L ~= 0.179.
+ */
+inline bool clipSurfacePrefersDarkText(const NUIColor& surface) {
+    const auto channel = [](float v) {
+        return (v <= 0.03928f) ? (v / 12.92f) : std::pow((v + 0.055f) / 1.055f, 2.4f);
+    };
+    const float l = 0.2126f * channel(surface.r) + 0.7152f * channel(surface.g) + 0.0722f * channel(surface.b);
+    return l > 0.179f;
 }
 
 inline int nearestPaletteIndex(uint32_t argb) {
