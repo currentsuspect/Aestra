@@ -29,8 +29,8 @@ namespace Aestra {
  * assigned only from capture*() or defaultSurfacePreference(); capture*() is called
  * only from gesture handlers.
  *
- * Nothing in the app calls these yet — AestraContent migrates in step 3, plugin
- * editors in step 5. Header-only; includes only header-only dependencies.
+ * Nothing in the app calls these yet — floating panels (AestraContent) and plugin
+ * editors migrate in step 5. Header-only; includes only header-only dependencies.
  */
 
 /**

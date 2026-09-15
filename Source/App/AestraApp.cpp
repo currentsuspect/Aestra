@@ -38,6 +38,7 @@
 #include <sstream>
 #include <chrono>
 #include "../Core/AudioSettingsStore.h"
+#include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
 #include <thread>
@@ -363,6 +364,25 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     UIState uiState;
     uiState.load();
+
+    // Before AestraContent exists: MixerPanel reads its preference from this store in its constructor.
+    m_uiSurfaceStore = std::make_unique<Aestra::UISurfaceStoreFile>(Aestra::UISurfaceStore::defaultPath());
+    if (m_uiSurfaceStore->path().empty()) {
+        Log::warning("[UISurfaceStore] No app-data directory; UI layout will not persist");
+    }
+    switch (Aestra::importLegacyMixerInspectorPreference(*m_uiSurfaceStore, Aestra::legacyMixerSettingsPath())) {
+    case Aestra::LegacyImportResult::Imported:
+        Log::info("[UISurfaceStore] Imported the mixer inspector preference from mixer_settings.json");
+        break;
+    case Aestra::LegacyImportResult::SaveFailed:
+        Log::warning("[UISurfaceStore] Could not save the imported mixer inspector preference to " +
+                     m_uiSurfaceStore->path());
+        break;
+    case Aestra::LegacyImportResult::AlreadyInStore:
+    case Aestra::LegacyImportResult::NothingToImport:
+        break;
+    }
+    Aestra::ServiceLocator::provide<Aestra::UISurfaceStoreFile>(m_uiSurfaceStore.get());
 
     {
         StartupTimer t("Platform + Window");
