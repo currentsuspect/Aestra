@@ -2425,8 +2425,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InspectorCollapseStateTest.cpp")
     add_executable(InspectorCollapseStateTest AestraUI/InspectorCollapseStateTest.cpp)
     target_include_directories(InspectorCollapseStateTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
-        ${CMAKE_SOURCE_DIR}/Source/Core
-        ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME InspectorCollapseStateTest COMMAND InspectorCollapseStateTest)
     set_tests_properties(InspectorCollapseStateTest PROPERTIES LABELS "ui;mixer;regression;contract:application")
@@ -2921,8 +2919,8 @@ endif()
 # in isolation -- round-trip fidelity, corruption/absence safety,
 # forward-compat with an unrecognized future schemaVersion, editor.*-only
 # pruning, and that the store never mutates the maximize preference on its
-# own. Nothing in the app consumes UISurfaceStore yet (later steps); this
-# only proves the contract every future step builds against.
+# own. Since step 3 it also pins the store's single owner, UISurfaceStoreFile
+# (never writes on construction, saves changes, skips unchanged values).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/UISurfaceStoreTest.cpp")
     add_executable(UISurfaceStoreTest
         Integration/UISurfaceStoreTest.cpp
@@ -2965,4 +2963,24 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/UISurfaceResolutionTest.cpp")
     )
     add_test(NAME UISurfaceResolutionTest COMMAND UISurfaceResolutionTest)
     set_tests_properties(UISurfaceResolutionTest PROPERTIES LABELS "preferences;layout;regression;contract:durability")
+endif()
+
+# V8-C14 step 3 (FD-23): the one-time, one-way import of the mixer inspector
+# preference from the pre-store mixer_settings.json. FD-23 forbids two long-lived
+# paths to one preference, so this pins: imported once, never read again once the
+# store holds a value, the legacy file never written, nothing invented.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/LegacyMixerSettingsImportTest.cpp")
+    add_executable(LegacyMixerSettingsImportTest
+        Integration/LegacyMixerSettingsImportTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(LegacyMixerSettingsImportTest PRIVATE AestraPlat)
+    target_include_directories(LegacyMixerSettingsImportTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Tests
+    )
+    add_test(NAME LegacyMixerSettingsImportTest COMMAND LegacyMixerSettingsImportTest)
+    set_tests_properties(LegacyMixerSettingsImportTest PROPERTIES LABELS "serialization;preferences;regression;contract:durability")
 endif()

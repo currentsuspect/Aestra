@@ -46,9 +46,8 @@ JSON geometryToJson(const UISurfaceGeometry& g) {
 }
 
 /// Type-checked, not merely present — a wrong-typed field falls back to the
-/// UISurfaceGeometry default for that field, the same "absent and
-/// wrong-typed land in the same bucket" policy MixerUIPreferences::load uses,
-/// so a stray {"anchorX": "nan"} cannot corrupt geometry silently.
+/// UISurfaceGeometry default for that field — absent and wrong-typed land in
+/// the same bucket — so a stray {"anchorX": "nan"} cannot corrupt geometry silently.
 UISurfaceGeometry geometryFromJson(const JSON& obj) {
     UISurfaceGeometry g;
     const auto readAnchor = [&obj](const char* key, double& out) {
@@ -285,6 +284,29 @@ bool UISurfaceStore::save(const std::string& path) const {
     root.set("listPreferences", listPrefsJson);
 
     return writeJSONAtomic(path, root);
+}
+
+UISurfaceStoreFile::UISurfaceStoreFile(std::string path)
+    : m_store(UISurfaceStore::load(path)), m_path(std::move(path)) {}
+
+std::optional<bool> UISurfaceStoreFile::boolPreference(const std::string& key) const {
+    const auto it = m_store.boolPreferences.find(key);
+    if (it == m_store.boolPreferences.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+bool UISurfaceStoreFile::setBoolPreference(const std::string& key, bool value) {
+    const auto it = m_store.boolPreferences.find(key);
+    if (it != m_store.boolPreferences.end() && it->second == value) {
+        return true;
+    }
+    m_store.boolPreferences[key] = value;
+    if (m_path.empty()) {
+        return true; // In-memory only: no write was attempted, so none failed.
+    }
+    return m_store.save(m_path);
 }
 
 } // namespace Aestra

@@ -15,10 +15,10 @@ namespace Aestra {
  * @brief The shared, disk-backed store for "how this user arranges the app".
  *
  * V8-C14 (FD-23). Step 1 defined this schema; step 2 defined how it resolves
- * against layout (see UISurfaceResolution.h). Nothing in the app constructs,
- * loads, saves or reads a UISurfaceStore yet — AestraContent, PluginUIController,
- * MixerUIPreferences, PluginBrowserPanel's favorites and Source/Core/UIState are
- * all untouched. That wiring is steps 3 and 5 of FD-23's binding order.
+ * against layout (see UISurfaceResolution.h); step 3 wired the first consumer,
+ * the mixer inspector's expand/collapse preference, through the app-owned
+ * UISurfaceStoreFile below. Floating panels, plugin editors, PluginBrowserPanel's
+ * favorites and Source/Core/UIState migrate in step 5.
  *
  * The ownership boundary this generalizes (founder's own words, FD-23): "The
  * project owns what is semantically part of the session. The UI state store
@@ -35,10 +35,9 @@ namespace Aestra {
  *     -> UISurfaceGeometry (anchored size + explicit maximize preference).
  *   - `dialogExport` -> UIDialogExportOptions, for the single "dialog.export" key.
  *
- * `boolPreferences`/`listPreferences` are reserved, unread homes for a later
- * step's migration of InspectorCollapseState's `expandedPreference` and
- * PluginBrowserPanel's favorites set into this same store — see the schema
- * design's open-questions section (FD-23 open question "d").
+ * `boolPreferences` holds simple preferences keyed by UISurfaceKeys (the mixer
+ * inspector since step 3); `listPreferences` is reserved for a later step's
+ * migration of PluginBrowserPanel's favorites.
  */
 
 /// A placement preference for one persistent surface (a panel or a plugin editor),
@@ -62,7 +61,7 @@ struct UISurfaceGeometry {
 
     /// Pixels. The user's requested size, kept even when it is larger than the
     /// current region; resolution shrinks what is displayed, never what is stored.
-    /// Placeholder defaults — per-surface defaults arrive with the step-3 migration.
+    /// Placeholder defaults — per-surface defaults arrive with the step-5 migration.
     double width{480.0};
     double height{320.0};
 
@@ -93,8 +92,8 @@ struct UIDialogExportOptions {
 struct UISurfaceStore {
     /// Bumped whenever the on-disk shape changes. load() routes anything
     /// older through migrateToCurrent(); anything newer or unparseable is
-    /// treated as foreign/corrupt and falls back to defaults, the same
-    /// forgiving policy MixerUIPreferences::load already uses.
+    /// treated as foreign/corrupt and falls back to defaults, so a corrupt or
+    /// foreign file never stops a surface from opening.
     ///
     /// Step 2 redefined UISurfaceGeometry within version 1 (anchors instead of
     /// fractional x/y, pixel sizes) without a bump, deliberately: nothing in the
@@ -113,31 +112,71 @@ struct UISurfaceStore {
     /// actually writes to it; nothing populates this yet.
     std::optional<UIDialogExportOptions> dialogExport;
 
-    /// Reserved for a later step's inspector-collapse migration
-    /// (e.g. "panel.mixer.inspectorExpanded"). Empty and unread today.
+    /// Simple on/off preferences, keyed by UISurfaceKeys. Since step 3:
+    /// "panel.mixer.inspectorExpanded".
     std::map<std::string, bool> boolPreferences;
 
     /// Reserved for a later step's plugin-favorites migration
     /// (e.g. "pluginBrowser.favorites"). Empty and unread today.
     std::map<std::string, std::vector<std::string>> listPreferences;
 
-    /// Full path to the store's file on disk, or empty when there is nowhere
-    /// to put it (mirrors MixerUIPreferences::settingsPath's empty-on-failure
-    /// convention).
+    /// Full path to the store's file in app data, or empty when there is nowhere
+    /// to put it.
     static std::string defaultPath();
 
     /// Read the store from @p path. Anything unreadable, empty, malformed, or
     /// carrying an unrecognized future schemaVersion yields defaults rather
     /// than an error — a corrupt or foreign store file must not stop any
-    /// surface from opening. Takes an explicit path (rather than always
-    /// resolving defaultPath() internally) so a test can round-trip through a
-    /// temp file without touching the real per-user config directory.
+    /// surface from opening. Takes an explicit path so a test can round-trip
+    /// through a temp file without touching the real per-user directory.
     static UISurfaceStore load(const std::string& path);
 
     /// Write the store to @p path via the shared atomic-write helper.
     /// Returns false, leaving any existing file untouched, if nothing was
-    /// written.
+    /// written. App code does not call this directly — it goes through
+    /// UISurfaceStoreFile, the single owner.
     bool save(const std::string& path) const;
+};
+
+/// Every key the app reads or writes. Namespace-scope constants on purpose: a
+/// function-local constexpr used inside a lambda fails to compile on MSVC (C3493).
+namespace UISurfaceKeys {
+inline constexpr char kMixerInspectorExpanded[] = "panel.mixer.inspectorExpanded";
+} // namespace UISurfaceKeys
+
+/**
+ * @brief The one in-memory copy of the store, bound to its file.
+ *
+ * The app owns exactly one (AestraApp, provided through ServiceLocator before any
+ * surface is constructed). A single owner is what prevents a lost update: if two
+ * surfaces each loaded, modified and saved the whole file on their own, the second
+ * save would overwrite the first with a stale copy. Not copyable for the same reason.
+ *
+ * Saves on every change, never at shutdown — one save path with one meaning.
+ */
+class UISurfaceStoreFile {
+public:
+    /// Loads @p path (defaults for a missing or unusable file). Never saves: constructing
+    /// the store must not write anything. An empty path means in-memory only.
+    explicit UISurfaceStoreFile(std::string path);
+
+    UISurfaceStoreFile(const UISurfaceStoreFile&) = delete;
+    UISurfaceStoreFile& operator=(const UISurfaceStoreFile&) = delete;
+
+    const std::string& path() const { return m_path; }
+
+    /// The stored value, or nullopt when the user has never set this preference.
+    std::optional<bool> boolPreference(const std::string& key) const;
+
+    /// Sets and saves. A no-op when the key already holds @p value, which is what keeps
+    /// applying a loaded preference from echoing straight back into a write. Returns
+    /// false only when a write was attempted and failed; the new value stays in memory
+    /// either way, and the next real change retries the write.
+    bool setBoolPreference(const std::string& key, bool value);
+
+private:
+    UISurfaceStore m_store;
+    std::string m_path;
 };
 
 } // namespace Aestra

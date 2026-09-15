@@ -1,12 +1,13 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// V8-C14 (FD-23): the UISurfaceStore schema has no runtime caller yet (that is
-// step 3), so this proves only the store's own file-format contract in
-// isolation: round-trip fidelity, corruption/absence safety, forward-compat
-// with an unrecognized future field, editor.*-only pruning, that the store
-// never mutates the explicit maximize preference on its own, and (since step 2)
-// that sizes are pixels validated as pixels while position is an anchor.
-// Every future step (3, 5, 6) builds against this contract.
+// V8-C14 (FD-23): the UISurfaceStore file-format contract in isolation —
+// round-trip fidelity, corruption/absence safety, forward-compat with an
+// unrecognized future field, editor.*-only pruning, that the store never mutates
+// the explicit maximize preference on its own, and (since step 2) that sizes are
+// pixels validated as pixels while position is an anchor. Since step 3 it also pins
+// the single owner, UISurfaceStoreFile: constructing it never writes, a change is
+// saved, an unchanged value writes nothing, and a save never discards the rest of
+// the store.
 
 #include "../../Source/Core/UISurfaceStore.h"
 #include "../Support/TestTempDirectory.h"
@@ -292,6 +293,70 @@ int main() {
         }
 
         std::cout << "[PASS] pixel sizes validated as pixels; out-of-domain sizes keep the default\n";
+    }
+
+    const std::string inspectorKey = UISurfaceKeys::kMixerInspectorExpanded;
+
+    // --- 9 (O1). Constructing the owner on a missing file loads defaults and writes nothing. ---
+    {
+        const auto path = (tempDir / "owner-missing.json").string();
+        const UISurfaceStoreFile owner(path);
+        require(!owner.boolPreference(inspectorKey).has_value(), "O1: a new store has no inspector preference");
+        require(!std::filesystem::exists(path), "O1: constructing the owner creates no file");
+        std::cout << "[PASS] O1 constructing the owner never writes\n";
+    }
+
+    // --- 10 (O2 + O3). A change is saved; setting the same value again writes nothing. ---
+    {
+        const auto path = (tempDir / "owner-save.json").string();
+        {
+            UISurfaceStoreFile owner(path);
+            require(owner.setBoolPreference(inspectorKey, false), "O2: setting a new value reports success");
+        }
+        const UISurfaceStoreFile reopened(path);
+        require(reopened.boolPreference(inspectorKey) == std::optional<bool>(false),
+                "O2: the change was saved, so a fresh owner reads it");
+
+        UISurfaceStoreFile same(path);
+        std::filesystem::remove(path);
+        require(same.setBoolPreference(inspectorKey, false), "O3: setting the value it already holds reports success");
+        require(!std::filesystem::exists(path),
+                "O3: an unchanged value writes nothing (so applying a loaded preference never echoes into a save)");
+        std::cout << "[PASS] O2/O3 changes are saved; unchanged values are not\n";
+    }
+
+    // --- 11 (O4). Saving one preference never discards the rest of the store. ---
+    {
+        const auto path = (tempDir / "owner-preserve.json").string();
+        UISurfaceStore seeded;
+        UISurfaceGeometry geometry;
+        geometry.width = 777.0;
+        seeded.surfaces["panel.mixer"] = geometry;
+        seeded.listPreferences["pluginBrowser.favorites"] = {"comp"};
+        require(seeded.save(path), "O4 seed saved");
+
+        {
+            UISurfaceStoreFile owner(path);
+            require(owner.setBoolPreference(inspectorKey, true), "O4: setting a preference reports success");
+        }
+        const UISurfaceStore reloaded = UISurfaceStore::load(path);
+        require(reloaded.surfaces.count("panel.mixer") == 1 && reloaded.surfaces.at("panel.mixer").width == 777.0,
+                "O4: stored geometry survives a preference save");
+        require(reloaded.listPreferences.count("pluginBrowser.favorites") == 1,
+                "O4: stored list preferences survive a preference save");
+        require(reloaded.boolPreferences.count(inspectorKey) == 1 && reloaded.boolPreferences.at(inspectorKey),
+                "O4: and the new preference was written");
+        std::cout << "[PASS] O4 a save keeps everything else in the store\n";
+    }
+
+    // --- 12 (O5). A failed write is reported, and the value stays in memory. ---
+    {
+        const auto path = (tempDir / "no-such-dir" / "owner.json").string();
+        UISurfaceStoreFile owner(path);
+        require(!owner.setBoolPreference(inspectorKey, false), "O5: a write to an unwritable location reports failure");
+        require(owner.boolPreference(inspectorKey) == std::optional<bool>(false),
+                "O5: the session keeps the new value in memory");
+        std::cout << "[PASS] O5 failed saves are reported, not hidden\n";
     }
 
     std::cout << "\nAll UISurfaceStore tests passed.\n";
