@@ -43,6 +43,11 @@ public:
     // Called when a title-bar drag ends (before m_isDraggingWindow is cleared)
     virtual void onDragEnd() {}
 
+    // Fired alongside onDragEnd when a title-bar drag ends. The plugin-editor
+    // position persistence (V8-C14 step 5b) hooks here to capture the dropped
+    // position; inert for every other AestraPanelWindow user.
+    void setOnWindowDragEnd(std::function<void()> callback) { m_onWindowDragEnd = std::move(callback); }
+
     // Helpers
     static constexpr float TITLE_BAR_H = 32.0f;
     static constexpr float kRadius = 14.0f;
@@ -107,8 +112,8 @@ private:
     std::string m_title;
     std::string m_badgeText;
     std::function<void()> m_onClose;
-    bool m_closeOnOutsideClick = true;
-    bool m_closeHovered = false;
+    std::function<void()> m_onWindowDragEnd;
+    bool m_closeOnOutsideClick = true;    bool m_closeHovered = false;
     bool m_closePressed = false;
 
     NUIColor m_bg;

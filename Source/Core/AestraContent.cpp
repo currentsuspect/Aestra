@@ -355,6 +355,37 @@ AestraContent::AestraContent()
     // The inspector rack's per-click "+ Add Insert" menu is created on demand,
     // so it pulls the catalog here instead of via refreshPluginList().
     m_pluginController->setMixerCatalogProvider([this]() { return buildMixerCatalogEntries(); });
+    // Editor-anchor persistence (V8-C14 step 5b): the controller resolves and
+    // captures anchors, the app owns the store. Size crossing the boundary is
+    // always the current intrinsic size — the record is anchor-only in
+    // practice, and editors never maximize.
+    m_pluginController->setEditorAnchorProvider(
+        [this](const std::string& key) -> std::optional<AestraUI::Layout::NUIAnchoredRect> {
+            auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>();
+            if (!store) {
+                return std::nullopt;
+            }
+            const auto stored = store->surfaceGeometry(key);
+            if (!stored.has_value()) {
+                return std::nullopt;
+            }
+            return AestraUI::Layout::NUIAnchoredRect{stored->anchorX, stored->anchorY, stored->width,
+                                                     stored->height};
+        },
+        [this](const std::string& key, const AestraUI::Layout::NUIAnchoredRect& anchor) {
+            auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>();
+            if (!store) {
+                return;
+            }
+            Aestra::UISurfaceGeometry preference;
+            preference.anchorX = anchor.anchorX;
+            preference.anchorY = anchor.anchorY;
+            preference.width = anchor.width;
+            preference.height = anchor.height;
+            preference.maximized = false;
+            preference.lastUsedAt = panelNowSeconds();
+            store->setSurfaceGeometry(key, preference);
+        });
 
     // Scoped subscriptions for playback-critical callbacks
     // Plugin loaded: mark project dirty
@@ -1322,7 +1353,11 @@ void AestraContent::setupArsenalPanels() {
                     }
                     return;
                 }
-                m_pluginController->openPluginEditor(plugin);
+                // Stable per-instance surface identity: the unit owns the plugin
+                // across sessions, so the editor reopens where this unit's
+                // editor was left.
+                m_pluginController->openPluginEditor(
+                    plugin, nullptr, "unit." + std::to_string(id) + "." + plugin->getInfo().id);
             }
         }
     });

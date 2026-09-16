@@ -2,10 +2,9 @@
 #
 # Materializes fixture trees in WORK_DIR/tree and runs the real guard against each,
 # asserting PASS/FAIL per fixture. Every fixture starts from the exact pinned baseline
-# (no ViewState rect assignments and no NUIRect literals in Source/Core/AestraContent.cpp,
-# no isMaximized reads there, the single computePlacementRegion definition, plus 1
-# editor->setBounds in AestraUI/Widgets/PluginUIController.cpp) and then applies one
-# mutation, so each result isolates exactly one guard behavior.
+# (no ViewState rect assignments, NUIRect literals, editor hand-centring, or
+# isMaximized reads; the single computePlacementRegion definition) and then applies
+# one mutation, so each result isolates exactly one guard behavior.
 #
 # Required -D args:
 #   GUARD_SCRIPT  absolute path to ui_surface_resolution.cmake
@@ -17,7 +16,7 @@ endif()
 
 set(failures 0)
 
-# Rebuild WORK_DIR/tree at the exact pinned baseline (0 + 0-subset + 1 + 0, and 1).
+# Rebuild WORK_DIR/tree at the exact pinned baseline (0 + 0-subset + 0 + 1 + 0).
 function(write_baseline_tree)
     file(REMOVE_RECURSE "${WORK_DIR}/tree")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/Source/Core")
@@ -33,10 +32,10 @@ AestraUI::NUIRect AestraContent::computePlacementRegion() const {
 }
 ]=])
     file(WRITE "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" [=[
-void PluginUIController::centerEditor(Editor* editor) {
+void PluginUIController::openPluginEditor(Instance* instance) {
     float x = (layerBounds.width - editorWidth) * 0.5f;
     float y = (layerBounds.height - editorHeight) * 0.5f;
-    editor->setBounds(x, y, editorWidth, editorHeight);
+    editor->setPosition(x, y);
     relayoutEditor(editor, editorWidth, editorHeight);
 }
 ]=])
@@ -77,15 +76,15 @@ void PanelStore::restore() {
 ]=])
 run_guard(spread-to-new-file FAIL)
 
-# ── One fewer than baseline (editor 1 → 0) → FAIL (stale baseline) ───────────
-# The zero-tolerance entries cannot fall further, so the stale pin lives on the
-# one remaining counted entry: removing the editor hand-centring without
-# updating the table must fail.
+# ── One fewer than baseline (region fn 1 → 0) → FAIL (stale baseline) ─────────
+# Every other entry is zero-tolerance and cannot fall further, so the stale pin
+# lives on the one remaining counted entry: deleting the single
+# placement-region definition without updating the table must fail.
 write_baseline_tree()
-file(READ "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" stale_contents)
-string(REPLACE "    editor->setBounds(x, y, editorWidth, editorHeight);\n" "" stale_contents
-               "${stale_contents}")
-file(WRITE "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" "${stale_contents}")
+file(READ "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" stale_contents)
+string(REPLACE "AestraUI::NUIRect AestraContent::computePlacementRegion() const {\n    return safe;\n}\n" ""
+               stale_contents "${stale_contents}")
+file(WRITE "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "${stale_contents}")
 run_guard(stale-baseline FAIL)
 
 # ── dragStartRect IS a rect assignment, not an exemption → FAIL ────────────────
