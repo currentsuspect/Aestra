@@ -87,7 +87,7 @@ set(entry_scan_tree ON ON ON ON OFF)
 set(entry_step5
     "Step 5a routed every assignment through resolveSurfacePlacement(...).resolved or capture*Placement: zero-tolerance."
     "Step 5a deleted the NUIRect literal constructions at open: zero-tolerance."
-    "Step 5b opens editors from the stored anchor through the anchored-placement resolve path: zero-tolerance."
+    "Step 5b opens editors from the stored anchor through the anchored-placement resolve path: zero-tolerance, covering both the historical setBounds spelling and the setPosition variant."
     "Step 5a replaced both helpers with the single placement-region function: exactly one."
     "Step 5a derives panel maximized flags from pref.maximized: zero-tolerance.")
 
@@ -100,7 +100,7 @@ set(entry_step5
 set(regex_0_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=")
 set(regex_0_b "m_viewState\\.\\*stateRect[ \t]*=")
 set(regex_1_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=[ \t]*AestraUI::NUIRect\\(")
-set(regex_2_a "editor->setBounds[ \t\r\n]*\\(")
+set(regex_2_a "editor->set(Bounds|Position)[ \t\r\n]*\\(")
 set(regex_3_a "AestraContent::computePlacementRegion")
 set(regex_4_a "isMaximized[ \t\r\n]*\\([ \t\r\n]*\\)")
 

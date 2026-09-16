@@ -33,10 +33,11 @@ AestraUI::NUIRect AestraContent::computePlacementRegion() const {
 ]=])
     file(WRITE "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" [=[
 void PluginUIController::openPluginEditor(Instance* instance) {
-    float x = (layerBounds.width - editorWidth) * 0.5f;
-    float y = (layerBounds.height - editorHeight) * 0.5f;
-    editor->setPosition(x, y);
-    relayoutEditor(editor, editorWidth, editorHeight);
+    const auto preference = editorOpenPreference(stored, intrinsicWidth, intrinsicHeight);
+    const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored,
+                                                            region, limits);
+    editorComp->setBounds(placement.resolved.raw());
+    relayoutEditor(editorComp, editorWidth, editorHeight);
 }
 ]=])
 endfunction()
@@ -98,6 +99,19 @@ run_guard(dragstartrect-counts FAIL)
 write_baseline_tree()
 file(APPEND "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" "    editor->setBounds (x, y, editorWidth, editorHeight);\n")
 run_guard(spaced-setbounds-counts FAIL)
+
+# ── setPosition hand-centring counts as editor hand-centring → FAIL ──────────
+# Pins the R4-editor method-variant: respelling the manual centre as setPosition
+# must not bypass the ratchet.
+write_baseline_tree()
+file(APPEND "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" [=[
+void PluginUIController::openPluginEditor(Instance* instance) {
+    float x = (layerBounds.width - editorWidth) * 0.5f;
+    float y = (layerBounds.height - editorHeight) * 0.5f;
+    editor->setPosition(x, y);
+}
+]=])
+run_guard(setposition-centring FAIL)
 
 # ── Today's capture* names match nothing (no R3 pattern yet) → PASS ───────────
 write_baseline_tree()

@@ -530,9 +530,10 @@ void PluginUIController::openPluginEditor(
 
     // Position the editor from its stored anchor (centred when never placed).
     // Every setBounds below takes a resolve result — the R4-editor guard entry
-    // keys on the historical `editor->setBounds` hand-centring shape, so the
-    // local keeps the relayout lambda's `editorComp` name and all geometry
-    // flows through resolveAnchoredPlacement (see EditorSurfacePlacementTest).
+    // keys on the historical hand-centring shape (`editor->setBounds`, plus the
+    // `setPosition` variant), so the local keeps the relayout lambda's
+    // `editorComp` name and all geometry flows through resolveAnchoredPlacement
+    // (see EditorSurfacePlacementTest).
     // Only the anchor persists; the size is always intrinsic.
     if (m_popupLayer && editorComp) {
         const auto editorBounds = editorComp->getBounds();
