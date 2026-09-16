@@ -557,6 +557,13 @@ void TransportBar::setPosition(double seconds) {
     m_position = std::max(0.0, seconds);
     if (m_infoContainer) {
         m_infoContainer->getTimerDisplay()->setTime(m_position);
+        // Musical clock mode needs beats + meter alongside seconds; the
+        // position itself is untouched, only its representation changes.
+        const int beatsPerBar = m_infoContainer->getTimeSignatureDisplay()
+                                    ? m_infoContainer->getTimeSignatureDisplay()->getBeatsPerBar()
+                                    : 4;
+        const double beats = m_position * std::max(0.0f, m_tempo) / 60.0;
+        m_infoContainer->getTimerDisplay()->setMusicalPosition(beats, beatsPerBar);
     }
     updateMetronomePose();
 }

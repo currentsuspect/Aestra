@@ -114,21 +114,38 @@ public:
     TimerDisplay();
     ~TimerDisplay() = default;
 
+    /** @brief The two transport-clock representations (spec item 2). */
+    enum class DisplayMode { Time, Musical };
+
     void setTime(double seconds);
     double getTime() const { return m_currentTime; }
-    
+
+    /** @brief Position in beats + meter for musical mode (fed alongside seconds). */
+    void setMusicalPosition(double beats, int beatsPerBar);
+
+    /** @brief Single tap/click toggles Time <-> Musical; position is untouched. */
+    void toggleDisplayMode();
+    DisplayMode getDisplayMode() const { return m_displayMode; }
+
     // Set playing state to change color
     void setPlaying(bool playing) { m_isPlaying = playing; }
     bool isPlaying() const { return m_isPlaying; }
-    
+
     void onRender(AestraUI::NUIRenderer& renderer) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+
+    /** @brief Existing time representation (minutes:seconds.centiseconds), preserved verbatim. */
+    static std::string formatTime(double seconds);
+    /** @brief Existing bar/beat representation (1-based bar:beat.centibeats), as in note labels. */
+    static std::string formatMusical(double beats, int beatsPerBar);
 
 private:
     double m_currentTime;
     bool m_isPlaying;
-    
-    std::string formatTime(double seconds) const;
+    DisplayMode m_displayMode{DisplayMode::Time};
+    double m_positionBeats{0.0};
+    int m_beatsPerBar{4};
+    bool m_tapArmed{false};
 };
 
 /**

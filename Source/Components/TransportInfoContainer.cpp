@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <cstdio>
 
 namespace Aestra {
 
@@ -228,17 +229,37 @@ void TimerDisplay::setTime(double seconds) {
     m_currentTime = std::max(0.0, seconds);
 }
 
-std::string TimerDisplay::formatTime(double seconds) const {
+void TimerDisplay::setMusicalPosition(double beats, int beatsPerBar) {
+    m_positionBeats = std::max(0.0, beats);
+    m_beatsPerBar = std::max(1, beatsPerBar);
+}
+
+void TimerDisplay::toggleDisplayMode() {
+    m_displayMode = (m_displayMode == DisplayMode::Time) ? DisplayMode::Musical : DisplayMode::Time;
+    setDirty(true);
+}
+
+std::string TimerDisplay::formatTime(double seconds) {
     int totalSeconds = static_cast<int>(seconds);
     int minutes = totalSeconds / 60;
     int secs = totalSeconds % 60;
     int millis = static_cast<int>((seconds - totalSeconds) * 100);
-    
+
     std::stringstream ss;
     ss << minutes << ":" << std::setfill('0')
         << std::setw(2) << secs << "."
         << std::setw(2) << millis;
     return ss.str();
+}
+
+std::string TimerDisplay::formatMusical(double beats, int beatsPerBar) {
+    const int bpb = std::max(1, beatsPerBar);
+    const double clamped = std::max(0.0, beats);
+    const double barIndex = std::floor(clamped / bpb);
+    const double beatInBar = clamped - barIndex * bpb;
+    char buf[24];
+    std::snprintf(buf, sizeof(buf), "%d:%.2f", static_cast<int>(barIndex) + 1, beatInBar + 1.0);
+    return std::string(buf);
 }
 
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
@@ -248,16 +269,32 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     // tonal well keeps it aligned with BPM/time signature without a third box.
     renderer.fillRoundedRect(bounds, themeManager.getRadius("s"),
                              themeManager.getColor("surfaceRaised").withAlpha(0.045f));
-    std::string timeText = formatTime(m_currentTime);
+    std::string timeText = (m_displayMode == DisplayMode::Musical)
+                                 ? formatMusical(m_positionBeats, m_beatsPerBar)
+                                 : formatTime(m_currentTime);
     renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
                               themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (getBounds().contains(event.position)) {
-        AestraUI::NUIComponent::showRemoteTooltip("Playback time", event.position, this);
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && !event.synthetic) {
+            m_tapArmed = true;
+            return true;
+        }
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            // A synthetic release (focus loss, post-capture re-resolution) is a
+            // stop, not an accept: disarm without toggling.
+            if (m_tapArmed && !event.synthetic) {
+                toggleDisplayMode();
+            }
+            m_tapArmed = false;
+            return true;
+        }
+        AestraUI::NUIComponent::showRemoteTooltip("Playback time — click to toggle bars/beats", event.position, this);
         return false;
     }
+    m_tapArmed = false;
     AestraUI::NUIComponent::hideRemoteTooltip(this);
     return false;
 }

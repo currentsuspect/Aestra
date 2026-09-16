@@ -2288,6 +2288,30 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# Spec 1 item 2: transport clock time/musical dual-mode formatting + toggle.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TransportClockFormatTest AestraUI_Core AestraUI_Platform)
+    add_executable(TransportClockFormatTest
+        AestraUI/TransportClockFormatTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TransportInfoContainer.cpp
+    )
+    target_link_libraries(TransportClockFormatTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(TransportClockFormatTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TransportClockFormatTest COMMAND TransportClockFormatTest)
+    set_tests_properties(TransportClockFormatTest PROPERTIES LABELS "ui;transport;regression;contract:application")
+endif()
+
 # Selection-based step editing regression: click-to-select grammar, Ctrl+B
 # span duplication, Delete/Backspace removal (2026-08-17).
 if(AESTRA_ENABLE_UI)
