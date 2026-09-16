@@ -359,6 +359,40 @@ int main() {
         std::cout << "[PASS] O5 failed saves are reported, not hidden\n";
     }
 
+    // --- 13 (G1). Geometry accessors: absent until set, saved on change, silent when unchanged. ---
+    {
+        const auto path = (tempDir / "owner-geometry.json").string();
+        UISurfaceStoreFile owner(path);
+        require(!owner.surfaceGeometry(UISurfaceKeys::kPanelMixer).has_value(),
+                "G1: a surface the user never touched has no stored geometry");
+
+        UISurfaceGeometry gesture;
+        gesture.anchorX = 0.25;
+        gesture.anchorY = 0.75;
+        gesture.width = 640.0;
+        gesture.height = 400.0;
+        gesture.maximized = false;
+        gesture.lastUsedAt = recentUnixSeconds();
+        require(owner.setSurfaceGeometry(UISurfaceKeys::kPanelMixer, gesture),
+                "G1: storing a new preference reports success");
+
+        const UISurfaceStoreFile reopened(path);
+        const auto loaded = reopened.surfaceGeometry(UISurfaceKeys::kPanelMixer);
+        require(loaded.has_value(), "G1: the geometry was saved, so a fresh owner reads it");
+        require(loaded->anchorX == gesture.anchorX && loaded->anchorY == gesture.anchorY &&
+                    loaded->width == gesture.width && loaded->height == gesture.height &&
+                    loaded->maximized == gesture.maximized && loaded->lastUsedAt == gesture.lastUsedAt,
+                "G1: every geometry field round-trips, maximized and timestamp included");
+
+        UISurfaceStoreFile same(path);
+        std::filesystem::remove(path);
+        require(same.setSurfaceGeometry(UISurfaceKeys::kPanelMixer, gesture),
+                "G1: re-storing the preference it already holds reports success");
+        require(!std::filesystem::exists(path),
+                "G1: an unchanged preference writes nothing (lastUsedAt alone is not a change)");
+        std::cout << "[PASS] G1 geometry accessors save on change, stay silent otherwise\n";
+    }
+
     std::cout << "\nAll UISurfaceStore tests passed.\n";
     return 0;
 }

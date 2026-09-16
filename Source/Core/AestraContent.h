@@ -28,6 +28,7 @@
 #include "OverlayLayer.h"
 #include "PatternSource.h"
 #include "TransportBar.h"
+#include "UISurfaceStore.h"
 #include "ViewTypes.h"
 
 #include <atomic>
@@ -120,23 +121,17 @@ public:
         /** @brief True when the playlist/timeline view is the active overlay. */
         bool playlistActive = true;
 
-        /** @brief Mixer overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect mixerRect = {0, 0, 800, 400};
-        /** @brief Piano-roll overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect pianoRollRect = {0, 0, 800, 450};
-        /** @brief Arsenal overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
-        AestraUI::NUIRect historyRect = {0, 80, 280, 460};
-        AestraUI::NUIRect takesRect = {0, 80, 320, 480};
-
         /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
         /** @brief View currently being dragged. */
         Aestra::Audio::ViewType draggingView = Aestra::Audio::ViewType::Playlist;
         /** @brief Mouse origin in overlay coordinates for the active drag. */
         AestraUI::NUIPoint dragStartMouseOverlay = {0, 0};
-        /** @brief Panel rectangle captured at drag start. */
-        AestraUI::NUIRect dragStartRect = {0, 0, 0, 0};
+        /** @brief Panel origin in overlay coordinates at drag start. Drag
+         * gestures reuse the stored size preference, never the displayed
+         * size, so dragging a fitted panel cannot bake the fit into the
+         * preference. */
+        AestraUI::NUIPoint dragStartPos = {0, 0};
     };
 
     /** @brief Advance workspace state and child-panel updates. */
@@ -251,10 +246,16 @@ public:
     AestraUI::NUIRect computeSafeRect() const;
     /** @brief Get the x coordinate of the visible browser edge. */
     float getVisibleBrowserEdge() const;
-    /** @brief Compute the rectangle panels are allowed to occupy. */
-    AestraUI::NUIRect computeAllowedRectForPanels() const;
-    /** @brief Compute the maximized overlay rectangle. */
-    AestraUI::NUIRect computeMaximizedRect() const;
+    /**
+     * @brief The single placement region for persistent surfaces (V8-C14 step 5).
+     *
+     * Replaces computeAllowedRectForPanels()/computeMaximizedRect(): one region,
+     * no minimum floor — per-surface size limits live in NUISizeLimits, where
+     * FD-18 constraint 4 puts them. A degenerate region is reported as-is;
+     * resolveSurfacePlacement answers DegenerateRegion and callers keep current
+     * bounds instead of inventing geometry.
+     */
+    AestraUI::NUIRect computePlacementRegion() const;
     /** @brief Clamp an overlay rectangle to the current allowed bounds. */
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
     /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
@@ -281,13 +282,13 @@ public:
     /**
      * @brief Wire the floating-panel behaviors shared by every overlay panel.
      *
-     * Covers maximize-refresh, the drag trio (begin/update/end), the clamped
-     * resize that persists into @p stateRect, and an optional minimum size.
-     * Panel-specific wiring (close action, visibility, z-order addChild)
-     * stays at the call site.
+     * Covers maximize-capture, the drag trio (begin/update/end) routed through
+     * captureSurfaceGesture, the resize handler routed through capture, and the
+     * panel minimum size. Geometry itself lives in the UISurfaceStore under the
+     * panel's key — never in ViewState. Panel-specific wiring (close action,
+     * visibility, z-order addChild) stays at the call site.
      */
-    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view,
-                           AestraUI::NUIRect ViewState::* stateRect, float minWidth = 0.0f, float minHeight = 0.0f);
+    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
@@ -295,6 +296,25 @@ public:
     void updatePanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
     /** @brief End the active overlay-panel drag. */
     void endPanelDrag(Aestra::Audio::ViewType view);
+
+    /** @brief The panel owned for a floating view, or nullptr for other views. */
+    std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+    /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
+    Aestra::UISurfaceStoreFile* surfaceStore() const;
+    /**
+     * @brief The stored preference for a floating panel, or its per-panel
+     * default when the user never moved, resized or maximized it. Never writes:
+     * an absent entry stays absent until a real gesture arrives.
+     */
+    Aestra::UISurfaceGeometry panelPreference(Aestra::Audio::ViewType view) const;
+    /** @brief Persist a captured preference (save-on-change, shared store). */
+    void savePanelPreference(Aestra::Audio::ViewType view, const Aestra::UISurfaceGeometry& preference);
+    /**
+     * @brief Show a panel from its preference: setBounds from
+     * resolveSurfacePlacement against the current region, and derive the
+     * widget maximized flag from the preference — never the reverse.
+     */
+    void applyPanelPreference(Aestra::Audio::ViewType view);
 
     /** @brief Update the transport/UI audio-active state. */
     void setAudioStatus(bool active);
@@ -454,9 +474,6 @@ private:
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
-    // First-open flag: the Takes panel gets a default rect once, then keeps
-    // whatever bounds the user dragged/resized across close/reopen.
-    bool m_takesRectInitialized{false};
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
 
