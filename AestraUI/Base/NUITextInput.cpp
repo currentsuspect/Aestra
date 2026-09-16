@@ -476,6 +476,11 @@ void NUITextInput::setOnReturnKey(std::function<void()> callback)
     onReturnKeyCallback_ = callback;
 }
 
+void NUITextInput::setOnArrowKey(std::function<void(int direction)> callback)
+{
+    onArrowKeyCallback_ = callback;
+}
+
 void NUITextInput::setOnEscapeKey(std::function<void()> callback)
 {
     onEscapeKeyCallback_ = callback;
@@ -1044,12 +1049,20 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             {
                 moveCaretToLine(-1, event.modifiers & NUIModifiers::Shift);
             }
+            else if (onArrowKeyCallback_)
+            {
+                onArrowKeyCallback_(-1);
+            }
             break;
-            
+
         case NUIKeyCode::Down:
             if (multiline_)
             {
                 moveCaretToLine(1, event.modifiers & NUIModifiers::Shift);
+            }
+            else if (onArrowKeyCallback_)
+            {
+                onArrowKeyCallback_(1);
             }
             break;
             

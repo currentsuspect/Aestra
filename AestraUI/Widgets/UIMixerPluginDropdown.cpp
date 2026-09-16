@@ -75,6 +75,14 @@ UIMixerPluginDropdown::UIMixerPluginDropdown()
     m_searchInput->setOnEscapeKey([this]() {
         dismiss();
     });
+    // Arrow keys move the list selection without leaving the search field;
+    // Return loads the highlighted row (same as double-click).
+    m_searchInput->setOnArrowKey([this](int direction) {
+        moveSelection(direction);
+    });
+    m_searchInput->setOnReturnKey([this]() {
+        activateSelected();
+    });
     addChild(m_searchInput);
 }
 
@@ -156,6 +164,9 @@ void UIMixerPluginDropdown::filter()
             m_filtered.push_back(std::move(filteredCat));
         }
     }
+    // The result set changed under any selection: drop it rather than load
+    // a row that no longer matches.
+    m_selectedRow = -1;
 }
 
 void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY) {
@@ -203,6 +214,7 @@ void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottom
     setVisible(true);
     m_hoveredRow = -1;
     m_hoveredFooter = -1;
+    m_selectedRow = -1;
     filter();
     m_searchInput->setFocused(true);
     repaint();
@@ -216,12 +228,68 @@ void UIMixerPluginDropdown::hide()
     setFocused(false);
     m_hoveredRow = -1;
     m_hoveredFooter = -1;
+    m_selectedRow = -1;
 }
 
 void UIMixerPluginDropdown::dismiss()
 {
     hide();
     if (onDismissed) onDismissed();
+}
+
+void UIMixerPluginDropdown::moveSelection(int direction)
+{
+    if (!m_open) {
+        return;
+    }
+    const auto& display = displayCategories();
+    const auto rows = flatten(display);
+    const int count = static_cast<int>(rows.size());
+    if (count <= 0) {
+        return;
+    }
+    // Category headers are not selectable: walk past them. From empty,
+    // Down takes the first item and Up the last.
+    int next = m_selectedRow;
+    if (next < 0 || next >= count) {
+        next = (direction < 0) ? count : -1;
+    }
+    for (int step = 0; step < count; ++step) {
+        next += (direction < 0) ? -1 : 1;
+        if (next < 0 || next >= count) {
+            return; // clamped at the ends
+        }
+        if (!rows[static_cast<size_t>(next)].isCategory) {
+            break;
+        }
+    }
+    if (next < 0 || next >= count || rows[static_cast<size_t>(next)].isCategory) {
+        return;
+    }
+    m_selectedRow = next;
+    m_hoveredRow = next;
+    repaint();
+}
+
+void UIMixerPluginDropdown::activateSelected()
+{
+    if (!m_open || m_selectedRow < 0) {
+        return;
+    }
+    const auto& display = displayCategories();
+    const auto rows = flatten(display);
+    if (m_selectedRow >= static_cast<int>(rows.size())) {
+        return;
+    }
+    const auto& row = rows[static_cast<size_t>(m_selectedRow)];
+    if (row.isCategory) {
+        return;
+    }
+    const auto& item = display[static_cast<size_t>(row.catIndex)].items[static_cast<size_t>(row.itemIndex)];
+    dismiss();
+    if (onPluginSelected) {
+        onPluginSelected(item.id, item.name);
+    }
 }
 
 std::vector<UIMixerPluginDropdown::FlatRow> UIMixerPluginDropdown::flatten(const std::vector<Category>& cats) const
@@ -318,7 +386,7 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
         } else {
             anyItem = true;
             const auto& item = display[row.catIndex].items[row.itemIndex];
-            bool hovered = (static_cast<int>(ri) == m_hoveredRow);
+            bool hovered = (static_cast<int>(ri) == m_hoveredRow || static_cast<int>(ri) == m_selectedRow);
             NUIRect rowRect{b.x + 1.0f, ry, b.width - 2.0f, ROW_H};
             if (hovered) {
                 renderer.fillRect(rowRect, m_rowHover);

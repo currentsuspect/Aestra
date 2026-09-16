@@ -161,6 +161,11 @@ public:
     void setOnTextChange(std::function<void(const std::string&)> callback);
     void setOnReturnKey(std::function<void()> callback);
     void setOnEscapeKey(std::function<void()> callback);
+    // Fired for Up (-1) / Down (+1) in single-line inputs only (multiline
+    // keeps caret behavior). Null by default: unwired inputs behave exactly
+    // as before. Lets popup lists with an embedded search field (mixer
+    // insert dropdown) move selection without stealing focus from typing.
+    void setOnArrowKey(std::function<void(int direction)> callback);
     void setOnFocusGained(std::function<void()> callback);
     void setOnFocusLost(std::function<void()> callback);
 
@@ -296,6 +301,7 @@ private:
     // Callbacks
     std::function<void(const std::string&)> onTextChangeCallback_;
     std::function<void()> onReturnKeyCallback_;
+    std::function<void(int direction)> onArrowKeyCallback_;
     std::function<void()> onEscapeKeyCallback_;
     std::function<void()> onFocusGainedCallback_;
     std::function<void()> onFocusLostCallback_;
