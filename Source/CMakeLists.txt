@@ -39,6 +39,7 @@ set(Aestra_SOURCES
 	Core/UIState.cpp
 	Core/UISurfaceStore.h
 	Core/UISurfaceStore.cpp
+	Core/LegacyMixerSettingsImport.h
 
 	# Panels
 	Panels/TransportBar.h

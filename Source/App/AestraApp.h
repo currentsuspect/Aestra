@@ -3,6 +3,7 @@
 
 #include "../AestraCore/include/AestraLog.h"
 #include "../Core/UIState.h"
+#include "../Core/UISurfaceStore.h"
 #include "AestraAudioController.h"
 #include "AestraContent.h"
 #include "AestraWindowManager.h"
@@ -189,6 +190,8 @@ private:
     std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();
 
+    // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
+    std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;
 
