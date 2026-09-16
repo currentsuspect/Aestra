@@ -315,10 +315,10 @@ void AestraContent::savePanelPreference(Audio::ViewType view, const Aestra::UISu
     }
 }
 
-void AestraContent::applyPanelPreference(Audio::ViewType view) {
+AestraUI::NUIRect AestraContent::applyPanelPreference(Audio::ViewType view) {
     auto panel = panelForView(view);
     if (!panel) {
-        return;
+        return {};
     }
     const FloatingPanelSpec& spec = floatingPanelSpec(view);
     const UISurfaceGeometry preference = panelPreference(view);
@@ -326,11 +326,13 @@ void AestraContent::applyPanelPreference(Audio::ViewType view) {
     const Layout::NUISizeLimits limits{spec.minWidth, spec.minHeight};
     const auto placement = resolveSurfacePlacement(preference, region, limits);
     if (!placement.applicable) {
-        return;
+        return panel->getBounds();
     }
     const auto resolved = placement.resolved;
-    panel->setBounds(NUIRect(resolved.x, resolved.y, resolved.width, resolved.height));
+    const AestraUI::NUIRect applied(resolved.x, resolved.y, resolved.width, resolved.height);
+    panel->setBounds(applied);
     panel->setMaximized(preference.maximized);
+    return applied;
 }
 
 AestraContent::AestraContent()
@@ -2799,9 +2801,10 @@ AestraUI::NUIRect AestraContent::computePlacementRegion() const {
     if (browserEdge > region.x) {
         float shift = browserEdge - region.x;
         region.x = browserEdge;
-        region.width -= shift;
+        region.width = std::max(0.0f, region.width - shift);
     }
 
+    region.height = std::max(0.0f, region.height);
     return region;
 }
 
@@ -2936,7 +2939,8 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
     AestraUI::NUIPoint delta = currentMouseOverlay - m_viewState.dragStartMouseOverlay;
 
     Layout::NUIWindowRect gesture(0.0f, 0.0f, 0.0f, 0.0f);
-    if (prior.maximized) {
+    const bool restoringMaximized = prior.maximized;
+    if (restoringMaximized) {
         // Dragging a maximized surface restores it under the pointer (founder
         // ruling 2026-09-14): the saved size follows the grab, and capturing
         // the gesture clears `maximized`.
@@ -2953,7 +2957,14 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
     }
 
     savePanelPreference(view, captureSurfaceGesture(prior, gesture, region, panelNowSeconds()));
-    applyPanelPreference(view);
+    const AestraUI::NUIRect applied = applyPanelPreference(view);
+    if (restoringMaximized) {
+        // The next update runs the non-maximized branch, which continues from
+        // dragStartPos: rebase it (and the mouse origin) onto the restored
+        // position, or the panel jumps on the second pointer update.
+        m_viewState.dragStartPos = AestraUI::NUIPoint(applied.x, applied.y);
+        m_viewState.dragStartMouseOverlay = currentMouseOverlay;
+    }
 
     setDirty(true);
 }

@@ -386,8 +386,10 @@ int main() {
 
         UISurfaceStoreFile same(path);
         std::filesystem::remove(path);
-        require(same.setSurfaceGeometry(UISurfaceKeys::kPanelMixer, gesture),
-                "G1: re-storing the preference it already holds reports success");
+        UISurfaceGeometry timestampOnly = gesture;
+        ++timestampOnly.lastUsedAt;
+        require(same.setSurfaceGeometry(UISurfaceKeys::kPanelMixer, timestampOnly),
+                "G1: changing lastUsedAt alone reports success");
         require(!std::filesystem::exists(path),
                 "G1: an unchanged preference writes nothing (lastUsedAt alone is not a change)");
         std::cout << "[PASS] G1 geometry accessors save on change, stay silent otherwise\n";

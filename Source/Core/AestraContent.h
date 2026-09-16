@@ -313,8 +313,10 @@ public:
      * @brief Show a panel from its preference: setBounds from
      * resolveSurfacePlacement against the current region, and derive the
      * widget maximized flag from the preference — never the reverse.
+     * @return The applied bounds, or the panel's current bounds when the
+     * region is degenerate (nothing is moved then).
      */
-    void applyPanelPreference(Aestra::Audio::ViewType view);
+    AestraUI::NUIRect applyPanelPreference(Aestra::Audio::ViewType view);
 
     /** @brief Update the transport/UI audio-active state. */
     void setAudioStatus(bool active);
