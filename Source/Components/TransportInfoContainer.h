@@ -14,9 +14,11 @@
 #include "../AestraUI/Core/NUIComponent.h"
 #include "NUILabel.h"
 #include "NUIIcon.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 
+#include <chrono>
 #include <memory>
 #include <functional>
 
@@ -31,7 +33,7 @@ namespace Aestra {
 class BPMDisplay : public AestraUI::NUIComponent {
 public:
     BPMDisplay();
-    ~BPMDisplay() = default;
+    ~BPMDisplay();
 
     void setBPM(float bpm);
     float getBPM() const { return m_currentBPM; }
@@ -39,7 +41,12 @@ public:
     // BPM adjustment
     void incrementBPM(float amount);
     void decrementBPM(float amount);
-    
+
+    // Direct editing (spec item 5): double-click the value opens an inline
+    // numeric field; Return commits through the same setBPM path as the
+    // arrows (existing 20..999 limits), Escape/focus-loss cancels.
+    bool isEditingBPM() const { return m_editInput != nullptr; }
+
     // Callback when BPM changes via arrows
     void setOnBPMChange(std::function<void(float)> callback) { m_onBPMChange = callback; }
     
@@ -72,6 +79,15 @@ private:
     
     AestraUI::NUIRect getUpArrowBounds() const;
     AestraUI::NUIRect getDownArrowBounds() const;
+
+    // Inline BPM editing state
+    std::shared_ptr<AestraUI::NUITextInput> m_editInput;
+    std::chrono::steady_clock::time_point m_lastValueClickTime{};
+    void openBPMEditor();
+    void commitBPMEdit();
+    void cancelBPMEdit();
+    void closeBPMEditor();
+    static std::string trimBPMValue(float bpm);
 };
 
 /**
