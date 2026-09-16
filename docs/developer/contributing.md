@@ -30,7 +30,7 @@ git checkout -b docs/update-build-guidance
 git clone https://github.com/YOUR_USERNAME/Aestra.git
 cd Aestra
 git remote add upstream https://github.com/currentsuspect/Aestra.git
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --config RelWithDebInfo --parallel
 ctest --test-dir build --config RelWithDebInfo --output-on-failure
@@ -42,12 +42,13 @@ ctest --test-dir build --config RelWithDebInfo --output-on-failure
 git clone https://github.com/YOUR_USERNAME/Aestra.git
 cd Aestra
 git remote add upstream https://github.com/currentsuspect/Aestra.git
+python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-There is currently no `scripts/install-hooks.sh` equivalent in the repo. On Linux, install hooks manually if needed by configuring Git to use `.githooks/` or run the PowerShell helper if your environment supports it.
+The Python installer works on Linux and macOS; Windows users may alternatively run `pwsh -File scripts/install-hooks.ps1`.
 
 ## Pull Request Expectations
 

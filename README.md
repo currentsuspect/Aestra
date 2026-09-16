@@ -87,7 +87,7 @@ render, batched all-or-nothing edits, and undo/redo.
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
@@ -99,6 +99,7 @@ Primary runtime targets are emitted under `build/bin` or generator-specific `bui
 ```bash
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
+python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```

@@ -40,7 +40,7 @@ Primary CMake options from the root `CMakeLists.txt`:
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
@@ -81,6 +81,7 @@ sudo apt install build-essential cmake git libasound2-dev libx11-dev libxrandr-d
 ```bash
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
+python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
