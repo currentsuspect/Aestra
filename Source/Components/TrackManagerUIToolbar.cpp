@@ -393,9 +393,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUIRect iconRect(std::round(bounds.x + (bounds.width - iconSz) * 0.5f),
                                        std::round(bounds.y + (bounds.height - iconSz) * 0.5f), iconSz, iconSz);
             icon->setBounds(iconRect);
-            icon->setColor(isActive  ? themeManager.getColor("textPrimary").withAlpha(0.90f)
-                           : hovered ? themeManager.getColor("textPrimary").withAlpha(0.70f)
-                                     : themeManager.getColor("textPrimary").withAlpha(0.55f));
+            icon->setColor(isActive  ? themeManager.getColor("textPrimary").withAlpha(1.0f)
+                           : hovered ? themeManager.getColor("textPrimary").withAlpha(1.0f)
+                                     : themeManager.getColor("textPrimary").withAlpha(0.95f));
             icon->onRender(renderer);
         }
     };

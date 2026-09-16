@@ -666,8 +666,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIColor glassBorder = AestraUI::NUIColor::transparent();
     AestraUI::NUIColor glassHover = themeManager.getColor("surfaceRaised");
     AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
-    
-    AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
+
     AestraUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
     AestraUI::NUIColor iconRed = themeManager.getColor("error");
 
@@ -692,10 +691,12 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
         bool isHovered = btn->isHovered() && btn->isEnabled();
         
-        // Setup Colors
+        // Setup Colors. Idle transport extras render bright white like the
+        // primary buttons and readout text (owner direction: legibility over
+        // idle hierarchy); hover/active/disabled still step apart via plates.
         AestraUI::NUIColor currentBg = glassBg;
         AestraUI::NUIColor currentBorder = glassBorder;
-        AestraUI::NUIColor iconColor = iconGrey.withAlpha(0.55f);
+        AestraUI::NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.95f);
         
         // LOGIC: Glassy Look (Reverted per user request)
         // Active = Purple Tint Glass + Purple Icon
@@ -713,7 +714,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
          } else if (isHovered) {
              currentBg = glassHover.withAlpha(0.82f);
              currentBorder = themeManager.getColor("border").withAlpha(0.30f);
-             iconColor = themeManager.getColor("textPrimary").withAlpha(0.76f);
+             iconColor = themeManager.getColor("textPrimary").withAlpha(1.0f);
          }
 
         if (isPrimaryTransport) {

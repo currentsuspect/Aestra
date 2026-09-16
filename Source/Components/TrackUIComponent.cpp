@@ -1899,11 +1899,11 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     if (lane) {
-        // Idle M/S/R glyphs sit at 0.62 rather than the old 0.42: thin 11px
-        // SVG strokes need more ink than body text for equal presence (the
-        // track number reads fine at 0.58). Hovered 0.80 and active 0.92 keep
-        // the idle < hovered < active hierarchy and the active pop intact.
-        const auto textIdle = themeManager.getColor("textSecondary").withAlpha(isHovered() ? 0.80f : 0.62f);
+        // Track M/S/R glyphs render bright white idle (owner direction:
+        // legibility over idle hierarchy). Active states keep their colored
+        // pills; hovered steps to full white; deliberately inactive/disabled
+        // controls elsewhere are untouched.
+        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 1.0f : 0.95f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
         const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);

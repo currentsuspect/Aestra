@@ -111,6 +111,19 @@ void BPMDisplay::openBPMEditor() {
     input->setInputType(AestraUI::NUITextInput::InputType::Number);
     input->setJustification(AestraUI::NUITextInput::Justification::Center);
     input->setBounds(AestraUI::NUIRect(bounds.x, bounds.y + 9.0f, bounds.width, 19.0f));
+    // Same field chrome as the mixer fader's inline editor: themed text on
+    // an input background with a purple focused border, so the open editor
+    // reads as focused instead of a blank box.
+    {
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+        input->setTextColor(themeManager.getColor("textPrimary"));
+        input->setBackgroundColor(themeManager.getColor("inputBgDefault"));
+        input->setBorderColor(themeManager.getColor("inputBorderFocus"));
+        input->setBorderWidth(1.0f);
+        input->setBorderRadius(3.0f);
+        input->setFocusedBorderColor(themeManager.getColor("accentPrimary"));
+        input->setPadding(4.0f);
+    }
     input->setOnReturnKey([this]() { commitBPMEdit(); });
     input->setOnEscapeKey([this]() { cancelBPMEdit(); });
     // Clicking away applies what's typed (same convention as the mixer
@@ -217,7 +230,7 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     // Small "BPM" label above the value
     renderer.drawTextCentered("BPM", {bounds.x, bounds.y, bounds.width, 10.0f},
                                 themeManager.getFontSize("micro"),
-                                themeManager.getColor("textSecondary").withAlpha(0.58f));
+                                themeManager.getColor("textSecondary").withAlpha(0.75f));
     // While the inline editor is open it draws the value itself; drawing the
     // label underneath would double-print it.
     if (!m_editInput) {
