@@ -29,7 +29,7 @@ Local setup to build core when private repos are not present:
    git submodule update --init --recursive
 
 Pre-commit checks
- - A PowerShell helper is available in `scripts/pre-commit-checks.ps1`. Install a Git hook to call it, or run it in CI.
+ - Run `python3 scripts/install_hooks.py` to install the Git hook. The scanner is `scripts/pre_commit_checks.py`; the `.ps1` entry points (`scripts/pre-commit-checks.ps1`, `scripts/pre-commit.ps1`, `scripts/install-hooks.ps1`) remain as wrappers for PowerShell users.
 
 If you are preparing a public PR that must not include private data, run a local secret scan (gitleaks recommended):
 

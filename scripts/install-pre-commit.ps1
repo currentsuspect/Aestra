@@ -1,34 +1,33 @@
 <#
-Install the git pre-commit hook that calls the PowerShell scanner.
-Run from repo root: .\scripts\install-pre-commit.ps1
+Deprecated: use scripts/install-hooks.ps1 (or `python3 scripts/install_hooks.py`) instead.
+This file is a thin shim that forwards to the canonical installer,
+scripts/install_hooks.py, and exits with its exit code.
 #>
-param()
 
-$hookPath = Join-Path -Path (Resolve-Path -Path .git).Path -ChildPath "hooks\pre-commit"
-Write-Host "Installing pre-commit hook to: $hookPath"
+Write-Host "install-pre-commit.ps1 is deprecated; scripts/install-hooks.ps1 (or `python3 scripts/install_hooks.py`) is the supported installer."
 
-$hookContent = @"
-#!/usr/bin/env pwsh
-# Auto-generated pre-commit hook: calls the repository PowerShell scanner
-pwsh -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/../scripts/pre-commit-checks.ps1"
-if (
-    $LASTEXITCODE -ne 0
-) {
-    echo "pre-commit check failed"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pyScript = Join-Path $scriptDir "install_hooks.py"
+if (-not (Test-Path $pyScript)) {
+    $repoRoot = git rev-parse --show-toplevel 2>$null
+    if ($repoRoot) { $pyScript = Join-Path $repoRoot.Trim() "scripts/install_hooks.py" }
+}
+if (-not (Test-Path $pyScript)) {
+    Write-Error "install_hooks.py not found (looked beside this script and in <repo>/scripts)."
     exit 1
 }
-exit 0
-"@
 
-# Ensure hooks directory exists
-if (-not (Test-Path (Split-Path -Path $hookPath -Parent))) {
-    New-Item -ItemType Directory -Path (Split-Path -Path $hookPath -Parent) -Force | Out-Null
+if (Get-Command "python3" -ErrorAction SilentlyContinue) {
+    & python3 $pyScript @args
+    exit $LASTEXITCODE
 }
-
-# Write hook file
-[System.IO.File]::WriteAllText($hookPath, $hookContent)
-
-# Make sure the hook is executable (Git for Windows will honor the file)
-git update-index --add --chmod=+x .git/hooks/pre-commit 2>$null
-
-Write-Host "Pre-commit hook installed. Run 'git add' and commit as normal. The scanner will run automatically." -ForegroundColor Green
+if (Get-Command "python" -ErrorAction SilentlyContinue) {
+    & python $pyScript @args
+    exit $LASTEXITCODE
+}
+if (Get-Command "py" -ErrorAction SilentlyContinue) {
+    & py -3 $pyScript @args
+    exit $LASTEXITCODE
+}
+Write-Error "No Python 3 interpreter found (tried python3, python, py -3). Cannot run install_hooks.py."
+exit 1
