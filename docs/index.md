@@ -86,7 +86,7 @@ Build, test, architecture, and roadmap docs are available directly in the repo f
     ```bash
     # Install dependencies
     sudo apt update
-    sudo apt install build-essential cmake git libasound2-dev \
+    sudo apt install build-essential cmake git python3 libasound2-dev \
                      libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
     
     # Clone the repository

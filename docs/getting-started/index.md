@@ -27,6 +27,7 @@ Before you begin, ensure you have:
     - **ALSA development libraries** (`libasound2-dev`)
     - **X11 development libraries** (`libx11-dev`, `libxrandr-dev`, `libxinerama-dev`)
     - **OpenGL development libraries** (`libgl1-mesa-dev`)
+    - **Python 3** (runs `scripts/install_hooks.py` and the pre-commit checks)
 
 ## 🚀 Quick Start
 
@@ -59,7 +60,7 @@ cd build/bin/Release
 ```bash
 # 1. Install dependencies
 sudo apt update
-sudo apt install build-essential cmake git libasound2-dev \
+sudo apt install build-essential cmake git python3 libasound2-dev \
                  libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
 
 # 2. Clone the repository

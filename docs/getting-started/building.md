@@ -32,6 +32,7 @@ Primary CMake options from the root `CMakeLists.txt`:
 - Git
 - Build essentials
 - OpenGL/X11 development packages if you are building the UI
+- Python 3 (runs `scripts/install_hooks.py` and the pre-commit checks)
 
 ## Windows Build
 
@@ -73,7 +74,7 @@ Ubuntu/Debian example:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake git libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
+sudo apt install build-essential cmake git python3 libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
 ```
 
 ### Full build
