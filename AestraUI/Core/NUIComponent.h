@@ -87,6 +87,11 @@ public:
     // deferred until the full component traversal unwinds.
     static bool dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event);
 
+    // Canonical key-event entry point. Same deferral contract as the mouse
+    // path: a key handler may close/destroy its own popup (mixer insert
+    // dropdown Enter/Escape), which must not run while dispatch is in flight.
+    static bool dispatchKeyEvent(NUIComponent* target, const NUIKeyEvent& event);
+
     // Low-level nestable guard retained for code that brackets a larger custom
     // dispatch. Prefer dispatchMouseEvent() for a single target.
     static void beginEventDispatch();
