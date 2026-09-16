@@ -268,6 +268,42 @@ public:
     virtual NUISize measureText(const std::string& text, float fontSize) = 0;
 
     /**
+     * Draw numeric-readout text in the digital display face (spec item 3).
+     *
+     * Transport clock and BPM readouts render here instead of drawText().
+     * The default routes to the regular text path, so renderers without a
+     * display face (and headless use) keep working with the UI face.
+     */
+    virtual void drawDisplayText(const std::string& text, const NUIPoint& position, float fontSize,
+                                 const NUIColor& color) {
+        drawText(text, position, fontSize, color);
+    }
+
+    /**
+     * Centered variant of drawDisplayText. Mirrors drawTextCentered.
+     */
+    virtual void drawDisplayTextCentered(const std::string& text, const NUIRect& rect, float fontSize,
+                                         const NUIColor& color) {
+        const NUISize textSize = measureDisplayText(text, fontSize);
+        const float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
+        const float y = std::round(calculateTextY(rect, fontSize));
+        drawDisplayText(text, NUIPoint(x, y), fontSize, color);
+    }
+
+    /**
+     * Measure display-face text dimensions. Defaults to the UI-face metrics.
+     */
+    virtual NUISize measureDisplayText(const std::string& text, float fontSize) {
+        return measureText(text, fontSize);
+    }
+
+    /**
+     * Whether a real display face is loaded. Callers do not branch on this
+     * (the defaults above already degrade); it exists for diagnostics.
+     */
+    virtual bool hasDisplayFont() const { return false; }
+
+    /**
      * Retrieve font metrics (scaled for the requested font size).
      *
      * Renderers should override this to return real ascent/descent/line height when available.

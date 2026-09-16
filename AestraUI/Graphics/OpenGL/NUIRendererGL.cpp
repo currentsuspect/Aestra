@@ -520,6 +520,11 @@ bool NUIRendererGL::initialize(int width, int height) {
                 "and measureText to width estimation");
         }
 
+        // Digital display face for numeric readouts (transport clock, BPM).
+        // Independent of the UI face: its absence only costs the segmented
+        // look, never legibility — every display draw falls back to UI text.
+        loadDisplayFont();
+
         // Load CJK fallback face (no atlas — glyphs added on demand)
         static const std::vector<std::string> cjkFallbackPaths = {
             // Linux
@@ -605,15 +610,25 @@ void NUIRendererGL::shutdown() {
             glDeleteTextures(1, &fontAtlasTextureIdXSmall_);
             fontAtlasTextureIdXSmall_ = 0;
         }
+        if (displayAtlasTextureId_ != 0) {
+            glDeleteTextures(1, &displayAtlasTextureId_);
+            displayAtlasTextureId_ = 0;
+        }
         fontCache_.clear();
         fontCacheMedium_.clear();
         fontCacheSmall_.clear();
         fontCacheXSmall_.clear();
+        displayCache_.clear();
         
         if (ftCJKFace_) {
             FT_Done_Face(ftCJKFace_);
             ftCJKFace_ = nullptr;
         }
+        if (ftDisplayFace_) {
+            FT_Done_Face(ftDisplayFace_);
+            ftDisplayFace_ = nullptr;
+        }
+        displayFontReady_ = false;
         FT_Done_Face(ftFace_);
         FT_Done_FreeType(ftLibrary_);
         fontInitialized_ = false;
@@ -2489,6 +2504,105 @@ charSet.push_back(0x23F9); // ⏹ Stop
     return true;
 }
 
+// Digital display face for numeric readouts (spec item 3). One atlas at a
+// single bake size; the readout charset is fixed, so unlike the UI atlases
+// there is no tier split and no kerning (segmented digits are uniform).
+namespace {
+constexpr char kDisplayCharset[] = "0123456789:. -";
+}
+
+bool NUIRendererGL::loadDisplayFont() {
+    std::vector<std::string> displayPaths;
+    if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
+        displayPaths.emplace_back(std::string(fontDir) + "/DSEG/DSEG7Classic-Regular.ttf");
+    }
+    displayPaths.insert(displayPaths.end(), {
+                                                 "AestraAssets/fonts/DSEG/DSEG7Classic-Regular.ttf",
+                                                 "../AestraAssets/fonts/DSEG/DSEG7Classic-Regular.ttf",
+                                                 "../../AestraAssets/fonts/DSEG/DSEG7Classic-Regular.ttf",
+                                                 "../../../AestraAssets/fonts/DSEG/DSEG7Classic-Regular.ttf",
+                                                 "../../../../AestraAssets/fonts/DSEG/DSEG7Classic-Regular.ttf",
+                                             });
+    for (const auto& path : displayPaths) {
+        if (FT_New_Face(ftLibrary_, path.c_str(), 0, &ftDisplayFace_) == 0) {
+            AESTRA_LOG_DEBUG("Display font loaded: " + path);
+            if (buildDisplayAtlas()) {
+                displayFontReady_ = true;
+                return true;
+            }
+            FT_Done_Face(ftDisplayFace_);
+            ftDisplayFace_ = nullptr;
+            return false;
+        }
+    }
+    AESTRA_LOG_WARNING("No digital display font found: numeric readouts fall back to the UI face");
+    return false;
+}
+
+bool NUIRendererGL::buildDisplayAtlas() {
+    if (!ftDisplayFace_) {
+        return false;
+    }
+    if (FT_Set_Pixel_Sizes(ftDisplayFace_, 0, kDisplayAtlasSize) != 0) {
+        AESTRA_LOG_ERROR("Failed to set display atlas pixel size");
+        return false;
+    }
+
+    // Same rebalance as the UI atlases so display text centers like UI text.
+    const float rawAscent = static_cast<float>(ftDisplayFace_->size->metrics.ascender) / 64.0f;
+    const float rawDescent = static_cast<float>(-(ftDisplayFace_->size->metrics.descender)) / 64.0f;
+    const float rawLineHeight = rawAscent + rawDescent;
+    const float verticalPadding = kDisplayAtlasSize * 0.10f;
+    const float capHalfHeight = kDisplayAtlasSize * 0.35f;
+    const float expandedLineHeight = rawLineHeight + verticalPadding;
+    displayAscent_ = std::max((expandedLineHeight * 0.5f) + capHalfHeight, rawAscent);
+    displayDescent_ = expandedLineHeight - displayAscent_;
+    displayLineHeight_ = expandedLineHeight;
+
+    if (displayAtlasTextureId_ != 0) {
+        glDeleteTextures(1, &displayAtlasTextureId_);
+        displayAtlasTextureId_ = 0;
+    }
+    glGenTextures(1, &displayAtlasTextureId_);
+    glBindTexture(GL_TEXTURE_2D, displayAtlasTextureId_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fontAtlasWidth_, fontAtlasHeight_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    displayAtlasX_ = 0;
+    displayAtlasY_ = 0;
+    displayAtlasRowHeight_ = 0;
+    displayCache_.clear();
+
+    for (char c : std::string(kDisplayCharset)) {
+        tryAddGlyphToAtlas(static_cast<uint32_t>(c), ftDisplayFace_, kDisplayAtlasSize, displayAtlasTextureId_,
+                           displayCache_, displayAtlasX_, displayAtlasY_, displayAtlasRowHeight_);
+    }
+    return true;
+}
+
+NUIRendererGL::AtlasInfo NUIRendererGL::selectDisplayAtlas() const {
+    AtlasInfo info{};
+    info.textureId = 0;
+    info.atlasSize = 0;
+    info.ascent = 0.0f;
+    info.descent = 0.0f;
+    info.lineHeight = 0.0f;
+    info.cache = nullptr;
+    if (!displayFontReady_ || displayAtlasTextureId_ == 0) {
+        return info;
+    }
+    info.textureId = displayAtlasTextureId_;
+    info.atlasSize = kDisplayAtlasSize;
+    info.ascent = displayAscent_;
+    info.descent = displayDescent_;
+    info.lineHeight = displayLineHeight_;
+    info.cache = &displayCache_;
+    return info;
+}
+
 bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atlasFontSize,
     uint32_t atlasTextureId, std::unordered_map<uint32_t, FontData>& cache,
     int& atlasX, int& atlasY, int& atlasRowHeight)
@@ -2819,6 +2933,188 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 
     // Restore blend func for non-text geometry
     // glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // Already default
+}
+
+void NUIRendererGL::renderDisplayTextWithFont(const std::string& text, const NUIPoint& position, float fontSize,
+                                              const NUIColor& color) {
+    AESTRA_ZONE("Text_Render_Display");
+    if (!displayFontReady_) {
+        return;
+    }
+
+    AtlasInfo atlas = selectDisplayAtlas();
+    if (atlas.atlasSize <= 0 || atlas.cache == nullptr) {
+        return;
+    }
+
+    if (currentTextureId_ != atlas.textureId) {
+        flush();
+        currentTextureId_ = atlas.textureId;
+    }
+
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+    size_t estimatedGlyphs = text.length();
+    vertices_.reserve(vertices_.size() + estimatedGlyphs * 4);
+    indices_.reserve(indices_.size() + estimatedGlyphs * 6);
+
+    const float scale = fontSize / static_cast<float>(atlas.atlasSize);
+    const NUIColor& glyphColor = color;
+
+    float x = std::round(position.x);
+    float baseline = std::round(position.y);
+
+    // UTF-8 decode loop. No kerning pass: segmented display digits advance
+    // uniformly by design, and the fixed readout charset carries no pairs
+    // worth caching. Misses rasterize on demand from the display face.
+    size_t index = 0;
+    while (index < text.length()) {
+        size_t prevIndex = index;
+        uint32_t codepoint = decodeUTF8(text, index);
+        if (codepoint == 0) {
+            if (index == prevIndex) {
+                index++;
+            }
+            continue;
+        }
+
+        auto it = atlas.cache->find(codepoint);
+        if (it == atlas.cache->end()) {
+            if (tryAddGlyphToAtlas(codepoint, ftDisplayFace_, kDisplayAtlasSize, displayAtlasTextureId_,
+                                   displayCache_, displayAtlasX_, displayAtlasY_, displayAtlasRowHeight_)) {
+                it = atlas.cache->find(codepoint);
+            }
+        }
+        if (it == atlas.cache->end()) {
+            x += fontSize * 0.6f;
+            continue;
+        }
+
+        const FontData& ch = it->second;
+        const float scaledBearingX = ch.bearingX * scale;
+        const float scaledBearingY = ch.bearingY * scale;
+        const float w = ch.width * scale;
+        const float h = ch.height * scale;
+
+        const float gx = x + scaledBearingX;
+        const float gy = baseline - scaledBearingY;
+        const float xpos = std::round(gx);
+        const float ypos = std::round(gy);
+        float xposR = std::round(gx + w);
+        float yposB = std::round(gy + h);
+        if (ch.width > 0 && xposR <= xpos) {
+            xposR = xpos + 1.0f;
+        }
+        if (ch.height > 0 && yposB <= ypos) {
+            yposB = ypos + 1.0f;
+        }
+
+        addVertex(xpos, yposB, ch.u0, ch.v1, glyphColor, 0, 0, 0, 0, 0, 0, 0, 4.0f);
+        addVertex(xposR, yposB, ch.u1, ch.v1, glyphColor, 0, 0, 0, 0, 0, 0, 0, 4.0f);
+        addVertex(xposR, ypos, ch.u1, ch.v0, glyphColor, 0, 0, 0, 0, 0, 0, 0, 4.0f);
+        addVertex(xpos, ypos, ch.u0, ch.v0, glyphColor, 0, 0, 0, 0, 0, 0, 0, 4.0f);
+
+        uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
+        indices_.push_back(base + 0);
+        indices_.push_back(base + 1);
+        indices_.push_back(base + 2);
+        indices_.push_back(base + 0);
+        indices_.push_back(base + 2);
+        indices_.push_back(base + 3);
+
+        x += (ch.advance / 64.0f) * scale;
+    }
+}
+
+void NUIRendererGL::drawDisplayText(const std::string& text, const NUIPoint& position, float fontSize,
+                                    const NUIColor& color) {
+    if (!displayFontReady_) {
+        drawText(text, position, fontSize, color);
+        return;
+    }
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize);
+    const AtlasInfo atlas = selectDisplayAtlas();
+    const float scale = effectiveFontSize / static_cast<float>(atlas.atlasSize);
+    const float scaledAscent = atlas.ascent * scale;
+    renderDisplayTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), effectiveFontSize, color);
+}
+
+void NUIRendererGL::drawDisplayTextCentered(const std::string& text, const NUIRect& rect, float fontSize,
+                                            const NUIColor& color) {
+    if (!displayFontReady_) {
+        drawTextCentered(text, rect, fontSize, color);
+        return;
+    }
+    // Mirrors drawTextCentered exactly (shared calculateTextY, then the face's
+    // own ascent inside drawDisplayText) so display text centers like UI text.
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize);
+    const NUISize textSize = measureDisplayText(text, effectiveFontSize);
+    const float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
+    const float y = std::round(calculateTextY(rect, effectiveFontSize));
+    drawDisplayText(text, NUIPoint(x, y), effectiveFontSize, color);
+}
+
+NUISize NUIRendererGL::measureDisplayText(const std::string& text, float fontSize) {
+    fontSize = normalizeSmallTextSize(fontSize);
+
+    if (text.empty()) {
+        if (displayFontReady_) {
+            const AtlasInfo atlas = selectDisplayAtlas();
+            if (atlas.atlasSize > 0) {
+                const float scale = fontSize / static_cast<float>(atlas.atlasSize);
+                return {0.0f, atlas.lineHeight * scale};
+            }
+        }
+        return {0.0f, fontSize};
+    }
+
+    TextMeasurementKey cacheKey{text, fontSize, true};
+    const auto cacheIt = textMeasurementCache_.find(cacheKey);
+    if (cacheIt != textMeasurementCache_.end()) {
+        return cacheIt->second;
+    }
+
+    NUISize result;
+    if (displayFontReady_) {
+        const AtlasInfo atlas = selectDisplayAtlas();
+        if (atlas.atlasSize <= 0 || atlas.cache == nullptr) {
+            result = {text.length() * fontSize * 0.6f, fontSize};
+        } else {
+            float totalWidth = 0.0f;
+            const float scale = fontSize / static_cast<float>(atlas.atlasSize);
+            size_t index = 0;
+            while (index < text.length()) {
+                const uint32_t codepoint = decodeUTF8(text, index);
+                if (codepoint == 0) {
+                    break;
+                }
+                auto it = atlas.cache->find(codepoint);
+                if (it == atlas.cache->end()) {
+                    if (tryAddGlyphToAtlas(codepoint, ftDisplayFace_, kDisplayAtlasSize, displayAtlasTextureId_,
+                                           displayCache_, displayAtlasX_, displayAtlasY_, displayAtlasRowHeight_)) {
+                        it = atlas.cache->find(codepoint);
+                    }
+                }
+                if (it == atlas.cache->end()) {
+                    totalWidth += fontSize * 0.6f;
+                    continue;
+                }
+                totalWidth += (it->second.advance / 64.0f) * scale;
+            }
+            result = {totalWidth, atlas.lineHeight * scale};
+        }
+    } else {
+        result = measureText(text, fontSize);
+    }
+
+    if (textMeasurementCache_.size() >= kTextMeasurementCacheMaxSize) {
+        auto it = textMeasurementCache_.begin();
+        for (size_t i = 0; i < kTextMeasurementCacheMaxSize / 2 && it != textMeasurementCache_.end(); ++i) {
+            it = textMeasurementCache_.erase(it);
+        }
+    }
+    textMeasurementCache_[cacheKey] = result;
+    return result;
 }
 
 // ============================================================================
