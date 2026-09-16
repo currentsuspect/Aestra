@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string>
 
 using namespace AestraUI;
@@ -48,6 +49,10 @@ int main() {
         expect(reported.width == 500.0f && reported.height == 300.0f, "reported editor size is the fallback");
         const auto fallback = editorIntrinsicBounds(0.0f, -10.0f, 0, 0);
         expect(fallback.width == 400.0f && fallback.height == 400.0f, "empty sizes fall back to 400");
+        const auto infinite =
+            editorIntrinsicBounds(std::numeric_limits<float>::infinity(), 600.0f, 500, 300);
+        expect(infinite.width == 500.0f && infinite.height == 600.0f,
+               "non-finite live dimensions fall back instead of poisoning placement");
     }
 
     {
@@ -104,6 +109,8 @@ int main() {
         const NUILocalRect backB = windowToLocal(placedB.resolved, originB);
         expect(near(backA.x, backB.x) && near(backA.y, backB.y),
                "both window frames convert back to the same popup-local placement");
+        expect(near(backA.x, gestureLocal.x) && near(backA.y, gestureLocal.y),
+               "the round trip preserves the original popup-local position");
     }
 
     if (g_failures == 0) {

@@ -3,6 +3,7 @@
 
 #include "../Layout/NUIAnchoredPlacement.h"
 
+#include <cmath>
 #include <optional>
 #include <string>
 
@@ -30,10 +31,12 @@ inline std::string editorSurfaceKey(const std::string& surfaceId) {
 /** @brief The plugin's intrinsic size: live bounds win, then the reported editor size, then 400. */
 inline Layout::NUIWindowRect editorIntrinsicBounds(float currentWidth, float currentHeight, int reportedWidth,
                                                    int reportedHeight) {
-    const float width =
-        (currentWidth > 0.0f) ? currentWidth : ((reportedWidth > 0) ? static_cast<float>(reportedWidth) : 400.0f);
-    const float height =
-        (currentHeight > 0.0f) ? currentHeight : ((reportedHeight > 0) ? static_cast<float>(reportedHeight) : 400.0f);
+    const float width = (std::isfinite(currentWidth) && currentWidth > 0.0f)
+                            ? currentWidth
+                            : ((reportedWidth > 0) ? static_cast<float>(reportedWidth) : 400.0f);
+    const float height = (std::isfinite(currentHeight) && currentHeight > 0.0f)
+                             ? currentHeight
+                             : ((reportedHeight > 0) ? static_cast<float>(reportedHeight) : 400.0f);
     return Layout::NUIWindowRect(0.0f, 0.0f, width, height);
 }
 

@@ -553,6 +553,7 @@ void PluginUIController::openPluginEditor(
         const Layout::NUILocalRect localRegion(0.0f, 0.0f, layerBounds.width, layerBounds.height);
         const Layout::NUISizeLimits limits{0.0, 0.0};
         const auto popupGlobal = m_popupLayer->getGlobalBounds();
+        bool placementApplied = false;
         if (!popupGlobal.isEmpty() && !layerBounds.isEmpty()) {
             // Measured window frame: resolve there, convert back for setBounds.
             const Layout::NUIWindowPoint popupOrigin(popupGlobal.x, popupGlobal.y);
@@ -561,9 +562,10 @@ void PluginUIController::openPluginEditor(
                                                                     regionWindow, limits);
             if (placement.applicable) {
                 editorComp->setBounds(Layout::windowToLocal(placement.resolved, popupOrigin).raw());
+                placementApplied = true;
             }
         }
-        if (editorComp->getBounds().width <= 0.0f) {
+        if (!placementApplied) {
             // No measured frame, or a degenerate one: resolve the stored
             // anchor in the popup-local frame setBounds shares. Anchors are
             // translation-invariant, so the placement still honours the
