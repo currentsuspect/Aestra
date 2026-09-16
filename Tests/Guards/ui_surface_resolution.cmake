@@ -4,24 +4,27 @@
 #   "A persistent surface must not unconditionally establish user-owned geometry during
 #    construction/open. Initial geometry must flow through the layout/state-resolution path."
 #
-# Context: FD-23 orders V8-C14 in six binding steps. Steps 1-3 merged (store schema,
+# Context: FD-23 orders V8-C14 in six binding steps. Steps 1-5 merged (store schema,
 # resolution contract in Source/Core/UISurfaceResolution.h, mixer-inspector reference
-# migration). This is step 4: the CI guard. Step 5 migrates the floating panels. This guard
-# exists so step 5 cannot regress and so no new violation can land while it proceeds.
+# migration, this CI guard, and the floating-panel migration). This guard exists so
+# the migrated surfaces cannot regress and so no new violation can land while step
+# 5b (plugin editors) and step 6 (ranked gaps) proceed.
 #
-# Why a ratchet instead of zero-tolerance: R1 and R3 cannot be enforced positively today.
-# Nothing in Source/ or AestraUI/ includes Source/Core/UISurfaceResolution.h (the only
-# in-tree include is the contract's own test, Tests/Integration/UISurfaceResolutionTest.cpp)
-# and resolveSurfacePlacement / resolveAnchoredPlacement have zero call sites in production
-# code (verified on develop 4b05719c). There is no compliant example to compare against
-# until step 5, so a zero-tolerance guard would fail the build on day one — the failure
-# mode this repo already rejected for the platform-leak check.
+# Why a ratchet instead of zero-tolerance: R1 and R3 cannot be enforced positively
+# today. Source/Core/AestraContent.cpp is the first production consumer of
+# Source/Core/UISurfaceResolution.h (step 5a), but R1 ("every setBounds comes
+# from a resolve result") still has no positive pattern — the ratchet pins the
+# violation shapes at zero instead, so any reintroduction fails the build.
+# There is deliberately NO R3 capture* pattern yet (see scoping notes below);
+# R3 enforcement waits for step 5b, when capture*Placement call sites exist
+# beyond AestraContent.
 #
 # The ratchet: today's known violations are pinned as the baseline table below. The build
 # fails if any count RISES, if a pattern appears in a file NOT in the table (spread), or if
 # a count FALLS without the table being updated (stale baseline — an unrecorded improvement
-# lets a later regression hide). Step 5 lowers the numbers toward zero, after which the
-# patterns become zero-tolerance.
+# lets a later regression hide). Step 5a drove four of the five entries to their floor
+# (three to zero-tolerance, the region function to exactly one); the editor entry
+# falls in step 5b.
 #
 # Load-bearing scoping decisions (do not "fix" without a V8-C14 step behind you):
 #   - R6 is scoped to Source/Core/AestraContent.cpp ONLY. Source/Core/AestraWindowManager.cpp
@@ -38,13 +41,14 @@
 #   - Spread detection covers Source/ and AestraUI/ (the production surface trees). Tests/
 #     holds the resolution contract's own tests and is out of scope.
 #
-# Baseline table (measured on develop 4b05719c — re-verify every count before editing):
+# Baseline table (re-measured after the step-5a floating-panel migration —
+# re-verify every count before editing):
 #   key                    rule   file                                       expected
-#   viewstate-rect-assign  R2/R3  Source/Core/AestraContent.cpp              25
-#   viewstate-rect-literal R4     Source/Core/AestraContent.cpp               3
+#   viewstate-rect-assign  R2/R3  Source/Core/AestraContent.cpp               0
+#   viewstate-rect-literal R4     Source/Core/AestraContent.cpp               0
 #   editor-hand-centring   R4     AestraUI/Widgets/PluginUIController.cpp     1
-#   placement-region-fn    R5     Source/Core/AestraContent.cpp               2
-#   panel-maximized-read   R6     Source/Core/AestraContent.cpp               6
+#   placement-region-fn    R5     Source/Core/AestraContent.cpp               1
+#   panel-maximized-read   R6     Source/Core/AestraContent.cpp               0
 #
 # Required -D args:
 #   REPO_ROOT  absolute path to the repository root
@@ -72,18 +76,19 @@ set(entry_files
     "AestraUI/Widgets/PluginUIController.cpp"
     "Source/Core/AestraContent.cpp"
     "Source/Core/AestraContent.cpp")
-set(entry_expected 25 3 1 2 6)
+set(entry_expected 0 0 1 1 0)
 # Spread-scan the tree for this key? OFF only for R6 (see scoping note above).
 set(entry_scan_tree ON ON ON ON OFF)
-# What step 5 does to remove each entry (one line each). Documentation-as-data:
-# no runtime consumer reads this list — it binds each pinned count to the exact
-# step-5 change that retires it, so the table cannot be edited without a plan.
+# What each entry's floor is and which step owns it (one line each).
+# Documentation-as-data: no runtime consumer reads this list — it binds each
+# pinned count to the exact change that owns it, so the table cannot be edited
+# without a plan.
 set(entry_step5
-    "Step 5 routes every assignment through resolveSurfacePlacement(...).resolved or capture*Placement and the count goes to zero."
-    "Step 5 deletes the NUIRect literal constructions at open so geometry comes from resolve and the count goes to zero."
-    "Step 5 routes editor centring through the anchored-placement resolve path instead of hand centring and the count goes to zero."
-    "Step 5 replaces both helpers with the single placement-region function and the count goes to one."
-    "Step 5 derives panel maximized flags from pref.maximized and the widget-flag reads go to zero.")
+    "Step 5a routed every assignment through resolveSurfacePlacement(...).resolved or capture*Placement: zero-tolerance."
+    "Step 5a deleted the NUIRect literal constructions at open: zero-tolerance."
+    "Step 5b routes editor centring through the anchored-placement resolve path instead of hand centring and the count goes to zero."
+    "Step 5a replaced both helpers with the single placement-region function: exactly one."
+    "Step 5a derives panel maximized flags from pref.maximized: zero-tolerance.")
 
 # Regexes per entry index (_b only where the table row needs two patterns).
 # Note: CMake folds \t inside "..." to a literal tab, so [ \t] below is a
@@ -95,8 +100,7 @@ set(regex_0_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=")
 set(regex_0_b "m_viewState\\.\\*stateRect[ \t]*=")
 set(regex_1_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=[ \t]*AestraUI::NUIRect\\(")
 set(regex_2_a "editor->setBounds[ \t\r\n]*\\(")
-set(regex_3_a "AestraContent::computeAllowedRectForPanels")
-set(regex_3_b "AestraContent::computeMaximizedRect")
+set(regex_3_a "AestraContent::computePlacementRegion")
 set(regex_4_a "isMaximized[ \t\r\n]*\\([ \t\r\n]*\\)")
 
 # count_for_entry(<text> <regex_a> <has_b> <regex_b> <out>): total MATCHALL hits.

@@ -142,6 +142,11 @@ struct UISurfaceStore {
 /// function-local constexpr used inside a lambda fails to compile on MSVC (C3493).
 namespace UISurfaceKeys {
 inline constexpr char kMixerInspectorExpanded[] = "panel.mixer.inspectorExpanded";
+inline constexpr char kPanelMixer[] = "panel.mixer";
+inline constexpr char kPanelPianoRoll[] = "panel.piano-roll";
+inline constexpr char kPanelSequencer[] = "panel.sequencer";
+inline constexpr char kPanelHistory[] = "panel.history";
+inline constexpr char kPanelTakes[] = "panel.takes";
 } // namespace UISurfaceKeys
 
 /**
@@ -173,6 +178,16 @@ public:
     /// false only when a write was attempted and failed; the new value stays in memory
     /// either way, and the next real change retries the write.
     bool setBoolPreference(const std::string& key, bool value);
+
+    /// The stored geometry, or nullopt when the user has never moved, resized or
+    /// maximized this surface. The caller falls back to defaultSurfacePreference().
+    std::optional<UISurfaceGeometry> surfaceGeometry(const std::string& key) const;
+
+    /// Sets and saves. A no-op when the key already holds the same preference
+    /// (anchor, size and maximized flag — lastUsedAt is bookkeeping, not a
+    /// change), so re-applying a loaded preference never echoes into a write.
+    /// Same save/ownership contract as setBoolPreference.
+    bool setSurfaceGeometry(const std::string& key, const UISurfaceGeometry& value);
 
 private:
     UISurfaceStore m_store;

@@ -309,4 +309,28 @@ bool UISurfaceStoreFile::setBoolPreference(const std::string& key, bool value) {
     return m_store.save(m_path);
 }
 
+std::optional<UISurfaceGeometry> UISurfaceStoreFile::surfaceGeometry(const std::string& key) const {
+    const auto it = m_store.surfaces.find(key);
+    if (it == m_store.surfaces.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+bool UISurfaceStoreFile::setSurfaceGeometry(const std::string& key, const UISurfaceGeometry& value) {
+    const auto it = m_store.surfaces.find(key);
+    if (it != m_store.surfaces.end()) {
+        const UISurfaceGeometry& held = it->second;
+        if (held.anchorX == value.anchorX && held.anchorY == value.anchorY && held.width == value.width &&
+            held.height == value.height && held.maximized == value.maximized) {
+            return true;
+        }
+    }
+    m_store.surfaces[key] = value;
+    if (m_path.empty()) {
+        return true; // In-memory only: no write was attempted, so none failed.
+    }
+    return m_store.save(m_path);
+}
+
 } // namespace Aestra

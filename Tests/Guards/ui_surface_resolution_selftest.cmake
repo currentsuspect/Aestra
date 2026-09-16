@@ -2,8 +2,8 @@
 #
 # Materializes fixture trees in WORK_DIR/tree and runs the real guard against each,
 # asserting PASS/FAIL per fixture. Every fixture starts from the exact pinned baseline
-# (25 rect assignments including 3 NUIRect literals in Source/Core/AestraContent.cpp, plus
-# 2 placement-region definitions and 6 isMaximized reads in the same file, plus 1
+# (no ViewState rect assignments and no NUIRect literals in Source/Core/AestraContent.cpp,
+# no isMaximized reads there, the single computePlacementRegion definition, plus 1
 # editor->setBounds in AestraUI/Widgets/PluginUIController.cpp) and then applies one
 # mutation, so each result isolates exactly one guard behavior.
 #
@@ -17,58 +17,19 @@ endif()
 
 set(failures 0)
 
-# Rebuild WORK_DIR/tree at the exact pinned baseline (25 + 3-subset + 2 + 6, and 1).
+# Rebuild WORK_DIR/tree at the exact pinned baseline (0 + 0-subset + 1 + 0, and 1).
 function(write_baseline_tree)
     file(REMOVE_RECURSE "${WORK_DIR}/tree")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/Source/Core")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/AestraUI/Widgets")
     file(WRITE "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" [=[
-void AestraContent::restoreViewState() {
-    m_viewState.sequencerRect = rect;
-    m_viewState.mixerRect = rect;
-    m_viewState.pianoRollRect = rect;
-    m_viewState.historyRect = rect;
-    m_viewState.takesRect = rect;
-    m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
-    m_viewState.pianoRollRect = clampRectToAllowed(m_viewState.pianoRollRect, allowed);
-    m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
-    m_viewState.historyRect = clampRectToAllowed(m_viewState.historyRect, allowed);
-    m_viewState.takesRect = clampRectToAllowed(m_viewState.takesRect, allowed);
-    m_viewState.dragStartRect = m_viewState.mixerRect;
-    m_viewState.dragStartRect = m_viewState.pianoRollRect;
-    m_viewState.dragStartRect = m_viewState.sequencerRect;
-    m_viewState.dragStartRect = m_viewState.historyRect;
-    m_viewState.dragStartRect = m_viewState.takesRect;
-    m_viewState.mixerRect = finalRect;
-    m_viewState.pianoRollRect = finalRect;
-    m_viewState.sequencerRect = finalRect;
-    m_viewState.historyRect = finalRect;
-    m_viewState.takesRect = finalRect;
-    m_viewState.*stateRect = clampRectToAllowed(proposed, allowed);
-    m_viewState.browserRect = rect;
-    m_viewState.pianoRollRect = AestraUI::NUIRect(editorX, editorY, editorWidth, editorHeight);
-    m_viewState.historyRect = AestraUI::NUIRect(x, y, w, h);
-    m_viewState.takesRect = AestraUI::NUIRect(x, y, w, h);
-    if (!m_sequencerPanel || m_sequencerPanel->isMaximized()) {
-    }
-    if (m_mixerPanel->isMaximized()) {
-    }
-    if (m_pianoRollPanel->isMaximized()) {
-    }
-    if (m_sequencerPanel->isMaximized()) {
-    }
-    if (m_historyPanel->isMaximized()) {
-    }
-    if (m_takesPanel->isMaximized()) {
-    }
+void AestraContent::applyPanelPreference(Audio::ViewType view) {
+    const UISurfaceGeometry preference = panelPreference(view);
+    const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());
 }
 
-AestraUI::NUIRect AestraContent::computeAllowedRectForPanels() const {
+AestraUI::NUIRect AestraContent::computePlacementRegion() const {
     return safe;
-}
-
-AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
-    return maxRect;
 }
 ]=])
     file(WRITE "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" [=[
@@ -102,7 +63,7 @@ endfunction()
 write_baseline_tree()
 run_guard(baseline-exact PASS)
 
-# ── One extra rect assignment (25 → 26) → FAIL (count rose) ────────────────────
+# ── One extra rect assignment (0 → 1) → FAIL (count rose) ────────────────────
 write_baseline_tree()
 file(APPEND "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "    m_viewState.extraRect = rect;\n")
 run_guard(count-rose FAIL)
@@ -116,11 +77,15 @@ void PanelStore::restore() {
 ]=])
 run_guard(spread-to-new-file FAIL)
 
-# ── One fewer than baseline (25 → 24) → FAIL (stale baseline) ─────────────────
+# ── One fewer than baseline (editor 1 → 0) → FAIL (stale baseline) ───────────
+# The zero-tolerance entries cannot fall further, so the stale pin lives on the
+# one remaining counted entry: removing the editor hand-centring without
+# updating the table must fail.
 write_baseline_tree()
-file(READ "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" stale_contents)
-string(REPLACE "    m_viewState.browserRect = rect;\n" "" stale_contents "${stale_contents}")
-file(WRITE "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "${stale_contents}")
+file(READ "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" stale_contents)
+string(REPLACE "    editor->setBounds(x, y, editorWidth, editorHeight);\n" "" stale_contents
+               "${stale_contents}")
+file(WRITE "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" "${stale_contents}")
 run_guard(stale-baseline FAIL)
 
 # ── dragStartRect IS a rect assignment, not an exemption → FAIL ────────────────
@@ -161,6 +126,16 @@ run_guard(r6-scoped-to-content PASS)
 write_baseline_tree()
 file(APPEND "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "    if (m_mixerPanel->isMaximized ()) {\n    }\n")
 run_guard(spaced-ismaximized-counts FAIL)
+
+# ── A second placement-region definition (1 → 2) → FAIL (count rose) ─────────
+# Pins the R5 exactly-one invariant: the region function must not reduplicate.
+write_baseline_tree()
+file(APPEND "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" [=[
+AestraUI::NUIRect AestraContent::computePlacementRegion() const {
+    return other;
+}
+]=])
+run_guard(duplicate-region-fn FAIL)
 
 # ── */External/* copies are vendored, not ours → PASS ─────────────────────────
 write_baseline_tree()
