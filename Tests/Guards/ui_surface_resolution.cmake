@@ -87,15 +87,17 @@ set(entry_step5
 
 # Regexes per entry index (_b only where the table row needs two patterns).
 # Note: CMake folds \t inside "..." to a literal tab, so [ \t] below is a
-# space/tab class both as written and as matched. None of these patterns can
-# match a semicolon, so MATCHALL results stay well-formed CMake lists.
+# space/tab class both as written and as matched; the [ \t\r\n]* runs after a
+# method name also match a newline, so `name (` / `name ()` cannot bypass the
+# ratchet. None of these patterns can match a semicolon, so MATCHALL results
+# stay well-formed CMake lists.
 set(regex_0_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=")
 set(regex_0_b "m_viewState\\.\\*stateRect[ \t]*=")
 set(regex_1_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=[ \t]*AestraUI::NUIRect\\(")
-set(regex_2_a "editor->setBounds\\(")
+set(regex_2_a "editor->setBounds[ \t\r\n]*\\(")
 set(regex_3_a "AestraContent::computeAllowedRectForPanels")
 set(regex_3_b "AestraContent::computeMaximizedRect")
-set(regex_4_a "isMaximized\\(\\)")
+set(regex_4_a "isMaximized[ \t\r\n]*\\([ \t\r\n]*\\)")
 
 # count_for_entry(<text> <regex_a> <has_b> <regex_b> <out>): total MATCHALL hits.
 function(count_for_entry text regex_a has_b regex_b out)

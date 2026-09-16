@@ -129,6 +129,12 @@ write_baseline_tree()
 file(APPEND "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "    m_viewState.dragStartRect = m_viewState.mixerRect;\n")
 run_guard(dragstartrect-counts FAIL)
 
+# ── Spaced `editor->setBounds (` still counts as editor hand-centring → FAIL ──
+# Pins the R4 whitespace variant: valid C++ spacing must not bypass the ratchet.
+write_baseline_tree()
+file(APPEND "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" "    editor->setBounds (x, y, editorWidth, editorHeight);\n")
+run_guard(spaced-setbounds-counts FAIL)
+
 # ── Today's capture* names match nothing (no R3 pattern yet) → PASS ───────────
 write_baseline_tree()
 file(APPEND "${WORK_DIR}/tree/AestraUI/Widgets/PluginUIController.cpp" [=[
@@ -149,6 +155,12 @@ void AestraWindowManager::save() {
 }
 ]=])
 run_guard(r6-scoped-to-content PASS)
+
+# ── Spaced `isMaximized ()` still counts as a panel-maximized read → FAIL ─────
+# Pins the R6 whitespace variant: valid C++ spacing must not bypass the ratchet.
+write_baseline_tree()
+file(APPEND "${WORK_DIR}/tree/Source/Core/AestraContent.cpp" "    if (m_mixerPanel->isMaximized ()) {\n    }\n")
+run_guard(spaced-ismaximized-counts FAIL)
 
 # ── */External/* copies are vendored, not ours → PASS ─────────────────────────
 write_baseline_tree()
