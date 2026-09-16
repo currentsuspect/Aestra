@@ -136,6 +136,33 @@ public:
      */
     void clearSelection();
 
+    /**
+     * @brief Move the selection through the filtered list (spec item 4).
+     *
+     * Same selection identity as a single click (fires onPluginSelected),
+     * clamped at the ends; a fresh list starts at the top (Down) or bottom
+     * (Up). No-op on an empty list.
+     */
+    void moveSelection(int delta);
+
+    /**
+     * @brief Load the highlighted plugin (spec item 4).
+     *
+     * Same action as double-click (fires onPluginLoadRequested). No-op
+     * without a valid selection.
+     */
+    void activateSelected();
+
+    /**
+     * @brief Target scroll offset (the lerped scroll converges here).
+     */
+    float getTargetScrollOffset() const { return m_targetScrollOffset; }
+
+    /**
+     * @brief Scroll just enough to bring the selection into view.
+     */
+    void ensureSelectionVisible();
+
     // ==============================
     // Favorites
     // ==============================

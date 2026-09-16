@@ -433,6 +433,8 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
+                // The list takes keyboard focus so arrows/Enter navigate it.
+                setFocused(true);
                 // Check star hit first
                 if (rowIndex < static_cast<int>(m_starRects.size()) && m_starRects[rowIndex].contains(mx, my)) {
                     toggleFavorite(m_filteredPlugins[rowIndex].id);
@@ -551,9 +553,34 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool PluginBrowserPanel::onKeyEvent(const NUIKeyEvent& event) {
-    if (!isVisible() || !m_searchFocused || !event.pressed) return false;
+    if (!isVisible() || !event.pressed) return false;
 
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
+
+    // List keyboard navigation (spec item 4): the focused list answers
+    // arrows + Enter through the same selection model as mouse clicks, so
+    // filtering, callbacks, and visuals stay unified. Focus never leaves.
+    if (isFocused()) {
+        if (event.keyCode == NUIKeyCode::Up) {
+            moveSelection(-1);
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Down) {
+            moveSelection(1);
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Enter) {
+            activateSelected();
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Escape) {
+            setFocused(false);
+            repaint();
+            return true;
+        }
+    }
+
+    if (!m_searchFocused) return false;
 
     if (event.keyCode == NUIKeyCode::Escape) {
         m_searchFocused = false;
@@ -723,6 +750,56 @@ void PluginBrowserPanel::selectPlugin(const std::string& id) {
 
 void PluginBrowserPanel::clearSelection() {
     m_selectedIndex = -1;
+}
+
+void PluginBrowserPanel::moveSelection(int delta) {
+    const int count = static_cast<int>(m_filteredPlugins.size());
+    if (count <= 0) {
+        return;
+    }
+    int next;
+    if (m_selectedIndex < 0) {
+        next = (delta < 0) ? count - 1 : 0;
+    } else {
+        next = std::clamp(m_selectedIndex + delta, 0, count - 1);
+    }
+    if (next == m_selectedIndex) {
+        return;
+    }
+    m_selectedIndex = next;
+    if (m_onPluginSelected) {
+        m_onPluginSelected(m_filteredPlugins[m_selectedIndex]);
+    }
+    ensureSelectionVisible();
+    repaint();
+}
+
+void PluginBrowserPanel::activateSelected() {
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_filteredPlugins.size())) {
+        if (m_onPluginLoadRequested) {
+            m_onPluginLoadRequested(m_filteredPlugins[m_selectedIndex]);
+        }
+        repaint();
+    }
+}
+
+void PluginBrowserPanel::ensureSelectionVisible() {
+    if (m_selectedIndex < 0) {
+        return;
+    }
+    const auto bounds = getBounds();
+    const float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
+    const float contentHeight = static_cast<float>(m_filteredPlugins.size()) * ROW_HEIGHT;
+    const float maxScroll = std::max(0.0f, contentHeight - listHeight);
+    const float rowTop = static_cast<float>(m_selectedIndex) * ROW_HEIGHT;
+    const float rowBottom = rowTop + ROW_HEIGHT;
+    float target = m_targetScrollOffset;
+    if (rowTop < target) {
+        target = rowTop;
+    } else if (rowBottom > target + listHeight) {
+        target = rowBottom - listHeight;
+    }
+    m_targetScrollOffset = std::clamp(target, 0.0f, maxScroll);
 }
 
 void PluginBrowserPanel::toggleFavorite(const std::string& pluginId) {
