@@ -1731,6 +1731,30 @@ add_test(NAME NoAudioEngineSingletonGuardSelfTest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
 set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
+# V8-C14 step 4 surface-resolution ratchet: today's known R2/R4/R5/R6 violations
+# are pinned as a baseline table; the build fails if any count rises, if a pattern
+# spreads to a file outside the table, or if a count falls without the table being
+# updated (stale baseline). Step 5 migrates the floating panels to
+# resolveSurfacePlacement and drives the table toward zero, after which these
+# patterns become zero-tolerance. cmake -P only: no AestraUI target dependency,
+# so this runs under AESTRA_CI=ON like the audio guards.
+add_test(NAME UISurfaceResolutionGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution.cmake)
+set_tests_properties(UISurfaceResolutionGuard PROPERTIES LABELS "guard;architecture;contract:application" TIMEOUT 120)
+
+# Self-test: runs the guard against fixture trees — the exact baseline must pass;
+# a risen count, out-of-table spread, stale (lowered) count, and the
+# dragStartRect-is-counted shape must fail; the capture* names, R6 file scoping,
+# and */External/* controls must pass.
+add_test(NAME UISurfaceResolutionGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/ui_surface_guard_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution_selftest.cmake)
+set_tests_properties(UISurfaceResolutionGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:application" TIMEOUT 120)
+
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
 # real processBlock timings.
