@@ -112,8 +112,18 @@ WINDOWS_MACRO_RES = [(m, re.compile(r'\b' + m + r'\b')) for m in FORBIDDEN_WINDO
 
 
 def _guard_tests_windows(condition):
-    """True when a preprocessor condition tests a Windows-only macro."""
-    return bool(WINDOWS_GUARD_RE.search(condition))
+    """True when a condition proves its branch compiles only on Windows.
+
+    Mentioning a Windows macro is not enough: every top-level `||`
+    alternative must test one. `#if defined(_MSC_VER) || defined(__x86_64__)`
+    (AestraAudio/include/Core/AudioRT.h) also compiles on Linux x86_64, so a
+    Windows include inside that branch is still a leak. `&&` only narrows a
+    branch further, so it needs no special handling.
+    """
+    alternatives = [part for part in condition.split('||') if part.strip()]
+    if not alternatives:
+        return False
+    return all(WINDOWS_GUARD_RE.search(part) for part in alternatives)
 
 
 def _guard_is_negated(directive, condition):
@@ -221,12 +231,16 @@ def scan_file_windows(file_path, project_root):
     guard_stack = []
     in_block_comment = False
     for i, line in enumerate(lines, 1):
-        if not line.lstrip().startswith('//'):
+        # Block-comment state is computed FIRST: a preprocessor-shaped line
+        # inside /* ... */ is prose, and must not arm or disarm a guard frame.
+        # Otherwise a commented-out `#ifdef _WIN32` leaves a guard open and
+        # hides every real include after it.
+        line_in_block = in_block_comment
+        in_block_comment = _update_block_comment_state(line, in_block_comment)
+        if not line_in_block and not line.lstrip().startswith('//'):
             directive = PREPROCESSOR_DIRECTIVE_RE.match(line)
             if directive:
                 _track_guard_directive(guard_stack, directive.group(1), directive.group(2))
-        line_in_block = in_block_comment
-        in_block_comment = _update_block_comment_state(line, in_block_comment)
         if is_skipped_line(line):
             continue
         if _is_guarded(guard_stack):
@@ -275,10 +289,15 @@ def check_windows_leaks(project_root):
 def scan_file(file_path, banned_patterns):
     leaks = []
     guard_stack = []
+    in_block_comment = False
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for i, line in enumerate(f, 1):
-                if not line.lstrip().startswith('//'):
+                # Same ordering as scan_file_windows: a preprocessor-shaped
+                # line inside /* ... */ is prose, not a guard.
+                line_in_block = in_block_comment
+                in_block_comment = _update_block_comment_state(line, in_block_comment)
+                if not line_in_block and not line.lstrip().startswith('//'):
                     directive = PREPROCESSOR_DIRECTIVE_RE.match(line)
                     if directive:
                         _track_guard_directive(guard_stack, directive.group(1), directive.group(2))
