@@ -103,12 +103,6 @@ public:
     void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) override;
     void drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) override;
     NUISize measureText(const std::string& text, float fontSize) override;
-    void drawDisplayText(const std::string& text, const NUIPoint& position, float fontSize,
-                         const NUIColor& color) override;
-    void drawDisplayTextCentered(const std::string& text, const NUIRect& rect, float fontSize,
-                                 const NUIColor& color) override;
-    NUISize measureDisplayText(const std::string& text, float fontSize) override;
-    bool hasDisplayFont() const override { return displayFontReady_; }
     NUIRenderer::FontMetrics getFontMetrics(float fontSize) const override;
     
     // ========================================================================
@@ -401,23 +395,19 @@ private:
     int fontAtlasYXSmall_ = 0;
     int fontAtlasRowHeightXSmall_ = 0;
     
-    // Text measurement cache (LRU-style with max entries). The display flag
-    // keeps UI-face and display-face measurements apart; it defaults off so
-    // existing call sites are unaffected.
+    // Text measurement cache (LRU-style with max entries)
     struct TextMeasurementKey {
         std::string text;
         float fontSize;
-        bool display = false;
         bool operator==(const TextMeasurementKey& o) const {
-            return text == o.text && std::abs(fontSize - o.fontSize) < 0.01f && display == o.display;
+            return text == o.text && std::abs(fontSize - o.fontSize) < 0.01f;
         }
     };
     struct TextMeasurementKeyHash {
         size_t operator()(const TextMeasurementKey& k) const {
             size_t h1 = std::hash<std::string>{}(k.text);
             size_t h2 = std::hash<float>{}(k.fontSize);
-            size_t h3 = std::hash<bool>{}(k.display);
-            return h1 ^ (h2 << 1) ^ (h3 << 2);
+            return h1 ^ (h2 << 1);
         }
     };
     mutable std::unordered_map<TextMeasurementKey, NUISize, TextMeasurementKeyHash> textMeasurementCache_;
@@ -431,32 +421,6 @@ private:
     FT_Library ftLibrary_;
     FT_Face ftFace_;
     FT_Face ftCJKFace_ = nullptr;
-
-    // Digital display face for numeric readouts (spec item 3: transport clock
-    // and BPM). One atlas at a single bake size — the readout charset is a
-    // dozen glyphs at two sizes, so the four-tier UI atlas split would be
-    // pure overhead. The atlas follows the UI 2048 extent (not a smaller
-    // texture) so the shared bounds checks and UV divisors in
-    // tryAddGlyphToAtlas stay correct without special cases. Null until
-    // loadDisplayFont() succeeds; every display draw falls back to the UI
-    // face through the base-class defaults.
-    FT_Face ftDisplayFace_ = nullptr;
-    bool displayFontReady_ = false;
-    static constexpr int kDisplayAtlasSize = 48;
-    uint32_t displayAtlasTextureId_ = 0;
-    std::unordered_map<uint32_t, FontData> displayCache_;
-    float displayAscent_ = 0.0f;
-    float displayDescent_ = 0.0f;
-    float displayLineHeight_ = 0.0f;
-    int displayAtlasX_ = 0;
-    int displayAtlasY_ = 0;
-    int displayAtlasRowHeight_ = 0;
-
-    bool loadDisplayFont();
-    bool buildDisplayAtlas();
-    AtlasInfo selectDisplayAtlas() const;
-    void renderDisplayTextWithFont(const std::string& text, const NUIPoint& position, float fontSize,
-                                   const NUIColor& color);
     
     // Projection matrix (orthographic)
     float projectionMatrix_[16];

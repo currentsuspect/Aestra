@@ -225,8 +225,8 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         ss << std::fixed << std::setprecision(2) << m_displayBPM;
         AestraUI::NUIColor bpmColor =
             m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
-        renderer.drawDisplayTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
-                                         themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
+        renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
+                                  themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
     }
 }
 
@@ -381,9 +381,8 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     std::string timeText = (m_displayMode == DisplayMode::Musical)
                                  ? formatMusical(m_positionBeats, m_beatsPerBar)
                                  : formatTime(m_currentTime);
-    renderer.drawDisplayTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
-                                     themeManager.getFontSize("xl"),
-                                     themeManager.getColor("textPrimary").withAlpha(0.95f));
+    renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
+                              themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {

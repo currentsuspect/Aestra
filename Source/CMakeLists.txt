@@ -310,7 +310,6 @@ set(AESTRA_DESKTOP_FONT_FILES
 	Manrope/Manrope-Bold.ttf
 	Manrope/Manrope-Medium.ttf
 	Manrope/Manrope-Regular.ttf
-	DSEG/DSEG7Classic-Regular.ttf
 )
 
 foreach(font_relative_path IN LISTS AESTRA_DESKTOP_FONT_FILES)
