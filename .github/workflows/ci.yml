@@ -94,6 +94,10 @@ jobs:
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
 
+      - name: Platform leak check (advisory)
+        continue-on-error: true
+        run: python3 scripts/check_platform_leaks.py
+
       - name: Security contract tests
         if: steps.scope.outputs.run == 'true'
         # Was a hand-written list of three names, repeated identically in the

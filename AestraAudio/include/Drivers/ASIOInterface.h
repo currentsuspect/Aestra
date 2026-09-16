@@ -130,6 +130,7 @@ enum ASIOError {
 };
 
 // ASIO Interface (COM style)
+#ifdef _WIN32
 interface IASIO : public IUnknown {
     virtual long __stdcall init(void* sysHandle) = 0;
     virtual void __stdcall getDriverName(char* name) = 0;
@@ -154,6 +155,9 @@ interface IASIO : public IUnknown {
     virtual long __stdcall future(long selector, void* opt) = 0;
     virtual long __stdcall outputReady() = 0;
 };
+#else
+#error "ASIOInterface.h: IASIO is Windows-only."
+#endif
 
 #pragma pack(pop)
 } // namespace ASIO
