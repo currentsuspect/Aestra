@@ -91,6 +91,12 @@ def hook_content():
 
 
 def hook_has_marker(path):
+    # A symlink is never this installer's work: it only ever writes a regular
+    # file. Reading through the link would let a symlink pointing at a marked
+    # file pass as ours, and writing would then modify a file outside the hooks
+    # directory entirely.
+    if path.is_symlink():
+        return False
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -99,6 +105,11 @@ def hook_has_marker(path):
 
 
 def describe_existing(path):
+    if path.is_symlink():
+        try:
+            return f"a symlink to {os.readlink(path)}"
+        except OSError as exc:
+            return f"a symlink ({exc})"
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
@@ -175,6 +186,10 @@ def main():
 
     try:
         hooks.mkdir(parents=True, exist_ok=True)
+        # Remove whatever is there first, so writing can never follow a symlink
+        # out of the hooks directory and modify an unrelated file.
+        if target.is_symlink() or target.exists():
+            target.unlink()
         # open(newline=...) rather than Path.write_text(newline=...): the latter
         # only accepts newline on Python 3.10+, and this installer must run on
         # whatever interpreter a contributor has. LF is explicit because the hook
