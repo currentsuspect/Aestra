@@ -27,6 +27,7 @@ Before you begin, ensure you have:
     - **ALSA development libraries** (`libasound2-dev`)
     - **X11 development libraries** (`libx11-dev`, `libxrandr-dev`, `libxinerama-dev`)
     - **OpenGL development libraries** (`libgl1-mesa-dev`)
+    - **Python 3** (runs `scripts/install_hooks.py` and the pre-commit checks)
 
 ## 🚀 Quick Start
 
@@ -41,6 +42,7 @@ cd Aestra
 
 # 2. Install Git hooks (recommended)
 pwsh -File scripts/install-hooks.ps1
+# Linux/macOS: python3 scripts/install_hooks.py
 
 # 3. Configure build
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
@@ -58,18 +60,21 @@ cd build/bin/Release
 ```bash
 # 1. Install dependencies
 sudo apt update
-sudo apt install build-essential cmake git libasound2-dev \
+sudo apt install build-essential cmake git python3 libasound2-dev \
                  libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
 
 # 2. Clone the repository
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
 
-# 3. Configure and build
+# 3. Install Git hooks (recommended)
+python3 scripts/install_hooks.py
+
+# 4. Configure and build
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 
-# 4. Run Aestra
+# 5. Run Aestra
 ./build/bin/Aestra
 ```
 

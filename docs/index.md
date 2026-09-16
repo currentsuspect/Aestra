@@ -68,6 +68,7 @@ Build, test, architecture, and roadmap docs are available directly in the repo f
     
     # Install Git hooks
     pwsh -File scripts/install-hooks.ps1
+    # Linux/macOS: python3 scripts/install_hooks.py
     
     # Configure build
     cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
@@ -85,13 +86,16 @@ Build, test, architecture, and roadmap docs are available directly in the repo f
     ```bash
     # Install dependencies
     sudo apt update
-    sudo apt install build-essential cmake git libasound2-dev \
+    sudo apt install build-essential cmake git python3 libasound2-dev \
                      libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
     
     # Clone the repository
     git clone https://github.com/currentsuspect/Aestra.git
     cd Aestra
     
+    # Install Git hooks
+    python3 scripts/install_hooks.py
+
     # Configure build
     cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
     

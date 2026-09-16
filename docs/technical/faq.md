@@ -66,7 +66,7 @@ Follow our comprehensive [Building Guide](../getting-started/building.md):
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
@@ -110,7 +110,7 @@ cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD
 
 1. **Install prerequisites** - See [Building Guide](../getting-started/building.md)
 2. **Clone the repository** - Fork and clone from GitHub
-3. **Install Git hooks** - `pwsh -File scripts/install-hooks.ps1`
+3. **Install Git hooks** - `python3 scripts/install_hooks.py` (Windows alternative: `pwsh -File scripts/install-hooks.ps1`)
 4. **Build the project** - Follow build instructions
 5. **Configure your IDE** - Use `.clang-format` for code formatting
 

@@ -32,6 +32,7 @@ Primary CMake options from the root `CMakeLists.txt`:
 - Git
 - Build essentials
 - OpenGL/X11 development packages if you are building the UI
+- Python 3 (runs `scripts/install_hooks.py` and the pre-commit checks)
 
 ## Windows Build
 
@@ -40,7 +41,7 @@ Primary CMake options from the root `CMakeLists.txt`:
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ```
@@ -73,7 +74,7 @@ Ubuntu/Debian example:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake git libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
+sudo apt install build-essential cmake git python3 libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libgl1-mesa-dev
 ```
 
 ### Full build
@@ -81,6 +82,7 @@ sudo apt install build-essential cmake git libasound2-dev libx11-dev libxrandr-d
 ```bash
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
+python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
