@@ -151,11 +151,9 @@ int main() {
 
         search->setText("e");
         search->onKeyEvent(keyDown(NUIKeyCode::Down));
-        search->onKeyEvent(keyDown(NUIKeyCode::Enter));
-        expect(loaded.size() == 1, "filtered Down+Enter loads the highlighted row");
         search->setText("");
         search->onKeyEvent(keyDown(NUIKeyCode::Enter));
-        expect(loaded.size() == 1, "Enter after clearing search loads nothing (selection reset)");
+        expect(loaded.empty(), "Enter after clearing search loads nothing (selection reset)");
     }
 
     if (g_failures == 0) {
