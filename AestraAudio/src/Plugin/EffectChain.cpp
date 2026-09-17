@@ -110,6 +110,27 @@ void markNonFiniteOutputFault(const std::shared_ptr<EffectSlotFaultState>& fault
     faultState->bypassedByNonFiniteOutput.store(true, std::memory_order_release);
 }
 
+// Appends one occupied-slot record in the v2 layout shared by the live,
+// missing-placeholder (#647) and crashed-occupant (#931) cases, so the three
+// can never drift apart byte-wise.
+void appendOccupiedSlotRecord(std::vector<uint8_t>& out, uint64_t instanceId, const std::string& pluginId,
+                              bool bypassed, float dryWetMix, const std::vector<uint8_t>& pluginState) {
+    out.push_back(1); // Has plugin flag
+    out.insert(out.end(), reinterpret_cast<const uint8_t*>(&instanceId),
+               reinterpret_cast<const uint8_t*>(&instanceId) + sizeof(instanceId));
+    const uint32_t idLen = static_cast<uint32_t>(pluginId.size());
+    out.insert(out.end(), reinterpret_cast<const uint8_t*>(&idLen),
+               reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
+    out.insert(out.end(), pluginId.begin(), pluginId.end());
+    out.push_back(bypassed ? 1 : 0);
+    out.insert(out.end(), reinterpret_cast<const uint8_t*>(&dryWetMix),
+               reinterpret_cast<const uint8_t*>(&dryWetMix) + sizeof(dryWetMix));
+    const uint32_t stateLen = static_cast<uint32_t>(pluginState.size());
+    out.insert(out.end(), reinterpret_cast<const uint8_t*>(&stateLen),
+               reinterpret_cast<const uint8_t*>(&stateLen) + sizeof(stateLen));
+    out.insert(out.end(), pluginState.begin(), pluginState.end());
+}
+
 void restoreDryChannels(float** buffer, const float* dryBuffer, uint32_t numChannels, uint32_t blendChannels,
                         uint32_t numFrames) noexcept {
     for (uint32_t ch = 0; ch < blendChannels; ++ch) {
@@ -741,28 +762,11 @@ std::vector<uint8_t> EffectChain::saveState() const {
         // layout is identical to the live-plugin case below, so the file format
         // is unchanged and a machine that has the plugin loads it normally.
         if (slot.hasMissingPlugin()) {
-            state.push_back(1); // Has plugin flag
-
             // v2: the placeholder's identity travels with it (Contract I6).
-            const uint64_t placeholderId = slot.instanceId;
-            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&placeholderId),
-                         reinterpret_cast<const uint8_t*>(&placeholderId) + sizeof(placeholderId));
-
-            uint32_t idLen = static_cast<uint32_t>(slot.missingPluginId.size());
-            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&idLen),
-                         reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
-            state.insert(state.end(), slot.missingPluginId.begin(), slot.missingPluginId.end());
-
-            state.push_back(slot.bypassed.load() ? 1 : 0);
-
-            float dryWet = slot.dryWetMix.load();
-            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&dryWet),
-                         reinterpret_cast<const uint8_t*>(&dryWet) + sizeof(dryWet));
-
-            uint32_t stateLen = static_cast<uint32_t>(slot.missingPluginState.size());
-            state.insert(state.end(), reinterpret_cast<const uint8_t*>(&stateLen),
-                         reinterpret_cast<const uint8_t*>(&stateLen) + sizeof(stateLen));
-            state.insert(state.end(), slot.missingPluginState.begin(), slot.missingPluginState.end());
+            const bool bypassed = slot.bypassed.load();
+            const float dryWet = slot.dryWetMix.load();
+            appendOccupiedSlotRecord(state, slot.instanceId, slot.missingPluginId, bypassed, dryWet,
+                                     slot.missingPluginState);
             continue;
         }
 
@@ -771,34 +775,36 @@ std::vector<uint8_t> EffectChain::saveState() const {
             continue;
         }
 
-        state.push_back(1); // Has plugin flag
+        // A crashed occupant still holds its slot, but its saveState() cannot be
+        // trusted: a dead helper answers with an empty blob, which would cement
+        // the crash into the project on the next save (#931). Emit the #647
+        // record layout with the last good blob instead, so a reload restores
+        // the plugin (when available) with its pre-crash state.
+        if (slot.plugin->isCrashed()) {
+            const auto& crashedInfo = slot.plugin->getInfo();
+            static const std::vector<uint8_t> kEmptyFallback;
+            const std::vector<uint8_t>& preserved =
+                (slot.lastGoodInstanceId == slot.instanceId && !slot.lastGoodPluginState.empty())
+                    ? slot.lastGoodPluginState
+                    : kEmptyFallback;
+            const bool bypassed = slot.bypassed.load();
+            const float dryWet = slot.dryWetMix.load();
+            appendOccupiedSlotRecord(state, slot.instanceId, crashedInfo.id, bypassed, dryWet, preserved);
+            continue;
+        }
 
         // v2: the instance identity travels with the instance (Contract I4).
-        const uint64_t slotInstanceId = slot.instanceId;
-        state.insert(state.end(), reinterpret_cast<const uint8_t*>(&slotInstanceId),
-                     reinterpret_cast<const uint8_t*>(&slotInstanceId) + sizeof(slotInstanceId));
-
-        // Save plugin ID
+        // A successful non-empty capture refreshes the last-good cache (#931),
+        // keyed by instance id so a replaced occupant can never inherit it.
         const auto& info = slot.plugin->getInfo();
-        uint32_t idLen = static_cast<uint32_t>(info.id.size());
-        state.insert(state.end(), reinterpret_cast<const uint8_t*>(&idLen),
-                     reinterpret_cast<const uint8_t*>(&idLen) + sizeof(idLen));
-        state.insert(state.end(), info.id.begin(), info.id.end());
-
-        // Save bypass state
-        state.push_back(slot.bypassed.load() ? 1 : 0);
-
-        // Save dry/wet
-        float dryWet = slot.dryWetMix.load();
-        state.insert(state.end(), reinterpret_cast<const uint8_t*>(&dryWet),
-                     reinterpret_cast<const uint8_t*>(&dryWet) + sizeof(dryWet));
-
-        // Save plugin state
         auto pluginState = slot.plugin->saveState();
-        uint32_t stateLen = static_cast<uint32_t>(pluginState.size());
-        state.insert(state.end(), reinterpret_cast<const uint8_t*>(&stateLen),
-                     reinterpret_cast<const uint8_t*>(&stateLen) + sizeof(stateLen));
-        state.insert(state.end(), pluginState.begin(), pluginState.end());
+        if (!pluginState.empty()) {
+            slot.lastGoodPluginState = pluginState;
+            slot.lastGoodInstanceId = slot.instanceId;
+        }
+        const bool bypassed = slot.bypassed.load();
+        const float dryWet = slot.dryWetMix.load();
+        appendOccupiedSlotRecord(state, slot.instanceId, info.id, bypassed, dryWet, pluginState);
     }
 
     return state;

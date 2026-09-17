@@ -233,6 +233,18 @@ target_include_directories(EffectChainMissingPluginTest PRIVATE
 add_test(NAME EffectChainMissingPluginTest COMMAND EffectChainMissingPluginTest)
 set_tests_properties(EffectChainMissingPluginTest PROPERTIES LABELS "audio;plugins;serialization;contract:durability")
 
+# Crashed-plugin state preservation (#931) — a helper death between two saves
+# must not erase the state the first save captured.
+add_executable(EffectChainCrashedPluginStateTest AestraAudio/EffectChainCrashedPluginStateTest.cpp)
+target_link_libraries(EffectChainCrashedPluginStateTest PRIVATE AestraAudio)
+target_include_directories(EffectChainCrashedPluginStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainCrashedPluginStateTest COMMAND EffectChainCrashedPluginStateTest)
+set_tests_properties(EffectChainCrashedPluginStateTest PROPERTIES LABELS "audio;plugins;serialization;regression;contract:durability")
+
 # Plugin-instance identity must survive chain reordering (#667) — automation
 # addresses the instance a curve was drawn for, never the position it occupied.
 add_executable(EffectChainInstanceIdentityTest AestraAudio/EffectChainInstanceIdentityTest.cpp)
