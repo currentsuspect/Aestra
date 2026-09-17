@@ -206,6 +206,9 @@ TransportBar::TransportBar()
     if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
         m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
             m_tempo = newBPM;
+            // Arrow edits bypass setTempo: resync the musical face here too,
+            // before anyone downstream reads the clock.
+            syncClockDisplays();
             if (m_onTempoChange) {
                 m_onTempoChange(m_tempo);
             }
