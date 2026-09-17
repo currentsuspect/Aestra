@@ -299,12 +299,12 @@ protected:
 
 private:
     // Callbacks
-    std::function<void(const std::string&)> onTextChangeCallback_;
-    std::function<void()> onReturnKeyCallback_;
-    std::function<void(int direction)> onArrowKeyCallback_;
-    std::function<void()> onEscapeKeyCallback_;
-    std::function<void()> onFocusGainedCallback_;
-    std::function<void()> onFocusLostCallback_;
+    std::function<void(const std::string&)> m_onTextChangeCallback;
+    std::function<void()> m_onReturnKeyCallback;
+    std::function<void(int direction)> m_onArrowKeyCallback;
+    std::function<void()> m_onEscapeKeyCallback;
+    std::function<void()> m_onFocusGainedCallback;
+    std::function<void()> m_onFocusLostCallback;
 };
 
 } // namespace AestraUI

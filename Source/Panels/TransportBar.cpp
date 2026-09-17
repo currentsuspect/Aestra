@@ -216,6 +216,9 @@ TransportBar::TransportBar()
     // display cycled 2/4..7/8 but nothing outside the transport ever heard).
     if (m_infoContainer && m_infoContainer->getTimeSignatureDisplay()) {
         m_infoContainer->getTimeSignatureDisplay()->setOnTimeSignatureChange([this](int beatsPerBar) {
+            // A new meter re-divides the same position: refresh the paused
+            // musical face before forwarding.
+            syncClockDisplays();
             if (m_onTimeSignatureChange) {
                 m_onTimeSignatureChange(beatsPerBar);
             }
@@ -517,7 +520,9 @@ void TransportBar::stop() {
         updateButtonStates();
         
         if (m_infoContainer) {
-            m_infoContainer->getTimerDisplay()->setTime(m_position);
+            // The position reset changes both clock faces: resync so a
+            // stopped clock in bars/beats mode reads 1:1.00, not stale bars.
+            syncClockDisplays();
             // Update timer to show stopped state (white color)
             m_infoContainer->getTimerDisplay()->setPlaying(false);
         }
@@ -548,6 +553,8 @@ void TransportBar::setTempo(float bpm) {
     if (m_infoContainer) {
         m_infoContainer->getBPMDisplay()->setBPM(m_tempo);
     }
+    // Beats derive from the tempo: refresh the musical face while paused.
+    syncClockDisplays();
     if (m_onTempoChange) {
         m_onTempoChange(m_tempo);
     }
@@ -555,17 +562,22 @@ void TransportBar::setTempo(float bpm) {
 
 void TransportBar::setPosition(double seconds) {
     m_position = std::max(0.0, seconds);
-    if (m_infoContainer) {
-        m_infoContainer->getTimerDisplay()->setTime(m_position);
-        // Musical clock mode needs beats + meter alongside seconds; the
-        // position itself is untouched, only its representation changes.
-        const int beatsPerBar = m_infoContainer->getTimeSignatureDisplay()
-                                    ? m_infoContainer->getTimeSignatureDisplay()->getBeatsPerBar()
-                                    : 4;
-        const double beats = m_position * std::max(0.0f, m_tempo) / 60.0;
-        m_infoContainer->getTimerDisplay()->setMusicalPosition(beats, beatsPerBar);
-    }
+    syncClockDisplays();
     updateMetronomePose();
+}
+
+void TransportBar::syncClockDisplays() {
+    if (!m_infoContainer || !m_infoContainer->getTimerDisplay()) {
+        return;
+    }
+    m_infoContainer->getTimerDisplay()->setTime(m_position);
+    // Musical clock mode needs beats + meter alongside seconds; the
+    // position itself is untouched, only its representation changes.
+    const int beatsPerBar = m_infoContainer->getTimeSignatureDisplay()
+                                ? m_infoContainer->getTimeSignatureDisplay()->getBeatsPerBar()
+                                : 4;
+    const double beats = m_position * std::max(0.0f, m_tempo) / 60.0;
+    m_infoContainer->getTimerDisplay()->setMusicalPosition(beats, beatsPerBar);
 }
 
 void TransportBar::updateMetronomePose() {

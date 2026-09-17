@@ -210,9 +210,9 @@ void NUITextInput::onFocusGained()
     showCaret_ = true;
     blinkStartTime_ = std::chrono::steady_clock::now();
 
-    if (onFocusGainedCallback_)
+    if (m_onFocusGainedCallback)
     {
-        onFocusGainedCallback_();
+        m_onFocusGainedCallback();
     }
 
     setDirty(true);
@@ -224,9 +224,9 @@ void NUITextInput::onFocusLost()
     showCaret_ = false;
     clearSelection();
     
-    if (onFocusLostCallback_)
+    if (m_onFocusLostCallback)
     {
-        onFocusLostCallback_();
+        m_onFocusLostCallback();
     }
     
     setDirty(true);
@@ -468,32 +468,32 @@ void NUITextInput::setScrollPosition(float position)
 
 void NUITextInput::setOnTextChange(std::function<void(const std::string&)> callback)
 {
-    onTextChangeCallback_ = callback;
+    m_onTextChangeCallback = callback;
 }
 
 void NUITextInput::setOnReturnKey(std::function<void()> callback)
 {
-    onReturnKeyCallback_ = callback;
+    m_onReturnKeyCallback = callback;
 }
 
 void NUITextInput::setOnArrowKey(std::function<void(int direction)> callback)
 {
-    onArrowKeyCallback_ = callback;
+    m_onArrowKeyCallback = callback;
 }
 
 void NUITextInput::setOnEscapeKey(std::function<void()> callback)
 {
-    onEscapeKeyCallback_ = callback;
+    m_onEscapeKeyCallback = callback;
 }
 
 void NUITextInput::setOnFocusGained(std::function<void()> callback)
 {
-    onFocusGainedCallback_ = callback;
+    m_onFocusGainedCallback = callback;
 }
 
 void NUITextInput::setOnFocusLost(std::function<void()> callback)
 {
-    onFocusLostCallback_ = callback;
+    m_onFocusLostCallback = callback;
 }
 
 void NUITextInput::clear()
@@ -1049,9 +1049,9 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             {
                 moveCaretToLine(-1, event.modifiers & NUIModifiers::Shift);
             }
-            else if (onArrowKeyCallback_)
+            else if (m_onArrowKeyCallback)
             {
-                onArrowKeyCallback_(-1);
+                m_onArrowKeyCallback(-1);
             }
             break;
 
@@ -1060,9 +1060,9 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             {
                 moveCaretToLine(1, event.modifiers & NUIModifiers::Shift);
             }
-            else if (onArrowKeyCallback_)
+            else if (m_onArrowKeyCallback)
             {
-                onArrowKeyCallback_(1);
+                m_onArrowKeyCallback(1);
             }
             break;
             
@@ -1362,25 +1362,25 @@ void NUITextInput::insertCharacter(char character)
 
 void NUITextInput::triggerTextChange()
 {
-    if (onTextChangeCallback_)
+    if (m_onTextChangeCallback)
     {
-        onTextChangeCallback_(text_);
+        m_onTextChangeCallback(text_);
     }
 }
 
 void NUITextInput::triggerReturnKey()
 {
-    if (onReturnKeyCallback_)
+    if (m_onReturnKeyCallback)
     {
-        onReturnKeyCallback_();
+        m_onReturnKeyCallback();
     }
 }
 
 void NUITextInput::triggerEscapeKey()
 {
-    if (onEscapeKeyCallback_)
+    if (m_onEscapeKeyCallback)
     {
-        onEscapeKeyCallback_();
+        m_onEscapeKeyCallback();
     }
 }
 

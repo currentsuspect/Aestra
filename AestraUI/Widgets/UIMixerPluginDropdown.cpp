@@ -149,6 +149,9 @@ void UIMixerPluginDropdown::filter()
 {
     if (m_searchQuery.empty()) {
         m_filtered = m_categories;
+        // A cleared query restores a different row set: drop the selection
+        // rather than let Enter activate a stale index in the new rows.
+        m_selectedRow = -1;
         return;
     }
     m_filtered.clear();

@@ -44,7 +44,7 @@ public:
 
     // Direct editing (spec item 5): double-click the value opens an inline
     // numeric field; Return commits through the same setBPM path as the
-    // arrows (existing 20..999 limits), Escape/focus-loss cancels.
+    // arrows (existing 20..999 limits). Escape cancels; focus loss commits.
     bool isEditingBPM() const { return m_editInput != nullptr; }
 
     // Callback when BPM changes via arrows

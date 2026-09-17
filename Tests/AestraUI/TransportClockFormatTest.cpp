@@ -80,6 +80,9 @@ int main() {
     expect(TimerDisplay::formatMusical(7.25, 3) == "3:2.25", "musical triple meter");
     expect(TimerDisplay::formatMusical(-2.0, 4) == "1:1.00", "musical clamps negative");
     expect(TimerDisplay::formatMusical(5.0, 0) == "6:1.00", "musical guards zero meter");
+    expect(TimerDisplay::formatMusical(3.995, 4) == "2:1.00", "centibeat rounding carries into the next bar");
+    expect(TimerDisplay::formatMusical(7.999, 4) == "3:1.00", "carry works past the first bar boundary");
+    expect(TimerDisplay::formatMusical(3.994, 4) == "1:4.99", "no carry below the rounding boundary");
 
     TimerDisplay clock;
     expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Time, "clock defaults to time mode");

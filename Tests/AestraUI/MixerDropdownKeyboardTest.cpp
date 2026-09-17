@@ -139,6 +139,25 @@ int main() {
         expect(root->getChildren().empty(), "host teardown detached the menu");
     }
 
+    {
+        // Clearing the search restores a different row set: the selection
+        // resets so Enter cannot activate a stale index in the restored rows.
+        UIMixerPluginDropdown menu;
+        std::vector<std::string> loaded;
+        menu.onPluginSelected = [&loaded](const std::string& id, const std::string&) { loaded.push_back(id); };
+        showMenu(menu);
+        NUITextInput* search = findSearchInput(menu);
+        expect(search != nullptr, "search field present for the clear-selection case");
+
+        search->setText("e");
+        search->onKeyEvent(keyDown(NUIKeyCode::Down));
+        search->onKeyEvent(keyDown(NUIKeyCode::Enter));
+        expect(loaded.size() == 1, "filtered Down+Enter loads the highlighted row");
+        search->setText("");
+        search->onKeyEvent(keyDown(NUIKeyCode::Enter));
+        expect(loaded.size() == 1, "Enter after clearing search loads nothing (selection reset)");
+    }
+
     if (g_failures == 0) {
         std::cout << "All MixerDropdownKeyboard tests passed.\n";
         return 0;

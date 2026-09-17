@@ -212,6 +212,7 @@ int main() {
     engine.panic();
     const double peakR2 = renderPeak(engine, 2.0);
     std::cout << "[probe R2] panic-after-play render peak=" << peakR2 << "\n";
+    require(peakR2 > 0.0, "R2: the timeline keeps rendering after a panic (panic kills voices, not transport)");
 
     // R3: panic mid-stream, measure only what comes after.
     resetTransport(trackManager);
@@ -220,6 +221,7 @@ int main() {
     engine.panic();
     const double peakR3 = renderPeak(engine, 1.5);
     std::cout << "[probe R3] post-mid-stream-panic peak=" << peakR3 << "\n";
+    require(peakR3 > 0.0, "R3: transport re-triggers keep rendering after a mid-stream panic");
 
     if (g_failures == 0) {
         std::cout << "All Timeline/Arsenal switch audio checks passed.\n";

@@ -388,8 +388,11 @@ std::string TimerDisplay::formatTime(double seconds) {
 std::string TimerDisplay::formatMusical(double beats, int beatsPerBar) {
     const int bpb = std::max(1, beatsPerBar);
     const double clamped = std::max(0.0, beats);
-    const double barIndex = std::floor(clamped / bpb);
-    const double beatInBar = clamped - barIndex * bpb;
+    // Round to centibeats BEFORE splitting bar/beat: a value like 3.995 in
+    // 4/4 must carry into 2:1.00, not print an invalid 1:5.00.
+    const double rounded = std::round(clamped * 100.0) / 100.0;
+    const double barIndex = std::floor(rounded / bpb);
+    const double beatInBar = rounded - barIndex * bpb;
     char buf[24];
     std::snprintf(buf, sizeof(buf), "%d:%.2f", static_cast<int>(barIndex) + 1, beatInBar + 1.0);
     return std::string(buf);
