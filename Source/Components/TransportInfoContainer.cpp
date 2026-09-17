@@ -110,7 +110,15 @@ void BPMDisplay::openBPMEditor() {
     auto input = std::make_shared<AestraUI::NUITextInput>(trimBPMValue(m_currentBPM));
     input->setInputType(AestraUI::NUITextInput::InputType::Number);
     input->setJustification(AestraUI::NUITextInput::Justification::Center);
-    input->setBounds(AestraUI::NUIRect(bounds.x, bounds.y + 9.0f, bounds.width, 19.0f));
+    // NUITextInput draws at the theme "m" size and needs line-height room: a
+    // 19 px strip clips the glyphs out entirely (same trap as the fader
+    // readout — see UIMixerFader). Size to the font and bottom-align over the
+    // value so the digits stay where they were; the transient field may cover
+    // the micro label above, same tradeoff the fader makes.
+    const float valueBottom = bounds.y + 9.0f + 19.0f;
+    const float editH =
+        std::ceil(AestraUI::NUIThemeManager::getInstance().getFontSize("m") * 1.9f) + 4.0f;
+    input->setBounds(AestraUI::NUIRect(bounds.x, valueBottom - editH, bounds.width, editH));
     // Same field chrome as the mixer fader's inline editor: themed text on
     // an input background with a purple focused border, so the open editor
     // reads as focused instead of a blank box.
@@ -241,6 +249,9 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
                                   themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
     }
+    // The inline editor is a child: without this it exists, takes focus and
+    // suppresses the label, but never paints (invisible-field defect).
+    renderChildren(renderer);
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
