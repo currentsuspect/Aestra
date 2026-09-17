@@ -286,9 +286,12 @@ void UIMixerPluginDropdown::activateSelected()
         return;
     }
     const auto& item = display[static_cast<size_t>(row.catIndex)].items[static_cast<size_t>(row.itemIndex)];
+    const std::string pluginId = item.id;
+    const std::string pluginName = item.name;
+    auto selectedCallback = onPluginSelected;
     dismiss();
-    if (onPluginSelected) {
-        onPluginSelected(item.id, item.name);
+    if (selectedCallback) {
+        selectedCallback(pluginId, pluginName);
     }
 }
 
@@ -499,8 +502,11 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
             const auto& row = rows[m_hoveredRow];
             if (!row.isCategory) {
                 const auto& item = display[row.catIndex].items[row.itemIndex];
+                const std::string pluginId = item.id;
+                const std::string pluginName = item.name;
+                auto selectedCallback = onPluginSelected;
                 dismiss();
-                if (onPluginSelected) onPluginSelected(item.id, item.name);
+                if (selectedCallback) selectedCallback(pluginId, pluginName);
                 return true;
             }
         }
