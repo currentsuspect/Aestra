@@ -6,9 +6,10 @@
 #
 # Context: FD-23 orders V8-C14 in six binding steps. Steps 1-5 merged (store schema,
 # resolution contract in Source/Core/UISurfaceResolution.h, mixer-inspector reference
-# migration, this CI guard, and the floating-panel migration). This guard exists so
-# the migrated surfaces cannot regress and so no new violation can land while step
-# 5b (plugin editors) and step 6 (ranked gaps) proceed.
+# migration, this CI guard, the floating-panel migration, and the plugin-editor
+# migration). This guard exists so the migrated surfaces cannot regress and so no
+# new violation can land while step 5c (docked widths) and step 6 (ranked gaps)
+# proceed.
 #
 # Why a ratchet instead of zero-tolerance: R1 and R3 cannot be enforced positively
 # today. Source/Core/AestraContent.cpp is the first production consumer of
@@ -22,9 +23,9 @@
 # The ratchet: today's known violations are pinned as the baseline table below. The build
 # fails if any count RISES, if a pattern appears in a file NOT in the table (spread), or if
 # a count FALLS without the table being updated (stale baseline — an unrecorded improvement
-# lets a later regression hide). Step 5a drove four of the five entries to their floor
-# (three to zero-tolerance, the region function to exactly one); the editor entry
-# falls in step 5b.
+# lets a later regression hide). Steps 5a+5b drove every entry to its floor (four to
+# zero-tolerance, the region function to exactly one); step 5c (docked widths) and
+# step 6 (ranked gaps) proceed under it.
 #
 # Load-bearing scoping decisions (do not "fix" without a V8-C14 step behind you):
 #   - R6 is scoped to Source/Core/AestraContent.cpp ONLY. Source/Core/AestraWindowManager.cpp
@@ -41,12 +42,12 @@
 #   - Spread detection covers Source/ and AestraUI/ (the production surface trees). Tests/
 #     holds the resolution contract's own tests and is out of scope.
 #
-# Baseline table (re-measured after the step-5a floating-panel migration —
+# Baseline table (re-measured after the step-5b plugin-editor migration —
 # re-verify every count before editing):
 #   key                    rule   file                                       expected
 #   viewstate-rect-assign  R2/R3  Source/Core/AestraContent.cpp               0
 #   viewstate-rect-literal R4     Source/Core/AestraContent.cpp               0
-#   editor-hand-centring   R4     AestraUI/Widgets/PluginUIController.cpp     1
+#   editor-hand-centring   R4     AestraUI/Widgets/PluginUIController.cpp     0
 #   placement-region-fn    R5     Source/Core/AestraContent.cpp               1
 #   panel-maximized-read   R6     Source/Core/AestraContent.cpp               0
 #
@@ -76,7 +77,7 @@ set(entry_files
     "AestraUI/Widgets/PluginUIController.cpp"
     "Source/Core/AestraContent.cpp"
     "Source/Core/AestraContent.cpp")
-set(entry_expected 0 0 1 1 0)
+set(entry_expected 0 0 0 1 0)
 # Spread-scan the tree for this key? OFF only for R6 (see scoping note above).
 set(entry_scan_tree ON ON ON ON OFF)
 # What each entry's floor is and which step owns it (one line each).
@@ -86,7 +87,7 @@ set(entry_scan_tree ON ON ON ON OFF)
 set(entry_step5
     "Step 5a routed every assignment through resolveSurfacePlacement(...).resolved or capture*Placement: zero-tolerance."
     "Step 5a deleted the NUIRect literal constructions at open: zero-tolerance."
-    "Step 5b routes editor centring through the anchored-placement resolve path instead of hand centring and the count goes to zero."
+    "Step 5b opens editors from the stored anchor through the anchored-placement resolve path: zero-tolerance, covering both the historical setBounds spelling and the setPosition variant."
     "Step 5a replaced both helpers with the single placement-region function: exactly one."
     "Step 5a derives panel maximized flags from pref.maximized: zero-tolerance.")
 
@@ -99,7 +100,7 @@ set(entry_step5
 set(regex_0_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=")
 set(regex_0_b "m_viewState\\.\\*stateRect[ \t]*=")
 set(regex_1_a "m_viewState\\.[A-Za-z]*[Rr]ect[ \t]*=[ \t]*AestraUI::NUIRect\\(")
-set(regex_2_a "editor->setBounds[ \t\r\n]*\\(")
+set(regex_2_a "editor->set(Bounds|Position)[ \t\r\n]*\\(")
 set(regex_3_a "AestraContent::computePlacementRegion")
 set(regex_4_a "isMaximized[ \t\r\n]*\\([ \t\r\n]*\\)")
 

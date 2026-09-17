@@ -206,6 +206,9 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
                 m_userPositioned = true;
             }
             onDragEnd();
+            if (m_onWindowDragEnd) {
+                m_onWindowDragEnd();
+            }
             m_isDraggingWindow = false;
             return true;
         }

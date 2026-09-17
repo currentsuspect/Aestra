@@ -3089,6 +3089,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIAnchoredPlacementTest.cpp")
     set_tests_properties(NUIAnchoredPlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# V8-C14 step 5b (FD-23): plugin editors store their anchor only — intrinsic
+# size selection, stored-anchor-or-centred preference assembly, the resolve
+# round-trip, and the placement-preserving localToWindow conversion.
+#
+# Deliberately links nothing. EditorSurfacePlacement.h is header-only, so this
+# test builds in every configuration, including AESTRA_CI=ON.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/EditorSurfacePlacementTest.cpp")
+    add_executable(EditorSurfacePlacementTest AestraUI/EditorSurfacePlacementTest.cpp)
+    add_test(NAME EditorSurfacePlacementTest COMMAND EditorSurfacePlacementTest)
+    set_tests_properties(EditorSurfacePlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
+
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
 # UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
 # surface restores it, absent entries resolve from defaults without writing.

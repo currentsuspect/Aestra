@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
+#include "EditorSurfacePlacement.h"
+#include "AestraPanelWindow.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "UIMixerPluginDropdown.h"
 #include "GenericPluginEditor.h"
@@ -18,6 +20,8 @@
 
 #include "Models/TrackManager.h"
 #include "Core/MixerChannel.h"
+
+#include <algorithm>
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
@@ -58,6 +62,11 @@ void PluginUIController::setPopupLayer(NUIComponent* layer) {
 void PluginUIController::setMixerCatalogProvider(
     std::function<std::vector<Aestra::Components::MixerPluginEntry>()> provider) {
     m_mixerCatalogProvider = std::move(provider);
+}
+
+void PluginUIController::setEditorAnchorProvider(EditorAnchorGetter getter, EditorAnchorSaver saver) {
+    m_editorAnchorGetter = std::move(getter);
+    m_editorAnchorSaver = std::move(saver);
 }
 
 void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
@@ -174,7 +183,20 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
         if (!chain) return;
         auto instance = chain->getPlugin(slot);
         if (instance && (instance->hasEditor() || instance->getParameterCount() > 0)) {
-            openPluginEditor(instance, nullptr);
+            // Stable per-instance surface identity: the channel owns the
+            // chain, the slot indexes it. Inserting a plugin shifts later
+            // slots (their positions follow); deleting the channel prunes
+            // the key via the editor.* pruning pass.
+            uint32_t channelId = 0;
+            for (const auto& binding : m_rackBindings) {
+                if (binding.rack == rack) {
+                    channelId = binding.channelId;
+                    break;
+                }
+            }
+            openPluginEditor(instance, nullptr,
+                             std::to_string(channelId) + "." + std::to_string(slot) + "." +
+                                 instance->getInfo().id);
         }
     });
     
@@ -392,11 +414,12 @@ void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain,
 
 void PluginUIController::openPluginEditor(
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
-    void* parentWindow) {
+    void* parentWindow,
+    const std::string& surfaceId) {
 
     if (!instance) return;
 
-    std::shared_ptr<NUIComponent> editor;
+    std::shared_ptr<NUIComponent> editorComp;
     const std::string& pluginId = instance->getInfo().id;
 
     if (false) {
@@ -405,68 +428,68 @@ void PluginUIController::openPluginEditor(
         auto ed = std::make_shared<RumblePluginEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
 #endif
     } else if (pluginId == "com.Aestrastudios.eq") {
         auto ed = std::make_shared<AestraEQEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.comp") {
         auto ed = std::make_shared<AestraCompEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.verb") {
         auto ed = std::make_shared<AestraVerbEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.delay") {
         auto ed = std::make_shared<AestraDelayEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.drift") {
         auto ed = std::make_shared<AestraDriftEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.limiter") {
         auto ed = std::make_shared<AestraLimitEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.sat") {
         auto ed = std::make_shared<AestraSatEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.filter") {
         auto ed = std::make_shared<AestraFilterEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.ott") {
         auto ed = std::make_shared<AestraOTTEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.lfo") {
         auto ed = std::make_shared<AestraLFOEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else if (pluginId == "com.Aestrastudios.transient") {
         auto ed = std::make_shared<AestraTransientEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
         wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
-        editor = ed;
+        editorComp = ed;
     }
     
     auto relayoutEditor = [&](const std::shared_ptr<NUIComponent>& editorComp,
@@ -505,29 +528,105 @@ void PluginUIController::openPluginEditor(
         }
     };
 
-    // Position editor in center of popup layer
-    if (m_popupLayer && editor) {
-        auto layerBounds = m_popupLayer->getBounds();
-        auto editorBounds = editor->getBounds();
-        float editorWidth = editorBounds.width > 0.0f ? editorBounds.width : 0.0f;
-        float editorHeight = editorBounds.height > 0.0f ? editorBounds.height : 0.0f;
+    // Position the editor from its stored anchor (centred when never placed).
+    // Every setBounds below takes a resolve result — the R4-editor guard entry
+    // keys on the historical hand-centring shape (`editor->setBounds`, plus the
+    // `setPosition` variant), so the local keeps the relayout lambda's
+    // `editorComp` name and all geometry flows through resolveAnchoredPlacement
+    // (see EditorSurfacePlacementTest).
+    // Only the anchor persists; the size is always intrinsic.
+    if (m_popupLayer && editorComp) {
+        const auto editorBounds = editorComp->getBounds();
+        const auto [reportedWidth, reportedHeight] = instance->getEditorSize();
+        const auto intrinsic = EditorPlacement::editorIntrinsicBounds(editorBounds.width, editorBounds.height,
+                                                                      reportedWidth, reportedHeight);
 
-        if (editorWidth <= 0.0f || editorHeight <= 0.0f) {
-            auto [preferredWidth, preferredHeight] = instance->getEditorSize();
-            editorWidth = preferredWidth > 0 ? static_cast<float>(preferredWidth) : 400.0f;
-            editorHeight = preferredHeight > 0 ? static_cast<float>(preferredHeight) : 400.0f;
+        const std::string key =
+            EditorPlacement::editorSurfaceKey(surfaceId.empty() ? pluginId : surfaceId);
+        std::optional<Layout::NUIAnchoredRect> stored;
+        if (m_editorAnchorGetter) {
+            stored = m_editorAnchorGetter(key);
+        }
+        const Layout::NUIAnchoredRect preference =
+            EditorPlacement::editorOpenPreference(stored, intrinsic.width, intrinsic.height);
+
+        const auto layerBounds = m_popupLayer->getBounds();
+        const Layout::NUILocalRect localRegion(0.0f, 0.0f, layerBounds.width, layerBounds.height);
+        const Layout::NUISizeLimits limits{0.0, 0.0};
+        const auto popupGlobal = m_popupLayer->getGlobalBounds();
+        bool placementApplied = false;
+        if (!popupGlobal.isEmpty() && !layerBounds.isEmpty()) {
+            // Measured window frame: resolve there, convert back for setBounds.
+            const Layout::NUIWindowPoint popupOrigin(popupGlobal.x, popupGlobal.y);
+            const Layout::NUIWindowRect regionWindow = Layout::localToWindow(localRegion, popupOrigin);
+            const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored,
+                                                                    regionWindow, limits);
+            if (placement.applicable) {
+                editorComp->setBounds(Layout::windowToLocal(placement.resolved, popupOrigin).raw());
+                placementApplied = true;
+            }
+        }
+        if (!placementApplied) {
+            // No measured frame, or a degenerate one: resolve the stored
+            // anchor in the popup-local frame setBounds shares. Anchors are
+            // translation-invariant, so the placement still honours the
+            // stored anchor relative to the layer.
+            const Layout::NUIWindowRect localRegionWindow(localRegion.x, localRegion.y, localRegion.width,
+                                                          localRegion.height);
+            const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored,
+                                                                    localRegionWindow, limits);
+            if (placement.applicable) {
+                editorComp->setBounds(placement.resolved.raw());
+            }
         }
 
-        editorWidth = std::min(editorWidth, layerBounds.width - 40.0f);
-        editorHeight = std::min(editorHeight, layerBounds.height - 40.0f);
-        float x = (layerBounds.width - editorWidth) * 0.5f;
-        float y = (layerBounds.height - editorHeight) * 0.5f;
-        
-        editor->setBounds(x, y, editorWidth, editorHeight);
-        relayoutEditor(editor, editorWidth, editorHeight);
-        
-        m_popupLayer->addChild(editor);
-        m_activeEditors.push_back(editor);
+        const auto placedBounds = editorComp->getBounds();
+        relayoutEditor(editorComp, placedBounds.width, placedBounds.height);
+
+        // A drag never resizes (editors have no resize handles): capture the
+        // dropped anchor on drag end, with the current intrinsic size, and
+        // persist it. The weak capture mirrors wireEditorClose — the callback
+        // must not keep a destroyed editor alive.
+        if (m_editorAnchorSaver) {
+            if (auto panelWindow = std::dynamic_pointer_cast<AestraPanelWindow>(editorComp)) {
+                std::weak_ptr<AestraPanelWindow> weakPanel = panelWindow;
+                panelWindow->setOnWindowDragEnd(
+                    [this, key, intrinsicW = intrinsic.width, intrinsicH = intrinsic.height, weakPanel]() {
+                        auto livePanel = weakPanel.lock();
+                        if (!livePanel || !m_popupLayer) {
+                            return;
+                        }
+                        std::optional<Layout::NUIAnchoredRect> priorStored;
+                        if (m_editorAnchorGetter) {
+                            priorStored = m_editorAnchorGetter(key);
+                        }
+                        const Layout::NUIAnchoredRect prior =
+                            EditorPlacement::editorOpenPreference(priorStored, intrinsicW, intrinsicH);
+                        const auto dropped = livePanel->getBounds();
+                        // Inbound clamp: only some editors enforce parent
+                        // bounds while dragging, so saturate here uniformly.
+                        const auto layer = m_popupLayer->getBounds();
+                        const float clampedX =
+                            std::clamp(dropped.x, 0.0f, std::max(0.0f, layer.width - dropped.width));
+                        const float clampedY =
+                            std::clamp(dropped.y, 0.0f, std::max(0.0f, layer.height - dropped.height));
+                        const auto popupGlobalNow = m_popupLayer->getGlobalBounds();
+                        if (popupGlobalNow.isEmpty()) {
+                            return;
+                        }
+                        const Layout::NUIWindowPoint originNow(popupGlobalNow.x, popupGlobalNow.y);
+                        const Layout::NUIWindowRect gestureWindow = Layout::localToWindow(
+                            Layout::NUILocalRect(clampedX, clampedY, intrinsicW, intrinsicH), originNow);
+                        const Layout::NUIWindowRect regionWindow = Layout::localToWindow(
+                            Layout::NUILocalRect(0.0f, 0.0f, layer.width, layer.height), originNow);
+                        m_editorAnchorSaver(key,
+                                            Layout::captureAnchoredPlacement(gestureWindow, regionWindow, prior));
+                    });
+            }
+        }
+
+        m_popupLayer->addChild(editorComp);
+        m_activeEditors.push_back(editorComp);
     }
 }
 
