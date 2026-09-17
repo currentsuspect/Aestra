@@ -2288,6 +2288,80 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# Spec 1 item 4b: mixer insert dropdown keyboard selection (arrows skip
+# category headers, Enter loads) without leaving the search field.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MixerDropdownKeyboardTest AestraUI_Core AestraUI_Platform)
+    add_executable(MixerDropdownKeyboardTest
+        AestraUI/MixerDropdownKeyboardTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets/UIMixerPluginDropdown.cpp
+    )
+    target_link_libraries(MixerDropdownKeyboardTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(MixerDropdownKeyboardTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerDropdownKeyboardTest COMMAND MixerDropdownKeyboardTest)
+    set_tests_properties(MixerDropdownKeyboardTest PROPERTIES LABELS "ui;input;regression;contract:application")
+endif()
+
+# Spec 1 item 2: transport clock time/musical dual-mode formatting + toggle.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TransportClockFormatTest AestraUI_Core AestraUI_Platform)
+    add_executable(TransportClockFormatTest
+        AestraUI/TransportClockFormatTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TransportInfoContainer.cpp
+    )
+    target_link_libraries(TransportClockFormatTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(TransportClockFormatTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TransportClockFormatTest COMMAND TransportClockFormatTest)
+    set_tests_properties(TransportClockFormatTest PROPERTIES LABELS "ui;transport;regression;contract:application")
+endif()
+
+# BPM editor paint contract: the double-click inline editor must emit visible
+# glyph paint (contrasting ink inside its bounds), not just exist in the tree.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(BPMEditorPaintTest AestraUI_Core AestraUI_Platform)
+    add_executable(BPMEditorPaintTest
+        AestraUI/BPMEditorPaintTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TransportInfoContainer.cpp
+    )
+    target_link_libraries(BPMEditorPaintTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(BPMEditorPaintTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME BPMEditorPaintTest COMMAND BPMEditorPaintTest)
+    set_tests_properties(BPMEditorPaintTest PROPERTIES LABELS "ui;transport;regression;contract:application")
+endif()
+
 # Selection-based step editing regression: click-to-select grammar, Ctrl+B
 # span duplication, Delete/Backspace removal (2026-08-17).
 if(AESTRA_ENABLE_UI)

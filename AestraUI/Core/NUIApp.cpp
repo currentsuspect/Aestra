@@ -248,15 +248,17 @@ void NUIApp::handleKeyEvent(const NUIKeyEvent& event) {
 
     // Let the root component arbitrate key routing first so app-level shortcuts
     // can stay authoritative before focused widgets get a chance to consume them.
-    if (rootComponent_ && rootComponent_->onKeyEvent(event)) {
+    // Both go through the guarded entry point: a key handler may close or
+    // destroy its own popup (hierarchy mutations defer until unwind).
+    if (rootComponent_ && NUIComponent::dispatchKeyEvent(rootComponent_.get(), event)) {
         return;
     }
 
     // Fallback to focused component only if the root did not handle the event.
     if (auto* focused = NUIComponent::getFocusedComponent()) {
-        focused->onKeyEvent(event);
+        NUIComponent::dispatchKeyEvent(focused, event);
     } else if (focusedComponent_) {
-        focusedComponent_->onKeyEvent(event);
+        NUIComponent::dispatchKeyEvent(focusedComponent_.get(), event);
     }
 }
 

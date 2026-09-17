@@ -464,4 +464,26 @@ set_tests_properties(HeadlessExportInstanceIsolationTest PROPERTIES
     ENVIRONMENT "AESTRA_HEADLESS=1"
 )
 
+# Spec 1 item 1: Timeline -> Arsenal -> Timeline must not go silent. Drives
+# the real setViewFocus teardown + hot-swap call sequence against live
+# TrackManager/AudioEngine state with committed audible content.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/TimelineArsenalSwitchAudioTest.cpp")
+    add_executable(TimelineArsenalSwitchAudioTest
+        TimelineArsenalSwitchAudioTest.cpp
+    )
+    target_link_libraries(TimelineArsenalSwitchAudioTest PRIVATE AestraAudio)
+    target_include_directories(TimelineArsenalSwitchAudioTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineArsenalSwitchAudioTest
+        COMMAND TimelineArsenalSwitchAudioTest
+    )
+    set_tests_properties(TimelineArsenalSwitchAudioTest PROPERTIES
+        LABELS "headless;engine;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

@@ -1899,7 +1899,11 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     if (lane) {
-        const auto textIdle = themeManager.getColor("textSecondary").withAlpha(isHovered() ? 0.65f : 0.42f);
+        // Track M/S/R glyphs render bright white idle (owner direction:
+        // legibility over idle hierarchy). Active states keep their colored
+        // pills; hovered steps to full white; deliberately inactive/disabled
+        // controls elsewhere are untouched.
+        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 1.0f : 0.95f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
         const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);

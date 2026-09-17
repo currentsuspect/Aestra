@@ -8,6 +8,8 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 namespace Aestra {
 
@@ -56,6 +58,19 @@ BPMDisplay::BPMDisplay()
     m_downArrow->setColorFromTheme("textSecondary");
 }
 
+BPMDisplay::~BPMDisplay() {
+    // Torn down mid-edit: the editor's callbacks capture `this`, and it can
+    // outlive the display via deferred-removal parking. Nothing fires focus
+    // loss during teardown today, so this is not a live crash; dropping the
+    // callbacks makes that independent of a future change to component
+    // destruction order. (Same shape as UIMixerFader.)
+    if (m_editInput) {
+        m_editInput->setOnReturnKey(nullptr);
+        m_editInput->setOnEscapeKey(nullptr);
+        m_editInput->setOnFocusLost(nullptr);
+    }
+}
+
 void BPMDisplay::setBPM(float bpm) {
     m_targetBPM = std::max(20.0f, std::min(999.0f, bpm));
     m_currentBPM = m_targetBPM;
@@ -74,6 +89,97 @@ void BPMDisplay::decrementBPM(float amount) {
     if (m_onBPMChange) {
         m_onBPMChange(m_currentBPM);
     }
+}
+
+std::string BPMDisplay::trimBPMValue(float bpm) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%.2f", static_cast<double>(bpm));
+    std::string text(buf);
+    text.erase(text.find_last_not_of('0') + 1, std::string::npos);
+    if (!text.empty() && text.back() == '.') {
+        text.pop_back();
+    }
+    return text.empty() ? std::string("0") : text;
+}
+
+void BPMDisplay::openBPMEditor() {
+    if (m_editInput) {
+        return;
+    }
+    AestraUI::NUIRect bounds = getBounds();
+    auto input = std::make_shared<AestraUI::NUITextInput>(trimBPMValue(m_currentBPM));
+    input->setInputType(AestraUI::NUITextInput::InputType::Number);
+    input->setJustification(AestraUI::NUITextInput::Justification::Center);
+    // NUITextInput draws at the theme "m" size and needs line-height room: a
+    // 19 px strip clips the glyphs out entirely (same trap as the fader
+    // readout — see UIMixerFader). Size to the font and bottom-align over the
+    // value so the digits stay where they were; the transient field may cover
+    // the micro label above, same tradeoff the fader makes.
+    const float valueBottom = bounds.y + 9.0f + 19.0f;
+    const float editH =
+        std::ceil(AestraUI::NUIThemeManager::getInstance().getFontSize("m") * 1.9f) + 4.0f;
+    input->setBounds(AestraUI::NUIRect(bounds.x, valueBottom - editH, bounds.width, editH));
+    // Same field chrome as the mixer fader's inline editor: themed text on
+    // an input background with a purple focused border, so the open editor
+    // reads as focused instead of a blank box.
+    {
+        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+        input->setTextColor(themeManager.getColor("textPrimary"));
+        input->setBackgroundColor(themeManager.getColor("inputBgDefault"));
+        input->setBorderColor(themeManager.getColor("inputBorderFocus"));
+        input->setBorderWidth(1.0f);
+        input->setBorderRadius(3.0f);
+        input->setFocusedBorderColor(themeManager.getColor("accentPrimary"));
+        input->setPadding(4.0f);
+    }
+    input->setOnReturnKey([this]() { commitBPMEdit(); });
+    input->setOnEscapeKey([this]() { cancelBPMEdit(); });
+    // Clicking away applies what's typed (same convention as the mixer
+    // fader's inline editor). commitBPMEdit is null-guarded, so the removal
+    // below retriggering focus loss is harmless.
+    input->setOnFocusLost([this]() { commitBPMEdit(); });
+    addChild(input);
+    input->setFocused(true);
+    input->selectAll();
+    m_editInput = std::move(input);
+    setDirty(true);
+}
+
+void BPMDisplay::commitBPMEdit() {
+    if (!m_editInput) {
+        return;
+    }
+    std::string text = m_editInput->getText();
+    closeBPMEditor();
+    const auto first = text.find_first_not_of(" \t");
+    if (first == std::string::npos) {
+        return; // Empty: reject, keep the current value.
+    }
+    const auto last = text.find_last_not_of(" \t");
+    char* end = nullptr;
+    const double value = std::strtod(text.c_str() + first, &end);
+    if (end != text.c_str() + last + 1 || !std::isfinite(value)) {
+        return; // Not a plain number: reject, keep the current value.
+    }
+    // Same path as the arrows: existing 20..999 limits constrain.
+    setBPM(static_cast<float>(value));
+    if (m_onBPMChange) {
+        m_onBPMChange(m_currentBPM);
+    }
+    m_pulseAnimation = 1.0f;
+}
+
+void BPMDisplay::cancelBPMEdit() {
+    closeBPMEditor();
+}
+
+void BPMDisplay::closeBPMEditor() {
+    if (!m_editInput) {
+        return;
+    }
+    removeChild(m_editInput);
+    m_editInput.reset();
+    setDirty(true);
 }
 
 AestraUI::NUIRect BPMDisplay::getUpArrowBounds() const {
@@ -132,12 +238,20 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     // Small "BPM" label above the value
     renderer.drawTextCentered("BPM", {bounds.x, bounds.y, bounds.width, 10.0f},
                                 themeManager.getFontSize("micro"),
-                                themeManager.getColor("textSecondary").withAlpha(0.58f));
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2) << m_displayBPM;
-    AestraUI::NUIColor bpmColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
-    renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
-                              themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
+                                themeManager.getColor("textSecondary").withAlpha(0.75f));
+    // While the inline editor is open it draws the value itself; drawing the
+    // label underneath would double-print it.
+    if (!m_editInput) {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2) << m_displayBPM;
+        AestraUI::NUIColor bpmColor =
+            m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
+        renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
+                                  themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
+    }
+    // The inline editor is a child: without this it exists, takes focus and
+    // suppresses the label, but never paints (invisible-field defect).
+    renderChildren(renderer);
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -157,6 +271,9 @@ bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Handle mouse wheel for fine adjustment (anywhere on BPM display)
     if (event.wheelDelta != 0.0f && inBounds) {
+        // A wheel turn elsewhere commits nothing: an open edit is abandoned
+        // first so the wheel never fights typed text.
+        cancelBPMEdit();
         // Modifier keys: Shift = 5x faster, Ctrl = 0.1x for fine control
         float increment = 1.0f;
         if (event.modifiers & AestraUI::NUIModifiers::Shift) {
@@ -176,6 +293,23 @@ bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Handle mouse button for arrow clicks
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        if (inUp || inDown) {
+            // Arrow input abandons an open edit (nothing typed is applied).
+            cancelBPMEdit();
+        } else if (inBounds) {
+            // Double-tap/click the value opens it for direct editing. The
+            // native doubleClick flag is never set by the bridge, so use the
+            // same manual window as the panel title bars. Epoch-initialized:
+            // the first click can never count as a double.
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsedMs =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastValueClickTime).count();
+            m_lastValueClickTime = now;
+            if (elapsedMs < 350) {
+                openBPMEditor();
+                return true;
+            }
+        }
         if (inUp) {
             m_upArrowPressed = true;
             m_holdDelay = 0.3f;  // 300ms before repeat starts
@@ -228,17 +362,40 @@ void TimerDisplay::setTime(double seconds) {
     m_currentTime = std::max(0.0, seconds);
 }
 
-std::string TimerDisplay::formatTime(double seconds) const {
+void TimerDisplay::setMusicalPosition(double beats, int beatsPerBar) {
+    m_positionBeats = std::max(0.0, beats);
+    m_beatsPerBar = std::max(1, beatsPerBar);
+}
+
+void TimerDisplay::toggleDisplayMode() {
+    m_displayMode = (m_displayMode == DisplayMode::Time) ? DisplayMode::Musical : DisplayMode::Time;
+    setDirty(true);
+}
+
+std::string TimerDisplay::formatTime(double seconds) {
     int totalSeconds = static_cast<int>(seconds);
     int minutes = totalSeconds / 60;
     int secs = totalSeconds % 60;
     int millis = static_cast<int>((seconds - totalSeconds) * 100);
-    
+
     std::stringstream ss;
     ss << minutes << ":" << std::setfill('0')
         << std::setw(2) << secs << "."
         << std::setw(2) << millis;
     return ss.str();
+}
+
+std::string TimerDisplay::formatMusical(double beats, int beatsPerBar) {
+    const int bpb = std::max(1, beatsPerBar);
+    const double clamped = std::max(0.0, beats);
+    // Round to centibeats BEFORE splitting bar/beat: a value like 3.995 in
+    // 4/4 must carry into 2:1.00, not print an invalid 1:5.00.
+    const double rounded = std::round(clamped * 100.0) / 100.0;
+    const double barIndex = std::floor(rounded / bpb);
+    const double beatInBar = rounded - barIndex * bpb;
+    char buf[24];
+    std::snprintf(buf, sizeof(buf), "%d:%.2f", static_cast<int>(barIndex) + 1, beatInBar + 1.0);
+    return std::string(buf);
 }
 
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
@@ -248,16 +405,32 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     // tonal well keeps it aligned with BPM/time signature without a third box.
     renderer.fillRoundedRect(bounds, themeManager.getRadius("s"),
                              themeManager.getColor("surfaceRaised").withAlpha(0.045f));
-    std::string timeText = formatTime(m_currentTime);
+    std::string timeText = (m_displayMode == DisplayMode::Musical)
+                                 ? formatMusical(m_positionBeats, m_beatsPerBar)
+                                 : formatTime(m_currentTime);
     renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
                               themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (getBounds().contains(event.position)) {
-        AestraUI::NUIComponent::showRemoteTooltip("Playback time", event.position, this);
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && !event.synthetic) {
+            m_tapArmed = true;
+            return true;
+        }
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            // A synthetic release (focus loss, post-capture re-resolution) is a
+            // stop, not an accept: disarm without toggling.
+            if (m_tapArmed && !event.synthetic) {
+                toggleDisplayMode();
+            }
+            m_tapArmed = false;
+            return true;
+        }
+        AestraUI::NUIComponent::showRemoteTooltip("Playback time — click to toggle bars/beats", event.position, this);
         return false;
     }
+    m_tapArmed = false;
     AestraUI::NUIComponent::hideRemoteTooltip(this);
     return false;
 }

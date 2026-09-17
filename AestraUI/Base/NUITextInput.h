@@ -161,6 +161,11 @@ public:
     void setOnTextChange(std::function<void(const std::string&)> callback);
     void setOnReturnKey(std::function<void()> callback);
     void setOnEscapeKey(std::function<void()> callback);
+    // Fired for Up (-1) / Down (+1) in single-line inputs only (multiline
+    // keeps caret behavior). Null by default: unwired inputs behave exactly
+    // as before. Lets popup lists with an embedded search field (mixer
+    // insert dropdown) move selection without stealing focus from typing.
+    void setOnArrowKey(std::function<void(int direction)> callback);
     void setOnFocusGained(std::function<void()> callback);
     void setOnFocusLost(std::function<void()> callback);
 
@@ -294,11 +299,12 @@ protected:
 
 private:
     // Callbacks
-    std::function<void(const std::string&)> onTextChangeCallback_;
-    std::function<void()> onReturnKeyCallback_;
-    std::function<void()> onEscapeKeyCallback_;
-    std::function<void()> onFocusGainedCallback_;
-    std::function<void()> onFocusLostCallback_;
+    std::function<void(const std::string&)> m_onTextChangeCallback;
+    std::function<void()> m_onReturnKeyCallback;
+    std::function<void(int direction)> m_onArrowKeyCallback;
+    std::function<void()> m_onEscapeKeyCallback;
+    std::function<void()> m_onFocusGainedCallback;
+    std::function<void()> m_onFocusLostCallback;
 };
 
 } // namespace AestraUI

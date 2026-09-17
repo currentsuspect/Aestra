@@ -206,6 +206,9 @@ TransportBar::TransportBar()
     if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
         m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
             m_tempo = newBPM;
+            // Arrow edits bypass setTempo: resync the musical face here too,
+            // before anyone downstream reads the clock.
+            syncClockDisplays();
             if (m_onTempoChange) {
                 m_onTempoChange(m_tempo);
             }
@@ -216,6 +219,9 @@ TransportBar::TransportBar()
     // display cycled 2/4..7/8 but nothing outside the transport ever heard).
     if (m_infoContainer && m_infoContainer->getTimeSignatureDisplay()) {
         m_infoContainer->getTimeSignatureDisplay()->setOnTimeSignatureChange([this](int beatsPerBar) {
+            // A new meter re-divides the same position: refresh the paused
+            // musical face before forwarding.
+            syncClockDisplays();
             if (m_onTimeSignatureChange) {
                 m_onTimeSignatureChange(beatsPerBar);
             }
@@ -517,7 +523,9 @@ void TransportBar::stop() {
         updateButtonStates();
         
         if (m_infoContainer) {
-            m_infoContainer->getTimerDisplay()->setTime(m_position);
+            // The position reset changes both clock faces: resync so a
+            // stopped clock in bars/beats mode reads 1:1.00, not stale bars.
+            syncClockDisplays();
             // Update timer to show stopped state (white color)
             m_infoContainer->getTimerDisplay()->setPlaying(false);
         }
@@ -548,6 +556,8 @@ void TransportBar::setTempo(float bpm) {
     if (m_infoContainer) {
         m_infoContainer->getBPMDisplay()->setBPM(m_tempo);
     }
+    // Beats derive from the tempo: refresh the musical face while paused.
+    syncClockDisplays();
     if (m_onTempoChange) {
         m_onTempoChange(m_tempo);
     }
@@ -555,10 +565,22 @@ void TransportBar::setTempo(float bpm) {
 
 void TransportBar::setPosition(double seconds) {
     m_position = std::max(0.0, seconds);
-    if (m_infoContainer) {
-        m_infoContainer->getTimerDisplay()->setTime(m_position);
-    }
+    syncClockDisplays();
     updateMetronomePose();
+}
+
+void TransportBar::syncClockDisplays() {
+    if (!m_infoContainer || !m_infoContainer->getTimerDisplay()) {
+        return;
+    }
+    m_infoContainer->getTimerDisplay()->setTime(m_position);
+    // Musical clock mode needs beats + meter alongside seconds; the
+    // position itself is untouched, only its representation changes.
+    const int beatsPerBar = m_infoContainer->getTimeSignatureDisplay()
+                                ? m_infoContainer->getTimeSignatureDisplay()->getBeatsPerBar()
+                                : 4;
+    const double beats = m_position * std::max(0.0f, m_tempo) / 60.0;
+    m_infoContainer->getTimerDisplay()->setMusicalPosition(beats, beatsPerBar);
 }
 
 void TransportBar::updateMetronomePose() {
@@ -659,8 +681,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIColor glassBorder = AestraUI::NUIColor::transparent();
     AestraUI::NUIColor glassHover = themeManager.getColor("surfaceRaised");
     AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
-    
-    AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
+
     AestraUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
     AestraUI::NUIColor iconRed = themeManager.getColor("error");
 
@@ -685,10 +706,12 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
         bool isHovered = btn->isHovered() && btn->isEnabled();
         
-        // Setup Colors
+        // Setup Colors. Idle transport extras render bright white like the
+        // primary buttons and readout text (owner direction: legibility over
+        // idle hierarchy); hover/active/disabled still step apart via plates.
         AestraUI::NUIColor currentBg = glassBg;
         AestraUI::NUIColor currentBorder = glassBorder;
-        AestraUI::NUIColor iconColor = iconGrey.withAlpha(0.55f);
+        AestraUI::NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.95f);
         
         // LOGIC: Glassy Look (Reverted per user request)
         // Active = Purple Tint Glass + Purple Icon
@@ -706,7 +729,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
          } else if (isHovered) {
              currentBg = glassHover.withAlpha(0.82f);
              currentBorder = themeManager.getColor("border").withAlpha(0.30f);
-             iconColor = themeManager.getColor("textPrimary").withAlpha(0.76f);
+             iconColor = themeManager.getColor("textPrimary").withAlpha(1.0f);
          }
 
         if (isPrimaryTransport) {

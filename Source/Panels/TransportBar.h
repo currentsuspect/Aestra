@@ -206,6 +206,12 @@ private:
     /** @brief Pick the pendulum pose for the current beat; repaints only on change. */
     void updateMetronomePose();
     void updateButtonStates();
+    // One writer for both clock faces: time seconds plus the musical
+    // beats/meter pair, derived from the current position, tempo and meter.
+    // Every path that changes a musical-position input (position, tempo,
+    // meter, stop-reset) funnels through here so a paused clock never shows
+    // one stale face.
+    void syncClockDisplays();
     void layoutComponents();
     void renderButtonIcons(AestraUI::NUIRenderer& renderer);
 };

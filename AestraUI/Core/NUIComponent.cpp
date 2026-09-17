@@ -291,6 +291,19 @@ bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent&
     return target->onMouseEvent(event);
 }
 
+bool NUIComponent::dispatchKeyEvent(NUIComponent* target, const NUIKeyEvent& event) {
+    if (!target) {
+        return false;
+    }
+
+    struct DispatchGuard {
+        DispatchGuard() { NUIComponent::beginEventDispatch(); }
+        ~DispatchGuard() { NUIComponent::endEventDispatch(); }
+    } guard;
+
+    return target->onKeyEvent(event);
+}
+
 void NUIComponent::beginEventDispatch() {
     ++g_eventDispatchDepth;
 }

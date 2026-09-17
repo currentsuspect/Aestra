@@ -115,6 +115,31 @@ public:
     }
 };
 
+// A focused child that removes itself during a KEY dispatch. This is the
+// mixer-insert-dropdown crash shape: Enter/Escape in the search field closes
+// the popup (removing the focused input's whole subtree) while its own
+// onKeyEvent is on the stack. Without the guarded key entry point the
+// removal runs immediately and frees the component mid-dispatch.
+class SelfCloserOnKey : public NUIComponent {
+public:
+    bool sawEvent = false;
+
+    bool onKeyEvent(const NUIKeyEvent& event) override {
+        sawEvent = true;
+        if (event.pressed && event.keyCode == NUIKeyCode::Enter) {
+            if (auto* parent = getParent()) {
+                for (const auto& child : parent->getChildren()) {
+                    if (child.get() == this) {
+                        parent->removeChild(child);
+                        break;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+};
+
 int g_failures = 0;
 void check(bool cond, const char* what) {
     if (!cond) {
@@ -276,6 +301,43 @@ void testBringToFrontDuringDispatchIsDeferred() {
     check(root->getChildren().back() == mutator, "bringToFront drains after dispatch");
 }
 
+void testSelfRemovalDuringKeyDispatchIsSafe() {
+    auto root = std::make_shared<NUIComponent>();
+    auto closer = std::make_shared<SelfCloserOnKey>();
+    auto keep = std::make_shared<NUIComponent>();
+    root->addChild(closer);
+    root->addChild(keep);
+    std::weak_ptr<NUIComponent> weak = closer;
+
+    NUIKeyEvent ev;
+    ev.pressed = true;
+    ev.keyCode = NUIKeyCode::Enter;
+    check(NUIComponent::dispatchKeyEvent(closer.get(), ev), "key dispatch handled");
+
+    check(closer->sawEvent, "self-closer received the key event");
+    check(root->getChildren().size() == 1, "key removal drains after dispatch unwinds");
+    check(root->getChildren().front() == keep, "the kept child remains");
+    closer.reset();
+    check(weak.expired(), "removed key component freed (no retain cycle)");
+}
+
+void testRawKeyCallRemovesImmediately() {
+    // Contrast case: the unguarded direct call removes synchronously. This is
+    // what key dispatch did before dispatchKeyEvent existed, and why a popup
+    // closed by its own key handler (insert dropdown Enter) freed itself
+    // mid-dispatch. The guarded entry above is the only safe path.
+    auto root = std::make_shared<NUIComponent>();
+    auto closer = std::make_shared<SelfCloserOnKey>();
+    root->addChild(closer);
+
+    NUIKeyEvent ev;
+    ev.pressed = true;
+    ev.keyCode = NUIKeyCode::Enter;
+    closer->onKeyEvent(ev);
+
+    check(root->getChildren().empty(), "unguarded key removal applies immediately");
+}
+
 } // namespace
 
 int main() {
@@ -287,6 +349,8 @@ int main() {
     testInterleavedAddThenRemovePreservesOrder();
     testRemoveAllDuringDispatchIsDeferred();
     testBringToFrontDuringDispatchIsDeferred();
+    testSelfRemovalDuringKeyDispatchIsSafe();
+    testRawKeyCallRemovesImmediately();
 
     if (g_failures > 0) {
         std::cout << g_failures << " check(s) failed\n";
