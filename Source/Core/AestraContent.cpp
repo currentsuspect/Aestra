@@ -51,6 +51,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "TrackManagerUI.h"
 #include "TransportBar.h"
 #include "UISurfaceResolution.h"
+#include "DockedRailWidths.h"
 
 // App includes
 #include "../App/ServiceLocator.h"
@@ -1874,6 +1875,10 @@ void AestraContent::onResize(int width, int height) {
 
     const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(width * 0.42f, 560.0f));
     const float computedFileBrowserWidth = std::clamp(width * 0.24f, kMinFileBrowserWidth, maxFileBrowserWidth);
+    // V8-C14 step 5c: first layout seeds unset prefs from the store; absent
+    // entries fall through to the computed defaults below, which are never
+    // written back — the store only learns a width at resize-drag end.
+    seedDockedRailWidths();
     if (m_fileBrowserWidthPref <= 0.0f) {
         m_fileBrowserWidthPref = computedFileBrowserWidth;
     }
@@ -2165,6 +2170,10 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_browserResizing = false;
             m_browserResizeTarget = BrowserResizeTarget::None;
+            // V8-C14 step 5c: one store write per resize gesture. Per-move
+            // updates stay in the memory prefs; the write-through store would
+            // otherwise hit the disk on every mouse move.
+            persistDockedRailWidths();
             return true;
         }
 
@@ -2392,6 +2401,43 @@ void AestraContent::setBrowserWidth(float width) {
     if (width > 0.0f) {
         *getActiveBrowserWidthPrefPtr() = width;
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    }
+}
+
+void AestraContent::seedDockedRailWidths() {
+    auto* store = surfaceStore();
+    if (!store) {
+        return;
+    }
+    if (m_fileBrowserWidthPref <= 0.0f) {
+        applyStoredRailWidth(m_fileBrowserWidthPref, store->surfaceGeometry(UISurfaceKeys::kPanelBrowser));
+    }
+    if (m_patternBrowserWidthPref <= 0.0f) {
+        applyStoredRailWidth(m_patternBrowserWidthPref,
+                             store->surfaceGeometry(UISurfaceKeys::kPanelPatternBrowser));
+    }
+}
+
+void AestraContent::persistDockedRailWidths() {
+    auto* store = surfaceStore();
+    if (!store) {
+        return;
+    }
+    // Width-only records: rail position is layout-derived every pass, so the
+    // anchor and height are never read back. Unset prefs are skipped rather
+    // than persisted as invalid widths.
+    const int64_t now = panelNowSeconds();
+    if (m_fileBrowserWidthPref > 0.0f) {
+        UISurfaceGeometry fileRail;
+        fileRail.width = m_fileBrowserWidthPref;
+        fileRail.lastUsedAt = now;
+        store->setSurfaceGeometry(UISurfaceKeys::kPanelBrowser, fileRail);
+    }
+    if (m_patternBrowserWidthPref > 0.0f) {
+        UISurfaceGeometry patternRail;
+        patternRail.width = m_patternBrowserWidthPref;
+        patternRail.lastUsedAt = now;
+        store->setSurfaceGeometry(UISurfaceKeys::kPanelPatternBrowser, patternRail);
     }
 }
 
