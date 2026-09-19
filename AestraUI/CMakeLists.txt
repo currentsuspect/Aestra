@@ -147,6 +147,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginUIController.cpp
     Widgets/AestraPanelWindow.h
     Widgets/AestraPanelWindow.cpp
+    Widgets/AestraDialogChrome.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
     Widgets/AestraEQEditor.h
