@@ -1575,31 +1575,36 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     
     // Zebra striping moved to TrackManagerUI for guaranteed rendering order
 
-    // No zebra: the grid is uniform pure black (owner direction). Only the
-    // selection/hover states below tint the row.
-    AestraUI::NUIColor trackBgColor = AestraUI::NUIColor::transparent();
-
-    // Selection Highlight (Static base)
-    if (isSelected()) {
-         trackBgColor = themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f);
-    } else if (isHovered()) {
-         trackBgColor = themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f);
-    }
-    
-    // Apply background
-    renderer.fillRect(bounds, trackBgColor);
-    if (isSelected()) {
-        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
-        renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f, selectionEdge);
-        renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f},
-                          1.0f, selectionEdge.withAlpha(0.12f));
-    }
-
-    // Row separation is the light gap strip drawn by TrackManagerUI between
-    // lanes — no per-row line here, so separators never stack.
-    AestraUI::NUIColor borderColor = themeManager.getColor("border");
-    
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+
+    // No zebra: the grid is uniform pure black (owner direction).
+    //
+    // Spec 2 §8: track selection and timeline selection are different things, and
+    // the selection wash used to be painted across the whole row — controls AND
+    // grid — so selecting Track 3 read as "a region of the timeline at Track 3 is
+    // selected". The wash and its edges stay inside the controls column now; what
+    // marks the selected lane out in the grid is the lane's own colour strip,
+    // which already brightens when selected.
+    //
+    // Hover keeps the full row: it follows the pointer, so it cannot be mistaken
+    // for a persistent selection, and it is the cue that tells you which lane a
+    // clip will land on.
+    const AestraUI::NUIRect controlColumn(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+
+    if (isSelected()) {
+        renderer.fillRect(controlColumn,
+                          themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f));
+        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
+        renderer.drawLine({controlColumn.x, controlColumn.y}, {controlColumn.right(), controlColumn.y}, 1.0f,
+                          selectionEdge);
+        renderer.drawLine({controlColumn.x, controlColumn.bottom() - 1.0f},
+                          {controlColumn.right(), controlColumn.bottom() - 1.0f}, 1.0f,
+                          selectionEdge.withAlpha(0.12f));
+    } else if (isHovered()) {
+        renderer.fillRect(bounds, themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f));
+    }
+
+    AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     if (m_isPrimaryForLane) {
         AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
@@ -1884,11 +1889,24 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     // A single quiet bottom rule separates rows without boxing every header.
+    //
+    // Spec 2 §8 asks for a separation cue because lanes blended into the grid.
+    // It runs the full row width now, not just the controls column, so the cue
+    // exists where lanes actually blur together. Deliberately one hairline at low
+    // alpha rather than a card, a border or a stripe: the ask was "these are
+    // distinct tracks", not "these are eight giant cards". Rows are contiguous
+    // (m_trackSpacing == 0) and each draws only its own bottom edge, so rules
+    // never stack at a boundary.
+    //
+    // The colour is a low-alpha white rather than borderSubtle: the timeline
+    // canvas is pure black, and a dark theme colour at low alpha on black is
+    // arithmetically almost nothing — the rule was invisible exactly where the
+    // blending complaint came from.
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1),
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
+        AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1),
         1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.10f)
+        AestraUI::NUIColor::white().withAlpha(0.065f)
     );
 
 
@@ -2079,10 +2097,12 @@ void TrackUIComponent::onResize(int width, int height) {
     const int numButtons = 3;
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
-    const float leftPad = 14.0f;
-    const float rightPad = 8.0f;
+    // Spec 2 §8: the row's footprint shrinks by taking it out of padding and the
+    // dead span between the name and the button cluster, not out of information.
+    const float leftPad = 10.0f;
+    const float rightPad = 6.0f;
     const float trackNumberWidth = 14.0f;
-    const float numberNameGap = 6.0f;
+    const float numberNameGap = 5.0f;
 
     // FD-14 §10: nested rows pull their chrome inward so the lane reads as
     // indented while the timeline grid stays globally aligned across lanes —
