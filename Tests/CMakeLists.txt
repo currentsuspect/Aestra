@@ -3136,3 +3136,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/LegacyMixerSettingsImportTest
     add_test(NAME LegacyMixerSettingsImportTest COMMAND LegacyMixerSettingsImportTest)
     set_tests_properties(LegacyMixerSettingsImportTest PROPERTIES LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# V8-C14 step 5c (FD-23): docked rail widths in the surface store — stored
+# width applies wholesale, absent entries defer to the computed default, and
+# the legacy ui_state.json width imports exactly once.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/DockedRailWidthsTest.cpp")
+    add_executable(DockedRailWidthsTest
+        Integration/DockedRailWidthsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(DockedRailWidthsTest PRIVATE AestraPlat)
+    target_include_directories(DockedRailWidthsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Tests
+    )
+    add_test(NAME DockedRailWidthsTest COMMAND DockedRailWidthsTest)
+    set_tests_properties(DockedRailWidthsTest PROPERTIES
+        LABELS "serialization;preferences;regression;contract:durability")
+endif()

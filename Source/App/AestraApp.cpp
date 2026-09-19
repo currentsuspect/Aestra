@@ -38,6 +38,7 @@
 #include <sstream>
 #include <chrono>
 #include "../Core/AudioSettingsStore.h"
+#include "../Core/DockedRailWidths.h"
 #include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
@@ -377,6 +378,28 @@ bool AestraApp::initialize(const std::string& projectPath) {
     case Aestra::LegacyImportResult::SaveFailed:
         Log::warning("[UISurfaceStore] Could not save the imported mixer inspector preference to " +
                      m_uiSurfaceStore->path());
+        break;
+    case Aestra::LegacyImportResult::AlreadyInStore:
+    case Aestra::LegacyImportResult::NothingToImport:
+        break;
+    }
+    // V8-C14 step 5c: one-time, one-way import of the pre-store ui_state.json
+    // rail width. A legacy value equal to the UIState default proves the user
+    // never resized, so nothing imports and the computed default flows.
+    const auto nowSeconds = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
+            .count());
+    switch (Aestra::importLegacyBrowserRailWidth(*m_uiSurfaceStore, uiState.browserWidth, UIState{}.browserWidth,
+                                                 nowSeconds)) {
+    case Aestra::LegacyImportResult::Imported:
+        Log::info("[UISurfaceStore] Imported the browser rail width from ui_state.json");
+        break;
+    case Aestra::LegacyImportResult::SaveFailed:
+        // Keep the legacy value in ui_state.json so the next launch can retry:
+        // the shutdown save below starts from a default-constructed UIState.
+        m_unimportedLegacyBrowserWidth = uiState.browserWidth;
+        Log::warning("[UISurfaceStore] Could not save the imported browser rail width to " + m_uiSurfaceStore->path() +
+                     "; keeping it in ui_state.json to retry next launch");
         break;
     case Aestra::LegacyImportResult::AlreadyInStore:
     case Aestra::LegacyImportResult::NothingToImport:
@@ -1139,11 +1162,12 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
 void AestraApp::restoreUIState(const UIState& uiState) {
     if (m_content) {
         m_content->setBrowserVisible(uiState.browserVisible);
-        m_content->setBrowserWidth(uiState.browserWidth);
+        // V8-C14 step 5c: the rail width lives in the surface store (imported
+        // once at startup); live prefs seed from it on first layout, so the
+        // legacy ui_state.json value is no longer applied here.
         m_content->setMixerVisible(uiState.mixerVisible);
         Log::info("[UIState] Applied panel state: browserVisible=" +
                   std::string(uiState.browserVisible ? "true" : "false") +
-                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
 
@@ -1733,15 +1757,22 @@ void AestraApp::shutdown() {
                   std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
     }
 
+    // V8-C14 step 5c: browserWidth is no longer written back — the surface
+    // store owns the rail width (written at resize-drag end) and ui_state.json
+    // keeps only its last value as a harmless import orphan. The one exception
+    // is a legacy width whose import failed to save: preserve it so the next
+    // launch can retry rather than reading back the default.
+    if (m_unimportedLegacyBrowserWidth) {
+        uiState.browserWidth = *m_unimportedLegacyBrowserWidth;
+    }
+
     // Capture panel states from AestraContent (Issue #120)
     if (m_content) {
         uiState.browserVisible = m_content->isBrowserVisible();
-        uiState.browserWidth = m_content->getBrowserWidth();
         uiState.mixerVisible = m_content->isMixerVisible();
 
         Log::info("[UIState] Captured panel state: browserVisible=" +
                   std::string(uiState.browserVisible ? "true" : "false") +
-                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
 

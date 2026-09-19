@@ -207,6 +207,20 @@ public:
     float getBrowserWidth() const;
     /** @brief Set the active browser column width. */
     void setBrowserWidth(float width);
+    /** @brief Seed rail widths from the surface store on first layout.
+     *
+     * V8-C14 step 5c: prefs start unset; a stored width applies wholesale,
+     * an absent entry leaves the pref for the computed default below. Runs
+     * every layout pass but only acts while a pref is still unset. */
+    void seedDockedRailWidths();
+    /** @brief Persist the dragged rail's width at resize-drag end.
+     *
+     * Single write per gesture (the store saves write-through): per-move
+     * drag updates stay in the memory prefs. Reads m_browserResizeTarget to
+     * write only the rail the user actually dragged — layout has by then
+     * backfilled both prefs with computed defaults, which must stay
+     * memory-only. Unset prefs are skipped. */
+    void persistDockedRailWidths();
     /** @brief Check whether the left browser area is visible. */
     bool isBrowserVisible() const;
     /** @brief Show or hide the left browser area. */
