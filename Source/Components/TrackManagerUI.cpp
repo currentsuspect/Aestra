@@ -31,6 +31,12 @@
 namespace Aestra {
 namespace Audio {
 
+// The timeline reserves its scrollbar gutter through a dependency-free constant;
+// this is where that constant meets the shared one it must match.
+static_assert(kTimelineScrollbarWidth == AestraUI::kOverlayScrollbarThickness,
+              "Timeline scrollbar gutter drifted from the DAW-wide overlay scrollbar width");
+
+
 // =============================================================================
 // SECTION: Construction & Destruction
 // =============================================================================
@@ -68,17 +74,9 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
     // Create scrollbar
     m_scrollbar = std::make_shared<AestraUI::NUIScrollbar>(AestraUI::NUIScrollbar::Orientation::Vertical);
-    {
-        auto& theme = AestraUI::NUIThemeManager::getInstance();
-        m_scrollbar->setArrowSize(0.0f);
-        m_scrollbar->setBorderWidth(0.0f);
-        m_scrollbar->setBorderRadius(8.0f);
-        m_scrollbar->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_scrollbar->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_scrollbar->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_scrollbar->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_scrollbar->setMinimumThumbSize(0.06);
-    }
+    // No styling here: drawOverlayScrollbar() owns how every scrollbar looks
+    // (spec 2 §2), and the pixel thumb floor is enforced by the component.
+    m_scrollbar->setMinimumThumbSize(0.06);
     m_scrollbar->setOnScroll([this](double position) { onScroll(position); });
     addChild(m_scrollbar);
 

@@ -54,17 +54,9 @@ PianoRollView::PianoRollView()
     
     m_vScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Vertical);
     m_vScroll->setOrientation(NUIScrollbar::Orientation::Vertical);
-    {
-        auto& theme = NUIThemeManager::getInstance();
-        m_vScroll->setArrowSize(0.0f);
-        m_vScroll->setBorderWidth(0.0f);
-        m_vScroll->setBorderRadius(8.0f);
-        m_vScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_vScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_vScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_vScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_vScroll->setMinimumThumbSize(0.06);
-    }
+    // No styling here: drawOverlayScrollbar() owns how every scrollbar looks
+    // (spec 2 §2), and the pixel thumb floor is enforced by the component.
+    m_vScroll->setMinimumThumbSize(0.06);
 
     // Initial default layout config
     m_minimap->setVisible(true);
@@ -72,18 +64,8 @@ PianoRollView::PianoRollView()
 
     m_hScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Horizontal);
     m_hScroll->setOrientation(NUIScrollbar::Orientation::Horizontal);
-    {
-        auto& theme = NUIThemeManager::getInstance();
-        m_hScroll->setArrowSize(0.0f);
-        m_hScroll->setBorderWidth(0.0f);
-        m_hScroll->setBorderRadius(8.0f);
-        m_hScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_hScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_hScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_hScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_hScroll->setMinimumThumbSize(0.06);
-        m_hScroll->setVisible(true);
-    }
+    m_hScroll->setMinimumThumbSize(0.06);
+    m_hScroll->setVisible(true);
 
     // Ruler Zoom Callback
     m_ruler->onZoomRequested = [this](float delta, float mouseX) {
@@ -370,7 +352,7 @@ void PianoRollView::onUpdate(double deltaTime) {
 
 void PianoRollView::layoutChildren() {
     auto b = getBounds();
-    float sbSize = 14.0f; 
+    const float sbSize = kOverlayScrollbarThickness;
     
     // 0. Toolbar (Standardized Aestra UI Height)
     float toolbarH = 50.0f;
@@ -388,7 +370,7 @@ void PianoRollView::layoutChildren() {
     float topTotalH = toolbarH + miniMapH + minimapGap + rulerH;
 
     float keyW = std::max(40.0f, m_keyLaneWidth);
-    const float hScrollH = 12.0f; // Horizontal scrollbar row below the grid
+    const float hScrollH = kOverlayScrollbarThickness; // Horizontal scrollbar row below the grid
     float contentW = std::max(0.0f, b.width - keyW - sbSize);
     float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight - hScrollH); // Subtract control panel
 

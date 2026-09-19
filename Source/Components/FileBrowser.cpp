@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
+#include "NUIScrollbar.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
 #include "NUIDragDrop.h"
@@ -308,7 +309,7 @@ FileBrowser::FileBrowser()
     , effectiveWidth_(0.0f)        // Initialize effective render width
     , scrollbarVisible_(false)
     , scrollbarOpacity_(0.0f)
-    , scrollbarWidth_(6.0f)        // Slim default scrollbar
+    , scrollbarWidth_(AestraUI::kOverlayScrollbarThickness)
     , scrollbarTrackHeight_(0.0f)
     , scrollbarThumbHeight_(0.0f)
     , scrollbarThumbY_(0.0f)
@@ -1295,12 +1296,15 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     renderer.setClipRect(layout.navPane);
     const float navOverflow = navContentHeight_ - navViewportHeight_;
     if (navOverflow > 0.5f && navViewportHeight_ > 0.0f) {
-        const float sbW = 3.0f;
-        const float sbX = layout.navPane.right() - sbW - 2.0f;
-        const float thumbH = std::max(24.0f, navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
+        // Same painter and same gutter width as the file list beside it, so the
+        // Collections rail is not a third scrollbar dialect (spec 2 §2).
+        const float sbW = AestraUI::kOverlayScrollbarThickness;
+        const NUIRect gutter(layout.navPane.right() - sbW - 2.0f, navContentTop, sbW, navViewportHeight_);
+        const float thumbH = std::max(AestraUI::kOverlayScrollbarMinThumb,
+                                      navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
         const float thumbY = navContentTop + (navScrollOffset_ / navOverflow) * (navViewportHeight_ - thumbH);
-        renderer.fillRoundedRect(NUIRect(sbX, thumbY, sbW, thumbH), sbW * 0.5f,
-                                 themeManager.getColor("textSecondary").withAlpha(0.30f));
+        AestraUI::drawOverlayScrollbar(renderer, gutter, NUIRect(gutter.x, thumbY, sbW, thumbH),
+                                       AestraUI::ScrollbarPaintState{});
     }
 
     renderer.clearClipRect();
@@ -1679,9 +1683,10 @@ void FileBrowser::onResize(int width, int height) {
     visibleItems_ = std::max(1, visibleItems_);
 
     // Update scrollbar dimensions
-    float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
+    // One gutter width for every scrollbar in the DAW (spec 2 §2); the thumb
+    // insets within it, so a narrower gutter would leave no pill to grab.
     scrollbarTrackHeight_ = std::max(0.0f, listHeight);
-    scrollbarWidth_ = std::clamp(scrollbarWidth, 4.0f, 6.0f);
+    scrollbarWidth_ = AestraUI::kOverlayScrollbarThickness;
 
     // Update caches
     updateScrollPosition();
@@ -3598,135 +3603,26 @@ void FileBrowser::updateScrollPosition() {
 }
 
 void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
-    auto& themeManager = NUIThemeManager::getInstance();
-
     const auto& view = getActiveView();
     // Use stored track height which is correctly calculated in onResize/onMouseEvent
-    // If it's 0 (unlikely if sized), fall back to list height calc
     if (scrollbarTrackHeight_ <= 0.0f) {
-        // Fallback or initialization
         scrollbarTrackHeight_ = getBounds().height; // Rough calc
     }
 
-    float contentHeight = view.size() * itemHeight_;
-    float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
-    bool needsScrollbar = maxScroll > 0.0f;
-
-    if (!needsScrollbar || view.empty()) return;
+    const float contentHeight = view.size() * itemHeight_;
+    const float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
+    if (maxScroll <= 0.0f || view.empty()) return; // Content fits: no scrollbar at all.
 
     const BrowserLayout browserLayout = computeBrowserLayout();
-    float scrollbarX = browserLayout.list.right() - scrollbarWidth_ - 2.0f;
-    float scrollbarY = browserLayout.list.y;
-    float scrollbarHeight = scrollbarTrackHeight_;
+    const NUIRect gutter(browserLayout.list.right() - scrollbarWidth_ - 2.0f, browserLayout.list.y,
+                         scrollbarWidth_, scrollbarTrackHeight_);
+    const NUIRect thumb(gutter.x, gutter.y + scrollbarThumbY_, gutter.width, scrollbarThumbHeight_);
 
-    float opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
-    if (opacity <= 0.01f) return;
-
-    const float radius = themeManager.getRadius("s");
-    const bool hot = isDraggingScrollbar_ || scrollbarHovered_;
-    const float hoverGrow = hot ? 1.0f : 0.0f;
-    const float trackWidth = scrollbarWidth_ + hoverGrow;
-    const float trackX = scrollbarX - hoverGrow * 0.5f;
-
-    // === GLASS/PRO SCROLLBAR STYLE ===
-    // Adapted from NUIScrollbar::drawEnhancedTrack & drawEnhancedThumb
-
-    // 1. Draw Track (Subtle Gradient)
-    const float trackAlphaMul = (hot ? 0.18f : 0.08f) * opacity;
-    NUIColor trackBase = themeManager.getColor("border").withAlpha(std::clamp(trackAlphaMul, 0.0f, 1.0f));
-    NUIColor trackTop = trackBase.lightened(0.03f);
-    NUIColor trackBottom = trackBase.darkened(0.06f);
-
-    NUIRect trackRect(trackX, scrollbarY, trackWidth, scrollbarHeight);
-
-    // Draw gradient track background
-    for (int i = 0; i < 4; ++i) {
-        float factor = static_cast<float>(i) / 3.0f;
-        NUIColor gradientColor = AestraUI::NUIColor::lerp(trackTop, trackBottom, factor);
-        NUIRect gradientRect = trackRect;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
-    }
-
-    // Track Inner Highlight
-    NUIRect highlightRect = trackRect;
-    highlightRect.x += 1.0f;
-    highlightRect.y += 1.0f;
-    highlightRect.width -= 2.0f;
-    highlightRect.height = trackRect.height * 0.3f;
-    const float highlightAlphaMul = (hot ? 0.35f : 0.25f);
-    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
-                             trackTop.withAlpha(trackTop.a * highlightAlphaMul));
-
-
-    // 2. Draw Thumb (Glass w/ Gradient & Markers)
-    float thumbY = scrollbarY + scrollbarThumbY_;
-    NUIRect thumbRect(trackX, thumbY, trackWidth, scrollbarThumbHeight_);
-
-    // Determine thumb base color
-    const bool thumbPressed = isDraggingScrollbar_;
-    const bool thumbHot = thumbPressed || scrollbarHovered_;
-
-    // Use textSecondary as base (neutral grey/white)
-    NUIColor thumbBase = themeManager.getColor("textSecondary");
-    if (thumbPressed) {
-        thumbBase = themeManager.getColor("textPrimary"); // Brighter when dragging
-    } else if (thumbHot) {
-        thumbBase = thumbBase.lightened(0.2f);
-    }
-    // Apply opacity base
-    thumbBase = thumbBase.withAlpha((thumbHot ? 0.55f : 0.35f) * opacity);
-
-    NUIColor thumbTopColor = thumbBase.lightened(0.06f);
-    NUIColor thumbBottomColor = thumbBase.darkened(0.06f);
-
-    // Thumb Thickness Affordance
-    NUIRect visualThumb = thumbRect;
-    const float inset = thumbHot ? 1.0f : 2.0f;
-    visualThumb.x += inset;
-    visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
-    const float thumbRadius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
-
-    // Draw Gradient Thumb
-    for (int i = 0; i < 4; ++i) {
-        float factor = static_cast<float>(i) / 3.0f;
-        NUIColor gradientColor = AestraUI::NUIColor::lerp(thumbTopColor, thumbBottomColor, factor);
-        NUIRect gradientRect = visualThumb;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, thumbRadius, gradientColor);
-    }
-
-    // Draw Markers (Horizontal Lines)
-    if (visualThumb.height > 12.0f) {
-        float markerHeight = 2.0f;
-        float markerSpacing = 3.0f;
-        float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
-        float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
-
-        NUIColor markerColor = AestraUI::NUIColor::white().withAlpha((thumbHot ? 0.4f : 0.2f) * opacity);
-
-        // Top marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY, visualThumb.width - 6.0f, markerHeight),
-                                 1.0f, markerColor);
-        // Bottom marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY + markerHeight + markerSpacing, visualThumb.width - 6.0f, markerHeight),
-                                 1.0f, markerColor);
-    }
-
-    // Thumb Inner Highlight
-    NUIRect thumbHighlight = visualThumb;
-    thumbHighlight.x += 1.0f;
-    thumbHighlight.y += 1.0f;
-    thumbHighlight.width -= 2.0f;
-    thumbHighlight.height = visualThumb.height * 0.4f;
-    renderer.fillRoundedRect(thumbHighlight, std::max(0.0f, thumbRadius - 1.0f),
-                             thumbTopColor.withAlpha(thumbTopColor.a * 0.3f));
-
-    // Thumb Border (Subtle)
-    renderer.strokeRoundedRect(visualThumb, thumbRadius, 1.0f,
-        thumbBase.lightened(0.1f).withAlpha(std::clamp(thumbBase.a * 0.8f, 0.0f, 1.0f)));
+    AestraUI::ScrollbarPaintState state;
+    state.hovered = scrollbarHovered_;
+    state.pressed = isDraggingScrollbar_;
+    state.opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
+    AestraUI::drawOverlayScrollbar(renderer, gutter, thumb, state);
 }
 
 bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
@@ -4027,8 +3923,8 @@ void FileBrowser::updateScrollbarVisibility() {
         scrollbarOpacity_ = 1.0f;
 
         // Calculate thumb height (proportional to visible area)
-        float minThumbSize = themeManager.getComponentDimension("scrollbar", "minThumbSize");
-        scrollbarThumbHeight_ = std::max(minThumbSize, (scrollbarTrackHeight_ / contentHeight) * scrollbarTrackHeight_);
+        scrollbarThumbHeight_ = std::max(AestraUI::kOverlayScrollbarMinThumb,
+                                         (scrollbarTrackHeight_ / contentHeight) * scrollbarTrackHeight_);
 
         // Calculate thumb position based on scroll offset
         if (maxScroll > 0.0f) {

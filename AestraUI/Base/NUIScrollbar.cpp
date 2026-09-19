@@ -12,68 +12,65 @@
 
 namespace AestraUI {
 
+void drawOverlayScrollbar(NUIRenderer& renderer, const NUIRect& gutter, const NUIRect& thumb,
+                          const ScrollbarPaintState& state)
+{
+    const float opacity = std::clamp(state.opacity, 0.0f, 1.0f);
+    if (opacity <= 0.01f || thumb.width <= 0.0f || thumb.height <= 0.0f) {
+        // An empty thumb means the content fits. Nothing is drawn, not even the
+        // track — a track with no thumb is exactly the permanently visible
+        // chrome this look exists to remove.
+        return;
+    }
+
+    auto& theme = NUIThemeManager::getInstance();
+    const bool hot = state.hovered || state.pressed;
+    const bool vertical = gutter.height >= gutter.width;
+
+    // Track: absent at rest, a whisper once the pointer is near. It only says
+    // how far the thumb can travel, which only matters while reaching for it.
+    if (hot && !gutter.isEmpty()) {
+        const float trackRadius = (vertical ? gutter.width : gutter.height) * 0.5f;
+        renderer.fillRoundedRect(gutter, trackRadius,
+                                 theme.getColor("border").withAlpha(0.10f * opacity));
+    }
+
+    // Thumb: a plain pill that grows toward the gutter edges on hover rather
+    // than only changing colour, so the affordance survives at low alpha. No
+    // gradient, no grip markers, no border — all three read as chrome at the
+    // sizes these gutters actually get.
+    const float inset = hot ? 1.0f : 2.5f;
+    NUIRect pill = thumb;
+    if (vertical) {
+        pill.x += inset;
+        pill.width = std::max(1.0f, pill.width - inset * 2.0f);
+    } else {
+        pill.y += inset;
+        pill.height = std::max(1.0f, pill.height - inset * 2.0f);
+    }
+
+    float alpha = 0.30f;
+    if (state.pressed) {
+        alpha = 0.62f;
+    } else if (state.hovered) {
+        alpha = 0.46f;
+    }
+
+    const float radius = std::min(pill.width, pill.height) * 0.5f;
+    renderer.fillRoundedRect(pill, radius, theme.getColor("textPrimary").withAlpha(alpha * opacity));
+}
+
+
 NUIScrollbar::NUIScrollbar(Orientation orientation)
     : NUIComponent()
     , orientation_(orientation)
 {
-    auto& theme = NUIThemeManager::getInstance();
-    const auto& props = theme.getCurrentTheme();
-    trackColor_ = theme.getColor("recessedPanel").withAlpha(0.72f);
-    thumbColor_ = theme.getColor("textMuted").withAlpha(0.42f);
-    thumbHoverColor_ = theme.getColor("textSecondary").withAlpha(0.62f);
-    thumbPressedColor_ = theme.getColor("textPrimary").withAlpha(0.76f);
-    arrowColor_ = theme.getColor("textMuted");
-    arrowHoverColor_ = theme.getColor("textSecondary");
-    arrowPressedColor_ = theme.getColor("textPrimary");
-    borderColor_ = theme.getColor("borderSubtle");
-    borderRadius_ = props.radiusXS;
-    arrowSize_ = props.fontSizeM;
-    // Normal 16px width scrollbar
-    setSize(orientation == Orientation::Vertical ? 16 : 200, 
-            orientation == Orientation::Vertical ? 200 : 16);
+    // No per-instance styling: drawOverlayScrollbar() is the one authority for
+    // how a scrollbar looks, so there is nothing here to configure and nothing
+    // a call site can set that would make this scrollbar differ from the rest.
+    setSize(orientation == Orientation::Vertical ? kOverlayScrollbarThickness : 200.0f,
+            orientation == Orientation::Vertical ? 200.0f : kOverlayScrollbarThickness);
     updateThumbSize();
-    
-    // Create SVG arrow icons based on orientation (Bug #11: Scrollbar Icons)
-    // CRITICAL: Horizontal scrollbars need left/right arrows, vertical need up/down arrows
-    if (orientation == Orientation::Vertical) {
-        // Vertical scrollbar: up arrow (top), down arrow (bottom)
-        const char* upArrowSvg = R"(
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 14l5-5 5 5z"/>
-            </svg>
-        )";
-        upArrowIcon_ = std::make_shared<NUIIcon>(upArrowSvg);
-        upArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
-        upArrowIcon_->setColor(arrowColor_);
-        
-        const char* downArrowSvg = R"(
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 10l5 5 5-5z"/>
-            </svg>
-        )";
-        downArrowIcon_ = std::make_shared<NUIIcon>(downArrowSvg);
-        downArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
-        downArrowIcon_->setColor(arrowColor_);
-    } else {
-        // Horizontal scrollbar: left arrow (left side), right arrow (right side)
-        const char* leftArrowSvg = R"(
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 7l-5 5 5 5z"/>
-            </svg>
-        )";
-        upArrowIcon_ = std::make_shared<NUIIcon>(leftArrowSvg);  // upArrowIcon_ = left for horizontal
-        upArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
-        upArrowIcon_->setColor(arrowColor_);
-        
-        const char* rightArrowSvg = R"(
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10 7l5 5-5 5z"/>
-            </svg>
-        )";
-        downArrowIcon_ = std::make_shared<NUIIcon>(rightArrowSvg);  // downArrowIcon_ = right for horizontal
-        downArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
-        downArrowIcon_->setColor(arrowColor_);
-    }
 }
 
 void NUIScrollbar::onRender(NUIRenderer& renderer)
@@ -82,27 +79,12 @@ void NUIScrollbar::onRender(NUIRenderer& renderer)
 
     drawTrack(renderer);
     drawThumb(renderer);
-    drawArrows(renderer);
 }
 
 void NUIScrollbar::onThemeChanged(const NUIThemeProperties& theme)
 {
-    if (!customColors_) {
-        trackColor_ = theme.backgroundSecondary.withAlpha(0.72f);
-        thumbColor_ = theme.textMuted.withAlpha(0.42f);
-        thumbHoverColor_ = theme.textSecondary.withAlpha(0.62f);
-        thumbPressedColor_ = theme.textPrimary.withAlpha(0.76f);
-        arrowColor_ = theme.textMuted;
-        arrowHoverColor_ = theme.textSecondary;
-        arrowPressedColor_ = theme.textPrimary;
-        borderColor_ = theme.borderSubtle;
-        borderRadius_ = theme.radiusXS;
-        arrowSize_ = theme.fontSizeM;
-        if (upArrowIcon_)
-            upArrowIcon_->setColor(arrowColor_);
-        if (downArrowIcon_)
-            downArrowIcon_->setColor(arrowColor_);
-    }
+    // Colours are read from the theme at paint time, so a theme swap needs no
+    // cached state refreshed here.
     NUIComponent::onThemeChanged(theme);
 }
 
@@ -187,14 +169,6 @@ bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
                 resizeStartSize_ = currentRangeSize_;
                 resizeStartValue_ = currentRangeStart_;
                 // std::cout << "Started resizing thumb" << std::endl;
-                break;
-            case Part::LeftArrow:
-                scrollByLine(-1.0);
-                // std::cout << "Left arrow clicked, scrolled by line" << std::endl;
-                break;
-            case Part::RightArrow:
-                scrollByLine(1.0);
-                // std::cout << "Right arrow clicked, scrolled by line" << std::endl;
                 break;
             case Part::LeftTrack:
                 scrollByPage(-1.0);
@@ -418,18 +392,6 @@ void NUIScrollbar::setOrientation(Orientation orientation)
     setDirty(true);
 }
 
-void NUIScrollbar::setStyle(Style style)
-{
-    style_ = style;
-    if (style_ == Style::Timeline) {
-        arrowSize_ = 0.0f;
-    } else {
-        arrowSize_ = 12.0f;
-    }
-    updateThumbSize();
-    setDirty(true);
-}
-
 void NUIScrollbar::setThumbSize(double size)
 {
     thumbSize_ = std::clamp(size, minimumThumbSize_, rangeLimitSize_);
@@ -441,80 +403,6 @@ void NUIScrollbar::setMinimumThumbSize(double size)
 {
     minimumThumbSize_ = std::max(size, 0.0);
     updateThumbSize();
-    setDirty(true);
-}
-
-void NUIScrollbar::setTrackColor(const NUIColor& color)
-{
-    trackColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setThumbColor(const NUIColor& color)
-{
-    thumbColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setThumbHoverColor(const NUIColor& color)
-{
-    thumbHoverColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setThumbPressedColor(const NUIColor& color)
-{
-    thumbPressedColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setArrowColor(const NUIColor& color)
-{
-    arrowColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setArrowHoverColor(const NUIColor& color)
-{
-    arrowHoverColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setArrowPressedColor(const NUIColor& color)
-{
-    arrowPressedColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setBorderColor(const NUIColor& color)
-{
-    borderColor_ = color;
-    customColors_ = true;
-    setDirty(true);
-}
-
-void NUIScrollbar::setBorderWidth(float width)
-{
-    borderWidth_ = width;
-    setDirty(true);
-}
-
-void NUIScrollbar::setBorderRadius(float radius)
-{
-    borderRadius_ = radius;
-    setDirty(true);
-}
-
-void NUIScrollbar::setArrowSize(float size)
-{
-    arrowSize_ = size;
     setDirty(true);
 }
 
@@ -616,218 +504,100 @@ void NUIScrollbar::setOnScrollEnd(std::function<void()> callback)
     onScrollEndCallback_ = callback;
 }
 
+// Track and thumb are one paint: drawOverlayScrollbar() needs both rects at once
+// to decide whether the track should show at all. drawThumb() therefore paints
+// the pair and drawTrack() is the no-op half — both stay as override points so a
+// subclass can still replace either.
 void NUIScrollbar::drawTrack(NUIRenderer& renderer)
 {
-    NUIRect trackRect = getTrackRect();
-    
-    // Enhanced track with gradient and subtle appearance
-    drawEnhancedTrack(renderer, trackRect);
+    (void)renderer;
 }
 
 void NUIScrollbar::drawThumb(NUIRenderer& renderer)
 {
-    if (currentRangeSize_ >= rangeLimitSize_) return; // No thumb needed if content fits
-    
-    NUIRect thumbRect = getThumbRect();
+    if (currentRangeSize_ >= rangeLimitSize_) return; // Content fits: draw nothing at all.
 
-    // Timeline style is handled by drawEnhancedThumb below (flat, inset,
-    // neutral grab handle — no gradient or grip markers). The old Timeline
-    // branch with edge handles was removed so the design change actually runs.
-    drawEnhancedThumb(renderer, thumbRect);
-}
-
-void NUIScrollbar::drawArrows(NUIRenderer& renderer)
-{
-    if (style_ == Style::Timeline) return;
-    drawLeftArrow(renderer);
-    drawRightArrow(renderer);
-}
-
-void NUIScrollbar::drawLeftArrow(NUIRenderer& renderer)
-{
-    NUIRect arrowRect = getLeftArrowRect();
-    
-    // Choose arrow color based on state
-    NUIColor arrowColor = arrowColor_;
-    if (isPressed_ && pressedPart_ == Part::LeftArrow)
-    {
-        arrowColor = arrowPressedColor_;
-    }
-    else if (hoveredPart_ == Part::LeftArrow)
-    {
-        arrowColor = arrowHoverColor_;
-    }
-    
-    // Draw arrow background
-    const float bgAlpha = std::clamp(arrowColor.a * 0.4f, 0.0f, 1.0f);
-    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(bgAlpha));
-    
-    // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
-    if (upArrowIcon_) {
-        upArrowIcon_->setColor(arrowColor);
-        upArrowIcon_->setBounds(arrowRect);
-        upArrowIcon_->onRender(renderer);
-    }
-}
-
-void NUIScrollbar::drawRightArrow(NUIRenderer& renderer)
-{
-    NUIRect arrowRect = getRightArrowRect();
-    
-    // Choose arrow color based on state
-    NUIColor arrowColor = arrowColor_;
-    if (isPressed_ && pressedPart_ == Part::RightArrow)
-    {
-        arrowColor = arrowPressedColor_;
-    }
-    else if (hoveredPart_ == Part::RightArrow)
-    {
-        arrowColor = arrowHoverColor_;
-    }
-    
-    // Draw arrow background
-    const float bgAlpha = std::clamp(arrowColor.a * 0.4f, 0.0f, 1.0f);
-    renderer.fillRoundedRect(arrowRect, borderRadius_, arrowColor.withAlpha(bgAlpha));
-    
-    // Draw SVG arrow icon instead of geometric shapes (Bug #11: Scrollbar Icons)
-    if (downArrowIcon_) {
-        downArrowIcon_->setColor(arrowColor);
-        downArrowIcon_->setBounds(arrowRect);
-        downArrowIcon_->onRender(renderer);
-    }
+    ScrollbarPaintState state;
+    state.hovered = isHovered_ || hoveredPart_ == Part::Thumb;
+    state.pressed = isDragging_ || (isPressed_ && pressedPart_ == Part::Thumb);
+    drawOverlayScrollbar(renderer, getTrackRect(), getThumbRect(), state);
 }
 
 NUIScrollbar::Part NUIScrollbar::getPartAtPosition(const NUIPoint& position) const
 {
     NUIRect bounds = getBounds();
     NUIRect thumbRect = getThumbRect();
-    
-    if (style_ == Style::Timeline && thumbRect.contains(position))
+
+    // Thumb ends are grab handles for resizing the visible range (the timeline
+    // overview's drag-to-zoom). Only worth offering on a thumb long enough that
+    // the middle is still grabbable for a plain pan.
+    const float thumbExtent = (orientation_ == Orientation::Horizontal) ? thumbRect.width : thumbRect.height;
+    const float edgeSize = std::min(12.0f, thumbExtent * 0.25f);
+    if (edgeSize > 1.0f && thumbRect.contains(position))
     {
-        float edgeSize = 12.0f; // Increased for easier grabbing
         if (orientation_ == Orientation::Horizontal)
         {
             if (position.x < thumbRect.x + edgeSize) return Part::ThumbStartEdge;
-            if (position.x > thumbRect.x + thumbRect.width - edgeSize) return Part::ThumbEndEdge;
+            if (position.x > thumbRect.right() - edgeSize) return Part::ThumbEndEdge;
         }
         else
         {
             if (position.y < thumbRect.y + edgeSize) return Part::ThumbStartEdge;
-            if (position.y > thumbRect.y + thumbRect.height - edgeSize) return Part::ThumbEndEdge;
+            if (position.y > thumbRect.bottom() - edgeSize) return Part::ThumbEndEdge;
         }
         return Part::Thumb;
     }
-    
+
+    if (thumbRect.contains(position))
+        return Part::Thumb;
+
     if (orientation_ == Orientation::Vertical)
     {
-        float y = position.y - bounds.y;
-        float height = bounds.height;
-        
-        if (y < arrowSize_)
-            return Part::LeftArrow;
-        if (y > height - arrowSize_)
-            return Part::RightArrow;
-        
-        if (thumbRect.contains(position))
-            return Part::Thumb;
-        
-        if (y < thumbRect.y)
+        if (position.y < thumbRect.y)
             return Part::LeftTrack;
-        if (y > thumbRect.y + thumbRect.height)
+        if (position.y > thumbRect.bottom())
             return Part::RightTrack;
     }
     else
     {
-        float x = position.x - bounds.x;
-        float width = bounds.width;
-        
-        if (x < arrowSize_)
-            return Part::LeftArrow;
-        if (x > width - arrowSize_)
-            return Part::RightArrow;
-        
-        if (thumbRect.contains(position))
-            return Part::Thumb;
-        
-        if (x < thumbRect.x)
+        if (position.x < thumbRect.x)
             return Part::LeftTrack;
-        if (x > thumbRect.x + thumbRect.width)
+        if (position.x > thumbRect.right())
             return Part::RightTrack;
     }
-    
+
     return Part::Track;
 }
 
 NUIRect NUIScrollbar::getThumbRect() const
 {
     NUIRect bounds = getBounds();
-    double thumbPos = getThumbPosition();
-    double thumbLen = getThumbLength();
-    
-    if (orientation_ == Orientation::Vertical)
-    {
-        float trackHeight = bounds.height - arrowSize_ * 2;
-        float thumbHeight = static_cast<float>(thumbLen * trackHeight);
-        float thumbY = bounds.y + arrowSize_ + static_cast<float>(thumbPos * trackHeight);
-        
-        return NUIRect(bounds.x + 2, thumbY, bounds.width - 4, thumbHeight);
-    }
-    else
-    {
-        float trackWidth = bounds.width - arrowSize_ * 2;
-        float thumbWidth = static_cast<float>(thumbLen * trackWidth);
-        float thumbX = bounds.x + arrowSize_ + static_cast<float>(thumbPos * trackWidth);
-        
-        return NUIRect(thumbX, bounds.y + 2, thumbWidth, bounds.height - 4);
-    }
-}
+    const double thumbPos = getThumbPosition();
+    const double thumbLen = getThumbLength();
 
-NUIRect NUIScrollbar::getLeftArrowRect() const
-{
-    NUIRect bounds = getBounds();
-    
+    // minimumThumbSize_ is a *fraction* of the range, so on a long timeline it
+    // still resolves to a few unusable pixels. The pixel floor is what actually
+    // keeps a thumb grabbable, and it is shared with every other scrollbar.
     if (orientation_ == Orientation::Vertical)
     {
-        return NUIRect(bounds.x, bounds.y, bounds.width, arrowSize_);
+        const float track = bounds.height;
+        const float h = std::min(track, std::max(kOverlayScrollbarMinThumb, static_cast<float>(thumbLen * track)));
+        const float y = bounds.y + static_cast<float>(thumbPos * track) * (track - h) /
+                                       std::max(1.0f, track - static_cast<float>(thumbLen * track));
+        return NUIRect(bounds.x, std::clamp(y, bounds.y, bounds.bottom() - h), bounds.width, h);
     }
-    else
-    {
-        return NUIRect(bounds.x, bounds.y, arrowSize_, bounds.height);
-    }
-}
 
-NUIRect NUIScrollbar::getRightArrowRect() const
-{
-    NUIRect bounds = getBounds();
-    
-    if (orientation_ == Orientation::Vertical)
-    {
-        return NUIRect(bounds.x, bounds.y + bounds.height - arrowSize_, bounds.width, arrowSize_);
-    }
-    else
-    {
-        return NUIRect(bounds.x + bounds.width - arrowSize_, bounds.y, arrowSize_, bounds.height);
-    }
+    const float track = bounds.width;
+    const float w = std::min(track, std::max(kOverlayScrollbarMinThumb, static_cast<float>(thumbLen * track)));
+    const float x = bounds.x + static_cast<float>(thumbPos * track) * (track - w) /
+                                   std::max(1.0f, track - static_cast<float>(thumbLen * track));
+    return NUIRect(std::clamp(x, bounds.x, bounds.right() - w), bounds.y, w, bounds.height);
 }
 
 NUIRect NUIScrollbar::getTrackRect() const
 {
-    NUIRect bounds = getBounds();
-    const bool arrowless = arrowSize_ <= 0.5f;
-    const float endCapInset = arrowless ? 2.0f : 0.0f;
-    
-    if (orientation_ == Orientation::Vertical)
-    {
-        const float y = bounds.y + arrowSize_ + endCapInset;
-        const float h = std::max(0.0f, bounds.height - (arrowSize_ * 2.0f) - (endCapInset * 2.0f));
-        return NUIRect(bounds.x, y, bounds.width, h);
-    }
-    else
-    {
-        const float x = bounds.x + arrowSize_ + endCapInset;
-        const float w = std::max(0.0f, bounds.width - (arrowSize_ * 2.0f) - (endCapInset * 2.0f));
-        return NUIRect(x, bounds.y, w, bounds.height);
-    }
+    // The whole component is the gutter now that there are no arrow buttons.
+    return getBounds();
 }
 
 double NUIScrollbar::positionToValue(const NUIPoint& position) const
@@ -936,209 +706,6 @@ void NUIScrollbar::triggerScrollEnd()
     {
         onScrollEndCallback_();
     }
-}
-
-void NUIScrollbar::drawArrowIcon(NUIRenderer& renderer, const NUIRect& rect, float rotation, const NUIColor& color)
-{
-    // Draw a simple arrow using lines
-    NUIPoint center = rect.center();
-    float size = std::min(rect.width, rect.height) * 0.3f;
-    
-    // Arrow points (pointing right by default)
-    NUIPoint p1(center.x - size * 0.5f, center.y - size * 0.3f);
-    NUIPoint p2(center.x + size * 0.5f, center.y);
-    NUIPoint p3(center.x - size * 0.5f, center.y + size * 0.3f);
-    
-    // Apply rotation
-    if (rotation != 0.0f)
-    {
-        float radians = rotation * M_PI / 180.0f;
-        float cos_r = std::cos(radians);
-        float sin_r = std::sin(radians);
-        
-        // Rotate each point around the center
-        auto rotatePoint = [&](const NUIPoint& p) -> NUIPoint {
-            float dx = p.x - center.x;
-            float dy = p.y - center.y;
-            return NUIPoint(
-                center.x + dx * cos_r - dy * sin_r,
-                center.y + dx * sin_r + dy * cos_r
-            );
-        };
-        
-        p1 = rotatePoint(p1);
-        p2 = rotatePoint(p2);
-        p3 = rotatePoint(p3);
-    }
-    
-    renderer.drawLine(p1, p2, 2.0f, color);
-    renderer.drawLine(p2, p3, 2.0f, color);
-}
-
-void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect)
-{
-    if (trackRect.isEmpty()) return;
-
-    // Timeline style: neutral, minimal track to avoid visual competition with overview.
-    if (style_ == Style::Timeline) {
-        auto& theme = NUIThemeManager::getInstance();
-        // Use an elevated neutral track (small lightening of panel bg)
-        NUIColor trackBg = theme.getColor("backgroundSecondary").lightened(0.04f);
-        renderer.fillRect(trackRect, trackBg);
-        return;
-    }
-
-    // Track: make end caps read clearly as intentional rounded pills for regular styles.
-    const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.16f : 0.06f;
-    const NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
-    const NUIColor trackTop = trackBase.lightened(0.03f);
-    const NUIColor trackBottom = trackBase.darkened(0.06f);
-
-    NUIRect visualTrack = trackRect;
-    if (orientation_ == Orientation::Vertical) {
-        visualTrack.x += 1.0f;
-        visualTrack.width = std::max(0.0f, visualTrack.width - 2.0f);
-    } else {
-        visualTrack.y += 1.0f;
-        visualTrack.height = std::max(0.0f, visualTrack.height - 2.0f);
-    }
-    if (visualTrack.isEmpty()) return;
-
-    const float maxRadius = std::min(visualTrack.width, visualTrack.height) * 0.5f;
-    const float radius = std::clamp(borderRadius_, 0.0f, maxRadius);
-
-    renderer.fillRoundedRect(visualTrack, radius, trackBottom);
-
-    NUIRect highlightRect = visualTrack;
-    highlightRect.y += 1.0f;
-    highlightRect.height = std::max(0.0f, visualTrack.height * 0.45f - 1.0f);
-    const float highlightAlphaMul = (isHovered_ || isDragging_) ? 0.35f : 0.25f;
-    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
-                             trackTop.withAlpha(trackTop.a * highlightAlphaMul));
-}
-
-void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumbRect)
-{
-    if (thumbRect.isEmpty()) return;
-
-    // Timeline style: minimal, flat grab handle (no gradient nor decorative markers)
-    if (style_ == Style::Timeline) {
-        auto& theme = NUIThemeManager::getInstance();
-        NUIRect visualThumb = thumbRect;
-        // Slight inset for nicer touch target
-        const float inset = 2.0f;
-        if (orientation_ == Orientation::Vertical) {
-            visualThumb.x += inset;
-            visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
-        } else {
-            visualThumb.y += inset;
-            visualThumb.height = std::max(0.0f, visualThumb.height - inset * 2.0f);
-        }
-        const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
-
-        // Track-aligned neutral thumb color (no gradient)
-        NUIColor handleCol = theme.getColor("textPrimary").withAlpha(0.72f);
-        // Lighter on hover/pressed
-        if (isPressed_ || isDragging_) handleCol = theme.getColor("accentPrimary").withAlpha(0.72f);
-        else if (hoveredPart_ == Part::Thumb) handleCol = handleCol.withAlpha(0.9f);
-
-        renderer.fillRoundedRect(visualThumb, radius, handleCol);
-        // Subtle border to separate from track
-        renderer.strokeRoundedRect(visualThumb, radius, 1.0f, theme.getColor("border").withAlpha(0.12f));
-        return;
-    }
-
-    // Thumb: subtle gradient based on configured colors for regular styles
-    const bool thumbPressed = (isPressed_ && pressedPart_ == Part::Thumb) || (isDragging_ && pressedPart_ == Part::Thumb);
-    const bool thumbHot = thumbPressed || (hoveredPart_ == Part::Thumb);
-
-    NUIColor thumbBase = thumbColor_;
-    if (thumbPressed) {
-        thumbBase = thumbPressedColor_;
-    } else if (thumbHot) {
-        thumbBase = thumbHoverColor_;
-    }
-    NUIColor thumbTop = thumbBase.lightened(0.06f);
-    NUIColor thumbBottom = thumbBase.darkened(0.06f);
-
-    // Thickness affordance: slightly narrower by default, slightly wider on hover.
-    NUIRect visualThumb = thumbRect;
-    const float inset = thumbHot ? 1.5f : 2.5f;
-    if (orientation_ == Orientation::Vertical) {
-        visualThumb.x += inset;
-        visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
-    } else {
-        visualThumb.y += inset;
-        visualThumb.height = std::max(0.0f, visualThumb.height - inset * 2.0f);
-    }
-
-    const float radius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
-    
-    // Faded white gradient thumb (16px wide)
-    for (int i = 0; i < 3; ++i)
-    {
-        float factor = static_cast<float>(i) / 2.0f;
-        NUIColor gradientColor = NUIColor::lerp(thumbTop, thumbBottom, factor);
-        NUIRect gradientRect = visualThumb;
-        gradientRect.y += i * 0.4f;
-        gradientRect.height -= i * 0.4f;
-        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
-    }
-    
-    // White markers within the thumb (orientation-aware)
-    if (orientation_ == Orientation::Vertical)
-    {
-        // Vertical scrollbar: horizontal white lines
-        float markerHeight = 2.0f; // Thickness of horizontal lines
-        float markerSpacing = 3.0f; // Gap between markers
-        float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
-        
-        // Center the markers vertically in the thumb
-        float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
-        
-        // Top horizontal white marker
-        NUIRect topMarker(visualThumb.x + 2.0f, markerY, visualThumb.width - 4.0f, markerHeight);
-        const float markerAlpha = thumbHot ? 0.24f : 0.12f;
-        renderer.fillRoundedRect(topMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
-        
-        // Bottom horizontal white marker
-        NUIRect bottomMarker(visualThumb.x + 2.0f, markerY + markerHeight + markerSpacing, 
-                             visualThumb.width - 4.0f, markerHeight);
-        renderer.fillRoundedRect(bottomMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
-    }
-    else
-    {
-        // Horizontal scrollbar: vertical white lines
-        float markerWidth = 2.0f; // Thickness of vertical lines
-        float markerSpacing = 3.0f; // Gap between markers
-        float totalMarkerWidth = (markerWidth * 2) + markerSpacing;
-        
-        // Center the markers horizontally in the thumb
-        float markerX = visualThumb.x + (visualThumb.width - totalMarkerWidth) * 0.5f;
-        
-        // Left vertical white marker
-        NUIRect leftMarker(markerX, visualThumb.y + 2.0f, markerWidth, visualThumb.height - 4.0f);
-        const float markerAlpha = thumbHot ? 0.24f : 0.12f;
-        renderer.fillRoundedRect(leftMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
-        
-        // Right vertical white marker
-        NUIRect rightMarker(markerX + markerWidth + markerSpacing, visualThumb.y + 2.0f, 
-                            markerWidth, visualThumb.height - 4.0f);
-        renderer.fillRoundedRect(rightMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
-    }
-    
-    // Subtle inner highlight
-    NUIRect highlightRect = visualThumb;
-    highlightRect.x += 1.0f;
-    highlightRect.y += 1.0f;
-    highlightRect.width -= 2.0f;
-    highlightRect.height = visualThumb.height * 0.4f;
-    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
-                             thumbTop.withAlpha(thumbTop.a * 0.25f));
-    
-    // Very subtle border
-    renderer.strokeRoundedRect(visualThumb, radius, 1.0f,
-        thumbBase.lightened(0.05f).withAlpha(std::clamp(thumbBase.a * (thumbHot ? 0.55f : 0.45f), 0.0f, 1.0f)));
 }
 
 } // namespace AestraUI
