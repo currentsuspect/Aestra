@@ -889,6 +889,10 @@ void FileBrowser::drawListEmptyState(NUIRenderer& renderer, const NUIRect& listC
     renderer.clearClipRect();
 }
 
+bool FileBrowser::searchQueryIsEmpty() const {
+    return !searchInput_ || searchInput_->getText().empty();
+}
+
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = bounds.width;
@@ -902,8 +906,9 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
 
     BrowserLayout layout;
     layout.searchBar = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH);
+    const float searchTrailing = searchQueryIsEmpty() ? 34.0f : 60.0f;
     layout.search = NUIRect(bounds.x + 26.0f, bounds.y + 4.0f,
-                            std::max(0.0f, effectiveW - 60.0f), searchH - 8.0f);
+                            std::max(0.0f, effectiveW - searchTrailing), searchH - 8.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
@@ -917,9 +922,17 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
     layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
                                std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
-    layout.searchActionButton = NUIRect(layout.searchBar.right() - 30.0f,
-                                        layout.searchBar.y + (layout.searchBar.height - 26.0f) * 0.5f,
-                                        26.0f, 26.0f);
+    // Clear-query button only. The filter control that used to share this slot
+    // was a duplicate of the funnel in the list header below (spec 2 §3), and
+    // the two used different icons for the same menu.
+    //
+    // An empty query leaves no button and no reserved gap: layout.search widens
+    // to the full row instead, so nothing unexplained is left behind.
+    layout.searchActionButton = searchQueryIsEmpty()
+                                    ? NUIRect()
+                                    : NUIRect(layout.searchBar.right() - 30.0f,
+                                              layout.searchBar.y + (layout.searchBar.height - 26.0f) * 0.5f,
+                                              26.0f, 26.0f);
     layout.navWidth = navW;
     return layout;
 }
@@ -1462,7 +1475,7 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
         case ChromeAction::Up: chromeHover = layout.upButton; break;
         case ChromeAction::Filter: chromeHover = layout.filterButton; break;
         case ChromeAction::Sort: chromeHover = layout.sortButton; break;
-        case ChromeAction::SearchAction: chromeHover = layout.searchActionButton; break;
+        case ChromeAction::ClearSearch: chromeHover = layout.searchActionButton; break;
         case ChromeAction::None: break;
     }
     if (!chromeHover.isEmpty()) {
@@ -1564,23 +1577,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
         const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
         const float cy = search.y + search.height * 0.5f;
 
-        const float fx = layout.searchActionButton.x + layout.searchActionButton.width * 0.5f;
-        if (!searchInput_->getText().empty()) {
+        if (!layout.searchActionButton.isEmpty()) {
+            const float fx = layout.searchActionButton.x + layout.searchActionButton.width * 0.5f;
             renderer.drawLine({fx - 4.0f, cy - 4.0f}, {fx + 4.0f, cy + 4.0f}, 1.3f, iconColor);
             renderer.drawLine({fx + 4.0f, cy - 4.0f}, {fx - 4.0f, cy + 4.0f}, 1.3f, iconColor);
-        } else {
-            const float lineStartY = cy - 5.0f;
-            for (int i = 0; i < 3; ++i) {
-                const float y = lineStartY + static_cast<float>(i) * 5.0f;
-                renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
-                const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
-                renderer.fillCircle({knobX, y}, 1.7f, iconColor);
-            }
-            if (isFilterActive()) {
-                renderer.fillCircle({layout.searchActionButton.right() - 4.0f,
-                                     layout.searchActionButton.y + 4.0f}, 2.0f,
-                                    themeManager.getColor("accentPrimary"));
-            }
         }
     }
 
@@ -1845,7 +1845,9 @@ bool FileBrowser::handleChromeMouse(const NUIMouseEvent& event, const BrowserLay
         else if (browserLayout.upButton.contains(event.position)) newChromeAction = ChromeAction::Up;
         else if (browserLayout.filterButton.contains(event.position)) newChromeAction = ChromeAction::Filter;
         else if (browserLayout.sortButton.contains(event.position)) newChromeAction = ChromeAction::Sort;
-        else if (browserLayout.searchActionButton.contains(event.position)) newChromeAction = ChromeAction::SearchAction;
+        else if (!browserLayout.searchActionButton.isEmpty() &&
+                 browserLayout.searchActionButton.contains(event.position))
+            newChromeAction = ChromeAction::ClearSearch;
     }
     if (newChromeAction != hoveredChromeAction_) {
         hoveredChromeAction_ = newChromeAction;
@@ -1859,9 +1861,8 @@ bool FileBrowser::handleChromeMouse(const NUIMouseEvent& event, const BrowserLay
             case ChromeAction::Up: navigateUp(); break;
             case ChromeAction::Filter: showQuickFilterMenu(); break;
             case ChromeAction::Sort: showSortMenu(); break;
-            case ChromeAction::SearchAction:
-                if (searchInput_ && !searchInput_->getText().empty()) searchInput_->clear();
-                else showQuickFilterMenu();
+            case ChromeAction::ClearSearch:
+                if (searchInput_) searchInput_->clear();
                 break;
             case ChromeAction::None: break;
         }
@@ -2323,9 +2324,9 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
         // It also double-entered the first character: the char was forwarded manually AND
         // then delivered again by the normal charCallback to the now-focused input
         // ("hello" arrived as "hhello"). Search is now focused explicitly only, via
-        // Ctrl+F (above) or by clicking the field. Note the search action button is
-        // NOT a focus path — ChromeAction::SearchAction clears the query or opens the
-        // quick-filter menu, and that stays its job.
+        // Ctrl+F (above) or by clicking the field. Note the clear button is NOT a
+        // focus path — ChromeAction::ClearSearch empties the query, and that is all
+        // it does.
     }
 
     // Handle navigation/activation on key-down only.

@@ -244,6 +244,10 @@ public:
 
     BrowserLayout computeBrowserLayout() const;
 
+    /// True when the search field is empty (or absent) — the search row's
+    /// trailing clear button exists only when there is a query to clear.
+    bool searchQueryIsEmpty() const;
+
     /// Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes
     /// never force a cache rebuild (see renderFileList / nav drawRow).
     void renderHoverOverlays(NUIRenderer& renderer);
@@ -449,7 +453,7 @@ public:
             Up,
             Filter,
             Sort,
-            SearchAction
+            ClearSearch
         };
         ChromeAction hoveredChromeAction_ = ChromeAction::None;
         std::vector<BrowserNavHit> navHits_;
