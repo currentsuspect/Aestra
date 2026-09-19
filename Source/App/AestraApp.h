@@ -192,6 +192,12 @@ private:
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
     std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;
+    /// V8-C14 step 5c: set only when the one-time ui_state.json rail-width
+    /// import could not be saved to the surface store. The shutdown UIState is
+    /// default-constructed, so without carrying the value through, that save
+    /// would overwrite the legacy width with the default and the next launch
+    /// would see NothingToImport — the width would be unrecoverable.
+    std::optional<float> m_unimportedLegacyBrowserWidth;
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;
 

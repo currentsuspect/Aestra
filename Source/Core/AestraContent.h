@@ -213,10 +213,13 @@ public:
      * an absent entry leaves the pref for the computed default below. Runs
      * every layout pass but only acts while a pref is still unset. */
     void seedDockedRailWidths();
-    /** @brief Persist rail widths at resize-drag end.
+    /** @brief Persist the dragged rail's width at resize-drag end.
      *
      * Single write per gesture (the store saves write-through): per-move
-     * drag updates stay in the memory prefs. Unset prefs are skipped. */
+     * drag updates stay in the memory prefs. Reads m_browserResizeTarget to
+     * write only the rail the user actually dragged — layout has by then
+     * backfilled both prefs with computed defaults, which must stay
+     * memory-only. Unset prefs are skipped. */
     void persistDockedRailWidths();
     /** @brief Check whether the left browser area is visible. */
     bool isBrowserVisible() const;

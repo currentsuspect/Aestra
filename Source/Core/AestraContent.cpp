@@ -2169,11 +2169,12 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_browserResizing) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_browserResizing = false;
-            m_browserResizeTarget = BrowserResizeTarget::None;
             // V8-C14 step 5c: one store write per resize gesture. Per-move
             // updates stay in the memory prefs; the write-through store would
-            // otherwise hit the disk on every mouse move.
+            // otherwise hit the disk on every mouse move. The target is cleared
+            // after the write, not before — it names the rail to persist.
             persistDockedRailWidths();
+            m_browserResizeTarget = BrowserResizeTarget::None;
             return true;
         }
 
@@ -2424,16 +2425,20 @@ void AestraContent::persistDockedRailWidths() {
         return;
     }
     // Width-only records: rail position is layout-derived every pass, so the
-    // anchor and height are never read back. Unset prefs are skipped rather
-    // than persisted as invalid widths.
+    // anchor and height are never read back.
+    //
+    // Only the dragged rail is written. Layout backfills *both* prefs with
+    // their computed defaults on the first pass, so by drag-end every pref is
+    // positive — writing all of them would freeze the untouched rail's
+    // responsive default into the store as though the user had chosen it, and
+    // that rail would never follow the computed default again.
     const int64_t now = panelNowSeconds();
-    if (m_fileBrowserWidthPref > 0.0f) {
+    if (m_browserResizeTarget == BrowserResizeTarget::FileRail && m_fileBrowserWidthPref > 0.0f) {
         UISurfaceGeometry fileRail;
         fileRail.width = m_fileBrowserWidthPref;
         fileRail.lastUsedAt = now;
         store->setSurfaceGeometry(UISurfaceKeys::kPanelBrowser, fileRail);
-    }
-    if (m_patternBrowserWidthPref > 0.0f) {
+    } else if (m_browserResizeTarget == BrowserResizeTarget::PatternRail && m_patternBrowserWidthPref > 0.0f) {
         UISurfaceGeometry patternRail;
         patternRail.width = m_patternBrowserWidthPref;
         patternRail.lastUsedAt = now;

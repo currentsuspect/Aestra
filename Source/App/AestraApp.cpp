@@ -395,8 +395,11 @@ bool AestraApp::initialize(const std::string& projectPath) {
         Log::info("[UISurfaceStore] Imported the browser rail width from ui_state.json");
         break;
     case Aestra::LegacyImportResult::SaveFailed:
-        Log::warning("[UISurfaceStore] Could not save the imported browser rail width to " +
-                     m_uiSurfaceStore->path());
+        // Keep the legacy value in ui_state.json so the next launch can retry:
+        // the shutdown save below starts from a default-constructed UIState.
+        m_unimportedLegacyBrowserWidth = uiState.browserWidth;
+        Log::warning("[UISurfaceStore] Could not save the imported browser rail width to " + m_uiSurfaceStore->path() +
+                     "; keeping it in ui_state.json to retry next launch");
         break;
     case Aestra::LegacyImportResult::AlreadyInStore:
     case Aestra::LegacyImportResult::NothingToImport:
@@ -1754,10 +1757,16 @@ void AestraApp::shutdown() {
                   std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
     }
 
-    // Capture panel states from AestraContent (Issue #120)
     // V8-C14 step 5c: browserWidth is no longer written back — the surface
     // store owns the rail width (written at resize-drag end) and ui_state.json
-    // keeps only its last value as a harmless import orphan.
+    // keeps only its last value as a harmless import orphan. The one exception
+    // is a legacy width whose import failed to save: preserve it so the next
+    // launch can retry rather than reading back the default.
+    if (m_unimportedLegacyBrowserWidth) {
+        uiState.browserWidth = *m_unimportedLegacyBrowserWidth;
+    }
+
+    // Capture panel states from AestraContent (Issue #120)
     if (m_content) {
         uiState.browserVisible = m_content->isBrowserVisible();
         uiState.mixerVisible = m_content->isMixerVisible();
