@@ -333,4 +333,24 @@ bool UISurfaceStoreFile::setSurfaceGeometry(const std::string& key, const UISurf
     return m_store.save(m_path);
 }
 
+std::optional<UIDialogExportOptions> UISurfaceStoreFile::dialogExportOptions() const {
+    return m_store.dialogExport;
+}
+
+bool UISurfaceStoreFile::setDialogExportOptions(const UIDialogExportOptions& value) {
+    if (m_store.dialogExport.has_value()) {
+        const UIDialogExportOptions& held = *m_store.dialogExport;
+        if (held.sampleRateIndex == value.sampleRateIndex && held.bitDepthIndex == value.bitDepthIndex &&
+            held.scopeIndex == value.scopeIndex && held.tailInput == value.tailInput &&
+            held.lastOutputDirectory == value.lastOutputDirectory) {
+            return true;
+        }
+    }
+    m_store.dialogExport = value;
+    if (m_path.empty()) {
+        return true; // In-memory only: no write was attempted, so none failed.
+    }
+    return m_store.save(m_path);
+}
+
 } // namespace Aestra
