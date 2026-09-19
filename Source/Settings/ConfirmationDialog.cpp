@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ConfirmationDialog.h"
+#include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -96,7 +97,8 @@ void ConfirmationDialog::calculateLayout() {
 
     // Dialog dimensions
     const float dialogWidth = 400.0f;
-    const float dialogHeight = 172.0f;
+    // The extra height over the old 172 is the shared chrome's title bar.
+    const float dialogHeight = 172.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
     const float buttonHeight = theme.layout.dialogActionHeight;
     const float buttonSpacing = theme.spacingS;
     const float margin = theme.spacingL;
@@ -148,21 +150,24 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     // Soft drop shadow (offsetX, offsetY, blur, color).
     renderer.drawShadow(m_dialogRect, 0.0f, theme.spacingS, theme.spacingL, theme.shadow);
 
-    // Dialog surface.
-    renderer.fillRoundedRect(m_dialogRect, theme.radiusL, theme.surfaceTertiary);
-    renderer.strokeRoundedRect(m_dialogRect, theme.radiusL, theme.layout.dividerWidth, theme.borderStrong);
+    // Surface and title bar come from the shared dialog chrome (spec 2 §5), so
+    // this reads as an Aestra panel rather than as a generic alert box. The
+    // title moves into the title bar; the "unsaved" dot stays with the message,
+    // which is where the state it marks actually is.
+    AestraUI::DialogChrome chrome;
+    chrome.panel = m_dialogRect;
+    chrome.title = m_title;
+    chrome.showClose = false; // Cancel is the dismissal; two would be ambiguous.
+    const AestraUI::NUIRect content = AestraUI::drawDialogChrome(renderer, chrome);
 
-    // Header: an accent "unsaved" dot, then the title on its baseline.
-    const float padX = m_dialogRect.x + theme.spacingL;
-    const float titleBaselineY = m_dialogRect.y + 40.0f;
+    const float padX = content.x + theme.spacingL;
+    const float messageY = std::round(content.y + theme.spacingL + 4.0f);
     const float dotR = 4.0f;
-    renderer.fillCircle({padX + dotR, titleBaselineY - 5.0f}, dotR, theme.warning);
-    renderer.drawText(m_title, AestraUI::NUIPoint(padX + dotR * 2.0f + 12.0f,
-                                                   std::round(titleBaselineY - 13.0f)),
-                      theme.fontSizeXL, theme.textPrimary);
-
-    // Message.
-    renderer.drawText(m_message, AestraUI::NUIPoint(padX, std::round(m_dialogRect.y + 66.0f)),
+    if (!m_isConfirmMode) {
+        renderer.fillCircle({padX + dotR, messageY + 5.0f}, dotR, theme.warning);
+    }
+    renderer.drawText(m_message,
+                      AestraUI::NUIPoint(m_isConfirmMode ? padX : padX + dotR * 2.0f + 10.0f, messageY),
                       theme.fontSizeM, theme.textSecondary);
 
     // Divider above the button row.

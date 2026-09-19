@@ -567,17 +567,35 @@ void NUIComponent::onThemeChanged(const NUIThemeProperties& theme) {
 // Protected Methods
 // ============================================================================
 
+// Both loops below call back into arbitrary component code, which is free to add
+// or remove children — a context menu closing itself during its own update is the
+// ordinary case. A range-for over children_ takes a reference into the vector's
+// buffer, so that reallocation or erase left the loop walking freed memory
+// (observed: SIGSEGV in updateChildren under AestraContent, 2026-09-19).
+//
+// g_eventDispatchDepth already defers hierarchy edits made during *event*
+// dispatch; update and render are not covered by it and cannot be, because a
+// component is entitled to restructure itself on a frame boundary.
+//
+// Index-based iteration with a per-step bounds re-check cannot walk off the end,
+// and the owning copy keeps the child alive across a call that removes it. A
+// concurrent edit can still cause a child to be visited twice or skipped for one
+// frame; that is a frame of staleness rather than a crash, and is the right trade
+// for a paint/update loop.
+
 void NUIComponent::renderChildren(NUIRenderer& renderer) {
-    for (auto& child : children_) {
-        if (child->isVisible()) {
+    for (size_t i = 0; i < children_.size(); ++i) {
+        auto child = children_[i];
+        if (child && child->isVisible()) {
             child->onRender(renderer);
         }
     }
 }
 
 void NUIComponent::updateChildren(double deltaTime) {
-    for (auto& child : children_) {
-        if (child->isVisible()) {
+    for (size_t i = 0; i < children_.size(); ++i) {
+        auto child = children_[i];
+        if (child && child->isVisible()) {
             child->onUpdate(deltaTime);
         }
     }

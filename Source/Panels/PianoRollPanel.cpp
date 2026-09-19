@@ -33,6 +33,13 @@ double quantizePatternLengthBeats(double contentEndBeat, int beatsPerBar) {
 }
 } // namespace
 
+namespace {
+// Width reserved for the "PIANO ROLL" title to the left of the tool strip.
+// Layout runs without a renderer, so this is stated rather than measured; it is
+// the 12px title's width plus its left inset and a gap, rounded up.
+constexpr float kTitleZoneWidth = 96.0f;
+} // namespace
+
 PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("PIANO ROLL")
     , m_trackManager(trackManager)
@@ -200,6 +207,19 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     }
 
     setContent(m_pianoRoll);
+
+    // The tool strip moves into the title bar (owner direction 2026-09-19). The
+    // panel used to stack a mostly-empty 28px title bar on top of a 42px
+    // toolbar; sharing one row hands that band back to the editing canvas, which
+    // is the thing the piano roll is actually for.
+    //
+    // The title stays the bare "PIANO ROLL": the pattern name it used to append
+    // is already shown by the Pattern dropdown now sitting a few pixels to its
+    // right, and repeating it would cost width the strip needs.
+    if (auto toolbar = m_pianoRoll->detachToolbarForHost()) {
+        toolbar->setHostedInTitleBar(true);
+        setTitleBarAccessory(toolbar, 26.0f, kTitleZoneWidth);
+    }
 }
 
 void PianoRollPanel::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
@@ -323,7 +343,9 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
         m_pianoRoll->setPatternName(sourceLabel);
         rebuildPatternSwitcher();
-        setTitle("PIANO ROLL - " + pattern->name);
+        // Title stays bare: the Pattern dropdown in the title bar shows which
+        // pattern this is, and duplicating it would crowd the strip.
+        (void)pattern;
 
         // Capture note state for undo/redo diff detection
         m_notesBeforeEdit = midiPayload.notes;

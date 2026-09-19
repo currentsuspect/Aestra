@@ -22,6 +22,8 @@ AestraPanelWindow::~AestraPanelWindow()
     }
 }
 
+
+
 void AestraPanelWindow::beginKnobCapture(const NUIPoint& knobCenter, const NUIPoint& grabPos)
 {
     if (!m_platformBridge) return;

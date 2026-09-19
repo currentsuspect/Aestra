@@ -188,6 +188,24 @@ protected:
 
     // Layout
     virtual void updateLayout();
+    /**
+     * @brief Resolve the menu's width from its own content, then re-fit it.
+     *
+     * Needs a renderer because text width is a font-metric question, so it runs
+     * at the top of the first onRender() after the items change rather than in
+     * showAt(). That is the same frame the menu first appears in, and it happens
+     * before any of this menu's own drawing, so nothing mis-sized is ever shown.
+     */
+    void measureAndFit(NUIRenderer& renderer);
+
+    /** @brief Clamp @p size into the parent viewport and position it there. */
+    void fitInsideParent(const NUISize& size);
+
+    /** @brief Width of everything on a row that is not the label or the shortcut. */
+    float decorationWidthFor(const std::shared_ptr<NUIContextMenuItem>& item) const;
+
+    /** @brief Renderer-free width guess, used only until measureAndFit() runs. */
+    float estimateItemWidth(const std::shared_ptr<NUIContextMenuItem>& item) const;
     virtual NUIRect getItemRect(int index) const;
     virtual float calculateMenuHeight() const;
 
@@ -246,6 +264,10 @@ private:
     float menuWidth_ = 0.0f;
     float menuHeight_ = 0.0f;
     float scrollOffset_ = 0.0f;
+    /** @brief Where the caller asked for the menu, before any edge clamping. */
+    NUIPoint requestedPosition_;
+    /** @brief Set whenever the items change; cleared once measureAndFit() has run. */
+    bool needsMeasure_ = true;
 
     // Callbacks
     std::function<void()> onShowCallback_;

@@ -37,6 +37,7 @@ enum class FileType {
     WavFile,
     Mp3File,
     FlacFile,
+    OggFile,
     MidiFile,
     Unknown
 };
@@ -244,6 +245,10 @@ public:
 
     BrowserLayout computeBrowserLayout() const;
 
+    /// True when the search field is empty (or absent) — the search row's
+    /// trailing clear button exists only when there is a query to clear.
+    bool searchQueryIsEmpty() const;
+
     /// Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes
     /// never force a cache rebuild (see renderFileList / nav drawRow).
     void renderHoverOverlays(NUIRenderer& renderer);
@@ -318,7 +323,6 @@ public:
 		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
 		    void sortFiles();
 		    bool compareFileItems(const FileItem& a, const FileItem& b) const;
-		    FileType getFileTypeFromExtension(const std::string& extension) const;
 		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
 		    bool isFilterActive() const;
             bool matchesQuickFilter(const FileItem& item) const;
@@ -449,7 +453,7 @@ public:
             Up,
             Filter,
             Sort,
-            SearchAction
+            ClearSearch
         };
         ChromeAction hoveredChromeAction_ = ChromeAction::None;
         std::vector<BrowserNavHit> navHits_;
@@ -519,6 +523,7 @@ public:
     std::shared_ptr<NUIIcon> wavFileIcon_;
     std::shared_ptr<NUIIcon> mp3FileIcon_;
     std::shared_ptr<NUIIcon> flacFileIcon_;
+    std::shared_ptr<NUIIcon> oggFileIcon_;
     std::shared_ptr<NUIIcon> midiFileIcon_;
     std::shared_ptr<NUIIcon> unknownFileIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;

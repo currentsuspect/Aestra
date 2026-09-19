@@ -483,25 +483,11 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
                 }
             }
 
-            // Lane selection follows the FULL resulting clip selection (#853
-            // round 1): retained clips from a modifier marquee keep their
-            // owning lanes highlighted too.
-            if (m_trackManager && !m_clipSelection.empty()) {
-                auto& playlist = m_trackManager->getPlaylistModel();
-                if (intent == TrackSelectionIntent::Replace) {
-                    m_trackSelection.clear();
-                }
-                m_clipSelection.forEachClip([&](const ClipInstanceID& clipId) {
-                    const PlaylistLaneID laneId = playlist.findClipLane(clipId);
-                    if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
-                        m_trackSelection.apply(laneId,
-                                               intent == TrackSelectionIntent::Replace
-                                                   ? TrackSelectionIntent::Add
-                                                   : intent);
-                    }
-                });
-                syncTrackSelectionView();
-            }
+            // Lane selection deliberately does NOT follow the clip selection
+            // any more (owner direction 2026-09-19, reverses #853 round 1): a
+            // marquee over the grid selects clips, and the track headers beside
+            // it are left alone. The grid is the grid; the header rail is the
+            // header rail.
 
             Log::info("Selection box completed: " +
                       std::string(m_clipSelection.empty()

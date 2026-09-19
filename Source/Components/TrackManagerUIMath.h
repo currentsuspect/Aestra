@@ -27,7 +27,11 @@ namespace Audio {
 constexpr float kTimelineRulerHeight = 28.0f;
 constexpr float kTimelineMinimapHeight = 24.0f;
 constexpr float kTimelineTimeBandHeight = kTimelineMinimapHeight + kTimelineRulerHeight;
-constexpr float kTimelineScrollbarWidth = 15.0f;
+// Must equal AestraUI::kOverlayScrollbarThickness — the DAW-wide gutter width
+// (spec 2 §2). It is restated rather than included because this header is kept
+// free of UI-framework dependencies so tests can use it; TrackManagerUI.cpp
+// carries a static_assert that turns any drift into a compile error.
+constexpr float kTimelineScrollbarWidth = 10.0f;
 
 // FD-14 §10: nested lane rows (owned lanes of an expanded track) indent this
 // far inside the track's primary row, leaving a gutter that reads as nesting.

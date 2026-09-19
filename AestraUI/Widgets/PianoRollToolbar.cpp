@@ -335,27 +335,50 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     const auto toolbarBg = themeManager.getColor("backgroundSecondary").darkened(0.015f);
     const auto groupBg = themeManager.getColor("backgroundPrimary").withAlpha(0.72f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
-    renderer.fillRect(b, toolbarBg);
-    // Top border to visually separate this toolbar from the panel above it
-    renderer.drawLine(NUIPoint(b.x, b.y + 0.5f),
-                      NUIPoint(b.right(), b.y + 0.5f),
-                      1.0f,
-                      themeManager.getColor("divider"));
-    renderer.drawLine(NUIPoint(b.x, b.bottom() - 0.5f),
-                      NUIPoint(b.right(), b.bottom() - 0.5f),
-                      1.0f,
-                      groupBorder);
+
+    // Hosted in a title bar, the strip draws no surface of its own: the bar
+    // already is one, and a second fill plus two rules inside it reads as a
+    // band-within-a-band — exactly the stacked chrome this move removes.
+    if (!m_hostedInTitleBar) {
+        renderer.fillRect(b, toolbarBg);
+        renderer.drawLine(NUIPoint(b.x, b.y + 0.5f), NUIPoint(b.right(), b.y + 0.5f), 1.0f,
+                          themeManager.getColor("divider"));
+        renderer.drawLine(NUIPoint(b.x, b.bottom() - 0.5f), NUIPoint(b.right(), b.bottom() - 0.5f), 1.0f,
+                          groupBorder);
+    }
+
+    // NOTE: deliberately NOT clipped to bounds. The dropdowns render their open
+    // popup list below the strip, so a clip here erases it — the control looks
+    // focused and does nothing. Overflow is handled by dropping whole clusters
+    // (see fits() below), which is this codebase's existing collapse policy.
 
     // Let child buttons keep input/hit-testing, but draw our custom toolbar chrome and glyphs after them.
     renderChildren(renderer);
 
-    const float buttonSize = 30.0f;
+    // Compact metrics so the whole strip fits one title-bar row beside the
+    // title and the window buttons (owner direction 2026-09-19).
+    const float buttonSize = m_hostedInTitleBar ? 26.0f : 30.0f;
     const float buttonSpacing = 4.0f;
-    const float innerPad = 10.0f;
+    const float innerPad = m_hostedInTitleBar ? 4.0f : 10.0f;
     const float radius = 6.0f;
 
     float currentX = b.x + innerPad;
     float currentY = b.y + (b.height - buttonSize) * 0.5f;
+
+    // Hosted in a title bar, the strip has a hard right edge (the window
+    // buttons). A control appears whole or not at all — never half-drawn over
+    // its neighbour — so each cluster is offered the space it needs and skipped
+    // entirely if it does not fit. Clusters are ordered left-to-right by
+    // importance, so this drops the least essential first.
+    const float rightEdge = b.right();
+    const auto fits = [&](float width) {
+        return !m_hostedInTitleBar || (currentX + width <= rightEdge);
+    };
+    // A skipped widget must also stop being clickable, or an invisible control
+    // keeps answering clicks where it used to be.
+    const auto park = [](const std::shared_ptr<NUIComponent>& w) {
+        if (w) w->setBounds(NUIRect(0.0f, 0.0f, 0.0f, 0.0f));
+    };
 
     auto idleBg = themeManager.getColor("surfaceSecondary").withAlpha(0.76f);
     auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
@@ -402,37 +425,55 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         currentX += buttonSize + buttonSpacing;
     };
 
-    drawGroup(currentX - 3.0f, buttonSize + 6.0f);
-    renderButton(m_menuBtn, m_menuIcon, false);
+    if (fits(buttonSize)) {
+        drawGroup(currentX - 3.0f, buttonSize + 6.0f);
+        renderButton(m_menuBtn, m_menuIcon, false);
+    } else {
+        park(m_menuBtn);
+    }
 
     currentX += 8.0f;
 
-    drawGroup(currentX - 3.0f, buttonSize * 3.0f + buttonSpacing * 2.0f + 6.0f);
-    renderButton(m_ptrBtn, m_ptrIcon, activeTool_ == GlobalTool::Pointer);
-    renderButton(m_pencilBtn, m_pencilIcon, activeTool_ == GlobalTool::Pencil);
-    renderButton(m_eraserBtn, m_eraserIcon, activeTool_ == GlobalTool::Eraser);
+    if (fits(buttonSize * 3.0f + buttonSpacing * 2.0f)) {
+        drawGroup(currentX - 3.0f, buttonSize * 3.0f + buttonSpacing * 2.0f + 6.0f);
+        renderButton(m_ptrBtn, m_ptrIcon, activeTool_ == GlobalTool::Pointer);
+        renderButton(m_pencilBtn, m_pencilIcon, activeTool_ == GlobalTool::Pencil);
+        renderButton(m_eraserBtn, m_eraserIcon, activeTool_ == GlobalTool::Eraser);
+    } else {
+        park(m_ptrBtn); park(m_pencilBtn); park(m_eraserBtn);
+    }
 
     float patternDropdownRight = currentX;
     if (m_patternDropdown) {
         currentX += 8.0f;
 
-        const float dropdownW = std::clamp(b.width * 0.24f, 180.0f, 250.0f);
-        drawGroup(currentX - 3.0f, dropdownW + 6.0f);
-        m_patternDropdown->setBounds(NUIRect(currentX, currentY, dropdownW, buttonSize));
-        m_patternDropdown->onRender(renderer);
-        patternDropdownRight = currentX + dropdownW;
-        currentX += dropdownW + buttonSpacing;
+        const float dropdownW = m_hostedInTitleBar ? std::clamp(b.width * 0.16f, 120.0f, 170.0f)
+                                                   : std::clamp(b.width * 0.24f, 180.0f, 250.0f);
+        if (fits(dropdownW)) {
+            drawGroup(currentX - 3.0f, dropdownW + 6.0f);
+            m_patternDropdown->setBounds(NUIRect(currentX, currentY, dropdownW, buttonSize));
+            m_patternDropdown->onRender(renderer);
+            patternDropdownRight = currentX + dropdownW;
+            currentX += dropdownW + buttonSpacing;
+        } else {
+            park(m_patternDropdown);
+        }
     }
 
     if (m_unitDropdown) {
         currentX += 8.0f;
 
-        const float unitDropdownW = std::clamp(b.width * 0.18f, 140.0f, 200.0f);
-        drawGroup(currentX - 3.0f, unitDropdownW + 6.0f);
-        m_unitDropdown->setBounds(NUIRect(currentX, currentY, unitDropdownW, buttonSize));
-        m_unitDropdown->onRender(renderer);
-        patternDropdownRight = currentX + unitDropdownW;
-        currentX += unitDropdownW + buttonSpacing;
+        const float unitDropdownW = m_hostedInTitleBar ? std::clamp(b.width * 0.13f, 110.0f, 150.0f)
+                                                       : std::clamp(b.width * 0.18f, 140.0f, 200.0f);
+        if (fits(unitDropdownW)) {
+            drawGroup(currentX - 3.0f, unitDropdownW + 6.0f);
+            m_unitDropdown->setBounds(NUIRect(currentX, currentY, unitDropdownW, buttonSize));
+            m_unitDropdown->onRender(renderer);
+            patternDropdownRight = currentX + unitDropdownW;
+            currentX += unitDropdownW + buttonSpacing;
+        } else {
+            park(m_unitDropdown);
+        }
     }
 
     currentX += 8.0f;
@@ -447,36 +488,50 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     const float pillW = std::max(64.0f, lengthSize.width + pillPadX * 2.0f);
     const float lengthGroupX = currentX - 3.0f;
     const float lengthGroupW = buttonSize * 2.0f + pillW + buttonSpacing * 2.0f + 6.0f;
-    drawGroup(lengthGroupX, lengthGroupW);
+    if (fits(lengthGroupW)) {
+        drawGroup(lengthGroupX, lengthGroupW);
 
-    renderButton(m_lengthDownBtn, m_lengthDownIcon, false);
-    const NUIRect pillRect(currentX, currentY, pillW, buttonSize);
-    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("controlBackground").withAlpha(0.92f));
-    renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
-    renderer.drawText(lengthLabel,
-                      NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
-                               pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),
-                      lengthFontSize,
-                      themeManager.getColor("textPrimary").withAlpha(0.82f));
-    currentX += pillW + buttonSpacing;
+        renderButton(m_lengthDownBtn, m_lengthDownIcon, false);
+        const NUIRect pillRect(currentX, currentY, pillW, buttonSize);
+        renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("controlBackground").withAlpha(0.92f));
+        renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
+        renderer.drawText(lengthLabel,
+                          NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
+                                   pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),
+                          lengthFontSize,
+                          themeManager.getColor("textPrimary").withAlpha(0.82f));
+        currentX += pillW + buttonSpacing;
 
-    renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
+        renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
+    } else {
+        park(m_lengthDownBtn);
+        park(m_lengthUpBtn);
+    }
 
     // Follow/center group — transport-adjacent, after the length controls.
     currentX += 8.0f;
-    drawGroup(currentX - 3.0f, buttonSize * 2.0f + buttonSpacing + 6.0f);
-    renderButton(m_followBtn, m_followIcon, m_followPlayhead);
-    renderButton(m_centerBtn, m_centerIcon, false);
+    if (fits(buttonSize * 2.0f + buttonSpacing)) {
+        drawGroup(currentX - 3.0f, buttonSize * 2.0f + buttonSpacing + 6.0f);
+        renderButton(m_followBtn, m_followIcon, m_followPlayhead);
+        renderButton(m_centerBtn, m_centerIcon, false);
+    } else {
+        park(m_followBtn);
+        park(m_centerBtn);
+    }
 
     // Snap selector — a real dropdown (was a dead "SNAP Beat" text pill). The
     // menu's Snap submenu and this dropdown stay in sync via applySnap().
     currentX += 8.0f;
     if (m_snapDropdown) {
-        const float snapDropdownW = 104.0f;
-        drawGroup(currentX - 3.0f, snapDropdownW + 6.0f);
-        m_snapDropdown->setBounds(NUIRect(currentX, currentY, snapDropdownW, buttonSize));
-        m_snapDropdown->onRender(renderer);
-        currentX += snapDropdownW;
+        const float snapDropdownW = m_hostedInTitleBar ? 92.0f : 104.0f;
+        if (fits(snapDropdownW)) {
+            drawGroup(currentX - 3.0f, snapDropdownW + 6.0f);
+            m_snapDropdown->setBounds(NUIRect(currentX, currentY, snapDropdownW, buttonSize));
+            m_snapDropdown->onRender(renderer);
+            currentX += snapDropdownW;
+        } else {
+            park(m_snapDropdown);
+        }
     }
 
     // (The redundant right-side "Pattern · Unit" label was removed — the Pattern

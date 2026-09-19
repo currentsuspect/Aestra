@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
+#include "NUIScrollbar.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
 #include "NUIDragDrop.h"
@@ -308,7 +309,7 @@ FileBrowser::FileBrowser()
     , effectiveWidth_(0.0f)        // Initialize effective render width
     , scrollbarVisible_(false)
     , scrollbarOpacity_(0.0f)
-    , scrollbarWidth_(6.0f)        // Slim default scrollbar
+    , scrollbarWidth_(AestraUI::kOverlayScrollbarThickness)
     , scrollbarTrackHeight_(0.0f)
     , scrollbarThumbHeight_(0.0f)
     , scrollbarThumbY_(0.0f)
@@ -476,15 +477,28 @@ FileBrowser::FileBrowser()
     mp3FileIcon_->setIconSize(20, 20);
     mp3FileIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // FLAC Icon (HQ High fidelity box)
+    // FLAC Icon (lossless compression)
     flacFileIcon_ = std::make_shared<NUIIcon>();
-    // FLAC — a continuous waveform, distinct from WAV's discrete peak bars so
-    // the two are told apart at a glance while both still read as audio. The
-    // old glyph was a rounded box with bars in it and said nothing at all.
-    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 12 C3.4 4.8 5.4 4.8 7 12 S10.6 19.2 12.2 12 S15.8 4.8 17.4 12 S21 17 22.2 12"/></svg>)";
+    // FLAC — a waveform squeezed between two plates: lossless *compression*.
+    // The previous glyph was a bare sine, which at 20px was one more wavy line
+    // next to WAV's wavy lines; the difference has to be in the silhouette, not
+    // in the curvature (spec 2 §7). Two heavy horizontal rules read instantly
+    // as "packed", and nothing else in the browser has that outline.
+    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="3.4" width="19.2" height="2.6" rx="1.3"/><rect x="2.4" y="18" width="19.2" height="2.6" rx="1.3"/><rect x="4.6" y="10.6" width="2.2" height="2.8" rx="1.1"/><rect x="8.2" y="8.6" width="2.2" height="6.8" rx="1.1"/><rect x="11.8" y="9.8" width="2.2" height="4.4" rx="1.1"/><rect x="15.4" y="7.8" width="2.2" height="8.4" rx="1.1"/><rect x="19" y="10.2" width="2.2" height="3.6" rx="1.1"/></svg>)";
     flacFileIcon_->loadSVG(flacSvg);
     flacFileIcon_->setIconSize(20, 20);
     flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
+
+    // OGG Icon (container / stream)
+    oggFileIcon_ = std::make_shared<NUIIcon>();
+    // OGG — a container: a solid capsule with a play triangle cut out of it
+    // (evenodd, so the background shows through). Deliberately not another
+    // waveform; the browser already has two, and a third would not be told
+    // apart at 20px. The cut-out is one shape, so the holes cannot cancel.
+    const char* oggSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.6 3.6H19.4A3 3 0 0 1 22.4 6.6V17.4A3 3 0 0 1 19.4 20.4H4.6A3 3 0 0 1 1.6 17.4V6.6A3 3 0 0 1 4.6 3.6ZM9.6 7.6V16.4L17 12Z"/></svg>)";
+    oggFileIcon_->loadSVG(oggSvg);
+    oggFileIcon_->setIconSize(20, 20);
+    oggFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // MIDI Icon — piano-roll note blocks. MIDI files previously fell through to
     // the generic document glyph because getIconForFileType had no MidiFile
@@ -630,7 +644,7 @@ void FileBrowser::scanWorkerLoop() {
 }
 
 const std::unordered_set<std::string> FileFilter::audioExtensions = {
-    ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".mp4", ".m4a"
+    ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".mp4", ".m4a", ".aac"
 };
 
 const std::unordered_set<std::string> FileFilter::projectExtensions = {
@@ -653,6 +667,10 @@ bool FileFilter::isAllowed(const std::string& path) {
     return false;
 }
 
+// The one extension -> FileType mapping. FileBrowser::getFileTypeFromExtension()
+// used to be a second, slightly different copy of this, with no callers at all:
+// it mapped .aes/.Aestra to ProjectFile where this one does not, and anyone
+// extending "the" mapping had even odds of editing the dead one.
 FileType FileFilter::getType(const std::string& path, bool isDir) {
     if (isDir) return FileType::Folder;
 
@@ -662,8 +680,11 @@ FileType FileFilter::getType(const std::string& path, bool isDir) {
     if (ext == ".wav") return FileType::WavFile;
     if (ext == ".mp3") return FileType::Mp3File;
     if (ext == ".flac") return FileType::FlacFile;
-    if (ext == ".ogg") return FileType::MusicFile;
-    if (ext == ".aif" || ext == ".aiff") return FileType::AudioFile;
+    // Ogg family shares a container glyph; .ogg previously fell through to the
+    // generic music note (spec 2 §7).
+    if (ext == ".ogg" || ext == ".oga" || ext == ".opus") return FileType::OggFile;
+    if (ext == ".aif" || ext == ".aiff" || ext == ".m4a" || ext == ".aac" || ext == ".mp4")
+        return FileType::AudioFile;
     if (ext == ".mid" || ext == ".midi") return FileType::MidiFile;
     if (projectExtensions.count(ext)) return FileType::ProjectFile;
 
@@ -888,6 +909,10 @@ void FileBrowser::drawListEmptyState(NUIRenderer& renderer, const NUIRect& listC
     renderer.clearClipRect();
 }
 
+bool FileBrowser::searchQueryIsEmpty() const {
+    return !searchInput_ || searchInput_->getText().empty();
+}
+
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = bounds.width;
@@ -901,8 +926,9 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
 
     BrowserLayout layout;
     layout.searchBar = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH);
+    const float searchTrailing = searchQueryIsEmpty() ? 34.0f : 60.0f;
     layout.search = NUIRect(bounds.x + 26.0f, bounds.y + 4.0f,
-                            std::max(0.0f, effectiveW - 60.0f), searchH - 8.0f);
+                            std::max(0.0f, effectiveW - searchTrailing), searchH - 8.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
@@ -916,9 +942,17 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
     layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
                                std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
-    layout.searchActionButton = NUIRect(layout.searchBar.right() - 30.0f,
-                                        layout.searchBar.y + (layout.searchBar.height - 26.0f) * 0.5f,
-                                        26.0f, 26.0f);
+    // Clear-query button only. The filter control that used to share this slot
+    // was a duplicate of the funnel in the list header below (spec 2 §3), and
+    // the two used different icons for the same menu.
+    //
+    // An empty query leaves no button and no reserved gap: layout.search widens
+    // to the full row instead, so nothing unexplained is left behind.
+    layout.searchActionButton = searchQueryIsEmpty()
+                                    ? NUIRect()
+                                    : NUIRect(layout.searchBar.right() - 30.0f,
+                                              layout.searchBar.y + (layout.searchBar.height - 26.0f) * 0.5f,
+                                              26.0f, 26.0f);
     layout.navWidth = navW;
     return layout;
 }
@@ -1295,12 +1329,15 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     renderer.setClipRect(layout.navPane);
     const float navOverflow = navContentHeight_ - navViewportHeight_;
     if (navOverflow > 0.5f && navViewportHeight_ > 0.0f) {
-        const float sbW = 3.0f;
-        const float sbX = layout.navPane.right() - sbW - 2.0f;
-        const float thumbH = std::max(24.0f, navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
+        // Same painter and same gutter width as the file list beside it, so the
+        // Collections rail is not a third scrollbar dialect (spec 2 §2).
+        const float sbW = AestraUI::kOverlayScrollbarThickness;
+        const NUIRect gutter(layout.navPane.right() - sbW - 2.0f, navContentTop, sbW, navViewportHeight_);
+        const float thumbH = std::max(AestraUI::kOverlayScrollbarMinThumb,
+                                      navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
         const float thumbY = navContentTop + (navScrollOffset_ / navOverflow) * (navViewportHeight_ - thumbH);
-        renderer.fillRoundedRect(NUIRect(sbX, thumbY, sbW, thumbH), sbW * 0.5f,
-                                 themeManager.getColor("textSecondary").withAlpha(0.30f));
+        AestraUI::drawOverlayScrollbar(renderer, gutter, NUIRect(gutter.x, thumbY, sbW, thumbH),
+                                       AestraUI::ScrollbarPaintState{});
     }
 
     renderer.clearClipRect();
@@ -1458,7 +1495,7 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
         case ChromeAction::Up: chromeHover = layout.upButton; break;
         case ChromeAction::Filter: chromeHover = layout.filterButton; break;
         case ChromeAction::Sort: chromeHover = layout.sortButton; break;
-        case ChromeAction::SearchAction: chromeHover = layout.searchActionButton; break;
+        case ChromeAction::ClearSearch: chromeHover = layout.searchActionButton; break;
         case ChromeAction::None: break;
     }
     if (!chromeHover.isEmpty()) {
@@ -1560,23 +1597,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
         const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
         const float cy = search.y + search.height * 0.5f;
 
-        const float fx = layout.searchActionButton.x + layout.searchActionButton.width * 0.5f;
-        if (!searchInput_->getText().empty()) {
+        if (!layout.searchActionButton.isEmpty()) {
+            const float fx = layout.searchActionButton.x + layout.searchActionButton.width * 0.5f;
             renderer.drawLine({fx - 4.0f, cy - 4.0f}, {fx + 4.0f, cy + 4.0f}, 1.3f, iconColor);
             renderer.drawLine({fx + 4.0f, cy - 4.0f}, {fx - 4.0f, cy + 4.0f}, 1.3f, iconColor);
-        } else {
-            const float lineStartY = cy - 5.0f;
-            for (int i = 0; i < 3; ++i) {
-                const float y = lineStartY + static_cast<float>(i) * 5.0f;
-                renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
-                const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
-                renderer.fillCircle({knobX, y}, 1.7f, iconColor);
-            }
-            if (isFilterActive()) {
-                renderer.fillCircle({layout.searchActionButton.right() - 4.0f,
-                                     layout.searchActionButton.y + 4.0f}, 2.0f,
-                                    themeManager.getColor("accentPrimary"));
-            }
         }
     }
 
@@ -1679,9 +1703,10 @@ void FileBrowser::onResize(int width, int height) {
     visibleItems_ = std::max(1, visibleItems_);
 
     // Update scrollbar dimensions
-    float scrollbarWidth = themeManager.getComponentDimension("fileBrowser", "scrollbarWidth");
+    // One gutter width for every scrollbar in the DAW (spec 2 §2); the thumb
+    // insets within it, so a narrower gutter would leave no pill to grab.
     scrollbarTrackHeight_ = std::max(0.0f, listHeight);
-    scrollbarWidth_ = std::clamp(scrollbarWidth, 4.0f, 6.0f);
+    scrollbarWidth_ = AestraUI::kOverlayScrollbarThickness;
 
     // Update caches
     updateScrollPosition();
@@ -1840,7 +1865,9 @@ bool FileBrowser::handleChromeMouse(const NUIMouseEvent& event, const BrowserLay
         else if (browserLayout.upButton.contains(event.position)) newChromeAction = ChromeAction::Up;
         else if (browserLayout.filterButton.contains(event.position)) newChromeAction = ChromeAction::Filter;
         else if (browserLayout.sortButton.contains(event.position)) newChromeAction = ChromeAction::Sort;
-        else if (browserLayout.searchActionButton.contains(event.position)) newChromeAction = ChromeAction::SearchAction;
+        else if (!browserLayout.searchActionButton.isEmpty() &&
+                 browserLayout.searchActionButton.contains(event.position))
+            newChromeAction = ChromeAction::ClearSearch;
     }
     if (newChromeAction != hoveredChromeAction_) {
         hoveredChromeAction_ = newChromeAction;
@@ -1854,9 +1881,8 @@ bool FileBrowser::handleChromeMouse(const NUIMouseEvent& event, const BrowserLay
             case ChromeAction::Up: navigateUp(); break;
             case ChromeAction::Filter: showQuickFilterMenu(); break;
             case ChromeAction::Sort: showSortMenu(); break;
-            case ChromeAction::SearchAction:
-                if (searchInput_ && !searchInput_->getText().empty()) searchInput_->clear();
-                else showQuickFilterMenu();
+            case ChromeAction::ClearSearch:
+                if (searchInput_) searchInput_->clear();
                 break;
             case ChromeAction::None: break;
         }
@@ -2318,9 +2344,9 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
         // It also double-entered the first character: the char was forwarded manually AND
         // then delivered again by the normal charCallback to the now-focused input
         // ("hello" arrived as "hhello"). Search is now focused explicitly only, via
-        // Ctrl+F (above) or by clicking the field. Note the search action button is
-        // NOT a focus path — ChromeAction::SearchAction clears the query or opens the
-        // quick-filter menu, and that stays its job.
+        // Ctrl+F (above) or by clicking the field. Note the clear button is NOT a
+        // focus path — ChromeAction::ClearSearch empties the query, and that is all
+        // it does.
     }
 
     // Handle navigation/activation on key-down only.
@@ -2998,17 +3024,6 @@ void FileBrowser::toggleFolder(const FileItem* item) {
     }
 }
 
-FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) const {
-    if (extension == ".wav") return FileType::WavFile;
-    if (extension == ".mp3") return FileType::Mp3File;
-    if (extension == ".flac") return FileType::FlacFile;
-    if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
-    if (extension == ".Aestra" || extension == ".aes" || extension == ".Aestraproj") return FileType::ProjectFile;
-    if (extension == ".mid" || extension == ".midi") return FileType::MidiFile;
-
-    return FileType::Unknown;
-}
-
 std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
     switch (type) {
         case FileType::Folder:
@@ -3025,6 +3040,8 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
             return mp3FileIcon_;
         case FileType::FlacFile:
             return flacFileIcon_;
+        case FileType::OggFile:
+            return oggFileIcon_;
         case FileType::MidiFile:
             return midiFileIcon_;
         default:
@@ -3598,135 +3615,26 @@ void FileBrowser::updateScrollPosition() {
 }
 
 void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
-    auto& themeManager = NUIThemeManager::getInstance();
-
     const auto& view = getActiveView();
     // Use stored track height which is correctly calculated in onResize/onMouseEvent
-    // If it's 0 (unlikely if sized), fall back to list height calc
     if (scrollbarTrackHeight_ <= 0.0f) {
-        // Fallback or initialization
         scrollbarTrackHeight_ = getBounds().height; // Rough calc
     }
 
-    float contentHeight = view.size() * itemHeight_;
-    float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
-    bool needsScrollbar = maxScroll > 0.0f;
-
-    if (!needsScrollbar || view.empty()) return;
+    const float contentHeight = view.size() * itemHeight_;
+    const float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
+    if (maxScroll <= 0.0f || view.empty()) return; // Content fits: no scrollbar at all.
 
     const BrowserLayout browserLayout = computeBrowserLayout();
-    float scrollbarX = browserLayout.list.right() - scrollbarWidth_ - 2.0f;
-    float scrollbarY = browserLayout.list.y;
-    float scrollbarHeight = scrollbarTrackHeight_;
+    const NUIRect gutter(browserLayout.list.right() - scrollbarWidth_ - 2.0f, browserLayout.list.y,
+                         scrollbarWidth_, scrollbarTrackHeight_);
+    const NUIRect thumb(gutter.x, gutter.y + scrollbarThumbY_, gutter.width, scrollbarThumbHeight_);
 
-    float opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
-    if (opacity <= 0.01f) return;
-
-    const float radius = themeManager.getRadius("s");
-    const bool hot = isDraggingScrollbar_ || scrollbarHovered_;
-    const float hoverGrow = hot ? 1.0f : 0.0f;
-    const float trackWidth = scrollbarWidth_ + hoverGrow;
-    const float trackX = scrollbarX - hoverGrow * 0.5f;
-
-    // === GLASS/PRO SCROLLBAR STYLE ===
-    // Adapted from NUIScrollbar::drawEnhancedTrack & drawEnhancedThumb
-
-    // 1. Draw Track (Subtle Gradient)
-    const float trackAlphaMul = (hot ? 0.18f : 0.08f) * opacity;
-    NUIColor trackBase = themeManager.getColor("border").withAlpha(std::clamp(trackAlphaMul, 0.0f, 1.0f));
-    NUIColor trackTop = trackBase.lightened(0.03f);
-    NUIColor trackBottom = trackBase.darkened(0.06f);
-
-    NUIRect trackRect(trackX, scrollbarY, trackWidth, scrollbarHeight);
-
-    // Draw gradient track background
-    for (int i = 0; i < 4; ++i) {
-        float factor = static_cast<float>(i) / 3.0f;
-        NUIColor gradientColor = AestraUI::NUIColor::lerp(trackTop, trackBottom, factor);
-        NUIRect gradientRect = trackRect;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
-    }
-
-    // Track Inner Highlight
-    NUIRect highlightRect = trackRect;
-    highlightRect.x += 1.0f;
-    highlightRect.y += 1.0f;
-    highlightRect.width -= 2.0f;
-    highlightRect.height = trackRect.height * 0.3f;
-    const float highlightAlphaMul = (hot ? 0.35f : 0.25f);
-    renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
-                             trackTop.withAlpha(trackTop.a * highlightAlphaMul));
-
-
-    // 2. Draw Thumb (Glass w/ Gradient & Markers)
-    float thumbY = scrollbarY + scrollbarThumbY_;
-    NUIRect thumbRect(trackX, thumbY, trackWidth, scrollbarThumbHeight_);
-
-    // Determine thumb base color
-    const bool thumbPressed = isDraggingScrollbar_;
-    const bool thumbHot = thumbPressed || scrollbarHovered_;
-
-    // Use textSecondary as base (neutral grey/white)
-    NUIColor thumbBase = themeManager.getColor("textSecondary");
-    if (thumbPressed) {
-        thumbBase = themeManager.getColor("textPrimary"); // Brighter when dragging
-    } else if (thumbHot) {
-        thumbBase = thumbBase.lightened(0.2f);
-    }
-    // Apply opacity base
-    thumbBase = thumbBase.withAlpha((thumbHot ? 0.55f : 0.35f) * opacity);
-
-    NUIColor thumbTopColor = thumbBase.lightened(0.06f);
-    NUIColor thumbBottomColor = thumbBase.darkened(0.06f);
-
-    // Thumb Thickness Affordance
-    NUIRect visualThumb = thumbRect;
-    const float inset = thumbHot ? 1.0f : 2.0f;
-    visualThumb.x += inset;
-    visualThumb.width = std::max(0.0f, visualThumb.width - inset * 2.0f);
-    const float thumbRadius = std::min(visualThumb.width, visualThumb.height) * 0.5f;
-
-    // Draw Gradient Thumb
-    for (int i = 0; i < 4; ++i) {
-        float factor = static_cast<float>(i) / 3.0f;
-        NUIColor gradientColor = AestraUI::NUIColor::lerp(thumbTopColor, thumbBottomColor, factor);
-        NUIRect gradientRect = visualThumb;
-        gradientRect.y += i * 0.5f;
-        gradientRect.height -= i * 0.5f;
-        renderer.fillRoundedRect(gradientRect, thumbRadius, gradientColor);
-    }
-
-    // Draw Markers (Horizontal Lines)
-    if (visualThumb.height > 12.0f) {
-        float markerHeight = 2.0f;
-        float markerSpacing = 3.0f;
-        float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
-        float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
-
-        NUIColor markerColor = AestraUI::NUIColor::white().withAlpha((thumbHot ? 0.4f : 0.2f) * opacity);
-
-        // Top marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY, visualThumb.width - 6.0f, markerHeight),
-                                 1.0f, markerColor);
-        // Bottom marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY + markerHeight + markerSpacing, visualThumb.width - 6.0f, markerHeight),
-                                 1.0f, markerColor);
-    }
-
-    // Thumb Inner Highlight
-    NUIRect thumbHighlight = visualThumb;
-    thumbHighlight.x += 1.0f;
-    thumbHighlight.y += 1.0f;
-    thumbHighlight.width -= 2.0f;
-    thumbHighlight.height = visualThumb.height * 0.4f;
-    renderer.fillRoundedRect(thumbHighlight, std::max(0.0f, thumbRadius - 1.0f),
-                             thumbTopColor.withAlpha(thumbTopColor.a * 0.3f));
-
-    // Thumb Border (Subtle)
-    renderer.strokeRoundedRect(visualThumb, thumbRadius, 1.0f,
-        thumbBase.lightened(0.1f).withAlpha(std::clamp(thumbBase.a * 0.8f, 0.0f, 1.0f)));
+    AestraUI::ScrollbarPaintState state;
+    state.hovered = scrollbarHovered_;
+    state.pressed = isDraggingScrollbar_;
+    state.opacity = std::clamp(scrollbarOpacity_, 0.0f, 1.0f);
+    AestraUI::drawOverlayScrollbar(renderer, gutter, thumb, state);
 }
 
 bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
@@ -4027,8 +3935,8 @@ void FileBrowser::updateScrollbarVisibility() {
         scrollbarOpacity_ = 1.0f;
 
         // Calculate thumb height (proportional to visible area)
-        float minThumbSize = themeManager.getComponentDimension("scrollbar", "minThumbSize");
-        scrollbarThumbHeight_ = std::max(minThumbSize, (scrollbarTrackHeight_ / contentHeight) * scrollbarTrackHeight_);
+        scrollbarThumbHeight_ = std::max(AestraUI::kOverlayScrollbarMinThumb,
+                                         (scrollbarTrackHeight_ / contentHeight) * scrollbarTrackHeight_);
 
         // Calculate thumb position based on scroll offset
         if (maxScroll > 0.0f) {

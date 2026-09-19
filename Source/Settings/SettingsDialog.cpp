@@ -166,6 +166,7 @@ void SettingsDialog::layoutComponents() {
 }
 
 void SettingsDialog::updateDialogBounds(const AestraUI::NUIRect& parentBounds) {
+    m_layoutViewport = parentBounds;
     constexpr float kPreferredWidth = 950.0f;
     constexpr float kPreferredHeight = 600.0f;
     constexpr float kWindowMargin = 16.0f;
@@ -201,7 +202,34 @@ void SettingsDialog::onUpdate(double deltaTime) {
     AestraUI::NUIComponent::onUpdate(deltaTime);
 }
 
+// The dialog is built lazily, from inside the File menu's own callback. addChild()
+// during event dispatch is deferred to the end of dispatch (g_eventDispatchDepth),
+// so show() runs with getParent() still null and its centring is skipped — leaving
+// the dialog centred in the 950x600 it was given at construction, which is why it
+// opened near the window's top-left corner however large the window was.
+//
+// Centring at paint time instead of at show() covers that, an ordinary window
+// resize, and a resize that happens while the dialog is hidden, with one rule: the
+// layout is valid only for the viewport it was computed against, and by paint time
+// the parent link always exists.
+void SettingsDialog::syncToViewport() {
+    auto* parent = getParent();
+    if (!parent) return;
+
+    const AestraUI::NUIRect viewport = parent->getBounds();
+    if (viewport.width <= 0.0f || viewport.height <= 0.0f) return;
+    if (viewport.x == m_layoutViewport.x && viewport.y == m_layoutViewport.y &&
+        viewport.width == m_layoutViewport.width && viewport.height == m_layoutViewport.height) {
+        return;
+    }
+
+    setBounds(viewport);
+    updateDialogBounds(viewport);
+    layoutComponents();
+}
+
 void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
+    syncToViewport();
     if (!m_visible) return;
     
     auto& theme = AestraUI::NUIThemeManager::getInstance();
