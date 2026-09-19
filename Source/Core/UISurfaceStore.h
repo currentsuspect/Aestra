@@ -143,6 +143,8 @@ struct UISurfaceStore {
 namespace UISurfaceKeys {
 inline constexpr char kMixerInspectorExpanded[] = "panel.mixer.inspectorExpanded";
 inline constexpr char kPanelMixer[] = "panel.mixer";
+inline constexpr char kPanelBrowser[] = "panel.browser";
+inline constexpr char kPanelPatternBrowser[] = "panel.pattern-browser";
 inline constexpr char kPanelPianoRoll[] = "panel.piano-roll";
 inline constexpr char kPanelSequencer[] = "panel.sequencer";
 inline constexpr char kPanelHistory[] = "panel.history";
