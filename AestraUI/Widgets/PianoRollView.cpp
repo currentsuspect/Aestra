@@ -11,13 +11,25 @@ namespace AestraUI {
 
 // Gap between the minimap (overview) and the ruler — both the layout and the
 // pitch-header geometry must agree on it so the key lane stays aligned.
+// Chrome band heights, in one place. onRender() and layoutChildren() each used
+// to carry their own copy of all four, so the header's painted geometry and the
+// grid's actual geometry were free to drift apart.
+//
+// Spec 2 §6: the editing canvas is the main object, so every band around it is
+// as small as it can be while its own contents still fit. The toolbar's buttons
+// are 30px, which 42 clears; the ruler and minimap are text and a strip.
+constexpr float kToolbarHeight = 42.0f;
+constexpr float kMinimapHeight = 22.0f;
+constexpr float kRulerHeight = 24.0f;
 constexpr float kMinimapGap = 4.0f;
 
 // =============================================================================
 // PianoRollView (split from NUIPianoRollWidgets.cpp)
 // =============================================================================
 PianoRollView::PianoRollView()
-    : m_keyLaneWidth(76.0f), m_rulerHeight(28.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
+    // Spec 2 §6: the pitch lane keeps its key shapes and octave labels at 58px;
+    // the 18px it gives back goes straight to the grid.
+    : m_keyLaneWidth(58.0f), m_rulerHeight(kRulerHeight), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
       m_scrollX(0.0f), m_targetScrollX(0.0f)
 {
     // [FIX] Canonical default octave: C3 (MIDI 48).
@@ -126,10 +138,10 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
 
-    const float toolbarH = 50.0f;
-    const float minimapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    const float toolbarH = kToolbarHeight;
+    const float minimapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;
     const float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
-    const float rulerH = 28.0f;
+    const float rulerH = kRulerHeight;
     const NUIRect pitchHeader(bounds.x,
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
@@ -354,15 +366,15 @@ void PianoRollView::layoutChildren() {
     auto b = getBounds();
     const float sbSize = kOverlayScrollbarThickness;
     
-    // 0. Toolbar (Standardized Aestra UI Height)
-    float toolbarH = 50.0f;
+    // 0. Toolbar
+    float toolbarH = kToolbarHeight;
     if (m_toolbar) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
     
     // 1. Scrollbar/Minimap Section (Below Toolbar)
-    float miniMapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    float miniMapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;
 
     // 2. Ruler Section (Below Minimap if present)
-    float rulerH = 28.0f;
+    float rulerH = kRulerHeight;
 
     // Gap between minimap (overview) and ruler to visually separate them
     float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;

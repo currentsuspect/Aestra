@@ -761,7 +761,9 @@ private:
 
     float m_keyLaneWidth;
     float m_rulerHeight;
-    float m_controlPanelHeight = 116.0f;
+    // Spec 2 §6: the velocity/pan lane was 116px of mostly empty space under the
+    // grid. Still splitter-resizable; this is only where it starts.
+    float m_controlPanelHeight = 88.0f;
     
     float m_pixelsPerBeat;
     float m_keyHeight;
