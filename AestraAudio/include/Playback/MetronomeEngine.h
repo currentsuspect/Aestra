@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "RealtimeThreadGuard.h"
+
 namespace Aestra {
 namespace Audio {
 
@@ -24,7 +26,7 @@ public:
      * Real-time safe.
      */
     void process(float* outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos,
-                 uint32_t sampleRate, bool transportPlaying);
+                 uint32_t sampleRate, bool transportPlaying) AESTRA_RT_NONBLOCKING;
 
     // Configuration
     void setEnabled(bool enabled) { m_enabled.store(enabled, std::memory_order_relaxed); }
@@ -49,7 +51,7 @@ public:
     // Re-align beat scheduling to a new transport position. Pass
     // skipCurrentBeat=true when the beat exactly at globalSamplePos already
     // clicked in the pre-jump timeline (loop wrap) so it doesn't fire twice.
-    void reset(uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat = false);
+    void reset(uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat = false) AESTRA_RT_NONBLOCKING;
 
     /** @brief Set the project sample rate and regenerate click sounds. */
     void setSampleRate(uint32_t rate);

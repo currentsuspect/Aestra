@@ -6,6 +6,8 @@
 #include <memory>
 #include <vector>
 
+#include "RealtimeThreadGuard.h"
+
 namespace Aestra {
 namespace Audio {
 
@@ -79,7 +81,7 @@ public:
      * @param channelId The track/channel ID
      * @return Dense slot index, or INVALID_SLOT if not found
      */
-    uint32_t getSlotIndex(uint32_t channelId) const;
+    uint32_t getSlotIndex(uint32_t channelId) const AESTRA_RT_NONBLOCKING;
 
     /**
      * @brief Get the channel ID for a dense slot index.

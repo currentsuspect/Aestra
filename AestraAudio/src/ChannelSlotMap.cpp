@@ -22,7 +22,7 @@ void ChannelSlotMap::rebuild(const std::vector<std::unique_ptr<MixerChannel>>& c
     m_channelCount = slot;
 }
 
-uint32_t ChannelSlotMap::getSlotIndex(uint32_t channelId) const {
+uint32_t ChannelSlotMap::getSlotIndex(uint32_t channelId) const AESTRA_RT_NONBLOCKING {
     // Linear scan of at most 127 entries. Deterministic, cache-friendly,
     // no hash computation. Called from RT path but n is tiny.
     const uint32_t count = m_channelCount;
