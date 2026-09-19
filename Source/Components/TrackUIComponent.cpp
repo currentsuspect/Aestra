@@ -152,7 +152,7 @@ void drawPianoRollStyleSelection(AestraUI::NUIRenderer& renderer, const AestraUI
 }
 
 // Waveform ink derived from the clip color so the waveform reads as part of
-// the clip rather than an overlay: a deep shade of the clip's own hue.
+// the clip rather than an overlay: a light shade of the clip's own hue.
 struct WaveformInk {
     AestraUI::NUIColor rms;
     AestraUI::NUIColor envTop;
@@ -171,17 +171,19 @@ WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
     // lost. envTop and envBottom were also identical, which made the gradient call
     // a flat fill paying for a gradient it never showed.
     //
-    // The ink depth is shared with clipBodyTone()'s counterpart so the contrast
-    // contract has one authority (see TrackColorPalette.h).
-    const AestraUI::NUIColor deep = AestraUI::deepenClipInk(base);
+    // The ink lift is shared with clipBodyTone()'s counterpart so the contrast
+    // contract has one authority (see TrackColorPalette.h). Light, not deep:
+    // spec 2 §1 makes every clip foreground read as one white-ish family
+    // regardless of which channel the clip routes to.
+    const AestraUI::NUIColor lifted = AestraUI::liftClipInk(base, AestraUI::kClipContentInkLift);
     WaveformInk ink;
-    ink.rms = deep.withAlpha(0.95f);
+    ink.rms = lifted.withAlpha(0.95f);
     // Envelope well below the body so peaks read as reach, not as more body. The
     // slight top-to-bottom falloff gives the shape a light source instead of the
     // flat slab a single alpha produces.
-    ink.envTop = deep.withAlpha(0.52f);
-    ink.envBottom = deep.withAlpha(0.38f);
-    ink.centerLine = deep.withAlpha(0.22f);
+    ink.envTop = lifted.withAlpha(0.52f);
+    ink.envBottom = lifted.withAlpha(0.38f);
+    ink.centerLine = lifted.withAlpha(0.22f);
     return ink;
 }
 
@@ -203,7 +205,7 @@ AestraUI::NUIColor patternClipIdentity(const ClipInstance& clip) {
 
 // Flat clip grammar shared by audio and pattern clips: the header is the body
 // darkened by a black wash (tone, not a divider), the edge is a thin dark line
-// that separates adjacent clips, and text/glyphs pick dark or light per hue.
+// that separates adjacent clips, and text/glyphs are always the light ink.
 AestraUI::NUIColor clipHeaderWash(bool selected) {
     return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, selected ? 0.30f : 0.22f);
 }
@@ -217,11 +219,12 @@ AestraUI::NUIColor clipEdgeColor() {
     return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.45f);
 }
 
+// One light foreground for every clip label and glyph, whatever the clip routes
+// to (spec 2 §1). Derived from the surface rather than the theme: the body does
+// not follow the UI theme, so a themed textPrimary would turn near-black on a
+// dark clip the moment the user switched to the light mode.
 AestraUI::NUIColor clipTextColor(const AestraUI::NUIColor& surface, float alpha) {
-    if (AestraUI::clipSurfacePrefersDarkText(surface)) {
-        return AestraUI::NUIColor(0.04f, 0.04f, 0.05f, alpha);
-    }
-    return AestraUI::NUIThemeManager::getInstance().getColor("textPrimary").withAlpha(alpha);
+    return AestraUI::clipForegroundInk(surface, alpha);
 }
 
 } // namespace
