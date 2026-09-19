@@ -477,15 +477,28 @@ FileBrowser::FileBrowser()
     mp3FileIcon_->setIconSize(20, 20);
     mp3FileIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // FLAC Icon (HQ High fidelity box)
+    // FLAC Icon (lossless compression)
     flacFileIcon_ = std::make_shared<NUIIcon>();
-    // FLAC — a continuous waveform, distinct from WAV's discrete peak bars so
-    // the two are told apart at a glance while both still read as audio. The
-    // old glyph was a rounded box with bars in it and said nothing at all.
-    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 12 C3.4 4.8 5.4 4.8 7 12 S10.6 19.2 12.2 12 S15.8 4.8 17.4 12 S21 17 22.2 12"/></svg>)";
+    // FLAC — a waveform squeezed between two plates: lossless *compression*.
+    // The previous glyph was a bare sine, which at 20px was one more wavy line
+    // next to WAV's wavy lines; the difference has to be in the silhouette, not
+    // in the curvature (spec 2 §7). Two heavy horizontal rules read instantly
+    // as "packed", and nothing else in the browser has that outline.
+    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="3.4" width="19.2" height="2.6" rx="1.3"/><rect x="2.4" y="18" width="19.2" height="2.6" rx="1.3"/><rect x="4.6" y="10.6" width="2.2" height="2.8" rx="1.1"/><rect x="8.2" y="8.6" width="2.2" height="6.8" rx="1.1"/><rect x="11.8" y="9.8" width="2.2" height="4.4" rx="1.1"/><rect x="15.4" y="7.8" width="2.2" height="8.4" rx="1.1"/><rect x="19" y="10.2" width="2.2" height="3.6" rx="1.1"/></svg>)";
     flacFileIcon_->loadSVG(flacSvg);
     flacFileIcon_->setIconSize(20, 20);
     flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
+
+    // OGG Icon (container / stream)
+    oggFileIcon_ = std::make_shared<NUIIcon>();
+    // OGG — a container: a solid capsule with a play triangle cut out of it
+    // (evenodd, so the background shows through). Deliberately not another
+    // waveform; the browser already has two, and a third would not be told
+    // apart at 20px. The cut-out is one shape, so the holes cannot cancel.
+    const char* oggSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.6 3.6H19.4A3 3 0 0 1 22.4 6.6V17.4A3 3 0 0 1 19.4 20.4H4.6A3 3 0 0 1 1.6 17.4V6.6A3 3 0 0 1 4.6 3.6ZM9.6 7.6V16.4L17 12Z"/></svg>)";
+    oggFileIcon_->loadSVG(oggSvg);
+    oggFileIcon_->setIconSize(20, 20);
+    oggFileIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // MIDI Icon — piano-roll note blocks. MIDI files previously fell through to
     // the generic document glyph because getIconForFileType had no MidiFile
@@ -631,7 +644,7 @@ void FileBrowser::scanWorkerLoop() {
 }
 
 const std::unordered_set<std::string> FileFilter::audioExtensions = {
-    ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".mp4", ".m4a"
+    ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".mp4", ".m4a", ".aac"
 };
 
 const std::unordered_set<std::string> FileFilter::projectExtensions = {
@@ -654,6 +667,10 @@ bool FileFilter::isAllowed(const std::string& path) {
     return false;
 }
 
+// The one extension -> FileType mapping. FileBrowser::getFileTypeFromExtension()
+// used to be a second, slightly different copy of this, with no callers at all:
+// it mapped .aes/.Aestra to ProjectFile where this one does not, and anyone
+// extending "the" mapping had even odds of editing the dead one.
 FileType FileFilter::getType(const std::string& path, bool isDir) {
     if (isDir) return FileType::Folder;
 
@@ -663,8 +680,11 @@ FileType FileFilter::getType(const std::string& path, bool isDir) {
     if (ext == ".wav") return FileType::WavFile;
     if (ext == ".mp3") return FileType::Mp3File;
     if (ext == ".flac") return FileType::FlacFile;
-    if (ext == ".ogg") return FileType::MusicFile;
-    if (ext == ".aif" || ext == ".aiff") return FileType::AudioFile;
+    // Ogg family shares a container glyph; .ogg previously fell through to the
+    // generic music note (spec 2 §7).
+    if (ext == ".ogg" || ext == ".oga" || ext == ".opus") return FileType::OggFile;
+    if (ext == ".aif" || ext == ".aiff" || ext == ".m4a" || ext == ".aac" || ext == ".mp4")
+        return FileType::AudioFile;
     if (ext == ".mid" || ext == ".midi") return FileType::MidiFile;
     if (projectExtensions.count(ext)) return FileType::ProjectFile;
 
@@ -3004,17 +3024,6 @@ void FileBrowser::toggleFolder(const FileItem* item) {
     }
 }
 
-FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) const {
-    if (extension == ".wav") return FileType::WavFile;
-    if (extension == ".mp3") return FileType::Mp3File;
-    if (extension == ".flac") return FileType::FlacFile;
-    if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
-    if (extension == ".Aestra" || extension == ".aes" || extension == ".Aestraproj") return FileType::ProjectFile;
-    if (extension == ".mid" || extension == ".midi") return FileType::MidiFile;
-
-    return FileType::Unknown;
-}
-
 std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
     switch (type) {
         case FileType::Folder:
@@ -3031,6 +3040,8 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
             return mp3FileIcon_;
         case FileType::FlacFile:
             return flacFileIcon_;
+        case FileType::OggFile:
+            return oggFileIcon_;
         case FileType::MidiFile:
             return midiFileIcon_;
         default:

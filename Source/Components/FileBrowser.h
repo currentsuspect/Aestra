@@ -37,6 +37,7 @@ enum class FileType {
     WavFile,
     Mp3File,
     FlacFile,
+    OggFile,
     MidiFile,
     Unknown
 };
@@ -322,7 +323,6 @@ public:
 		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
 		    void sortFiles();
 		    bool compareFileItems(const FileItem& a, const FileItem& b) const;
-		    FileType getFileTypeFromExtension(const std::string& extension) const;
 		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
 		    bool isFilterActive() const;
             bool matchesQuickFilter(const FileItem& item) const;
@@ -523,6 +523,7 @@ public:
     std::shared_ptr<NUIIcon> wavFileIcon_;
     std::shared_ptr<NUIIcon> mp3FileIcon_;
     std::shared_ptr<NUIIcon> flacFileIcon_;
+    std::shared_ptr<NUIIcon> oggFileIcon_;
     std::shared_ptr<NUIIcon> midiFileIcon_;
     std::shared_ptr<NUIIcon> unknownFileIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;
