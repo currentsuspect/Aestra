@@ -73,49 +73,125 @@ inline NUIColor restrainLaneIdentityColor(const NUIColor& color, float alpha) {
 // Clip colour contract
 //
 // A clip is a flat, opaque surface in its identity hue — the same hue the mixer
-// strips paint — with its content (waveform, notes) drawn as a deep shade of that
-// hue on top. Owner direction 2026-09-15: expressive, Ableton-style clips. The
-// earlier toned-down bodies (68% brightness, 56% saturation, blended over the bed)
-// read as dull and out of place next to the mixer's colours.
+// strips paint — with its content (waveform, notes, label) drawn as a LIGHT ink
+// on top. Owner direction 2026-09-19 (spec 2 §1): foreground legibility is
+// separated from routing identity. Routing colour still decides the hue; it no
+// longer decides whether the foreground comes out light or dark.
+//
+// The previous contract derived ink by deepening the hue toward black and picked
+// label colour per hue by luminance. That made a routed clip's foreground flip
+// between near-black and near-white depending on which channel it fed, and on
+// the dark hues (purple, indigo) the near-black ink sat on a near-black body.
+//
+// The rule now has two halves that only work together:
+//
+//   1. Every body is capped to one luminance ceiling. Hue and saturation are
+//      untouched (one scalar multiplies all three channels), so a clip still
+//      reads as its channel's colour — it is simply never bright enough to
+//      swallow a light foreground.
+//   2. Every foreground is lifted toward white from the surface it sits on, so
+//      label and waveform belong to one family instead of being independently
+//      chosen colours.
 //
 // Body and ink live here together because what matters is the *gap* between them
 // and its direction; separate the two derivations and a later edit can quietly
 // collapse or invert it. TimelineClipContrastTest guards both.
 // ---------------------------------------------------------------------------
 
-/** @brief The clip body: the identity hue at near full strength. Selection lifts it. */
-inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
-    return restrainDawColor(identity, selected ? 1.0f : 0.95f, 1.0f, 1.0f);
+/** @brief WCAG relative luminance — the measure both halves of the contract use. */
+inline float clipRelativeLuminance(const NUIColor& color) {
+    const auto channel = [](float v) {
+        v = std::clamp(v, 0.0f, 1.0f);
+        return (v <= 0.03928f) ? (v / 12.92f) : std::pow((v + 0.055f) / 1.055f, 2.4f);
+    };
+    return 0.2126f * channel(color.r) + 0.7152f * channel(color.g) + 0.0722f * channel(color.b);
 }
 
-/** @brief The tint clip content is deepened from — the body hue itself. */
+/**
+ * @brief The luminance every clip body is pulled down to.
+ *
+ * Contrast of near-white against a surface at luminance L is (1.05)/(L + 0.05),
+ * which crosses 4.5:1 at L = 0.183 — and that is for *pure* white, before the
+ * selection lift brightens the body. So the ceiling is not a taste value with
+ * slack in it: above roughly 0.15 no foreground colour whatsoever can carry a
+ * label at AA on a selected clip, and the rule silently stops working. 0.14
+ * leaves the margin the lift consumes while keeping the body ~3.8:1 against the
+ * timeline's black canvas, so clips still read as clips.
+ *
+ * TimelineClipContrastTest measures both ends rather than restating this number.
+ */
+inline constexpr float kClipBodyLuminanceCeiling = 0.14f;
+
+/** @brief How much brighter a selected body is than an unselected one. */
+inline constexpr float kClipSelectionLift = 1.06f;
+
+/**
+ * @brief Darken a hue until it is dark enough to carry a light foreground.
+ *
+ * One scalar scales all three channels, so hue angle and saturation — the parts
+ * that carry routing identity — survive exactly; only brightness moves. Solved
+ * by bisection because the sRGB transfer curve has no single closed-form inverse
+ * across its linear and power segments.
+ */
+inline NUIColor capClipLuminance(const NUIColor& color, float ceiling) {
+    if (clipRelativeLuminance(color) <= ceiling) {
+        return color;
+    }
+    const auto scaled = [&color](float k) {
+        return NUIColor(color.r * k, color.g * k, color.b * k, color.a);
+    };
+    float lo = 0.0f;
+    float hi = 1.0f;
+    for (int i = 0; i < 14; ++i) {
+        const float mid = (lo + hi) * 0.5f;
+        if (clipRelativeLuminance(scaled(mid)) > ceiling) {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    return scaled(lo);
+}
+
+/** @brief The clip body: the identity hue, capped for legibility. Selection lifts it. */
+inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
+    const NUIColor capped =
+        capClipLuminance(NUIColor(identity.r, identity.g, identity.b, 1.0f), kClipBodyLuminanceCeiling);
+    return selected ? restrainDawColor(capped, kClipSelectionLift, 1.0f, 1.0f) : capped;
+}
+
+/** @brief The tint clip content is lifted from — the body hue itself. */
 inline NUIColor waveformTintTone(const NUIColor& identity, bool selected) {
     return clipBodyTone(identity, selected);
 }
 
-/** @brief Deepen a tint toward black. Sole authority for the ink depth. */
-inline NUIColor deepenClipInk(const NUIColor& tint) {
-    return NUIColor::lerp(tint, NUIColor(0.0f, 0.0f, 0.0f, 1.0f), 0.62f);
+/** @brief Lift a surface toward white. Sole authority for how light clip ink is. */
+inline NUIColor liftClipInk(const NUIColor& surface, float amount) {
+    return NUIColor::lerp(NUIColor(surface.r, surface.g, surface.b, 1.0f), NUIColor(1.0f, 1.0f, 1.0f, 1.0f),
+                          std::clamp(amount, 0.0f, 1.0f));
 }
 
-/** @brief The ink drawn over the body (waveform, notes). Must stay darker than clipBodyTone(). */
+/** @brief Lift used for waveform/note ink — keeps a whisper of the clip's hue. */
+inline constexpr float kClipContentInkLift = 0.86f;
+
+/** @brief Lift used for labels and glyphs — the brightest thing on a clip. */
+inline constexpr float kClipLabelInkLift = 0.94f;
+
+/** @brief The ink drawn over the body (waveform, notes). Must stay lighter than clipBodyTone(). */
 inline NUIColor waveformInkTone(const NUIColor& identity, bool selected) {
-    return deepenClipInk(waveformTintTone(identity, selected));
+    return liftClipInk(waveformTintTone(identity, selected), kClipContentInkLift);
 }
 
 /**
- * @brief True when near-black text out-contrasts near-white text on a clip surface.
+ * @brief The one foreground colour for clip text and glyphs.
  *
- * Clip hues span light (amber, sage) to dark (purple, indigo), so no single label
- * colour reads on all of them. Uses WCAG relative luminance: contrast against
- * black and against white are equal at L ~= 0.179.
+ * Derived from the surface it lands on rather than from the theme: a themed
+ * textPrimary is near-black in the light UI mode, which is exactly the
+ * unreadable-on-a-dark-clip case this contract exists to remove. Clip bodies do
+ * not follow the UI theme, so their foreground must not either.
  */
-inline bool clipSurfacePrefersDarkText(const NUIColor& surface) {
-    const auto channel = [](float v) {
-        return (v <= 0.03928f) ? (v / 12.92f) : std::pow((v + 0.055f) / 1.055f, 2.4f);
-    };
-    const float l = 0.2126f * channel(surface.r) + 0.7152f * channel(surface.g) + 0.0722f * channel(surface.b);
-    return l > 0.179f;
+inline NUIColor clipForegroundInk(const NUIColor& surface, float alpha) {
+    return liftClipInk(surface, kClipLabelInkLift).withAlpha(alpha);
 }
 
 inline int nearestPaletteIndex(uint32_t argb) {

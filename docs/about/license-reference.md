@@ -143,8 +143,11 @@ All third-party licenses are compatible with Aestra's proprietary model.
 
 ## Contributor License Agreement
 
-Contributing assigns ownership of your contribution to Aestra Studios, and the terms are
-in [`LICENSE` §5](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) — four short
+You keep the copyright in what you contribute. What you grant Aestra Studios is a
+perpetual, worldwide, non-exclusive, royalty-free, irrevocable licence to use, modify,
+distribute and sublicense it — including under proprietary terms — with moral rights
+waived so far as the law allows and no obligation to accept or keep any contribution.
+The terms are in [`LICENSE` §5](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) — four short
 subsections covering the grant of rights, your warranties, moral rights, and the absence
 of any obligation to use a contribution.
 

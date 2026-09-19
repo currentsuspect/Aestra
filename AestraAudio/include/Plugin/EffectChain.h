@@ -49,6 +49,20 @@ struct EffectSlot {
     std::string missingPluginId;
     std::vector<uint8_t> missingPluginState;
 
+    // Last-good state cache for crash preservation (#931).
+    //
+    // saveState() on a dead helper returns empty, which would cement the crash
+    // into the project on the next save. So every successful non-empty
+    // saveState() refreshes this cache, and a crashed occupant is emitted as a
+    // #647-style record carrying the cached blob instead of the empty one.
+    //
+    // Keyed by instanceId: a replaced occupant mints a fresh id, so a stale
+    // cache can never attach to a new plugin. Non-RT only, like the
+    // missing-plugin record above. saveState() stays logically const — this is
+    // memoization, hence mutable.
+    mutable std::vector<uint8_t> lastGoodPluginState;
+    mutable uint64_t lastGoodInstanceId{0};
+
     /// RT predicate: is there a plugin to process here? Placeholders answer true.
     bool isEmpty() const { return plugin == nullptr; }
 

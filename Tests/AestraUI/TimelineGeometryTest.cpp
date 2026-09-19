@@ -36,7 +36,14 @@ int main() {
     expectNear(timelineGridStartX(80.0f, 236.0f), 321.0, 0.0001, "window-absolute grid origin");
     expectNear(timelineGridStartX(17.5f, 236.0f), 258.5, 0.0001, "ruler-relative grid origin");
 
-    expectNear(timelineGridEndX(80.0f, 800.0f), 865.0, 0.0001, "grid end excludes scrollbar");
+    // Derived from the constant rather than restating it: the contract is that
+    // the grid stops exactly one scrollbar gutter short of the basis edge, not
+    // that the gutter is any particular width — the gutter width is shared with
+    // the rest of the DAW and is expected to be retuned (spec 2 §2). The check
+    // below keeps that derivation from passing vacuously if it ever hits zero.
+    check(kTimelineScrollbarWidth > 0.0f, "scrollbar gutter must reserve real width");
+    expectNear(timelineGridEndX(80.0f, 800.0f), 80.0 + 800.0 - kTimelineScrollbarWidth, 0.0001,
+               "grid end excludes exactly one scrollbar gutter");
     // Time band = minimap row (24) + ruler row (28); the minimap surface is
     // cropped to start at the track-controls boundary.
     expectNear(timelineTrackAreaTopY(40.0f), 92.0, 0.0001, "track area follows shared vertical stack");

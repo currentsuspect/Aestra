@@ -51,6 +51,27 @@ public:
     const std::string& getTitle() const { return m_title; }
 
     float getTitleBarHeight() const { return m_titleBarHeight; }
+
+    /**
+     * @brief Host a controls strip inside the title bar, beside the title.
+     *
+     * A panel whose controls belong to the panel itself — the piano roll's tool
+     * strip, say — otherwise pays for two stacked chrome bands: a title bar that
+     * is mostly empty, and a toolbar under it. The accessory shares the title
+     * bar's row, so the panel's content starts one band higher.
+     *
+     * The accessory becomes a child of this panel, so it renders, hit-tests and
+     * clips like the window buttons rather than like content. It is laid out
+     * between the title text and the window buttons, and the title bar grows to
+     * @p preferredHeight plus padding if that is taller than the default bar.
+     *
+     * @param titleZoneWidth Space reserved for the title text to the accessory's
+     *        left. Layout has no renderer, so the caller states it rather than
+     *        measuring; overshoot costs a little accessory width, undershoot
+     *        would let the accessory sit on the title.
+     */
+    void setTitleBarAccessory(std::shared_ptr<AestraUI::NUIComponent> accessory, float preferredHeight,
+                              float titleZoneWidth);
     bool isUserPositioned() const { return m_userPositioned; }
 
     float getExpandedHeight() const { return m_expandedHeight; }
@@ -96,6 +117,10 @@ private:
     bool m_minimized{false};
     bool m_maximized{false};
     float m_titleBarHeight{28.0f};
+    static constexpr float kDefaultTitleBarHeight{28.0f};
+    std::shared_ptr<AestraUI::NUIComponent> m_titleBarAccessory;
+    float m_accessoryHeight{0.0f};
+    float m_accessoryTitleZone{0.0f};
     float m_expandedHeight{300.0f}; // Remember height when expanded
     
     // Title bar buttons

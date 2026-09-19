@@ -226,7 +226,10 @@ struct NUIThemeProperties {
     struct LayoutDimensions {
         // Panel widths
         float fileBrowserWidth = 300.0f;
-        float trackControlsWidth = 236.0f;
+        // Spec 2 §8: narrowed from 236. The span between a track's name and its
+        // M/S/R cluster was dead width, and every pixel of it is timeline the
+        // user does not get. Names still flex and ellipsize as before.
+        float trackControlsWidth = 204.0f;
         float timelineAreaWidth = 800.0f;
 
         // Track heights and spacing

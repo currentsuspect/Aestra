@@ -31,6 +31,12 @@
 namespace Aestra {
 namespace Audio {
 
+// The timeline reserves its scrollbar gutter through a dependency-free constant;
+// this is where that constant meets the shared one it must match.
+static_assert(kTimelineScrollbarWidth == AestraUI::kOverlayScrollbarThickness,
+              "Timeline scrollbar gutter drifted from the DAW-wide overlay scrollbar width");
+
+
 // =============================================================================
 // SECTION: Construction & Destruction
 // =============================================================================
@@ -68,17 +74,9 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
     // Create scrollbar
     m_scrollbar = std::make_shared<AestraUI::NUIScrollbar>(AestraUI::NUIScrollbar::Orientation::Vertical);
-    {
-        auto& theme = AestraUI::NUIThemeManager::getInstance();
-        m_scrollbar->setArrowSize(0.0f);
-        m_scrollbar->setBorderWidth(0.0f);
-        m_scrollbar->setBorderRadius(8.0f);
-        m_scrollbar->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_scrollbar->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_scrollbar->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_scrollbar->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_scrollbar->setMinimumThumbSize(0.06);
-    }
+    // No styling here: drawOverlayScrollbar() owns how every scrollbar looks
+    // (spec 2 §2), and the pixel thumb floor is enforced by the component.
+    m_scrollbar->setMinimumThumbSize(0.06);
     m_scrollbar->setOnScroll([this](double position) { onScroll(position); });
     addChild(m_scrollbar);
 
@@ -732,12 +730,9 @@ void TrackManagerUI::selectAllClips() {
     }
     m_selectedClipId = m_clipSelection.anchor();
 
-    // Owning lanes highlight with their clips (#848 cohesion).
-    m_trackSelection.clear();
-    for (const auto& laneId : ownerLanes) {
-        m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
-    }
-    syncTrackSelectionView();
+    // Owner direction 2026-09-19: clip selection no longer drags lane selection
+    // along with it (reverses #848 cohesion). Selecting every clip says nothing
+    // about which lanes are selected; the lane headers stay as the user left them.
     invalidateCache();
 }
 
@@ -753,14 +748,8 @@ void TrackManagerUI::addToClipSelection(ClipInstanceID clipId) {
             trackUI->setSelectedClips(&m_clipSelection);
         }
     }
-    // Owning lane highlights with the added clip (#848 cohesion).
-    if (m_trackManager) {
-        const PlaylistLaneID laneId = m_trackManager->getPlaylistModel().findClipLane(clipId);
-        if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
-            m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
-            syncTrackSelectionView();
-        }
-    }
+    // No lane propagation: adding a clip to the selection selects that clip, not
+    // the lane under it (owner direction 2026-09-19, reverses #848 cohesion).
     invalidateCache();
 }
 
@@ -797,7 +786,8 @@ std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
 }
 
 void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
-                                          std::function<void()> onSendToAudition) {
+                                          std::function<void()> onSendToAudition,
+                                          TrackUIComponent* target) {
     if (m_activeContextMenu) {
         detachContextMenu(m_activeContextMenu);
     }
@@ -805,7 +795,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
 
-    TrackUIComponent* selectedTrack = getSelectedTrackUI();
+    TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
     auto* lane = selectedTrack && m_trackManager
                      ? m_trackManager->getPlaylistModel().getLane(selectedTrack->getLaneId())
                      : nullptr;

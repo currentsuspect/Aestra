@@ -187,7 +187,13 @@ public:
     bool isTrackSelected(TrackUIComponent* track) const;
 
     // Context Menu Helpers (v4.0)
-    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    /// Open the lane context menu. Only ever opened from a lane's header — the
+    /// grid does not activate lane actions (owner direction 2026-09-19).
+    /// @param target Lane the menu acts on, named explicitly so the menu does
+    ///        not depend on selection having already landed. Null falls back to
+    ///        the current selection.
+    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
+                              TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control
@@ -336,7 +342,10 @@ private:
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
-    int m_trackHeight{42};
+    // Spec 2 §8: 42 -> 38. Controls are 24px tall, so this keeps 7px of clear
+    // space above and below them — compact without becoming cramped — and puts
+    // another lane on screen at a typical window height.
+    int m_trackHeight{38};
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};

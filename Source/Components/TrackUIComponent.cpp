@@ -152,7 +152,7 @@ void drawPianoRollStyleSelection(AestraUI::NUIRenderer& renderer, const AestraUI
 }
 
 // Waveform ink derived from the clip color so the waveform reads as part of
-// the clip rather than an overlay: a deep shade of the clip's own hue.
+// the clip rather than an overlay: a light shade of the clip's own hue.
 struct WaveformInk {
     AestraUI::NUIColor rms;
     AestraUI::NUIColor envTop;
@@ -171,17 +171,19 @@ WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
     // lost. envTop and envBottom were also identical, which made the gradient call
     // a flat fill paying for a gradient it never showed.
     //
-    // The ink depth is shared with clipBodyTone()'s counterpart so the contrast
-    // contract has one authority (see TrackColorPalette.h).
-    const AestraUI::NUIColor deep = AestraUI::deepenClipInk(base);
+    // The ink lift is shared with clipBodyTone()'s counterpart so the contrast
+    // contract has one authority (see TrackColorPalette.h). Light, not deep:
+    // spec 2 §1 makes every clip foreground read as one white-ish family
+    // regardless of which channel the clip routes to.
+    const AestraUI::NUIColor lifted = AestraUI::liftClipInk(base, AestraUI::kClipContentInkLift);
     WaveformInk ink;
-    ink.rms = deep.withAlpha(0.95f);
+    ink.rms = lifted.withAlpha(0.95f);
     // Envelope well below the body so peaks read as reach, not as more body. The
     // slight top-to-bottom falloff gives the shape a light source instead of the
     // flat slab a single alpha produces.
-    ink.envTop = deep.withAlpha(0.52f);
-    ink.envBottom = deep.withAlpha(0.38f);
-    ink.centerLine = deep.withAlpha(0.22f);
+    ink.envTop = lifted.withAlpha(0.52f);
+    ink.envBottom = lifted.withAlpha(0.38f);
+    ink.centerLine = lifted.withAlpha(0.22f);
     return ink;
 }
 
@@ -203,7 +205,7 @@ AestraUI::NUIColor patternClipIdentity(const ClipInstance& clip) {
 
 // Flat clip grammar shared by audio and pattern clips: the header is the body
 // darkened by a black wash (tone, not a divider), the edge is a thin dark line
-// that separates adjacent clips, and text/glyphs pick dark or light per hue.
+// that separates adjacent clips, and text/glyphs are always the light ink.
 AestraUI::NUIColor clipHeaderWash(bool selected) {
     return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, selected ? 0.30f : 0.22f);
 }
@@ -217,11 +219,12 @@ AestraUI::NUIColor clipEdgeColor() {
     return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.45f);
 }
 
+// One light foreground for every clip label and glyph, whatever the clip routes
+// to (spec 2 §1). Derived from the surface rather than the theme: the body does
+// not follow the UI theme, so a themed textPrimary would turn near-black on a
+// dark clip the moment the user switched to the light mode.
 AestraUI::NUIColor clipTextColor(const AestraUI::NUIColor& surface, float alpha) {
-    if (AestraUI::clipSurfacePrefersDarkText(surface)) {
-        return AestraUI::NUIColor(0.04f, 0.04f, 0.05f, alpha);
-    }
-    return AestraUI::NUIThemeManager::getInstance().getColor("textPrimary").withAlpha(alpha);
+    return AestraUI::clipForegroundInk(surface, alpha);
 }
 
 } // namespace
@@ -1572,31 +1575,36 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     
     // Zebra striping moved to TrackManagerUI for guaranteed rendering order
 
-    // No zebra: the grid is uniform pure black (owner direction). Only the
-    // selection/hover states below tint the row.
-    AestraUI::NUIColor trackBgColor = AestraUI::NUIColor::transparent();
-
-    // Selection Highlight (Static base)
-    if (isSelected()) {
-         trackBgColor = themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f);
-    } else if (isHovered()) {
-         trackBgColor = themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f);
-    }
-    
-    // Apply background
-    renderer.fillRect(bounds, trackBgColor);
-    if (isSelected()) {
-        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
-        renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f, selectionEdge);
-        renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f},
-                          1.0f, selectionEdge.withAlpha(0.12f));
-    }
-
-    // Row separation is the light gap strip drawn by TrackManagerUI between
-    // lanes — no per-row line here, so separators never stack.
-    AestraUI::NUIColor borderColor = themeManager.getColor("border");
-    
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
+
+    // No zebra: the grid is uniform pure black (owner direction).
+    //
+    // Spec 2 §8: track selection and timeline selection are different things, and
+    // the selection wash used to be painted across the whole row — controls AND
+    // grid — so selecting Track 3 read as "a region of the timeline at Track 3 is
+    // selected". The wash and its edges stay inside the controls column now; what
+    // marks the selected lane out in the grid is the lane's own colour strip,
+    // which already brightens when selected.
+    //
+    // Hover keeps the full row: it follows the pointer, so it cannot be mistaken
+    // for a persistent selection, and it is the cue that tells you which lane a
+    // clip will land on.
+    const AestraUI::NUIRect controlColumn(bounds.x, bounds.y, controlAreaWidth, bounds.height);
+
+    if (isSelected()) {
+        renderer.fillRect(controlColumn,
+                          themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f));
+        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
+        renderer.drawLine({controlColumn.x, controlColumn.y}, {controlColumn.right(), controlColumn.y}, 1.0f,
+                          selectionEdge);
+        renderer.drawLine({controlColumn.x, controlColumn.bottom() - 1.0f},
+                          {controlColumn.right(), controlColumn.bottom() - 1.0f}, 1.0f,
+                          selectionEdge.withAlpha(0.12f));
+    } else if (isHovered()) {
+        renderer.fillRect(bounds, themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f));
+    }
+
+    AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     if (m_isPrimaryForLane) {
         AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
@@ -1698,10 +1706,13 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
             bounds.height
         );
         
-        if (lane && lane->solo) {
-            renderer.fillRect(gridArea, themeManager.getColor("accentCyan").withAlpha(0.06f));
-        }
-
+        // Solo colours the lane's controls (renderStatic + the control-area pass
+        // below), never the grid — owner direction 2026-09-19. The cyan wash that
+        // used to sit here made soloing look like a timeline selection.
+        //
+        // The dimming that follows stays on the grid on purpose: it is not a
+        // highlight but a statement about the audio — a suppressed or muted lane
+        // will not be heard, and that belongs where its clips are.
         float dimAlpha = 0.0f;
         if (soloSuppressed) dimAlpha = std::max(dimAlpha, 0.28f);
         if (lane && lane->muted) dimAlpha = std::max(dimAlpha, 0.40f);
@@ -1881,11 +1892,24 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     // A single quiet bottom rule separates rows without boxing every header.
+    //
+    // Spec 2 §8 asks for a separation cue because lanes blended into the grid.
+    // It runs the full row width now, not just the controls column, so the cue
+    // exists where lanes actually blur together. Deliberately one hairline at low
+    // alpha rather than a card, a border or a stripe: the ask was "these are
+    // distinct tracks", not "these are eight giant cards". Rows are contiguous
+    // (m_trackSpacing == 0) and each draws only its own bottom edge, so rules
+    // never stack at a boundary.
+    //
+    // The colour is a low-alpha white rather than borderSubtle: the timeline
+    // canvas is pure black, and a dark theme colour at low alpha on black is
+    // arithmetically almost nothing — the rule was invisible exactly where the
+    // blending complaint came from.
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1),
-        AestraUI::NUIPoint(bounds.x + controlAreaWidth, bounds.bottom() - 1),
+        AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1),
         1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.10f)
+        AestraUI::NUIColor::white().withAlpha(0.065f)
     );
 
 
@@ -2076,10 +2100,12 @@ void TrackUIComponent::onResize(int width, int height) {
     const int numButtons = 3;
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
-    const float leftPad = 14.0f;
-    const float rightPad = 8.0f;
+    // Spec 2 §8: the row's footprint shrinks by taking it out of padding and the
+    // dead span between the name and the button cluster, not out of information.
+    const float leftPad = 10.0f;
+    const float rightPad = 6.0f;
     const float trackNumberWidth = 14.0f;
-    const float numberNameGap = 6.0f;
+    const float numberNameGap = 5.0f;
 
     // FD-14 §10: nested rows pull their chrome inward so the lane reads as
     // indented while the timeline grid stays globally aligned across lanes —
@@ -2315,7 +2341,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
 
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
+                parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback, this);
                 return true;
             }
         }
@@ -2517,11 +2543,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
             
-            // Allow selecting track in automation mode if not interacting with points
+            // The automation lane lives in the grid, so it follows the same rule:
+            // clicking it edits automation and clears the clip selection, but it
+            // does not select the lane.
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
-                if (m_onTrackSelectedCallback) {
-                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                }
                 if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             
@@ -2764,7 +2789,20 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
             
-            // Check if clicking on any clip for drag initiation or trimming
+            // Clip gestures below select the CLIP and nothing else.
+            //
+            // Owner direction 2026-09-19: "the grid is just the grid, and the
+            // left side panel is just the left side panel". Clicking, trimming,
+            // dragging or right-clicking a clip used to also select the clip's
+            // lane, so touching a clip lit up the track header as though the
+            // track itself had been selected. Selecting a lane is a gesture on
+            // the lane — its header, or its empty timeline space — not a side
+            // effect of touching something that happens to sit on it.
+            //
+            // This reverses the "owning lane highlights with its clip" cohesion
+            // added for #848/#853; the matching propagation in
+            // TrackManagerUI::selectAllClips/addToClipSelection and the marquee
+            // path in TrackManagerUIEvents went with it.
             if (clickedClipId.isValid()) {
                 // Hamburger affordance (top-left corner): opens the full
                 // contextual menu — checked before trim/drag/open so the
@@ -2778,9 +2816,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
                         burgerRect.contains(event.position)) {
                         m_activeClipId = clickedClipId;
-                        if (m_onTrackSelectedCallback) {
-                            m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                        }
+                        // Clip gestures select the clip only (owner direction
+                        // 2026-09-19). See the note above the clip branch.
                         if (m_onClipSelectedCallback) {
                             m_onClipSelectedCallback(this, clickedClipId);
                         }
@@ -2845,11 +2882,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         }
                     }
                     
-                    if (m_onTrackSelectedCallback) {
-                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                    } else {
-                        m_selected = true;
-                    }
+                    // Trimming a clip is a clip gesture; the lane is not selected.
                     Log::info("Started trimming left edge of clip: " + clickedClipId.toString());
                     return true;
                 }
@@ -2880,11 +2913,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         }
                     }
                     
-                    if (m_onTrackSelectedCallback) {
-                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                    } else {
-                        m_selected = true;
-                    }
+                    // Trimming a clip is a clip gesture; the lane is not selected.
                     Log::info("Started trimming right edge of clip: " + clickedClipId.toString());
                     return true;
                 }
@@ -2892,12 +2921,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_clipDragPotential = true;
                 m_clipDragStartPos = event.position;
                 m_activeClipId = clickedClipId;
-                if (m_onTrackSelectedCallback) {
-                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                } else {
-                    m_selected = true;
-                }
-                
+
                 if (m_onClipSelectedCallback) {
                     if (event.modifiers & AestraUI::NUIModifiers::Shift) {
                         // Shift+click adds to the multi-selection (#848).
@@ -2916,12 +2940,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
 
             
-            // Grid area click (not on any clip) - select track
-            if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, selectionIntentFor(event));
-            } else {
-                m_selected = true;
-            }
+            // Empty grid: clears the clip selection and nothing else.
+            //
+            // This used to select the lane, so clicking anywhere in the timeline
+            // lit up that lane's header. Owner direction 2026-09-19: the grid is
+            // the grid and the header rail is the header rail, so lane selection
+            // is only ever a gesture ON the header.
             if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
@@ -2951,12 +2975,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (clickedClipId.isValid()) {
             m_activeClipId = clickedClipId;
 
-            if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
-            } else {
-                m_selected = true;
-            }
-
+            // Clip gesture: selects the clip, not its lane.
             if (m_onClipSelectedCallback) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
@@ -2972,16 +2991,18 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             return true;
         }
 
-        // Empty timeline space still belongs to its track. Right-click opens
-        // the same track menu as the header; marquee selection is an explicit
-        // tool gesture, not a hidden alternate meaning for the context button.
-        if (m_onTrackSelectedCallback) {
-            m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
-        }
+        // Empty timeline space: clears the clip selection, and that is all.
+        //
+        // It used to open the lane context menu — mute, solo, delete lane,
+        // rename — from a right-click anywhere in the timeline. Owner direction
+        // 2026-09-19: the grid must not activate things that belong to the
+        // track. Lane actions live on the lane's header, which is where the
+        // same menu still opens.
+        //
+        // The event is still consumed: the grid owns this click, it simply has
+        // nothing to offer for it yet. Letting it fall through would hand a lane
+        // gesture to whatever sits behind, which is the bug in a subtler form.
         if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
-        if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-            parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
-        }
         return true;
     }
 

@@ -364,32 +364,40 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
 
-        // Double-click the title bar to toggle maximize (excluding buttons).
+        // Double-click the title bar to toggle maximize (excluding its controls).
         bool insideTitle = m_titleBarBounds.contains(event.position);
-        
+
+        // Anything in the title bar that is itself interactive: the window
+        // buttons, and the accessory strip when a panel has put its controls up
+        // here. Both drag and double-click-maximize must decline these, because
+        // this whole branch runs BEFORE children are offered the event and
+        // returns true — so without this test a click on an accessory control
+        // starts a window drag and the control never sees it at all.
+        const auto onTitleBarControl = [this](const AestraUI::NUIPoint& p) {
+            if (m_closeButton && m_closeButton->getBounds().contains(p)) return true;
+            if (m_maximizeButton && m_maximizeButton->getBounds().contains(p)) return true;
+            if (m_minimizeButton && m_minimizeButton->getBounds().contains(p)) return true;
+            if (m_titleBarAccessory && m_titleBarAccessory->isVisible() &&
+                m_titleBarAccessory->getBounds().contains(p)) {
+                return true;
+            }
+            return false;
+        };
+
         auto now = std::chrono::steady_clock::now();
         auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTitleBarClickTime).count();
         const bool manualDoubleClick = elapsedMs > 0 && elapsedMs < 350;
         if ((event.doubleClick || manualDoubleClick) && insideTitle) {
-            const auto onButton =
-                (m_closeButton && m_closeButton->getBounds().contains(event.position)) ||
-                (m_maximizeButton && m_maximizeButton->getBounds().contains(event.position)) ||
-                (m_minimizeButton && m_minimizeButton->getBounds().contains(event.position));
-            if (!onButton) {
+            if (!onTitleBarControl(event.position)) {
                 toggleMaximize();
                 m_lastTitleBarClickTime = std::chrono::steady_clock::time_point{};
                 return true;
             }
         }
 
-        // Start dragging when the title bar is clicked (excluding the title-bar buttons).
+        // Start dragging when the title bar is clicked (excluding its controls).
         if (insideTitle) {
-            const auto onButton =
-                (m_closeButton && m_closeButton->getBounds().contains(event.position)) ||
-                (m_maximizeButton && m_maximizeButton->getBounds().contains(event.position)) ||
-                (m_minimizeButton && m_minimizeButton->getBounds().contains(event.position));
-
-            if (!onButton) {
+            if (!onTitleBarControl(event.position)) {
                 m_lastTitleBarClickTime = now;
                 m_userPositioned = true;
                 m_draggingTitleBar = true;
@@ -410,6 +418,28 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     return false;
+}
+
+
+void WindowPanel::setTitleBarAccessory(std::shared_ptr<AestraUI::NUIComponent> accessory, float preferredHeight,
+                                       float titleZoneWidth) {
+    if (m_titleBarAccessory) {
+        removeChild(m_titleBarAccessory);
+    }
+    m_titleBarAccessory = std::move(accessory);
+    m_accessoryHeight = std::max(0.0f, preferredHeight);
+    m_accessoryTitleZone = std::max(0.0f, titleZoneWidth);
+
+    if (m_titleBarAccessory) {
+        addChild(m_titleBarAccessory);
+        // Padding above and below matches the window buttons' own inset, so the
+        // accessory sits on the same optical line as them.
+        m_titleBarHeight = std::max(kDefaultTitleBarHeight, m_accessoryHeight + 8.0f);
+    } else {
+        m_titleBarHeight = kDefaultTitleBarHeight;
+    }
+    layoutContent();
+    setDirty(true);
 }
 
 void WindowPanel::layoutContent() {
@@ -448,6 +478,20 @@ void WindowPanel::layoutContent() {
     }
     if (m_minimizeButton) {
         m_minimizeButton->setBounds(localToWindow(buttonRects[2], panelOrigin).raw());
+    }
+
+    // Accessory occupies the title bar between the title text and the window
+    // buttons. Computed from the same titleBar rect the buttons use, so the
+    // three cannot drift apart.
+    if (m_titleBarAccessory) {
+        const float buttonsWidth = buttonSize * 3.0f + buttonPadding * 4.0f;
+        const float accessoryX = m_accessoryTitleZone;
+        const float accessoryW = std::max(0.0f, panelWidth - accessoryX - buttonsWidth);
+        const float accessoryH = std::min(m_accessoryHeight, m_titleBarHeight);
+        const float accessoryY = (m_titleBarHeight - accessoryH) * 0.5f;
+        const NUILocalRect accessoryRect(accessoryX, accessoryY, accessoryW, accessoryH);
+        m_titleBarAccessory->setBounds(localToWindow(accessoryRect, panelOrigin).raw());
+        m_titleBarAccessory->onResize(static_cast<int>(accessoryW), static_cast<int>(accessoryH));
     }
 
     // Layout content (below title bar)
