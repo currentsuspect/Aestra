@@ -187,7 +187,13 @@ public:
     bool isTrackSelected(TrackUIComponent* track) const;
 
     // Context Menu Helpers (v4.0)
-    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    /// Open the lane context menu. Only ever opened from a lane's header — the
+    /// grid does not activate lane actions (owner direction 2026-09-19).
+    /// @param target Lane the menu acts on, named explicitly so the menu does
+    ///        not depend on selection having already landed. Null falls back to
+    ///        the current selection.
+    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
+                              TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control

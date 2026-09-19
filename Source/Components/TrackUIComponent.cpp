@@ -1706,10 +1706,13 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
             bounds.height
         );
         
-        if (lane && lane->solo) {
-            renderer.fillRect(gridArea, themeManager.getColor("accentCyan").withAlpha(0.06f));
-        }
-
+        // Solo colours the lane's controls (renderStatic + the control-area pass
+        // below), never the grid — owner direction 2026-09-19. The cyan wash that
+        // used to sit here made soloing look like a timeline selection.
+        //
+        // The dimming that follows stays on the grid on purpose: it is not a
+        // highlight but a statement about the audio — a suppressed or muted lane
+        // will not be heard, and that belongs where its clips are.
         float dimAlpha = 0.0f;
         if (soloSuppressed) dimAlpha = std::max(dimAlpha, 0.28f);
         if (lane && lane->muted) dimAlpha = std::max(dimAlpha, 0.40f);
@@ -2338,7 +2341,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
 
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
+                parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback, this);
                 return true;
             }
         }
@@ -2540,11 +2543,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
             
-            // Allow selecting track in automation mode if not interacting with points
+            // The automation lane lives in the grid, so it follows the same rule:
+            // clicking it edits automation and clears the clip selection, but it
+            // does not select the lane.
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
-                if (m_onTrackSelectedCallback) {
-                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                }
                 if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             }
             
@@ -2787,7 +2789,20 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
             
-            // Check if clicking on any clip for drag initiation or trimming
+            // Clip gestures below select the CLIP and nothing else.
+            //
+            // Owner direction 2026-09-19: "the grid is just the grid, and the
+            // left side panel is just the left side panel". Clicking, trimming,
+            // dragging or right-clicking a clip used to also select the clip's
+            // lane, so touching a clip lit up the track header as though the
+            // track itself had been selected. Selecting a lane is a gesture on
+            // the lane — its header, or its empty timeline space — not a side
+            // effect of touching something that happens to sit on it.
+            //
+            // This reverses the "owning lane highlights with its clip" cohesion
+            // added for #848/#853; the matching propagation in
+            // TrackManagerUI::selectAllClips/addToClipSelection and the marquee
+            // path in TrackManagerUIEvents went with it.
             if (clickedClipId.isValid()) {
                 // Hamburger affordance (top-left corner): opens the full
                 // contextual menu — checked before trim/drag/open so the
@@ -2801,9 +2816,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
                         burgerRect.contains(event.position)) {
                         m_activeClipId = clickedClipId;
-                        if (m_onTrackSelectedCallback) {
-                            m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                        }
+                        // Clip gestures select the clip only (owner direction
+                        // 2026-09-19). See the note above the clip branch.
                         if (m_onClipSelectedCallback) {
                             m_onClipSelectedCallback(this, clickedClipId);
                         }
@@ -2868,11 +2882,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         }
                     }
                     
-                    if (m_onTrackSelectedCallback) {
-                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                    } else {
-                        m_selected = true;
-                    }
+                    // Trimming a clip is a clip gesture; the lane is not selected.
                     Log::info("Started trimming left edge of clip: " + clickedClipId.toString());
                     return true;
                 }
@@ -2903,11 +2913,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         }
                     }
                     
-                    if (m_onTrackSelectedCallback) {
-                        m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                    } else {
-                        m_selected = true;
-                    }
+                    // Trimming a clip is a clip gesture; the lane is not selected.
                     Log::info("Started trimming right edge of clip: " + clickedClipId.toString());
                     return true;
                 }
@@ -2915,12 +2921,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_clipDragPotential = true;
                 m_clipDragStartPos = event.position;
                 m_activeClipId = clickedClipId;
-                if (m_onTrackSelectedCallback) {
-                    m_onTrackSelectedCallback(this, selectionIntentFor(event));
-                } else {
-                    m_selected = true;
-                }
-                
+
                 if (m_onClipSelectedCallback) {
                     if (event.modifiers & AestraUI::NUIModifiers::Shift) {
                         // Shift+click adds to the multi-selection (#848).
@@ -2939,12 +2940,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
 
             
-            // Grid area click (not on any clip) - select track
-            if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, selectionIntentFor(event));
-            } else {
-                m_selected = true;
-            }
+            // Empty grid: clears the clip selection and nothing else.
+            //
+            // This used to select the lane, so clicking anywhere in the timeline
+            // lit up that lane's header. Owner direction 2026-09-19: the grid is
+            // the grid and the header rail is the header rail, so lane selection
+            // is only ever a gesture ON the header.
             if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }
@@ -2974,12 +2975,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (clickedClipId.isValid()) {
             m_activeClipId = clickedClipId;
 
-            if (m_onTrackSelectedCallback) {
-                m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
-            } else {
-                m_selected = true;
-            }
-
+            // Clip gesture: selects the clip, not its lane.
             if (m_onClipSelectedCallback) {
                 m_onClipSelectedCallback(this, clickedClipId);
             }
@@ -2995,16 +2991,18 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             return true;
         }
 
-        // Empty timeline space still belongs to its track. Right-click opens
-        // the same track menu as the header; marquee selection is an explicit
-        // tool gesture, not a hidden alternate meaning for the context button.
-        if (m_onTrackSelectedCallback) {
-            m_onTrackSelectedCallback(this, TrackSelectionIntent::Replace);
-        }
+        // Empty timeline space: clears the clip selection, and that is all.
+        //
+        // It used to open the lane context menu — mute, solo, delete lane,
+        // rename — from a right-click anywhere in the timeline. Owner direction
+        // 2026-09-19: the grid must not activate things that belong to the
+        // track. Lane actions live on the lane's header, which is where the
+        // same menu still opens.
+        //
+        // The event is still consumed: the grid owns this click, it simply has
+        // nothing to offer for it yet. Letting it fall through would hand a lane
+        // gesture to whatever sits behind, which is the bug in a subtler form.
         if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
-        if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-            parentMgr->openTrackContextMenu(event.position, m_onSendToAuditionCallback);
-        }
         return true;
     }
 
