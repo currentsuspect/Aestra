@@ -138,7 +138,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
 
-    const float toolbarH = kToolbarHeight;
+    const float toolbarH = m_toolbarHosted ? 0.0f : kToolbarHeight;
     const float minimapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;
     const float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
     const float rulerH = kRulerHeight;
@@ -362,13 +362,22 @@ void PianoRollView::onUpdate(double deltaTime) {
     }
 }
 
+std::shared_ptr<PianoRollToolbar> PianoRollView::detachToolbarForHost() {
+    if (m_toolbar && !m_toolbarHosted) {
+        removeChild(m_toolbar);
+        m_toolbarHosted = true;
+        layoutChildren();
+    }
+    return m_toolbar;
+}
+
 void PianoRollView::layoutChildren() {
     auto b = getBounds();
     const float sbSize = kOverlayScrollbarThickness;
     
-    // 0. Toolbar
-    float toolbarH = kToolbarHeight;
-    if (m_toolbar) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
+    // 0. Toolbar — zero once a host panel has taken it into its title bar.
+    float toolbarH = m_toolbarHosted ? 0.0f : kToolbarHeight;
+    if (m_toolbar && !m_toolbarHosted) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
     
     // 1. Scrollbar/Minimap Section (Below Toolbar)
     float miniMapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;

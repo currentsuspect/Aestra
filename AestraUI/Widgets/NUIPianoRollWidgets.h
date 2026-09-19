@@ -161,6 +161,17 @@ class NUIContextMenu; // Forward declaration
 // -----------------------------------------------------------------------------
 class PianoRollToolbar : public NUIComponent {
 public:
+
+    /**
+     * @brief Draw as a bare control strip, sized for a title-bar row.
+     *
+     * Suppresses the strip's own surface fill and divider rules (the host bar is
+     * already a surface) and tightens button and dropdown metrics so everything
+     * fits on one row beside a title and the window buttons.
+     */
+    void setHostedInTitleBar(bool hosted) { m_hostedInTitleBar = hosted; setDirty(true); }
+    bool isHostedInTitleBar() const { return m_hostedInTitleBar; }
+
     struct PatternChoice {
         int value = 0;
         std::string label;
@@ -277,6 +288,9 @@ private:
     std::string m_patternName = "New Pattern";
     double m_patternLengthBeats = 8.0;
     std::shared_ptr<NUILabel> m_patternLabel;
+
+private:
+    bool m_hostedInTitleBar = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -684,6 +698,17 @@ private:
 // -----------------------------------------------------------------------------
 class PianoRollView : public NUIComponent {
 public:
+    /**
+     * @brief Hand the tool strip to a host that will place it in its title bar.
+     *
+     * The view keeps its pointer — every callback and state sync still goes
+     * through m_toolbar — but stops owning its position: the toolbar is removed
+     * as a child, so the host lays it out, renders it and clips it. The view's
+     * vertical stack then starts at the minimap instead of the toolbar, which
+     * is the whole point (spec 2 §6 follow-up, owner direction 2026-09-19).
+     */
+    std::shared_ptr<PianoRollToolbar> detachToolbarForHost();
+
     PianoRollView();
 
     void onRender(NUIRenderer& renderer) override;
@@ -755,6 +780,9 @@ private:
     std::shared_ptr<PianoRollControlPanel> m_controls;
     std::shared_ptr<PianoRollMinimap> m_minimap;
     std::shared_ptr<PianoRollToolbar> m_toolbar;
+    /// Set once a host panel has taken the toolbar into its title bar; the view
+    /// then stops reserving a band for it and stops laying it out.
+    bool m_toolbarHosted = false;
     
     std::shared_ptr<NUIScrollbar> m_vScroll; // Vertical Scrollbar still standard
     std::shared_ptr<NUIScrollbar> m_hScroll; // Horizontal Scrollbar (timeline parity)
@@ -792,6 +820,7 @@ private:
 
     void syncChildren();
     void layoutChildren();
+
     void updateScrollbars(); // Renamed to updateNavigation?
     void updateScrollbarDomain();
     float horizontalScrollMax() const;
