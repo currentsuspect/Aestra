@@ -55,8 +55,10 @@ void drawOverlayScrollbar(NUIRenderer& renderer, const NUIRect& gutter, const NU
 
 /**
  * NUIScrollbar - A scrollbar component for scrollable content
- * Supports both horizontal and vertical scrolling with customizable appearance
- * Replaces juce::ScrollBar with AestraUI styling and theming
+ * Owns scroll range, position and interaction for both orientations. It does NOT
+ * own its appearance: drawOverlayScrollbar() above is the DAW-wide look, and
+ * there is deliberately no colour, border or arrow API for a call site to
+ * diverge with.
  */
 class NUIScrollbar : public NUIComponent
 {
