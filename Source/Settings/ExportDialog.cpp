@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ExportDialog.h"
+#include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "AudioDeviceManager.h"
 #include "AudioExporter.h"
 #include "../App/ServiceLocator.h"
@@ -246,25 +247,20 @@ void ExportDialog::drawOverlay(AestraUI::NUIRenderer& renderer) {
 void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
-    AestraUI::NUIColor dialogBg = theme.getColor("elevatedPanel");
-    AestraUI::NUIColor border = theme.getColor("borderStrong");
-
     // Shadow
     renderer.drawShadow(m_dialogRect, 0.0f, props.spacingS, props.spacingL, theme.getColor("shadow"));
-    renderer.fillRoundedRect(m_dialogRect, props.radiusL, dialogBg);
-    renderer.strokeRoundedRect(m_dialogRect, props.radiusL, props.layout.dividerWidth, border);
 
-    // Title bar area
-    float titleY = m_dialogRect.y + props.spacingM;
-    std::string title = (m_panelState == PanelState::Settings) ? "Export Audio" :
-                        (m_panelState == PanelState::Progress) ? "Rendering..." : "Export Complete";
-    renderer.drawText(title, AestraUI::NUIPoint(m_dialogRect.x + props.spacingL, titleY),
-                      props.fontSizeXL, theme.getColor("textPrimary"));
-
-    // Separator
-    renderer.drawLine(AestraUI::NUIPoint(m_dialogRect.x + 16.0f, titleY + 24.0f),
-                      AestraUI::NUIPoint(m_dialogRect.x + m_dialogRect.width - 16.0f, titleY + 24.0f),
-                      props.layout.dividerWidth, theme.getColor("borderSubtle"));
+    // Surface and title bar come from the shared dialog chrome (spec 2 §5).
+    // The title was a 20px heading with its own hand-drawn rule below it; it is
+    // the panel's title now, in the same 12px title-bar style the plugin editors
+    // and Settings use, and the chrome's own hairline replaces the rule.
+    AestraUI::DialogChrome chrome;
+    chrome.panel = m_dialogRect;
+    chrome.title = (m_panelState == PanelState::Settings)   ? "Export Audio"
+                   : (m_panelState == PanelState::Progress) ? "Rendering..."
+                                                            : "Export Complete";
+    chrome.showClose = false; // The panel's own Cancel/Close button is the dismissal.
+    AestraUI::drawDialogChrome(renderer, chrome);
 
     if (m_panelState == PanelState::Settings) {
         drawSettingsPanel(renderer);

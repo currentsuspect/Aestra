@@ -11,6 +11,44 @@ namespace AestraUI {
 // Forward declaration
 class NUIPlatformBridge;
 
+// ---------------------------------------------------------------------------
+// Shared modal-dialog chrome
+//
+// AestraPanelWindow below is the DAW's panel chrome, but it is a base class: a
+// surface that owns dragging, content clipping and a close button, which the
+// plugin editors inherit. The modal dialogs (Save Changes, Recovery, Export,
+// Settings) cannot inherit it without giving up their own layout and modality,
+// and every one of them had therefore grown its own idea of what an Aestra
+// panel looks like — Settings open-coded a passable copy, Recovery drew a
+// centred 20px bold heading inside a plain card with no title bar at all.
+//
+// These two functions are the same chrome as a free painter, so a dialog gets
+// the title-bar language by calling one function instead of by inheriting a
+// component it is not. Constants live once, here, alongside the class that uses
+// them (spec 2 §5).
+// ---------------------------------------------------------------------------
+
+/** @brief What the shared chrome needs to know about a dialog. */
+struct DialogChrome {
+    /** @brief The dialog surface, in global coordinates. */
+    NUIRect panel;
+    /** @brief Title-bar text. Rendered in the panel title style, not as a heading. */
+    std::string title;
+    /** @brief Draw the close affordance and reserve its slot. */
+    bool showClose = true;
+    /** @brief Pointer is over the close button. */
+    bool closeHovered = false;
+};
+
+/**
+ * @brief Paint a dialog's surface and title bar.
+ * @return The content rect below the title bar, for the caller to lay out into.
+ */
+NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome);
+
+/** @brief The close button's rect for a dialog surface — hit testing and hover. */
+NUIRect dialogCloseButtonRect(const NUIRect& panel);
+
 /**
  * @brief Unified panel chrome for all child windows (plugin editors, Settings, etc.).
  *
