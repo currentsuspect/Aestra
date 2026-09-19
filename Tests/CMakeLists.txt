@@ -3156,3 +3156,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/DockedRailWidthsTest.cpp")
     set_tests_properties(DockedRailWidthsTest PROPERTIES
         LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# V8-C14 step 5d: the export dialog's `dialog.export` record — stored-wins per
+# field, out-of-range index refusal, directory-only capture, restart roundtrip.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ExportDialogPreferencesTest.cpp")
+    add_executable(ExportDialogPreferencesTest
+        Integration/ExportDialogPreferencesTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(ExportDialogPreferencesTest PRIVATE AestraPlat)
+    target_include_directories(ExportDialogPreferencesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Tests
+    )
+    add_test(NAME ExportDialogPreferencesTest COMMAND ExportDialogPreferencesTest)
+    set_tests_properties(ExportDialogPreferencesTest PROPERTIES
+        LABELS "serialization;preferences;regression;contract:durability")
+endif()

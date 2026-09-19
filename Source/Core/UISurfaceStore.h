@@ -37,7 +37,8 @@ namespace Aestra {
  *
  * `boolPreferences` holds simple preferences keyed by UISurfaceKeys (the mixer
  * inspector since step 3); `listPreferences` is reserved for a later step's
- * migration of PluginBrowserPanel's favorites.
+ * migration of PluginBrowserPanel's favorites. `dialogExport` is owned by
+ * ExportDialog since step 5d.
  */
 
 /// A placement preference for one persistent surface (a panel or a plugin editor),
@@ -108,8 +109,8 @@ struct UISurfaceStore {
     /// semantics.
     std::map<std::string, UISurfaceGeometry> surfaces;
 
-    /// Key: "dialog.export" today. Absent (std::nullopt) until a later step
-    /// actually writes to it; nothing populates this yet.
+    /// Key: "dialog.export" today. Absent (std::nullopt) until the user
+    /// completes an export; written by ExportDialog since step 5d.
     std::optional<UIDialogExportOptions> dialogExport;
 
     /// Simple on/off preferences, keyed by UISurfaceKeys. Since step 3:
@@ -190,6 +191,16 @@ public:
     /// change), so re-applying a loaded preference never echoes into a write.
     /// Same save/ownership contract as setBoolPreference.
     bool setSurfaceGeometry(const std::string& key, const UISurfaceGeometry& value);
+
+    /// The stored `dialog.export` record, or nullopt when the user has never
+    /// completed an export. Single-record accessor rather than keyed, because
+    /// FD-23's table gives this namespace exactly one key. Since step 5d.
+    std::optional<UIDialogExportOptions> dialogExportOptions() const;
+
+    /// Sets and saves. A no-op when the record is unchanged, so reopening the
+    /// dialog and re-exporting the same settings never echoes into a write.
+    /// Same save/ownership contract as setBoolPreference.
+    bool setDialogExportOptions(const UIDialogExportOptions& value);
 
 private:
     UISurfaceStore m_store;

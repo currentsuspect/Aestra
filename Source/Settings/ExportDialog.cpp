@@ -5,6 +5,8 @@
 #include "AudioDeviceManager.h"
 #include "AudioExporter.h"
 #include "../App/ServiceLocator.h"
+#include "../Core/ExportDialogPreferences.h"
+#include "../Core/UISurfaceStore.h"
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -58,8 +60,45 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     std::string exportName = Aestra::Audio::AudioExporter::getDefaultExportName(projectPath);
     std::filesystem::path outDir = std::filesystem::path(projectPath).parent_path();
     if (outDir.empty()) outDir = std::filesystem::current_path();
-    m_outputPath = (outDir / exportName).string();
     syncTailInputFromValue();
+
+    // V8-C14 step 5d: the stored `dialog.export` record wins per field over the
+    // defaults computed above; anything the user never chose keeps the default.
+    // Only the output *directory* is remembered — the file name always follows
+    // the current project, or a rename would export under the old one.
+    Aestra::ExportDialogValues live;
+    live.sampleRateIndex = m_selectedSampleRate;
+    live.bitDepthIndex = m_selectedBitDepth;
+    live.scopeIndex = m_selectedScope;
+    live.tailInput = m_tailInput;
+    live.outputDirectory = outDir.string();
+
+    if (const auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>()) {
+        Aestra::ExportOptionCounts counts;
+        counts.sampleRateCount = static_cast<int>(m_sampleRateOptions.size());
+        counts.bitDepthCount = static_cast<int>(m_bitDepthOptions.size());
+        counts.scopeCount = static_cast<int>(m_scopeOptions.size());
+        Aestra::applyStoredExportOptions(live, store->dialogExportOptions(), counts, [](const std::string& dir) {
+            std::error_code ec;
+            return std::filesystem::is_directory(dir, ec);
+        });
+    }
+
+    m_selectedSampleRate = live.sampleRateIndex;
+    m_selectedBitDepth = live.bitDepthIndex;
+    m_selectedScope = live.scopeIndex;
+    m_outputPath = (std::filesystem::path(live.outputDirectory) / exportName).string();
+
+    // The restored text is the authority for the tail value, but it is disk
+    // data: an unparseable one falls back to the live seconds rather than
+    // leaving the field and m_tailSeconds disagreeing.
+    m_tailInput = live.tailInput;
+    double restoredTail = 0.0;
+    if (parseTailInput(restoredTail)) {
+        m_tailSeconds = restoredTail;
+    } else {
+        syncTailInputFromValue();
+    }
 
     m_visible = true;
     setVisible(true);
@@ -753,6 +792,20 @@ void ExportDialog::startExport() {
 
     m_tailSeconds = parsedTail;
     m_tailInputFocused = false;
+
+    // V8-C14 step 5d: remember what this export actually ran with. One write
+    // per export (the store saves write-through) at the commit point rather
+    // than on every dropdown change, so a dialog the user opens and abandons
+    // leaves the stored preference alone.
+    if (auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>()) {
+        Aestra::ExportDialogValues used;
+        used.sampleRateIndex = m_selectedSampleRate;
+        used.bitDepthIndex = m_selectedBitDepth;
+        used.scopeIndex = m_selectedScope;
+        used.tailInput = m_tailInput;
+        used.outputDirectory = std::filesystem::path(m_outputPath).parent_path().string();
+        store->setDialogExportOptions(Aestra::captureExportOptions(used));
+    }
 
     m_panelState = PanelState::Progress;
     m_progress = 0.0f;
