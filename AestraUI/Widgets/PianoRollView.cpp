@@ -362,6 +362,10 @@ void PianoRollView::onUpdate(double deltaTime) {
     }
 }
 
+NUIRect PianoRollView::getGridBounds() const {
+    return m_grid ? m_grid->getBounds() : NUIRect();
+}
+
 std::shared_ptr<PianoRollToolbar> PianoRollView::detachToolbarForHost() {
     if (m_toolbar && !m_toolbarHosted) {
         removeChild(m_toolbar);

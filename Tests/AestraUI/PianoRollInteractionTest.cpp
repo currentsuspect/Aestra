@@ -362,11 +362,15 @@ static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
     // startBeat 1.25 at 80 ppb over an 810 px grid: scrollX = 100.
     view.setViewWindow(1.25, 810.0 / 80.0);
 
-    // Default layout: key lane 76 px, vertical scrollbar 14 px.
-    const float keyLaneWidth = 76.0f;
-    const float gridWidthPx = 900.0f - keyLaneWidth - 14.0f;
-    const float gridLocalCursorX = 500.0f; // 500 px into the grid
-    const float cursorWindowX = kViewOffsetX + keyLaneWidth + gridLocalCursorX;
+    // Take the grid's REAL geometry rather than restating the key-lane width and
+    // scrollbar gutter. Both are layout values that get retuned (the key lane
+    // went 76 -> 58 and the gutter 14 -> 10 in the spec 2 pass), and a test that
+    // copies them fails on the retune instead of on the behaviour it guards.
+    const NUIRect gridBounds = view.getGridBounds();
+    ASSERT(gridBounds.width > 100.0f, "grid has a usable width to anchor in");
+    const float gridWidthPx = gridBounds.width;
+    const float gridLocalCursorX = gridWidthPx * 0.5f; // mid-grid
+    const float cursorWindowX = gridBounds.x + gridLocalCursorX;
 
     const auto beatAtCursor = [&]() {
         const double ppb = static_cast<double>(gridWidthPx) / view.getViewDurationBeats();

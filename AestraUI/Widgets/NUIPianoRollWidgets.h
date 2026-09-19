@@ -709,6 +709,16 @@ public:
      */
     std::shared_ptr<PianoRollToolbar> detachToolbarForHost();
 
+    /**
+     * @brief The grid's current bounds, in window coordinates.
+     *
+     * Exposed so tests can anchor on the grid's REAL geometry instead of
+     * restating the key-lane width and scrollbar gutter as literals — those are
+     * layout values that get retuned, and a test that copies them fails on the
+     * retune rather than on the behaviour it is guarding.
+     */
+    NUIRect getGridBounds() const;
+
     PianoRollView();
 
     void onRender(NUIRenderer& renderer) override;
