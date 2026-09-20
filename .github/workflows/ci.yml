@@ -452,6 +452,15 @@ jobs:
           }
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
+      # Ninja does not discover MSVC the way the Visual Studio generator
+      # does: without a VsDevCmd environment, CMake falls back to mingw64 g++
+      # from PATH and the build dies in Windows headers (proven: native_handle
+      # as unsigned long long vs HANDLE). This sets INCLUDE/LIB/PATH so Ninja
+      # finds cl.exe and the MSVC toolset.
+      - name: Setup MSVC environment
+        if: steps.scope.outputs.run == 'true'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
       - name: Configure
         if: steps.scope.outputs.run == 'true'
         shell: pwsh
