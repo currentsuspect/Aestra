@@ -42,10 +42,14 @@ namespace {
 // close() in a bounded loop. opendir/readdir would allocate and can deadlock,
 // so the obvious /proc/self/fd iteration is out.
 void closeUnrelatedDescriptors() noexcept {
-#if defined(__linux__) && (!defined(__GLIBC__) || __GLIBC_PREREQ(2, 34))
+// Nested, not &&: invoking the function-like __GLIBC_PREREQ while it is
+// undefined is a hard error on Clang, and short-circuit does not save it.
+#if defined(__linux__)
+#if !defined(__GLIBC__) || __GLIBC_PREREQ(2, 34)
     if (::close_range(3, ~0u, 0) == 0) {
         return;
     }
+#endif
 #endif
     struct rlimit rl{};
     long cap = 1024;
