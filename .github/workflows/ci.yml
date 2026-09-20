@@ -75,6 +75,9 @@ jobs:
         with:
           lane: linux-gcc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -83,7 +86,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -170,6 +173,9 @@ jobs:
         with:
           lane: ui-app
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -178,7 +184,7 @@ jobs:
 
       - name: Configure (UI enabled)
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=ON
+        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build app target
         if: steps.scope.outputs.run == 'true'
@@ -252,6 +258,9 @@ jobs:
         with:
           lane: plugin-host
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
 
       # Two levels, because the VST3 SDK keeps its own tree in nested submodules.
       # `--init` on the outer path alone leaves base/, pluginterfaces/ and
@@ -297,7 +306,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
             -DAestra_CORE_MODE=ON \
             -DAESTRA_HEADLESS_ONLY=ON \
-            -DAESTRA_ENABLE_TESTS=ON 2>&1 | tee configure.log
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache 2>&1 | tee configure.log
           grep -q "VST3 SDK: Found" configure.log \
             || { echo "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1; }
           grep -q "CLAP SDK: Found" configure.log \
@@ -389,6 +400,9 @@ jobs:
         with:
           lane: windows-msvc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
@@ -448,7 +462,9 @@ jobs:
             -DAestra_CORE_MODE=ON `
             -DAESTRA_CI=ON `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -520,6 +536,9 @@ jobs:
         with:
           lane: macos-clang
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -528,7 +547,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local" -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -858,6 +877,9 @@ jobs:
           lane: asan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -873,6 +895,8 @@ jobs:
           -DAESTRA_CI=ON
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -914,6 +938,9 @@ jobs:
           lane: tsan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -922,7 +949,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-tsan
+        run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -967,6 +994,9 @@ jobs:
           lane: lsan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -975,7 +1005,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-lsan
+        run: cmake --preset ci-lsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
