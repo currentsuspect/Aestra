@@ -1054,6 +1054,9 @@ public:
             }
 
             auto appendSample = [&](float sample) {
+                if (!std::isfinite(sample)) {
+                    sample = 0.0f;
+                }
                 size_t writeIndex = (head + size) % capacity;
                 capture->samples[writeIndex].store(sample, std::memory_order_relaxed);
                 if (size < capacity) {

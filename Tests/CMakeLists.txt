@@ -1042,6 +1042,16 @@ target_include_directories(RecordingSessionContentTest PRIVATE
 add_test(NAME RecordingSessionContentTest COMMAND RecordingSessionContentTest)
 set_tests_properties(RecordingSessionContentTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
 
+# #855: non-finite hardware input must not poison capture rings or takes
+add_executable(RecordingInputSanitizeTest AestraAudio/RecordingInputSanitizeTest.cpp)
+target_link_libraries(RecordingInputSanitizeTest PRIVATE AestraAudio)
+target_include_directories(RecordingInputSanitizeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RecordingInputSanitizeTest COMMAND RecordingInputSanitizeTest)
+set_tests_properties(RecordingInputSanitizeTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
+
 
 # AudioEngineDiagnostics Test
 add_executable(AestraAudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
