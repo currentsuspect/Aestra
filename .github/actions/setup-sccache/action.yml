@@ -21,13 +21,18 @@
 # is deliberately no PCH or unity-build interaction to worry about: the tree
 # uses neither (verified, no target_precompile_headers / CMAKE_UNITY_BUILD).
 #
-# SCCACHE_CACHE_SIZE is 2G, not the 10G default. The GitHub cache backing this
-# is capped at 10G per repository and shared with the vcpkg cache; a full
-# engine build does not fit six lane-configs in either budget, so a bounded
-# cache that holds the hottest translation units beats an unbounded one that
-# churns and evicts its neighbours. The post-run stats (automatic) report hit
-# rates per lane — raise the size only on measured evidence, per #620's rule
-# against feeling-productive changes.
+# SCCACHE_CACHE_SIZE is 2G, not the 10G default. Read this precisely, because
+# the obvious reading is wrong: the variable caps sccache's LOCAL disk cache
+# only, not the GitHub Actions cache backend. Each lane still uploads up to 2G
+# under its own key, and all eight lane keys share the repository's 10G cap
+# with the vcpkg cache under LRU eviction. So 2G bounds each lane's disk use
+# and upload time (a 10G upload would eat the savings it buys), but it does
+# NOT partition the shared cap — eight lanes plus vcpkg can still evict each
+# other. If eviction shows up (cache usage page, or post-run stats suddenly
+# cold on unchanged code), the levers are fewer cached lanes or a higher repo
+# cap, decided on that evidence — not a bigger local number, which changes
+# nothing about the shared budget. Hit rates come from the automatic post-run
+# stats, per #620's rule against feeling-productive changes.
 #
 # sccache binary is pinned to v0.17.0 (seven weeks soaked at adoption).
 # v0.18.0 exists but was six days old; youth in the compile cache is risk
