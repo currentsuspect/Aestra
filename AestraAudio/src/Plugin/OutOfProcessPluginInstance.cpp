@@ -42,24 +42,25 @@ namespace {
 // close() in a bounded loop. opendir/readdir would allocate and can deadlock,
 // so the obvious /proc/self/fd iteration is out.
 void closeUnrelatedDescriptors() noexcept {
-// Nested, not &&: invoking the function-like __GLIBC_PREREQ while it is
-// undefined is a hard error on Clang, and short-circuit does not save it.
+// Doubly nested, not &&: invoking the function-like __GLIBC_PREREQ while it
+// is undefined is a hard error on Clang, and short-circuit does not save it —
+// expansion runs before evaluation. Each level keeps undefined macros out of
+// reach: macOS skips at __linux__, musl (no __GLIBC__) takes the loop below.
 #if defined(__linux__)
-#if !defined(__GLIBC__) || __GLIBC_PREREQ(2, 34)
+#if defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 34)
     if (::close_range(3, ~0u, 0) == 0) {
         return;
     }
 #endif
 #endif
+#endif
     struct rlimit rl{};
-    long cap = 1024;
+    rlim_t lim = 1024;
     if (::getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) {
-        cap = static_cast<long>(rl.rlim_cur);
+        lim = rl.rlim_cur;
     }
-    if (cap > (1L << 20)) {
-        cap = 1L << 20;
-    }
-    for (long fd = 3; fd < cap; ++fd) {
+    for (rlim_t fd = 3; fd < lim; ++fd) {
         ::close(static_cast<int>(fd));
     }
 }
