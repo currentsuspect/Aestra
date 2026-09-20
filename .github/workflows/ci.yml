@@ -75,6 +75,9 @@ jobs:
         with:
           lane: linux-gcc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -83,7 +86,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -170,6 +173,9 @@ jobs:
         with:
           lane: ui-app
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -178,7 +184,7 @@ jobs:
 
       - name: Configure (UI enabled)
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=ON
+        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build app target
         if: steps.scope.outputs.run == 'true'
@@ -252,6 +258,9 @@ jobs:
         with:
           lane: plugin-host
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
 
       # Two levels, because the VST3 SDK keeps its own tree in nested submodules.
       # `--init` on the outer path alone leaves base/, pluginterfaces/ and
@@ -297,7 +306,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
             -DAestra_CORE_MODE=ON \
             -DAESTRA_HEADLESS_ONLY=ON \
-            -DAESTRA_ENABLE_TESTS=ON 2>&1 | tee configure.log
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache 2>&1 | tee configure.log
           grep -q "VST3 SDK: Found" configure.log \
             || { echo "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1; }
           grep -q "CLAP SDK: Found" configure.log \
@@ -389,6 +400,9 @@ jobs:
         with:
           lane: windows-msvc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
@@ -438,17 +452,36 @@ jobs:
           }
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
+      # Ninja does not discover MSVC the way the Visual Studio generator
+      # does: without a VsDevCmd environment, CMake falls back to mingw64 g++
+      # from PATH and the build dies in Windows headers (proven: native_handle
+      # as unsigned long long vs HANDLE). This sets INCLUDE/LIB/PATH so Ninja
+      # finds cl.exe and the MSVC toolset.
+      - name: Setup MSVC environment
+        if: steps.scope.outputs.run == 'true'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
       - name: Configure
         if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          # Ninja, not the default Visual Studio generator: CMake implements
+          # CMAKE_<LANG>_COMPILER_LAUNCHER only for Makefile and Ninja
+          # generators, so MSBuild compiles would silently bypass sccache
+          # (proven by a 30-minute zero-request Windows run). No VS-specific
+          # properties exist anywhere in the CMake tree, so nothing depends on
+          # MSBuild semantics.
           cmake -B build -S . `
+            -G Ninja `
+            -G Ninja `
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
             -DAestra_CORE_MODE=ON `
             -DAESTRA_CI=ON `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -520,6 +553,9 @@ jobs:
         with:
           lane: macos-clang
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -528,7 +564,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local" -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -858,6 +894,9 @@ jobs:
           lane: asan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -873,6 +912,8 @@ jobs:
           -DAESTRA_CI=ON
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -914,6 +955,9 @@ jobs:
           lane: tsan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -922,7 +966,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-tsan
+        run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -967,6 +1011,9 @@ jobs:
           lane: lsan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -975,7 +1022,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-lsan
+        run: cmake --preset ci-lsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'

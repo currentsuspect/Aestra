@@ -1,0 +1,60 @@
+# © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#
+# Start sccache with the GitHub Actions cache backend for one CI lane (#620).
+#
+# WHY A COMPOSITE ACTION AND NOT INLINE STEPS
+#
+# Eight lanes need the same three lines. That table lived inline once for lane
+# selection and drifted; lane-runs.sh exists because of it. Same rule here.
+#
+# WHY SCCACHE AND NOT CCACHE
+#
+# ccache has no stable MSVC support, and Windows (MSVC) is the 17.9-minute
+# critical path — a cache that skips the longest lane is decoration. sccache
+# wraps cl.exe via /showIncludes and is one tool on all three platforms.
+#
+# SCOPE AND SAFETY
+#
+# sccache keys entries on compiler version, preprocessor output, and flags, so
+# lanes with different compilers and flag sets (GCC vs ASan vs MSVC) share one
+# cache without false hits — sharing costs capacity, never correctness. There
+# is deliberately no PCH or unity-build interaction to worry about: the tree
+# uses neither (verified, no target_precompile_headers / CMAKE_UNITY_BUILD).
+#
+# SCCACHE_CACHE_SIZE is 2G, not the 10G default. Read this precisely, because
+# the obvious reading is wrong: the variable caps sccache's LOCAL disk cache
+# only, not the GitHub Actions cache backend. Each lane still uploads up to 2G
+# under its own key, and all eight lane keys share the repository's 10G cap
+# with the vcpkg cache under LRU eviction. So 2G bounds each lane's disk use
+# and upload time (a 10G upload would eat the savings it buys), but it does
+# NOT partition the shared cap — eight lanes plus vcpkg can still evict each
+# other. If eviction shows up (cache usage page, or post-run stats suddenly
+# cold on unchanged code), the levers are fewer cached lanes or a higher repo
+# cap, decided on that evidence — not a bigger local number, which changes
+# nothing about the shared budget. Hit rates come from the automatic post-run
+# stats, per #620's rule against feeling-productive changes.
+#
+# sccache binary is pinned to v0.17.0 (seven weeks soaked at adoption).
+# v0.18.0 exists but was six days old; youth in the compile cache is risk
+# without upside. The ACTION itself is SHA-pinned like every other action in
+# this repo (see actions/checkout@34e1148).
+#
+# The caller gates this on its lane verdict (steps.scope.outputs.run), like
+# every other expensive step: starting a server and saving a cache for a lane
+# about to skip is pure overhead.
+
+name: Setup sccache
+description: Start sccache with the GitHub Actions cache backend for this lane.
+
+runs:
+  using: composite
+  steps:
+    # Env must precede the server start: sccache reads its configuration when
+    # the server launches, so a later $GITHUB_ENV write would miss it.
+    - shell: bash
+      run: |
+        echo "SCCACHE_CACHE_SIZE=2G" >> "$GITHUB_ENV"
+        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+      with:
+        version: v0.17.0
