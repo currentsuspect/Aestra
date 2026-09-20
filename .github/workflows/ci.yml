@@ -457,7 +457,15 @@ jobs:
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          # Ninja, not the default Visual Studio generator: CMake implements
+          # CMAKE_<LANG>_COMPILER_LAUNCHER only for Makefile and Ninja
+          # generators, so MSBuild compiles would silently bypass sccache
+          # (proven by a 30-minute zero-request Windows run). No VS-specific
+          # properties exist anywhere in the CMake tree, so nothing depends on
+          # MSBuild semantics.
           cmake -B build -S . `
+            -G Ninja `
+            -G Ninja `
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
             -DAestra_CORE_MODE=ON `
             -DAESTRA_CI=ON `
