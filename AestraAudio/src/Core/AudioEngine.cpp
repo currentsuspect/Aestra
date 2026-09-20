@@ -100,13 +100,14 @@ bool AudioEngine::isPreviewDuckingEnabled() const {
 }
 
 namespace {
-std::atomic<uint64_t> g_rtMisuseCount{0};
-std::atomic<uint64_t> g_rtMisuseReportedCount{0};
+std::atomic<AudioTelemetry*> g_misuseTelemetry{nullptr};
 std::atomic<const char*> g_rtMisuseLastApi{nullptr};
 
 void recordRealtimeMisuse(const char* apiName) noexcept {
     g_rtMisuseLastApi.store(apiName, std::memory_order_relaxed);
-    g_rtMisuseCount.fetch_add(1, std::memory_order_relaxed);
+    if (auto* telemetry = g_misuseTelemetry.load(std::memory_order_acquire)) {
+        telemetry->incrementRtMisuseViolations();
+    }
 }
 
 void installRealtimeMisuseHandler() noexcept {
@@ -660,10 +661,9 @@ void AudioEngine::performNonRealtimeMaintenance() {
         preview->handleDeferredCompletion();
     }
 
-    const uint64_t rtMisuseCount = g_rtMisuseCount.load(std::memory_order_relaxed);
-    const uint64_t reportedCount = g_rtMisuseReportedCount.load(std::memory_order_relaxed);
-    if (rtMisuseCount != reportedCount) {
-        g_rtMisuseReportedCount.store(rtMisuseCount, std::memory_order_relaxed);
+    const uint64_t rtMisuseCount = m_telemetry.getRtMisuseViolations();
+    if (rtMisuseCount != m_reportedMisuseCount.load(std::memory_order_relaxed)) {
+        m_reportedMisuseCount.store(rtMisuseCount, std::memory_order_relaxed);
         const char* apiName = g_rtMisuseLastApi.load(std::memory_order_relaxed);
         Aestra::Log::warning(
             "[RTGuard] Non-real-time API reached audio thread: " + std::string(apiName ? apiName : "unknown") +
@@ -2016,6 +2016,7 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
+    g_misuseTelemetry.store(&m_telemetry, std::memory_order_release);
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
@@ -2040,6 +2041,8 @@ AudioEngine::AudioEngine() {
 }
 
 AudioEngine::~AudioEngine() {
+    AudioTelemetry* expected = &m_telemetry;
+    g_misuseTelemetry.compare_exchange_strong(expected, nullptr, std::memory_order_acq_rel);
     if (auto trackMgr = m_trackManager.lock()) {
         trackMgr->setChannelPrepareCallback(nullptr);
         for (size_t i = 0; i < trackMgr->getChannelCount(); ++i) {

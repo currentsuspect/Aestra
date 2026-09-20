@@ -541,9 +541,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             const uint64_t overruns = telemetry.getOverruns();
             const uint64_t queueDrops = m_engine->commandQueue().droppedCount();
             const uint64_t queueEdgeDrops = m_engine->commandQueue().edgeDroppedCount();
-            const uint64_t rtAllocations = telemetry.getRtAllocationViolations();
-            const uint64_t rtLocks = telemetry.getRtLockViolations();
-            const uint64_t rtLogs = telemetry.getRtLogViolations();
+            const uint64_t rtMisuse = telemetry.getRtMisuseViolations();
             const uint64_t nanSamples = m_engine->getNaNCount();
             const uint64_t clippedSamples = m_engine->getClipCount();
             const bool recoveryActive = telemetry.isInRecoveryMode();
@@ -558,9 +556,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             addIssue(overruns > 0, "callback_deadline_overruns");
             addIssue(queueDrops > 0, "command_queue_drops");
             addIssue(queueEdgeDrops > 0, "command_queue_edge_drops");
-            addIssue(rtAllocations > 0, "rt_allocation_violations");
-            addIssue(rtLocks > 0, "rt_lock_violations");
-            addIssue(rtLogs > 0, "rt_log_violations");
+            addIssue(rtMisuse > 0, "rt_misuse_violations");
             addIssue(nanSamples > 0, "nan_samples_sanitized");
             addIssue(clippedSamples > 0, "hard_clipped_samples");
             addIssue(recoveryActive, "underrun_recovery_active");
@@ -594,9 +590,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             realtime.set("recoveryActive", JSON(recoveryActive));
             realtime.set("recoveryActivations",
                          JSON(static_cast<double>(telemetry.getRecoveryModeActivations())));
-            realtime.set("allocationViolations", JSON(static_cast<double>(rtAllocations)));
-            realtime.set("lockViolations", JSON(static_cast<double>(rtLocks)));
-            realtime.set("logViolations", JSON(static_cast<double>(rtLogs)));
+            realtime.set("misuseViolations", JSON(static_cast<double>(rtMisuse)));
             realtime.set("threadPriorityStatus",
                          JSON(static_cast<double>(telemetry.getThreadPriorityStatus())));
             realtime.set("threadPriorityOptimal", JSON(telemetry.isThreadPriorityOptimal()));

@@ -256,8 +256,7 @@ int main(int argc, char** argv) {
     }
     std::cout << "localOverruns=" << localOverruns << "\n";
     std::cout << "engineOverruns=" << tel.getOverruns() << "\n";
-    std::cout << "rtLockViolations=" << tel.getRtLockViolations() << "\n";
-    std::cout << "rtLogViolations=" << tel.getRtLogViolations() << "\n";
+    std::cout << "rtMisuseViolations=" << tel.getRtMisuseViolations() << "\n";
     if (diagnostics) {
         std::cout << "maxEngineNs=" << maxEngineNs << "\n";
         std::cout << "maxMonitoringNs=" << maxMonitoringNs << "\n";
@@ -269,7 +268,7 @@ int main(int argc, char** argv) {
 #endif
     }
 
-    if (localOverruns > 0 || tel.getOverruns() > 0 || tel.getRtLockViolations() != 0 || tel.getRtLogViolations() != 0) {
+    if (localOverruns > 0 || tel.getOverruns() > 0 || tel.getRtMisuseViolations() != 0) {
         return 1;
     }
 

@@ -909,6 +909,7 @@ private:
 
     AudioCommandQueue m_commandQueue;
     AudioTelemetry m_telemetry;
+    std::atomic<uint64_t> m_reportedMisuseCount{0};
     EngineState m_state;
 
     std::atomic<uint32_t> m_sampleRate{48000};

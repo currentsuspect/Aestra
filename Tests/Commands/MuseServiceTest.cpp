@@ -9,6 +9,7 @@
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
 #include "Plugin/PluginManager.h"
+#include "RealtimeThreadGuard.h"
 
 #include "AestraJSON.h"
 
@@ -190,7 +191,10 @@ int main() {
 
         telemetry.incrementXruns();
         telemetry.incrementUnderruns();
-        telemetry.incrementRtAllocationViolations();
+        {
+            Aestra::Audio::ScopedRealtimeAudioThread rtScope;
+            Aestra::Audio::reportRealtimeMisuse("MuseServiceTest::rtProbe");
+        }
         engine.commandQueue().push(Aestra::Audio::AudioQueueCommand{});
 
         r = call(service, "{\"id\": 5, \"verb\": \"get_audio_health\"}");
@@ -203,7 +207,7 @@ int main() {
               "audio health reports callback count, duration, and budget");
         check(r["result"]["realtime"]["xruns"].asNumber() == 1.0 &&
                   r["result"]["realtime"]["underruns"].asNumber() == 1.0 &&
-                  r["result"]["realtime"]["allocationViolations"].asNumber() == 1.0,
+                  r["result"]["realtime"]["misuseViolations"].asNumber() == 1.0,
               "audio health reports xrun, underrun, and RT violation counters");
         check(r["result"]["commandQueue"]["maxDepth"].asNumber() == 1.0 &&
                   r["result"]["commandQueue"]["capacity"].asNumber() > 1.0,
@@ -212,13 +216,13 @@ int main() {
               "audio health reports resampling activity");
 
         bool sawXrun = false;
-        bool sawRtAllocation = false;
+        bool sawRtMisuse = false;
         for (size_t i = 0; i < r["result"]["issues"].size(); ++i) {
             const std::string issue = r["result"]["issues"][i].asString();
             sawXrun = sawXrun || issue == "xruns";
-            sawRtAllocation = sawRtAllocation || issue == "rt_allocation_violations";
+            sawRtMisuse = sawRtMisuse || issue == "rt_misuse_violations";
         }
-        check(sawXrun && sawRtAllocation, "audio health provides machine-readable issue codes");
+        check(sawXrun && sawRtMisuse, "audio health provides machine-readable issue codes");
 
         r = call(service,
                  "{\"id\": 6, \"verb\": \"get_audio_health\", \"args\": {\"reset\": true}}");
