@@ -21,6 +21,7 @@
 #ifndef _WIN32
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -30,6 +31,40 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+
+#ifndef _WIN32
+// Contain the fork child before exec (#710): descriptors the parent holds
+// (project files, sockets, devices) are inherited across fork by default and
+// would be reachable from untrusted plugin code. Only 0/1/2 survive.
+//
+// Only async-signal-safe work is allowed here — fork in a multithreaded
+// process may hold malloc's lock. close_range is one syscall; the fallback is
+// close() in a bounded loop. opendir/readdir would allocate and can deadlock,
+// so the obvious /proc/self/fd iteration is out.
+void closeUnrelatedDescriptors() noexcept {
+// Doubly nested, not &&: invoking the function-like __GLIBC_PREREQ while it
+// is undefined is a hard error on Clang, and short-circuit does not save it —
+// expansion runs before evaluation. Each level keeps undefined macros out of
+// reach: macOS skips at __linux__, musl (no __GLIBC__) takes the loop below.
+#if defined(__linux__)
+#if defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 34)
+    if (::close_range(3, ~0u, 0) == 0) {
+        return;
+    }
+#endif
+#endif
+#endif
+    struct rlimit rl{};
+    rlim_t lim = 1024;
+    if (::getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) {
+        lim = rl.rlim_cur;
+    }
+    for (rlim_t fd = 3; fd < lim; ++fd) {
+        ::close(static_cast<int>(fd));
+    }
+}
+#endif
 
 std::string hexEncode(const std::string& input) {
     static constexpr char kHex[] = "0123456789ABCDEF";
@@ -400,6 +435,7 @@ bool PluginHostProcess::start() {
         close(inPipe[1]);
         close(outPipe[0]);
         close(outPipe[1]);
+        closeUnrelatedDescriptors();
         // [SEC-FIX] Validate path is absolute and a regular file before exec to prevent
         // arbitrary code execution via AESTRA_PLUGIN_HOST_PATH environment variable.
         std::error_code ec;
