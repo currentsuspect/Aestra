@@ -1629,6 +1629,8 @@ public:
      * @return True when Arsenal pattern transport owns playback.
      */
     bool isPatternMode() const { return m_patternMode.load(std::memory_order_relaxed); }
+    /** @brief True while Arsenal's pattern loop is the effective loop (setPatternLoopOverride). */
+    bool isPatternLoopOverrideActive() const { return m_patternOverrideActive.load(std::memory_order_relaxed); }
     /**
      * @brief Stop Arsenal playback and optionally remain in pattern mode.
      * @param keepPatternMode True to preserve pattern mode after stopping.

@@ -71,6 +71,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -1572,9 +1573,73 @@ void AestraContent::setupHistoryAndTakesPanels() {
 // SECTION: Lifecycle
 // =============================================================================
 
+// Playback "mode" is mirrored in several places that nothing forces to agree:
+// the view focus (intent), the engine's pattern flag (which silences every
+// timeline clip while set), TrackManager's pattern flag (gates timeline
+// scheduling in play()), the pattern loop override (the effective loop), the
+// timeline UI's pattern mode, the clip-preview flag, audition mode, and the
+// pattern scheduler. A stale mirror is heard as a transport rolling in
+// silence. This logs one line whenever any of them changes, so a repro shows
+// exactly which mirror diverged and when. Main thread only; no RT access.
+void AestraContent::logModeStateIfChanged() {
+    if (!m_audioEngine || !m_trackManager) {
+        return;
+    }
+    const char* focus = "?";
+    switch (m_viewFocus) {
+    case ViewFocus::Arsenal:
+        focus = "Arsenal";
+        break;
+    case ViewFocus::Timeline:
+        focus = "Timeline";
+        break;
+    case ViewFocus::Audition:
+        focus = "Audition";
+        break;
+    case ViewFocus::RoutingMap:
+        focus = "RoutingMap";
+        break;
+    }
+    const bool enginePattern = m_audioEngine->isPatternPlaybackMode();
+    const bool tmPattern = m_trackManager->isPatternMode();
+    const bool override = m_trackManager->isPatternLoopOverrideActive();
+    const bool uiPattern = m_trackManagerUI && m_trackManagerUI->isPatternMode();
+    const bool audition = m_audioEngine->isAuditionModeEnabled();
+    const bool tmPlaying = m_trackManager->isPlaying();
+    const bool enginePlaying = m_audioEngine->isTransportPlaying();
+    const size_t instances = m_trackManager->getPatternPlaybackEngine().getActiveInstanceCount();
+
+    // Timeline clips render only while the engine flag is clear; in Timeline
+    // focus with no clip preview, every pattern mirror should be clear.
+    // Audition intent: the DAW transport is parked, so no pattern mirror may
+    // be set either (audition itself is expected there).
+    const bool timelineIntent = m_viewFocus == ViewFocus::Timeline && !m_patternClipPreviewActive;
+    const bool auditionIntent = m_viewFocus == ViewFocus::Audition;
+    const bool patternMirrorSet = enginePattern || tmPattern || override || uiPattern;
+    const bool drift = (timelineIntent && (patternMirrorSet || audition)) || (auditionIntent && patternMirrorSet);
+
+    char line[320];
+    std::snprintf(line, sizeof(line),
+                  "[ModeProbe] focus=%s preview=%d enginePattern=%d len=%.2f tmPattern=%d override=%d uiPattern=%d "
+                  "audition=%d tmPlaying=%d enginePlaying=%d instances=%zu%s",
+                  focus, m_patternClipPreviewActive ? 1 : 0, enginePattern ? 1 : 0,
+                  m_audioEngine->getPatternLengthBeats(), tmPattern ? 1 : 0, override ? 1 : 0, uiPattern ? 1 : 0,
+                  audition ? 1 : 0, tmPlaying ? 1 : 0, enginePlaying ? 1 : 0, instances,
+                  drift ? "  <-- DRIFT: a pattern mirror is set outside pattern playback" : "");
+    if (m_lastModeProbe != line) {
+        m_lastModeProbe = line;
+        if (drift) {
+            AESTRA_LOG_WARNING(line);
+        } else {
+            AESTRA_LOG_INFO(line);
+        }
+    }
+}
+
 void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
     updatePendingCountIn();
+    logModeStateIfChanged();
 
     // Heal dropped mixer-state pushes: cheap when clean (one atomic per
     // channel), converges when a queue flood ends (#913).
@@ -2571,6 +2636,15 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             // Restore playback position
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            // The pattern loop override is the model's mirror of the engine flag
+            // just cleared. Only timeline PLAY used to clear it, so after a
+            // stopped Arsenal -> Timeline switch the effective loop stayed the
+            // pattern's, and a count-in recorded from here was clamped into it
+            // (#845's clamp). Seen live by the [ModeProbe] as override=1 on
+            // Timeline focus.
+            if (m_trackManager) {
+                m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
+            }
             // Reinstall the owner-bound preview callback after returning to timeline mode. The destructor clears it.
             if (m_trackManager) {
                 m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
@@ -2627,6 +2701,11 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
             m_audioEngine->panic(); // Silence all DAW audio
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
+            // Same mirror as the Timeline branch: Audition leaves pattern
+            // playback, so the pattern loop override must go with it.
+            if (m_trackManager) {
+                m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
+            }
 
             // Stop any file browser preview
             stopSoundPreview();

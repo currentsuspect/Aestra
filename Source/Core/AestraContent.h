@@ -358,6 +358,8 @@ public:
     void playFromCurrentFocus();
     /** @brief Stop playback based on the current focus mode. */
     void stopFromCurrentFocus(bool hardStop = false);
+    /** Log every playback-mode mirror when any of them changes (mode-drift probe). */
+    void logModeStateIfChanged();
     /** @brief Pause playback based on the current focus mode. */
     void pauseFromCurrentFocus();
 
@@ -525,6 +527,7 @@ private:
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
     bool m_patternClipPreviewActive{false};
+    std::string m_lastModeProbe;
     Aestra::Audio::PatternID m_previewPatternId{};
     bool m_countInEnabled{false};
     bool m_forcedMetronomeForCountIn{false};

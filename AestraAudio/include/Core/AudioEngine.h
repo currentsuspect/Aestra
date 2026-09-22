@@ -471,6 +471,7 @@ public:
     void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
+    double getPatternLengthBeats() const { return m_patternLengthBeats.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
     void setUnitManager(UnitManager* mgr) {
