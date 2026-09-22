@@ -344,6 +344,22 @@ void main() {
         color.a *= alpha;
     }
     
+    if (primitiveID == 8) {
+        // Blurred Filled Squircle — shadows and glows.
+        //
+        // This is the one primitive where vBlur is a real radius. Type 1 cannot
+        // be it: fillRoundedRect passes blur=1.0f purely as an "use standard AA"
+        // marker, so reading vBlur there would soften every widget in the app.
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
+
+        // Falloff straddles the shape edge, as a Gaussian does, so the interior
+        // near the edge is not fully opaque. fwidth is the floor: a blur smaller
+        // than a pixel must still anti-alias rather than alias.
+        float edge = max(vBlur, fwidth(dist) * 1.25);
+        color.a *= 1.0 - smoothstep(-edge, edge, dist);
+    }
+
     if (primitiveID == 3) {
         // Stroked Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
@@ -1227,17 +1243,45 @@ void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, con
 // ============================================================================
 
 void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) {
-    // Simple glow as expanded semi-transparent rect
-    NUIRect glowRect = rect;
-    glowRect.x -= radius;
-    glowRect.y -= radius;
-    glowRect.width += radius * 2;
-    glowRect.height += radius * 2;
-    
+    AESTRA_ZONE("Renderer_DrawGlow");
+
+    // This was one expanded fillRect at alpha * intensity * 0.3 — a hard-edged
+    // SQUARE halo, which read especially wrong around its only caller: the
+    // audition panel's drop target, a 16px-rounded header. A glow with a visible
+    // straight edge is not a glow.
+    if (radius <= 0.0f || intensity <= 0.0f || color.a <= 0.0f) {
+        return;
+    }
+
+    // The quad has to contain the whole falloff, which completes at `radius`.
+    NUIRect glowQuad = rect;
+    glowQuad.x -= radius;
+    glowQuad.y -= radius;
+    glowQuad.width += radius * 2.0f;
+    glowQuad.height += radius * 2.0f;
+
+    // The placeholder's 0.3f is KEPT, and the reasoning for dropping it was wrong.
+    // The falloff straddles the shape edge, so the interior saturates at full
+    // alpha — a glow is a solid fill with soft edges, not a ring. The interior
+    // wash therefore still exists and this factor still scales it. Measured on
+    // the audition drop target: without it the effective interior alpha runs
+    // 0.19 at the pulse trough to 0.63 at the crest, where the previous range
+    // was 0.06 to 0.19 — the new trough equalled the old crest, and at the crest
+    // it washed out the header's own text. Re-tuning glow strength is a separate
+    // pass (FD-21's precedent puts it last); removing a constant the call site
+    // was written against is not a mechanism fix.
     NUIColor glowColor = color;
-    glowColor.a *= intensity * 0.3f;
-    
-    fillRect(glowRect, glowColor);
+    glowColor.a = std::clamp(color.a * intensity * 0.3f, 0.0f, 1.0f);
+
+    //
+    // Corner radius is fixed for the same reason drawShadow fixes it — the
+    // signature carries no rounding for the source shape — and at these blur
+    // radii the falloff dominates the corner anyway. Clamped like
+    // fillRoundedRect does, so a glow around something smaller than 16px does
+    // not get a corner radius larger than its own half-extent.
+    const float cornerRadius = std::min(8.0f, std::min(rect.width, rect.height) * 0.5f);
+    addQuad(glowQuad, glowColor, rect.width, rect.height, glowQuad.width, glowQuad.height, cornerRadius, radius, 0.0f,
+            8.0f);
 }
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
@@ -1254,7 +1298,10 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
     // Pass RectSize (logic size) and QuadSize (drawing size) separately
     // Radius fixed at 8.0f for standard shadows for now, matching previous logic
     // Type 1 = Filled Rect (Shadows use same SDF logic with blur)
-    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f, 1.0f);
+    // Type 8, not 1: until now this passed `blur` into a varying nothing read,
+    // so every shadow in the app was a hard-edged squircle expanded by blur*2.
+    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f,
+            8.0f);
 }
 
 // ============================================================================
