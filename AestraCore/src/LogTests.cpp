@@ -5,7 +5,9 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <string>
 #include <thread>
+#include <vector>
 
 using namespace Aestra;
 
@@ -226,6 +228,75 @@ bool testThreadSafety() {
 }
 
 // =============================================================================
+// Logger Swap During a Log Call (heap-corruption regression)
+// =============================================================================
+// Log's entry points used to read the logger_ member twice and hold no
+// reference to it, so replacing the logger while a call was in flight destroyed
+// the logger that call was still executing inside. Racing two threads to prove
+// that is flaky; replacing the logger from *inside* log() makes it
+// deterministic, because the facade holds the only remaining reference.
+namespace {
+
+class SelfReplacingLogger : public ILogger {
+public:
+    // The trace outlives the logger, so the order stays readable either way.
+    explicit SelfReplacingLogger(std::vector<std::string>& trace) : trace_(trace) {}
+    ~SelfReplacingLogger() override { trace_.push_back("dtor"); }
+
+    void log(LogLevel, const std::string&) override {
+        trace_.push_back("log-enter");
+        if (!replaced_) {
+            replaced_ = true;
+            Log::shutdown(); // drops the facade's reference to this object
+        }
+        trace_.push_back("log-exit");
+    }
+
+    void setLevel(LogLevel level) override { level_ = level; }
+    LogLevel getLevel() const override { return level_; }
+
+private:
+    std::vector<std::string>& trace_;
+    LogLevel level_ = LogLevel::Trace;
+    bool replaced_ = false;
+};
+
+} // namespace
+
+bool testLoggerSwapDuringLog() {
+    std::cout << "\nTesting logger swap during a log call..." << std::endl;
+
+    std::vector<std::string> trace;
+    {
+        auto logger = std::make_shared<SelfReplacingLogger>(trace);
+        Log::init(logger);
+    } // local reference dropped: the facade now holds the only one
+
+    Log::info("this message replaces the logger that is printing it");
+
+    // Because the entry point snapshots the logger into a local shared_ptr, the
+    // call runs to completion and the logger is released only when that
+    // snapshot dies — after log() returns. Without the snapshot the destructor
+    // interleaves, giving log-enter / dtor / log-exit, and "log-exit" is then
+    // written through a freed object.
+    const std::vector<std::string> expected{"log-enter", "log-exit", "dtor"};
+    std::string got;
+    for (const auto& step : trace) {
+        got += step;
+        got += ' ';
+    }
+    TEST_ASSERT(trace == expected, "logger must outlive the log call that replaced it; order was: " + got);
+
+    // Sanity: the facade is still usable afterwards (shutdown() installed a
+    // console logger), so a failure above cannot be mistaken for a dead facade.
+    TEST_ASSERT(Log::getLogger() != nullptr, "a logger must remain installed after the swap");
+    Log::info("facade still works after the swap");
+
+    std::cout << "  Logger swap tests passed" << std::endl;
+    return true;
+}
+
+// =============================================================================
 // Main Test Runner
 // =============================================================================
 int main() {
@@ -239,6 +310,7 @@ int main() {
     allPassed &= testMultiLogger();
     allPassed &= testGlobalLogger();
     allPassed &= testThreadSafety();
+    allPassed &= testLoggerSwapDuringLog();
 
     std::cout << "\n==================================" << std::endl;
     if (allPassed) {
