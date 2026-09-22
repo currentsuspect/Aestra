@@ -527,13 +527,12 @@ void TransportBar::stop() {
     
     if (!wasAlreadyStopped) {
         m_state = TransportState::Stopped;
-        m_position = 0.0;
+        // No local position reset: a single stop returns to the cue, which
+        // only the model knows. The per-frame setPosition() sync from
+        // TrackManager updates both clock faces; zeroing here flashed 0.
         updateButtonStates();
-        
+
         if (m_infoContainer) {
-            // The position reset changes both clock faces: resync so a
-            // stopped clock in bars/beats mode reads 1:1.00, not stale bars.
-            syncClockDisplays();
             // Update timer to show stopped state (white color)
             m_infoContainer->getTimerDisplay()->setPlaying(false);
         }

@@ -17,15 +17,13 @@
 //
 // The fix: honor the pushed position on START. Only cues at or past the loop
 // end (a stale timeline position entering pattern mode) are wrapped back into
-// the loop, matching the render path's existing wrap logic. STOP follows the
-// T-8 single-stop contract: TrackManager::stop() pushes 0, so the playhead
-// resets to the loop top authoritatively — the scrubbed cue is honored by
-// playback start, never resurrected by stop.
+// the loop, matching the render path's existing wrap logic. STOP lands exactly
+// on the position its command carries: TrackManager::stop() sends the cue, a
+// hard stop sends 0. The stop scenario pins the hard-stop (0) case.
 //
 // These assertions fail on the pre-fix engine: pattern-mode play/pause/resume
 // lands the playhead at 0 (or one block past it) instead of the cued position.
-// The stop scenario documents the T-8 contract the model now emits (stop push
-// carries 0); the producer-side reset pin lives in TransportStopResetTest.
+// The producer-side cue/hard-stop pin lives in TransportStopResetTest.
 
 #include "Core/AudioCommandQueue.h"
 #include "Core/AudioEngine.h"
@@ -184,10 +182,9 @@ void patternResumeFromPausedPosition() {
     engine.setTransportPlaying(false);
 }
 
-// Stop in pattern mode must reset to the loop top: TrackManager::stop()
-// pushes 0 (T-8 single-stop reset), and the engine lands exactly on the
-// pushed position — the drain is authoritative. A scrubbed cue survives only
-// until the stop; playback start honors it, stop does not resurrect it.
+// A hard stop in pattern mode must reset to the loop top: the stop command
+// carries 0 and the engine lands exactly on the pushed position — the drain
+// is authoritative.
 void patternStopResetsToTop() {
     AudioEngine engine;
     engine.setSampleRate(kSampleRate);
@@ -205,7 +202,7 @@ void patternStopResetsToTop() {
     engine.commandQueue().push(makeTransportCmd(1.0f, kCueSamples));
     engine.processBlock(out.data(), nullptr, kFrames, 0.0);
 
-    // Stop pushes 0, as TrackManager::stop() does after T-8.
+    // Hard stop pushes 0 (the UI zeroes the cue before TrackManager::stop()).
     engine.commandQueue().push(makeTransportCmd(0.0f, 0));
     engine.processBlock(out.data(), nullptr, kFrames, 0.0);
 

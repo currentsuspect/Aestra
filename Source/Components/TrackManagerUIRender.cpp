@@ -1132,6 +1132,31 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float playheadEndX = bounds.x + bounds.width - scrollbarWidth;
     float playheadEndY = bounds.y + bounds.height;
 
+    // Return marker: where a single stop will put the playhead (the cue that
+    // play() stored, or wherever the user last dragged it). Only visible while
+    // it differs from the playhead — once stopped, the playhead sits on it.
+    // Dashed and dimmer so it never reads as the playhead itself.
+    const double cueBeats = m_trackManager->getPlayStartPosition() / secondsPerBeat;
+    const float cueX =
+        gridStartX + static_cast<float>((cueBeats * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset));
+    if (std::abs(cueX - playheadX) >= 1.0f && cueX >= gridStartX && cueX <= playheadEndX) {
+        const AestraUI::NUIColor cueColor = themeManager.getColor("accentPrimary");
+        constexpr float kDash = 4.0f;
+        constexpr float kGap = 4.0f;
+        for (float y = playheadStartY; y < playheadEndY; y += kDash + kGap) {
+            renderer.drawLine(AestraUI::NUIPoint(cueX, y), AestraUI::NUIPoint(cueX, std::min(y + kDash, playheadEndY)),
+                              1.0f, cueColor.withAlpha(0.38f));
+        }
+        constexpr float cueHalfW = 4.0f;
+        constexpr float cueH = 5.0f;
+        const AestraUI::NUIPoint cueTip(cueX, playheadStartY);
+        const AestraUI::NUIPoint cueLeft(cueX - cueHalfW, playheadStartY - cueH);
+        const AestraUI::NUIPoint cueRight(cueX + cueHalfW, playheadStartY - cueH);
+        renderer.drawLine(cueLeft, cueRight, 1.0f, cueColor.withAlpha(0.5f));
+        renderer.drawLine(cueLeft, cueTip, 1.0f, cueColor.withAlpha(0.5f));
+        renderer.drawLine(cueRight, cueTip, 1.0f, cueColor.withAlpha(0.5f));
+    }
+
     // PRECISE CULLING: Draw if the playhead CENTER is within bounds
     // We allow the triangle to extend slightly outside for better visibility at boundaries
     // This ensures playhead shows at position 0 (start) and at the right edge
