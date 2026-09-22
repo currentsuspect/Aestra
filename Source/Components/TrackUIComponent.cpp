@@ -11,6 +11,7 @@
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 #include "NUIContextMenu.h"
+#include "Commands/EditAutomationCurvesCommand.h"
 #include "Commands/MakeClipPatternUniqueCommand.h"
 #include "Commands/SetVolumeCommand.h"
 #include "Commands/SetPanCommand.h"
@@ -436,6 +437,42 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
     });
     m_clipRoutingMenu->addItem(deleteItem);
     attachAndShowContextMenu(this, m_clipRoutingMenu, position);
+}
+
+namespace {
+
+/** @brief Name the gesture from what it did, so the undo entry reads correctly. */
+const char* deriveAutomationEditLabel(const std::vector<AutomationCurve>& before,
+                                      const std::vector<AutomationCurve>& after) {
+    const auto countPoints = [](const std::vector<AutomationCurve>& curves) {
+        size_t n = 0;
+        for (const auto& curve : curves)
+            n += curve.points.size();
+        return n;
+    };
+    const size_t was = countPoints(before);
+    const size_t now = countPoints(after);
+    if (now > was)
+        return "Add Automation Point";
+    if (now < was)
+        return "Delete Automation Point";
+    return "Move Automation Point";
+}
+
+} // namespace
+
+void TrackUIComponent::pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name) {
+    if (!m_trackManager)
+        return;
+    auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+    if (!lane)
+        return;
+    const auto& after = lane->automationCurves;
+    if (automationCurvesEqual(before, after))
+        return; // a click that only selected a point is not an undo step
+    const char* label = name ? name : deriveAutomationEditLabel(before, after);
+    m_trackManager->getCommandHistory().pushAndExecute(
+        std::make_shared<EditAutomationCurvesCommand>(*m_trackManager, m_laneId, std::move(before), after, label));
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -2401,6 +2438,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                 m_trackManager->markModified();
             }
+            // One undo step for the whole gesture. Pushed unconditionally: the
+            // `moved` test above only inspects the dragged point, while a
+            // gesture that created a curve and added a point changed the lane
+            // even when that point never moved. The helper's own comparison is
+            // what decides whether anything undoable happened.
+            pushAutomationEditCommand(std::move(m_automationCurvesBefore), nullptr);
             return true;
         }
     }
@@ -2415,6 +2458,13 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto lane = playlist.getLane(m_laneId);
 
             if (lane) {
+                // V8-A1: snapshot once per gesture, before anything mutates.
+                // Only a press can begin an edit here; drag-move events reuse
+                // the snapshot taken at press and the release pushes it.
+                if (event.pressed && (event.button == AestraUI::NUIMouseButton::Left ||
+                                      event.button == AestraUI::NUIMouseButton::Right)) {
+                    m_automationCurvesBefore = lane->automationCurves;
+                }
                 // Left-press only: right-click is the delete gesture, and a
                 // right-click on empty space must not mutate the model.
                 const bool isLeftPress =
@@ -2459,6 +2509,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                                 m_trackManager->markModified();
                             }
+                            // Deleting is instantaneous — no drag follows, so the
+                            // gesture ends here and its undo step is pushed now.
+                            pushAutomationEditCommand(std::move(m_automationCurvesBefore),
+                                                      "Delete Automation Point");
                             return true;
                         }
                     }
@@ -2526,6 +2580,13 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 }
                                 break;
                             }
+                        }
+                        // Adding a point immediately begins dragging it, so the
+                        // create-curve + add-point + position gesture coalesces
+                        // into ONE undo step pushed at release. Push here only if
+                        // no drag started, so the point is never left un-undoable.
+                        if (!m_isDraggingPoint) {
+                            pushAutomationEditCommand(std::move(m_automationCurvesBefore), nullptr);
                         }
                         return true;
                     }

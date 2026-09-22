@@ -33,6 +33,23 @@ inline AutomationTarget automationTargetFromRawInt(int rawValue) noexcept {
     return static_cast<AutomationTarget>(static_cast<uint8_t>(std::clamp(rawValue, 0, 255)));
 }
 
+/**
+ * @brief The value a curve of this target evaluates to when it has no points.
+ *
+ * A Volume curve is a gain multiplier, so its neutral is unity — 0.0f is
+ * silence, not "no automation". Pan is bipolar with centre at 0. Custom is
+ * plugin-defined, where 0 is the only safe assumption.
+ *
+ * This lives in the model deliberately (FD-20): a Volume curve is unity
+ * because it is a Volume curve, not because one UI path remembered to say so.
+ * Before this existed, exactly one call site patched it — the UI's
+ * create-on-first-click path — so a curve arriving by any other route was
+ * neutral-at-silence.
+ */
+inline constexpr float neutralDefaultFor(AutomationTarget target) noexcept {
+    return target == AutomationTarget::Volume ? 1.0f : 0.0f;
+}
+
 struct AutomationPoint {
     // beat is the authoritative position domain: it is what the serializer
     // persists, what the UI edits, and what evaluation/sorting use. sample is
@@ -71,7 +88,11 @@ struct AutomationCurve {
     uint32_t paramId{0};
 
     AutomationCurve() = default;
-    AutomationCurve(const std::string& n, AutomationTarget t) : name(n), target(t) {}
+    // defaultValue follows the target, so no construction path can produce a
+    // Volume curve that is neutral-at-silence. Only reachable when points is
+    // empty — getValueAtBeat returns a point value in every other case.
+    AutomationCurve(const std::string& n, AutomationTarget t)
+        : name(n), target(t), defaultValue(neutralDefaultFor(t)) {}
 
     /**
      * @brief Get the automation target type
@@ -197,6 +218,40 @@ struct AutomationCurve {
 
     bool isVisible() const { return true; }
 };
+
+/**
+ * @brief Compare two automation points by their undoable content.
+ *
+ * `selected` is UI state and `sample` is a stale tempo cache that nothing may
+ * evaluate or sort by (see AutomationPoint), so neither is content. Without
+ * this distinction a click that merely selected a point would register as an
+ * edit and push an undo step for nothing.
+ */
+inline bool automationPointsEqual(const AutomationPoint& a, const AutomationPoint& b) noexcept {
+    return a.beat == b.beat && a.value == b.value && a.curve == b.curve;
+}
+
+/** @brief Compare two curve vectors by undoable content; the V8-A1 no-op guard. */
+inline bool automationCurvesEqual(const std::vector<AutomationCurve>& a,
+                                  const std::vector<AutomationCurve>& b) noexcept {
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const AutomationCurve& x = a[i];
+        const AutomationCurve& y = b[i];
+        if (x.name != y.name || x.target != y.target || x.mixerChannelId != y.mixerChannelId ||
+            x.defaultValue != y.defaultValue || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
+            return false;
+        }
+        if (x.points.size() != y.points.size())
+            return false;
+        for (size_t p = 0; p < x.points.size(); ++p) {
+            if (!automationPointsEqual(x.points[p], y.points[p]))
+                return false;
+        }
+    }
+    return true;
+}
 
 } // namespace Audio
 } // namespace Aestra

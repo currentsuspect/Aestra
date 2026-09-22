@@ -272,6 +272,15 @@ private:
     
     // Snap helper for trimming
     double snapBeatToGrid(double beat) const;
+    /**
+     * @brief Push one undo step for an automation gesture, or nothing if it changed nothing.
+     *
+     * Mirrors UnitRow::pushNotesEditCommand: the model is mutated live, the
+     * before/after snapshots are compared, and a no-op gesture (a click that
+     * selected without moving) pushes no command.
+     */
+    void pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name);
+
     double getSnapGridSizeBeats() const;
  
     // Automation Interaction State (v3.1)
@@ -282,6 +291,8 @@ private:
     // (simple click-select) must not dirty the project or rebuild the graph.
     double m_dragStartBeat = -1.0;
     float m_dragStartValue = -1.0f;
+    /** @brief Lane's curves as they were when the current gesture began (V8-A1). */
+    std::vector<AutomationCurve> m_automationCurvesBefore;
     AestraUI::NUIPoint m_lastAutomationMousePos;
 
     // Optimization
