@@ -5,7 +5,6 @@
 #include "../NUITransformStack.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
 #include <vector>
 #include <tuple>
@@ -139,11 +138,7 @@ public:
     // Performance Optimizations
     // ========================================================================
     
-    void setDirtyRegionTrackingEnabled(bool enabled) override;
     void setCachingEnabled(bool enabled) override;
-    void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                             size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
-    NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
     NUIRenderCache* getRenderCache() override { return &renderCache_; }
     void invalidateCache(uint64_t widgetId) override;
     bool renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
@@ -337,7 +332,6 @@ private:
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     
     // Optimization systems
-    NUIDirtyRegionManager dirtyRegionManager_;
     NUIRenderCache renderCache_;
     uint64_t frameCounter_ = 0;
     size_t submittedQuadCount_ = 0;

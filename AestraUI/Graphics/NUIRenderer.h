@@ -7,7 +7,6 @@
 
 // Forward declarations for optimization systems
 namespace AestraUI {
-    class NUIDirtyRegionManager;
     class NUIRenderCache;
 }
 
@@ -399,25 +398,9 @@ public:
     // ========================================================================
     
     /**
-     * Enable/disable dirty region tracking.
-     */
-    virtual void setDirtyRegionTrackingEnabled(bool enabled) = 0;
-    
-    /**
      * Enable/disable render caching.
      */
     virtual void setCachingEnabled(bool enabled) = 0;
-    
-    /**
-     * Get optimization stats.
-     */
-    virtual void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                                     size_t& cachedWidgets, size_t& cacheMemoryBytes) = 0;
-    
-    /**
-     * Access to dirty region manager.
-     */
-    virtual NUIDirtyRegionManager* getDirtyRegionManager() = 0;
     
     /**
      * Access to render cache.

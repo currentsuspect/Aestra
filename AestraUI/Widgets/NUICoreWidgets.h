@@ -171,39 +171,6 @@ private:
     std::function<void(const NUIPopupMenuItem&)> onSelect_;
 };
 
-class NUITabBar : public NUIComponent {
-public:
-    struct Tab {
-        std::string id;
-        std::string label;
-        bool closeable = false;
-    };
-
-    NUITabBar();
-
-    void onRender(NUIRenderer& renderer) override;
-    bool onMouseEvent(const NUIMouseEvent& event) override;
-
-    void addTab(const Tab& tab);
-    void removeTab(const std::string& id);
-    void clearTabs();
-
-    void setActiveTab(const std::string& id);
-    std::string getActiveTab() const { return activeTabId_; }
-
-    void setOnTabChanged(std::function<void(const std::string&)> callback);
-
-    const std::vector<Tab>& getTabs() const { return tabs_; }
-
-private:
-    int hitTestTab(int x, int y) const;
-
-    std::vector<Tab> tabs_;
-    std::string activeTabId_;
-    std::function<void(const std::string&)> onTabChanged_;
-    int hoveredIndex_ = -1;
-};
-
 class NUIComboBox : public NUIComponent {
 public:
     struct Item {
