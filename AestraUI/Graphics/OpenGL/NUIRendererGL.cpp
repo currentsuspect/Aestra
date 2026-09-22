@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
+
+#include "../NUIGlowFalloff.h"
 #include <cstring>
 #include <cmath>
 #include <iostream>
@@ -1227,17 +1229,42 @@ void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, con
 // ============================================================================
 
 void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) {
-    // Simple glow as expanded semi-transparent rect
-    NUIRect glowRect = rect;
-    glowRect.x -= radius;
-    glowRect.y -= radius;
-    glowRect.width += radius * 2;
-    glowRect.height += radius * 2;
-    
-    NUIColor glowColor = color;
-    glowColor.a *= intensity * 0.3f;
-    
-    fillRect(glowRect, glowColor);
+    AESTRA_ZONE("Renderer_DrawGlow");
+
+    // This used to be one expanded fillRect at alpha * intensity * 0.3 — a
+    // hard-edged SQUARE halo, which read especially wrong around its only
+    // caller: the audition panel's drop target, a 16px-rounded header. A glow
+    // with a visible straight edge is not a glow.
+    //
+    // There is no blur to reach for (see NUIGlowFalloff.h), so the falloff is
+    // built from concentric rounded rects, which do anti-alias through the
+    // type-1 SDF path. Overlap count rises toward the centre, giving a smooth
+    // monotonic ramp; glowLayerAlpha() solves the per-layer alpha so the
+    // innermost band lands on the caller's requested opacity.
+    if (radius <= 0.0f || intensity <= 0.0f || color.a <= 0.0f) {
+        return;
+    }
+
+    const float target = std::clamp(color.a * intensity, 0.0f, 1.0f);
+    const float layerAlpha = glowLayerAlpha(target, kGlowLayers);
+
+    for (int layer = 0; layer < kGlowLayers; ++layer) {
+        const float spread = glowLayerSpread(radius, layer, kGlowLayers);
+        NUIRect band = rect;
+        band.x -= spread;
+        band.y -= spread;
+        band.width += spread * 2.0f;
+        band.height += spread * 2.0f;
+
+        // drawGlow's signature carries no corner radius for the source shape, so
+        // the band is rounded by its own spread. That is right for the outer
+        // bands and slightly under-rounded for the innermost one; a straight
+        // halo was the defect, and passing the real corner radius would mean a
+        // default argument on a pure virtual, which is its own trap.
+        NUIColor bandColor = color;
+        bandColor.a = layerAlpha;
+        fillRoundedRect(band, spread, bandColor);
+    }
 }
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
