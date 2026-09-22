@@ -239,10 +239,6 @@ void TrackManagerUI::finishInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false; // Restore normal behavior
-    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
-        m_onStopPatternClipPreview();
-    }
-    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);
@@ -290,10 +286,6 @@ void TrackManagerUI::cancelInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false;
-    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
-        m_onStopPatternClipPreview();
-    }
-    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);

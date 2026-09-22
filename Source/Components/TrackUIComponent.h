@@ -89,7 +89,6 @@ public:
     void setOnAudioClipOpenRequested(std::function<void(ClipInstanceID)> callback) {
         m_onAudioClipOpenRequested = std::move(callback);
     }
-    void setOnPatternClipDragStarted(std::function<void(PatternID)> callback) { m_onPatternClipDragStarted = std::move(callback); }
 
     // Callback for track selection
     void setOnTrackSelected(std::function<void(TrackUIComponent*, TrackSelectionIntent)> callback) {
@@ -220,7 +219,6 @@ private:
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectionAddCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
-    std::function<void(PatternID)> m_onPatternClipDragStarted;
     std::function<void(TrackUIComponent*, TrackSelectionIntent)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 
