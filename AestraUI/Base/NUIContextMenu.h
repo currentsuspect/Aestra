@@ -103,6 +103,12 @@ public:
     void onMouseLeave() override;
 
     // Menu management
+    /**
+     * @brief Append an item; a submenu on it inherits this menu's bound owner.
+     *
+     * Every add path funnels through here, so submenu owner inheritance does
+     * not depend on whether the submenu was attached before or after setOwner().
+     */
     void addItem(std::shared_ptr<NUIContextMenuItem> item);
     void addItem(const std::string& text, std::function<void()> callback = nullptr);
     void addSeparator();
@@ -168,6 +174,23 @@ public:
     void setOnShow(std::function<void()> callback);
     void setOnHide(std::function<void()> callback);
     void setOnItemClick(std::function<void(std::shared_ptr<NUIContextMenuItem>)> callback);
+
+    /**
+     * @brief Bind the component whose lifetime gates this menu's callbacks.
+     *
+     * Context menus are attached to the *root* component so they can draw
+     * outside their owner's bounds, which means a menu outlives the component
+     * that built it. Its callbacks, however, almost always capture that
+     * component. Binding the owner here makes the menu drop every callback
+     * once the owner dies instead of calling into freed memory.
+     *
+     * Passing an empty or already-expired handle leaves the menu ungated, so
+     * menus that are not owned by a component keep working unchanged.
+     */
+    void setOwner(std::weak_ptr<NUIComponent> owner);
+
+    /** @brief False only when an owner was bound and has since been destroyed. */
+    bool hasLiveOwner() const;
 
     // Utility
     std::vector<std::shared_ptr<NUIContextMenuItem>> getItems() const { return items_; }
@@ -259,6 +282,12 @@ private:
     std::shared_ptr<NUIContextMenu> activeSubmenu_;
     int submenuItemIndex_ = -1;
     std::weak_ptr<NUIComponent> previousFocus_;
+
+    // Owner lifetime gate. ownerBound_ distinguishes "no owner" from "dead
+    // owner": a default-constructed weak_ptr is already expired, so the flag
+    // is what keeps un-owned menus ungated.
+    std::weak_ptr<NUIComponent> owner_;
+    bool ownerBound_ = false;
 
     // Layout state
     float menuWidth_ = 0.0f;
