@@ -2007,16 +2007,6 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
 
-# V8-C7: drawGlow's falloff arithmetic. Header-only, so no GL context and no UI
-# target — the geometry needs a renderer, but what makes the glow a gradient
-# rather than the placeholder's uniform slab is pure maths.
-add_executable(GlowFalloffTest AestraUI/GlowFalloffTest.cpp)
-target_include_directories(GlowFalloffTest PRIVATE
-    ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
-)
-add_test(NAME GlowFalloffTest COMMAND GlowFalloffTest)
-set_tests_properties(GlowFalloffTest PROPERTIES LABELS "ui;rendering;regression;contract:application")
-
 # Mixer plugin dropdown catalog contract: metadata-driven mixer-insert
 # filtering and grouping (header-only policy, no widget link).
 add_executable(MixerPluginListPolicyTest AestraUI/MixerPluginListPolicyTest.cpp)

@@ -1,7 +1,5 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
-
-#include "../NUIGlowFalloff.h"
 #include <cstring>
 #include <cmath>
 #include <iostream>
@@ -346,6 +344,22 @@ void main() {
         color.a *= alpha;
     }
     
+    if (primitiveID == 8) {
+        // Blurred Filled Squircle — shadows and glows.
+        //
+        // This is the one primitive where vBlur is a real radius. Type 1 cannot
+        // be it: fillRoundedRect passes blur=1.0f purely as an "use standard AA"
+        // marker, so reading vBlur there would soften every widget in the app.
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
+
+        // Falloff straddles the shape edge, as a Gaussian does, so the interior
+        // near the edge is not fully opaque. fwidth is the floor: a blur smaller
+        // than a pixel must still anti-alias rather than alias.
+        float edge = max(vBlur, fwidth(dist) * 1.25);
+        color.a *= 1.0 - smoothstep(-edge, edge, dist);
+    }
+
     if (primitiveID == 3) {
         // Stroked Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
@@ -1231,40 +1245,35 @@ void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, con
 void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) {
     AESTRA_ZONE("Renderer_DrawGlow");
 
-    // This used to be one expanded fillRect at alpha * intensity * 0.3 — a
-    // hard-edged SQUARE halo, which read especially wrong around its only
-    // caller: the audition panel's drop target, a 16px-rounded header. A glow
-    // with a visible straight edge is not a glow.
-    //
-    // There is no blur to reach for (see NUIGlowFalloff.h), so the falloff is
-    // built from concentric rounded rects, which do anti-alias through the
-    // type-1 SDF path. Overlap count rises toward the centre, giving a smooth
-    // monotonic ramp; glowLayerAlpha() solves the per-layer alpha so the
-    // innermost band lands on the caller's requested opacity.
+    // This was one expanded fillRect at alpha * intensity * 0.3 — a hard-edged
+    // SQUARE halo, which read especially wrong around its only caller: the
+    // audition panel's drop target, a 16px-rounded header. A glow with a visible
+    // straight edge is not a glow.
     if (radius <= 0.0f || intensity <= 0.0f || color.a <= 0.0f) {
         return;
     }
 
-    const float target = std::clamp(color.a * intensity, 0.0f, 1.0f);
-    const float layerAlpha = glowLayerAlpha(target, kGlowLayers);
+    // The quad has to contain the whole falloff, which completes at `radius`.
+    NUIRect glowQuad = rect;
+    glowQuad.x -= radius;
+    glowQuad.y -= radius;
+    glowQuad.width += radius * 2.0f;
+    glowQuad.height += radius * 2.0f;
 
-    for (int layer = 0; layer < kGlowLayers; ++layer) {
-        const float spread = glowLayerSpread(radius, layer, kGlowLayers);
-        NUIRect band = rect;
-        band.x -= spread;
-        band.y -= spread;
-        band.width += spread * 2.0f;
-        band.height += spread * 2.0f;
+    NUIColor glowColor = color;
+    glowColor.a = std::clamp(color.a * intensity, 0.0f, 1.0f);
 
-        // drawGlow's signature carries no corner radius for the source shape, so
-        // the band is rounded by its own spread. That is right for the outer
-        // bands and slightly under-rounded for the innermost one; a straight
-        // halo was the defect, and passing the real corner radius would mean a
-        // default argument on a pure virtual, which is its own trap.
-        NUIColor bandColor = color;
-        bandColor.a = layerAlpha;
-        fillRoundedRect(band, spread, bandColor);
-    }
+    // The 0.3f the placeholder folded in is gone: it existed to stop a hard slab
+    // reading as a solid block, and a real falloff does not need compensating for.
+    //
+    // Corner radius is fixed for the same reason drawShadow fixes it — the
+    // signature carries no rounding for the source shape — and at these blur
+    // radii the falloff dominates the corner anyway. Clamped like
+    // fillRoundedRect does, so a glow around something smaller than 16px does
+    // not get a corner radius larger than its own half-extent.
+    const float cornerRadius = std::min(8.0f, std::min(rect.width, rect.height) * 0.5f);
+    addQuad(glowQuad, glowColor, rect.width, rect.height, glowQuad.width, glowQuad.height, cornerRadius, radius, 0.0f,
+            8.0f);
 }
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
@@ -1281,7 +1290,10 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
     // Pass RectSize (logic size) and QuadSize (drawing size) separately
     // Radius fixed at 8.0f for standard shadows for now, matching previous logic
     // Type 1 = Filled Rect (Shadows use same SDF logic with blur)
-    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f, 1.0f);
+    // Type 8, not 1: until now this passed `blur` into a varying nothing read,
+    // so every shadow in the app was a hard-edged squircle expanded by blur*2.
+    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f,
+            8.0f);
 }
 
 // ============================================================================
