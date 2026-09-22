@@ -672,16 +672,29 @@ jobs:
             echo "safety ok: workflow-only #618 -> broad"
           fi
 
-          # LIVENESS (phase 2): #596 changed one .cpp under Source/Components and
-          # nothing else. No headless target compiles that file — AESTRA_CI=ON
+          # LIVENESS (phase 2): #906 changed one .cpp under Source/ and nothing
+          # else. No headless target compiles that file — AESTRA_CI=ON
           # force-disables the UI — so only the UI/App lane can observe it. If this
           # stops saying ui-app-only, the phase 2 rule has gone inert.
-          v=$(verdict_for 596) || fail=1
+          #
+          # This probe was #596 (Source/Components/TrackManagerUIToolbar.cpp) until
+          # ClipContextMenuReachabilityTest began compiling the TrackManagerUI set
+          # for V8-W2 coverage. That made #596's file genuinely headless-compiled,
+          # so `broad` became the CORRECT verdict for it and the probe's stated
+          # premise — "no headless target compiles that file" — stopped holding.
+          # Retargeting keeps what this check is for; it does not relax it.
+          #
+          # Note the probe class is fragile by construction: any UI .cpp named in a
+          # CMakeLists retires whichever probe points at it, and the failure reads
+          # as "the rule went inert" when the truth may be "this one file changed
+          # category". A derived probe (pick any merged PR whose files are
+          # currently narrow) would not have this failure mode.
+          v=$(verdict_for 906) || fail=1
           if [ "${v:-}" != "ui-app-only" ]; then
-            echo "::error::LIVENESS: UI-only #596 classified '${v:-<none>}', expected ui-app-only"
+            echo "::error::LIVENESS: UI-only #906 classified '${v:-<none>}', expected ui-app-only"
             fail=1
           else
-            echo "liveness ok: UI-only #596 -> ui-app-only"
+            echo "liveness ok: UI-only #906 -> ui-app-only"
           fi
 
           # SAFETY: #610 touched AestraAudio and a test. Never narrow.
