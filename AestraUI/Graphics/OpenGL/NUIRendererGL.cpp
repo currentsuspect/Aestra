@@ -1260,11 +1260,19 @@ void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity,
     glowQuad.width += radius * 2.0f;
     glowQuad.height += radius * 2.0f;
 
+    // The placeholder's 0.3f is KEPT, and the reasoning for dropping it was wrong.
+    // The falloff straddles the shape edge, so the interior saturates at full
+    // alpha — a glow is a solid fill with soft edges, not a ring. The interior
+    // wash therefore still exists and this factor still scales it. Measured on
+    // the audition drop target: without it the effective interior alpha runs
+    // 0.19 at the pulse trough to 0.63 at the crest, where the previous range
+    // was 0.06 to 0.19 — the new trough equalled the old crest, and at the crest
+    // it washed out the header's own text. Re-tuning glow strength is a separate
+    // pass (FD-21's precedent puts it last); removing a constant the call site
+    // was written against is not a mechanism fix.
     NUIColor glowColor = color;
-    glowColor.a = std::clamp(color.a * intensity, 0.0f, 1.0f);
+    glowColor.a = std::clamp(color.a * intensity * 0.3f, 0.0f, 1.0f);
 
-    // The 0.3f the placeholder folded in is gone: it existed to stop a hard slab
-    // reading as a solid block, and a real falloff does not need compensating for.
     //
     // Corner radius is fixed for the same reason drawShadow fixes it — the
     // signature carries no rounding for the source shape — and at these blur
