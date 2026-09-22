@@ -484,6 +484,11 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     // because the burger's left-click handler returns first — established by
     // instrumenting the press, after two wrong guesses.
     const float bandTop = clipBounds.y + FADE_BODY_TOP_INSET;
+    // Fades are an audio-clip gesture: pattern clips render no fade, so a
+    // grab zone there would only steal their trim/drag and write dead values.
+    if (!m_trackManager || !m_trackManager->getPlaylistModel().isAudioClip(clip)) {
+        return FadeHandle::None;
+    }
     if (position.y < bandTop || position.y > clipBounds.y + clipBounds.height) {
         return FadeHandle::None;
     }
@@ -2440,6 +2445,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // === HOVER EDGE DETECTION (for resize cursor) ===
     // Update hover state on every mouse move (not just press)
     if (!m_isTrimming && isInsideBounds && !event.pressed) {
+        const ClipInstanceID previousHoveredClipId = m_hoveredClipId;
+        const FadeHandle previousHoverFade = m_hoverFadeHandle;
         TrimEdge newHoverEdge = TrimEdge::None;
         FadeHandle newHoverFade = FadeHandle::None;
 
@@ -2480,17 +2487,25 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
         
-        if (newHoverEdge == TrimEdge::None) {
+        // A fade hit keeps the clip hovered: drawClipFades lights an unset
+        // grip only while its clip is hot, so clearing it here left the grip
+        // invisible exactly when the pointer was on it.
+        if (newHoverEdge == TrimEdge::None && newHoverFade == FadeHandle::None) {
             m_hoveredClipId = ClipInstanceID{};
         }
 
-        if (m_hoverFadeHandle != newHoverFade) {
-            m_hoverFadeHandle = newHoverFade;
-            repaint();
-        }
+        m_hoverFadeHandle = newHoverFade;
         if (m_hoverTrimEdge != newHoverEdge) {
             m_hoverTrimEdge = newHoverEdge;
             repaint(); // Trigger redraw for cursor feedback
+        }
+        // Rows render through TrackManagerUI's cache, which repaint() alone
+        // does not invalidate — the grip's hover state would never reach it.
+        if (previousHoveredClipId != m_hoveredClipId || previousHoverFade != m_hoverFadeHandle) {
+            repaint();
+            if (m_onCacheInvalidationCallback) {
+                m_onCacheInvalidationCallback();
+            }
         }
     } else if (!isInsideBounds && !m_isTrimming) {
         m_hoveredClipId = ClipInstanceID{};
