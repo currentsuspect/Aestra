@@ -191,7 +191,8 @@ jobs:
         # proven bound already used by the TSan/LSan lanes.
         run: >-
           cmake --build build-app --config ${{env.BUILD_TYPE}}
-          --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ModalDialogInteractionTest
+          --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ClipContextMenuReachabilityTest
+          ModalDialogInteractionTest
           PianoRollInteractionTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
           PianoRollExternalEditCommitTest EditorCloseDeferredTest PanelWindowClickSwallowTest
           MixerViewModelAutomationPresenceTest PanelResizeLayoutTest UnitRowStepSelectionTest

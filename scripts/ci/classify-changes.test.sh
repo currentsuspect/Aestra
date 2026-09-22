@@ -66,7 +66,7 @@ expect skip-cxx "#615 as merged"                 "workers/license-signing/packag
 # compile)" sets it — so nothing else compiles these files.
 expect ui-app-only "UI widget source"            "AestraUI/Widgets/UIMixerButtonRow.cpp"
 expect ui-app-only "app source"                  "Source/App/AestraApp.cpp"
-expect ui-app-only "component source"            "Source/Components/TrackManagerUIClipOps.cpp"
+expect ui-app-only "component source"            "Source/Components/FileBrowser.cpp"
 expect ui-app-only "several UI sources"          "AestraUI/Widgets/UIMixerButtonRow.cpp" \
                                                  "Source/Panels/MixerPanel.cpp"
 expect ui-app-only "UI source plus docs"         "docs/index.md" "Source/App/AestraApp.cpp"
@@ -88,6 +88,12 @@ expect broad "muse agent"                        "Source/MuseAgent/AgentLoop.cpp
 expect broad "panel compiled by a test"          "Source/Panels/WindowPanel.cpp"
 expect broad "theme compiled by a test"          "AestraUI/Core/NUITheme.cpp"
 expect broad "cursor service compiled by a test" "AestraUI/Platform/NUICursorService.cpp"
+# The timeline set joined this group when ClipContextMenuReachabilityTest began
+# compiling it (V8-W2 coverage). "component source" above therefore had to move to
+# a lane component no test compiles; TrackManagerUIClipOps.cpp is genuinely broad
+# now, and this pair is what keeps that honest in both directions.
+expect broad "lane component compiled by a test" "Source/Components/TrackManagerUIClipOps.cpp"
+expect broad "lane view compiled by a test"      "Source/Components/TrackUIComponent.cpp"
 expect broad "one headless source among UI"      "Source/App/AestraApp.cpp" \
                                                  "Source/Core/ProjectSerializer.cpp"
 
