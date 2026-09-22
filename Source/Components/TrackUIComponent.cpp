@@ -479,9 +479,12 @@ void TrackUIComponent::pushAutomationEditCommand(std::vector<AutomationCurve> be
 TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIRect& clipBounds,
                                                            const ClipInstance& clip,
                                                            const AestraUI::NUIPoint& position) const {
-    // Only the top band belongs to fades; trim owns the full-height edges below
-    // it, so the two gestures never compete for the same pixel.
-    if (position.y < clipBounds.y || position.y > clipBounds.y + FADE_HANDLE_BAND) {
+    // Fades own the waveform body; the header keeps the burger menu and trim.
+    // A handle in the header is unreachable regardless of hit-test order,
+    // because the burger's left-click handler returns first — established by
+    // instrumenting the press, after two wrong guesses.
+    const float bandTop = clipBounds.y + FADE_BODY_TOP_INSET;
+    if (position.y < bandTop || position.y > clipBounds.y + clipBounds.height) {
         return FadeHandle::None;
     }
     if (position.x < clipBounds.x || position.x > clipBounds.x + clipBounds.width) {
@@ -497,8 +500,24 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
 
     const float dIn = std::abs(position.x - inX);
     const float dOut = std::abs(position.x - outX);
-    if (dIn > FADE_HANDLE_GRAB && dOut > FADE_HANDLE_GRAB) {
+
+    // A handle that has never been dragged sits ON the clip edge, where there is
+    // nothing drawn to aim at — a 9px target on an invisible point, which made
+    // the gesture land only by luck. So an UNSET fade claims a wider zone
+    // inward from its edge: the corner is grabbable, as it is in other DAWs.
+    // Once a fade exists its handle is visible, and the tight tolerance applies.
+    const bool inUnset = clip.edits.fadeInBeats <= 0.0f;
+    const bool outUnset = clip.edits.fadeOutBeats <= 0.0f;
+    const float inReach = inUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
+    const float outReach = outUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
+
+    const bool inHit = inUnset ? (position.x - inX >= 0.0f && position.x - inX <= inReach) : dIn <= inReach;
+    const bool outHit = outUnset ? (outX - position.x >= 0.0f && outX - position.x <= outReach) : dOut <= outReach;
+    if (!inHit && !outHit) {
         return FadeHandle::None;
+    }
+    if (inHit != outHit) {
+        return inHit ? FadeHandle::In : FadeHandle::Out;
     }
     // Ties go to whichever handle is nearer; on a very short clip both can be
     // in range and picking arbitrarily would feel broken.
@@ -506,10 +525,20 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
 }
 
 void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                     const ClipInstance& clip) {
-    if (clipBounds.width <= 1.0f || clipBounds.height <= 1.0f) {
+                                     const AestraUI::NUIRect& waveformRect, const ClipInstance& clip) {
+    if (clipBounds.width <= 1.0f || waveformRect.width <= 1.0f || waveformRect.height <= 2.0f) {
         return;
     }
+
+    // Everything here is confined to the WAVEFORM rect: it never reaches the
+    // label bar above, and a clip scrolled partly off-screen cannot paint its
+    // envelope across the track header. Geometry is still anchored on the FULL
+    // clip bounds, because that is where the engine anchors the fade.
+    renderer.setClipRect(waveformRect);
+    struct ClipRectGuard {
+        AestraUI::NUIRenderer& r;
+        ~ClipRectGuard() { r.clearClipRect(); }
+    } clipGuard{renderer};
 
     const bool hot = m_hoveredClipId == clip.id || isClipHighlighted(clip.id) ||
                      (m_fadeDragHandle != FadeHandle::None && m_fadeDragClipId == clip.id);
@@ -517,40 +546,52 @@ void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const Aest
                                       clipBounds.width);
     const float fadeOutPx = std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
                                        clipBounds.width);
-
-    // A zero-length fade has no ramp to draw; its handle is still shown while
-    // the clip is hot so the affordance can be found without guessing.
     if (fadeInPx <= 0.0f && fadeOutPx <= 0.0f && !hot) {
         return;
     }
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto ramp = themeManager.getColor("textPrimary").withAlpha(hot ? 0.75f : 0.45f);
-    const auto marker = themeManager.getColor("textPrimary").withAlpha(hot ? 0.95f : 0.0f);
 
-    const float top = clipBounds.y;
-    const float bottom = clipBounds.y + clipBounds.height;
+    // Same centreline and half-height drawChannelWaveform uses, so the guide
+    // sits exactly on the tapered waveform's outer edge rather than near it.
+    const float centerY = waveformRect.y + waveformRect.height * 0.5f;
+    const float halfH = std::max(1.0f, waveformRect.height * 0.5f - 2.0f);
+    const float clipLeft = clipBounds.x;
+    const float clipRight = clipBounds.x + clipBounds.width;
 
-    const auto drawMarker = [&](float x) {
-        if (marker.a <= 0.0f) {
+    // The waveform itself now tapers (it is drawn through the fade gain), so the
+    // guide only has to state the shape: a thin mirrored envelope opening from
+    // the centreline. Under a linear-amplitude fade on a linear, centred
+    // waveform that envelope IS straight — drawing a curve here would show a
+    // shape the engine does not apply.
+    const auto guide = themeManager.getColor("textPrimary").withAlpha(hot ? 0.80f : 0.45f);
+    if (fadeInPx > 0.0f) {
+        const AestraUI::NUIPoint apex(clipLeft, centerY);
+        renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY - halfH), 1.25f, guide);
+        renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY + halfH), 1.25f, guide);
+    }
+    if (fadeOutPx > 0.0f) {
+        const AestraUI::NUIPoint apex(clipRight, centerY);
+        renderer.drawLine(AestraUI::NUIPoint(clipRight - fadeOutPx, centerY - halfH), apex, 1.25f, guide);
+        renderer.drawLine(AestraUI::NUIPoint(clipRight - fadeOutPx, centerY + halfH), apex, 1.25f, guide);
+    }
+
+    // Grip visibility follows the DATA, not the pointer: an existing fade always
+    // shows its handle so you can see and re-grab what you made; an unset fade's
+    // phantom handle appears only on hover. Grips sit on the centreline, the
+    // middle of the grab band, where they are easiest to hit.
+    const auto drawGrip = [&](float x, float fadePx) {
+        const float alpha = fadePx > 0.0f ? (hot ? 1.0f : 0.72f) : (hot ? 0.85f : 0.0f);
+        if (alpha <= 0.0f) {
             return;
         }
-        const float half = FADE_HANDLE_SIZE * 0.5f;
-        renderer.fillRoundedRect(AestraUI::NUIRect(x - half, top + 1.0f, FADE_HANDLE_SIZE, FADE_HANDLE_SIZE), 1.5f,
-                                 marker);
+        const float r = FADE_HANDLE_SIZE * 0.5f;
+        renderer.fillCircle(AestraUI::NUIPoint(x, centerY), r + 1.5f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, alpha * 0.55f));
+        renderer.fillCircle(AestraUI::NUIPoint(x, centerY), r,
+                            themeManager.getColor("textPrimary").withAlpha(alpha));
     };
-
-    if (fadeInPx > 0.0f) {
-        renderer.drawLine(AestraUI::NUIPoint(clipBounds.x, bottom),
-                          AestraUI::NUIPoint(clipBounds.x + fadeInPx, top), 1.5f, ramp);
-    }
-    drawMarker(clipBounds.x + fadeInPx);
-
-    if (fadeOutPx > 0.0f) {
-        renderer.drawLine(AestraUI::NUIPoint(clipBounds.x + clipBounds.width - fadeOutPx, top),
-                          AestraUI::NUIPoint(clipBounds.x + clipBounds.width, bottom), 1.5f, ramp);
-    }
-    drawMarker(clipBounds.x + clipBounds.width - fadeOutPx);
+    drawGrip(clipLeft + fadeInPx, fadeInPx);
+    drawGrip(clipRight - fadeOutPx, fadeOutPx);
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -1140,9 +1181,28 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
 
     // Display gain is the file-scope kWaveDisplayGain, shared with the
     // AESTRA_WAVE_TRACE span assertion so both map peaks identically.
+    // V8-W3: per-column fade gain, the same linear-amplitude law ClipRenderKernel
+    // applies (min of the fade-in and fade-out ramps, anchored on the clip's full
+    // edges). Only active while one clip's waveform is being drawn.
+    const auto fadeGainAt = [this](float px) {
+        if (!m_waveformFade.active) {
+            return 1.0f;
+        }
+        float g = 1.0f;
+        if (m_waveformFade.fadeInPx > 0.0f) {
+            g = std::min(g, std::clamp((px - m_waveformFade.clipLeft) / m_waveformFade.fadeInPx, 0.0f, 1.0f));
+        }
+        if (m_waveformFade.fadeOutPx > 0.0f) {
+            g = std::min(g, std::clamp((m_waveformFade.clipRight - px) / m_waveformFade.fadeOutPx, 0.0f, 1.0f));
+        }
+        return g;
+    };
+
     for (int i = 0; i < numPoints; ++i) {
-        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(i) * kWaveDisplayGain));
-        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(i) * kWaveDisplayGain));
+        const float colX = x + (static_cast<float>(i) + 0.5f) * step;
+        const float fadeGain = fadeGainAt(colX);
+        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(i) * kWaveDisplayGain * fadeGain));
+        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(i) * kWaveDisplayGain * fadeGain));
 
         float topY = centerY - normMax * halfDrawH;
         float bottomY = centerY - normMin * halfDrawH;
@@ -1158,7 +1218,7 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
         float px = x + (static_cast<float>(i) + 0.5f) * step;
         m_waveformTopPts.emplace_back(px, topY);
         m_waveformBottomPts.emplace_back(px, bottomY);
-        m_waveformRmsVals.push_back(std::max(0.0f, std::min(1.0f, combinedRms(i) * kWaveDisplayGain)));
+        m_waveformRmsVals.push_back(std::max(0.0f, std::min(1.0f, combinedRms(i) * kWaveDisplayGain * fadeGain)));
     }
 
     renderer.fillWaveformGradient(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, envTopColor,
@@ -1501,10 +1561,6 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     drawPatternClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip);
                 } else {
                     drawSampleClipForClip(renderer, insetClippedClipBounds, insetFullClipBounds, clip, seamLeft, seamRight);
-                    // V8-W3: fade ramps and their handles sit on top of the
-                    // clip body. Audio only — fades are a ClipEdits property
-                    // the render path applies to sampled material.
-                    drawClipFades(renderer, insetFullClipBounds, clip);
                     // The waveform spans the FULL clip body; the header renders as
                     // a translucent scrim over it (see drawSampleClipHeader).
                     // Reserving a strip below the label boxed the wave into the
@@ -1526,8 +1582,26 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                         std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) -
                                            (insetClippedClipBounds.y + waveformPadTop))
                     );
+                    // V8-W3: the waveform is drawn THROUGH the clip's fades, with the
+                    // same linear-amplitude gain ClipRenderKernel applies to the
+                    // audio, so what you see taper is what you hear taper. Anchored
+                    // on the FULL clip edges, exactly as the engine anchors them.
+                    m_waveformFade.active = true;
+                    m_waveformFade.clipLeft = insetFullClipBounds.x;
+                    m_waveformFade.clipRight = insetFullClipBounds.x + insetFullClipBounds.width;
+                    m_waveformFade.fadeInPx =
+                        std::clamp(static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat, 0.0f,
+                                   insetFullClipBounds.width);
+                    m_waveformFade.fadeOutPx =
+                        std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
+                                   insetFullClipBounds.width);
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
+                    m_waveformFade = WaveformFade{};
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
+                    // Envelope guide and grips go LAST, on top of waveform and header,
+                    // and are clipped to the waveform rect — they never reach the
+                    // label bar. Drawing them first let the waveform paint over them.
+                    drawClipFades(renderer, insetFullClipBounds, waveformInsideClip, clip);
                 }
                 // A muted clip is silent in playback, so it must not read as active.
                 // Same dim a muted lane applies to its grid area, scoped to the clip;
