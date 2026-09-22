@@ -1121,10 +1121,23 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 patternLoopLenSamples = loopEndSample - loopStartSample;
             }
 
-            // Check for loop crossing
-            // Enhanced Logic: In Pattern Mode, we might start WAY past loop end (Timeline position).
-            // We must wrap if nextGlobalPos exceeds loopEndSample, regardless of where current started.
-            if (nextGlobalPos > loopEndSample && loopEndSample > loopStartSample) {
+            // Check for loop crossing.
+            // Pattern mode: we might start WAY past the loop end (a stale timeline
+            // position), and the pattern is the whole world, so wrap regardless of
+            // where playback started.
+            // Timeline mode: the loop only catches a playhead that crosses the loop
+            // end from inside. Playback started past the loop end runs on linearly —
+            // otherwise dragging the playhead there and pressing play folded it
+            // into the loop by modulo, and the drag looked ignored.
+            // Exactly AT the loop end is ambiguous: a block can end on it without
+            // wrapping (the test below is next > loopEnd), so arriving there by
+            // advancing must still wrap — but a play/seek that PLACED the playhead
+            // there (a grid-snapped drag onto the loop's end bar) did not come
+            // from inside. transportRestart is exactly "placed by a command".
+            const bool crossesFromInside = currentGlobalPos < loopEndSample ||
+                                           (currentGlobalPos == loopEndSample && !transportRestart);
+            if (nextGlobalPos > loopEndSample && loopEndSample > loopStartSample &&
+                (patternMode || crossesFromInside)) {
                 // Loop Triggered!
                 // Calculate wrap
                 // Case 1: Standard crossing (inside -> outside)

@@ -1297,23 +1297,27 @@ public:
     }
 
     /**
-     * @brief Stop transport playback and reset the playhead to 0.
+     * @brief Stop transport playback and return the playhead to the cue.
      *
-     * Single stop lands at 0 authoritatively (v0.7.1 T-8): the reset rides the
-     * transport command itself — the audio-thread drain is the single position
-     * authority, and a UI-side rewind after the fact races it (8714ede9 rule).
-     * The stored cue is dropped (play() cannot resurrect a scrubbed position)
-     * and any display override is cleared (a count-in leftover must not pin
-     * the UI to a stale position on a soft stop).
+     * A single stop goes back to where playback started, or to wherever the
+     * user last dragged the playhead (every seek path updates the cue), so a
+     * section can be replayed without re-placing the playhead. A hard stop
+     * (double stop) zeroes the cue BEFORE calling this, so it lands at 0.
+     *
+     * The return rides the transport command itself (kept from v0.7.1 T-8):
+     * the audio-thread drain is the single position authority, and a UI-side
+     * rewind after the fact races it (8714ede9 rule). Any display override is
+     * cleared — a count-in leftover must not pin the UI to a stale position.
      * Pause keeps its own preserve-sentinel path (#590) and is untouched.
      */
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        m_playStartPosition.store(0.0, std::memory_order_relaxed);
-        m_position.store(0.0, std::memory_order_relaxed);
+        const double cue = std::max(0.0, m_playStartPosition.load(std::memory_order_relaxed));
+        m_playStartPosition.store(cue, std::memory_order_relaxed);
+        m_position.store(cue, std::memory_order_relaxed);
         clearDisplayPositionOverride();
-        pushTransportCommand(0.0f, 0.0);
+        pushTransportCommand(0.0f, cue);
     }
 
     /**
@@ -1424,9 +1428,20 @@ public:
         recomputeEffectiveLoop();
     }
 
-    /** @brief Clamp a candidate deferred-capture beat into the effective loop region. */
+    /**
+     * @brief Clamp a candidate deferred-capture beat into the effective loop region.
+     *
+     * Only the pattern loop override needs it (Arsenal force-loops the engine,
+     * which wraps any position into the pattern loop, so a start outside it is
+     * never reached — #845). On the
+     * timeline the loop only catches a playhead crossing the loop end from
+     * inside, so playback always reaches its own start — clamping it there
+     * would place the take at the loop start while audio from the cue is
+     * captured.
+     */
     double reachableDeferredStart(double startBeat) const {
-        if (!m_loopEnabled.load(std::memory_order_relaxed)) {
+        if (!m_loopEnabled.load(std::memory_order_relaxed) ||
+            !m_patternOverrideActive.load(std::memory_order_relaxed)) {
             return startBeat;
         }
         const double loopStart = m_loopStartBeats.load(std::memory_order_relaxed);
@@ -1464,8 +1479,8 @@ public:
         m_countInPending.store(true, std::memory_order_release);
         setPlayStartPosition(clampedStart);
         m_position.store(clampedStart, std::memory_order_relaxed);
-        // Clamp into the active loop region: a cue beyond the loop end would
-        // pin capture to a beat the engine wraps past forever (#845).
+        // Pattern loop only: a cue outside the pattern loop would pin capture
+        // to a beat the engine wraps past forever (#845). See reachableDeferredStart.
         pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(clampedStart)));
         setDisplayPositionOverride(clampedStart);
         // No sink means no engine to notify (model-level tests, loader): the
@@ -1532,9 +1547,9 @@ public:
             // recording — capture would skip frames to the old count-in beat.
             clearDeferredRecordingStartBeat();
         } else {
-            // Re-clamp into the loop region at the moment playback starts: a
-            // cue beyond the loop end would leave capture waiting for a beat
-            // the engine wraps past forever (#845).
+            // Re-clamp at the moment playback starts (pattern loop only — see
+            // reachableDeferredStart): the loop may have changed during the
+            // count-in (#845).
             pinDeferredRecordingStartBeat(
                 reachableDeferredStart(m_deferredRecordingStartBeat.load(std::memory_order_relaxed)));
         }
@@ -1633,8 +1648,8 @@ public:
      *        the playhead for resume.
      *
      * The engine keeps its own authoritative position via the #590
-     * preserve-sentinel — routing pause through stop() would trigger T-8's
-     * single-stop reset (land at 0) and break resume. The cue and m_position
+     * preserve-sentinel — routing pause through stop() would return the
+     * playhead to the cue and break resume. The cue and m_position
      * are deliberately untouched: playPatternInArsenal(-1) resumes from
      * m_position, which the UI keeps synced to the engine during playback.
      */

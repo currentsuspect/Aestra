@@ -285,8 +285,11 @@ bool testCompleteWithoutPendingIsNoop() {
 }
 
 // Test 6 (#845): a cue beyond the active loop region must keep deferred
-// capture reachable — the engine wraps playback into the loop, so capture
-// pinned to the raw cue would skip every block forever (empty takes).
+// capture reachable (the #845 symptom was empty takes). On the timeline the
+// loop only catches a playhead crossing the loop end from inside, so playback
+// started past it runs on linearly from the cue — and the take belongs at the
+// cue. (Before, the engine folded the cue into the loop and capture was
+// clamped to the loop start to match; the user's drag looked ignored.)
 bool testLoopWrapKeepsCaptureReachable() {
     std::cout << "  [6/7] Loop wrap keeps deferred capture reachable... ";
     auto tm = makeRecorder();
@@ -310,16 +313,16 @@ bool testLoopWrapKeepsCaptureReachable() {
     tm->completeCountIn();
     check(tm->isPlaying(), "transport started after count-in");
 
-    // Engine wraps the playhead into the region; sync feeds wrapped positions.
-    tm->setPosition(0.0);
-    tm->onTransportStateApplied(true, static_cast<uint64_t>(0), static_cast<double>(kSampleRate));
+    // Engine plays on from the cue (past the loop end, no wrap).
+    tm->setPosition(6.0);
+    tm->onTransportStateApplied(true, static_cast<uint64_t>(6.0 * kSampleRate), static_cast<double>(kSampleRate));
     check(tm->isRecording(), "capture session began when transport applied");
 
-    feedAt(*tm, 0.25, 0.25); // beat 1 — inside the clamped region
-    feedAt(*tm, 0.5, 0.25);
-    feedAt(*tm, 1.5, 0.25);
+    feedAt(*tm, 6.0, 0.25); // beat 12 — the cue itself
+    feedAt(*tm, 6.25, 0.25);
+    feedAt(*tm, 6.5, 0.25);
 
-    tm->onTransportStateApplied(false, static_cast<uint64_t>(2.0 * kSampleRate),
+    tm->onTransportStateApplied(false, static_cast<uint64_t>(6.75 * kSampleRate),
                                 static_cast<double>(kSampleRate));
     check(!tm->isRecording(), "capture finalized on stop");
 
@@ -330,8 +333,8 @@ bool testLoopWrapKeepsCaptureReachable() {
     }
     auto* lane = tm->getPlaylistModel().getLane(takeLane);
     const ClipInstance& clip = lane->clips.front();
-    check(std::abs(clip.startBeat - 0.0) < 0.001,
-          "take aligned to the loop-wrapped position (start beat 0), not the unreachable cue");
+    check(std::abs(clip.startBeat - 12.0) < 0.001,
+          "take aligned to the cue (beat 12), where playback actually ran, not the loop start");
     std::cout << "PASSED\n";
     return true;
 }

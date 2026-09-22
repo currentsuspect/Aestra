@@ -4,8 +4,8 @@
 // Pause hard-cuts active voices (one-shot workflow) but must NOT rewind:
 // playPatternInArsenal() resumes from the stored position by design, so the
 // pause path keeps the playhead via the #590 preserve-sentinel (the engine's
-// own authoritative position). Routing pause through stop() would trigger the
-// T-8 single-stop reset (land at 0) and break resume.
+// own authoritative position). Routing pause through stop() would return the
+// playhead to the cue and break resume.
 
 #include "Core/AudioCommandQueue.h"
 #include "Models/TrackManager.h"
@@ -76,8 +76,8 @@ int main() {
     // Pause: hard-cut voices, preserve the playhead.
     tm.pauseArsenalPlayback();
     // The stop command must carry the #590 preserve-sentinel — never the
-    // paused position (which the UI cache can lag) and never zero (T-8's
-    // single-stop reset is stop's semantic, not pause's). The engine keeps
+    // paused position (which the UI cache can lag) and never the cue
+    // (returning to the cue is stop's semantic, not pause's). The engine keeps
     // its own authoritative playhead.
     const uint64_t pausedSamples = static_cast<uint64_t>(3.0 * kSampleRate);
     bool pauseCarriesSentinel = false;
