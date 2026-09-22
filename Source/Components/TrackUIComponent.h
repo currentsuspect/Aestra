@@ -269,6 +269,19 @@ private:
     double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
+
+    // V8-W3 — timeline fade handles. The model, serialization, offline render,
+    // live playback (ClipRenderKernel) and the AudioClipEditorPanel sliders all
+    // already handle fades; this is only the timeline gesture.
+    //
+    // The handle lives in a band along the TOP of the clip so it can coexist
+    // with trim, which owns the full-height left/right edges. Fade is tested
+    // first: inside the top band the fade handle wins, below it trim does.
+    static constexpr float FADE_HANDLE_BAND = 12.0f;   // Top band height owned by fades
+    static constexpr float FADE_HANDLE_GRAB = 9.0f;    // Horizontal grab tolerance
+    static constexpr float FADE_HANDLE_SIZE = 6.0f;    // Drawn marker size
+
+    enum class FadeHandle { None, In, Out };
     
     // Snap helper for trimming
     double snapBeatToGrid(double beat) const;
@@ -280,10 +293,24 @@ private:
      * selected without moving) pushes no command.
      */
     void pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name);
+    /** @brief Which fade handle (if any) the pointer is over for this clip. */
+    FadeHandle fadeHandleAt(const AestraUI::NUIRect& clipBounds, const ClipInstance& clip,
+                            const AestraUI::NUIPoint& position) const;
+
+    /** @brief Draw the fade ramps and their handles for one audio clip. */
+    void drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                       const ClipInstance& clip);
 
     double getSnapGridSizeBeats() const;
  
     // Automation Interaction State (v3.1)
+    // Fade-handle gesture state. m_fadeOriginalEdits is the undo "before",
+    // captured at press like m_trimOriginal* is for trimming.
+    FadeHandle m_hoverFadeHandle = FadeHandle::None;
+    FadeHandle m_fadeDragHandle = FadeHandle::None;
+    ClipInstanceID m_fadeDragClipId{};
+    ClipEdits m_fadeOriginalEdits{};
+
     bool m_isDraggingPoint = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
