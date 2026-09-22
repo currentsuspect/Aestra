@@ -1765,6 +1765,31 @@ add_test(NAME UISurfaceResolutionGuardSelfTest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution_selftest.cmake)
 set_tests_properties(UISurfaceResolutionGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:application" TIMEOUT 120)
 
+# V8-G2 — the required-UI-test list must be identical in all three places it
+# lives: AESTRA_REQUIRED_UI_TESTS (fails configure), ci.yml's --target list
+# (decides what is BUILT) and ci.yml's -R selector (decides what is RUN).
+# Nothing asserted they agreed, and the directions are not symmetric: omitting
+# a test from --target fails loudly as "(Not Run)", while omitting it from -R
+# fails SILENTLY — it builds, the others run, the lane is green, and the new
+# test gates nothing. --no-tests=error cannot catch that, because tests did run.
+# Observed on PR #945. cmake -P only: no UI target dependency, so this runs
+# under AESTRA_CI=ON like the other guards.
+add_test(NAME UIRequiredTestListsGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_required_test_lists.cmake)
+set_tests_properties(UIRequiredTestListsGuard PROPERTIES LABELS "guard;architecture;ui;contract:application" TIMEOUT 120)
+
+# Self-test: an agreeing baseline must pass; each divergence direction must
+# fail, including both unreadable-input cases — a guard that cannot read its
+# input must not report agreement.
+add_test(NAME UIRequiredTestListsGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/ui_required_test_lists.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/ui_required_test_lists_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_required_test_lists_selftest.cmake)
+set_tests_properties(UIRequiredTestListsGuardSelfTest PROPERTIES LABELS "guard;architecture;ui;contract:application" TIMEOUT 120)
+
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
 # real processBlock timings.
