@@ -117,12 +117,75 @@ void testTallMenuScrollingAndViewportContainment() {
     check(activated == 1, "scrolling exposes and activates the next routing destination");
 }
 
+// A context menu is attached to the *root* component so it can draw outside its
+// owner's bounds, which means it outlives the component that built it, while its
+// callbacks capture that component. Destroying the owner with the menu still up
+// (refreshTracks() rebuilding lanes is the common way) therefore left every
+// callback holding a dangling pointer.
+void testOwnerLifetimeGatesCallbacks() {
+    NUIComponent::clearFocusedComponent();
+
+    // No owner bound: menus that are not owned by a component must be untouched.
+    // A default-constructed weak_ptr is already expired, so this is the case a
+    // naive expired() check would break.
+    {
+        auto menu = std::make_shared<NUIContextMenu>();
+        int activations = 0;
+        menu->addItem("Copy", [&]() { ++activations; });
+        check(menu->hasLiveOwner(), "a menu with no owner bound is never gated");
+        menu->showAt(10, 10);
+        menu->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 1, "an un-owned menu still activates its items");
+    }
+
+    // Live owner. Without this half, the dead-owner checks below would pass just
+    // as happily if the gate blocked every callback unconditionally.
+    {
+        auto owner = std::make_shared<NUIComponent>();
+        auto menu = std::make_shared<NUIContextMenu>();
+        int activations = 0;
+        int hides = 0;
+        menu->addItem("Copy", [&]() { ++activations; });
+        menu->setOnHide([&]() { ++hides; });
+        menu->setOwner(owner);
+        check(menu->hasLiveOwner(), "a bound, live owner reports live");
+        menu->showAt(10, 10);
+        menu->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 1, "a live owner does not block item activation");
+        check(hides == 1, "a live owner does not block the hide handler");
+    }
+
+    // Dead owner: the use-after-free. Both callbacks below would have run
+    // against freed owner state.
+    {
+        auto doomed = std::make_shared<NUIComponent>();
+        auto menu = std::make_shared<NUIContextMenu>();
+        int activations = 0;
+        int hides = 0;
+        menu->addItem("Delete Clip", [&]() { ++activations; });
+        menu->setOnHide([&]() { ++hides; });
+        menu->setOwner(doomed);
+        menu->showAt(10, 10);
+
+        doomed.reset(); // refreshTracks() destroying the lane component
+
+        check(!menu->hasLiveOwner(), "a destroyed owner reports dead");
+        menu->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 0, "a destroyed owner blocks item activation");
+        check(hides == 0, "a destroyed owner blocks the hide handler");
+        check(!menu->isVisible(), "activating against a dead owner dismisses the menu");
+    }
+
+    NUIComponent::clearFocusedComponent();
+}
+
 } // namespace
 
 int main() {
     testKeyboardNavigationAndFocusRestoration();
     testSubmenuKeyboardLifecycle();
     testTallMenuScrollingAndViewportContainment();
+    testOwnerLifetimeGatesCallbacks();
     NUIComponent::clearFocusedComponent();
 
     if (failures == 0) {

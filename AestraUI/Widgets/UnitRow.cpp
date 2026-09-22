@@ -55,6 +55,10 @@ void attachAndShowContextMenu(AestraUI::NUIComponent* owner, const std::shared_p
     if (!root)
         root = owner;
     root->addChild(menu);
+    // The menu lives on the root, so it outlives `owner`; bind the owner so the
+    // menu drops its (owner-capturing) callbacks if the owner is destroyed
+    // while the menu is still up.
+    menu->setOwner(owner->weak_from_this());
     menu->showAt(position);
     root->repaint();
 }

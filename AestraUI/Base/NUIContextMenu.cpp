@@ -560,6 +560,20 @@ void NUIContextMenu::setOnHide(std::function<void()> callback)
     onHideCallback_ = callback;
 }
 
+void NUIContextMenu::setOwner(std::weak_ptr<NUIComponent> owner)
+{
+    owner_ = std::move(owner);
+    // An empty handle (or a component not managed by shared_ptr, whose
+    // weak_from_this() is empty) leaves the menu ungated rather than
+    // permanently dead.
+    ownerBound_ = !owner_.expired();
+}
+
+bool NUIContextMenu::hasLiveOwner() const
+{
+    return !ownerBound_ || !owner_.expired();
+}
+
 void NUIContextMenu::setOnItemClick(std::function<void(std::shared_ptr<NUIContextMenuItem>)> callback)
 {
     onItemClickCallback_ = callback;
@@ -1068,6 +1082,15 @@ void NUIContextMenu::hideSubmenu()
 
 void NUIContextMenu::triggerItemClick(std::shared_ptr<NUIContextMenuItem> item)
 {
+    // The owner died while this menu was still on screen (it is a child of the
+    // root, so nothing dismissed it). Its callbacks captured that owner, so
+    // invoking them now is a use-after-free. Dismiss instead.
+    if (!hasLiveOwner())
+    {
+        hide();
+        return;
+    }
+
     if (item->getOnClick())
     {
         item->getOnClick()();
@@ -1081,6 +1104,11 @@ void NUIContextMenu::triggerItemClick(std::shared_ptr<NUIContextMenuItem> item)
 
 void NUIContextMenu::triggerShow()
 {
+    if (!hasLiveOwner())
+    {
+        return;
+    }
+
     if (onShowCallback_)
     {
         onShowCallback_();
@@ -1089,6 +1117,14 @@ void NUIContextMenu::triggerShow()
 
 void NUIContextMenu::triggerHide()
 {
+    // Deliberately no hide() here: hide() is what calls us. The dead-owner
+    // case is exactly the one that used to touch a freed member, because the
+    // usual on-hide handler detaches the menu through the owner.
+    if (!hasLiveOwner())
+    {
+        return;
+    }
+
     if (onHideCallback_)
     {
         onHideCallback_();

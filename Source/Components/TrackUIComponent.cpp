@@ -61,6 +61,10 @@ void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
     AestraUI::NUIComponent* root = getRootComponent(owner);
     if (!root) root = owner;
     root->addChild(menu);
+    // The menu lives on the root, so it outlives `owner`; bind the owner so the
+    // menu drops its (owner-capturing) callbacks if the owner is destroyed
+    // while the menu is still up.
+    menu->setOwner(owner->weak_from_this());
     menu->showAt(position);
     root->repaint();
 }
@@ -350,7 +354,13 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
     const auto* clip = m_trackManager->getPlaylistModel().getClip(clipId);
     auto* pattern = clip ? m_trackManager->getPatternManager().getPattern(clip->patternId) : nullptr;
     m_clipRoutingMenu = std::make_shared<AestraUI::NUIContextMenu>();
-    m_clipRoutingMenu->setOnHide([this]() { detachContextMenu(m_clipRoutingMenu); });
+    // Weak self-check as well as the menu's own owner gate: this handler runs
+    // on dismissal, which can happen after refreshTracks() has destroyed us.
+    m_clipRoutingMenu->setOnHide([this, weakSelf = weak_from_this()]() {
+        if (weakSelf.expired())
+            return;
+        detachContextMenu(m_clipRoutingMenu);
+    });
 
     auto addAction = [this](const std::string& label, const std::string& shortcut, std::function<void()> action) {
         auto item = std::make_shared<AestraUI::NUIContextMenuItem>(label);
@@ -534,7 +544,13 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
 
     detachContextMenu(m_recordModeMenu);
     m_recordModeMenu = std::make_shared<AestraUI::NUIContextMenu>();
-    m_recordModeMenu->setOnHide([this]() { detachContextMenu(m_recordModeMenu); });
+    // Weak self-check as well as the menu's own owner gate: this handler runs
+    // on dismissal, which can happen after refreshTracks() has destroyed us.
+    m_recordModeMenu->setOnHide([this, weakSelf = weak_from_this()]() {
+        if (weakSelf.expired())
+            return;
+        detachContextMenu(m_recordModeMenu);
+    });
     m_recordModeMenu->addRadioItem("Input Monitoring: Off", "record_mode", !channel->isMonitoringEnabled(), [this, channel]() {
         channel->setMonitoringEnabled(false);
         if (m_trackManager) {
