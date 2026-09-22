@@ -9,6 +9,12 @@
 #   GUARD_SCRIPT  absolute path to ui_required_test_lists.cmake
 #   WORK_DIR      scratch directory (recreated per fixture)
 
+# Script mode (cmake -P) does not inherit the project's cmake_minimum_required,
+# so without this every policy is unset: on CMake 3.x IN_LIST (CMP0057) falls
+# back to OLD behaviour and if() errors. CMake 4 defaults it NEW, which is why
+# this passed locally and failed in CI.
+cmake_minimum_required(VERSION 3.22)
+
 if(NOT GUARD_SCRIPT OR NOT WORK_DIR)
     message(FATAL_ERROR "GUARD_SCRIPT and WORK_DIR must be provided")
 endif()

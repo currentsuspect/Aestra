@@ -24,6 +24,12 @@
 #
 # Fails with FATAL_ERROR naming each divergence and its direction.
 
+# Script mode (cmake -P) does not inherit the project's cmake_minimum_required,
+# so without this every policy is unset: on CMake 3.x IN_LIST (CMP0057) falls
+# back to OLD behaviour and if() errors. CMake 4 defaults it NEW, which is why
+# this passed locally and failed in CI.
+cmake_minimum_required(VERSION 3.22)
+
 if(NOT REPO_ROOT)
     message(FATAL_ERROR "REPO_ROOT must be provided")
 endif()
