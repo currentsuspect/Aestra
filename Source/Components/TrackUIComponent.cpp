@@ -474,6 +474,8 @@ void TrackUIComponent::pushAutomationEditCommand(std::vector<AutomationCurve> be
     const char* label = name ? name : deriveAutomationEditLabel(before, after);
     m_trackManager->getCommandHistory().pushAndExecute(
         std::make_shared<EditAutomationCurvesCommand>(*m_trackManager, m_laneId, std::move(before), after, label));
+}
+
 TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIRect& clipBounds,
                                                            const ClipInstance& clip,
                                                            const AestraUI::NUIPoint& position) const {
@@ -2753,11 +2755,6 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_trackManager->markModified();
                     }
                 }
-                if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                    if (auto win = parentMgr->getPlatformWindow()) {
-                        win->setMouseCapture(false);
-                    }
-                }
             }
             m_fadeDragHandle = FadeHandle::None;
             m_fadeDragClipId = ClipInstanceID{};
@@ -3107,11 +3104,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             m_fadeDragClipId = clickedClipId;
                             m_fadeOriginalEdits = fadeClip->edits; // the undo "before"
                             m_activeClipId = clickedClipId;
-                            if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                                if (auto win = parentMgr->getPlatformWindow()) {
-                                    win->setMouseCapture(true);
-                                }
-                            }
+                            // Deliberately NO setMouseCapture here, unlike trim.
+                            // Capture exists so a gesture survives the pointer
+                            // leaving the row; m_fadeDragHandle is already in
+                            // isActiveOperation, which does that without warping
+                            // the pointer. Capture also confines and recentres,
+                            // which makes the gesture untestable by synthetic
+                            // absolute moves — the same reason the mixer fader
+                            // cannot be driven.
                             return true;
                         }
                     }
