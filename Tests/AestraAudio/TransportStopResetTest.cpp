@@ -206,21 +206,21 @@ void engineStopsOnCueAndStays() {
 // loop and the drag looked ignored (the return marker then pointed at a spot
 // playback never visited).
 void engineTimelineLoop() {
-    constexpr uint32_t kFrames = 512;
-    constexpr uint32_t kChannels = 2;
-    constexpr uint32_t kSampleRate = 48000;
-    constexpr uint64_t kLoopEndSamples = 192000; // beat 8 @120 BPM, 48 kHz
+    constexpr uint32_t FRAMES = 512;
+    constexpr uint32_t CHANNELS = 2;
+    constexpr uint32_t SAMPLE_RATE = 48000;
+    constexpr uint64_t LOOP_END_SAMPLES = 192000; // beat 8 @120 BPM, 48 kHz
 
     const auto makeEngine = [&](AudioEngine& engine) {
-        engine.setSampleRate(kSampleRate);
-        engine.setBufferConfig(kFrames, kChannels);
+        engine.setSampleRate(SAMPLE_RATE);
+        engine.setBufferConfig(FRAMES, CHANNELS);
         engine.setMetronomeEnabled(false);
         engine.setBPM(120.0f);
         engine.setLoopRegion(0.0, 8.0);
         engine.setLoopEnabled(true);
         return engine.initialize();
     };
-    std::vector<float> out(static_cast<size_t>(kFrames) * kChannels, 0.0f);
+    std::vector<float> out(static_cast<size_t>(FRAMES) * CHANNELS, 0.0f);
     const auto play = [&](AudioEngine& engine, uint64_t from, int blocks) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTransportState;
@@ -228,7 +228,7 @@ void engineTimelineLoop() {
         cmd.samplePos = from;
         engine.commandQueue().push(cmd);
         for (int i = 0; i < blocks; ++i) {
-            engine.processBlock(out.data(), nullptr, kFrames, 0.0);
+            engine.processBlock(out.data(), nullptr, FRAMES, 0.0);
         }
     };
 
@@ -238,9 +238,9 @@ void engineTimelineLoop() {
             check(false, "engine initializes (past-end)");
             return;
         }
-        constexpr uint64_t kCue = 480000; // beat 20, well past the loop end
-        play(engine, kCue, 4);
-        check(engine.getGlobalSamplePos() == kCue + 4ull * kFrames,
+        constexpr uint64_t CUE_SAMPLES = 480000; // beat 20, well past the loop end
+        play(engine, CUE_SAMPLES, 4);
+        check(engine.getGlobalSamplePos() == CUE_SAMPLES + 4ull * FRAMES,
               "timeline play past the loop end runs on from the cue, not folded into the loop (got " +
                   std::to_string(engine.getGlobalSamplePos()) + ")");
     }
@@ -251,9 +251,27 @@ void engineTimelineLoop() {
             return;
         }
         // Start two blocks before the loop end: the crossing must still wrap.
-        play(engine, kLoopEndSamples - 2ull * kFrames, 4);
-        check(engine.getGlobalSamplePos() < kLoopEndSamples,
+        // LOOP_END_SAMPLES is a whole number of blocks, so block 2 ends EXACTLY
+        // on the loop end without wrapping (the wrap test is next > loopEnd),
+        // and block 3 then starts AT the loop end. That arrival came from
+        // advancing inside the loop, so it must wrap — a strict
+        // `current < loopEnd` rule would run on past the loop here.
+        play(engine, LOOP_END_SAMPLES - 2ull * FRAMES, 4);
+        check(engine.getGlobalSamplePos() < LOOP_END_SAMPLES,
               "a playhead crossing the loop end from inside still wraps to the loop (got " +
+                  std::to_string(engine.getGlobalSamplePos()) + ")");
+    }
+    {
+        AudioEngine engine;
+        if (!makeEngine(engine)) {
+            check(false, "engine initializes (start at end)");
+            return;
+        }
+        // Playback STARTED exactly on the loop end: a grid-snapped drag onto
+        // the loop's end bar. It did not arrive from inside, so it runs on.
+        play(engine, LOOP_END_SAMPLES, 4);
+        check(engine.getGlobalSamplePos() == LOOP_END_SAMPLES + 4ull * FRAMES,
+              "timeline play started exactly on the loop end runs on (got " +
                   std::to_string(engine.getGlobalSamplePos()) + ")");
     }
     {
@@ -265,7 +283,7 @@ void engineTimelineLoop() {
         // Pattern mode keeps its wrap-from-anywhere rule: the pattern is the whole world.
         engine.setPatternPlaybackMode(true, 8.0);
         play(engine, 480000, 2);
-        check(engine.getGlobalSamplePos() < kLoopEndSamples,
+        check(engine.getGlobalSamplePos() < LOOP_END_SAMPLES,
               "pattern mode still wraps a position past the loop end (got " +
                   std::to_string(engine.getGlobalSamplePos()) + ")");
     }

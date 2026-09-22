@@ -1141,17 +1141,17 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
         gridStartX + static_cast<float>((cueBeats * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset));
     if (std::abs(cueX - playheadX) >= 1.0f && cueX >= gridStartX && cueX <= playheadEndX) {
         const AestraUI::NUIColor cueColor = themeManager.getColor("accentPrimary");
-        constexpr float kDash = 4.0f;
-        constexpr float kGap = 4.0f;
-        for (float y = playheadStartY; y < playheadEndY; y += kDash + kGap) {
-            renderer.drawLine(AestraUI::NUIPoint(cueX, y), AestraUI::NUIPoint(cueX, std::min(y + kDash, playheadEndY)),
+        constexpr float CUE_DASH_LENGTH = 4.0f;
+        constexpr float CUE_DASH_GAP = 4.0f;
+        for (float y = playheadStartY; y < playheadEndY; y += CUE_DASH_LENGTH + CUE_DASH_GAP) {
+            renderer.drawLine(AestraUI::NUIPoint(cueX, y), AestraUI::NUIPoint(cueX, std::min(y + CUE_DASH_LENGTH, playheadEndY)),
                               1.0f, cueColor.withAlpha(0.38f));
         }
-        constexpr float cueHalfW = 4.0f;
-        constexpr float cueH = 5.0f;
+        constexpr float CUE_MARKER_HALF_WIDTH = 4.0f;
+        constexpr float CUE_MARKER_HEIGHT = 5.0f;
         const AestraUI::NUIPoint cueTip(cueX, playheadStartY);
-        const AestraUI::NUIPoint cueLeft(cueX - cueHalfW, playheadStartY - cueH);
-        const AestraUI::NUIPoint cueRight(cueX + cueHalfW, playheadStartY - cueH);
+        const AestraUI::NUIPoint cueLeft(cueX - CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
+        const AestraUI::NUIPoint cueRight(cueX + CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
         renderer.drawLine(cueLeft, cueRight, 1.0f, cueColor.withAlpha(0.5f));
         renderer.drawLine(cueLeft, cueTip, 1.0f, cueColor.withAlpha(0.5f));
         renderer.drawLine(cueRight, cueTip, 1.0f, cueColor.withAlpha(0.5f));
