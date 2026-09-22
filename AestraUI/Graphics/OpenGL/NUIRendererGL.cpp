@@ -708,17 +708,12 @@ void NUIRendererGL::beginFrame() {
     currentQuadSize_ = {0.0f, 0.0f};
     renderCache_.setCurrentFrame(frameCounter_);
     
-    // OPTIMIZED: Don't mark all dirty - let widgets mark their own dirty regions
-    // This enables true incremental rendering where only changed areas are redrawn
-    // dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
-    
 }
 
 void NUIRendererGL::endFrame() {
     flush();
     
     // Clear dirty regions for next frame
-    dirtyRegionManager_.clear();
     
     // Cleanup old caches every 60 frames
     if (frameCounter_ % 60 == 0) {
@@ -3619,20 +3614,9 @@ bool NUIRendererGL::renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destR
     return true;
 }
 
-void NUIRendererGL::setDirtyRegionTrackingEnabled(bool enabled) {
-    dirtyRegionManager_.setEnabled(enabled);
-}
-
 void NUIRendererGL::setCachingEnabled(bool enabled) {
     renderCache_.setEnabled(enabled);
 }
 
-void NUIRendererGL::getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                                        size_t& cachedWidgets, size_t& cacheMemoryBytes) {
-    batchedQuads = submittedQuadCount_ + indices_.size() / 6;
-    dirtyRegions = dirtyRegionManager_.getDirtyRegionCount();
-    cachedWidgets = renderCache_.getCacheCount();
-    cacheMemoryBytes = renderCache_.getMemoryUsage();
-}
 
 } // namespace AestraUI

@@ -308,8 +308,6 @@ if(AESTRAUI_BUILD_OPENGL)
     set(AESTRAUI_OPENGL_SOURCES
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
-        Graphics/OpenGL/NUIDirtyRegion.h
-        Graphics/OpenGL/NUIDirtyRegion.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
     )

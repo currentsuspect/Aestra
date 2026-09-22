@@ -67,12 +67,9 @@ public:
     void beginBatch() override {}
     void endBatch() override {}
     void flush() override {}
-    void setDirtyRegionTrackingEnabled(bool) override {}
     void setCachingEnabled(bool) override {}
-    AestraUI::NUIDirtyRegionManager* getDirtyRegionManager() override { return nullptr; }
     AestraUI::NUIRenderCache* getRenderCache() override { return nullptr; }
     void invalidateCache(uint64_t) override {}
-    void getOptimizationStats(size_t&, size_t&, size_t&, size_t&) override {}
     bool renderCachedOrUpdate(uint64_t, const AestraUI::NUIRect&, const std::function<void()>&) override {
         return false;
     }
