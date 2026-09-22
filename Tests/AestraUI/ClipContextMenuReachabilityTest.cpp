@@ -226,13 +226,33 @@ void testGestureIsClipTargeted() {
         return;
     }
 
-    const AestraUI::NUIPoint emptySpace(fixture.clipBounds.x + fixture.clipBounds.width + 200.0f,
+    // Probe halfway between the clip's right edge and the lane's right edge, so
+    // it lands inside the lane by construction rather than by luck. A fixed
+    // offset past the clip can overshoot the lane at some zoom levels, and that
+    // matters more than it looks: onMouseEvent early-returns unless
+    // bounds.contains(event.position), so an out-of-lane probe opens no menu
+    // because the click missed the component — not because empty lane space was
+    // correctly ignored. Both readings are green, and only one is the test.
+    const auto laneBounds = fixture.lane->getBounds();
+    const float clipRight = fixture.clipBounds.x + fixture.clipBounds.width;
+    const AestraUI::NUIPoint emptySpace(clipRight + (laneBounds.right() - clipRight) * 0.5f,
                                         fixture.clipBounds.y + fixture.clipBounds.height * 0.5f);
 
     const auto& bounds = fixture.lane->getAllClipBounds();
     const bool overAnyClip =
         std::any_of(bounds.begin(), bounds.end(), [&](const auto& entry) { return entry.second.contains(emptySpace); });
+
+    // The same frame the handler uses: it tests getBounds().contains(position).
+    const bool insideLane = laneBounds.contains(emptySpace);
+    check(insideLane, "the empty-space probe is inside the lane, so the gesture reaches the handler");
     check(!overAnyClip, "the empty-space probe is genuinely not over any clip");
+    if (!insideLane || overAnyClip) {
+        // Asserting on a probe that fails its own preconditions would report a
+        // pass for a reason the test never meant to exercise.
+        std::cout << "        probe " << emptySpace.x << ',' << emptySpace.y << " vs lane " << laneBounds.x << ','
+                  << laneBounds.y << ' ' << laneBounds.width << 'x' << laneBounds.height << '\n';
+        return;
+    }
 
     AestraUI::NUIComponent::dispatchMouseEvent(fixture.lane.get(), rightClickAt(emptySpace, /*withShift=*/true));
     check(findVisibleMenu(*fixture.root) == nullptr, "Shift+right-click on empty lane space opens no clip menu");
