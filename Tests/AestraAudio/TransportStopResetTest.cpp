@@ -198,6 +198,79 @@ void engineStopsOnCueAndStays() {
     check(engine.getGlobalSamplePos() == kCueSamples, "playhead stays on the cue while stopped (no creep)");
 }
 
+// --- Timeline loop: only a crossing from inside wraps ----------------------
+//
+// Dragging the playhead past the loop end and pressing play must play from
+// there. The engine used to wrap ANY position past the loop end by modulo —
+// a rule written for pattern mode — so the timeline folded the cue into the
+// loop and the drag looked ignored (the return marker then pointed at a spot
+// playback never visited).
+void engineTimelineLoop() {
+    constexpr uint32_t kFrames = 512;
+    constexpr uint32_t kChannels = 2;
+    constexpr uint32_t kSampleRate = 48000;
+    constexpr uint64_t kLoopEndSamples = 192000; // beat 8 @120 BPM, 48 kHz
+
+    const auto makeEngine = [&](AudioEngine& engine) {
+        engine.setSampleRate(kSampleRate);
+        engine.setBufferConfig(kFrames, kChannels);
+        engine.setMetronomeEnabled(false);
+        engine.setBPM(120.0f);
+        engine.setLoopRegion(0.0, 8.0);
+        engine.setLoopEnabled(true);
+        return engine.initialize();
+    };
+    std::vector<float> out(static_cast<size_t>(kFrames) * kChannels, 0.0f);
+    const auto play = [&](AudioEngine& engine, uint64_t from, int blocks) {
+        AudioQueueCommand cmd{};
+        cmd.type = AudioQueueCommandType::SetTransportState;
+        cmd.value1 = 1.0f;
+        cmd.samplePos = from;
+        engine.commandQueue().push(cmd);
+        for (int i = 0; i < blocks; ++i) {
+            engine.processBlock(out.data(), nullptr, kFrames, 0.0);
+        }
+    };
+
+    {
+        AudioEngine engine;
+        if (!makeEngine(engine)) {
+            check(false, "engine initializes (past-end)");
+            return;
+        }
+        constexpr uint64_t kCue = 480000; // beat 20, well past the loop end
+        play(engine, kCue, 4);
+        check(engine.getGlobalSamplePos() == kCue + 4ull * kFrames,
+              "timeline play past the loop end runs on from the cue, not folded into the loop (got " +
+                  std::to_string(engine.getGlobalSamplePos()) + ")");
+    }
+    {
+        AudioEngine engine;
+        if (!makeEngine(engine)) {
+            check(false, "engine initializes (crossing)");
+            return;
+        }
+        // Start two blocks before the loop end: the crossing must still wrap.
+        play(engine, kLoopEndSamples - 2ull * kFrames, 4);
+        check(engine.getGlobalSamplePos() < kLoopEndSamples,
+              "a playhead crossing the loop end from inside still wraps to the loop (got " +
+                  std::to_string(engine.getGlobalSamplePos()) + ")");
+    }
+    {
+        AudioEngine engine;
+        if (!makeEngine(engine)) {
+            check(false, "engine initializes (pattern)");
+            return;
+        }
+        // Pattern mode keeps its wrap-from-anywhere rule: the pattern is the whole world.
+        engine.setPatternPlaybackMode(true, 8.0);
+        play(engine, 480000, 2);
+        check(engine.getGlobalSamplePos() < kLoopEndSamples,
+              "pattern mode still wraps a position past the loop end (got " +
+                  std::to_string(engine.getGlobalSamplePos()) + ")");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -207,6 +280,7 @@ int main() {
     producerHardStopLandsAtZero();
     producerPauseStillPreserves();
     engineStopsOnCueAndStays();
+    engineTimelineLoop();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n"
                                   : "FAILURES: " + std::to_string(g_failures) + "\n");

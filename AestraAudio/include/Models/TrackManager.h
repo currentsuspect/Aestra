@@ -1428,9 +1428,20 @@ public:
         recomputeEffectiveLoop();
     }
 
-    /** @brief Clamp a candidate deferred-capture beat into the effective loop region. */
+    /**
+     * @brief Clamp a candidate deferred-capture beat into the effective loop region.
+     *
+     * Only the pattern loop override needs it (Arsenal force-loops the engine,
+     * which wraps any position into the pattern loop, so a start outside it is
+     * never reached — #845). On the
+     * timeline the loop only catches a playhead crossing the loop end from
+     * inside, so playback always reaches its own start — clamping it there
+     * would place the take at the loop start while audio from the cue is
+     * captured.
+     */
     double reachableDeferredStart(double startBeat) const {
-        if (!m_loopEnabled.load(std::memory_order_relaxed)) {
+        if (!m_loopEnabled.load(std::memory_order_relaxed) ||
+            !m_patternOverrideActive.load(std::memory_order_relaxed)) {
             return startBeat;
         }
         const double loopStart = m_loopStartBeats.load(std::memory_order_relaxed);
@@ -1468,8 +1479,8 @@ public:
         m_countInPending.store(true, std::memory_order_release);
         setPlayStartPosition(clampedStart);
         m_position.store(clampedStart, std::memory_order_relaxed);
-        // Clamp into the active loop region: a cue beyond the loop end would
-        // pin capture to a beat the engine wraps past forever (#845).
+        // Pattern loop only: a cue outside the pattern loop would pin capture
+        // to a beat the engine wraps past forever (#845). See reachableDeferredStart.
         pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(clampedStart)));
         setDisplayPositionOverride(clampedStart);
         // No sink means no engine to notify (model-level tests, loader): the
@@ -1536,9 +1547,9 @@ public:
             // recording — capture would skip frames to the old count-in beat.
             clearDeferredRecordingStartBeat();
         } else {
-            // Re-clamp into the loop region at the moment playback starts: a
-            // cue beyond the loop end would leave capture waiting for a beat
-            // the engine wraps past forever (#845).
+            // Re-clamp at the moment playback starts (pattern loop only — see
+            // reachableDeferredStart): the loop may have changed during the
+            // count-in (#845).
             pinDeferredRecordingStartBeat(
                 reachableDeferredStart(m_deferredRecordingStartBeat.load(std::memory_order_relaxed)));
         }
