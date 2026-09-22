@@ -269,6 +269,30 @@ private:
     double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
+
+    // V8-W3 — timeline fade handles. The model, serialization, offline render,
+    // live playback (ClipRenderKernel) and the AudioClipEditorPanel sliders all
+    // already handle fades; this is only the timeline gesture.
+    //
+    // Handles live in the WAVEFORM BODY, not at the clip's top corners.
+    //
+    // The top-left carries the burger menu — a 21x18 hit box whose handler runs
+    // before any fade check, so a handle up there is unreachable however the
+    // hit-test is ordered (confirmed by driving, not assumed). Owner's call:
+    // put them where the waveform is. That also makes them a bigger grab
+    // target, and it yields one explainable rule:
+    //
+    //     clip HEADER = menu and trim   ·   clip BODY = fades
+    //
+    // FADE_BODY_TOP_INSET clears the burger box (17px) with a pixel to spare.
+    static constexpr float FADE_BODY_TOP_INSET = 18.0f;  // Where the fade band begins
+    static constexpr float FADE_HANDLE_GRAB = 9.0f;      // Tolerance once a fade is visible
+    // An unset fade has no drawn handle to aim at, so its corner claims a
+    // wider inward zone. Without this the gesture only landed by luck.
+    static constexpr float FADE_CORNER_REACH = 26.0f;
+    static constexpr float FADE_HANDLE_SIZE = 6.0f;      // Drawn marker size
+
+    enum class FadeHandle { None, In, Out };
     
     // Snap helper for trimming
     double snapBeatToGrid(double beat) const;
@@ -280,10 +304,44 @@ private:
      * selected without moving) pushes no command.
      */
     void pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name);
+    /** @brief Which fade handle (if any) the pointer is over for this clip. */
+    FadeHandle fadeHandleAt(const AestraUI::NUIRect& clipBounds, const ClipInstance& clip,
+                            const AestraUI::NUIPoint& position) const;
+
+    /**
+     * @brief Draw the fade ramps and their handles for one audio clip.
+     *
+     * @param clipBounds    the clip's FULL extent — fade geometry must sit at the
+     *                      clip's true edges, which may lie outside the viewport.
+     * @param visibleBounds the on-screen portion, used as a clip rect. Without it
+     *                      a partly-scrolled clip draws its ramp across the track
+     *                      header, because the full extent starts off-grid.
+     */
+    void drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                       const AestraUI::NUIRect& waveformRect, const ClipInstance& clip);
 
     double getSnapGridSizeBeats() const;
  
     // Automation Interaction State (v3.1)
+    // Fade-handle gesture state. m_fadeOriginalEdits is the undo "before",
+    // captured at press like m_trimOriginal* is for trimming.
+    FadeHandle m_hoverFadeHandle = FadeHandle::None;
+    FadeHandle m_fadeDragHandle = FadeHandle::None;
+    ClipInstanceID m_fadeDragClipId{};
+    ClipEdits m_fadeOriginalEdits{};
+
+    // Fade geometry the waveform draw applies per column (screen x). Set just
+    // for the duration of one clip's drawWaveformForClip call, then cleared, so
+    // no other caller can inherit a stale fade.
+    struct WaveformFade {
+        bool active = false;
+        float clipLeft = 0.0f;
+        float clipRight = 0.0f;
+        float fadeInPx = 0.0f;
+        float fadeOutPx = 0.0f;
+    };
+    WaveformFade m_waveformFade{};
+
     bool m_isDraggingPoint = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;

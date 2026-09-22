@@ -17,6 +17,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
+#include "Commands/SetClipEditsCommand.h"
 #include "Commands/TrimClipCommand.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -473,6 +474,129 @@ void TrackUIComponent::pushAutomationEditCommand(std::vector<AutomationCurve> be
     const char* label = name ? name : deriveAutomationEditLabel(before, after);
     m_trackManager->getCommandHistory().pushAndExecute(
         std::make_shared<EditAutomationCurvesCommand>(*m_trackManager, m_laneId, std::move(before), after, label));
+}
+
+TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIRect& clipBounds,
+                                                           const ClipInstance& clip,
+                                                           const AestraUI::NUIPoint& position) const {
+    // Fades own the waveform body; the header keeps the burger menu and trim.
+    // A handle in the header is unreachable regardless of hit-test order,
+    // because the burger's left-click handler returns first — established by
+    // instrumenting the press, after two wrong guesses.
+    const float bandTop = clipBounds.y + FADE_BODY_TOP_INSET;
+    // Fades are an audio-clip gesture: pattern clips render no fade, so a
+    // grab zone there would only steal their trim/drag and write dead values.
+    if (!m_trackManager || !m_trackManager->getPlaylistModel().isAudioClip(clip)) {
+        return FadeHandle::None;
+    }
+    if (position.y < bandTop || position.y > clipBounds.y + clipBounds.height) {
+        return FadeHandle::None;
+    }
+    if (position.x < clipBounds.x || position.x > clipBounds.x + clipBounds.width) {
+        return FadeHandle::None;
+    }
+
+    // Each handle sits at the END of its ramp, so it tracks the fade as it is
+    // dragged. At zero the in-handle rests on the clip's left corner and the
+    // out-handle on its right, which is what makes them discoverable.
+    const float inX = clipBounds.x + static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat;
+    const float outX =
+        clipBounds.x + clipBounds.width - static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat;
+
+    const float dIn = std::abs(position.x - inX);
+    const float dOut = std::abs(position.x - outX);
+
+    // A handle that has never been dragged sits ON the clip edge, where there is
+    // nothing drawn to aim at — a 9px target on an invisible point, which made
+    // the gesture land only by luck. So an UNSET fade claims a wider zone
+    // inward from its edge: the corner is grabbable, as it is in other DAWs.
+    // Once a fade exists its handle is visible, and the tight tolerance applies.
+    const bool inUnset = clip.edits.fadeInBeats <= 0.0f;
+    const bool outUnset = clip.edits.fadeOutBeats <= 0.0f;
+    const float inReach = inUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
+    const float outReach = outUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
+
+    const bool inHit = inUnset ? (position.x - inX >= 0.0f && position.x - inX <= inReach) : dIn <= inReach;
+    const bool outHit = outUnset ? (outX - position.x >= 0.0f && outX - position.x <= outReach) : dOut <= outReach;
+    if (!inHit && !outHit) {
+        return FadeHandle::None;
+    }
+    if (inHit != outHit) {
+        return inHit ? FadeHandle::In : FadeHandle::Out;
+    }
+    // Ties go to whichever handle is nearer; on a very short clip both can be
+    // in range and picking arbitrarily would feel broken.
+    return dIn <= dOut ? FadeHandle::In : FadeHandle::Out;
+}
+
+void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                                     const AestraUI::NUIRect& waveformRect, const ClipInstance& clip) {
+    if (clipBounds.width <= 1.0f || waveformRect.width <= 1.0f || waveformRect.height <= 2.0f) {
+        return;
+    }
+
+    // Everything here is confined to the WAVEFORM rect: it never reaches the
+    // label bar above, and a clip scrolled partly off-screen cannot paint its
+    // envelope across the track header. Geometry is still anchored on the FULL
+    // clip bounds, because that is where the engine anchors the fade.
+    renderer.setClipRect(waveformRect);
+    struct ClipRectGuard {
+        AestraUI::NUIRenderer& r;
+        ~ClipRectGuard() { r.clearClipRect(); }
+    } clipGuard{renderer};
+
+    const bool hot = m_hoveredClipId == clip.id || isClipHighlighted(clip.id) ||
+                     (m_fadeDragHandle != FadeHandle::None && m_fadeDragClipId == clip.id);
+    const float fadeInPx = std::clamp(static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat, 0.0f,
+                                      clipBounds.width);
+    const float fadeOutPx = std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
+                                       clipBounds.width);
+    if (fadeInPx <= 0.0f && fadeOutPx <= 0.0f && !hot) {
+        return;
+    }
+
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+
+    // Same centreline and half-height drawChannelWaveform uses, so the guide
+    // sits exactly on the tapered waveform's outer edge rather than near it.
+    const float centerY = waveformRect.y + waveformRect.height * 0.5f;
+    const float halfH = std::max(1.0f, waveformRect.height * 0.5f - 2.0f);
+    const float clipLeft = clipBounds.x;
+    const float clipRight = clipBounds.x + clipBounds.width;
+
+    // The waveform itself now tapers (it is drawn through the fade gain), so the
+    // guide only has to state the shape: a thin mirrored envelope opening from
+    // the centreline. Under a linear-amplitude fade on a linear, centred
+    // waveform that envelope IS straight — drawing a curve here would show a
+    // shape the engine does not apply.
+    const auto guide = themeManager.getColor("textPrimary").withAlpha(hot ? 0.80f : 0.45f);
+    if (fadeInPx > 0.0f) {
+        const AestraUI::NUIPoint apex(clipLeft, centerY);
+        renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY - halfH), 1.25f, guide);
+        renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY + halfH), 1.25f, guide);
+    }
+    if (fadeOutPx > 0.0f) {
+        const AestraUI::NUIPoint apex(clipRight, centerY);
+        renderer.drawLine(AestraUI::NUIPoint(clipRight - fadeOutPx, centerY - halfH), apex, 1.25f, guide);
+        renderer.drawLine(AestraUI::NUIPoint(clipRight - fadeOutPx, centerY + halfH), apex, 1.25f, guide);
+    }
+
+    // Grip visibility follows the DATA, not the pointer: an existing fade always
+    // shows its handle so you can see and re-grab what you made; an unset fade's
+    // phantom handle appears only on hover. Grips sit on the centreline, the
+    // middle of the grab band, where they are easiest to hit.
+    const auto drawGrip = [&](float x, float fadePx) {
+        const float alpha = fadePx > 0.0f ? (hot ? 1.0f : 0.72f) : (hot ? 0.85f : 0.0f);
+        if (alpha <= 0.0f) {
+            return;
+        }
+        const float r = FADE_HANDLE_SIZE * 0.5f;
+        renderer.fillCircle(AestraUI::NUIPoint(x, centerY), r + 1.5f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, alpha * 0.55f));
+        renderer.fillCircle(AestraUI::NUIPoint(x, centerY), r,
+                            themeManager.getColor("textPrimary").withAlpha(alpha));
+    };
+    drawGrip(clipLeft + fadeInPx, fadeInPx);
+    drawGrip(clipRight - fadeOutPx, fadeOutPx);
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -1062,9 +1186,28 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
 
     // Display gain is the file-scope kWaveDisplayGain, shared with the
     // AESTRA_WAVE_TRACE span assertion so both map peaks identically.
+    // V8-W3: per-column fade gain, the same linear-amplitude law ClipRenderKernel
+    // applies (min of the fade-in and fade-out ramps, anchored on the clip's full
+    // edges). Only active while one clip's waveform is being drawn.
+    const auto fadeGainAt = [this](float px) {
+        if (!m_waveformFade.active) {
+            return 1.0f;
+        }
+        float g = 1.0f;
+        if (m_waveformFade.fadeInPx > 0.0f) {
+            g = std::min(g, std::clamp((px - m_waveformFade.clipLeft) / m_waveformFade.fadeInPx, 0.0f, 1.0f));
+        }
+        if (m_waveformFade.fadeOutPx > 0.0f) {
+            g = std::min(g, std::clamp((m_waveformFade.clipRight - px) / m_waveformFade.fadeOutPx, 0.0f, 1.0f));
+        }
+        return g;
+    };
+
     for (int i = 0; i < numPoints; ++i) {
-        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(i) * kWaveDisplayGain));
-        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(i) * kWaveDisplayGain));
+        const float colX = x + (static_cast<float>(i) + 0.5f) * step;
+        const float fadeGain = fadeGainAt(colX);
+        float normMin = std::max(-1.0f, std::min(1.0f, combinedMin(i) * kWaveDisplayGain * fadeGain));
+        float normMax = std::max(-1.0f, std::min(1.0f, combinedMax(i) * kWaveDisplayGain * fadeGain));
 
         float topY = centerY - normMax * halfDrawH;
         float bottomY = centerY - normMin * halfDrawH;
@@ -1080,7 +1223,7 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
         float px = x + (static_cast<float>(i) + 0.5f) * step;
         m_waveformTopPts.emplace_back(px, topY);
         m_waveformBottomPts.emplace_back(px, bottomY);
-        m_waveformRmsVals.push_back(std::max(0.0f, std::min(1.0f, combinedRms(i) * kWaveDisplayGain)));
+        m_waveformRmsVals.push_back(std::max(0.0f, std::min(1.0f, combinedRms(i) * kWaveDisplayGain * fadeGain)));
     }
 
     renderer.fillWaveformGradient(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, envTopColor,
@@ -1444,8 +1587,26 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                         std::max(1.0f, (insetClippedClipBounds.bottom() - waveformPadBottom) -
                                            (insetClippedClipBounds.y + waveformPadTop))
                     );
+                    // V8-W3: the waveform is drawn THROUGH the clip's fades, with the
+                    // same linear-amplitude gain ClipRenderKernel applies to the
+                    // audio, so what you see taper is what you hear taper. Anchored
+                    // on the FULL clip edges, exactly as the engine anchors them.
+                    m_waveformFade.active = true;
+                    m_waveformFade.clipLeft = insetFullClipBounds.x;
+                    m_waveformFade.clipRight = insetFullClipBounds.x + insetFullClipBounds.width;
+                    m_waveformFade.fadeInPx =
+                        std::clamp(static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat, 0.0f,
+                                   insetFullClipBounds.width);
+                    m_waveformFade.fadeOutPx =
+                        std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
+                                   insetFullClipBounds.width);
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
+                    m_waveformFade = WaveformFade{};
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
+                    // Envelope guide and grips go LAST, on top of waveform and header,
+                    // and are clipped to the waveform rect — they never reach the
+                    // label bar. Drawing them first let the waveform paint over them.
+                    drawClipFades(renderer, insetFullClipBounds, waveformInsideClip, clip);
                 }
                 // A muted clip is silent in playback, so it must not read as active.
                 // Same dim a muted lane applies to its grid area, scoped to the clip;
@@ -2256,7 +2417,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
-    bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential || m_isDraggingPoint;
+    bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential || m_isDraggingPoint ||
+                             m_fadeDragHandle != FadeHandle::None;
     bool isControlCapture = (m_muteButton && m_muteButton->isPressed()) ||
                             (m_soloButton && m_soloButton->isPressed()) ||
                             (m_recordButton && m_recordButton->isPressed());
@@ -2283,12 +2445,27 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // === HOVER EDGE DETECTION (for resize cursor) ===
     // Update hover state on every mouse move (not just press)
     if (!m_isTrimming && isInsideBounds && !event.pressed) {
+        const ClipInstanceID previousHoveredClipId = m_hoveredClipId;
+        const FadeHandle previousHoverFade = m_hoverFadeHandle;
         TrimEdge newHoverEdge = TrimEdge::None;
-        
+        FadeHandle newHoverFade = FadeHandle::None;
+
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (!clipBounds.contains(event.position)) continue;
             
             m_hoveredClipId = clipId;
+
+            // V8-W3: the fade band is tested BEFORE the trim edges. Both live at
+            // the clip's corners, so without an explicit order the full-height
+            // trim zone would swallow every fade grab.
+            if (m_trackManager) {
+                if (const auto* clip = m_trackManager->getPlaylistModel().getClip(clipId)) {
+                    newHoverFade = fadeHandleAt(clipBounds, *clip, event.position);
+                    if (newHoverFade != FadeHandle::None) {
+                        break;
+                    }
+                }
+            }
 
             float leftEdge = clipBounds.x;
             float rightEdge = clipBounds.x + clipBounds.width;
@@ -2310,13 +2487,25 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
         
-        if (newHoverEdge == TrimEdge::None) {
+        // A fade hit keeps the clip hovered: drawClipFades lights an unset
+        // grip only while its clip is hot, so clearing it here left the grip
+        // invisible exactly when the pointer was on it.
+        if (newHoverEdge == TrimEdge::None && newHoverFade == FadeHandle::None) {
             m_hoveredClipId = ClipInstanceID{};
         }
 
+        m_hoverFadeHandle = newHoverFade;
         if (m_hoverTrimEdge != newHoverEdge) {
             m_hoverTrimEdge = newHoverEdge;
             repaint(); // Trigger redraw for cursor feedback
+        }
+        // Rows render through TrackManagerUI's cache, which repaint() alone
+        // does not invalidate — the grip's hover state would never reach it.
+        if (previousHoveredClipId != m_hoveredClipId || previousHoverFade != m_hoverFadeHandle) {
+            repaint();
+            if (m_onCacheInvalidationCallback) {
+                m_onCacheInvalidationCallback();
+            }
         }
     } else if (!isInsideBounds && !m_isTrimming) {
         m_hoveredClipId = ClipInstanceID{};
@@ -2635,6 +2824,33 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Handle mouse release - always process to clear state
     if (!event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        // V8-W3: end the fade gesture first — it owns the pointer while active,
+        // so none of the clip-drag bookkeeping below applies to it.
+        if (m_fadeDragHandle != FadeHandle::None) {
+            if (m_trackManager) {
+                auto& playlist = m_trackManager->getPlaylistModel();
+                if (auto* clip = playlist.getClip(m_fadeDragClipId)) {
+                    const ClipEdits newEdits = clip->edits;
+                    // A press that never moved is not an undo step, matching
+                    // the trim and automation gestures.
+                    if (newEdits.fadeInBeats != m_fadeOriginalEdits.fadeInBeats ||
+                        newEdits.fadeOutBeats != m_fadeOriginalEdits.fadeOutBeats) {
+                        m_trackManager->getCommandHistory().pushAndExecute(
+                            std::make_shared<SetClipEditsCommand>(playlist, m_fadeDragClipId, m_fadeOriginalEdits,
+                                                                  newEdits, /*alreadyExecuted=*/true));
+                        // Fades are applied by ClipRenderKernel from the runtime
+                        // snapshot, so the edit is inaudible until a rebuild.
+                        m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                        m_trackManager->markModified();
+                    }
+                }
+            }
+            m_fadeDragHandle = FadeHandle::None;
+            m_fadeDragClipId = ClipInstanceID{};
+            repaint();
+            return true;
+        }
+
         bool wasActive = m_isTrimming || m_isDraggingClip || m_clipDragPotential;
         if (m_isTrimming) {
             // The trim was applied to the model live during the drag. Push the
@@ -2692,6 +2908,41 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
     
     // PRIORITY 2: Handle active trimming (mouse move while trimming)
+    // V8-W3 fade drag. The model is mutated live like a trim, so the ramp and
+    // the audio follow the pointer; the undo step is pushed once at release.
+    if (m_fadeDragHandle != FadeHandle::None && m_fadeDragClipId.isValid() && m_trackManager) {
+        auto& playlist = m_trackManager->getPlaylistModel();
+        if (auto* clip = playlist.getClip(m_fadeDragClipId)) {
+            const auto boundsIt = m_allClipBounds.find(m_fadeDragClipId);
+            if (boundsIt != m_allClipBounds.end() && m_pixelsPerBeat > 0.0f) {
+                const auto& cb = boundsIt->second;
+                const double maxBeats = clip->durationBeats;
+                double beats = 0.0;
+                if (m_fadeDragHandle == FadeHandle::In) {
+                    beats = static_cast<double>(event.position.x - cb.x) / m_pixelsPerBeat;
+                } else {
+                    beats = static_cast<double>(cb.x + cb.width - event.position.x) / m_pixelsPerBeat;
+                }
+                // Clamped so the two ramps can meet but never cross: a fade
+                // longer than the clip, or overlapping its partner, is not a
+                // shape the render path can express.
+                const double partner = m_fadeDragHandle == FadeHandle::In
+                                           ? static_cast<double>(clip->edits.fadeOutBeats)
+                                           : static_cast<double>(clip->edits.fadeInBeats);
+                beats = std::clamp(beats, 0.0, std::max(0.0, maxBeats - partner));
+                if (m_fadeDragHandle == FadeHandle::In) {
+                    clip->edits.fadeInBeats = static_cast<float>(beats);
+                } else {
+                    clip->edits.fadeOutBeats = static_cast<float>(beats);
+                }
+                setDirty(true);
+                repaint();
+                if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
+            }
+        }
+        return true;
+    }
+
     if (m_isTrimming && m_activeClipId.isValid()) {
         auto& clipBounds = m_allClipBounds[m_activeClipId];
         float deltaX = event.position.x - m_trimDragStartX;
@@ -2927,6 +3178,30 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 }
                                 break;
                             }
+                        }
+                    }
+                }
+
+                // V8-W3: fade handles are tested before the trim edges, for the
+                // same reason as the hover path — they share the clip's corners
+                // and trim owns full height, so trim would otherwise win every time.
+                if (m_trackManager) {
+                    if (const auto* fadeClip = m_trackManager->getPlaylistModel().getClip(clickedClipId)) {
+                        const FadeHandle handle = fadeHandleAt(clickedClipBounds, *fadeClip, event.position);
+                        if (handle != FadeHandle::None) {
+                            m_fadeDragHandle = handle;
+                            m_fadeDragClipId = clickedClipId;
+                            m_fadeOriginalEdits = fadeClip->edits; // the undo "before"
+                            m_activeClipId = clickedClipId;
+                            // Deliberately NO setMouseCapture here, unlike trim.
+                            // Capture exists so a gesture survives the pointer
+                            // leaving the row; m_fadeDragHandle is already in
+                            // isActiveOperation, which does that without warping
+                            // the pointer. Capture also confines and recentres,
+                            // which makes the gesture untestable by synthetic
+                            // absolute moves — the same reason the mixer fader
+                            // cannot be driven.
+                            return true;
                         }
                     }
                 }
