@@ -2788,21 +2788,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_isDraggingClip = true;
 
             // Normal clip movement uses the low-latency arrangement drag path.
+            // Moving a clip only moves it. It used to audition MIDI pattern
+            // clips while dragging, which stopped a playing song, played the
+            // pattern alone and left the transport stopped on release — not a
+            // convention any DAW follows. Explicit preview lives in the
+            // pattern browser.
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                if (m_trackManager) {
-                    auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
-                    if (lane) {
-                        for (const auto& clip : lane->clips) {
-                            if (clip.id == m_activeClipId && clip.patternId.isValid()) {
-                                auto* pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
-                                if (pattern && pattern->isMidi() && m_onPatternClipDragStarted) {
-                                    m_onPatternClipDragStarted(clip.patternId);
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
                 parentMgr->startInstantClipDrag(this, m_activeClipId, event.position);
                 
                 // Capture mouse to follow outside bounds

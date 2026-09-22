@@ -275,12 +275,6 @@ void TrackManagerUI::refreshTracks() {
                 m_onOpenAudioClipEditor(clipId);
             }
         });
-        trackUI->setOnPatternClipDragStarted([this](PatternID patternId) {
-            if (m_onPreviewPatternClip && patternId.isValid()) {
-                m_onPreviewPatternClip(patternId);
-                m_dragPatternPreviewActive = true;
-            }
-        });
 
         trackUI->setOnTrackSelected([this](TrackUIComponent* trackComp, TrackSelectionIntent intent) {
             this->selectTrack(trackComp, intent);

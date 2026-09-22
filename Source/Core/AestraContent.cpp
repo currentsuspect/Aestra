@@ -516,8 +516,6 @@ void AestraContent::setupTrackManagerUI() {
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
     m_trackManagerUI->setOnOpenPatternInPianoRoll([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
     m_trackManagerUI->setOnOpenAudioClipEditor([this](ClipInstanceID clipId) { openAudioClipEditor(clipId); });
-    m_trackManagerUI->setOnPreviewPatternClip([this](PatternID patternId) { startPatternClipPreview(patternId); });
-    m_trackManagerUI->setOnStopPatternClipPreview([this]() { stopPatternClipPreview(true); });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
     m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
     m_trackManagerUI->setOnLoopPresetChanged([this](int preset) {
