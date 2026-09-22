@@ -265,6 +265,26 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# V8-A1 (FD-20): automation mutations go through the command history, and V8-A9's
+# neutral-is-unity model fix which the command layer would otherwise have
+# resurrected through a second construction path. Core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(AutomationCommandHistoryTest
+        AutomationCommandHistoryTest.cpp
+    )
+    target_link_libraries(AutomationCommandHistoryTest PRIVATE AestraAudioCore)
+    target_include_directories(AutomationCommandHistoryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutomationCommandHistoryTest COMMAND AutomationCommandHistoryTest)
+    set_tests_properties(AutomationCommandHistoryTest PROPERTIES
+        LABELS "headless;automation;undo;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)

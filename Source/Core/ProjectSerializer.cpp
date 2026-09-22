@@ -2188,7 +2188,13 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 // Pre-v3 curves inherited their lane's paired insert.
                                 curve.mixerChannelId = channel->getChannelId();
                             }
-                            curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
+                            // An absent "default" keeps the target-derived neutral rather than
+                            // 0.0, which would silence an empty Volume curve (FD-20). Projects
+                            // written by this build always carry the key, so this only affects
+                            // files predating it.
+                            curve.setDefaultValue(finiteNumberOr(aj[a], "default",
+                                                                 static_cast<double>(curve.getDefaultValue()),
+                                                                 -1.0e6, 1.0e6));
                             // Plugin-parameter address (Custom target). Bounded:
                             // slot to the effect-chain size, paramId defensively.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
