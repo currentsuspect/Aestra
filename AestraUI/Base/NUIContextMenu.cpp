@@ -327,6 +327,14 @@ void NUIContextMenu::onMouseLeave()
 void NUIContextMenu::addItem(std::shared_ptr<NUIContextMenuItem> item)
 {
     items_.push_back(item);
+    // Every add path (addSubmenu, addRadioItem, addCheckbox, addSeparator)
+    // funnels through here, so a submenu attached after this menu was bound
+    // inherits the owner and the attach order stops mattering.
+    if (ownerBound_ && item) {
+        if (const auto& submenu = item->getSubmenu()) {
+            submenu->setOwner(owner_);
+        }
+    }
     updateLayout();
     setDirty(true);
 }
@@ -567,6 +575,20 @@ void NUIContextMenu::setOwner(std::weak_ptr<NUIComponent> owner)
     // weak_from_this() is empty) leaves the menu ungated rather than
     // permanently dead.
     ownerBound_ = !owner_.expired();
+
+    // The owner has to reach the whole tree. A submenu is a separate
+    // NUIContextMenu that receives mouse input directly (onMouseEvent forwards
+    // to activeSubmenu_) and consults its OWN gate, so binding only the parent
+    // leaves every submenu ungated while its items capture the same component.
+    // Recursing here covers nesting; addItem() covers submenus attached later.
+    for (const auto& item : items_) {
+        if (!item) {
+            continue;
+        }
+        if (const auto& submenu = item->getSubmenu()) {
+            submenu->setOwner(owner_);
+        }
+    }
 }
 
 bool NUIContextMenu::hasLiveOwner() const

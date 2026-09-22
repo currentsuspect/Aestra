@@ -179,6 +179,73 @@ void testOwnerLifetimeGatesCallbacks() {
     NUIComponent::clearFocusedComponent();
 }
 
+// A submenu is a separate NUIContextMenu: onMouseEvent forwards to
+// activeSubmenu_, and it consults its own gate. Binding only the parent left the
+// deepest level ungated while its items captured the same component —
+// TrackUIComponent's "Route Linked Clips" submenu is exactly that shape, and its
+// radio callbacks dereference m_trackManager. Both attach orders are covered
+// because showClipRoutingMenu attaches the submenu *before* the owner is bound.
+void testSubmenuOwnerPropagation() {
+    NUIComponent::clearFocusedComponent();
+
+    // Live owner first: without this, the dead-owner half below would pass even
+    // if propagation disabled submenus outright.
+    {
+        auto owner = std::make_shared<NUIComponent>();
+        auto menu = std::make_shared<NUIContextMenu>();
+        auto attachedFirst = std::make_shared<NUIContextMenu>();
+        int activations = 0;
+        attachedFirst->addItem("Master", [&]() { ++activations; });
+        menu->addSubmenu("Route Linked Clips", attachedFirst);
+        menu->setOwner(owner);
+
+        auto attachedLater = std::make_shared<NUIContextMenu>();
+        attachedLater->addItem("Channel 1", [&]() { activations += 10; });
+        menu->addSubmenu("Added after binding", attachedLater);
+
+        check(attachedFirst->hasLiveOwner(), "binding a parent reaches an already-attached submenu");
+        check(attachedLater->hasLiveOwner(), "a submenu attached after binding inherits the owner");
+
+        attachedFirst->showAt(20, 20);
+        attachedFirst->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 1, "a live owner does not block submenu item activation");
+    }
+
+    // Dead owner: this is the hole the top-level gate alone left open.
+    {
+        auto doomed = std::make_shared<NUIComponent>();
+        auto menu = std::make_shared<NUIContextMenu>();
+        auto submenu = std::make_shared<NUIContextMenu>();
+        auto nested = std::make_shared<NUIContextMenu>();
+        int activations = 0;
+        nested->addItem("Deepest", [&]() { activations += 100; });
+        submenu->addItem("Master", [&]() { ++activations; });
+        submenu->addSubmenu("Nested", nested);
+        menu->addSubmenu("Route Linked Clips", submenu);
+        menu->setOwner(doomed);
+
+        // Deliberately no live-owner assertion on `nested` here: hasLiveOwner()
+        // is true both when the owner propagated and when nothing was ever
+        // bound, so it would pass for the wrong reason. The dead-owner checks
+        // below are what actually prove the owner reached this depth.
+        menu->showAt(10, 10);
+        doomed.reset(); // refreshTracks() destroying the lane component
+
+        check(!submenu->hasLiveOwner(), "a destroyed owner reaches the submenu gate");
+        check(!nested->hasLiveOwner(), "a destroyed owner reaches the nested submenu gate");
+
+        submenu->showAt(20, 20);
+        submenu->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 0, "a destroyed owner blocks submenu item activation");
+
+        nested->showAt(30, 30);
+        nested->onKeyEvent(press(NUIKeyCode::Enter));
+        check(activations == 0, "a destroyed owner blocks nested submenu item activation");
+    }
+
+    NUIComponent::clearFocusedComponent();
+}
+
 } // namespace
 
 int main() {
@@ -186,6 +253,7 @@ int main() {
     testSubmenuKeyboardLifecycle();
     testTallMenuScrollingAndViewportContainment();
     testOwnerLifetimeGatesCallbacks();
+    testSubmenuOwnerPropagation();
     NUIComponent::clearFocusedComponent();
 
     if (failures == 0) {

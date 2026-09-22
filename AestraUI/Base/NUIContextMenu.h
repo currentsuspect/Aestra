@@ -103,6 +103,12 @@ public:
     void onMouseLeave() override;
 
     // Menu management
+    /**
+     * @brief Append an item; a submenu on it inherits this menu's bound owner.
+     *
+     * Every add path funnels through here, so submenu owner inheritance does
+     * not depend on whether the submenu was attached before or after setOwner().
+     */
     void addItem(std::shared_ptr<NUIContextMenuItem> item);
     void addItem(const std::string& text, std::function<void()> callback = nullptr);
     void addSeparator();
