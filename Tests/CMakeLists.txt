@@ -3151,6 +3151,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TimelinePatternRescheduleTest
     set_tests_properties(TimelinePatternRescheduleTest PROPERTIES LABELS "audio;pattern;regression;contract:audio")
 endif()
 
+# Moving/deleting a timeline clip while playing must not cut or re-fire any other
+# clip's sounding notes, and must release the moved/deleted clip's own voice.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TimelineClipMoveKeepsNotesTest.cpp")
+    add_executable(TimelineClipMoveKeepsNotesTest AestraAudio/TimelineClipMoveKeepsNotesTest.cpp)
+    target_link_libraries(TimelineClipMoveKeepsNotesTest PRIVATE AestraAudio)
+    target_include_directories(TimelineClipMoveKeepsNotesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineClipMoveKeepsNotesTest COMMAND TimelineClipMoveKeepsNotesTest)
+    set_tests_properties(TimelineClipMoveKeepsNotesTest PROPERTIES LABELS "audio;pattern;playback;regression;contract:audio")
+endif()
+
 # T-6 (v0.7.1 trust sprint): record-path latency compensation + engine-frame
 # capture placement.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RecordingLatencyCompensationTest.cpp")

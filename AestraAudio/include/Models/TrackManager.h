@@ -1255,11 +1255,57 @@ public:
         if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
             return;
         }
-        // NOTE: a full clear drops sounding notes' tracked gates and queued note-offs, so
-        // every refresh is audible as a cut and a late re-entry. Call it only when the
-        // timeline's MIDI content really changed.
-        m_patternPlaybackEngine.clearScheduledInstances();
-        scheduleTimelinePatternInstances(m_position.load(std::memory_order_relaxed));
+        // Incremental, NOT clear-and-reschedule. A clear dropped every sounding note's
+        // tracked gate and queued note-off, and re-queued from the UI's lagging playhead:
+        // moving one clip cut the notes of every other clip and re-fired them late.
+        // Each clip keeps its slot (held-note tracking is per slot), a slot keeps its
+        // frontier, and the content-edit refill re-queues from the engine's real playhead.
+        const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
+        std::unordered_map<ClipInstanceID, uint32_t> nextSlots;
+        std::array<bool, 256> used{};
+        used[0] = used[1] = true; // 0 unused; 1 is Arsenal's single-pattern slot
+        for (const auto& [clip, slot] : m_timelineSlots) {
+            (void)clip;
+            used[slot] = true; // survivors keep theirs; removed ones are free from the NEXT refresh
+        }
+        std::vector<const MidiClipPlaybackInstance*> fresh;
+        for (const auto& instance : instances) {
+            if (!instance.isValid()) {
+                continue;
+            }
+            auto it = m_timelineSlots.find(instance.clipId);
+            if (it == m_timelineSlots.end()) {
+                fresh.push_back(&instance);
+                continue;
+            }
+            nextSlots[instance.clipId] = it->second;
+            m_patternPlaybackEngine.updatePatternInstance(instance.patternId, instance.startBeat, it->second,
+                                                          instance.sourceOffsetBeats, instance.durationBeats);
+        }
+        for (const auto& [clip, slot] : m_timelineSlots) {
+            if (nextSlots.find(clip) == nextSlots.end()) {
+                // Stays marked used for THIS refresh: the content-edit refill still has to
+                // release the removed clip's held notes by slot, and a new clip reusing the
+                // slot now would be mistaken for them.
+                m_patternPlaybackEngine.removePatternInstance(slot);
+            }
+        }
+        uint32_t cursor = 2;
+        for (const auto* instance : fresh) {
+            while (cursor < used.size() && used[cursor]) {
+                ++cursor;
+            }
+            if (cursor >= used.size()) {
+                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
+                break;
+            }
+            used[cursor] = true;
+            nextSlots[instance->clipId] = cursor;
+            m_patternPlaybackEngine.updatePatternInstance(instance->patternId, instance->startBeat, cursor,
+                                                          instance->sourceOffsetBeats, instance->durationBeats);
+        }
+        m_timelineSlots = std::move(nextSlots);
+        m_patternPlaybackEngine.patternContentEdited();
         m_timelineRescheduleCount.fetch_add(1, std::memory_order_relaxed);
     }
 
@@ -1999,6 +2045,7 @@ private:
                   " MIDI clip instances from beat " + std::to_string(playStartBeat));
 
         uint32_t instanceId = 2; // Reserve 1 for Arsenal-focused single-pattern playback.
+        m_timelineSlots.clear(); // a full schedule starts from an empty scheduler
         for (const auto& instance : instances) {
             if (!instance.isValid()) {
                 continue;
@@ -2030,6 +2077,7 @@ private:
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
                       " schedStart=" + std::to_string(instance.startBeat) + " " + routeSummary);
+            m_timelineSlots[instance.clipId] = instanceId;
             m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.startBeat, instanceId++,
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
@@ -2615,6 +2663,8 @@ private:
     std::atomic<double> m_position{0.0};
     std::atomic<double> m_playStartPosition{0.0};
     std::atomic<uint64_t> m_timelineRescheduleCount{0};
+    // Timeline MIDI clip -> scheduler slot for the current playback run. Main thread only.
+    std::unordered_map<ClipInstanceID, uint32_t> m_timelineSlots;
     std::atomic<bool> m_hasDisplayPositionOverride{false};
     std::atomic<double> m_displayPositionOverride{0.0};
     std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};

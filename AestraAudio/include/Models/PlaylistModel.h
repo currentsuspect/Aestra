@@ -55,6 +55,7 @@ struct PlaylistLane {
 };
 
 struct MidiClipPlaybackInstance {
+    ClipInstanceID clipId; ///< Which clip this is: keeps its scheduler slot across a live reschedule.
     PatternID patternId;
     double startBeat{0.0};
     double sourceOffsetBeats{0.0};
@@ -836,6 +837,7 @@ public:
                 }
 
                 MidiClipPlaybackInstance instance;
+                instance.clipId = clip.id;
                 instance.patternId = clip.patternId;
                 instance.startBeat = clip.startBeat;
                 instance.sourceOffsetBeats = clip.sourceOffset;
