@@ -20,7 +20,8 @@
 //
 // Hotspots (24x24 viewBox; the renderer offsets each glyph so the hotspot sits
 // on the pointer — keep AestraWindowManager::renderCustomCursor in step):
-//   Arrow (2, 2) · Hand fingertip (9, 2) · everything else centred at (12, 12).
+//   Arrow (2, 2) · Hand fingertip (9, 2) · Pencil tip (3, 21) · Eraser edge (6, 19) ·
+//   everything else centred at (12, 12). nuiCursorHotspot() is the table the renderer reads.
 
 #pragma once
 
@@ -83,8 +84,52 @@ inline const char* nuiCursorSvg(NUICursorStyle style) {
                R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#000" fill-opacity="0.32" transform="translate(1.2 0.2)"/>)SVG"
                R"SVG(<path d="M2.2 12 L6.8 7.4 V10.3 H17.2 V7.4 L21.8 12 L17.2 16.6 V13.7 H6.8 V16.6 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
                R"SVG(</g></svg>)SVG";
+    case NUICursorStyle::Crosshair:
+        // A plus with an open centre, so the exact point stays visible. It had no glyph, so
+        // the overlay renderer drew the plain arrow for it (the pencil "had no cursor").
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M12 3 V9.3 M12 14.7 V21 M3 12 H9.3 M14.7 12 H21" stroke="#141416" stroke-width="3.6" stroke-linecap="round"/>)SVG"
+               R"SVG(<path d="M12 3 V9.3 M12 14.7 V21 M3 12 H9.3 M14.7 12 H21" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>)SVG"
+               R"SVG(</svg>)SVG";
+    case NUICursorStyle::Pencil:
+        // Tip at (3, 21): the note lands where the tip points.
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M3 21 L5 15.4 L16.2 4.2 C16.9 3.5 18 3.5 18.7 4.2 L19.8 5.3 C20.5 6 20.5 7.1 19.8 7.8 L8.6 19 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M3 21 L5 15.4 L16.2 4.2 C16.9 3.5 18 3.5 18.7 4.2 L19.8 5.3 C20.5 6 20.5 7.1 19.8 7.8 L8.6 19 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(<path d="M5 15.4 L8.6 19 M14.4 6 L18 9.6" stroke="#141416" stroke-width="1.1" stroke-linecap="round"/>)SVG"
+               R"SVG(<path d="M3 21 L4.1 17.9 L6.1 19.9 Z" fill="#141416"/>)SVG"
+               R"SVG(</svg>)SVG";
+    case NUICursorStyle::Eraser:
+        // A slanted block; the darker band is the working end, centred on the hotspot (6, 19).
+        return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
+               R"SVG(<path d="M3 16 L12 7 L18.5 13.5 L9.5 22.5 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
+               R"SVG(<path d="M3 16 L12 7 L18.5 13.5 L9.5 22.5 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
+               R"SVG(<path d="M3 16 L7.6 11.4 L14.1 17.9 L9.5 22.5 Z" fill="#141416" fill-opacity="0.55"/>)SVG"
+               R"SVG(</svg>)SVG";
     default:
         return nullptr;
+    }
+}
+
+/** @brief Where the click lands inside a glyph, in its 24x24 viewBox. The overlay renderer
+ *  offsets each glyph by this so the hotspot sits on the pointer. */
+struct NUICursorHotspot {
+    float x;
+    float y;
+};
+
+inline NUICursorHotspot nuiCursorHotspot(NUICursorStyle style) {
+    switch (style) {
+    case NUICursorStyle::Arrow:
+        return {2.0f, 2.0f};
+    case NUICursorStyle::Hand:
+        return {9.0f, 2.0f};
+    case NUICursorStyle::Pencil:
+        return {3.0f, 21.0f};
+    case NUICursorStyle::Eraser:
+        return {6.0f, 19.0f};
+    default:
+        return {12.0f, 12.0f};
     }
 }
 

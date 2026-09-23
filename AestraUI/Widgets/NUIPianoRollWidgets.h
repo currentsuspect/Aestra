@@ -3,6 +3,7 @@
 
 #include "NUIComponent.h"
 #include "NUIScrollbar.h" // Include Scrollbar
+#include "../Platform/NUICursorStyle.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -399,6 +400,8 @@ public:
     void setTool(PianoRollTool tool);
     /** @brief Get the active editing tool. */
     PianoRollTool getTool() const { return tool_; }
+    /** @brief The hover cursor over empty grid for the active tool (pencil, eraser, arrow). */
+    NUICursorStyle toolCursor() const;
     
     /** @brief Set the snap grid used for note edits. */
     void setSnap(SnapGrid snap) { snap_ = snap; }
