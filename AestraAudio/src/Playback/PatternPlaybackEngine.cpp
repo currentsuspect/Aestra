@@ -56,6 +56,33 @@ const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNot
     return nullptr;
 }
 
+// When a scheduled note ends, and whether it ends at all. ONE definition, used by the refill
+// that queues the note-off and by the live-edit reconciliation that decides whether a sounding
+// note still exists: a pitched-sampler gate can outlast the note's duration, so the two
+// computing it differently released notes early (or kept stale ones).
+struct NoteOffTiming {
+    double offBeat;
+    bool suppressNoteOff; // pitched-sampler slide into the next step holds the voice
+};
+
+NoteOffTiming calculateNoteOffTiming(const MidiPayload& midi, const MidiNote& note, double instanceStartBeat,
+                                     double sourceEndBeatAbsolute, bool isPitchedSampler) {
+    const double noteBeat = instanceStartBeat + note.startBeat;
+    NoteOffTiming timing{std::min(noteBeat + note.durationBeats, sourceEndBeatAbsolute), false};
+    if (isPitchedSampler) {
+        const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
+        timing.offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, sourceEndBeatAbsolute);
+        if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
+            if (note.slide) {
+                timing.suppressNoteOff = true;
+            } else {
+                timing.offBeat = std::min(timing.offBeat, instanceStartBeat + nextStep->startBeat);
+            }
+        }
+    }
+    return timing;
+}
+
 int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
     if (note.pitchOffset == 0 && note.pitch > 0 && note.pitch != rootMidiNote) {
         return std::clamp(note.pitch, 0, 127);
@@ -243,14 +270,23 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         {
             continue;
         }
-        for (const auto& gated : m_gatedNotes) {
-            if (gated.offFrame <= currentFrame)
+        // Gate records released here, or already past, are dropped after the pass. A surviving
+        // record takes its note's CURRENT off frame: an edit that lengthened a sounding note left
+        // the old one, the record was purged once that passed while the note still sounded, and a
+        // later edit deleting the note then had nothing to release it with (review, #956).
+        std::vector<size_t> consumedGates;
+        for (size_t gateIndex = 0; gateIndex < m_gatedNotes.size(); ++gateIndex) {
+            auto& gated = m_gatedNotes[gateIndex];
+            if (gated.offFrame <= currentFrame) {
+                consumedGates.push_back(gateIndex);
                 continue;
+            }
             PatternInstance* instPtr = findInstance(gated.instanceId);
             // A removed slot (a clip deleted, muted or moved out of the timeline while its
             // note sounds) can re-emit nothing, so its held note is released here or it hangs.
             auto* pattern = instPtr ? m_patternManager->getPattern(instPtr->patternId) : nullptr;
             bool stillExists = false;
+            uint64_t currentOffFrame = gated.offFrame;
             if (instPtr && pattern && pattern->isMidi()) {
                 for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
                     if (note.unitId != gated.unitId)
@@ -270,17 +306,21 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                     // The note must still SPAN the playhead at its current placement. Started
                     // before the playhead is not enough: a clip moved (or a note shortened) so the
                     // note has already ended there gets no re-queued off, so the old voice would hang.
-                    const double offBeat =
-                        std::min(onBeat + note.durationBeats, instPtr->startBeat + instPtr->sourceEndBeat);
-                    const uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
-                    if (onFrame < currentFrame && offFrame > currentFrame) {
+                    const NoteOffTiming offTiming =
+                        calculateNoteOffTiming(std::get<MidiPayload>(pattern->payload), note, instPtr->startBeat,
+                                               instPtr->startBeat + instPtr->sourceEndBeat, isPitchedSampler);
+                    const uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offTiming.offBeat, sampleRate);
+                    if (onFrame < currentFrame && (offTiming.suppressNoteOff || offFrame > currentFrame)) {
                         stillExists = true;
+                        currentOffFrame = offFrame;
                         break;
                     }
                 }
             }
-            if (stillExists)
+            if (stillExists) {
+                gated.offFrame = currentOffFrame;
                 continue;
+            }
             ScheduledEvent off{};
             off.sampleFrame = currentFrame;
             off.instanceId = gated.instanceId;
@@ -291,13 +331,12 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             off.data2 = 0;
             off.priority = 0;
             deletedOffs.push_back(off);
+            consumedGates.push_back(gateIndex);
         }
-        // Drop consumed gate records in the same pass.
-        m_gatedNotes.erase(std::remove_if(m_gatedNotes.begin(), m_gatedNotes.end(),
-                                          [currentFrame](const GatedNote& g) {
-                                              return g.offFrame <= currentFrame;
-                                          }),
-                           m_gatedNotes.end());
+        // Drop consumed gate records in the same pass (indices ascend; erase from the back).
+        for (auto it = consumedGates.rbegin(); it != consumedGates.rend(); ++it) {
+            m_gatedNotes.erase(m_gatedNotes.begin() + static_cast<std::ptrdiff_t>(*it));
+        }
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = std::min(inst.scheduledThroughFrame, currentFrame);
         }
@@ -361,28 +400,16 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
-            double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
             // A one-shot sample may continue to its natural endpoint when no
             // note gate is present, but a Piano Roll note still owns an ADSR
             // gate. Always emit its note-off so the sampler can enter release
             // when the note ends. Pitched-sampler slides are the one explicit
             // exception because they intentionally hold the voice across the
             // next step.
-            bool suppressNoteOff = false;
-
-            if (isPitchedSampler) {
-                const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
-                offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, inst.startBeat + inst.sourceEndBeat);
-
-                if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
-                    const double nextStepBeat = inst.startBeat + nextStep->startBeat;
-                    if (note.slide) {
-                        suppressNoteOff = true;
-                    } else {
-                        offBeat = std::min(offBeat, nextStepBeat);
-                    }
-                }
-            }
+            const NoteOffTiming offTiming =
+                calculateNoteOffTiming(midi, note, inst.startBeat, inst.startBeat + inst.sourceEndBeat, isPitchedSampler);
+            const double offBeat = offTiming.offBeat;
+            const bool suppressNoteOff = offTiming.suppressNoteOff;
 
             uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
 

@@ -21,6 +21,7 @@
 #include "Playback/PatternPlaybackEngine.h"
 
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -81,6 +82,44 @@ struct Fixture {
         clip.durationBeats = length;
         clip.sourceOffset = 0.0;
         return tm.getPlaylistModel().addClip(lane, clip);
+    }
+
+    // One clip, one note, on a unit of the given type: the live-edit reconciliation cases.
+    bool buildSingle(UnitType type, MidiNote note) {
+        unit = tm.getUnitManager().createUnit("Edit Unit", type);
+        if (unit == 0) {
+            return false;
+        }
+        note.unitId = unit;
+        auto& patterns = tm.getPatternManager();
+        const PatternID id = patterns.createPattern();
+        auto* p = patterns.getPattern(id);
+        p->type = PatternSource::Type::Midi;
+        p->name = "Edit";
+        p->lengthBeats = 16.0;
+        p->payload = MidiPayload{};
+        std::get<MidiPayload>(p->payload).notes.push_back(note);
+        laneA = tm.getPlaylistModel().createLane("Edit");
+        clipA = place(laneA, id, 0.0, 16.0);
+        tm.play();
+        return clipA.isValid() && tm.isPlaying();
+    }
+
+    void editPattern(const std::function<void(MidiPayload&)>& fn) {
+        const auto* clip = tm.getPlaylistModel().getClip(clipA);
+        tm.getPatternManager().applyPatch(clip->patternId,
+                                          [&](PatternSource& p) { fn(std::get<MidiPayload>(p.payload)); });
+        tm.getPatternPlaybackEngine().patternContentEdited();
+    }
+
+    std::vector<MidiEvent> offs() const {
+        std::vector<MidiEvent> out;
+        for (const auto& e : events) {
+            if (!e.on) {
+                out.push_back(e);
+            }
+        }
+        return out;
     }
 
     bool build() {
@@ -221,6 +260,46 @@ void testMovingSoTheNoteAlreadyEndedReleasesIt() {
                                                           "released at once, not left hanging");
 }
 
+// A pitched-sampler note sounds for its GATE, not its duration: 0.25 beats x gate 2 = until
+// beat 0.5. An edit at beat 0.3 must see it as still sounding. Computed from the duration, it
+// was released early at the edit, and then released again at 0.5 (review, #956).
+void testEditDuringExtendedPitchedGateKeepsTheNote() {
+    Fixture f;
+    MidiNote note{kHeld, 0.0, 0.25, 1.0f, 0.0f, 0};
+    note.gate = 2.0f;
+    if (!f.buildSingle(UnitType::PitchedSampler, note)) {
+        check(false, "fixture");
+        return;
+    }
+    f.renderTo(0.3);
+    f.editPattern([](MidiPayload&) {}); // any content edit mid-gate
+    f.renderTo(1.0);
+    const auto offs = f.offs();
+    check(offs.size() == 1, "the gated note is released exactly once (got " + std::to_string(offs.size()) + ")");
+    check(!offs.empty() && landsNear(offs.front().frame, 0.5),
+          "at the end of its gate (beat 0.5), not at the edit (beat 0.3)");
+}
+
+// A surviving gate record must take its note's CURRENT end. Lengthened mid-play (6 -> 10 beats),
+// the note outlives its old end; the stale record was purged there, so deleting the note at beat
+// 7 left nothing to release it with. A hung voice (review, #956).
+void testDeletingANoteLengthenedMidPlayReleasesIt() {
+    Fixture f;
+    if (!f.buildSingle(UnitType::Sampler, MidiNote{kHeld, 0.0, 6.0, 1.0f, 0.0f, 0})) {
+        check(false, "fixture");
+        return;
+    }
+    f.renderTo(1.0);
+    f.editPattern([](MidiPayload& midi) { midi.notes.front().durationBeats = 10.0; });
+    f.renderTo(7.0);
+    check(f.offs().empty(), "precondition: the lengthened note still sounds past its old end (beat 6)");
+    f.editPattern([](MidiPayload& midi) { midi.notes.clear(); });
+    f.renderTo(8.0);
+    const auto offs = f.offs();
+    check(offs.size() == 1 && landsNear(offs.front().frame, 7.0),
+          "deleting it at beat 7 releases it at once (got " + std::to_string(offs.size()) + " note-offs)");
+}
+
 } // namespace
 
 int main() {
@@ -228,6 +307,8 @@ int main() {
     testMovingASoundingClipAwayReleasesIt();
     testDeletingASoundingClipReleasesIt();
     testMovingSoTheNoteAlreadyEndedReleasesIt();
+    testEditDuringExtendedPitchedGateKeepsTheNote();
+    testDeletingANoteLengthenedMidPlayReleasesIt();
 
     if (g_failures == 0) {
         std::cout << "Timeline clip move tests passed\n";
