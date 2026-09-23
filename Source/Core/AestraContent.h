@@ -57,6 +57,7 @@ namespace AestraUI {
 namespace Aestra::Audio {
     class AudioEngine;
     class MidiInputService;
+    class PlaybackContextController;
     class TrackManager;
     class TrackManagerUI;
     class PreviewEngine;
@@ -481,6 +482,9 @@ private:
     std::shared_ptr<AestraUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
     std::shared_ptr<Aestra::Audio::TrackManagerUI> m_trackManagerUI;
+    // The single writer of the playback-mode mirrors. Declared after m_trackManager
+    // (it holds a reference to it), so it is destroyed first.
+    std::unique_ptr<Aestra::Audio::PlaybackContextController> m_playbackContext;
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     Aestra::Audio::AudioEngine* m_audioEngine = nullptr;
     Aestra::Audio::MidiInputService* m_midiInput = nullptr;
