@@ -1476,8 +1476,9 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
     
     // Only draw if waveform is visible in the current viewport
     float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
-    float gridWidth = bounds.width - controlAreaWidth - 10;
-    float gridEndX = gridStartX + gridWidth;
+    // The row's right edge is the grid's right edge (timelineTrackRowWidth), and hit-testing
+    // already ends there. Painting 5px short left a strip where clips never showed (SPEC 3 §2.3).
+    float gridEndX = bounds.right();
     
     // Culling padding for smooth scrolling
     float cullPaddingLeft = 400.0f;
@@ -2437,9 +2438,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     float controlAreaWidth = layout.trackControlsWidth;
     float controlAreaEndX = bounds.x + controlAreaWidth;
     float gridStartX = timelineGridStartX(bounds.x, controlAreaWidth);
-    // Rows span width - scrollbar - 5; ending interaction at bounds.right()
-    // aligns clip grab/trim with the plane's last gridline (width - scrollbar
-    // - inset) instead of leaving a 5px strip lines draw but clips can't use.
+    // Rows span the whole plane up to the scrollbar (timelineTrackRowWidth), so
+    // ending interaction at bounds.right() is the grid's last pixel: clips paint
+    // and hit-test to the same edge.
     float gridEndX = bounds.right();
     
     // === HOVER EDGE DETECTION (for resize cursor) ===

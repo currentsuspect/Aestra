@@ -60,6 +60,11 @@ int main() {
     }
 
     const float infinity = std::numeric_limits<float>::infinity();
+    // SPEC 3 §2.3: a track row ends where the grid does, at the scrollbar. Rows used to stop 5px
+    // short while gridlines ran on, leaving a strip clips never painted into.
+    expectNear(timelineTrackRowWidth(800.0f), timelineGridEndX(0.0f, 800.0f), 0.0001,
+               "a track row spans the whole grid, up to the scrollbar");
+    check(timelineTrackRowWidth(4.0f) == 0.0f, "a manager narrower than the scrollbar has no row");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, 0.0f) == 0.0, "zero zoom has deterministic fallback");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, -4.0f) == 0.0, "negative zoom has deterministic fallback");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, infinity) == 0.0, "non-finite zoom has deterministic fallback");
