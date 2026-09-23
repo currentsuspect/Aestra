@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -86,10 +87,16 @@ struct Fixture {
     }
 };
 
+// A Fixture holds a TrackManager and an AudioEngine BY VALUE, about 324 KB. Several
+// on one stack frame overflowed MSVC's 1 MB default stack (a SegFault on the Windows
+// lane only; Linux's 8 MB stack hid it). They live on the heap.
+std::unique_ptr<Fixture> makeFixture() { return std::make_unique<Fixture>(); }
+
 // ------------------------------------------------------------------ the table --
 
 void testDocumentedTable() {
-    Fixture f;
+    auto owned = makeFixture();
+    Fixture& f = *owned;
     check(f.pattern.isValid(), "fixture pattern exists");
     f.expect(mirrors(false, false, false, false, false), "Timeline at first engine attachment");
     check(f.ctx.context() == PlaybackContext::Timeline, "context starts as Timeline");
@@ -154,7 +161,8 @@ std::vector<PriorState> priorStates() {
 void testEnteringTimelineOrAuditionClearsEveryPatternMirror() {
     for (const auto& prior : priorStates()) {
         {
-            Fixture f;
+            auto owned = makeFixture();
+        Fixture& f = *owned;
             prior.reach(f);
             f.ctx.enterTimeline();
             f.expect(mirrors(false, false, false, false, false), std::string(prior.name) + " -> Timeline");
@@ -163,7 +171,8 @@ void testEnteringTimelineOrAuditionClearsEveryPatternMirror() {
                   std::string(prior.name) + " -> Timeline: no pattern playback survives");
         }
         {
-            Fixture f;
+            auto owned = makeFixture();
+        Fixture& f = *owned;
             prior.reach(f);
             f.ctx.enterAudition();
             f.expect(mirrors(false, false, false, false, true), std::string(prior.name) + " -> Audition");
@@ -176,7 +185,8 @@ void testEnteringTimelineOrAuditionClearsEveryPatternMirror() {
 
 void testLoopLengthOnlyActsInArsenal() {
     {
-        Fixture f;
+        auto owned = makeFixture();
+        Fixture& f = *owned;
         f.ctx.enterArsenal(8.0);
         f.ctx.applyArsenalLoopLength(16.0);
         f.expect(mirrors(true, false, true, true, false), "a length edit in Arsenal arms the override before play");
@@ -188,7 +198,8 @@ void testLoopLengthOnlyActsInArsenal() {
     {
         // The one intended change: a piano-roll length edit during a timeline clip preview used to arm
         // the engine's pattern mode (TrackManager's flag is set there), muting the whole timeline.
-        Fixture f;
+        auto owned = makeFixture();
+        Fixture& f = *owned;
         f.ctx.startClipPreview(f.pattern);
         f.ctx.resizeArsenalLoop(16.0);
         f.ctx.applyArsenalLoopLength(16.0);
@@ -198,7 +209,8 @@ void testLoopLengthOnlyActsInArsenal() {
     {
         // A preview started under Arsenal focus must not strip the Arsenal context: loop-length
         // edits there still have to reach the engine (review finding on #954).
-        Fixture f;
+        auto owned = makeFixture();
+        Fixture& f = *owned;
         f.ctx.enterArsenal(8.0);
         f.ctx.startClipPreview(f.pattern);
         check(f.ctx.context() == PlaybackContext::Arsenal, "a preview under Arsenal focus keeps the Arsenal context");
@@ -206,7 +218,8 @@ void testLoopLengthOnlyActsInArsenal() {
         check(f.engine.getPatternLengthBeats() == 16.0, "and Arsenal loop-length edits still reach the engine");
     }
     {
-        Fixture f;
+        auto owned = makeFixture();
+        Fixture& f = *owned;
         f.ctx.resizeArsenalLoop(16.0);
         f.ctx.applyArsenalLoopLength(16.0);
         f.expect(mirrors(false, false, false, false, false), "loop-length paths are inert on the Timeline");
@@ -216,7 +229,8 @@ void testLoopLengthOnlyActsInArsenal() {
 // ---------------------------------------------------------------- teardown --
 
 void testTeardownOnlyStopsPatternPlayback() {
-    Fixture f;
+    auto owned = makeFixture();
+    Fixture& f = *owned;
     f.ctx.playTimeline();
     check(f.tm.isPlaying(), "timeline play started the transport");
     check(!f.ctx.teardownPatternPlayback(), "teardown reports nothing to do during timeline playback");
@@ -229,7 +243,8 @@ void testTeardownOnlyStopsPatternPlayback() {
 }
 
 void testTimelinePlayEndsTheOverride() {
-    Fixture f;
+    auto owned = makeFixture();
+    Fixture& f = *owned;
     f.ctx.enterArsenal(8.0);
     f.ctx.applyArsenalLoopLength(8.0);
     check(f.tm.isPatternLoopOverrideActive(), "precondition: the override is set");
