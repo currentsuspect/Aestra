@@ -525,4 +525,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PlaybackContextTest.cpp")
     )
 endif()
 
+# SPEC 3 §2.1: the piano roll's playhead follows the clip playing its pattern during
+# timeline playback (it used to park at 0).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollPlayheadMappingTest.cpp")
+    add_executable(PianoRollPlayheadMappingTest
+        PianoRollPlayheadMappingTest.cpp
+    )
+    target_link_libraries(PianoRollPlayheadMappingTest PRIVATE AestraAudioCore)
+    target_include_directories(PianoRollPlayheadMappingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PianoRollPlayheadMappingTest COMMAND PianoRollPlayheadMappingTest)
+    set_tests_properties(PianoRollPlayheadMappingTest PROPERTIES
+        LABELS "headless;pattern;timeline;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

@@ -7,6 +7,7 @@
 #include "PlaylistRuntimeSnapshot.h"
 #include "SourceManager.h"
 
+#include <optional>
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -64,6 +65,27 @@ struct MidiClipPlaybackInstance {
     double patternStartBeat() const { return startBeat - sourceOffsetBeats; }
     double endBeat() const { return startBeat + durationBeats; }
 };
+
+/**
+ * @brief Where in a pattern the arrangement playhead is, via the clip playing that pattern.
+ *
+ * The piano roll's X axis is pattern-local; the transport reports arrangement beats. During
+ * timeline playback the panel used to park its playhead at 0 because it resolved no clip
+ * (SPEC 3 §2.1). This resolves one: the first clip of @p pattern whose span contains
+ * @p arrangementBeat. The result is `arrangementBeat - clip.startBeat`, the same origin the
+ * pattern scheduler emits that clip's notes from, so the playhead sits on what is audible.
+ * Nothing when no clip of the pattern is under the playhead.
+ */
+inline std::optional<double> patternLocalBeatAt(const std::vector<MidiClipPlaybackInstance>& instances,
+                                                PatternID pattern, double arrangementBeat) {
+    for (const auto& instance : instances) {
+        if (instance.patternId == pattern && instance.isValid() && arrangementBeat >= instance.startBeat &&
+            arrangementBeat < instance.endBeat()) {
+            return arrangementBeat - instance.startBeat;
+        }
+    }
+    return std::nullopt;
+}
 
 /**
  * @brief Prune a MIDI pattern to a temporal region, making it a truthful
