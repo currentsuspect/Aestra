@@ -84,6 +84,8 @@ public:
     void setContent(std::shared_ptr<AestraContent> content);
     /** @brief Attach the settings dialog. */
     void setSettingsDialog(std::shared_ptr<Aestra::SettingsDialog> dialog);
+    /// Wire the title bar's membership status cluster ("Signed out" / "Core"). Call at startup.
+    void setOnMembershipClicked(std::function<void()> callback);
     /** @brief Attach the confirmation dialog. */
     void setConfirmationDialog(std::shared_ptr<Aestra::ConfirmationDialog> dialog);
     /** @brief Attach the recovery dialog. */

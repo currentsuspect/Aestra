@@ -107,6 +107,7 @@ private:
 
     void buildSettingsAndDialogs();  // heavy — deferred until first open
     void ensureSettingsAndDialogs(); // lazy guard
+    void openSettings();             // builds the dialogs if needed, then shows Settings
     void buildMenuBar();
     void initializePlugins();
     void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
