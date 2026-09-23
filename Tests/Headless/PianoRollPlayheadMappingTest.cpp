@@ -50,7 +50,8 @@ ClipInstanceID place(TrackManager& tm, PlaylistLaneID lane, PatternID pattern, d
     return tm.getPlaylistModel().addClip(lane, clip);
 }
 
-bool near(const std::optional<double>& got, double want) { return got && std::abs(*got - want) < 1e-9; }
+// Not "near": <windef.h> defines near/far as empty macros, which breaks MSVC.
+bool approxEqual(const std::optional<double>& got, double want) { return got && std::abs(*got - want) < 1e-9; }
 
 } // namespace
 
@@ -66,15 +67,15 @@ int main() {
     place(tm, laneB, bass, 0.0, 32.0);
     const auto instances = tm.getPlaylistModel().collectMidiClipInstances(tm.getPatternManager());
 
-    check(near(patternLocalBeatAt(instances, drums, 10.5), 2.5),
+    check(approxEqual(patternLocalBeatAt(instances, drums, 10.5), 2.5),
           "inside the first drums clip, the playhead is 2.5 beats into the pattern");
-    check(near(patternLocalBeatAt(instances, drums, 27.0), 3.0),
+    check(approxEqual(patternLocalBeatAt(instances, drums, 27.0), 3.0),
           "inside the second drums clip, it measures from THAT clip's start");
     check(!patternLocalBeatAt(instances, drums, 20.0).has_value(),
           "between drums clips there is no position (the panel parks at 0)");
     check(!patternLocalBeatAt(instances, drums, 16.0).has_value(), "a clip's end is exclusive");
-    check(near(patternLocalBeatAt(instances, drums, 8.0), 0.0), "a clip's start is inclusive");
-    check(near(patternLocalBeatAt(instances, bass, 20.0), 20.0),
+    check(approxEqual(patternLocalBeatAt(instances, drums, 8.0), 0.0), "a clip's start is inclusive");
+    check(approxEqual(patternLocalBeatAt(instances, bass, 20.0), 20.0),
           "another pattern's clips never answer for this one");
 
     if (g_failures == 0) {
