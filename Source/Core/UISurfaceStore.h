@@ -150,6 +150,9 @@ inline constexpr char kPanelPianoRoll[] = "panel.piano-roll";
 inline constexpr char kPanelSequencer[] = "panel.sequencer";
 inline constexpr char kPanelHistory[] = "panel.history";
 inline constexpr char kPanelTakes[] = "panel.takes";
+// Timeline follow-playhead (SPEC 3 §3.1): how this user arranges the app, so FD-23's store.
+inline constexpr char kTimelineFollowPlayhead[] = "panel.timeline.followPlayhead";
+inline constexpr char kTimelineFollowContinuous[] = "panel.timeline.followContinuous";
 } // namespace UISurfaceKeys
 
 /**
