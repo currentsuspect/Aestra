@@ -89,9 +89,49 @@ void testPlayheadIgnoresClipsPastTheSchedulerCap() {
           "played from past the Filler clips, the Lead clip is scheduled and the playhead follows it");
 }
 
+// The scheduled set is the scheduler's record, not a recomputation. A live refresh holds a
+// removed clip's slot for one refresh (its held notes still release by slot), so after removing
+// one Filler the Lead clip is NOT scheduled yet, though only 254 eligible clips remain. The
+// playhead must agree with the scheduler: Lead is followed only once the next refresh gives it
+// the freed slot.
+void testPlayheadTracksTheSchedulerAcrossALiveRefresh() {
+    TrackManager tm;
+    const PatternID filler = makeMidiPattern(tm, "Filler");
+    const PatternID lead = makeMidiPattern(tm, "Lead");
+    const PlaylistLaneID laneA = tm.getPlaylistModel().createLane("A");
+    const PlaylistLaneID laneB = tm.getPlaylistModel().createLane("B");
+    ClipInstanceID firstFiller;
+    for (std::size_t i = 0; i < kMaxScheduledTimelineMidiInstances; ++i) {
+        const auto id = place(tm, laneA, filler, static_cast<double>(i), 1.0);
+        if (i == 0) {
+            firstFiller = id;
+        }
+    }
+    place(tm, laneB, lead, 300.0, 8.0);
+
+    tm.play(); // from 0: the cap drops Lead
+    check(!patternLocalBeatAt(tm.getScheduledTimelineInstances(), lead, 302.0).has_value(),
+          "played from 0, Lead is past the cap and not followed");
+
+    tm.getPlaylistModel().removeClip(firstFiller);
+    tm.refreshTimelinePatternInstances();
+    const auto eligible = selectScheduledTimelineInstances(
+        tm.getPlaylistModel().collectMidiClipInstances(tm.getPatternManager()), 0.0);
+    check(approxEqual(patternLocalBeatAt(eligible, lead, 302.0), 2.0),
+          "recomputing the selection would already take Lead (so the next check is not vacuous)");
+    check(!patternLocalBeatAt(tm.getScheduledTimelineInstances(), lead, 302.0).has_value(),
+          "but the refresh held the freed slot, so Lead makes no MIDI yet and is not followed");
+
+    tm.refreshTimelinePatternInstances();
+    check(approxEqual(patternLocalBeatAt(tm.getScheduledTimelineInstances(), lead, 302.0), 2.0),
+          "the next refresh gives Lead the slot, and the playhead follows it");
+    tm.stop();
+}
+
 } // namespace
 
 int main() {
+    testPlayheadTracksTheSchedulerAcrossALiveRefresh();
     testPlayheadIgnoresClipsPastTheSchedulerCap();
 
     TrackManager tm;
