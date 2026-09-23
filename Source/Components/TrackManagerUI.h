@@ -288,6 +288,20 @@ public:
     // Selection query for looping
     std::pair<double, double> getSelectionBeatRange() const;
 
+    /**
+     * @brief A left press on empty grid in the Select tool (SPEC 3 §1.2): the default marquee.
+     *
+     * A plain press is the selection exit: it clears the clip selection and the ruler zone. With
+     * Shift/Ctrl the press keeps them, so the band adds or toggles. Either way a marquee starts;
+     * a release that never travelled is a click and selects nothing (marqueeReleasePlan).
+     * @return True if the press started a marquee (the Select tool, left button, none active).
+     */
+    bool beginGridMarquee(const ::AestraUI::NUIMouseEvent& event);
+    /** @brief Drop the ruler zone. The loop region it set stays. */
+    void clearRulerSelection();
+    bool hasRulerSelection() const { return m_hasRulerSelection; }
+    bool isMarqueeActive() const { return m_marquee.active(); }
+
     // Time Signature Sync
     void setBeatsPerBar(int bpb) {
         if (m_beatsPerBar == bpb)
@@ -503,6 +517,7 @@ private:
     // endpoint updates); this widget keeps only the screen mapping and the
     // selection application on finalize.
     ::Aestra::Components::TimelineMarqueeDrag m_marquee;
+    ::Aestra::Components::MarqueeOrigin m_marqueeOrigin = ::Aestra::Components::MarqueeOrigin::Tool;
 
     // === SMOOTH ZOOM ANIMATION ===
     float m_targetPixelsPerBeat = 50.0f; // Target zoom level for animation (match initial m_pixelsPerBeat)
