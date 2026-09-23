@@ -1348,6 +1348,18 @@ public:
      * anything already scheduled stayed live and was rendered into the export alongside
      * the timeline.
      */
+    /**
+     * @brief The clip instances the last timeline schedule took, recomputed from the current
+     *        playlist with the same selection and play-start beat the scheduler used.
+     *
+     * The piano-roll playhead follows a clip from this set, never a clip past the scheduler's
+     * cap that produces no MIDI (review, #961).
+     */
+    std::vector<MidiClipPlaybackInstance> getScheduledTimelineInstances() const {
+        return selectScheduledTimelineInstances(m_playlistModel.collectMidiClipInstances(m_patternManager),
+                                                m_timelineScheduleStartBeat.load(std::memory_order_relaxed));
+    }
+
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
     }
@@ -1994,22 +2006,20 @@ private:
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
         const double playStartBeat = playStartPositionSeconds * bpm / 60.0;
         const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
+        m_timelineScheduleStartBeat.store(playStartBeat, std::memory_order_relaxed);
 
         Log::info("[TimelinePattern] scheduling " + std::to_string(instances.size()) +
                   " MIDI clip instances from beat " + std::to_string(playStartBeat));
 
+        bool truncated = false;
+        const auto scheduled = selectScheduledTimelineInstances(instances, playStartBeat, &truncated);
+        if (truncated) {
+            Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at " +
+                         std::to_string(kMaxScheduledTimelineMidiInstances));
+        }
+
         uint32_t instanceId = 2; // Reserve 1 for Arsenal-focused single-pattern playback.
-        for (const auto& instance : instances) {
-            if (!instance.isValid()) {
-                continue;
-            }
-            if (instance.endBeat() <= playStartBeat) {
-                continue;
-            }
-            if (instanceId >= 256) {
-                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
-                break;
-            }
+        for (const auto& instance : scheduled) {
 
             std::string routeSummary = "no-pattern";
             if (auto* pattern = m_patternManager.getPattern(instance.patternId); pattern && pattern->isMidi()) {
@@ -2034,6 +2044,9 @@ private:
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
     }
+
+    // Atomic: an offline render can schedule off the main thread while the panel reads it.
+    std::atomic<double> m_timelineScheduleStartBeat{0.0};
 
     double getCurrentTransportBeat() const {
         const double bpm = std::max(1.0, m_playlistModel.getBPM());

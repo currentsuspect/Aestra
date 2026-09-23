@@ -5,6 +5,8 @@
 #include "Music/ScaleContext.h"
 #include "PianoRollPanel.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -108,7 +110,37 @@ void testSelectionSurvivesCommittedEditRoundTrip() {
 
 } // namespace
 
+// SPEC 3 §2.1 at the caller (review, #961): the helper tests prove the mapping, this proves
+// onUpdate() actually puts it on screen. While the timeline plays through a clip of the loaded
+// pattern, the editor's playhead sits at the clip-local beat, not parked at 0.
+void testTimelinePlaybackMovesThePanelPlayhead() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& patternManager = trackManager->getPatternManager();
+    const PatternID patternId = patternManager.createMidiPattern("Timeline Playhead", 8.0, MidiPayload{});
+    auto& playlist = trackManager->getPlaylistModel();
+    const PlaylistLaneID lane = playlist.createLane("A");
+    ClipInstance clip;
+    clip.patternId = patternId;
+    clip.sourceId = patternId.value;
+    clip.startBeat = 8.0;
+    clip.durationBeats = 8.0;
+    playlist.addClip(lane, clip);
+
+    PianoRollPanel editor(trackManager);
+    editor.setVisible(true);
+    editor.loadPattern(patternId);
+
+    const double bpm = std::max(1.0, playlist.getBPM());
+    trackManager->setPosition(10.5 * 60.0 / bpm); // arrangement beat 10.5, 2.5 beats into the clip
+    trackManager->play();
+    editor.onUpdate(1.0 / 60.0);
+    expect(std::abs(editor.getPlayheadBeat() - 2.5) < 1e-6,
+           "timeline playback through a clip should put the editor playhead at the clip-local beat");
+    trackManager->stop();
+}
+
 int main() {
+    testTimelinePlaybackMovesThePanelPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();
     if (failures == 0) {

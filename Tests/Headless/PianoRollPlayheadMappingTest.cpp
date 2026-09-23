@@ -12,7 +12,9 @@
 #include "Models/PlaylistModel.h"
 #include "Models/TrackManager.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -53,9 +55,45 @@ ClipInstanceID place(TrackManager& tm, PlaylistLaneID lane, PatternID pattern, d
 // Not "near": <windef.h> defines near/far as empty macros, which breaks MSVC.
 bool approxEqual(const std::optional<double>& got, double want) { return got && std::abs(*got - want) < 1e-9; }
 
+// Review, #961: timeline playback schedules only the first kMaxScheduledTimelineMidiInstances
+// eligible clips, so a clip past the cap makes no MIDI. The playhead must not follow it.
+void testPlayheadIgnoresClipsPastTheSchedulerCap() {
+    TrackManager tm;
+    const PatternID filler = makeMidiPattern(tm, "Filler");
+    const PatternID lead = makeMidiPattern(tm, "Lead");
+    const PlaylistLaneID laneA = tm.getPlaylistModel().createLane("A");
+    const PlaylistLaneID laneB = tm.getPlaylistModel().createLane("B");
+    for (std::size_t i = 0; i < kMaxScheduledTimelineMidiInstances; ++i) {
+        place(tm, laneA, filler, static_cast<double>(i), 1.0);
+    }
+    // The 255th eligible instance (lane B is collected after lane A): the only Lead clip.
+    place(tm, laneB, lead, 300.0, 8.0);
+
+    const auto all = tm.getPlaylistModel().collectMidiClipInstances(tm.getPatternManager());
+    check(all.size() == kMaxScheduledTimelineMidiInstances + 1, "the fixture has one clip past the cap");
+    check(approxEqual(patternLocalBeatAt(all, lead, 302.0), 2.0),
+          "unfiltered, the Lead clip would answer (so the next check is not vacuous)");
+
+    // A schedule from the top: the cap takes every Filler clip and drops Lead.
+    tm.scheduleTimelineForOfflineRender(0.0);
+    bool truncated = false;
+    const auto fromTop = selectScheduledTimelineInstances(all, 0.0, &truncated);
+    check(truncated && fromTop.size() == kMaxScheduledTimelineMidiInstances, "a schedule from 0 truncates at the cap");
+    check(!patternLocalBeatAt(tm.getScheduledTimelineInstances(), lead, 302.0).has_value(),
+          "a clip past the scheduler's cap makes no MIDI, so the playhead does not follow it");
+
+    // Played from beat 260, every Filler clip has ended: Lead is scheduled, and followed.
+    const double bpm = std::max(1.0, tm.getPlaylistModel().getBPM());
+    tm.scheduleTimelineForOfflineRender(260.0 * 60.0 / bpm);
+    check(approxEqual(patternLocalBeatAt(tm.getScheduledTimelineInstances(), lead, 302.0), 2.0),
+          "played from past the Filler clips, the Lead clip is scheduled and the playhead follows it");
+}
+
 } // namespace
 
 int main() {
+    testPlayheadIgnoresClipsPastTheSchedulerCap();
+
     TrackManager tm;
     const PatternID drums = makeMidiPattern(tm, "Drums");
     const PatternID bass = makeMidiPattern(tm, "Bass");

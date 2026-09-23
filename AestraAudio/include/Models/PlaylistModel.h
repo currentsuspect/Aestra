@@ -10,6 +10,7 @@
 #include <optional>
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <limits>
 #include <mutex>
@@ -65,6 +66,39 @@ struct MidiClipPlaybackInstance {
     double patternStartBeat() const { return startBeat - sourceOffsetBeats; }
     double endBeat() const { return startBeat + durationBeats; }
 };
+
+/// Timeline MIDI clip instances the pattern scheduler takes: ids 2..255 (1 is Arsenal playback).
+inline constexpr std::size_t kMaxScheduledTimelineMidiInstances = 254;
+
+/**
+ * @brief The clip instances timeline playback actually schedules from @p playStartBeat, in order.
+ *
+ * Valid instances that have not ended by the play start, capped at
+ * kMaxScheduledTimelineMidiInstances. The scheduler and the piano-roll playhead both use this, so
+ * the playhead can never follow a clip that produces no MIDI (review, #961).
+ * @param truncated Set when eligible instances were dropped at the cap.
+ */
+inline std::vector<MidiClipPlaybackInstance>
+selectScheduledTimelineInstances(const std::vector<MidiClipPlaybackInstance>& instances, double playStartBeat,
+                                 bool* truncated = nullptr) {
+    std::vector<MidiClipPlaybackInstance> selected;
+    if (truncated) {
+        *truncated = false;
+    }
+    for (const auto& instance : instances) {
+        if (!instance.isValid() || instance.endBeat() <= playStartBeat) {
+            continue;
+        }
+        if (selected.size() >= kMaxScheduledTimelineMidiInstances) {
+            if (truncated) {
+                *truncated = true;
+            }
+            break;
+        }
+        selected.push_back(instance);
+    }
+    return selected;
+}
 
 /**
  * @brief Where in a pattern the arrangement playhead is, via the clip playing that pattern.
