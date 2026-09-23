@@ -131,7 +131,8 @@ struct Fixture {
     }
 };
 
-bool near(uint64_t frame, double beat) {
+// Not "near": <windef.h> defines near/far as empty macros, which broke the MSVC build.
+bool landsNear(uint64_t frame, double beat) {
     const uint64_t want = beatFrame(beat);
     return (frame > want ? frame - want : want - frame) <= kTol;
 }
@@ -154,10 +155,10 @@ void testMovingAnotherClipLeavesASoundingNoteAlone() {
     const auto heldOffs = f.of(kHeld, false);
     check(heldOns.size() == 1, "the held note is not re-fired by another clip's move (got " +
                                    std::to_string(heldOns.size()) + " note-ons)");
-    check(heldOffs.size() == 1 && near(heldOffs.front().frame, 6.0),
+    check(heldOffs.size() == 1 && landsNear(heldOffs.front().frame, 6.0),
           "the held note is not cut: it ends once, at beat 6");
     const auto shortOns = f.of(kShort, true);
-    check(shortOns.size() == 1 && near(shortOns.front().frame, 5.0),
+    check(shortOns.size() == 1 && landsNear(shortOns.front().frame, 5.0),
           "the moved clip plays at its new position (beat 5), not its old one (beat 4)");
 }
 
@@ -174,7 +175,7 @@ void testMovingASoundingClipAwayReleasesIt() {
     f.renderTo(3.0);
 
     const auto offs = f.of(kHeld, false);
-    check(!offs.empty() && near(offs.front().frame, 2.0),
+    check(!offs.empty() && landsNear(offs.front().frame, 2.0),
           "moving a sounding clip past the playhead releases its note at the move");
     check(f.of(kHeld, true).size() == 1, "and does not re-fire it");
 }
@@ -193,7 +194,7 @@ void testDeletingASoundingClipReleasesIt() {
     f.renderTo(8.0);
 
     const auto offs = f.of(kHeld, false);
-    check(!offs.empty() && near(offs.front().frame, 2.0), "deleting a sounding clip releases its note at once");
+    check(!offs.empty() && landsNear(offs.front().frame, 2.0), "deleting a sounding clip releases its note at once");
     check(f.tm.getPatternPlaybackEngine().getActiveInstanceCount() == 1, "the deleted clip's slot is gone");
 }
 
@@ -216,7 +217,7 @@ void testMovingSoTheNoteAlreadyEndedReleasesIt() {
     f.tm.refreshTimelinePatternInstances();
     f.renderTo(4.0);
     const auto offs = f.of(kHeld, false);
-    check(!offs.empty() && near(offs.front().frame, 2.0), "a sounding note whose placement has already ended is "
+    check(!offs.empty() && landsNear(offs.front().frame, 2.0), "a sounding note whose placement has already ended is "
                                                           "released at once, not left hanging");
 }
 
