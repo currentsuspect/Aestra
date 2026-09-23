@@ -23,6 +23,7 @@
 #include "Playback/LiveMidiQueue.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
+#include <cstring>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -482,8 +483,9 @@ public:
      * rewindScheduledInstances() drains the pattern RT queue from the producer side and must
      * never run on the audio thread.
      *
-     * If the queue stays full past pushReliable()'s timeout, the context is stored directly
-     * rather than lost: ordering degrades to the old behaviour, but the mode can never go stale.
+     * If the queue stays full past pushReliable()'s timeout, the context is posted to a
+     * generation-tagged fallback slot that the audio thread applies at the start of its next
+     * block: never lost, and never written by two threads.
      */
     void requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition);
     /** @brief Generation of the last requested / audio-applied playback context. Equal means settled. */
@@ -1250,6 +1252,19 @@ private:
     std::atomic<uint64_t> m_appliedContextGeneration{0};
     bool m_requestedPatternMode{false};
     double m_requestedPatternLength{4.0};
+    // Saturated-queue fallback slot (requestPlaybackContext): written by the producer, applied
+    // ONLY by the audio thread. Packed: bit0 pattern, bit1 audition, bits 32-63 length (float).
+    std::atomic<uint64_t> m_fallbackContextGeneration{0};
+    std::atomic<uint64_t> m_fallbackContextPacked{0};
+    static uint64_t packPlaybackContext(bool pattern, double lengthBeats, bool audition) {
+        const float length = static_cast<float>(lengthBeats);
+        uint32_t lengthBits = 0;
+        std::memcpy(&lengthBits, &length, sizeof(length));
+        return (static_cast<uint64_t>(lengthBits) << 32) | (audition ? 2u : 0u) | (pattern ? 1u : 0u);
+    }
+    // Drain carry-over (applyPendingCommands): audio thread only. See the pair rule there.
+    AudioQueueCommand m_carriedCommand{};
+    bool m_hasCarriedCommand{false};
     // Completed pattern-loop passes (audio thread writes at each wrap, reset
     // while stopped). Gives pattern scheduling a MONOTONIC frame domain
     // (iteration * loopLen + wrapped pos) so the next iteration's events are

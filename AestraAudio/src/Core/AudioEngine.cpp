@@ -246,6 +246,25 @@ void AudioEngine::applyPendingMetronomeCountInRt() {
 }
 
 void AudioEngine::applyPendingCommands() {
+    // Saturated-queue fallback (requestPlaybackContext): applied here, on the audio thread, so
+    // the context has exactly one writer. A slot newer than anything applied wins; any older
+    // command still queued behind it is rejected by the generation check below. Reading the
+    // payload after the generation can only yield the same or a newer payload, and a newer one
+    // is simply re-applied under its own generation on the next block.
+    {
+        const uint64_t fallbackGeneration = m_fallbackContextGeneration.load(std::memory_order_acquire);
+        if (fallbackGeneration > m_appliedContextGeneration.load(std::memory_order_relaxed)) {
+            const uint64_t packed = m_fallbackContextPacked.load(std::memory_order_relaxed);
+            m_patternPlaybackMode.store((packed & 1u) != 0, std::memory_order_relaxed);
+            m_auditionModeEnabled.store((packed & 2u) != 0, std::memory_order_relaxed);
+            float length = 0.0f;
+            const uint32_t lengthBits = static_cast<uint32_t>(packed >> 32);
+            std::memcpy(&length, &lengthBits, sizeof(length));
+            m_patternLengthBeats.store(static_cast<double>(length), std::memory_order_relaxed);
+            m_appliedContextGeneration.store(fallbackGeneration, std::memory_order_release);
+        }
+    }
+
     AudioQueueCommand cmd;
     // Bounded drain - max 16 commands per block (less work = less RT risk)
     int cmdCount = 0;
@@ -275,8 +294,37 @@ void AudioEngine::applyPendingCommands() {
         return command.channelId - 1;
     };
 
-    while (cmdCount < 16 && m_commandQueue.pop(cmd)) {
+    // A playback-context request and its transition's transport command must land in ONE
+    // block (PR 3). The 16-command drain limit could split such a pair across two blocks, so at
+    // the limit, right after one half of a pair, exactly one more command is taken: applied if
+    // it is the other half, otherwise carried to the front of the next block. Bounded (<= 17)
+    // and order-preserving. (Review, #957.)
+    const auto isPairHalf = [](AudioQueueCommandType type) {
+        return type == AudioQueueCommandType::SetPlaybackContext || type == AudioQueueCommandType::SetTransportState;
+    };
+    AudioQueueCommandType lastType = AudioQueueCommandType::None;
+    bool pairExtended = false;
+    for (;;) {
+        if (cmdCount < 16) {
+            if (m_hasCarriedCommand) {
+                cmd = m_carriedCommand;
+                m_hasCarriedCommand = false;
+            } else if (!m_commandQueue.pop(cmd)) {
+                break;
+            }
+        } else {
+            if (!isPairHalf(lastType) || pairExtended || !m_commandQueue.pop(cmd)) {
+                break;
+            }
+            if (!isPairHalf(cmd.type) || cmd.type == lastType) {
+                m_carriedCommand = cmd;
+                m_hasCarriedCommand = true;
+                break;
+            }
+            pairExtended = true;
+        }
         ++cmdCount;
+        lastType = cmd.type;
         // Transport commands: keep only the latest per block, but record edges.
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
             const bool nextPlaying = (cmd.value1 != 0.0f);
@@ -694,11 +742,16 @@ void AudioEngine::requestPlaybackContext(bool patternMode, double patternLengthB
     cmd.trackIndex = audition ? 1u : 0u;
     cmd.samplePos = generation;
     if (!m_commandQueue.pushReliable(cmd)) {
-        Aestra::Log::warning("[AudioEngine] Playback context command queue saturated; applying the context directly");
-        m_patternPlaybackMode.store(patternMode, std::memory_order_relaxed);
-        m_patternLengthBeats.store(patternLengthBeats, std::memory_order_relaxed);
-        m_auditionModeEnabled.store(audition, std::memory_order_relaxed);
-        m_appliedContextGeneration.store(generation, std::memory_order_release);
+        // Queue saturated: post the context to a generation-tagged slot the audio thread applies
+        // at the start of its next block. The producer never writes the context itself. Writing
+        // it directly (the first version) raced an older command the audio thread was mid-way
+        // through applying, which could restore a stale context AND lower the applied generation,
+        // leaving settled() false forever. (Review, #957.)
+        Aestra::Log::warning("[AudioEngine] Playback context command queue saturated; posting the context to the "
+                             "fallback slot");
+        m_fallbackContextPacked.store(packPlaybackContext(patternMode, patternLengthBeats, audition),
+                                      std::memory_order_relaxed);
+        m_fallbackContextGeneration.store(generation, std::memory_order_release);
     }
 }
 

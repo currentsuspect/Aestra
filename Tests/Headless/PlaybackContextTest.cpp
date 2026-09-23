@@ -324,6 +324,77 @@ void testSupersededContextIsNotReapplied() {
     check(f.engine.isPatternPlaybackMode(), "a stale-generation context is ignored");
 }
 
+AudioQueueCommand metronome(bool on) {
+    AudioQueueCommand cmd{};
+    cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
+    cmd.value1 = on ? 1.0f : 0.0f;
+    return cmd;
+}
+
+AudioQueueCommand playFromZero() {
+    AudioQueueCommand cmd{};
+    cmd.type = AudioQueueCommandType::SetTransportState;
+    cmd.value1 = 1.0f;
+    cmd.samplePos = 0;
+    return cmd;
+}
+
+// Review, #957: the drain takes 16 commands per block. With 15 queued ahead, a transition's
+// context is pop 16 and its transport pop 17. Split across blocks, the context rendered a
+// block under the previous transport state.
+void testDrainLimitKeepsThePairTogether() {
+    auto owned = makeFixture();
+    Fixture& f = *owned;
+    f.settle();
+    for (int i = 0; i < 15; ++i) {
+        f.engine.commandQueue().push(metronome(false));
+    }
+    f.engine.requestPlaybackContext(true, 8.0, false); // pop 16
+    f.engine.commandQueue().push(playFromZero());      // pop 17
+    f.engine.processBlock(f.block.data(), nullptr, 512, 0.0);
+    check(f.engine.isPatternPlaybackMode() && f.engine.isTransportPlaying(),
+          "a context/transport pair straddling the drain limit lands in ONE block");
+}
+
+// The extra command taken at the limit is applied only if it is the pair's other half; anything
+// else is carried to the front of the next block, in order, never dropped.
+void testNonPartnerAtTheLimitIsCarriedNotDropped() {
+    auto owned = makeFixture();
+    Fixture& f = *owned;
+    f.settle();
+    for (int i = 0; i < 15; ++i) {
+        f.engine.commandQueue().push(metronome(false));
+    }
+    f.engine.commandQueue().push(playFromZero()); // pop 16: half a pair
+    f.engine.commandQueue().push(metronome(true)); // pop 17: not its partner
+    f.engine.processBlock(f.block.data(), nullptr, 512, 0.0);
+    check(f.engine.isTransportPlaying(), "the transport command at the limit applies");
+    check(!f.engine.isMetronomeEnabled(), "the non-partner behind it waits for the next block");
+    f.engine.processBlock(f.block.data(), nullptr, 512, 0.0);
+    check(f.engine.isMetronomeEnabled(), "and is applied there, not dropped");
+}
+
+// Review, #957: a saturated queue used to make the PRODUCER write the context directly, racing
+// an older command the audio thread was applying (stale context, applied generation going
+// backwards). Now it is posted to a slot that only the audio thread applies.
+void testSaturatedFallbackIsAppliedByTheAudioThread() {
+    auto owned = makeFixture();
+    Fixture& f = *owned;
+    f.settle();
+    int queued = 0;
+    while (f.engine.commandQueue().push(metronome(false))) {
+        ++queued;
+    }
+    check(queued > 0, "precondition: the queue fills");
+    f.engine.requestPlaybackContext(true, 8.0, false); // reliable push times out: fallback slot
+    check(!f.engine.isPatternPlaybackMode(), "the requesting thread does not write the context itself");
+    f.engine.processBlock(f.block.data(), nullptr, 512, 0.0);
+    check(f.engine.isPatternPlaybackMode() && f.engine.getPatternLengthBeats() == 8.0,
+          "the audio thread applies the fallback at its next block");
+    check(f.engine.getAppliedContextGeneration() == f.engine.getRequestedContextGeneration(),
+          "and the context settles");
+}
+
 } // namespace
 
 int main() {
@@ -335,6 +406,9 @@ int main() {
     testContextAppliesAtTheBlockNotBefore();
     testContextAndTransportLandInOneBlock();
     testSupersededContextIsNotReapplied();
+    testDrainLimitKeepsThePairTogether();
+    testNonPartnerAtTheLimitIsCarriedNotDropped();
+    testSaturatedFallbackIsAppliedByTheAudioThread();
 
     if (g_failures == 0) {
         std::cout << "Playback context tests passed\n";
