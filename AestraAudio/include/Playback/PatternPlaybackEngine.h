@@ -168,6 +168,28 @@ public:
                                  double sourceStartBeat = 0.0, double durationBeats = -1.0);
 
     /**
+     * @brief Re-place a slot while playing without disturbing what already sounds (non-RT thread).
+     *
+     * Like schedulePatternInstance(), but an existing slot keeps its scheduling frontier.
+     * schedulePatternInstance() resets it to 0, which wakes the refill's entry catch-up and
+     * re-fires every note already sounding. Pair with patternContentEdited(): the next refill
+     * re-queues this slot from the playhead at its new placement. Held notes that still span
+     * the playhead there carry on, and ones that no longer do are released at once.
+     * A slot that did not exist is scheduled fresh, exactly as by schedulePatternInstance().
+     */
+    void updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId, double sourceStartBeat = 0.0,
+                               double durationBeats = -1.0);
+
+    /**
+     * @brief Remove a slot while playing (non-RT thread). Pair with patternContentEdited().
+     *
+     * Unlike cancelPatternInstance(), this does NOT raise the cancellation flag. processAudio()
+     * drops every event of a cancelled slot, note-offs included, so a note sounding at removal
+     * would hang. The next content-edit refill releases the removed slot's held notes instead.
+     */
+    void removePatternInstance(uint32_t instanceId);
+
+    /**
      * Cancel pattern instance via atomic flag (RT-safe)
      * @param instanceId Pattern-instance identifier to cancel.
      */

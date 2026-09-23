@@ -118,6 +118,39 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
                       " duration=" + std::to_string(durationBeats));
 }
 
+void PatternPlaybackEngine::updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
+                                                  double sourceStartBeat, double durationBeats) {
+    if (instanceId >= 256) {
+        Aestra::Log::error("[PatternPlayback] Instance ID must be < 256");
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto existing = std::find_if(m_activeInstances.begin(), m_activeInstances.end(),
+                                     [instanceId](const PatternInstance& e) { return e.instanceId == instanceId; });
+        if (existing != m_activeInstances.end()) {
+            existing->patternId = pid;
+            existing->startBeat = startBeat;
+            existing->sourceStartBeat = std::max(0.0, sourceStartBeat);
+            existing->sourceEndBeat = durationBeats > 0.0 ? (existing->sourceStartBeat + durationBeats)
+                                                          : std::numeric_limits<double>::infinity();
+            // scheduledThroughFrame deliberately kept: see the header.
+            return;
+        }
+    }
+    schedulePatternInstance(pid, startBeat, instanceId, sourceStartBeat, durationBeats);
+}
+
+void PatternPlaybackEngine::removePatternInstance(uint32_t instanceId) {
+    if (instanceId >= 256)
+        return;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_activeInstances.erase(
+        std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
+                       [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
+        m_activeInstances.end());
+}
+
 void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
     if (instanceId >= 256)
         return;
@@ -214,30 +247,36 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             if (gated.offFrame <= currentFrame)
                 continue;
             PatternInstance* instPtr = findInstance(gated.instanceId);
-            if (!instPtr)
-                continue;
-            auto* pattern = m_patternManager->getPattern(instPtr->patternId);
-            if (!pattern || !pattern->isMidi())
-                continue;
+            // A removed slot (a clip deleted, muted or moved out of the timeline while its
+            // note sounds) can re-emit nothing, so its held note is released here or it hangs.
+            auto* pattern = instPtr ? m_patternManager->getPattern(instPtr->patternId) : nullptr;
             bool stillExists = false;
-            for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
-                if (note.unitId != gated.unitId)
-                    continue;
-                const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
-                const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
-                int resolved = std::clamp(note.pitch, 0, 127);
-                if (isPitchedSampler) {
-                    const auto sampler =
-                        unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
-                    resolved = resolvePitchedSamplerMidiNote(note, sampler ? sampler->getRootMidiNote() : 60);
-                }
-                if (resolved != static_cast<int>(gated.noteNumber))
-                    continue;
-                const double onBeat = instPtr->startBeat + note.startBeat;
-                const uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
-                if (onFrame < currentFrame) {
-                    stillExists = true;
-                    break;
+            if (instPtr && pattern && pattern->isMidi()) {
+                for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
+                    if (note.unitId != gated.unitId)
+                        continue;
+                    const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
+                    const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+                    int resolved = std::clamp(note.pitch, 0, 127);
+                    if (isPitchedSampler) {
+                        const auto sampler =
+                            unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
+                        resolved = resolvePitchedSamplerMidiNote(note, sampler ? sampler->getRootMidiNote() : 60);
+                    }
+                    if (resolved != static_cast<int>(gated.noteNumber))
+                        continue;
+                    const double onBeat = instPtr->startBeat + note.startBeat;
+                    const uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
+                    // The note must still SPAN the playhead at its current placement. Started
+                    // before the playhead is not enough: a clip moved (or a note shortened) so the
+                    // note has already ended there gets no re-queued off, so the old voice would hang.
+                    const double offBeat =
+                        std::min(onBeat + note.durationBeats, instPtr->startBeat + instPtr->sourceEndBeat);
+                    const uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
+                    if (onFrame < currentFrame && offFrame > currentFrame) {
+                        stillExists = true;
+                        break;
+                    }
                 }
             }
             if (stillExists)
