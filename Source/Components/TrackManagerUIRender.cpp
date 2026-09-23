@@ -295,7 +295,9 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     // stack of boxed cells instead of a workspace.
     if (m_playlistVisible && viewportHeight > 0.0f) {
         const float planeStartX = bounds.x + gridStartX;
-        const float planeEndX = std::max(planeStartX, bounds.x + trackWidth - kTimelineGridInsetX);
+        // The plane ends where a row does (timelineTrackRowWidth): clips paint to the row's
+        // right edge, so a plane ending 5px short left gridlines missing under them (SPEC 3 §2.3).
+        const float planeEndX = std::max(planeStartX, bounds.x + timelineTrackRowWidth(bounds.width));
         // The plane begins at the ruler's top edge so the bar lines run
         // through the ruler row itself — numbers read as labels attached to
         // the grid, not a separate strip. The minimap row above stays its own
