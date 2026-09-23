@@ -22,6 +22,7 @@ namespace {
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
 bool NUIComponent::s_cursorCaptureActive = false;
+bool NUIComponent::s_pointerButtonHeld = false;
 
 
 
@@ -178,8 +179,7 @@ void NUIComponent::onMouseEnter() {
     hovered_ = true;
 
     if (!tooltipText_.empty()) {
-        NUIPoint localCenter(bounds_.width * 0.5f, bounds_.height + 6.0f);
-        showRemoteTooltip(tooltipText_, localToGlobal(localCenter), this);
+        showRemoteTooltip(tooltipText_, globalTooltipAnchor(), this);
     }
 
     setDirty();
@@ -288,6 +288,7 @@ bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent&
         ~DispatchGuard() { NUIComponent::endEventDispatch(); }
     } guard;
 
+    notePointerGesture(event);
     return target->onMouseEvent(event);
 }
 
@@ -448,7 +449,12 @@ void NUIComponent::setVisible(bool visible) {
         visible_ = visible;
         if (!visible_) {
             setHovered(false);
-            hideRemoteTooltip(this);
+            // A tooltip owned anywhere inside this component goes with it. Hiding a panel hides
+            // only the panel, and its buttons own their tooltips, so a panel switch used to
+            // leave one stuck on screen (SPEC 3 §1.3).
+            if (s_tooltipState.owner != nullptr && subtreeContains(s_tooltipState.owner)) {
+                hideRemoteTooltip();
+            }
         }
         setDirty();
     }
@@ -630,22 +636,35 @@ void NUIComponent::setTooltip(const std::string& text) {
     hideRemoteTooltip(this);
     tooltipText_ = text;
     if (hovered_ && !tooltipText_.empty()) {
-        const NUIPoint localCenter(bounds_.width * 0.5f, bounds_.height + 6.0f);
-        showRemoteTooltip(tooltipText_, localToGlobal(localCenter), this);
+        showRemoteTooltip(tooltipText_, globalTooltipAnchor(), this);
     }
 }
 
-void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner, bool force) {
-    constexpr float kTooltipDelaySeconds = 0.45f;
+namespace {
+constexpr float kTooltipDelaySeconds = 0.45f;
+} // namespace
 
+void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner, bool force) {
+    showRemoteTooltip(text, pointerTooltipAnchor(position), owner, force);
+    // Point callers read back the point they gave (the anchor is its clearance box).
+    if (s_tooltipState.owner == owner && s_tooltipState.text == text && s_tooltipState.anchor.x == position.x &&
+        s_tooltipState.anchor.y == position.y) {
+        s_tooltipState.position = position;
+    }
+}
+
+void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anchor, const void* owner, bool force) {
     if (text.empty()) {
         hideRemoteTooltip(owner);
         return;
     }
 
-    if (!force && s_cursorCaptureActive)
+    // Hover tooltips stay down for the length of a gesture: a cursor capture, or any held
+    // button (a drag). Forced readouts are the drag's own value display and still show.
+    if (!force && (s_cursorCaptureActive || s_pointerButtonHeld))
         return;
 
+    const NUIPoint anchorPoint{anchor.x, anchor.bottom()};
     const bool canResumePendingDismiss = !s_tooltipState.active && s_tooltipState.dismissGraceTimer > 0.0f &&
         owner != nullptr &&
         s_tooltipState.owner == owner && s_tooltipState.text == text;
@@ -653,7 +672,8 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
         s_tooltipState.active = true;
         s_tooltipState.dismissGraceTimer = 0.0f;
         if (force) {
-            s_tooltipState.position = position;
+            s_tooltipState.position = anchorPoint;
+            s_tooltipState.anchor = anchor;
             s_tooltipState.immediate = true;
             s_tooltipState.delayTimer = kTooltipDelaySeconds;
         }
@@ -665,19 +685,62 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
     const bool shouldRestart = ownerChanged || (contentChanged && !force);
 
     if (shouldRestart) {
+        // Hand-off (SPEC 3 §1.3): a tooltip already on screen, or still fading after its
+        // control was left, passes straight to the next control with no second delay. Only a
+        // tooltip that was actually visible hands off; a press or scroll resets it to zero.
+        const bool handOff = s_tooltipState.alpha > 0.0f && s_tooltipState.owner != nullptr;
         s_tooltipState.text = text;
-        s_tooltipState.position = position;
+        s_tooltipState.position = anchorPoint;
+        s_tooltipState.anchor = anchor;
         s_tooltipState.owner = owner;
         s_tooltipState.active = true;
-        s_tooltipState.immediate = force;
+        s_tooltipState.immediate = force || handOff;
         s_tooltipState.delayTimer = 0.0f;
-        s_tooltipState.alpha = 0.0f;
+        if (!handOff) {
+            s_tooltipState.alpha = 0.0f;
+        }
         s_tooltipState.dismissGraceTimer = 0.0f;
     } else if (force) {
         s_tooltipState.text = text;
-        s_tooltipState.position = position;
+        s_tooltipState.position = anchorPoint;
+        s_tooltipState.anchor = anchor;
         s_tooltipState.immediate = true;
         s_tooltipState.delayTimer = kTooltipDelaySeconds;
+    }
+}
+
+NUIRect NUIComponent::pointerTooltipAnchor(const NUIPoint& point) {
+    // The pointer glyph hangs below and right of its hotspot; keep the tooltip under it.
+    constexpr float kPointerClearance = 16.0f;
+    return {point.x, point.y, 0.0f, kPointerClearance};
+}
+
+NUIRect NUIComponent::globalTooltipAnchor() const {
+    const NUIPoint topLeft = localToGlobal({0.0f, 0.0f});
+    return {topLeft.x, topLeft.y, bounds_.width, bounds_.height};
+}
+
+bool NUIComponent::subtreeContains(const void* candidate) const {
+    if (candidate == static_cast<const void*>(this)) {
+        return true;
+    }
+    for (const auto& child : children_) {
+        if (child && child->subtreeContains(candidate)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void NUIComponent::notePointerGesture(const NUIMouseEvent& event) {
+    if (event.pressed) {
+        s_pointerButtonHeld = true;
+        hideRemoteTooltip(); // a press is a decision: the explanation is no longer wanted
+    } else if (event.released) {
+        s_pointerButtonHeld = false;
+    }
+    if (event.wheelDelta != 0.0f) {
+        hideRemoteTooltip(); // a scroll moves what the tooltip was pointing at (the BPM case)
     }
 }
 
@@ -704,7 +767,6 @@ void NUIComponent::hideRemoteTooltip(const void* owner) {
 }
 
 void NUIComponent::updateGlobalTooltip(double deltaTime) {
-    constexpr float kTooltipDelaySeconds = 0.45f;
     constexpr float kFadeSpeed = 8.0f;
 
     if (s_tooltipState.active) {
@@ -726,22 +788,26 @@ void NUIComponent::updateGlobalTooltip(double deltaTime) {
     }
 }
 
-NUIRect NUIComponent::calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
+NUIRect NUIComponent::calculateTooltipBounds(const NUIRect& anchor, const NUISize& tooltipSize,
                                              const NUIRect& viewport) {
+    // One rule everywhere (SPEC 3 §1.3): below the anchor, left-aligned with it, flipped above
+    // only where the viewport has no room below. It used to sit ABOVE a point near the control's
+    // bottom edge, covering the control, and flip below near the top, so toolbars at the top of
+    // a panel showed theirs underneath while everything else showed above.
     constexpr float kMargin = 4.0f;
-    float x = anchor.x + 10.0f;
-    float y = anchor.y - tooltipSize.height - 6.0f;
+    constexpr float kGap = 4.0f;
+    float x = anchor.x;
+    float y = anchor.bottom() + kGap;
 
     const bool hasViewport = viewport.width > 0.0f && viewport.height > 0.0f;
-    const float top = hasViewport ? viewport.y + kMargin : kMargin;
-    if (y < top) {
-        y = anchor.y + 16.0f;
-    }
-
     if (hasViewport) {
         const float left = viewport.x + kMargin;
         const float right = viewport.right() - kMargin;
+        const float top = viewport.y + kMargin;
         const float bottom = viewport.bottom() - kMargin;
+        if (y + tooltipSize.height > bottom) {
+            y = anchor.y - kGap - tooltipSize.height;
+        }
         x = std::clamp(x, left, std::max(left, right - tooltipSize.width));
         y = std::clamp(y, top, std::max(top, bottom - tooltipSize.height));
     } else {
@@ -750,6 +816,11 @@ NUIRect NUIComponent::calculateTooltipBounds(const NUIPoint& anchor, const NUISi
     }
 
     return {x, y, tooltipSize.width, tooltipSize.height};
+}
+
+NUIRect NUIComponent::calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
+                                             const NUIRect& viewport) {
+    return calculateTooltipBounds(pointerTooltipAnchor(anchor), tooltipSize, viewport);
 }
 
 void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport) {
@@ -768,7 +839,7 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& vie
     const float w = size.width + tooltipPadX * 2.0f;
     const float h = size.height + tooltipPadY * 2.0f;
 
-    const NUIRect tipRect = calculateTooltipBounds(s_tooltipState.position, {w, h}, viewport);
+    const NUIRect tipRect = calculateTooltipBounds(s_tooltipState.anchor, {w, h}, viewport);
 
     // Theme colors (matching minimap style)
     const NUIColor bg = theme.getColor("elevatedPanel").withAlpha(0.98f * s_tooltipState.alpha);

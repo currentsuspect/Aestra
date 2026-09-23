@@ -30,7 +30,8 @@ enum class NUILayer {
  */
 struct TooltipState {
     std::string text;
-    NUIPoint position;
+    NUIPoint position;  ///< The point anchor as given; for a rect anchor, its bottom-left.
+    NUIRect anchor;     ///< What the tooltip must not cover: the control, or the pointer's clearance box.
     const void* owner = nullptr;
     bool active = false;
     bool immediate = false;
@@ -192,10 +193,15 @@ private:
     NUILayer layer_ = NUILayer::Content;
     
     std::string tooltipText_;
+    /** This component's global bounds: what its own tooltip must not cover. */
+    NUIRect globalTooltipAnchor() const;
+    /** True if @p candidate is this component or any descendant (tooltip owners are raw pointers). */
+    bool subtreeContains(const void* candidate) const;
     
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
     static bool s_cursorCaptureActive;
+    static bool s_pointerButtonHeld;
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -205,12 +211,35 @@ public:
     std::string getTooltip() const { return tooltipText_; }
     
     // Global Tooltip Management
+    /**
+     * @brief Show the one app-level tooltip (SPEC 3 §1.3).
+     *
+     * Policy, the same everywhere: it sits BELOW its anchor, left-aligned, and flips above only
+     * where the viewport has no room below, so it never covers the control it explains. A hover
+     * tooltip waits ~0.45s; moving to another control while one is showing hands off at once.
+     * A press, a drag (any held button), a scroll, a cursor capture or hiding the owner's panel
+     * dismisses it. @p force (a live value readout during a drag) bypasses delay and suppression.
+     *
+     * The rect overload anchors to a control's global bounds; prefer it. The point overload is
+     * for pointer-following readouts and keeps a pointer-sized clearance below the point.
+     */
+    static void showRemoteTooltip(const std::string& text, const NUIRect& anchor, const void* owner = nullptr,
+                                  bool force = false);
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
     static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
     static void updateGlobalTooltip(double deltaTime);
+    static NUIRect calculateTooltipBounds(const NUIRect& anchor, const NUISize& tooltipSize,
+                                          const NUIRect& viewport);
     static NUIRect calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
                                           const NUIRect& viewport);
+    /** @brief The box a point anchor keeps clear: the pointer glyph below the hotspot. */
+    static NUIRect pointerTooltipAnchor(const NUIPoint& point);
+    /** @brief Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip. */
+    static void notePointerGesture(const NUIMouseEvent& event);
+    /** @brief Forget a held button (window focus lost: its release may never arrive). */
+    static void resetPointerGestureState() { s_pointerButtonHeld = false; }
+    static bool isPointerButtonHeld() { return s_pointerButtonHeld; }
     static const TooltipState& getGlobalTooltipState() { return s_tooltipState; }
     static void setCursorCaptureActive(bool active);
     static bool isCursorCaptureActive() { return s_cursorCaptureActive; }
