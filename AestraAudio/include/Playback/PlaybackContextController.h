@@ -188,7 +188,13 @@ public:
         m_trackManager.preparePatternForArsenal(pattern);
         // Clip preview intentionally starts from the top. Every other play path resumes from the cued position.
         m_trackManager.playPatternInArsenal(pattern, 0.0);
-        m_context = PlaybackContext::ClipPreview;
+        // A preview under Arsenal focus stays Arsenal: its stop path skips endClipPreview, so
+        // a ClipPreview context would outlive it and gate off Arsenal loop-length updates,
+        // which the inline code this replaced always applied under Arsenal focus.
+        // (Not reachable from the UI today: the pattern browser only shows on Timeline focus.)
+        if (m_context != PlaybackContext::Arsenal) {
+            m_context = PlaybackContext::ClipPreview;
+        }
     }
 
     /**

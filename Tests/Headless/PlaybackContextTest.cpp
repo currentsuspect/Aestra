@@ -196,6 +196,16 @@ void testLoopLengthOnlyActsInArsenal() {
         check(!f.tm.isPatternLoopOverrideActive(), "nor arm the pattern loop override there");
     }
     {
+        // A preview started under Arsenal focus must not strip the Arsenal context: loop-length
+        // edits there still have to reach the engine (review finding on #954).
+        Fixture f;
+        f.ctx.enterArsenal(8.0);
+        f.ctx.startClipPreview(f.pattern);
+        check(f.ctx.context() == PlaybackContext::Arsenal, "a preview under Arsenal focus keeps the Arsenal context");
+        f.ctx.applyArsenalLoopLength(16.0);
+        check(f.engine.getPatternLengthBeats() == 16.0, "and Arsenal loop-length edits still reach the engine");
+    }
+    {
         Fixture f;
         f.ctx.resizeArsenalLoop(16.0);
         f.ctx.applyArsenalLoopLength(16.0);
