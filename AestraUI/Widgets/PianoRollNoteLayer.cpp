@@ -1120,17 +1120,29 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // DOUBLE CLICK: note → precision properties popup; empty space → add.
         // (Deletion stays on right-click / eraser / Delete.)
         if (isDoubleClick) {
+            // The note the first click of this pair placed lands on the SNAPPED cell, which need
+            // not be under the pointer (bar snap: a click at 3.5 places at 0..1). Looking only
+            // under the pointer, the second click found nothing and added a duplicate on top of
+            // it (review, #959). So resolve the snapped placement too, and open what is there.
+            const double placementBeat =
+                snapPlacementToGrid(std::max(0.0, static_cast<double>(localX / pixelsPerBeat_)));
+            const int placementPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+            if (clickedIndex == -1) {
+                for (int i = 0; i < static_cast<int>(notes_.size()); ++i) {
+                    const auto& n = notes_[i];
+                    if (!n.isDeleted && n.pitch == placementPitch && std::abs(n.startBeat - placementBeat) < 1e-6) {
+                        clickedIndex = i;
+                        break;
+                    }
+                }
+            }
             if (clickedIndex != -1) {
                  openNoteProperties(clickedIndex);
             } else {
                  auto oldNotes = notes_;
                  // Create New Note
-                 double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
-                 beat = snapPlacementToGrid(beat);
-                 
-                  int pitch = 127 - static_cast<int>(localY / keyHeight_);
-                  pitch = std::clamp(pitch, 0, 127);
-                  pitch = snapPitchToScale(pitch);
+                 const double beat = placementBeat;
+                 const int pitch = placementPitch;
                  
                  MidiNote newNote;
                  newNote.pitch = pitch;

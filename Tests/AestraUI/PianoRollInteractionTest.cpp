@@ -580,11 +580,49 @@ static void test_pencil_places_in_the_cell_under_the_pointer() {
     PASS("pencil places the note in the cell under the pointer");
 }
 
+// Review, #959: with bar snap, a double-click at beat 3.5 is two presses. The first places a
+// note on the snapped cell (0..1), NOT under the pointer; the second looked only under the
+// pointer, found nothing, and added a duplicate on top of the first. It must open that note.
+static void test_bar_snap_double_click_does_not_duplicate() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Bar);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+
+    const NUIPoint at(3.5f * kPpb, (127.0f - 60.0f) * kKey + kKey * 0.5f);
+    auto click = [&]() {
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = at;
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent release = press;
+        release.type = NUIMouseEventType::Up;
+        release.pressed = false;
+        release.released = true;
+        layer.onMouseEvent(release);
+    };
+    click(); // places a note on the snapped cell
+    ASSERT(layer.getNotes().size() == 1, "the first click places one note");
+    ASSERT(std::abs(layer.getNotes()[0].startBeat - 0.0) < 1e-9, "on the bar-snapped cell, not under the pointer");
+    click(); // same spot within the double-click window
+    ASSERT(layer.getNotes().size() == 1, "the double-click opens that note instead of adding a duplicate; got " +
+                                             std::to_string(layer.getNotes().size()) + " notes");
+    PASS("a bar-snap double-click does not duplicate the note it just placed");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
     test_deleted_notes_ignored();
     test_pencil_places_in_the_cell_under_the_pointer();
+    test_bar_snap_double_click_does_not_duplicate();
     test_topmost_note_returned();
     test_no_note_found_outside();
     test_marquee_detects_note_inside();
