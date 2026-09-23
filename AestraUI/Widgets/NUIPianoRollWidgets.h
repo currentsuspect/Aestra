@@ -740,6 +740,7 @@ public:
     void setUnitChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
+    double getPlayheadBeat() const { return m_playheadBeat; }
     void setTotalDurationBeats(double beats);
     void setLocalMinimapVisible(bool visible);
     void applyEdgeAutoScroll(float scrollX, float scrollY);

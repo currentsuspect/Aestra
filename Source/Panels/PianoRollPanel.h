@@ -90,6 +90,8 @@ public:
     ScaleContext getHarmonyContext() const;
     /** @brief Current notes as shown by the editor view (including selection state). */
     const std::vector<AestraUI::MidiNote>& getNotes() const { return m_pianoRoll->getNotes(); }
+    /** @brief The playhead the editor shows, in pattern-local beats. */
+    double getPlayheadBeat() const { return m_pianoRoll->getPlayheadBeat(); }
     /**
      * @brief Bind the live audio engine used for transport/playhead sync.
      * @param engine Audio engine pointer, or nullptr to disable engine sync.

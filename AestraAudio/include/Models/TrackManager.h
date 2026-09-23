@@ -1305,6 +1305,13 @@ public:
                                                           instance->sourceOffsetBeats, instance->durationBeats);
         }
         m_timelineSlots = std::move(nextSlots);
+        // Record what the slots now play, with the timing just handed to the scheduler.
+        m_scheduledTimelineInstances.clear();
+        for (const auto& instance : instances) {
+            if (m_timelineSlots.find(instance.clipId) != m_timelineSlots.end()) {
+                m_scheduledTimelineInstances.push_back(instance);
+            }
+        }
         m_patternPlaybackEngine.patternContentEdited();
         m_timelineRescheduleCount.fetch_add(1, std::memory_order_relaxed);
     }
@@ -1394,6 +1401,20 @@ public:
      * anything already scheduled stayed live and was rendered into the export alongside
      * the timeline.
      */
+    /**
+     * @brief The clip instances timeline playback has scheduled, with the timing it scheduled them at.
+     *
+     * Recorded by the full schedule and the in-place refresh as they hand instances to the
+     * scheduler, never read back from the playlist: a live clip drag moves the model on every
+     * motion but reschedules only on release, and until then the scheduler still plays the old
+     * timing. The piano-roll playhead follows a clip from this set, so it shows what is audible:
+     * never a clip past the scheduler's cap, never a clip's in-drag position (review, #961).
+     * Main thread, like the scheduler.
+     */
+    const std::vector<MidiClipPlaybackInstance>& getScheduledTimelineInstances() const {
+        return m_scheduledTimelineInstances;
+    }
+
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
     }
@@ -2044,19 +2065,17 @@ private:
         Log::info("[TimelinePattern] scheduling " + std::to_string(instances.size()) +
                   " MIDI clip instances from beat " + std::to_string(playStartBeat));
 
+        bool truncated = false;
+        const auto scheduled = selectScheduledTimelineInstances(instances, playStartBeat, &truncated);
+        if (truncated) {
+            Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at " +
+                         std::to_string(kMaxScheduledTimelineMidiInstances));
+        }
+
         uint32_t instanceId = 2; // Reserve 1 for Arsenal-focused single-pattern playback.
         m_timelineSlots.clear(); // a full schedule starts from an empty scheduler
-        for (const auto& instance : instances) {
-            if (!instance.isValid()) {
-                continue;
-            }
-            if (instance.endBeat() <= playStartBeat) {
-                continue;
-            }
-            if (instanceId >= 256) {
-                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
-                break;
-            }
+        m_scheduledTimelineInstances = scheduled;
+        for (const auto& instance : scheduled) {
 
             std::string routeSummary = "no-pattern";
             if (auto* pattern = m_patternManager.getPattern(instance.patternId); pattern && pattern->isMidi()) {
@@ -2665,6 +2684,8 @@ private:
     std::atomic<uint64_t> m_timelineRescheduleCount{0};
     // Timeline MIDI clip -> scheduler slot for the current playback run. Main thread only.
     std::unordered_map<ClipInstanceID, uint32_t> m_timelineSlots;
+    // What those slots play, as scheduled (see getScheduledTimelineInstances).
+    std::vector<MidiClipPlaybackInstance> m_scheduledTimelineInstances;
     std::atomic<bool> m_hasDisplayPositionOverride{false};
     std::atomic<double> m_displayPositionOverride{0.0};
     std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};

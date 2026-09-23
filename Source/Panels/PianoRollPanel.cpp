@@ -616,20 +616,24 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                         // must not yank the viewport back.
                         follow = m_followPlayhead && m_trackManager->isPlaying();
                     } else {
-                        // This editor's X axis is PATTERN-LOCAL beats; the transport reports
-                        // ARRANGEMENT beats. Feeding one into the other drew a playhead that
-                        // drifted across the pattern and off its end — at 8.6s (17.2 beats) it
-                        // sat past bar 5 of a 2-bar pattern — asserting a playback position
-                        // that does not exist in this editor, then vanishing off the right.
-                        //
-                        // Timeline playback of a pattern happens through clip instances placed
-                        // on lanes, each with its own offset into the source; this panel edits
-                        // the pattern itself and resolves no clip, so there is no single honest
-                        // pattern-local position to show. Park at the pattern start rather than
-                        // display a false one. (Mapping a clip under the playhead back into
-                        // pattern-local beats would be the richer behaviour, and needs the clip
-                        // lookup this panel deliberately does not carry.)
+                        // Timeline playback. This editor's X axis is PATTERN-LOCAL beats and the
+                        // transport reports ARRANGEMENT beats, so the playhead goes through the
+                        // clip currently playing this pattern (SPEC 3 §2.1). It used to park at
+                        // 0 because the panel resolved no clip, so it never moved while the song
+                        // played. With no clip of this pattern under the playhead it still parks
+                        // at 0 rather than invent a position.
                         playheadBeat = 0.0;
+                        if (m_trackManager->isPlaying()) {
+                            auto& playlist = m_trackManager->getPlaylistModel();
+                            const double arrangementBeat = playlist.secondsToBeats(positionSeconds);
+                            // Only clips the scheduler actually took: past its cap a clip makes no MIDI.
+                            const auto& instances = m_trackManager->getScheduledTimelineInstances();
+                            if (const auto local =
+                                    Aestra::Audio::patternLocalBeatAt(instances, m_currentPatternId, arrangementBeat)) {
+                                playheadBeat = *local;
+                                follow = m_followPlayhead;
+                            }
+                        }
                     }
                 }
             }
