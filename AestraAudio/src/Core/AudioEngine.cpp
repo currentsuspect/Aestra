@@ -315,6 +315,19 @@ void AudioEngine::applyPendingCommands() {
         case AudioQueueCommandType::SetMetronomeEnabled:
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
             break;
+        case AudioQueueCommandType::SetPlaybackContext:
+            // Stores only. The scheduler rewind a mode or length change needs already ran on
+            // the main thread when the context was requested (see requestPlaybackContext).
+            // Generations are monotonic: a context already superseded (by the saturated-queue
+            // direct fallback) must not be re-applied from the queue behind it.
+            if (cmd.samplePos <= m_appliedContextGeneration.load(std::memory_order_relaxed)) {
+                break;
+            }
+            m_patternPlaybackMode.store(cmd.value1 != 0.0f, std::memory_order_relaxed);
+            m_patternLengthBeats.store(static_cast<double>(cmd.value2), std::memory_order_relaxed);
+            m_auditionModeEnabled.store(cmd.trackIndex != 0, std::memory_order_relaxed);
+            m_appliedContextGeneration.store(cmd.samplePos, std::memory_order_release);
+            break;
         case AudioQueueCommandType::MetronomeCountInStart: {
             // Clamp before the float→unsigned narrowing: negative/NaN/oversized
             // value1 on the shared command surface must not reach the cast or
@@ -639,6 +652,10 @@ void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSn
 }
 
 void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
+    // Legacy direct store (Muse's offline renders until Playback Context PR 4). Keep the request
+    // bookkeeping in step, or the next requestPlaybackContext() could skip a rewind it needs.
+    m_requestedPatternMode = enabled;
+    m_requestedPatternLength = lengthBeats;
     const double oldLength = m_patternLengthBeats.exchange(lengthBeats, std::memory_order_relaxed);
     const bool wasEnabled = m_patternPlaybackMode.exchange(enabled, std::memory_order_relaxed);
     // A loop-length change while playing shifts the monotonic scheduling
@@ -649,6 +666,39 @@ void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
         if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
             patEng->rewindScheduledInstances();
         }
+    }
+}
+
+void AudioEngine::requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition) {
+    if (reportRealtimeMisuse("AudioEngine::requestPlaybackContext")) {
+        return;
+    }
+    // Same rule as setPatternPlaybackMode(): entering pattern mode, or changing its loop length
+    // while in it, shifts the monotonic scheduling domain, so queued events must re-queue.
+    // Judged against the last REQUEST, not the applied state, so two requests inside one block
+    // cannot both skip it.
+    if (patternMode && (!m_requestedPatternMode || std::abs(m_requestedPatternLength - patternLengthBeats) > 1e-9)) {
+        if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
+            patEng->rewindScheduledInstances();
+        }
+    }
+    m_requestedPatternMode = patternMode;
+    m_requestedPatternLength = patternLengthBeats;
+
+    const uint64_t generation = m_requestedContextGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    AudioQueueCommand cmd{};
+    cmd.type = AudioQueueCommandType::SetPlaybackContext;
+    cmd.value1 = patternMode ? 1.0f : 0.0f;
+    // Pattern lengths are whole or quarter beats, all exact in float.
+    cmd.value2 = static_cast<float>(patternLengthBeats);
+    cmd.trackIndex = audition ? 1u : 0u;
+    cmd.samplePos = generation;
+    if (!m_commandQueue.pushReliable(cmd)) {
+        Aestra::Log::warning("[AudioEngine] Playback context command queue saturated; applying the context directly");
+        m_patternPlaybackMode.store(patternMode, std::memory_order_relaxed);
+        m_patternLengthBeats.store(patternLengthBeats, std::memory_order_relaxed);
+        m_auditionModeEnabled.store(audition, std::memory_order_relaxed);
+        m_appliedContextGeneration.store(generation, std::memory_order_release);
     }
 }
 

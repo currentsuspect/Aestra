@@ -471,6 +471,26 @@ public:
     void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Request a playback-context change (main thread only).
+     *
+     * Rides the audio command queue as SetPlaybackContext, so the audio thread applies it in
+     * the same drain as the transport commands around it. The direct setPatternPlaybackMode()
+     * store raced them: a block could render a transition's transport under the previous
+     * context. The scheduler rewind it needs stays HERE, on the producer thread:
+     * rewindScheduledInstances() drains the pattern RT queue from the producer side and must
+     * never run on the audio thread.
+     *
+     * If the queue stays full past pushReliable()'s timeout, the context is stored directly
+     * rather than lost: ordering degrades to the old behaviour, but the mode can never go stale.
+     */
+    void requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition);
+    /** @brief Generation of the last requested / audio-applied playback context. Equal means settled. */
+    uint64_t getRequestedContextGeneration() const {
+        return m_requestedContextGeneration.load(std::memory_order_acquire);
+    }
+    uint64_t getAppliedContextGeneration() const { return m_appliedContextGeneration.load(std::memory_order_acquire); }
     double getPatternLengthBeats() const { return m_patternLengthBeats.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
@@ -1224,6 +1244,12 @@ private:
     // Pattern Playback Mode State
     std::atomic<bool> m_patternPlaybackMode{false};
     std::atomic<double> m_patternLengthBeats{4.0};
+    // Playback-context requests (requestPlaybackContext). The requested* fields are main-thread
+    // only: they decide whether the producer-side scheduler rewind is due.
+    std::atomic<uint64_t> m_requestedContextGeneration{0};
+    std::atomic<uint64_t> m_appliedContextGeneration{0};
+    bool m_requestedPatternMode{false};
+    double m_requestedPatternLength{4.0};
     // Completed pattern-loop passes (audio thread writes at each wrap, reset
     // while stopped). Gives pattern scheduling a MONOTONIC frame domain
     // (iteration * loopLen + wrapped pos) so the next iteration's events are
