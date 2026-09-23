@@ -627,7 +627,7 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                             auto& playlist = m_trackManager->getPlaylistModel();
                             const double arrangementBeat = playlist.secondsToBeats(positionSeconds);
                             // Only clips the scheduler actually took: past its cap a clip makes no MIDI.
-                            const auto instances = m_trackManager->getScheduledTimelineInstances();
+                            const auto& instances = m_trackManager->getScheduledTimelineInstances();
                             if (const auto local =
                                     Aestra::Audio::patternLocalBeatAt(instances, m_currentPatternId, arrangementBeat)) {
                                 playheadBeat = *local;

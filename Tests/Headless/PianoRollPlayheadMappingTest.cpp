@@ -128,9 +128,34 @@ void testPlayheadTracksTheSchedulerAcrossALiveRefresh() {
     tm.stop();
 }
 
+// Review, #961: a live clip drag moves the model on every motion but reschedules only on
+// release. Until then the scheduler plays the clip at its old position, so the playhead must too.
+void testPlayheadIgnoresAnUnscheduledLiveMove() {
+    TrackManager tm;
+    const PatternID drums = makeMidiPattern(tm, "Drums");
+    const PlaylistLaneID lane = tm.getPlaylistModel().createLane("A");
+    const ClipInstanceID clip = place(tm, lane, drums, 8.0, 8.0);
+    tm.play();
+    check(approxEqual(patternLocalBeatAt(tm.getScheduledTimelineInstances(), drums, 10.5), 2.5),
+          "before the drag, the clip at 8 answers 2.5 at beat 10.5");
+
+    tm.getPlaylistModel().setClipStartBeat(clip, 10.0); // a drag motion: model only, no reschedule
+    const auto model = tm.getPlaylistModel().collectMidiClipInstances(tm.getPatternManager());
+    check(approxEqual(patternLocalBeatAt(model, drums, 10.5), 0.5),
+          "the model already has the dragged position (so the next check is not vacuous)");
+    check(approxEqual(patternLocalBeatAt(tm.getScheduledTimelineInstances(), drums, 10.5), 2.5),
+          "mid-drag the scheduler still plays the old timing, and the playhead shows that");
+
+    tm.refreshTimelinePatternInstances(); // the release
+    check(approxEqual(patternLocalBeatAt(tm.getScheduledTimelineInstances(), drums, 10.5), 0.5),
+          "after the release reschedules, the playhead follows the new position");
+    tm.stop();
+}
+
 } // namespace
 
 int main() {
+    testPlayheadIgnoresAnUnscheduledLiveMove();
     testPlayheadTracksTheSchedulerAcrossALiveRefresh();
     testPlayheadIgnoresClipsPastTheSchedulerCap();
 
