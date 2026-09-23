@@ -434,6 +434,9 @@ bool AestraApp::initialize(const std::string& projectPath) {
     {
         StartupTimer t("Menu bar");
         buildMenuBar();
+        // The status cluster is the account/plan status, so it opens Settings on the Membership
+        // page, from the first click, before any dialog exists.
+        m_windowManager->setOnMembershipClicked([this]() { openSettings("membership"); });
     }
     {
         StartupTimer t("Plugins init");
@@ -849,6 +852,20 @@ void AestraApp::ensureSettingsAndDialogs() {
     }
 }
 
+// The one open-Settings path: File -> Settings and the title bar's status cluster both use it,
+// so neither depends on the other having built the (lazily created) dialog first.
+// @p pageId selects a page first (show() keeps the active page); empty keeps whichever page
+// the dialog was last on, which is what File -> Settings does.
+void AestraApp::openSettings(const std::string& pageId) {
+    ensureSettingsAndDialogs();
+    if (auto dialog = m_windowManager->getSettingsDialog()) {
+        if (!pageId.empty()) {
+            dialog->setActivePage(pageId);
+        }
+        dialog->show();
+    }
+}
+
 void AestraApp::buildMenuBar() {
     auto menuBar = std::make_shared<AestraUI::NUIMenuBar>();
 
@@ -916,12 +933,7 @@ void AestraApp::buildMenuBar() {
         menu->addSeparator();
         menu->addItem("Export Audio...", [this]() { startExport(); });
         menu->addSeparator();
-        menu->addItem("Settings...", [this]() {
-            ensureSettingsAndDialogs();
-            if (m_windowManager->getSettingsDialog()) {
-                m_windowManager->getSettingsDialog()->show();
-            }
-        });
+        menu->addItem("Settings...", [this]() { openSettings(); });
         menu->addSeparator();
         menu->addItem("Exit", [this]() { requestClose(); });
 
