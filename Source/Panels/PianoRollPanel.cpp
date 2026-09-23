@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "PianoRollPanel.h"
+#include "Playback/PlaybackContextController.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioEngine.h"
 #include "AudioCommandQueue.h"
@@ -483,10 +484,11 @@ void PianoRollPanel::savePattern() {
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
 
-    // If we're in Arsenal pattern mode, update the audio engine's loop length immediately
-    // so the next playback restart uses the correct boundary without requiring a focus switch.
-    if (m_trackManager && m_trackManager->isPatternMode() && m_audioEngine) {
-        m_audioEngine->setPatternPlaybackMode(true, newLengthBeats);
+    // During Arsenal pattern playback, update the engine's loop length immediately so the
+    // next restart uses the correct boundary. The context decides whether that is Arsenal:
+    // TrackManager's pattern flag alone is also set during a timeline clip preview.
+    if (m_playbackContext && m_trackManager && m_trackManager->isPatternMode()) {
+        m_playbackContext->resizeArsenalLoop(newLengthBeats);
     }
 }
 
@@ -522,8 +524,8 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
 
-    if (m_trackManager->isPatternMode() && m_audioEngine) {
-        m_audioEngine->setPatternPlaybackMode(true, newLengthBeats);
+    if (m_playbackContext && m_trackManager->isPatternMode()) {
+        m_playbackContext->resizeArsenalLoop(newLengthBeats);
     }
 
     if (m_onPatternEdited) {

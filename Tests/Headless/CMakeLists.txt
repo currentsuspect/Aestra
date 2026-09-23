@@ -506,4 +506,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/TimelineArsenalSwitchAudioTest.cpp")
     )
 endif()
 
+# Playback Context Authority PR 2: PlaybackContextController is the single writer of
+# the playback-mode mirrors. Pins the documented mirror table and the invariant that
+# entering Timeline/Audition clears every pattern mirror from every prior state.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PlaybackContextTest.cpp")
+    add_executable(PlaybackContextTest
+        PlaybackContextTest.cpp
+    )
+    target_link_libraries(PlaybackContextTest PRIVATE AestraAudio)
+    target_include_directories(PlaybackContextTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PlaybackContextTest COMMAND PlaybackContextTest)
+    set_tests_properties(PlaybackContextTest PROPERTIES
+        LABELS "headless;engine;transport;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

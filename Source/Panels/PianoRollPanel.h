@@ -16,6 +16,7 @@
 namespace Aestra {
 namespace Audio {
 class AudioEngine;
+class PlaybackContextController;
 
 /**
  * @brief Piano Roll Panel - MIDI editor with piano keyboard
@@ -94,6 +95,8 @@ public:
      * @param engine Audio engine pointer, or nullptr to disable engine sync.
      */
     void setAudioEngine(AudioEngine* engine) { m_audioEngine = engine; }
+    /** @brief The playback-mode authority; the piano roll resizes the pattern loop only through it. */
+    void setPlaybackContext(PlaybackContextController* context) { m_playbackContext = context; }
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
     bool handleKeyEvent(const AestraUI::NUIKeyEvent& event);
     
@@ -107,6 +110,7 @@ private:
 
     std::shared_ptr<TrackManager> m_trackManager;
     AudioEngine* m_audioEngine{nullptr};
+    PlaybackContextController* m_playbackContext{nullptr};
     std::shared_ptr<AestraUI::PianoRollView> m_pianoRoll;
     std::shared_ptr<AestraUI::TimelineMinimapBar> m_timelineMinimap;
     AestraUI::TimelineSummaryCache m_timelineSummaryCache;

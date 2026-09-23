@@ -58,6 +58,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 
 // Audio includes
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraAudio/include/Playback/PlaybackContextController.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
@@ -405,6 +406,7 @@ AestraContent::AestraContent()
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
+    m_playbackContext = std::make_unique<Audio::PlaybackContextController>(*m_trackManager);
 
     // Register the Muse command factories once. They are stateless; the engine
     // and track model are supplied per command via CommandContext at parse time.
@@ -511,6 +513,11 @@ AestraContent::AestraContent()
 void AestraContent::setupTrackManagerUI() {
     // Create track manager UI (add to workspace)
     m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
+    m_playbackContext->setUiPatternMirror([this](bool patternMode) {
+        if (m_trackManagerUI) {
+            m_trackManagerUI->setPatternMode(patternMode);
+        }
+    });
 
     // Wire up TrackManagerUI internal toggles to centralized authority (v3.1)
     m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
@@ -1064,6 +1071,7 @@ void AestraContent::setupMixerPanels() {
 
 void AestraContent::setupPianoRollPanel() {
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
+    m_pianoRollPanel->setPlaybackContext(m_playbackContext.get());
     if (m_audioEngine) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
@@ -1512,7 +1520,7 @@ void AestraContent::setupArsenalPanels() {
         } else if (m_audioEngine && m_sequencerPanel) {
             // Use actual pattern length, not step count
             double lengthBeats = getActivePatternLengthBeats();
-            m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
+            m_playbackContext->resizeArsenalLoop(lengthBeats);
         }
     });
     m_sequencerPanel->refreshUnits();
@@ -2591,12 +2599,9 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_savedTimelinePosition = m_trackManager->getPosition();
             }
 
-            m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
-            m_audioEngine->setAuditionModeEnabled(false);
-
-            // UI: Hide timeline playhead and FREEZE usage
+            // Engine arms the pattern loop; UI hides the timeline playhead.
+            m_playbackContext->enterArsenal(lengthBeats);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setPatternMode(true);
                 m_trackManagerUI->setFollowPlayhead(false); // Stop scrolling
             }
 
@@ -2625,38 +2630,27 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             const bool patternStillArmed = m_trackManager && m_trackManager->isPatternMode();
             if (leavingArsenal || patternStillArmed) {
                 if (patternStillArmed) {
-                    m_trackManager->stopArsenalPlayback(false); // clears the mirror AND the scheduler
+                    m_playbackContext->teardownPatternPlayback(); // clears the mirror AND the scheduler
                 } else if (m_trackManager && m_trackManager->isPlaying()) {
                     m_trackManager->stop();
                 }
                 m_audioEngine->panic(); // Kill all voices/ring-outs
             }
 
-            // Restore playback position
-            m_audioEngine->setPatternPlaybackMode(false, 4.0);
-            // The pattern loop override is the model's mirror of the engine flag
-            // just cleared. Only timeline PLAY used to clear it, so after a
-            // stopped Arsenal -> Timeline switch the effective loop stayed the
-            // pattern's, and a count-in recorded from here was clamped into it
-            // (#845's clamp). Seen live by the [ModeProbe] as override=1 on
-            // Timeline focus.
-            if (m_trackManager) {
-                m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
-            }
+            // Every pattern mirror clears here, in one place (Playback Context Authority).
+            m_playbackContext->enterTimeline();
             // Reinstall the owner-bound preview callback after returning to timeline mode. The destructor clears it.
             if (m_trackManager) {
                 m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
             }
 
-            m_audioEngine->setAuditionModeEnabled(false);
-
+            // Restore playback position
             if (m_trackManager) {
                 m_trackManager->setPosition(m_savedTimelinePosition);
                 m_trackManager->setPlayStartPosition(m_savedTimelinePosition);
             }
 
             if (m_trackManagerUI) {
-                m_trackManagerUI->setPatternMode(false);
                 m_trackManagerUI->setFollowPlayhead(true); // Resume scrolling
             }
 
@@ -2669,8 +2663,8 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         // Self-transitions refresh UI only. Engine, transport, preview,
         // scheduler, and position state must remain untouched.
         else if (!focusChanged && focus == ViewFocus::Arsenal) {
+            m_playbackContext->refreshUiForFocus(true);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setPatternMode(true);
                 m_trackManagerUI->setFollowPlayhead(false);
             }
             if (m_auditionPanel)
@@ -2679,8 +2673,8 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_trackManagerUI->setVisible(true);
         }
         else if (!focusChanged && focus == ViewFocus::Timeline) {
+            m_playbackContext->refreshUiForFocus(false);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setPatternMode(false);
                 m_trackManagerUI->setFollowPlayhead(true);
             }
             if (m_auditionPanel)
@@ -2692,18 +2686,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         else if (focus == ViewFocus::Audition) {
             stopPatternClipPreview(false);
             // Stop main DAW playback - Audition has its own engine
-            if (m_trackManager && m_trackManager->isPatternMode()) {
-                m_trackManager->stopArsenalPlayback(false);
-            } else if (m_trackManager && m_trackManager->isPlaying()) {
+            if (!m_playbackContext->teardownPatternPlayback() && m_trackManager && m_trackManager->isPlaying()) {
                 m_trackManager->stop();
             }
             m_audioEngine->panic(); // Silence all DAW audio
-            m_audioEngine->setPatternPlaybackMode(false, 4.0);
-            // Same mirror as the Timeline branch: Audition leaves pattern
-            // playback, so the pattern loop override must go with it.
-            if (m_trackManager) {
-                m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
-            }
 
             // Stop any file browser preview
             stopSoundPreview();
@@ -2716,7 +2702,6 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             if (m_trackManagerUI) {
-                m_trackManagerUI->setPatternMode(false);
                 m_trackManagerUI->setFollowPlayhead(false); // Freeze timeline
             }
 
@@ -2731,8 +2716,9 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             // Sync sample rate from audio engine to audition engine
             m_auditionEngine->setSampleRate(static_cast<double>(m_audioEngine->getSampleRate()));
 
-            // Enable Exclusive Audition Mode (bypasses main DAW graph)
-            m_audioEngine->setAuditionModeEnabled(true);
+            // Enable Exclusive Audition Mode (bypasses main DAW graph). Also clears every
+            // pattern mirror: the transport is already stopped and panicked above.
+            m_playbackContext->enterAudition();
 
             if (!m_auditionPanel) {
                 m_auditionPanel = std::make_shared<AuditionPanel>(m_auditionEngine);
@@ -3232,17 +3218,9 @@ void AestraContent::startPatternClipPreview(PatternID patternId) {
     updatePatternLoopLength(patternId);
 
     if (m_trackManagerUI) {
-        m_trackManagerUI->setPatternMode(true);
         m_trackManagerUI->setFollowPlayhead(false);
     }
-    if (m_audioEngine) {
-        m_audioEngine->setAuditionModeEnabled(false);
-    }
-
-    m_trackManager->preparePatternForArsenal(patternId);
-    // Clip preview intentionally starts from the top; every other play path
-    // resumes from the cued transport position (playPatternInArsenal default).
-    m_trackManager->playPatternInArsenal(patternId, 0.0);
+    m_playbackContext->startClipPreview(patternId);
 }
 
 void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
@@ -3250,18 +3228,14 @@ void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
         return;
     }
 
-    if (m_trackManager && m_trackManager->isPatternMode() && m_viewFocus != ViewFocus::Arsenal) {
-        m_trackManager->stopArsenalPlayback(false);
-        m_trackManager->setPosition(m_savedTimelinePosition);
-    }
-
-    if (m_audioEngine && m_viewFocus != ViewFocus::Arsenal) {
-        m_audioEngine->setPatternPlaybackMode(false, 4.0);
-    }
-
-    if (restoreTimelineUi && m_trackManagerUI && m_viewFocus != ViewFocus::Arsenal) {
-        m_trackManagerUI->setPatternMode(false);
-        m_trackManagerUI->setFollowPlayhead(true);
+    // Ending into Arsenal keeps the pattern playing: Arsenal owns it from here.
+    if (m_viewFocus != ViewFocus::Arsenal) {
+        if (m_playbackContext->endClipPreview(restoreTimelineUi) && m_trackManager) {
+            m_trackManager->setPosition(m_savedTimelinePosition);
+        }
+        if (restoreTimelineUi && m_trackManagerUI) {
+            m_trackManagerUI->setFollowPlayhead(true);
+        }
     }
 
     m_patternClipPreviewActive = false;
@@ -3380,10 +3354,9 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
     if (resolveTransportFocus() != ViewFocus::Arsenal) {
         return; // Pattern loop length governs Arsenal playback only.
     }
-    m_audioEngine->setPatternPlaybackMode(true, lengthBeats);
     // Pattern-mode force-loop as an OVERRIDE: timeline loop truth is preserved
     // underneath and restored when pattern mode ends (#845 review round 2).
-    m_trackManager->setPatternLoopOverride(0.0, lengthBeats, true);
+    m_playbackContext->applyArsenalLoopLength(lengthBeats);
 }
 
 void AestraContent::handleTransportPlayRequest() {
@@ -3471,22 +3444,16 @@ void AestraContent::playFromCurrentFocus() {
             return;
         }
 
-        if (m_audioEngine) {
-            m_audioEngine->setPatternPlaybackMode(true, getActivePatternLengthBeats());
-        }
-        m_trackManager->setPatternLoopOverride(0.0, getActivePatternLengthBeats(), true);
-
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
         // Resumes from the cued transport position (e.g. a scrubbed piano-roll
         // playhead) — playPatternInArsenal's default — not from beat zero.
-        m_trackManager->playPatternInArsenal(activePattern);
+        m_playbackContext->startArsenalPlayback(activePattern, getActivePatternLengthBeats());
         return;
     }
 
     if (m_trackManager) {
         // Timeline playback: pattern override ends, timeline loop truth applies.
-        m_trackManager->setPatternLoopOverride(0.0, 0.0, false);
-        m_trackManager->play();
+        m_playbackContext->playTimeline();
     }
 }
 
@@ -3724,9 +3691,11 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     // Timeline is already the default focus on first engine attachment. Since a
     // focus self-transition is engine-idempotent, initialize that engine state
     // explicitly before using setViewFocus() for the UI refresh.
+    if (m_playbackContext) {
+        m_playbackContext->setEngine(m_audioEngine);
+    }
     if (m_audioEngine && m_viewFocus == ViewFocus::Timeline) {
-        m_audioEngine->setPatternPlaybackMode(false, 4.0);
-        m_audioEngine->setAuditionModeEnabled(false);
+        m_playbackContext->initializeTimeline();
         if (m_trackManager) {
             m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
             m_trackManager->setPosition(m_savedTimelinePosition);
