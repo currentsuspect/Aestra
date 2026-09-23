@@ -215,10 +215,35 @@ public:
         Continuous // Smooth scrolling keeping playhead centered
     };
 
-    void setFollowPlayhead(bool enabled) { m_followPlayhead = enabled; }
+    // Follow-playhead (SPEC 3 §3.1). setFollowPlayhead / setFollowMode are the USER's choice
+    // (the toolbar toggle and the right-click mode menu) and notify the app so it can persist
+    // them. Focus changes never touch that choice; they only suspend following. They used to
+    // force it on at every Timeline entry and at startup, so turning it off never stuck.
+    void setFollowPlayhead(bool enabled) {
+        if (m_followPlayhead == enabled) return;
+        m_followPlayhead = enabled;
+        notifyFollowPreference();
+    }
     bool isFollowPlayhead() const { return m_followPlayhead; }
+    /// Arsenal/Audition focus freezes timeline scrolling without changing the user's choice.
+    void setFollowSuspended(bool suspended) { m_followSuspended = suspended; }
+    bool isFollowSuspended() const { return m_followSuspended; }
+    /// What actually drives the viewport: the user's choice, unless focus has suspended it.
+    bool isFollowActive() const { return m_followPlayhead && !m_followSuspended; }
+    /// Apply a stored preference (startup) without echoing it back to the store.
+    void applyFollowPreference(bool enabled, FollowMode mode) {
+        m_followPlayhead = enabled;
+        m_followMode = mode;
+    }
+    void setOnFollowPreferenceChanged(std::function<void(bool enabled, FollowMode mode)> callback) {
+        m_onFollowPreferenceChanged = std::move(callback);
+    }
 
-    void setFollowMode(FollowMode mode) { m_followMode = mode; }
+    void setFollowMode(FollowMode mode) {
+        if (m_followMode == mode) return;
+        m_followMode = mode;
+        notifyFollowPreference();
+    }
     FollowMode getFollowMode() const { return m_followMode; }
 
     // New Snap System
@@ -528,8 +553,13 @@ private:
 
     // === SNAP-TO-GRID ===
 
-    bool m_followPlayhead = false;              // Whether timeline automatically scrolls to follow playhead
+    bool m_followPlayhead = false;              // The user's choice: off by default (SPEC 3 §3.1)
     FollowMode m_followMode = FollowMode::Page; // Default logic
+    bool m_followSuspended = false;             // Focus freeze (Arsenal/Audition); never the user's choice
+    std::function<void(bool, FollowMode)> m_onFollowPreferenceChanged;
+    void notifyFollowPreference() {
+        if (m_onFollowPreferenceChanged) m_onFollowPreferenceChanged(m_followPlayhead, m_followMode);
+    }
     std::shared_ptr<::AestraUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
 
     // === CLIPBOARD for copy/paste (v3.0) ===

@@ -641,6 +641,11 @@ private:
     NUIRect selectionStretchHandleRect() const;
     void commitNotes();
     double snapToGrid(double beat);
+    // Where a NEW note starts: the grid cell the pointer is in (floor), not the nearest line.
+    // Rounding put a note placed in the right half of a cell on the NEXT cell, to the right of
+    // the pointer, and the pencil's phantom followed it faithfully (SPEC 3 §2.5). Moves and
+    // resizes keep snapToGrid(): a relative drag should land on the nearest line.
+    double snapPlacementToGrid(double beat);
     int snapPitchToScale(int pitch);
 
     // Edit audition — play the note under the cursor while placing/dragging it,

@@ -673,7 +673,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     }
 
     // === Follow Playhead Logic (Page & Continuous) ===
-    if (m_followPlayhead && m_trackManager && m_trackManager->isPlaying()) {
+    if (isFollowActive() && m_trackManager && m_trackManager->isPlaying()) {
         if (!AestraUI::NUIDragDropManager::getInstance().isDragging() && !m_isDraggingPlayhead &&
             !m_isDraggingRulerSelection && !m_isDraggingLoopStart && !m_isDraggingLoopEnd) {
             double currentBeat = secondsToBeats(m_trackManager->getUIPosition());

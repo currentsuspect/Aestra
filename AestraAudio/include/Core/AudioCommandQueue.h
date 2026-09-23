@@ -33,6 +33,11 @@ enum class AudioQueueCommandType : uint8_t {
     MetronomeCountInStart, // value1 = beats to count
     MetronomeCountInStop,
     AuditionUnit, // trackIndex = unitId, value1 = velocity
+    // Playback context (PlaybackContextController, PR 3): value1 = pattern mode (0/1),
+    // value2 = pattern loop length in beats, trackIndex = audition mode (0/1),
+    // samplePos = context generation. Applied in the same drain as SetTransportState,
+    // so a block can never render one transition's transport with another's context.
+    SetPlaybackContext,
 };
 
 /**
@@ -75,6 +80,7 @@ public:
     // the engine converging on the next update. See #913.
     static constexpr bool isEdgeCommand(AudioQueueCommandType type) noexcept {
         return type == AudioQueueCommandType::SetTransportState ||
+               type == AudioQueueCommandType::SetPlaybackContext ||
                type == AudioQueueCommandType::MetronomeCountInStart ||
                type == AudioQueueCommandType::MetronomeCountInStop;
     }

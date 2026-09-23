@@ -669,16 +669,15 @@ void AestraWindowManager::setSettingsDialog(std::shared_ptr<Aestra::SettingsDial
         m_rootComponent->addChild(m_settingsDialog);
         m_rootComponent->setSettingsDialog(m_settingsDialog);
     }
+}
 
-    // Wire the title bar's membership status cluster to open the settings dialog.
-    // This makes "Signed out" / "Core" behave as a clickable status indicator
-    // rather than a dead label with no affordance.
+void AestraWindowManager::setOnMembershipClicked(std::function<void()> callback) {
+    // The "Signed out" / "Core" status cluster is a control, not a label. It used to be wired
+    // inside setSettingsDialog(), but the Settings dialog is built LAZILY (first File -> Settings),
+    // so until then the cluster had no handler at all and clicking it did nothing (SPEC 3 §2.2).
+    // The app wires it at startup to the same open-settings path the menu uses.
     if (m_customWindow && m_customWindow->getTitleBar()) {
-        m_customWindow->getTitleBar()->setOnMembershipClicked([this]() {
-            if (m_settingsDialog) {
-                m_settingsDialog->show();
-            }
-        });
+        m_customWindow->getTitleBar()->setOnMembershipClicked(std::move(callback));
     }
 }
 

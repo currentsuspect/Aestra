@@ -334,7 +334,11 @@ void NUITextInput::selectAll()
         selectionStart_ = 0;
         selectionEnd_ = static_cast<int>(text_.length());
         hasSelection_ = true;
-        setDirty(true);
+        // The caret rests at the selection's end, as in every platform text field. It used
+        // to stay wherever it was (0 on a fresh field), so an inline editor opened with its
+        // value highlighted and the caret drawn at the far left (SPEC 3 §2.6, the BPM field).
+        // setCaretPosition keeps the selection and restarts the blink, so the caret shows at once.
+        setCaretPosition(selectionEnd_);
     }
 }
 

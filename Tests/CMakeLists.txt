@@ -2725,6 +2725,59 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;interaction;timeline;playback;regression;contract:application")
 endif()
 
+# SPEC 3 §3.1: follow-playhead is the user's choice; focus only suspends it.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TimelineFollowPreferenceTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(TimelineFollowPreferenceTest
+        AestraUI/TimelineFollowPreferenceTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(TimelineFollowPreferenceTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(TimelineFollowPreferenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineFollowPreferenceTest COMMAND TimelineFollowPreferenceTest)
+    set_tests_properties(TimelineFollowPreferenceTest PROPERTIES
+        LABELS "ui;timeline;preferences;regression;contract:application")
+endif()
+
 # V8-G3b (FD-19): the absence of failures is not the presence of coverage.
 # This list names every UI test that must be configured whenever
 # AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
@@ -2734,6 +2787,7 @@ if(AESTRA_ENABLE_UI)
         NUIContextMenuInteractionTest
         ClipContextMenuReachabilityTest
         ClipDragReleaseTest
+        TimelineFollowPreferenceTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
         PianoRollPanelPersistenceTest
@@ -3149,6 +3203,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TimelinePatternRescheduleTest
     )
     add_test(NAME TimelinePatternRescheduleTest COMMAND TimelinePatternRescheduleTest)
     set_tests_properties(TimelinePatternRescheduleTest PROPERTIES LABELS "audio;pattern;regression;contract:audio")
+endif()
+
+# Moving/deleting a timeline clip while playing must not cut or re-fire any other
+# clip's sounding notes, and must release the moved/deleted clip's own voice.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TimelineClipMoveKeepsNotesTest.cpp")
+    add_executable(TimelineClipMoveKeepsNotesTest AestraAudio/TimelineClipMoveKeepsNotesTest.cpp)
+    target_link_libraries(TimelineClipMoveKeepsNotesTest PRIVATE AestraAudio)
+    target_include_directories(TimelineClipMoveKeepsNotesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineClipMoveKeepsNotesTest COMMAND TimelineClipMoveKeepsNotesTest)
+    set_tests_properties(TimelineClipMoveKeepsNotesTest PROPERTIES LABELS "audio;pattern;playback;regression;contract:audio")
 endif()
 
 # T-6 (v0.7.1 trust sprint): record-path latency compensation + engine-frame

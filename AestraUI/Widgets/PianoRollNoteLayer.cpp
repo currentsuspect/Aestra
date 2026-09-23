@@ -34,6 +34,16 @@ double PianoRollNoteLayer::snapToGrid(double beat) {
     return std::round(beat / grid) * grid;
 }
 
+double PianoRollNoteLayer::snapPlacementToGrid(double beat) {
+    if (fineDrag_) return beat;
+    if (snap_ == SnapGrid::None) return beat;
+    const double grid = MusicTheory::getSnapDuration(snap_);
+    if (grid <= 0.00001) return beat;
+    // The epsilon keeps a pointer sitting exactly on a line (in floating point, a hair under
+    // it) in that line's cell rather than the one before.
+    return std::floor(beat / grid + 1e-9) * grid;
+}
+
 int PianoRollNoteLayer::snapPitchToScale(int pitch) {
     if (!snapToScale_ || scaleType_ == ScaleType::Chromatic) return pitch;
     if (MusicTheory::isNoteInScale(pitch, rootKey_, scaleType_)) return pitch;
@@ -106,7 +116,7 @@ std::vector<int> PianoRollNoteLayer::buildTriad(int rootPitch) const {
 }
 
 bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
-    const double snappedBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
+    const double snappedBeat = snapPlacementToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
     const int rootPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
     const std::vector<int> strokePitches = chordMode_ ? buildTriad(rootPitch) : std::vector<int>{rootPitch};
     bool changed = false;
@@ -965,7 +975,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // space with the pencil active; suppressed elsewhere so it never lingers.
         const double snappedHoverBeat =
             (tool_ == GlobalTool::Pencil && hitIdx == -1)
-                ? snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_))
+                ? snapPlacementToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_))
                 : -1.0;
         if (hoverBeat_ != snappedHoverBeat) {
             hoverBeat_ = snappedHoverBeat;
@@ -1110,17 +1120,29 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // DOUBLE CLICK: note → precision properties popup; empty space → add.
         // (Deletion stays on right-click / eraser / Delete.)
         if (isDoubleClick) {
+            // The note the first click of this pair placed lands on the SNAPPED cell, which need
+            // not be under the pointer (bar snap: a click at 3.5 places at 0..1). Looking only
+            // under the pointer, the second click found nothing and added a duplicate on top of
+            // it (review, #959). So resolve the snapped placement too, and open what is there.
+            const double placementBeat =
+                snapPlacementToGrid(std::max(0.0, static_cast<double>(localX / pixelsPerBeat_)));
+            const int placementPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+            if (clickedIndex == -1) {
+                for (int i = 0; i < static_cast<int>(notes_.size()); ++i) {
+                    const auto& n = notes_[i];
+                    if (!n.isDeleted && n.pitch == placementPitch && std::abs(n.startBeat - placementBeat) < 1e-6) {
+                        clickedIndex = i;
+                        break;
+                    }
+                }
+            }
             if (clickedIndex != -1) {
                  openNoteProperties(clickedIndex);
             } else {
                  auto oldNotes = notes_;
                  // Create New Note
-                 double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
-                 beat = snapToGrid(beat);
-                 
-                  int pitch = 127 - static_cast<int>(localY / keyHeight_);
-                  pitch = std::clamp(pitch, 0, 127);
-                  pitch = snapPitchToScale(pitch);
+                 const double beat = placementBeat;
+                 const int pitch = placementPitch;
                  
                  MidiNote newNote;
                  newNote.pitch = pitch;
@@ -1198,7 +1220,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             if (!(event.modifiers & NUIModifiers::Shift)) {
                 for (auto& note : notes_) note.selected = false;
             }
-            const double startBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
+            const double startBeat = snapPlacementToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
             const int rootPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
             for (int p : buildTriad(rootPitch)) {
                 bool occupied = false;
@@ -1244,7 +1266,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             dragStartNotes_ = notes_; 
             
             double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
-            paintStartBeat_ = snapToGrid(beat);
+            paintStartBeat_ = snapPlacementToGrid(beat);
             
             int pitch = 127 - static_cast<int>(localY / keyHeight_);
             pitch = std::clamp(pitch, 0, 127);

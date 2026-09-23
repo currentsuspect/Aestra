@@ -519,6 +519,23 @@ void AestraContent::setupTrackManagerUI() {
         }
     });
 
+    // Follow-playhead is the user's choice, remembered across launches (SPEC 3 §3.1, FD-23).
+    // Default off; focus changes only suspend it (setFollowSuspended), never overwrite it.
+    if (auto* store = surfaceStore()) {
+        const bool follow = store->boolPreference(Aestra::UISurfaceKeys::kTimelineFollowPlayhead).value_or(false);
+        const bool continuous =
+            store->boolPreference(Aestra::UISurfaceKeys::kTimelineFollowContinuous).value_or(false);
+        m_trackManagerUI->applyFollowPreference(follow, continuous ? TrackManagerUI::FollowMode::Continuous
+                                                                   : TrackManagerUI::FollowMode::Page);
+    }
+    m_trackManagerUI->setOnFollowPreferenceChanged([this](bool enabled, TrackManagerUI::FollowMode mode) {
+        if (auto* store = surfaceStore()) {
+            store->setBoolPreference(Aestra::UISurfaceKeys::kTimelineFollowPlayhead, enabled);
+            store->setBoolPreference(Aestra::UISurfaceKeys::kTimelineFollowContinuous,
+                                     mode == TrackManagerUI::FollowMode::Continuous);
+        }
+    });
+
     // Wire up TrackManagerUI internal toggles to centralized authority (v3.1)
     m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
@@ -1622,15 +1639,19 @@ void AestraContent::logModeStateIfChanged() {
     const bool timelineIntent = m_viewFocus == ViewFocus::Timeline && !m_patternClipPreviewActive;
     const bool auditionIntent = m_viewFocus == ViewFocus::Audition;
     const bool patternMirrorSet = enginePattern || tmPattern || override || uiPattern;
-    const bool drift = (timelineIntent && (patternMirrorSet || audition)) || (auditionIntent && patternMirrorSet);
+    // While a context request is still in flight the engine reports the previous context; that is
+    // the command queue ordering it with transport (PR 3), not drift. Judge only settled states.
+    const bool contextPending = m_playbackContext && !m_playbackContext->settled();
+    const bool drift = !contextPending &&
+                       ((timelineIntent && (patternMirrorSet || audition)) || (auditionIntent && patternMirrorSet));
 
-    char line[320];
+    char line[384];
     std::snprintf(line, sizeof(line),
                   "[ModeProbe] focus=%s preview=%d enginePattern=%d len=%.2f tmPattern=%d override=%d uiPattern=%d "
-                  "audition=%d tmPlaying=%d enginePlaying=%d instances=%zu%s",
+                  "audition=%d tmPlaying=%d enginePlaying=%d instances=%zu ctxPending=%d%s",
                   focus, m_patternClipPreviewActive ? 1 : 0, enginePattern ? 1 : 0,
                   m_audioEngine->getPatternLengthBeats(), tmPattern ? 1 : 0, override ? 1 : 0, uiPattern ? 1 : 0,
-                  audition ? 1 : 0, tmPlaying ? 1 : 0, enginePlaying ? 1 : 0, instances,
+                  audition ? 1 : 0, tmPlaying ? 1 : 0, enginePlaying ? 1 : 0, instances, contextPending ? 1 : 0,
                   drift ? "  <-- DRIFT: a pattern mirror is set outside pattern playback" : "");
     if (m_lastModeProbe != line) {
         m_lastModeProbe = line;
@@ -2602,7 +2623,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             // Engine arms the pattern loop; UI hides the timeline playhead.
             m_playbackContext->enterArsenal(lengthBeats);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setFollowPlayhead(false); // Stop scrolling
+                m_trackManagerUI->setFollowSuspended(true); // Stop scrolling
             }
 
             // Hide Audition panel if it exists (returning from Audition)
@@ -2651,7 +2672,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             if (m_trackManagerUI) {
-                m_trackManagerUI->setFollowPlayhead(true); // Resume scrolling
+                m_trackManagerUI->setFollowSuspended(false); // Resume scrolling
             }
 
             // Hide Audition panel if it exists (returning from Audition)
@@ -2665,7 +2686,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         else if (!focusChanged && focus == ViewFocus::Arsenal) {
             m_playbackContext->refreshUiForFocus(true);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setFollowPlayhead(false);
+                m_trackManagerUI->setFollowSuspended(true);
             }
             if (m_auditionPanel)
                 m_auditionPanel->setVisible(false);
@@ -2675,7 +2696,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         else if (!focusChanged && focus == ViewFocus::Timeline) {
             m_playbackContext->refreshUiForFocus(false);
             if (m_trackManagerUI) {
-                m_trackManagerUI->setFollowPlayhead(true);
+                m_trackManagerUI->setFollowSuspended(false);
             }
             if (m_auditionPanel)
                 m_auditionPanel->setVisible(false);
@@ -2702,7 +2723,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             if (m_trackManagerUI) {
-                m_trackManagerUI->setFollowPlayhead(false); // Freeze timeline
+                m_trackManagerUI->setFollowSuspended(true); // Freeze timeline
             }
 
             // === CREATE AUDITION PANEL (lazy init) ===
@@ -3218,7 +3239,7 @@ void AestraContent::startPatternClipPreview(PatternID patternId) {
     updatePatternLoopLength(patternId);
 
     if (m_trackManagerUI) {
-        m_trackManagerUI->setFollowPlayhead(false);
+        m_trackManagerUI->setFollowSuspended(true);
     }
     m_playbackContext->startClipPreview(patternId);
 }
@@ -3234,7 +3255,7 @@ void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
             m_trackManager->setPosition(m_savedTimelinePosition);
         }
         if (restoreTimelineUi && m_trackManagerUI) {
-            m_trackManagerUI->setFollowPlayhead(true);
+            m_trackManagerUI->setFollowSuspended(false);
         }
     }
 

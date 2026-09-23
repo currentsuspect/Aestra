@@ -57,6 +57,7 @@ struct PlaylistLane {
 };
 
 struct MidiClipPlaybackInstance {
+    ClipInstanceID clipId; ///< Which clip this is: keeps its scheduler slot across a live reschedule.
     PatternID patternId;
     double startBeat{0.0};
     double sourceOffsetBeats{0.0};
@@ -74,8 +75,9 @@ inline constexpr std::size_t kMaxScheduledTimelineMidiInstances = 254;
  * @brief The clip instances timeline playback actually schedules from @p playStartBeat, in order.
  *
  * Valid instances that have not ended by the play start, capped at
- * kMaxScheduledTimelineMidiInstances. The scheduler and the piano-roll playhead both use this, so
- * the playhead can never follow a clip that produces no MIDI (review, #961).
+ * kMaxScheduledTimelineMidiInstances: the one selection rule of a full timeline schedule. The
+ * piano-roll playhead reads what the scheduler recorded from it (TrackManager's slot map), so it
+ * never follows a clip that produces no MIDI (review, #961).
  * @param truncated Set when eligible instances were dropped at the cap.
  */
 inline std::vector<MidiClipPlaybackInstance>
@@ -892,6 +894,7 @@ public:
                 }
 
                 MidiClipPlaybackInstance instance;
+                instance.clipId = clip.id;
                 instance.patternId = clip.patternId;
                 instance.startBeat = clip.startBeat;
                 instance.sourceOffsetBeats = clip.sourceOffset;
