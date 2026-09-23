@@ -3289,6 +3289,13 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             // lit up that lane's header. Owner direction 2026-09-19: the grid is
             // the grid and the header rail is the header rail, so lane selection
             // is only ever a gesture ON the header.
+            //
+            // In the Select tool the press also starts the default marquee and clears the
+            // ruler zone (SPEC 3 §1.2): the manager owns both, and the drag from here on.
+            if (auto* parentMgr = dynamic_cast<TrackManagerUI*>(getParent());
+                parentMgr && parentMgr->beginGridMarquee(event)) {
+                return true;
+            }
             if (m_onClipSelectedCallback) m_onClipSelectedCallback(this, ClipInstanceID{});
             return true;
         }

@@ -2778,6 +2778,59 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;timeline;preferences;regression;contract:application")
 endif()
 
+# SPEC 3 §1.2: a left click on empty grid (or Esc) clears the ruler zone; the grid marquees by default.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TimelineGridSelectionTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(TimelineGridSelectionTest
+        AestraUI/TimelineGridSelectionTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(TimelineGridSelectionTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(TimelineGridSelectionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineGridSelectionTest COMMAND TimelineGridSelectionTest)
+    set_tests_properties(TimelineGridSelectionTest PROPERTIES
+        LABELS "ui;timeline;selection;regression;contract:application")
+endif()
+
 # V8-G3b (FD-19): the absence of failures is not the presence of coverage.
 # This list names every UI test that must be configured whenever
 # AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
@@ -2788,6 +2841,7 @@ if(AESTRA_ENABLE_UI)
         ClipContextMenuReachabilityTest
         ClipDragReleaseTest
         TimelineFollowPreferenceTest
+        TimelineGridSelectionTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
         PianoRollPanelPersistenceTest
