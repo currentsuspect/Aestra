@@ -220,6 +220,7 @@ void TrackManagerUI::finishInstantClipDrag() {
     // Capture final position before clearing drag state
     double finalStartBeat = 0.0;
     PlaylistLaneID finalLaneId;
+    bool moved = true; // unknown state (clip gone mid-drag) takes the full refresh
     if (m_trackManager && m_draggedClipId.isValid()) {
         auto& playlist = m_trackManager->getPlaylistModel();
         if (const auto* clip = playlist.getClip(m_draggedClipId)) {
@@ -228,7 +229,8 @@ void TrackManagerUI::finishInstantClipDrag() {
         }
 
         // Create undoable command for the move if position actually changed
-        if (finalStartBeat != m_clipOriginalStartTime || finalLaneId != m_clipOriginalLaneId) {
+        moved = finalStartBeat != m_clipOriginalStartTime || finalLaneId != m_clipOriginalLaneId;
+        if (moved) {
             auto cmd = std::make_shared<MoveClipCommand>(playlist, m_draggedClipId, m_clipOriginalStartTime,
                                                          m_clipOriginalLaneId, finalStartBeat, finalLaneId);
             m_trackManager->getCommandHistory().pushAndExecute(cmd);
@@ -242,6 +244,17 @@ void TrackManagerUI::finishInstantClipDrag() {
 
     if (m_window) {
         m_window->setMouseCapture(false);
+    }
+
+    // A release that changed nothing does nothing. The drag moved the model live with
+    // playlist refreshes suppressed, so landing where it started leaves the model — and
+    // the rows built before the drag — exactly as they were. The full path below rebuilt
+    // every track row (a hitch on release) and cleared the MIDI scheduler, cutting every
+    // sounding note and re-entering them late from the UI's lagging playhead: a click on
+    // a clip during playback sounded like an edit.
+    if (!moved) {
+        invalidateCache();
+        return;
     }
 
     // Final refresh to ensure everything is consistent

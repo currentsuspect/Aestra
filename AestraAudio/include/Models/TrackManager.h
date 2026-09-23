@@ -1255,9 +1255,16 @@ public:
         if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
             return;
         }
+        // NOTE: a full clear drops sounding notes' tracked gates and queued note-offs, so
+        // every refresh is audible as a cut and a late re-entry. Call it only when the
+        // timeline's MIDI content really changed.
         m_patternPlaybackEngine.clearScheduledInstances();
         scheduleTimelinePatternInstances(m_position.load(std::memory_order_relaxed));
+        m_timelineRescheduleCount.fetch_add(1, std::memory_order_relaxed);
     }
+
+    /** @brief How many times playing timeline MIDI was rescheduled in place (diagnostics / tests). */
+    uint64_t getTimelineRescheduleCount() const { return m_timelineRescheduleCount.load(std::memory_order_relaxed); }
 
     /**
      * @brief Start transport playback from the current UI position.
@@ -2607,6 +2614,7 @@ private:
     int m_inputChannelCount{0};
     std::atomic<double> m_position{0.0};
     std::atomic<double> m_playStartPosition{0.0};
+    std::atomic<uint64_t> m_timelineRescheduleCount{0};
     std::atomic<bool> m_hasDisplayPositionOverride{false};
     std::atomic<double> m_displayPositionOverride{0.0};
     std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};

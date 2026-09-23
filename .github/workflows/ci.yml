@@ -197,7 +197,7 @@ jobs:
         # proven bound already used by the TSan/LSan lanes.
         run: >-
           cmake --build build-app --config ${{env.BUILD_TYPE}}
-          --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ClipContextMenuReachabilityTest
+          --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ClipContextMenuReachabilityTest ClipDragReleaseTest
           ModalDialogInteractionTest
           PianoRollInteractionTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
           PianoRollExternalEditCommitTest EditorCloseDeferredTest PanelWindowClickSwallowTest
@@ -214,7 +214,7 @@ jobs:
         # broken selector runs zero tests and ctest still exits 0. A step that
         # silently runs nothing is worse than no step, because it reports
         # success (same precedent as the security contract steps).
-        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest)$' --no-tests=error --output-on-failure
+        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest)$' --no-tests=error --output-on-failure
 
       - name: Verify desktop font bundle
         if: steps.scope.outputs.run == 'true'
