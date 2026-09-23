@@ -23,6 +23,7 @@
 #include "Playback/LiveMidiQueue.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
+#include <cstring>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -471,6 +472,27 @@ public:
     void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Request a playback-context change (main thread only).
+     *
+     * Rides the audio command queue as SetPlaybackContext, so the audio thread applies it in
+     * the same drain as the transport commands around it. The direct setPatternPlaybackMode()
+     * store raced them: a block could render a transition's transport under the previous
+     * context. The scheduler rewind it needs stays HERE, on the producer thread:
+     * rewindScheduledInstances() drains the pattern RT queue from the producer side and must
+     * never run on the audio thread.
+     *
+     * If the queue stays full past pushReliable()'s timeout, the context is posted to a
+     * generation-tagged fallback slot that the audio thread applies at the start of its next
+     * block: never lost, and never written by two threads.
+     */
+    void requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition);
+    /** @brief Generation of the last requested / audio-applied playback context. Equal means settled. */
+    uint64_t getRequestedContextGeneration() const {
+        return m_requestedContextGeneration.load(std::memory_order_acquire);
+    }
+    uint64_t getAppliedContextGeneration() const { return m_appliedContextGeneration.load(std::memory_order_acquire); }
     double getPatternLengthBeats() const { return m_patternLengthBeats.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
@@ -1224,6 +1246,25 @@ private:
     // Pattern Playback Mode State
     std::atomic<bool> m_patternPlaybackMode{false};
     std::atomic<double> m_patternLengthBeats{4.0};
+    // Playback-context requests (requestPlaybackContext). The requested* fields are main-thread
+    // only: they decide whether the producer-side scheduler rewind is due.
+    std::atomic<uint64_t> m_requestedContextGeneration{0};
+    std::atomic<uint64_t> m_appliedContextGeneration{0};
+    bool m_requestedPatternMode{false};
+    double m_requestedPatternLength{4.0};
+    // Saturated-queue fallback slot (requestPlaybackContext): written by the producer, applied
+    // ONLY by the audio thread. Packed: bit0 pattern, bit1 audition, bits 32-63 length (float).
+    std::atomic<uint64_t> m_fallbackContextGeneration{0};
+    std::atomic<uint64_t> m_fallbackContextPacked{0};
+    static uint64_t packPlaybackContext(bool pattern, double lengthBeats, bool audition) {
+        const float length = static_cast<float>(lengthBeats);
+        uint32_t lengthBits = 0;
+        std::memcpy(&lengthBits, &length, sizeof(length));
+        return (static_cast<uint64_t>(lengthBits) << 32) | (audition ? 2u : 0u) | (pattern ? 1u : 0u);
+    }
+    // Drain carry-over (applyPendingCommands): audio thread only. See the pair rule there.
+    AudioQueueCommand m_carriedCommand{};
+    bool m_hasCarriedCommand{false};
     // Completed pattern-loop passes (audio thread writes at each wrap, reset
     // while stopped). Gives pattern scheduling a MONOTONIC frame domain
     // (iteration * loopLen + wrapped pos) so the next iteration's events are

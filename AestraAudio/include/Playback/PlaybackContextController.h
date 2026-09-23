@@ -60,7 +60,8 @@ struct PlaybackMirrors {
  *
  * Making these rows consistent changes when scheduling happens. Each change gets its own PR with its own
  * evidence. The one intended change here is noted on resizeArsenalLoop(). Moving the context onto the audio
- * command queue is PR 3. The transport sequencing around these calls (panic, the position save and restore,
+ * command queue is PR 3 (done: every engine-side change is one SetPlaybackContext request, pushed before any
+ * transport command of the same transition). The transport sequencing around these calls (panic, the position save and restore,
  * the hot-swap restart) stays with the caller for now.
  *
  * Thread model: main thread only, like every call site it replaces.
@@ -75,7 +76,21 @@ public:
 
     PlaybackContext context() const { return m_context; }
 
-    /** Read every mirror from where it actually lives (the UI mirror from the last value pushed). */
+    /**
+     * @brief True once the audio thread has applied the last context this controller requested.
+     *
+     * Between a request and the next audio block the engine still reports the previous context.
+     * That is the queue doing its job (PR 3), not drift, so the [ModeProbe] holds its verdict until
+     * this is true.
+     */
+    bool settled() const {
+        return !m_engine || m_engine->getAppliedContextGeneration() >= m_engine->getRequestedContextGeneration();
+    }
+
+    /**
+     * Read every mirror from where it actually lives (the UI mirror from the last value pushed).
+     * The engine mirrors are what the audio thread has APPLIED; see settled().
+     */
     PlaybackMirrors observe() const {
         PlaybackMirrors m;
         m.enginePattern = m_engine && m_engine->isPatternPlaybackMode();
@@ -90,22 +105,21 @@ public:
 
     /** First engine attachment: Timeline is the default focus. Engine side only, as before. */
     void initializeTimeline() {
-        setEnginePattern(false, kTimelineLengthBeats);
-        setAudition(false);
+        publishEngineContext(false, kTimelineLengthBeats, false);
         m_context = PlaybackContext::Timeline;
     }
 
     /** Focus entered Arsenal. The engine arms the pattern loop. TrackManager joins on play (see the table). */
     void enterArsenal(double patternLengthBeats) {
-        setEnginePattern(true, patternLengthBeats);
-        setAudition(false);
+        publishEngineContext(true, patternLengthBeats, false);
         setUi(true);
         m_context = PlaybackContext::Arsenal;
     }
 
     /** Play pressed in Arsenal. Resumes from the cued position unless startSeconds >= 0. */
     void startArsenalPlayback(PatternID pattern, double patternLengthBeats, double startSeconds = -1.0) {
-        setEnginePattern(true, patternLengthBeats);
+        // Published before play() pushes its transport command, so both land in one drain.
+        publishEngineContext(true, patternLengthBeats, m_engineAudition);
         m_trackManager.setPatternLoopOverride(0.0, patternLengthBeats, true);
         m_trackManager.playPatternInArsenal(pattern, startSeconds);
         m_context = PlaybackContext::Arsenal;
@@ -119,7 +133,7 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        setEnginePattern(true, patternLengthBeats);
+        publishEngineContext(true, patternLengthBeats, m_engineAudition);
         m_trackManager.setPatternLoopOverride(0.0, patternLengthBeats, true);
     }
 
@@ -136,7 +150,7 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        setEnginePattern(true, patternLengthBeats);
+        publishEngineContext(true, patternLengthBeats, m_engineAudition);
     }
 
     /** Timeline play: the pattern loop override ends, so the timeline's own loop applies again. */
@@ -161,12 +175,11 @@ public:
     /** Focus entered Timeline. Ends any pattern playback still running, then clears every pattern mirror. */
     void enterTimeline() {
         teardownPatternPlayback();
-        setEnginePattern(false, kTimelineLengthBeats);
+        publishEngineContext(false, kTimelineLengthBeats, false);
         // The model's mirror of the engine flag just cleared. Only timeline PLAY used to clear it, so after a
         // stopped Arsenal -> Timeline switch the effective loop stayed the pattern's, and a count-in recorded
         // from there was clamped into it (#845's clamp). The [ModeProbe] saw this live.
         m_trackManager.setPatternLoopOverride(0.0, 0.0, false);
-        setAudition(false);
         setUi(false);
         m_context = PlaybackContext::Timeline;
     }
@@ -174,17 +187,16 @@ public:
     /** Focus entered Audition: the DAW transport is parked and exclusive audition takes over. */
     void enterAudition() {
         teardownPatternPlayback();
-        setEnginePattern(false, kTimelineLengthBeats);
+        publishEngineContext(false, kTimelineLengthBeats, true);
         m_trackManager.setPatternLoopOverride(0.0, 0.0, false);
         setUi(false);
-        setAudition(true);
         m_context = PlaybackContext::Audition;
     }
 
     /** A pattern clip previews from the Timeline: pattern playback without an Arsenal focus. */
     void startClipPreview(PatternID pattern) {
         setUi(true);
-        setAudition(false);
+        publishEngineContext(m_enginePattern, m_engineLength, false);
         m_trackManager.preparePatternForArsenal(pattern);
         // Clip preview intentionally starts from the top. Every other play path resumes from the cued position.
         m_trackManager.playPatternInArsenal(pattern, 0.0);
@@ -205,7 +217,7 @@ public:
      */
     bool endClipPreview(bool restoreUi) {
         const bool toreDown = teardownPatternPlayback();
-        setEnginePattern(false, kTimelineLengthBeats);
+        publishEngineContext(false, kTimelineLengthBeats, m_engineAudition);
         if (restoreUi) {
             setUi(false);
         }
@@ -220,14 +232,15 @@ private:
     // The engine's neutral pattern length when pattern mode is off, as every call site passed.
     static constexpr double kTimelineLengthBeats = 4.0;
 
-    void setEnginePattern(bool enabled, double lengthBeats) {
+    // One request carries the whole engine-side context (pattern mode, loop length, audition),
+    // so the audio thread applies it atomically in queue order (PR 3). The requested values are
+    // kept here because the engine's own flags only change when the audio thread applies them.
+    void publishEngineContext(bool pattern, double lengthBeats, bool audition) {
+        m_enginePattern = pattern;
+        m_engineLength = lengthBeats;
+        m_engineAudition = audition;
         if (m_engine) {
-            m_engine->setPatternPlaybackMode(enabled, lengthBeats);
-        }
-    }
-    void setAudition(bool enabled) {
-        if (m_engine) {
-            m_engine->setAuditionModeEnabled(enabled);
+            m_engine->requestPlaybackContext(pattern, lengthBeats, audition);
         }
     }
     void setUi(bool patternMode) {
@@ -241,6 +254,9 @@ private:
     AudioEngine* m_engine = nullptr;
     std::function<void(bool)> m_uiMirror;
     bool m_uiPattern = false;
+    bool m_enginePattern = false;
+    double m_engineLength = kTimelineLengthBeats;
+    bool m_engineAudition = false;
     PlaybackContext m_context = PlaybackContext::Timeline;
 };
 

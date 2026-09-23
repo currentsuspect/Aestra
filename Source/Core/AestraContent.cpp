@@ -1622,15 +1622,19 @@ void AestraContent::logModeStateIfChanged() {
     const bool timelineIntent = m_viewFocus == ViewFocus::Timeline && !m_patternClipPreviewActive;
     const bool auditionIntent = m_viewFocus == ViewFocus::Audition;
     const bool patternMirrorSet = enginePattern || tmPattern || override || uiPattern;
-    const bool drift = (timelineIntent && (patternMirrorSet || audition)) || (auditionIntent && patternMirrorSet);
+    // While a context request is still in flight the engine reports the previous context; that is
+    // the command queue ordering it with transport (PR 3), not drift. Judge only settled states.
+    const bool contextPending = m_playbackContext && !m_playbackContext->settled();
+    const bool drift = !contextPending &&
+                       ((timelineIntent && (patternMirrorSet || audition)) || (auditionIntent && patternMirrorSet));
 
-    char line[320];
+    char line[384];
     std::snprintf(line, sizeof(line),
                   "[ModeProbe] focus=%s preview=%d enginePattern=%d len=%.2f tmPattern=%d override=%d uiPattern=%d "
-                  "audition=%d tmPlaying=%d enginePlaying=%d instances=%zu%s",
+                  "audition=%d tmPlaying=%d enginePlaying=%d instances=%zu ctxPending=%d%s",
                   focus, m_patternClipPreviewActive ? 1 : 0, enginePattern ? 1 : 0,
                   m_audioEngine->getPatternLengthBeats(), tmPattern ? 1 : 0, override ? 1 : 0, uiPattern ? 1 : 0,
-                  audition ? 1 : 0, tmPlaying ? 1 : 0, enginePlaying ? 1 : 0, instances,
+                  audition ? 1 : 0, tmPlaying ? 1 : 0, enginePlaying ? 1 : 0, instances, contextPending ? 1 : 0,
                   drift ? "  <-- DRIFT: a pattern mirror is set outside pattern playback" : "");
     if (m_lastModeProbe != line) {
         m_lastModeProbe = line;
