@@ -360,7 +360,11 @@ void PatternBrowserPanel::refreshClips() {
         return;
     }
 
+    // A clip references a pattern (patternId); an audio pattern references
+    // its source. ClipInstance::sourceId is a legacy mirror of the pattern id,
+    // never a source id (ownership contract F9).
     std::unordered_set<uint64_t> placedSourceIds;
+    const auto& patternManager = m_trackManager->getPatternManager();
     auto& playlistModel = m_trackManager->getPlaylistModel();
     const auto laneIds = playlistModel.getLaneIDs();
     for (const auto& laneId : laneIds) {
@@ -369,8 +373,12 @@ void PatternBrowserPanel::refreshClips() {
             continue;
         }
         for (const auto& clip : lane->clips) {
-            if (clip.sourceId > 0) {
-                placedSourceIds.insert(static_cast<uint64_t>(clip.sourceId));
+            const PatternSource* pattern = patternManager.getPattern(clip.patternId);
+            if (pattern && pattern->isAudio()) {
+                const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
+                if (payload.audioSourceId.value > 0) {
+                    placedSourceIds.insert(payload.audioSourceId.value);
+                }
             }
         }
     }
