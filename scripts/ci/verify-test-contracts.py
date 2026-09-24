@@ -47,6 +47,10 @@ KNOWN_CONTRACTS = frozenset(
         "contract:plugins",
         "contract:application",
         "contract:core",
+        # Ownership & reference contract (Aestra-Internals, D8): invariants for
+        # sources, units, patterns, clips and editors. Known violations carry
+        # WILL_FAIL plus guards:F<n> labels; see Tests/Contract/.
+        "contract:ownership",
     }
 )
 
