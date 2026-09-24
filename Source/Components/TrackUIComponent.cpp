@@ -2268,6 +2268,8 @@ void TrackUIComponent::onMouseEnter() {
 
 void TrackUIComponent::onMouseLeave() {
     NUIComponent::onMouseLeave();
+    // Leaving the row straight off the menu glyph must not strand its hover or the hand cursor.
+    releaseClipMenuHover();
     
     // Reset trim hover state when mouse leaves track bounds
     if (m_hoverTrimEdge != TrimEdge::None) {
@@ -2463,7 +2465,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // used to show the TRIM cursor on its left half and nothing on its centre, while a click
         // anywhere on it opened the menu (SPEC 3 §3.3).
         const ClipInstanceID previousMenuHover = m_hoveredClipMenuId;
-        m_hoveredClipMenuId = clipMenuAt(event.position);
+        // In Automation mode a press on the glyph edits automation (that branch runs first), so the
+        // hover must not advertise the menu there (review, #968).
+        m_hoveredClipMenuId =
+            m_playlistMode == PlaylistMode::Automation ? ClipInstanceID{} : clipMenuAt(event.position);
 
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (!clipBounds.contains(event.position)) continue;
@@ -2544,6 +2549,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         }
     } else if (!isInsideBounds && !m_isTrimming) {
         m_hoveredClipId = ClipInstanceID{};
+        releaseClipMenuHover();
     }
     
     // Keep button hover/press state accurate even when leaving the track row.
@@ -3614,6 +3620,21 @@ ClipInstanceID TrackUIComponent::clipMenuAt(const AestraUI::NUIPoint& point) con
         }
     }
     return ClipInstanceID{};
+}
+
+void TrackUIComponent::releaseClipMenuHover() {
+    const bool hadHover = m_hoveredClipMenuId.isValid();
+    m_hoveredClipMenuId = ClipInstanceID{};
+    if (m_clipMenuCursorClaimed && m_platformBridge) {
+        m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+    }
+    m_clipMenuCursorClaimed = false;
+    if (hadHover) {
+        repaint();
+        if (m_onCacheInvalidationCallback) {
+            m_onCacheInvalidationCallback();
+        }
+    }
 }
 
 } // namespace Audio

@@ -261,6 +261,8 @@ private:
     }
     /** The clip whose menu glyph contains @p point, or an invalid id. */
     ClipInstanceID clipMenuAt(const AestraUI::NUIPoint& point) const;
+    /** Drop the menu-glyph hover and hand the cursor back if this row claimed it. */
+    void releaseClipMenuHover();
     ClipInstanceID m_activeClipId;  // Currently clicked/dragged clip id
     ClipInstanceID m_lastClickedClipId;
     long long m_lastClipClickTimeMs = 0;
