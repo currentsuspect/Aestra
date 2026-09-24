@@ -337,7 +337,7 @@ bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Capture hover changes for redraw
     if (wasHovered != m_isHovered || inUp || inDown) {
         if (inBounds) {
-            AestraUI::NUIComponent::showRemoteTooltip("BPM - scroll to adjust", event.position, this);
+            AestraUI::NUIComponent::showRemoteTooltip("BPM - scroll to adjust", getBounds(), this);
         } else {
             AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
@@ -427,7 +427,7 @@ bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_tapArmed = false;
             return true;
         }
-        AestraUI::NUIComponent::showRemoteTooltip("Playback time — click to toggle bars/beats", event.position, this);
+        AestraUI::NUIComponent::showRemoteTooltip("Playback time — click to toggle bars/beats", getBounds(), this);
         return false;
     }
     m_tapArmed = false;
@@ -503,7 +503,7 @@ bool TimeSignatureDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Capture hover changes for redraw
     if (wasHovered != m_isHovered) {
         if (inside) {
-            AestraUI::NUIComponent::showRemoteTooltip("Time signature - click to cycle", event.position, this);
+            AestraUI::NUIComponent::showRemoteTooltip("Time signature - click to cycle", getBounds(), this);
         } else {
             AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
