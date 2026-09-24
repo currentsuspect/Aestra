@@ -57,6 +57,10 @@ void UIMixerFader::cacheThemeColors()
     m_textSecondary = theme.getColor("textSecondary");
     m_border = theme.getColor("borderStrong");
     m_tick = theme.getColor("textSecondary").withAlpha(0.34f);
+    // Scale labels and the idle readout are small TEXT on a raised surface: the textSecondary tier.
+    // They used to reuse the tick line's 0.34 alpha (1.8:1 in both themes). textMuted is calibrated
+    // to the primary ground and measured 3.8:1 on this strip, so the secondary tier it is.
+    m_textMuted = theme.getColor("textSecondary");
     m_tickUnity = theme.getColor("textPrimary").withAlpha(0.72f);
     m_tooltipBg = theme.getColor("elevatedPanel").withAlpha(0.98f);
 }
@@ -167,7 +171,7 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
         renderer.drawText(label,
                           {leftEnd - TICK_LEN - 5.0f - labelSize, y - 3.5f},
                           unity ? 8.0f : 7.5f,
-                          unity ? m_tickUnity : m_tick.withAlpha(showLabels ? m_tick.a : m_tick.a * 0.72f));
+                          unity ? m_tickUnity : m_textMuted.withAlpha(showLabels ? 1.0f : 0.72f));
     }
 }
 
@@ -253,7 +257,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(m_cachedText,
                                   textRect,
                                   fontSize,
-                                  valueActive ? m_text : m_textSecondary.withAlpha(0.72f));
+                                  valueActive ? m_text : m_textMuted);
     }
 
     // 6. Drag Value Tooltip (only while dragging)
