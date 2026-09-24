@@ -21,6 +21,38 @@ inline float timelineGridLevelFade(float spacingPixels) {
     return std::clamp((spacingPixels - kLevelHidePixels) / (kLevelFullPixels - kLevelHidePixels), 0.0f, 1.0f);
 }
 
+/**
+ * Zoom fade for lines the snap lands on. They fade in at 6-12 px spacing, where decorative tiers
+ * need 14-28 px: at the default timeline zoom a beat is ~10 px, and the decorative fade hid the
+ * beat lines even under a Beat snap, so the grid showed bars only whatever the snap said.
+ */
+inline float timelineSnapTierFade(float spacingPixels) {
+    constexpr float kSnapHidePixels = 6.0f;
+    constexpr float kSnapFullPixels = 12.0f;
+    return std::clamp((spacingPixels - kSnapHidePixels) / (kSnapFullPixels - kSnapHidePixels), 0.0f, 1.0f);
+}
+
+/** True when a snap finer than a bar is active, so beat-level tiers are snap positions. */
+inline bool timelineSnapIsSubBar(double subdivisionBeats) {
+    return subdivisionBeats > 0.0 && subdivisionBeats <= 1.0 + 1e-9;
+}
+
+/**
+ * Alpha for a sub-beat tier drawn because of the snap: half-beats, and the finer subdivision.
+ *
+ * Those are the positions edits land on, so they get a visible floor, three quarters of the beat
+ * tier, instead of the decorative subdivision whisper. On the timeline's black bed the whisper
+ * rendered at RGB 2, so a 1/4 snap looked identical to Beat: clips snapped to lines nobody could
+ * see (owner report 2026-09-24). Unsnapped keeps the decorative level and fade.
+ */
+inline float timelineSnapTierAlpha(const TimelineGridStyle& style, double subdivisionBeats, float spacingPixels) {
+    const bool snapTier = subdivisionBeats > 0.0 && subdivisionBeats < 1.0;
+    if (!snapTier) {
+        return style.subdivisionLineAlpha * timelineGridLevelFade(spacingPixels);
+    }
+    return std::max(style.subdivisionLineAlpha, style.beatLineAlpha * 0.75f) * timelineSnapTierFade(spacingPixels);
+}
+
 inline int timelineGridBarStride(float pixelsPerBeat, int beatsPerBar) {
     constexpr float kLevelFullPixels = 28.0f;
     const float pixelsPerBar = pixelsPerBeat * static_cast<float>(std::max(1, beatsPerBar));
@@ -120,8 +152,11 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                           1.0f,
                           ink.withAlpha(alpha));
     };
-    const float beatLineAlpha = style.beatLineAlpha * timelineGridLevelFade(pixelsPerBeat);
-    const float halfBeatLineAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(pixelsPerBeat * 0.5f);
+    // Under a beat-or-finer snap every beat is a snap position: it uses the snap fade.
+    const float beatLineAlpha =
+        style.beatLineAlpha * (timelineSnapIsSubBar(subdivisionBeats) ? timelineSnapTierFade(pixelsPerBeat)
+                                                                         : timelineGridLevelFade(pixelsPerBeat));
+    const float halfBeatLineAlpha = timelineSnapTierAlpha(style, subdivisionBeats, pixelsPerBeat * 0.5f);
     const bool showBeatTier = timelineGridTierAlignedToSnap(1.0, subdivisionBeats);
     const bool showHalfBeatTier = timelineGridTierAlignedToSnap(0.5, subdivisionBeats);
 
@@ -165,7 +200,7 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
         // lines are skipped — those tiers already own them.
         if (subdivisionBeats > 0.0 && subdivisionBeats < 0.5) {
             const float subPixels = pixelsPerBeat * static_cast<float>(subdivisionBeats);
-            const float subAlpha = style.subdivisionLineAlpha * timelineGridLevelFade(subPixels);
+            const float subAlpha = timelineSnapTierAlpha(style, subdivisionBeats, subPixels);
             if (subAlpha > 0.001f) {
                 const double sub = subdivisionBeats;
                 const double firstSub = std::ceil((static_cast<double>(bar) * beatsPerBar) / sub);
@@ -175,8 +210,12 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                     const double lineBeat = k * sub;
                     const double nearestBeat = std::round(lineBeat);
                     const double nearestBar = std::round(lineBeat / beatsPerBar);
+                    // Skip positions another tier already draws: a second 1 px line on the same
+                    // pixel doubled its brightness (half-beats outshone beats).
+                    const double nearestHalf = std::round(lineBeat * 2.0) * 0.5;
                     if (std::abs(lineBeat - nearestBeat) < 1e-9 ||
-                        std::abs(lineBeat - nearestBar * beatsPerBar) < 1e-9) {
+                        std::abs(lineBeat - nearestBar * beatsPerBar) < 1e-9 ||
+                        (showHalfBeatTier && std::abs(lineBeat - nearestHalf) < 1e-9)) {
                         continue;
                     }
                     const float subX = gridStartX + static_cast<float>(lineBeat * pixelsPerBeat) - scrollX;

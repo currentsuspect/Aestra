@@ -449,6 +449,30 @@ static void test_grid_subdivision_matches_snap() {
 // ---------------------------------------------------------------------------
 // Test: grid tiers never advertise positions the snap does not allow
 // ---------------------------------------------------------------------------
+// Owner report 2026-09-24: "the grid on timeline doesn't respect snap". The tiers were PRESENT
+// (the test above) but not VISIBLE: at a 1/4 snap the snap lines were drawn at the decorative
+// subdivision alpha, RGB 2 on the timeline's black bed, so 1/4 looked identical to Beat. A tier
+// that exists because of the snap now gets a visible floor. Uses the timeline plane's own style.
+static void test_snap_tiers_are_visible_not_just_present() {
+    const TimelineGridStyle plane{0.179f, 0.057f, 0.019f, 0.0f};
+    constexpr float kWide = 40.0f; // spacing past the zoom fade: the tier is fully faded in
+
+    const float quarter = timelineSnapTierAlpha(plane, 0.25, kWide);
+    ASSERT(quarter >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "a 1/4 snap's lines are drawn at a visible level (at least 3/4 of the beat tier)");
+    ASSERT(quarter < plane.beatLineAlpha, "and still below the beat tier, keeping the hierarchy");
+    ASSERT(quarter > plane.subdivisionLineAlpha * 1.5f,
+           "clearly brighter than the decorative whisper it used to use (so this is not vacuous)");
+    ASSERT(timelineSnapTierAlpha(plane, 0.5, kWide) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "the half-beat tier under a 1/2 snap is visible too");
+    ASSERT(std::abs(timelineSnapTierAlpha(plane, 0.0, kWide) - plane.subdivisionLineAlpha) < 1e-6f,
+           "with no snap the subdivisions stay decorative");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, 4.0f) == 0.0f, "lines closer than 6 px are still dropped");
+    ASSERT(timelineSnapTierFade(10.0f) > 0.5f && timelineGridLevelFade(10.0f) == 0.0f,
+           "at ~10 px (a beat at default zoom) snap lines show where decorative tiers stay hidden");
+    PASS("snap tiers are visible, not just present");
+}
+
 static void test_grid_tiers_follow_snap() {
     // Without snap info (timeline contract) every tier stays visible.
     ASSERT(timelineGridTierAlignedToSnap(1.0, 0.0), "no snap keeps the beat tier");
@@ -644,6 +668,7 @@ int main() {
     test_ctrl_wheel_zoom_uses_grid_local_anchor();
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
+    test_snap_tiers_are_visible_not_just_present();
     test_scroll_domain_floor_and_growth();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
