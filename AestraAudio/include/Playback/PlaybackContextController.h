@@ -168,7 +168,8 @@ public:
      * the loop length is republished at once, and if the pattern is playing with a different range
      * it restarts at the loop's top so the new range is heard immediately. Clearing the zone
      * returns to the whole-pattern loop.
-     * @param pattern The pattern the piano roll is editing, which is the one Arsenal plays.
+     * @param pattern The pattern the piano roll is editing. It becomes the Arsenal pattern only
+     *        when a zone is set on it while no other pattern is playing.
      * @param zone The range; its pattern is set to @p pattern. nullopt clears the zone.
      */
     void setArsenalLoopZone(PatternID pattern, std::optional<TrackManager::ArsenalLoopZone> zone,
@@ -177,10 +178,23 @@ public:
             zone->pattern = pattern;
         }
         m_trackManager.setArsenalLoopZone(zone);
-        if (pattern.isValid()) {
-            m_arsenalPattern = pattern;
+        if (!pattern.isValid()) {
+            return;
         }
-        reapplyArsenalLoop(patternLengthBeats);
+        if (pattern == m_arsenalPattern) {
+            reapplyArsenalLoop(patternLengthBeats);
+            return;
+        }
+        // Another pattern is (or was last) Arsenal's. A zone drawn on this one becomes Arsenal's
+        // only when nothing is playing: never reschedule, or publish this pattern's loop length
+        // over, a different pattern that is playing. Clearing another pattern's zone changes
+        // nothing that is playing, so it never takes the Arsenal pattern over either (#970).
+        const bool otherPlaying = m_trackManager.isPlaying() && m_trackManager.isPatternMode() &&
+                                  m_arsenalPattern.isValid();
+        if (zone && !otherPlaying) {
+            m_arsenalPattern = pattern;
+            reapplyArsenalLoop(patternLengthBeats);
+        }
     }
 
     /**
@@ -354,8 +368,8 @@ private:
     bool m_enginePattern = false;
     double m_engineLength = kTimelineLengthBeats;
     bool m_engineAudition = false;
-    // The pattern Arsenal plays (last started, or the piano roll's when it set a zone). Loop-zone
-    // lookups use it, so a zone drawn on one pattern never shapes another.
+    // The pattern Arsenal plays (last started, or the piano roll's when it set a zone with nothing
+    // else playing). Loop-zone lookups use it, so a zone drawn on one pattern never shapes another.
     PatternID m_arsenalPattern{};
     PlaybackContext m_context = PlaybackContext::Timeline;
 };

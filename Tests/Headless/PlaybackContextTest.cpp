@@ -515,6 +515,19 @@ void testAZoneShapesOnlyItsPatternInArsenal() {
     f.settle();
     check(!f.tm.scheduledArsenalLoopZone().has_value(), "Arsenal playback of another pattern ignores the zone");
     check(std::abs(f.engine.getPatternLengthBeats() - 8.0) < 1e-9, "and loops that pattern's whole length");
+
+    // While `other` plays, editing or clearing the first pattern's zone must not take playback
+    // over: no reschedule of the first pattern, no zone-length loop published (review, #970).
+    f.ctx.setArsenalLoopZone(f.pattern, TrackManager::ArsenalLoopZone{{}, 1.0, 3.0}, 8.0);
+    f.settle();
+    insts = f.tm.getPatternPlaybackEngine().snapshotInstances();
+    check(insts.size() == 1 && insts[0].patternId == other, "a zone edit on another pattern leaves `other` playing");
+    check(std::abs(f.engine.getPatternLengthBeats() - 8.0) < 1e-9, "and does not publish that zone's length");
+    check(f.tm.getArsenalLoopZone().has_value(), "the zone is still stored, for when its pattern plays");
+    f.ctx.setArsenalLoopZone(f.pattern, std::nullopt, 8.0);
+    f.settle();
+    insts = f.tm.getPatternPlaybackEngine().snapshotInstances();
+    check(insts.size() == 1 && insts[0].patternId == other, "clearing it leaves `other` playing too");
 }
 
 int main() {

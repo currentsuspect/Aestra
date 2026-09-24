@@ -621,6 +621,20 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     ASSERT(view.getLoopZone().has_value() && std::abs(view.getLoopZone()->first - 12.0) < 1e-6 &&
                std::abs(view.getLoopZone()->second - 16.0) < 1e-6,
            "a zone dragged past the pattern end stops at the end: [12, 16)");
+
+    // Shortening the pattern cuts the zone to the new end, and the listener hears it (#970).
+    notifications = 0;
+    view.setLoopZone(std::make_pair(8.0, 16.0));
+    view.setTotalDurationBeats(12.0);
+    ASSERT(notifications == 1 && last.has_value() && std::abs(last->first - 8.0) < 1e-6 &&
+               std::abs(last->second - 12.0) < 1e-6,
+           "a 16 -> 12 beat pattern cuts [8, 16) to [8, 12)");
+    // A zone wholly past the new end ends.
+    view.setTotalDurationBeats(16.0);
+    view.setLoopZone(std::make_pair(12.0, 16.0));
+    view.setTotalDurationBeats(8.0);
+    ASSERT(!view.getLoopZone() && notifications == 2 && !last.has_value(),
+           "a zone wholly past the new end is cleared");
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 

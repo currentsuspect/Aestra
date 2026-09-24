@@ -879,6 +879,12 @@ void PianoRollView::setTotalDurationBeats(double beats) {
     if (m_toolbar) {
         m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
     }
+    // A shorter pattern cuts the loop zone to its new end (or ends it, if the zone lay wholly past
+    // it), exactly as drawing the zone clamps. The listener hears the change like any other (#970).
+    if (m_loopZone && m_loopZone->second > m_totalDurationBeats) {
+        const double end = m_totalDurationBeats;
+        applyLoopZone(std::make_pair(std::min(m_loopZone->first, end), end), true);
+    }
     updateScrollbars();
     syncChildren();
 }
