@@ -258,6 +258,18 @@ public:
      */
     size_t getActiveInstanceCount() const;
 
+    /** @brief What one scheduled instance plays: pattern beat 0 lands at startBeat; only
+     *  pattern beats in [sourceStartBeat, sourceEndBeat) sound. */
+    struct InstanceSnapshot {
+        PatternID patternId;
+        uint32_t instanceId = 0;
+        double startBeat = 0.0;
+        double sourceStartBeat = 0.0;
+        double sourceEndBeat = 0.0;
+    };
+    /** @brief Copy of the scheduled instances (control thread; takes the scheduler lock). */
+    std::vector<InstanceSnapshot> snapshotInstances() const;
+
     /**
      * @brief Get the number of scheduler overflows observed so far.
      * @return Overflow counter value.

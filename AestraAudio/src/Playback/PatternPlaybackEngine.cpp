@@ -554,6 +554,16 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
     }
 }
 
+std::vector<PatternPlaybackEngine::InstanceSnapshot> PatternPlaybackEngine::snapshotInstances() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<InstanceSnapshot> out;
+    out.reserve(m_activeInstances.size());
+    for (const auto& inst : m_activeInstances) {
+        out.push_back({inst.patternId, inst.instanceId, inst.startBeat, inst.sourceStartBeat, inst.sourceEndBeat});
+    }
+    return out;
+}
+
 void PatternPlaybackEngine::clearScheduledInstances() {
     // Control thread only — takes the scheduler mutex. processAudio() consumes m_rtQueue
     // and never reads m_activeInstances, so erasing here cannot race the audio thread.

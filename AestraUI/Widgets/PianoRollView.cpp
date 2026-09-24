@@ -93,6 +93,20 @@ PianoRollView::PianoRollView()
         }
     };
 
+    // Ruler loop zone (SPEC 3 §5.2): snapped to the editor's grid, nearest line.
+    m_ruler->snapBeat = [this](double beat) {
+        const double step = m_notes ? MusicTheory::getSnapDuration(m_notes->getSnap()) : 0.0;
+        return step > 0.0 ? std::round(beat / step) * step : beat;
+    };
+    m_ruler->onLoopZoneDrawn = [this](double start, double end) {
+        applyLoopZone(std::make_pair(start, end), true);
+    };
+    m_notes->setOnEmptyGridPress([this]() {
+        if (m_loopZone) {
+            applyLoopZone(std::nullopt, true);
+        }
+    });
+
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
         m_targetScrollX = m_scrollX;
@@ -360,6 +374,10 @@ void PianoRollView::onUpdate(double deltaTime) {
         updateScrollbars();
         syncChildren();
     }
+}
+
+NUIRect PianoRollView::getRulerBounds() const {
+    return m_ruler ? m_ruler->getBounds() : NUIRect{};
 }
 
 NUIRect PianoRollView::getGridBounds() const {
@@ -652,8 +670,32 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
         repaint();
         return true;
     }
+    // Esc is the exit: it clears the loop zone, and the note layer still gets it (deselect).
+    if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
+        applyLoopZone(std::nullopt, true);
+        m_notes->onKeyEvent(event);
+        return true;
+    }
     if (m_notes->onKeyEvent(event)) return true;
     return NUIComponent::onKeyEvent(event);
+}
+
+void PianoRollView::setLoopZone(std::optional<std::pair<double, double>> zone) { applyLoopZone(zone, false); }
+
+void PianoRollView::applyLoopZone(std::optional<std::pair<double, double>> zone, bool notify) {
+    if (zone && zone->second <= zone->first + 1e-6) {
+        zone.reset();
+    }
+    m_loopZone = zone;
+    const bool active = m_loopZone.has_value();
+    const double start = active ? m_loopZone->first : 0.0;
+    const double end = active ? m_loopZone->second : 0.0;
+    if (m_ruler) m_ruler->setLoopZone(active, start, end);
+    if (m_grid) m_grid->setLoopZone(active, start, end);
+    if (notify && m_onLoopZoneChanged) {
+        m_onLoopZoneChanged(m_loopZone);
+    }
+    repaint();
 }
 
 void PianoRollView::setNotes(const std::vector<MidiNote>& notes) {

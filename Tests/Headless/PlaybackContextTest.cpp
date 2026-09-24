@@ -18,9 +18,11 @@
 #include "Models/TrackManager.h"
 #include "Playback/PlaybackContextController.h"
 
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -397,6 +399,57 @@ void testSaturatedFallbackIsAppliedByTheAudioThread() {
 
 } // namespace
 
+// SPEC 3 §5.2: a piano-roll ruler zone loops only that range of the pattern. The engine loops
+// [0, zone length) and the Arsenal instance plays the zone's source range from beat 0.
+void testAPianoRollZoneShortensTheArsenalLoop() {
+    auto owned = makeFixture();
+    auto& f = *owned;
+    using Zone = TrackManager::ArsenalLoopZone;
+
+    // Set on Timeline focus: stored, nothing published (the zone only shapes Arsenal).
+    f.ctx.setArsenalLoopZone(f.pattern, Zone{2.0, 6.0}, 8.0);
+    f.settle();
+    check(f.tm.getArsenalLoopZone().has_value(), "the zone is kept whatever the focus");
+
+    f.ctx.enterArsenal(8.0);
+    f.settle();
+    check(std::abs(f.engine.getPatternLengthBeats() - 4.0) < 1e-9, "in Arsenal the engine loops the zone's 4 beats");
+
+    f.ctx.startArsenalPlayback(f.pattern, 8.0, 0.0);
+    f.settle();
+    auto insts = f.tm.getPatternPlaybackEngine().snapshotInstances();
+    check(insts.size() == 1, "one Arsenal instance");
+    if (insts.size() == 1) {
+        check(std::abs(insts[0].startBeat + 2.0) < 1e-9, "pattern beat 0 lands at -2, so the zone starts the loop");
+        check(std::abs(insts[0].sourceStartBeat - 2.0) < 1e-9 && std::abs(insts[0].sourceEndBeat - 6.0) < 1e-9,
+              "only the zone's [2, 6) sounds");
+    }
+
+    // Clearing while playing: the whole pattern loops again, heard at once.
+    f.ctx.setArsenalLoopZone(f.pattern, std::nullopt, 8.0);
+    f.settle();
+    check(std::abs(f.engine.getPatternLengthBeats() - 8.0) < 1e-9, "clearing the zone loops the whole pattern");
+    insts = f.tm.getPatternPlaybackEngine().snapshotInstances();
+    check(insts.size() == 1 && std::abs(insts[0].startBeat) < 1e-9 && insts[0].sourceStartBeat == 0.0,
+          "and the instance plays the whole pattern from beat 0");
+}
+
+// Recording places a take by transport beat; inside a zone transport beat 0 is not pattern beat 0.
+// Until capture is zone-aware, an armed record loops the whole pattern.
+void testAnArmedRecordLoopsTheWholePattern() {
+    auto owned = makeFixture();
+    auto& f = *owned;
+    f.ctx.enterArsenal(8.0);
+    f.ctx.setArsenalLoopZone(f.pattern, TrackManager::ArsenalLoopZone{2.0, 6.0}, 8.0);
+    f.settle();
+    check(std::abs(f.engine.getPatternLengthBeats() - 4.0) < 1e-9, "the zone applies (so the next check is not vacuous)");
+    f.tm.record(); // arm
+    f.ctx.applyArsenalLoopLength(8.0);
+    f.settle();
+    check(std::abs(f.engine.getPatternLengthBeats() - 8.0) < 1e-9, "armed for recording, the whole pattern loops");
+    f.tm.record(); // disarm
+}
+
 int main() {
     testDocumentedTable();
     testEnteringTimelineOrAuditionClearsEveryPatternMirror();
@@ -409,6 +462,8 @@ int main() {
     testDrainLimitKeepsThePairTogether();
     testNonPartnerAtTheLimitIsCarriedNotDropped();
     testSaturatedFallbackIsAppliedByTheAudioThread();
+    testAPianoRollZoneShortensTheArsenalLoop();
+    testAnArmedRecordLoopsTheWholePattern();
 
     if (g_failures == 0) {
         std::cout << "Playback context tests passed\n";

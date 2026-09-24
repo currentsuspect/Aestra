@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace Aestra {
@@ -111,7 +112,7 @@ public:
 
     /** Focus entered Arsenal. The engine arms the pattern loop. TrackManager joins on play (see the table). */
     void enterArsenal(double patternLengthBeats) {
-        publishEngineContext(true, patternLengthBeats, false);
+        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(patternLengthBeats), false);
         setUi(true);
         m_context = PlaybackContext::Arsenal;
     }
@@ -119,8 +120,10 @@ public:
     /** Play pressed in Arsenal. Resumes from the cued position unless startSeconds >= 0. */
     void startArsenalPlayback(PatternID pattern, double patternLengthBeats, double startSeconds = -1.0) {
         // Published before play() pushes its transport command, so both land in one drain.
-        publishEngineContext(true, patternLengthBeats, m_engineAudition);
-        m_trackManager.setPatternLoopOverride(0.0, patternLengthBeats, true);
+        // A piano-roll zone shortens the loop to the zone (TrackManager::arsenalLoopLengthBeats).
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
+        publishEngineContext(true, loopBeats, m_engineAudition);
+        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
         m_trackManager.playPatternInArsenal(pattern, startSeconds);
         m_context = PlaybackContext::Arsenal;
     }
@@ -133,8 +136,9 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        publishEngineContext(true, patternLengthBeats, m_engineAudition);
-        m_trackManager.setPatternLoopOverride(0.0, patternLengthBeats, true);
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
+        publishEngineContext(true, loopBeats, m_engineAudition);
+        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
     }
 
     /**
@@ -150,7 +154,30 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        publishEngineContext(true, patternLengthBeats, m_engineAudition);
+        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(patternLengthBeats), m_engineAudition);
+    }
+
+    /**
+     * @brief A piano-roll ruler zone: pattern playback loops only that range (SPEC 3 §5.2).
+     *
+     * Kept whatever the focus; it shapes playback only in Arsenal. There, the loop length is
+     * republished at once, and if the pattern is playing it restarts at the zone's top so the
+     * new range is heard immediately. Clearing the zone returns to the whole-pattern loop.
+     * @param pattern The pattern the piano roll is editing (the one Arsenal plays).
+     */
+    void setArsenalLoopZone(PatternID pattern, std::optional<TrackManager::ArsenalLoopZone> zone,
+                            double patternLengthBeats) {
+        m_trackManager.setArsenalLoopZone(zone);
+        if (m_context != PlaybackContext::Arsenal) {
+            return;
+        }
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
+        // Context first, then any transport command, so both land in one drain (PR 3).
+        publishEngineContext(true, loopBeats, m_engineAudition);
+        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
+        if (m_trackManager.isPlaying() && m_trackManager.isPatternMode()) {
+            m_trackManager.playPatternInArsenal(pattern, 0.0);
+        }
     }
 
     /** Timeline play: the pattern loop override ends, so the timeline's own loop applies again. */

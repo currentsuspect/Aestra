@@ -8,6 +8,8 @@
 #include <string>
 #include <cassert>
 #include <iostream>
+#include <optional>
+#include <utility>
 #include <limits>
 
 using namespace AestraUI;
@@ -500,6 +502,73 @@ static void test_grid_tiers_follow_snap() {
 // Scrollable-domain parity with the Track Manager timeline
 // ---------------------------------------------------------------------------
 
+// SPEC 3 §5.2 (owner ruling): a right-drag, or Ctrl+left-drag, on the piano-roll ruler makes a
+// loop zone; a plain left press still scrubs. Esc, or a Select-tool press on empty grid, clears
+// it. The zone never selects notes (a separate, future interaction).
+static void test_ruler_draws_and_clears_a_loop_zone() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setViewWindow(0.0, 16.0);
+
+    int notifications = 0;
+    std::optional<std::pair<double, double>> last;
+    view.setOnLoopZoneChanged([&](std::optional<std::pair<double, double>> zone) {
+        ++notifications;
+        last = zone;
+    });
+
+    const NUIRect ruler = view.getRulerBounds();
+    ASSERT(ruler.width > 100.0f, "the ruler is laid out");
+    const double ppb = static_cast<double>(view.getGridBounds().width) / view.getViewDurationBeats();
+    const float y = ruler.y + ruler.height * 0.5f;
+    const auto xAt = [&](double beat) { return ruler.x + static_cast<float>(beat * ppb); };
+    auto mouse = [](NUIMouseEventType type, NUIMouseButton button, float x, float y, NUIModifiers mods = NUIModifiers::None) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.button = button;
+        e.position = {x, y};
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        e.modifiers = mods;
+        return e;
+    };
+
+    // Right-drag from ~beat 4 to ~beat 8.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Right, xAt(4.02), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, xAt(7.98), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Right, xAt(7.98), y));
+    ASSERT(notifications == 1 && last.has_value(), "a right-drag on the ruler makes one zone");
+    ASSERT(std::abs(last->first - 4.0) < 1e-6 && std::abs(last->second - 8.0) < 1e-6,
+           "the zone snaps to the editor's grid: [4, 8)");
+    ASSERT(view.getLoopZone().has_value(), "the view keeps the zone");
+
+    // A plain left press scrubs: no new zone.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(2.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(2.0), y));
+    ASSERT(notifications == 1 && view.getLoopZone().has_value(), "a plain left press on the ruler still just scrubs");
+
+    // Esc clears it.
+    NUIKeyEvent esc;
+    esc.keyCode = NUIKeyCode::Escape;
+    esc.pressed = true;
+    view.onKeyEvent(esc);
+    ASSERT(notifications == 2 && !last.has_value() && !view.getLoopZone(), "Esc clears the zone");
+
+    // Ctrl+left-drag makes one too; a Select-tool press on empty grid clears it.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(1.0), y, NUIModifiers::Ctrl));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(3.0), y, NUIModifiers::Ctrl));
+    ASSERT(view.getLoopZone().has_value(), "Ctrl+left-drag on the ruler makes a zone");
+    view.setTool(PianoRollTool::Pointer);
+    const NUIRect grid = view.getGridBounds();
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    ASSERT(!view.getLoopZone(), "a Select-tool press on empty grid clears the zone");
+    PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -645,6 +714,7 @@ int main() {
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
     test_scroll_domain_floor_and_growth();
+    test_ruler_draws_and_clears_a_loop_zone();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

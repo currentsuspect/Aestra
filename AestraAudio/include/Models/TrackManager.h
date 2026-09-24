@@ -1948,6 +1948,44 @@ public:
      *        The engine wraps positions past the pattern length, so any cue
      *        point is safe.
      */
+    /**
+     * @brief A piano-roll ruler zone: pattern playback loops only [startBeat, endBeat) of the
+     *        pattern (SPEC 3 §5.2). Session-only; not saved with the project.
+     */
+    struct ArsenalLoopZone {
+        double startBeat = 0.0;
+        double endBeat = 0.0;
+    };
+
+    /** @brief Set or clear the zone. An empty or inverted range clears it. Main thread. */
+    void setArsenalLoopZone(std::optional<ArsenalLoopZone> zone) {
+        if (zone && (zone->startBeat < 0.0 || zone->endBeat <= zone->startBeat + 1e-6)) {
+            zone.reset();
+        }
+        m_arsenalLoopZone = zone;
+    }
+    std::optional<ArsenalLoopZone> getArsenalLoopZone() const { return m_arsenalLoopZone; }
+
+    /**
+     * @brief The zone playback actually uses. None while recording is armed: a take is placed
+     *        by transport beat, and inside a zone transport beat 0 is pattern beat startBeat, so
+     *        recording loops the whole pattern until zone-aware capture exists.
+     */
+    std::optional<ArsenalLoopZone> activeArsenalLoopZone() const {
+        if (!m_arsenalLoopZone || m_recordArmed.load(std::memory_order_relaxed)) {
+            return std::nullopt;
+        }
+        return m_arsenalLoopZone;
+    }
+
+    /** @brief The Arsenal loop length: the zone's length when one applies, else the pattern's. */
+    double arsenalLoopLengthBeats(double patternLengthBeats) const {
+        if (const auto zone = activeArsenalLoopZone()) {
+            return zone->endBeat - zone->startBeat;
+        }
+        return patternLengthBeats;
+    }
+
     void playPatternInArsenal(PatternID pid, double startSeconds = -1.0) {
         if (startSeconds < 0.0) {
             startSeconds = std::max(0.0, m_position.load(std::memory_order_relaxed));
@@ -1977,7 +2015,16 @@ public:
         }
 
         pushTransportCommand(1.0f, startSeconds);
-        m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
+        if (const auto zone = activeArsenalLoopZone()) {
+            // The scheduler plays pattern beat b at startBeat + b, and only beats inside the
+            // source range. Starting the instance at -zone.start puts the zone's first beat on
+            // the engine's loop top (beat 0); the source range confines it to the zone, and the
+            // engine loops [0, zone length) (arsenalLoopLengthBeats). Same path trimmed clips use.
+            m_patternPlaybackEngine.schedulePatternInstance(pid, -zone->startBeat, 1, zone->startBeat,
+                                                            zone->endBeat - zone->startBeat);
+        } else {
+            m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
+        }
     }
 
     /**
@@ -2684,6 +2731,7 @@ private:
     std::atomic<uint64_t> m_timelineRescheduleCount{0};
     // Timeline MIDI clip -> scheduler slot for the current playback run. Main thread only.
     std::unordered_map<ClipInstanceID, uint32_t> m_timelineSlots;
+    std::optional<ArsenalLoopZone> m_arsenalLoopZone; // main thread (see setArsenalLoopZone)
     // What those slots play, as scheduled (see getScheduledTimelineInstances).
     std::vector<MidiClipPlaybackInstance> m_scheduledTimelineInstances;
     std::atomic<bool> m_hasDisplayPositionOverride{false};

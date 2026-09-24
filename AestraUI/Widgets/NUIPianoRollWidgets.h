@@ -6,6 +6,8 @@
 #include "../Platform/NUICursorStyle.h"
 #include <functional>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -138,12 +140,35 @@ public:
     /** @brief Called while the user clicks or drags the ruler playhead. */
     std::function<void(double beat, bool active)> onPlayheadScrubbed;
 
+    /** @brief Snaps a ruler beat (the view supplies the editor's grid). Identity if unset. */
+    std::function<double(double beat)> snapBeat;
+    /**
+     * @brief A right-drag (or Ctrl+left-drag) on the ruler made a loop zone (SPEC 3 §5.2),
+     *        called once on release with the snapped [start, end). A drag that spans nothing
+     *        makes no zone and does not call.
+     */
+    std::function<void(double startBeat, double endBeat)> onLoopZoneDrawn;
+    /** @brief The zone to draw (the view owns it). */
+    void setLoopZone(bool active, double startBeat, double endBeat) {
+        loopZoneActive_ = active;
+        loopZoneStart_ = startBeat;
+        loopZoneEnd_ = endBeat;
+        repaint();
+    }
+
 private:
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
     double playheadBeat_ = 0.0;
     bool isScrubbing_ = false;
+    bool isDrawingZone_ = false;
+    NUIMouseButton zoneButton_ = NUIMouseButton::None;
+    double zoneAnchorBeat_ = 0.0;
+    double zoneDragBeat_ = 0.0;
+    bool loopZoneActive_ = false;
+    double loopZoneStart_ = 0.0;
+    double loopZoneEnd_ = 0.0;
 };
 
 // -----------------------------------------------------------------------------
@@ -316,6 +341,13 @@ public:
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
     void setTotalDurationBeats(double beats) { totalDurationBeats_ = std::max(0.0, beats); repaint(); }
     void setHoveredPitch(int pitch) { hoveredPitch_ = pitch; repaint(); }
+    /** @brief The ruler loop zone, drawn as a band across the grid (SPEC 3 §5.2). */
+    void setLoopZone(bool active, double startBeat, double endBeat) {
+        loopZoneActive_ = active;
+        loopZoneStart_ = startBeat;
+        loopZoneEnd_ = endBeat;
+        repaint();
+    }
     
     /** @brief Set the bar signature in beats per bar. */
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
@@ -337,6 +369,9 @@ private:
     float scrollX_;
     float scrollY_; // Added implementation
     int beatsPerBar_ = 4;
+    bool loopZoneActive_ = false;
+    double loopZoneStart_ = 0.0;
+    double loopZoneEnd_ = 0.0;
     double playheadBeat_ = 0.0;
     double totalDurationBeats_ = 8.0;
     int hoveredPitch_ = -1;
@@ -456,6 +491,8 @@ public:
 
     /** @brief Set the callback fired whenever notes change. */
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
+    /** @brief A plain Select-tool press on empty grid (the editor's selection "exit"). */
+    void setOnEmptyGridPress(std::function<void()> cb) { onEmptyGridPress_ = std::move(cb); }
     void setOnHoveredPitchChanged(std::function<void(int pitch)> cb) {
         onHoveredPitchChanged_ = std::move(cb);
     }
@@ -527,6 +564,7 @@ private:
 
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     std::function<void(int pitch)> onHoveredPitchChanged_;
+    std::function<void()> onEmptyGridPress_;
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<bool()> isPlayingCallback_;
     int auditionPitch_ = -1; // Pitch currently sounding from edit audition; -1 if none
@@ -726,6 +764,20 @@ public:
      * retune rather than on the behaviour it is guarding.
      */
     NUIRect getGridBounds() const;
+    /** @brief The ruler's window-absolute bounds (tests draw loop zones on it). */
+    NUIRect getRulerBounds() const;
+
+    /**
+     * @brief The ruler loop zone (SPEC 3 §5.2): pattern playback loops only [start, end).
+     * Drawn on the ruler and across the grid. Made by a right-drag (or Ctrl+left-drag) on the
+     * ruler; cleared by Esc or a Select-tool click on empty grid, like the timeline's zone.
+     */
+    void setLoopZone(std::optional<std::pair<double, double>> zone);
+    std::optional<std::pair<double, double>> getLoopZone() const { return m_loopZone; }
+    /** @brief The user made or cleared the zone (not called for setLoopZone). */
+    void setOnLoopZoneChanged(std::function<void(std::optional<std::pair<double, double>>)> cb) {
+        m_onLoopZoneChanged = std::move(cb);
+    }
 
     PianoRollView();
 
@@ -798,6 +850,9 @@ private:
     std::shared_ptr<PianoRollNoteLayer> m_notes;
     std::shared_ptr<PianoRollControlPanel> m_controls;
     std::shared_ptr<PianoRollMinimap> m_minimap;
+    std::optional<std::pair<double, double>> m_loopZone;
+    std::function<void(std::optional<std::pair<double, double>>)> m_onLoopZoneChanged;
+    void applyLoopZone(std::optional<std::pair<double, double>> zone, bool notify);
     std::shared_ptr<PianoRollToolbar> m_toolbar;
     /// Set once a host panel has taken the toolbar into its title bar; the view
     /// then stops reserving a band for it and stops laying it out.
