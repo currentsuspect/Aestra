@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <array>
 #include <memory>
 #include <string>
 #include <atomic>
@@ -221,15 +222,9 @@ private:
      *  exactly one known state, and a hidden native pointer without a drawn
      *  custom cursor (the invisible-cursor failure) self-heals. */
     void resolveCursorState();
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorArrow;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandPointing;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHand;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandGrabbing;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorIBeam;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeH;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeV;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNESW;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNWSE;
+    // One overlay glyph per cursor style that has artwork in NUICursorRegistry, indexed by the
+    // style. A style without a glyph draws the arrow.
+    std::array<std::shared_ptr<AestraUI::NUIIcon>, AestraUI::kNUICursorStyleCount> m_cursorIcons{};
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
     bool m_cachedNativeCursorHidden{false};
 

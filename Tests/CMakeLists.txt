@@ -2076,6 +2076,15 @@ target_include_directories(TimelineMarqueeTest PRIVATE
 add_test(NAME TimelineMarqueeTest COMMAND TimelineMarqueeTest)
 set_tests_properties(TimelineMarqueeTest PROPERTIES LABELS "ui;timeline;selection;regression;contract:application")
 
+# SPEC 3 §3.4: every requestable cursor style has overlay artwork (the pencil drew the arrow).
+add_executable(NUICursorRegistryTest AestraUI/NUICursorRegistryTest.cpp)
+target_include_directories(NUICursorRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Platform
+)
+add_test(NAME NUICursorRegistryTest COMMAND NUICursorRegistryTest)
+set_tests_properties(NUICursorRegistryTest PROPERTIES LABELS "ui;cursor;regression;contract:application")
+
 # Clip contrast contract: waveform ink must stay brighter than the clip body it
 # is drawn on, for every lane identity and both selection states.
 add_executable(TimelineClipContrastTest AestraUI/TimelineClipContrastTest.cpp)

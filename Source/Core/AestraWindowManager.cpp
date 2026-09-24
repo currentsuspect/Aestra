@@ -963,16 +963,14 @@ void AestraWindowManager::initializeCustomCursors() {
 
     // Canonical cursor artwork comes from NUICursorRegistry — the single
     // source for every interaction cursor, so resize in one editor uses the
-    // same asset as resize anywhere else.
-    m_cursorArrow = mk(AestraUI::NUICursorStyle::Arrow);
-    m_cursorHandPointing = mk(AestraUI::NUICursorStyle::Hand);
-    m_cursorHand = mk(AestraUI::NUICursorStyle::Grab);
-    m_cursorHandGrabbing = mk(AestraUI::NUICursorStyle::Grabbing);
-    m_cursorIBeam = mk(AestraUI::NUICursorStyle::IBeam);
-    m_cursorResizeH = mk(AestraUI::NUICursorStyle::ResizeEW);
-    m_cursorResizeV = mk(AestraUI::NUICursorStyle::ResizeNS);
-    m_cursorResizeDiagNESW = mk(AestraUI::NUICursorStyle::ResizeNESW);
-    m_cursorResizeDiagNWSE = mk(AestraUI::NUICursorStyle::ResizeNWSE);
+    // same asset as resize anywhere else. Every style with a glyph gets one;
+    // a hand-kept list here once left Crosshair out, so the pencil drew the arrow.
+    for (int i = 0; i < AestraUI::kNUICursorStyleCount; ++i) {
+        const auto style = static_cast<AestraUI::NUICursorStyle>(i);
+        if (AestraUI::nuiCursorSvg(style) != nullptr) {
+            m_cursorIcons[static_cast<size_t>(i)] = mk(style);
+        }
+    }
 
     Log::info("Custom cursor icons initialized");
     m_useCustomCursor = true;
@@ -987,51 +985,21 @@ void AestraWindowManager::renderCustomCursor() {
         return;
     }
 
+    // Each glyph is offset so its hotspot (NUICursorRegistry) sits on the pointer.
+    constexpr float size = 24.0f;
+    auto style = m_activeCursorStyle;
+    const int index = static_cast<int>(style);
     std::shared_ptr<AestraUI::NUIIcon> cursorIcon;
-    float offsetX = 0.0f, offsetY = 0.0f;
-    float size = 24.0f;
-
-    switch (m_activeCursorStyle) {
-        // Offsets put each glyph's hotspot on the pointer (see NUICursorRegistry.h):
-        // the pointing fingertip for Hand, the palm centre for Grab/Grabbing.
-        case AestraUI::NUICursorStyle::Hand:
-            cursorIcon = m_cursorHandPointing ? m_cursorHandPointing : m_cursorHand;
-            offsetX = -9.0f; offsetY = -2.0f;
-            break;
-        case AestraUI::NUICursorStyle::Grab:
-            cursorIcon = m_cursorHand;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::Grabbing:
-            cursorIcon = m_cursorHandGrabbing ? m_cursorHandGrabbing : m_cursorHand;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::IBeam:
-            cursorIcon = m_cursorIBeam;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::ResizeEW:
-            cursorIcon = m_cursorResizeH;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::ResizeNS:
-            cursorIcon = m_cursorResizeV;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::ResizeNESW:
-            cursorIcon = m_cursorResizeDiagNESW;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        case AestraUI::NUICursorStyle::ResizeNWSE:
-            cursorIcon = m_cursorResizeDiagNWSE;
-            offsetX = -size / 2.0f; offsetY = -size / 2.0f;
-            break;
-        default:
-            // The arrow tip sits at (2, 2) in its glyph; align it with the click point.
-            cursorIcon = m_cursorArrow;
-            offsetX = -2.0f; offsetY = -2.0f;
-            break;
+    if (index >= 0 && index < AestraUI::kNUICursorStyleCount) {
+        cursorIcon = m_cursorIcons[static_cast<size_t>(index)];
     }
+    if (!cursorIcon) {
+        style = AestraUI::NUICursorStyle::Arrow;
+        cursorIcon = m_cursorIcons[static_cast<size_t>(AestraUI::NUICursorStyle::Arrow)];
+    }
+    const auto hotspot = AestraUI::nuiCursorHotspot(style);
+    const float offsetX = -hotspot.x;
+    const float offsetY = -hotspot.y;
 
     if (cursorIcon) {
         // Use authoritative platform cursor position rather than cached event coords.

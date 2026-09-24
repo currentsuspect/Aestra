@@ -898,6 +898,18 @@ NUIRect PianoRollNoteLayer::selectionStretchHandleRect() const {
                    SELECTION_STRETCH_HANDLE_WIDTH, SELECTION_STRETCH_HANDLE_HEIGHT);
 }
 
+NUICursorStyle PianoRollNoteLayer::toolCursor() const {
+    // The cursor names the active tool over empty grid (SPEC 3 §3.4).
+    switch (tool_) {
+    case GlobalTool::Pencil:
+        return NUICursorStyle::Pencil;
+    case GlobalTool::Eraser:
+        return NUICursorStyle::Eraser;
+    default:
+        return NUICursorStyle::Arrow;
+    }
+}
+
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (state_ == State::None && !getBounds().contains(event.position)) {
         // Reset hover when leaving bounds
@@ -989,8 +1001,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 repaint();
             }
             if (platformBridge_) {
-                platformBridge_->setCursorStyle(
-                    tool_ == GlobalTool::Pencil ? NUICursorStyle::Crosshair : NUICursorStyle::Arrow);
+                platformBridge_->setCursorStyle(toolCursor());
             }
         } else {
             const auto& n = notes_[hitIdx];
@@ -1007,7 +1018,10 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 repaint();
             }
             if (platformBridge_) {
-                if (onLeftEdge || onRightEdge)
+                // The eraser deletes what it touches: it never offers to grab or resize.
+                if (tool_ == GlobalTool::Eraser)
+                    platformBridge_->setCursorStyle(NUICursorStyle::Eraser);
+                else if (onLeftEdge || onRightEdge)
                     platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
                 else
                     platformBridge_->setCursorStyle(NUICursorStyle::Grab);

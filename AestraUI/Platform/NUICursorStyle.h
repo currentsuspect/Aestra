@@ -30,7 +30,13 @@ enum class NUICursorStyle {
     NotAllowed,     // Disabled/not allowed
     Grab,           // Open hand (ready to grab)
     Grabbing,       // Closed hand (currently grabbing)
-    Hidden          // No cursor visible
+    Hidden,         // No cursor visible
+    // Tool cursors (SPEC 3 §3.4). Appended so no existing value moves.
+    Pencil,         // Draw tool: the tip is the hotspot
+    Eraser,         // Erase tool: the working edge is the hotspot
 };
+
+/// Number of NUICursorStyle values; keep it last-value + 1 when appending.
+inline constexpr int kNUICursorStyleCount = static_cast<int>(NUICursorStyle::Eraser) + 1;
 
 } // namespace AestraUI

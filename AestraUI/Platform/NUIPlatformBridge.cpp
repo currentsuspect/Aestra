@@ -707,6 +707,9 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         case NUICursorStyle::Wait:       cursor = ::LoadCursor(NULL, IDC_WAIT); break;
         case NUICursorStyle::WaitArrow:  cursor = ::LoadCursor(NULL, IDC_APPSTARTING); break;
         case NUICursorStyle::Crosshair:  cursor = ::LoadCursor(NULL, IDC_CROSS); break;
+        // Tool cursors have no system shape; the app's overlay draws the real glyph.
+        case NUICursorStyle::Pencil:     cursor = ::LoadCursor(NULL, IDC_CROSS); break;
+        case NUICursorStyle::Eraser:     cursor = ::LoadCursor(NULL, IDC_CROSS); break;
         case NUICursorStyle::ResizeNS:   cursor = ::LoadCursor(NULL, IDC_SIZENS); break;
         case NUICursorStyle::ResizeEW:   cursor = ::LoadCursor(NULL, IDC_SIZEWE); break;
         case NUICursorStyle::ResizeNESW: cursor = ::LoadCursor(NULL, IDC_SIZENESW); break;
