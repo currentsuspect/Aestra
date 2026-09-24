@@ -267,7 +267,19 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             m_content->getTrackManagerUI()->setWindowPointerPosition(static_cast<float>(x), static_cast<float>(y));
         }
 
-        if (m_content) {
+        // A modal dialog covers the content: surfaces UNDER it do not get to pick the cursor.
+        // Panel edges and the browser splitter used to resolve through the dialog, so the pointer
+        // over Settings > Appearance showed the browser splitter's resize arrow (owner: "a global
+        // issue where the cursor sometimes disappears or forgets to change state").
+        const bool modalOpen = isModalDialogOpen();
+        if (modalOpen && !m_modalWasOpen && m_window) {
+            // Content widgets stop receiving moves while a modal blocks them, so whatever they
+            // last set (resize, hand) would stick over the dialog. Hand it back once, on open.
+            m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+        }
+        m_modalWasOpen = modalOpen;
+
+        if (m_content && !modalOpen) {
             m_activeCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
             );
@@ -954,6 +966,13 @@ void AestraWindowManager::resolveCursorState() {
         m_cachedNativeCursorHidden = hideNative;
         m_window->setCursorVisible(!hideNative);
     }
+}
+
+bool AestraWindowManager::isModalDialogOpen() const {
+    return (m_settingsDialog && m_settingsDialog->isVisible()) || (m_exportDialog && m_exportDialog->isVisible()) ||
+           (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) ||
+           (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) ||
+           (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible());
 }
 
 void AestraWindowManager::initializeCustomCursors() {
