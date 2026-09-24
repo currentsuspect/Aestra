@@ -3161,9 +3161,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             // Centred in the row, like the chevron and the name beside it. A fixed "+5" only
             // centred a 24 px row; at the current row height the icon sat 3 px above its label,
             // so the label read as low (SPEC 3 §3.2, measured on screen).
-            constexpr float kRowIconSize = 14.0f;
-            NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - kRowIconSize) * 0.5f), kRowIconSize,
-                             kRowIconSize);
+            constexpr float ROW_ICON_SIZE = 14.0f;
+            NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,
+                             ROW_ICON_SIZE);
             icon->setBounds(iconRect);
             icon->setColor(item->isDirectory ? folderText.withAlpha(0.78f) : muted);
             icon->onRender(renderer);
