@@ -2849,6 +2849,11 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;timeline;selection;regression;contract:application")
 endif()
 
+# Ownership contract tests (contract:ownership). Registration and the
+# WILL_FAIL/guards rules live in one file so rebases touch one place. Included
+# before the required-UI-test check below, which verifies its UI targets exist.
+include(${CMAKE_CURRENT_SOURCE_DIR}/Contract/ContractOwnershipTests.cmake)
+
 # V8-G3b (FD-19): the absence of failures is not the presence of coverage.
 # This list names every UI test that must be configured whenever
 # AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
@@ -2881,6 +2886,10 @@ if(AESTRA_ENABLE_UI)
         NUIComponentTooltipTest
         NUIHiddenChildDispatchTest
         NUIWidgetHiddenInputTest
+        ContractPianoRollOneEntryPerGestureTest
+        ContractPianoRollUndoStaysInPatternTest
+        ContractPianoRollReachesGlobalUndoTest
+        ContractPianoRollPasteTargetsEditingUnitTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
