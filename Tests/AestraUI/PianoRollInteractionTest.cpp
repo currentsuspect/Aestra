@@ -4,11 +4,13 @@
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
+#include "../Support/NullRenderer.h"
 #include <cmath>
 #include <string>
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <vector>
 
 using namespace AestraUI;
 
@@ -481,6 +483,32 @@ static void test_snap_tiers_are_visible_not_just_present() {
     ASSERT(timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.25f) == 0.0f,
            "default zoom, 1/4 snap: the 2.5 px quarter lines stay hidden");
     ASSERT(!timelineGridTierAlignedToSnap(0.5, 1.0), "default zoom, Beat snap: no half-beat tier, so the two differ");
+
+    // The same, through the real renderer (review, #973): record every vertical line it draws for
+    // one bar at the default zoom, under a 1/4 snap and under a Beat snap.
+    struct LineRecorder : Aestra::Testing::NullRenderer {
+        std::vector<float> xs;
+        void drawLine(const NUIPoint& a, const NUIPoint&, float, const NUIColor& c) override {
+            if (c.a > 0.001f) xs.push_back(a.x);
+        }
+        bool drew(float x) const {
+            for (const float v : xs) {
+                if (std::abs(v - x) < 0.01f) return true;
+            }
+            return false;
+        }
+    };
+    const NUIRect bed(0.0f, 0.0f, 40.0f, 100.0f); // one 4-beat bar at 10 px per beat
+    LineRecorder quarterSnap;
+    renderTimelineGrid(quarterSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 0.25);
+    ASSERT(quarterSnap.drew(10.0f) && quarterSnap.drew(5.0f) && quarterSnap.drew(15.0f),
+           "renderer, default zoom, 1/4 snap: beat and half-beat lines are drawn");
+    ASSERT(!quarterSnap.drew(2.5f) && !quarterSnap.drew(7.5f),
+           "renderer, default zoom, 1/4 snap: the 2.5 px quarter lines are not");
+    LineRecorder beatSnap;
+    renderTimelineGrid(beatSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 1.0);
+    ASSERT(beatSnap.drew(10.0f) && !beatSnap.drew(5.0f),
+           "renderer, default zoom, Beat snap: beat lines only, so it differs from 1/4");
     PASS("snap tiers are visible, not just present");
 }
 
