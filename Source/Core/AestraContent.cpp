@@ -685,7 +685,13 @@ void AestraContent::setupTransportBar() {
         }
         const bool isRecordArmed = m_trackManager->isRecordArmed();
         if (recording != isRecordArmed) {
-            m_trackManager->record();
+            // Through the playback context: an armed record ignores the piano-roll loop zone, so
+            // the Arsenal loop is re-applied with the arm, not at the next play.
+            if (m_playbackContext) {
+                m_playbackContext->setRecordArmed(recording, getActivePatternLengthBeats());
+            } else {
+                m_trackManager->record();
+            }
         }
         if (recording && !m_trackManager->hasArmedTracks()) {
             showToast("No armed tracks — recording will capture nothing. Arm a track in the playlist.");

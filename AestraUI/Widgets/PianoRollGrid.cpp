@@ -27,6 +27,14 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(bounds);
     renderer.fillRect(bounds, theme.getColor("timelineBed"));
 
+    // The ruler loop zone: pattern playback loops only this range (SPEC 3 §5.2).
+    if (loopZoneActive_ && loopZoneEnd_ > loopZoneStart_) {
+        const float x1 = bounds.x + static_cast<float>(loopZoneStart_ * pixelsPerBeat_) - scrollX_;
+        const float x2 = bounds.x + static_cast<float>(loopZoneEnd_ * pixelsPerBeat_) - scrollX_;
+        renderer.fillRect(NUIRect(x1, bounds.y, x2 - x1, bounds.height),
+                          theme.getColor("accentPrimary").withAlpha(0.07f));
+    }
+
     const auto gridInk = theme.getCurrentTheme().textPrimary;
     const auto accidentalRow = gridInk.withAlpha(0.018f);
     const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.035f);

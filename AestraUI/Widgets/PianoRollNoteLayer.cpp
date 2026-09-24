@@ -1410,6 +1410,12 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // Empty Click (Pointer or Pencil logic fell through) -> Selection Box
         // Only if NOT pencil (Pencil paints) - handled by intentToPaint
         if (tool_ == GlobalTool::Pointer) {
+             // A plain press on empty grid is the selection exit: it also clears the ruler
+             // loop zone (SPEC 3 §5.2, same rule as the timeline). Shift/Ctrl extend instead.
+             if (onEmptyGridPress_ && !(event.modifiers & NUIModifiers::Shift) &&
+                 !(event.modifiers & NUIModifiers::Ctrl)) {
+                 onEmptyGridPress_();
+             }
              state_ = State::SelectingBox;
              dragStartPos_ = event.position;
              selectionRect_ = NUIRect(event.position.x, event.position.y, 0, 0); // Start size 0

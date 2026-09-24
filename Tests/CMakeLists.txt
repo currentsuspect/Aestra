@@ -3057,6 +3057,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternTransportPositionTest.
     set_tests_properties(PatternTransportPositionTest PROPERTIES LABELS "audio;engine;transport;pattern;contract:audio")
 endif()
 
+# SPEC 3 §5.2: a piano-roll ruler zone loops only its range of the pattern.
+add_executable(PianoRollLoopZoneTest AestraAudio/PianoRollLoopZoneTest.cpp)
+target_link_libraries(PianoRollLoopZoneTest PRIVATE AestraAudio)
+target_include_directories(PianoRollLoopZoneTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PianoRollLoopZoneTest COMMAND PianoRollLoopZoneTest)
+set_tests_properties(PianoRollLoopZoneTest PROPERTIES LABELS "audio;pattern;playback;regression;contract:audio")
+
 # AudioEngine Diagnostics Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cpp")
     add_executable(AudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)

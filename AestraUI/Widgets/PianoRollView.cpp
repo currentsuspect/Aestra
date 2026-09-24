@@ -93,6 +93,23 @@ PianoRollView::PianoRollView()
         }
     };
 
+    // Ruler loop zone (SPEC 3 §5.2): snapped to the editor's grid, nearest line.
+    m_ruler->snapBeat = [this](double beat) {
+        const double step = m_notes ? MusicTheory::getSnapDuration(m_notes->getSnap()) : 0.0;
+        return step > 0.0 ? std::round(beat / step) * step : beat;
+    };
+    m_ruler->onLoopZoneDrawn = [this](double start, double end) {
+        // Clamped to the pattern, like the scrub: past its end there is only silence to loop. A
+        // zone entirely past the end becomes empty, and applyLoopZone drops it.
+        const double limit = std::max(0.0, m_totalDurationBeats);
+        applyLoopZone(std::make_pair(std::clamp(start, 0.0, limit), std::clamp(end, 0.0, limit)), true);
+    };
+    m_notes->setOnEmptyGridPress([this]() {
+        if (m_loopZone) {
+            applyLoopZone(std::nullopt, true);
+        }
+    });
+
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
         m_targetScrollX = m_scrollX;
@@ -360,6 +377,10 @@ void PianoRollView::onUpdate(double deltaTime) {
         updateScrollbars();
         syncChildren();
     }
+}
+
+NUIRect PianoRollView::getRulerBounds() const {
+    return m_ruler ? m_ruler->getBounds() : NUIRect{};
 }
 
 NUIRect PianoRollView::getMinimapBounds() const {
@@ -661,8 +682,32 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
         repaint();
         return true;
     }
+    // Esc is the exit: it clears the loop zone, and the note layer still gets it (deselect).
+    if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
+        applyLoopZone(std::nullopt, true);
+        m_notes->onKeyEvent(event);
+        return true;
+    }
     if (m_notes->onKeyEvent(event)) return true;
     return NUIComponent::onKeyEvent(event);
+}
+
+void PianoRollView::setLoopZone(std::optional<std::pair<double, double>> zone) { applyLoopZone(zone, false); }
+
+void PianoRollView::applyLoopZone(std::optional<std::pair<double, double>> zone, bool notify) {
+    if (zone && zone->second <= zone->first + 1e-6) {
+        zone.reset();
+    }
+    m_loopZone = zone;
+    const bool active = m_loopZone.has_value();
+    const double start = active ? m_loopZone->first : 0.0;
+    const double end = active ? m_loopZone->second : 0.0;
+    if (m_ruler) m_ruler->setLoopZone(active, start, end);
+    if (m_grid) m_grid->setLoopZone(active, start, end);
+    if (notify && m_onLoopZoneChanged) {
+        m_onLoopZoneChanged(m_loopZone);
+    }
+    repaint();
 }
 
 void PianoRollView::setNotes(const std::vector<MidiNote>& notes) {
@@ -833,6 +878,12 @@ void PianoRollView::setTotalDurationBeats(double beats) {
     m_patternLengthBeats = m_totalDurationBeats;
     if (m_toolbar) {
         m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
+    }
+    // A shorter pattern cuts the loop zone to its new end (or ends it, if the zone lay wholly past
+    // it), exactly as drawing the zone clamps. The listener hears the change like any other (#970).
+    if (m_loopZone && m_loopZone->second > m_totalDurationBeats) {
+        const double end = m_totalDurationBeats;
+        applyLoopZone(std::make_pair(std::min(m_loopZone->first, end), end), true);
     }
     updateScrollbars();
     syncChildren();
