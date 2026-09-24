@@ -183,7 +183,11 @@ void PianoRollMinimap::updateHoverCursor(const NUIMouseEvent& event) {
         return; // keep the interaction cursor while dragging; next move re-resolves
     }
     if (!getBounds().contains(event.position)) {
-        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        // Hand the cursor back once, and only if this minimap set it. Resetting it on every move
+        // outside overrode the note layer's drag cursor (NUIHoverCursorClaim, SPEC 3 §3.4).
+        if (const auto style = m_cursorClaim.outside()) {
+            m_platformBridge->setCursorStyle(*style);
+        }
         return;
     }
 
@@ -200,13 +204,13 @@ void PianoRollMinimap::updateHoverCursor(const NUIMouseEvent& event) {
 
     // Rubberband affordance: resize cursor on the edge grips, grab on the bar,
     // default elsewhere (Track Manager minimap behavior).
+    NUICursorStyle style = NUICursorStyle::Arrow;
     if (leftGrip.contains(localPos) || rightGrip.contains(localPos)) {
-        m_platformBridge->setCursorStyle(NUICursorStyle::ResizeEW);
+        style = NUICursorStyle::ResizeEW;
     } else if (bar.contains(localPos)) {
-        m_platformBridge->setCursorStyle(NUICursorStyle::Grab);
-    } else {
-        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        style = NUICursorStyle::Grab;
     }
+    m_platformBridge->setCursorStyle(*m_cursorClaim.inside(style));
 }
 
 void PianoRollMinimap::onMouseEnter() {
@@ -217,7 +221,9 @@ void PianoRollMinimap::onMouseLeave() {
     // Preserve the interaction cursor while a drag is active; only a parked
     // pointer yields to the default.
     if (m_platformBridge && !isDragging_) {
-        m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        if (const auto style = m_cursorClaim.outside()) {
+            m_platformBridge->setCursorStyle(*style);
+        }
     }
     NUIComponent::onMouseLeave();
 }

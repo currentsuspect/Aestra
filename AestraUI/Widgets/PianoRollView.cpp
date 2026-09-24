@@ -383,6 +383,10 @@ NUIRect PianoRollView::getRulerBounds() const {
     return m_ruler ? m_ruler->getBounds() : NUIRect{};
 }
 
+NUIRect PianoRollView::getMinimapBounds() const {
+    return m_minimap ? m_minimap->getBounds() : NUIRect{};
+}
+
 NUIRect PianoRollView::getGridBounds() const {
     return m_grid ? m_grid->getBounds() : NUIRect();
 }
@@ -558,7 +562,12 @@ void PianoRollView::syncChildren() {
 }
 
 bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
-    if (!getBounds().contains(event.position) && !m_isResizingPanel) return false;
+    // A release always reaches the children, wherever the button comes up. A drag that began
+    // inside (the minimap bar, a note, the velocity lane) must end even when released outside
+    // the editor: dropping it left the minimap "still clicked", scrolling the view on every
+    // later move (SPEC 3 §2.4). Every child's release path checks its own drag state, so a
+    // release that is not theirs does nothing.
+    if (!getBounds().contains(event.position) && !m_isResizingPanel && !event.released) return false;
 
     // The shortcut sheet captures the pointer: any click or scroll dismisses it
     // instead of reaching the editors underneath.

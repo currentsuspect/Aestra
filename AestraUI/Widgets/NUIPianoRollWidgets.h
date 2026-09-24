@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
+#include "../Core/NUIHoverCursorClaim.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -100,6 +101,7 @@ private:
 
     // Interaction
     bool isDragging_ = false;
+    NUIHoverCursorClaim m_cursorClaim; // hands the cursor back once, only if this set it (SPEC 3 §3.4)
     bool isResizingL_ = false;
     bool isResizingR_ = false;
     NUIPoint dragStartPos_;
@@ -778,6 +780,8 @@ public:
     void setOnLoopZoneChanged(std::function<void(std::optional<std::pair<double, double>>)> cb) {
         m_onLoopZoneChanged = std::move(cb);
     }
+    /** @brief The overview minimap's window-absolute bounds (tests drive its viewport bar). */
+    NUIRect getMinimapBounds() const;
 
     PianoRollView();
 

@@ -2085,6 +2085,15 @@ target_include_directories(NUICursorRegistryTest PRIVATE
 add_test(NAME NUICursorRegistryTest COMMAND NUICursorRegistryTest)
 set_tests_properties(NUICursorRegistryTest PROPERTIES LABELS "ui;cursor;regression;contract:application")
 
+# SPEC 3 §3.4: a hovered widget hands the cursor back once, never on every outside move.
+add_executable(NUIHoverCursorClaimTest AestraUI/NUIHoverCursorClaimTest.cpp)
+target_include_directories(NUIHoverCursorClaimTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Platform
+)
+add_test(NAME NUIHoverCursorClaimTest COMMAND NUIHoverCursorClaimTest)
+set_tests_properties(NUIHoverCursorClaimTest PROPERTIES LABELS "ui;cursor;regression;contract:application")
+
 # Clip contrast contract: waveform ink must stay brighter than the clip body it
 # is drawn on, for every lane identity and both selection states.
 add_executable(TimelineClipContrastTest AestraUI/TimelineClipContrastTest.cpp)
