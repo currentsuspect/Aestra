@@ -996,27 +996,31 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
 
 NUIThemeProperties NUIThemePresets::createAestraLight() {
     NUIThemeProperties theme;
-    
-    // Colors
-    theme.background = NUIColor(0.98f, 0.98f, 0.98f, 1.0f);
-    theme.surface = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
-    theme.surfaceVariant = NUIColor(0.95f, 0.95f, 0.95f, 1.0f);
-    theme.backgroundPrimary = theme.background;
-    theme.backgroundSecondary = theme.surface;
-    theme.surfaceTertiary = theme.surfaceVariant;
-    theme.surfaceRaised = NUIColor(0.955f, 0.957f, 0.962f, 1.0f);
-    theme.primary = NUIColor(0.2f, 0.4f, 0.8f, 1.0f);
-    theme.primaryVariant = NUIColor(0.1f, 0.3f, 0.7f, 1.0f);
-    theme.primaryHover = NUIColor(0.26f, 0.46f, 0.86f, 1.0f);
-    theme.primaryPressed = theme.primaryVariant;
-    theme.secondary = NUIColor(0.4f, 0.4f, 0.5f, 1.0f);
-    theme.secondaryVariant = NUIColor(0.3f, 0.3f, 0.4f, 1.0f);
-    theme.error = NUIColor(0.8f, 0.2f, 0.2f, 1.0f);
-    theme.warning = NUIColor(0.9f, 0.6f, 0.1f, 1.0f);
-    theme.success = NUIColor(0.2f, 0.7f, 0.3f, 1.0f);
-    theme.info = NUIColor(0.1f, 0.6f, 0.8f, 1.0f);
-    theme.accentCyan = theme.info;
-    theme.accentMagenta = theme.error;
+
+    // The light theme is the same product as the dark one: the same brand violet (a step deeper,
+    // for contrast on white), the same tuned accent hues, and neutrals with the same slight
+    // violet bias. It used to be a stock Material palette: a blue primary, so buttons, notes and
+    // clips turned blue in light mode, and a hover surface LIGHTER than the controls it hovers.
+    theme.backgroundPrimary = NUIColor::fromHex(0xf4f4f7);   // app ground
+    theme.backgroundSecondary = NUIColor::fromHex(0xffffff); // panels
+    theme.surfaceTertiary = NUIColor::fromHex(0xececf1);     // controls
+    theme.surfaceRaised = NUIColor::fromHex(0xe2e2ea);       // raised / hovered: a step DARKER on light
+    theme.background = theme.backgroundPrimary;
+    theme.surface = theme.backgroundSecondary;
+    theme.surfaceVariant = theme.surfaceTertiary;
+
+    theme.primary = NUIColor::fromHex(0x6d28d9);        // brand violet, ~7:1 on white
+    theme.primaryHover = NUIColor::fromHex(0x7c3aed);   // the dark theme's primary
+    theme.primaryPressed = NUIColor::fromHex(0x5b21b6);
+    theme.primaryVariant = theme.primaryPressed;
+    theme.secondary = NUIColor::fromHex(0x7c3aed);
+    theme.secondaryVariant = theme.primary;
+    theme.success = NUIColor::fromHex(0x2f9a64);
+    theme.warning = NUIColor::fromHex(0xc98a1e);
+    theme.error = NUIColor::fromHex(0xd64545);
+    theme.info = theme.secondary; // violet, as in the dark theme
+    theme.accentCyan = NUIColor::fromHex(0x2b9a8c);
+    theme.accentMagenta = NUIColor::fromHex(0xa94fb3);
     theme.accentLime = theme.success;
     theme.accentPrimary = theme.primary;
     theme.accentSecondary = theme.secondary;
@@ -1042,8 +1046,8 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     // Interactive states
     theme.hover = NUIColor(0.0f, 0.0f, 0.0f, 0.04f);
     theme.pressed = NUIColor(0.0f, 0.0f, 0.0f, 0.08f);
-    theme.focused = theme.primary.withAlpha(0.12f);
-    theme.selected = theme.primary.withAlpha(0.08f);
+    theme.focused = theme.primary.withAlpha(0.14f);
+    theme.selected = theme.primary.withAlpha(0.12f);
     theme.disabled = NUIColor(0.6f, 0.6f, 0.6f, 0.38f);
     theme.focusRing = theme.primary.withAlpha(0.82f);
     theme.armed = theme.error;
@@ -1054,11 +1058,11 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.highlightGlow = theme.primary.withAlpha(0.14f);
     
     // Borders
-    theme.border = NUIColor(0.78f, 0.78f, 0.80f, 1.0f);
-    theme.borderSubtle = theme.border.withAlpha(0.72f);
-    theme.borderStrong = NUIColor(0.62f, 0.62f, 0.65f, 1.0f);
+    theme.border = NUIColor::fromHex(0xd6d6de);
+    theme.borderSubtle = NUIColor::fromHex(0xe3e3e9);
+    theme.borderStrong = NUIColor::fromHex(0xb4b4c0);
     theme.borderActive = theme.primary;
-    theme.divider = NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
+    theme.divider = NUIColor::fromHex(0xe4e4ea);
     theme.outline = NUIColor(0.7f, 0.7f, 0.7f, 1.0f);
     theme.outlineVariant = NUIColor(0.85f, 0.85f, 0.85f, 1.0f);
     
@@ -1070,7 +1074,7 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.2f);
 
     // Meter colors follow the same semantics as dark mode.
-    theme.meterSafe = theme.info;
+    theme.meterSafe = theme.accentCyan; // meters read teal in both themes
     theme.meterWarn = theme.warning;
     theme.meterCrit = theme.error;
     theme.meterBackground = NUIColor(0.88f, 0.88f, 0.89f, 1.0f);
