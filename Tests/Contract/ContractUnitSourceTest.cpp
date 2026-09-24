@@ -128,7 +128,8 @@ void wireLikeApp(TrackManager& tm) {
     tm.getUnitManager().setPatternManager(&tm.getPatternManager());
 }
 
-bool near(float a, float b, float relTol) {
+// Not named `near`: <windows.h> defines near as an empty macro.
+bool withinRelative(float a, float b, float relTol) {
     return std::abs(a - b) <= relTol * std::max(std::abs(a), std::abs(b));
 }
 
@@ -260,9 +261,9 @@ int samplerDestructivePersist(bool reverse) {
     contractSetup(reloadedSampler != nullptr, "reloaded unit has no SamplerPlugin");
     const float afterReload = metric(renderNote(*reloadedSampler, frames));
 
-    v.check(near(afterReload, edited, 0.10f), std::string(reverse ? "reversed" : "normalized") +
-                                                  " sound survives save -> reload (untouched=" + str(untouched) +
-                                                  " edited=" + str(edited) + " reloaded=" + str(afterReload) + ")");
+    v.check(withinRelative(afterReload, edited, 0.10f),
+            std::string(reverse ? "reversed" : "normalized") + " sound survives save -> reload (untouched=" +
+                str(untouched) + " edited=" + str(edited) + " reloaded=" + str(afterReload) + ")");
     v.check(fileBytes(wav) == originalBytes, "the original file on disk is unchanged");
     return v.finish();
 }
