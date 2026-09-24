@@ -225,6 +225,7 @@ private:
     // One overlay glyph per cursor style that has artwork in NUICursorRegistry, indexed by the
     // style. A style without a glyph draws the arrow.
     std::array<std::shared_ptr<AestraUI::NUIIcon>, AestraUI::kNUICursorStyleCount> m_cursorIcons{};
+    bool m_cursorsBuiltForDark = true; // polarity the cursor glyphs were built for
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
     bool m_cachedNativeCursorHidden{false};
 

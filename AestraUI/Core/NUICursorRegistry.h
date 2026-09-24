@@ -27,6 +27,8 @@
 
 #include "../Platform/NUICursorStyle.h"
 
+#include <string>
+
 namespace AestraUI {
 
 /** @brief Canonical SVG for an interaction cursor style, or nullptr for styles
@@ -109,6 +111,36 @@ inline const char* nuiCursorSvg(NUICursorStyle style) {
     default:
         return nullptr;
     }
+}
+
+/**
+ * @brief The glyph for the surface it is drawn over: on dark surfaces fill and outline swap.
+ *
+ * Every glyph is a white fill with a thin near-black outline. On light surfaces the outline
+ * carries the silhouette and the cursor reads crisply. On dark surfaces that outline vanishes into
+ * the background, leaving only the white fill: a shape one outline narrower each side, which reads
+ * small and is harder to aim (owner, 2026-09-24). Swapping the two keeps the outline, the part that
+ * contrasts with the surface, as the silhouette in both themes. The drop shadow is unchanged.
+ */
+inline std::string nuiCursorSvgForSurface(NUICursorStyle style, bool darkSurface) {
+    const char* svg = nuiCursorSvg(style);
+    if (svg == nullptr) {
+        return {};
+    }
+    std::string out(svg);
+    if (!darkSurface) {
+        return out;
+    }
+    // Exact quoted tokens only, via a placeholder, so no other colour can be touched.
+    const auto replaceAll = [&out](const std::string& from, const std::string& to) {
+        for (size_t pos = out.find(from); pos != std::string::npos; pos = out.find(from, pos + to.size())) {
+            out.replace(pos, from.size(), to);
+        }
+    };
+    replaceAll("\"#fff\"", "\"@INK@\"");
+    replaceAll("\"#141416\"", "\"#fff\"");
+    replaceAll("\"@INK@\"", "\"#141416\"");
+    return out;
 }
 
 /** @brief Where the click lands inside a glyph, in its 24x24 viewBox. The overlay renderer
