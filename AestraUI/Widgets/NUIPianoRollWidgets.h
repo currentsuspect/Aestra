@@ -728,6 +728,8 @@ public:
      * retune rather than on the behaviour it is guarding.
      */
     NUIRect getGridBounds() const;
+    /** @brief The overview minimap's window-absolute bounds (tests drive its viewport bar). */
+    NUIRect getMinimapBounds() const;
 
     PianoRollView();
 

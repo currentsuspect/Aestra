@@ -500,6 +500,52 @@ static void test_grid_tiers_follow_snap() {
 // Scrollable-domain parity with the Track Manager timeline
 // ---------------------------------------------------------------------------
 
+// SPEC 3 §2.4 (owner: "the minimap scrollbar on piano roll ... when I come back, it
+// 'remembers' that it was still clicked"). PianoRollView dropped every event outside its
+// bounds, releases included, so a minimap drag released above the editor never ended: back
+// over the editor, plain mouse moves kept scrolling the view. A release now always reaches
+// the children, wherever the button comes up.
+static void test_minimap_drag_released_outside_the_editor_ends() {
+    PianoRollView view;
+    view.setBounds({200.0f, 120.0f, 900.0f, 600.0f}); // away from the window origin
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setNotes({});
+    view.setViewWindow(0.0, 16.0); // the bar covers the first quarter of the 64-beat domain
+
+    const NUIRect mm = view.getMinimapBounds();
+    ASSERT(mm.width > 100.0f && mm.height > 4.0f, "the minimap is laid out");
+    const float barY = mm.y + mm.height * 0.5f;
+
+    auto mouse = [](NUIMouseEventType type, NUIMouseButton button, float x, float y) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.button = button;
+        e.position = {x, y};
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        return e;
+    };
+
+    // Grab the bar (clear of its edge grips) and drag it right, inside the editor.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, mm.x + 60.0f, barY));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 160.0f, barY));
+    const double afterDrag = view.getViewStartBeat();
+    ASSERT(afterDrag > 0.5, "dragging the minimap bar scrolls the view (so the next checks are not vacuous)");
+
+    // Let go ABOVE the editor (over the transport bar, in the app).
+    const NUIRect vb = view.getBounds();
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, mm.x + 160.0f, vb.y - 40.0f));
+
+    // Come back over the editor with no button held: nothing may scroll.
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 300.0f, barY));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 450.0f, vb.y + 300.0f));
+    ASSERT(std::abs(view.getViewStartBeat() - afterDrag) < 1e-9,
+           "a minimap drag released outside the editor has ended: later moves do not scroll");
+    PASS("a minimap drag released outside the editor ends there");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -645,6 +691,7 @@ int main() {
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
     test_scroll_domain_floor_and_growth();
+    test_minimap_drag_released_outside_the_editor_ends();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
