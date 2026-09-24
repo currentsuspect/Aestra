@@ -22,14 +22,17 @@ inline float timelineGridLevelFade(float spacingPixels) {
 }
 
 /**
- * Zoom fade for lines the snap lands on. They fade in at 6-12 px spacing, where decorative tiers
- * need 14-28 px: at the default timeline zoom a beat is ~10 px, and the decorative fade hid the
- * beat lines even under a Beat snap, so the grid showed bars only whatever the snap said.
+ * Zoom fade for lines the snap lands on. They show from 5 px spacing (fading out below that, gone
+ * under 4 px, where 1 px lines stop reading as separate lines), where decorative tiers need
+ * 14-28 px. At the default timeline zoom a beat is ~10 px: the decorative fade hid the beat lines
+ * even under a Beat snap, so the grid showed bars only whatever the snap said. The half-beat tier
+ * of a 1/2 or 1/4 snap is 5 px there, so it shows too and a fine snap reads differently from Beat;
+ * the 2.5 px quarter tier stays hidden until zoomed in (review, #973).
  */
 inline float timelineSnapTierFade(float spacingPixels) {
-    constexpr float kSnapHidePixels = 6.0f;
-    constexpr float kSnapFullPixels = 12.0f;
-    return std::clamp((spacingPixels - kSnapHidePixels) / (kSnapFullPixels - kSnapHidePixels), 0.0f, 1.0f);
+    constexpr float SNAP_HIDE_PIXELS = 4.0f;
+    constexpr float SNAP_FULL_PIXELS = 5.0f;
+    return std::clamp((spacingPixels - SNAP_HIDE_PIXELS) / (SNAP_FULL_PIXELS - SNAP_HIDE_PIXELS), 0.0f, 1.0f);
 }
 
 /** True when a snap finer than a bar is active, so beat-level tiers are snap positions. */

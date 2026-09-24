@@ -455,21 +455,32 @@ static void test_grid_subdivision_matches_snap() {
 // that exists because of the snap now gets a visible floor. Uses the timeline plane's own style.
 static void test_snap_tiers_are_visible_not_just_present() {
     const TimelineGridStyle plane{0.179f, 0.057f, 0.019f, 0.0f};
-    constexpr float kWide = 40.0f; // spacing past the zoom fade: the tier is fully faded in
+    constexpr float WIDE_SPACING_PX = 40.0f; // spacing past the zoom fade: the tier is fully faded in
 
-    const float quarter = timelineSnapTierAlpha(plane, 0.25, kWide);
+    const float quarter = timelineSnapTierAlpha(plane, 0.25, WIDE_SPACING_PX);
     ASSERT(quarter >= plane.beatLineAlpha * 0.75f - 1e-6f,
            "a 1/4 snap's lines are drawn at a visible level (at least 3/4 of the beat tier)");
     ASSERT(quarter < plane.beatLineAlpha, "and still below the beat tier, keeping the hierarchy");
     ASSERT(quarter > plane.subdivisionLineAlpha * 1.5f,
            "clearly brighter than the decorative whisper it used to use (so this is not vacuous)");
-    ASSERT(timelineSnapTierAlpha(plane, 0.5, kWide) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+    ASSERT(timelineSnapTierAlpha(plane, 0.5, WIDE_SPACING_PX) >= plane.beatLineAlpha * 0.75f - 1e-6f,
            "the half-beat tier under a 1/2 snap is visible too");
-    ASSERT(std::abs(timelineSnapTierAlpha(plane, 0.0, kWide) - plane.subdivisionLineAlpha) < 1e-6f,
+    ASSERT(std::abs(timelineSnapTierAlpha(plane, 0.0, WIDE_SPACING_PX) - plane.subdivisionLineAlpha) < 1e-6f,
            "with no snap the subdivisions stay decorative");
-    ASSERT(timelineSnapTierAlpha(plane, 0.25, 4.0f) == 0.0f, "lines closer than 6 px are still dropped");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, 4.0f) == 0.0f, "lines closer than 4 px are still dropped");
     ASSERT(timelineSnapTierFade(10.0f) > 0.5f && timelineGridLevelFade(10.0f) == 0.0f,
            "at ~10 px (a beat at default zoom) snap lines show where decorative tiers stay hidden");
+
+    // At the default timeline zoom (~10 px per beat) a 1/4 snap must not look like a Beat snap
+    // (review, #973): its half-beat tier (5 px) is drawn at the snap floor, the quarter tier
+    // (2.5 px) is too dense and stays hidden, and a Beat snap draws no half-beat tier at all.
+    constexpr float DEFAULT_PX_PER_BEAT = 10.0f;
+    ASSERT(timelineGridTierAlignedToSnap(0.5, 0.25) &&
+               timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.5f) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "default zoom, 1/4 snap: the half-beat lines are drawn at the snap floor");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.25f) == 0.0f,
+           "default zoom, 1/4 snap: the 2.5 px quarter lines stay hidden");
+    ASSERT(!timelineGridTierAlignedToSnap(0.5, 1.0), "default zoom, Beat snap: no half-beat tier, so the two differ");
     PASS("snap tiers are visible, not just present");
 }
 
