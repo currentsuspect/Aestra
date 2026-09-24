@@ -1026,10 +1026,13 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.accentSecondary = theme.secondary;
     
     // Text colors
-    theme.textPrimary = NUIColor(0.08f, 0.08f, 0.09f, 1.0f);
-    theme.textSecondary = NUIColor(0.26f, 0.26f, 0.28f, 1.0f);
-    theme.textMuted = NUIColor(0.38f, 0.38f, 0.40f, 1.0f);
-    theme.textDisabled = NUIColor(0.55f, 0.55f, 0.57f, 1.0f);
+    // Soft charcoals, not near-black: 0.08 grey read as stamped-on ("too harsh, out of place")
+    // against the soft violet-grey surfaces. Same slight violet bias as the neutrals; every tier
+    // stays above its contrast floor on white (primary ~14:1, muted >= 4.5:1).
+    theme.textPrimary = NUIColor::fromHex(0x282833);
+    theme.textSecondary = NUIColor::fromHex(0x4a4a57);
+    theme.textMuted = NUIColor::fromHex(0x686875);
+    theme.textDisabled = NUIColor::fromHex(0x9a9aa6);
     theme.textLink = theme.primary;
     theme.textCritical = theme.error;
     theme.textOnPrimary = NUIColor::white();
