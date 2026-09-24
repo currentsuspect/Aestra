@@ -52,8 +52,8 @@ add_executable(ContractClipModelTest ${_contract_dir}/ContractClipModelTest.cpp)
 target_link_libraries(ContractClipModelTest PRIVATE AestraAudio)
 target_include_directories(ContractClipModelTest PRIVATE ${_contract_audio_includes})
 
-# guards: F8 — isPatternUsed misses the split half's pattern (stale sourceId). Fix: Pass 2.
-aestra_contract_test(ContractSplitReferentTest ContractClipModelTest split-referent GUARDS F8 KNOWN_VIOLATION)
+# guards: F8 — isPatternUsed reads the clip's patternId. Closed in Pass 2.
+aestra_contract_test(ContractSplitReferentTest ContractClipModelTest split-referent GUARDS F8)
 # guards: F6,F7 — split undo recomputes durationSeconds and leaks the cloned pattern. Fix: Pass 3.
 aestra_contract_test(ContractSplitUndoExactTest ContractClipModelTest split-undo-exact GUARDS F6 F7 KNOWN_VIOLATION)
 # guards: F24 — the scheduler treats sourceOffset as a filter, not an origin shift. Fix: Pass 3.
@@ -81,8 +81,8 @@ aestra_contract_test(ContractSamplerSharedSourceTest ContractUnitSourceTest samp
 aestra_contract_test(ContractSamplerReversePersistTest ContractUnitSourceTest sampler-reverse-persist GUARDS F13 KNOWN_VIOLATION)
 # guards: F13 — sampler normalize is in-memory only; lost on reload. Fix: Pass 4.
 aestra_contract_test(ContractSamplerNormalizePersistTest ContractUnitSourceTest sampler-normalize-persist GUARDS F13 KNOWN_VIOLATION)
-# guards: F20 — source ids are clamped to 32 bits on load. Fix: Pass 2.
-aestra_contract_test(ContractSourceIdWidthTest ContractUnitSourceTest source-id-width GUARDS F20 KNOWN_VIOLATION)
+# guards: F20 — source ids load as 64-bit (JSON-exact to 2^53-1). Closed in Pass 2.
+aestra_contract_test(ContractSourceIdWidthTest ContractUnitSourceTest source-id-width GUARDS F20)
 # guards: F25 — audio clip beat-domain sourceOffset is re-derived on load in another domain. Fix: Pass 3 (owner to confirm).
 aestra_contract_test(ContractRoundTripStableTest ContractUnitSourceTest roundtrip-stable GUARDS F25 KNOWN_VIOLATION)
 # guards: F26 — type defaults override saved mono/glide on load. Fix: Pass 4.
@@ -94,8 +94,8 @@ add_executable(ContractStructuralCheck ${_contract_dir}/ContractStructuralCheck.
 target_compile_definitions(ContractStructuralCheck PRIVATE AESTRA_SOURCE_ROOT="${CMAKE_SOURCE_DIR}")
 target_include_directories(ContractStructuralCheck PRIVATE ${CMAKE_SOURCE_DIR}/Tests)
 
-# guards: F9 — ClipInstance::sourceId is read at runtime. Fix: Pass 2.
-aestra_contract_test(ContractNoClipSourceIdReadsTest ContractStructuralCheck sourceid-reads GUARDS F9 KNOWN_VIOLATION)
+# guards: F9 — no runtime read of ClipInstance::sourceId. Closed in Pass 2.
+aestra_contract_test(ContractNoClipSourceIdReadsTest ContractStructuralCheck sourceid-reads GUARDS F9)
 # guards: F16 — Arsenal context changes rewind the scheduler. Fix: Pass 3.
 aestra_contract_test(ContractSelectionNoPlaybackRewindTest ContractStructuralCheck selection-playback GUARDS F16 KNOWN_VIOLATION)
 # guards: F17 — ad-hoc unit resolution and find-pattern-by-name. Fix: Pass 3.
@@ -137,12 +137,12 @@ if(AESTRA_ENABLE_UI)
         aestra_contract_test(${test_name} ${test_name} ${mode} ${ARGN})
     endfunction()
 
-    # guards: F3 — one gesture produces several history entries. Fix: Pass 2.
-    aestra_contract_piano_roll_test(ContractPianoRollOneEntryPerGestureTest gesture GUARDS F3 KNOWN_VIOLATION)
-    # guards: F2 — Piano Roll local undo writes into another pattern. Fix: Pass 2.
-    aestra_contract_piano_roll_test(ContractPianoRollUndoStaysInPatternTest cross-pattern GUARDS F2 KNOWN_VIOLATION)
-    # guards: F1 — Piano Roll swallows Ctrl+Z. Fix: Pass 2.
-    aestra_contract_piano_roll_test(ContractPianoRollReachesGlobalUndoTest global-undo GUARDS F1 KNOWN_VIOLATION)
+    # guards: F3 — one gesture is one history entry. Closed in Pass 2.
+    aestra_contract_piano_roll_test(ContractPianoRollOneEntryPerGestureTest gesture GUARDS F3)
+    # guards: F2 — undo targets the edited pattern, never the loaded one. Closed in Pass 2.
+    aestra_contract_piano_roll_test(ContractPianoRollUndoStaysInPatternTest cross-pattern GUARDS F2)
+    # guards: F1 — Ctrl+Z at the Piano Roll reaches the global history. Closed in Pass 2.
+    aestra_contract_piano_roll_test(ContractPianoRollReachesGlobalUndoTest global-undo GUARDS F1)
     # guards: F5 — paste keeps the copied unitId. Fix: Pass 3.
     aestra_contract_piano_roll_test(ContractPianoRollPasteTargetsEditingUnitTest paste-target GUARDS F5 KNOWN_VIOLATION)
 endif()

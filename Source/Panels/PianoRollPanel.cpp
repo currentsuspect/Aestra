@@ -12,6 +12,8 @@
 #include "Commands/UpdateNoteCommand.h"
 #include "Commands/NoteDiff.h"
 #include "Commands/CommandHistory.h"
+#include "Commands/CommandTransaction.h"
+#include "Commands/SetPatternLengthCommand.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "Music/ScaleContext.h"
 #include <cmath>
@@ -310,6 +312,9 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
                 m_playbackContext->setArsenalLoopZone(m_currentPatternId, std::nullopt, oldLength);
             }
         }
+        if (m_currentPatternId != patternId) {
+            m_lastEditTransaction.reset(); // a continuing edit never spans patterns
+        }
         m_currentPatternId = patternId;
 
         // Load scale context if present
@@ -424,6 +429,27 @@ void PianoRollPanel::savePattern() {
     // grouping for move/resize inference.
     NoteDiffResult diff = diffNotes(m_notesBeforeEdit, currentNotes);
 
+    // Only a real note edit may drive the pattern length. savePattern() also runs
+    // when nothing was edited — setEditingUnit() commits pending edits before every
+    // unit switch — and recomputing the length there rewrote the user's pattern:
+    // adding or selecting a unit collapsed an empty 2-bar pattern to 1 bar, and an
+    // explicitly-sized 4-bar pattern to 1 bar, silently halving the audible loop
+    // while the Arsenal grid still displayed the old bar count.
+    double newLengthBeats = m_patternDurationBeats;
+    if (!diff.empty()) {
+        double longestBeat = 0.0;
+        for (const auto& note : currentNotes) {
+            longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
+        }
+        // Keep patterns musical in whole bars and let note content drive the
+        // default loop size on add/delete.
+        newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+    } else if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
+        // Nothing changed: adopt the stored length instead of rewriting it, so an
+        // explicit length set via the bars control survives a unit switch.
+        newLengthBeats = std::max(static_cast<double>(beatsPerBar()), storedPattern->lengthBeats);
+    }
+
     if (!diff.empty()) {
         // Guard against CommandHistory OnStateChanged reloading the UI mid-save
         m_applyingUndoRedo = true;
@@ -437,33 +463,55 @@ void PianoRollPanel::savePattern() {
             }
         });
 
-        // Execute commands in a safe order:
+        // Commands run in a safe order:
         // 1. Remove first — removes notes that no longer exist
         // 2. Move/Resize — operates on notes that still exist in the pattern
         // 3. Add last — adds new notes
         // This ordering ensures commands never interfere with each other.
+        std::vector<std::shared_ptr<ICommand>> commands;
         for (const auto& note : diff.removed) {
-            auto cmd = std::make_shared<RemoveNoteCommand>(pm, m_currentPatternId, note);
-            history.pushAndExecute(cmd);
+            commands.push_back(std::make_shared<RemoveNoteCommand>(pm, m_currentPatternId, note));
         }
         for (const auto& [oldNote, newNote] : diff.moved) {
-            auto cmd = std::make_shared<MoveNoteCommand>(
-                pm, m_currentPatternId, oldNote, newNote.startBeat, newNote.pitch);
-            history.pushAndExecute(cmd);
+            commands.push_back(
+                std::make_shared<MoveNoteCommand>(pm, m_currentPatternId, oldNote, newNote.startBeat, newNote.pitch));
         }
         for (const auto& [oldNote, newNote] : diff.resized) {
-            auto cmd = std::make_shared<ResizeNoteCommand>(
-                pm, m_currentPatternId, oldNote, newNote.durationBeats);
-            history.pushAndExecute(cmd);
+            commands.push_back(
+                std::make_shared<ResizeNoteCommand>(pm, m_currentPatternId, oldNote, newNote.durationBeats));
         }
         for (const auto& [oldNote, newNote] : diff.modified) {
-            auto cmd = std::make_shared<UpdateNoteCommand>(
-                pm, m_currentPatternId, oldNote, newNote.velocity, newNote.pan);
-            history.pushAndExecute(cmd);
+            commands.push_back(std::make_shared<UpdateNoteCommand>(pm, m_currentPatternId, oldNote, newNote.velocity,
+                                                                   newNote.pan));
         }
         for (const auto& note : diff.added) {
-            auto cmd = std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note);
-            history.pushAndExecute(cmd);
+            commands.push_back(std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note));
+        }
+        // The length follows the notes, so it belongs to the same undo step.
+        if (const auto* storedPattern = pm.getPattern(m_currentPatternId);
+            storedPattern && std::abs(storedPattern->lengthBeats - newLengthBeats) > 0.001) {
+            commands.push_back(std::make_shared<SetPatternLengthCommand>(pm, m_currentPatternId, newLengthBeats));
+        }
+
+        // One user gesture is one CommandHistory entry (ownership contract §3.5).
+        // A continuing edit (an Alt+wheel velocity scrub) folds into the entry
+        // it started, as long as nothing else has been recorded since.
+        const auto& undoStack = history.getUndoStack();
+        const bool continuing = m_pianoRoll->isContinuingEdit() && m_lastEditTransaction && !undoStack.empty() &&
+                                undoStack.back() == m_lastEditTransaction;
+        if (continuing) {
+            for (const auto& cmd : commands) {
+                cmd->execute();
+                m_lastEditTransaction->add(cmd);
+            }
+        } else {
+            auto transaction = std::make_shared<CommandTransaction>("Edit Notes");
+            for (const auto& cmd : commands) {
+                transaction->add(cmd);
+            }
+            transaction->execute();
+            history.pushExecuted(transaction);
+            m_lastEditTransaction = transaction;
         }
 
         Log::info("[PianoRollPanel] Saved pattern " + std::to_string(m_currentPatternId.value) +
@@ -486,32 +534,6 @@ void PianoRollPanel::savePattern() {
     // fed the setEditingUnit recursion.
     if (!diff.empty() && m_onPatternEdited) {
         m_onPatternEdited(m_currentPatternId);
-    }
-
-    // Only a real note edit may drive the pattern length. savePattern() also runs
-    // when nothing was edited — setEditingUnit() commits pending edits before every
-    // unit switch — and recomputing the length there rewrote the user's pattern:
-    // adding or selecting a unit collapsed an empty 2-bar pattern to 1 bar, and an
-    // explicitly-sized 4-bar pattern to 1 bar, silently halving the audible loop
-    // while the Arsenal grid still displayed the old bar count.
-    double newLengthBeats = m_patternDurationBeats;
-    if (!diff.empty()) {
-        double longestBeat = 0.0;
-        for (const auto& note : currentNotes) {
-            longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
-        }
-        // Keep patterns musical in whole bars and let note content drive the
-        // default loop size on add/delete.
-        newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
-
-        // Persist the updated length back to the PatternManager so playback uses it
-        pm.applyPatch(m_currentPatternId, [newLengthBeats](PatternSource& pattern) {
-            pattern.lengthBeats = newLengthBeats;
-        });
-    } else if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
-        // Nothing changed: adopt the stored length instead of rewriting it, so an
-        // explicit length set via the bars control survives a unit switch.
-        newLengthBeats = std::max(static_cast<double>(beatsPerBar()), storedPattern->lengthBeats);
     }
 
     m_patternDurationBeats = newLengthBeats;
@@ -781,7 +803,7 @@ void PianoRollPanel::updateGhostChannels() {
             uiNote.pitch = vn.pitch;
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;
-            uiNote.velocity = vn.velocity / 127.0f;
+            uiNote.velocity = vn.velocity; // already 0..1 (was divided by 127 twice, F19)
             uiNote.selected = false;
             uiNote.isDeleted = false;
             gp.notes.push_back(uiNote);

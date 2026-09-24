@@ -303,7 +303,10 @@ int sourceIdWidth() {
     const ClipSourceID restoredId = std::get<AudioSlicePayload>(restored->payload).audioSourceId;
     const ClipSource* src = reloaded->getSourceManager().getSource(restoredId);
     v.check(restoredId == wide, "region keeps source id " + str(wide.value) + " (got " + str(restoredId.value) + ")");
-    v.check(src != nullptr && src->getFilePath() == wav.string(), "region's source id resolves to the same file");
+    // Compare as paths: the project stores generic separators ('/'), so on
+    // Windows the reloaded string differs from wav.string() but names the same file.
+    v.check(src != nullptr && std::filesystem::path(src->getFilePath()) == wav,
+            "region's source id resolves to the same file");
     return v.finish();
 }
 

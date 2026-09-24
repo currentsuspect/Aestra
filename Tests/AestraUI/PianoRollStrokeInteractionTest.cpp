@@ -77,7 +77,11 @@ void testChordBrushPaintsCompleteTriadsAsOneEdit() {
     layer.setChordMode(true);
 
     int commits = 0;
-    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> committed;
+    layer.setOnNotesChanged([&commits, &committed](const std::vector<MidiNote>& n) {
+        ++commits;
+        committed = n;
+    });
     const float y = pitchRowCenter(60);
     check(layer.onMouseEvent(mouseDown(10.0f, y, NUIMouseButton::Left, NUIModifiers::Shift)),
           "chord brush press should be handled");
@@ -93,13 +97,14 @@ void testChordBrushPaintsCompleteTriadsAsOneEdit() {
         check(hasNote(notes, 64, beat), "each brushed chord should contain its third");
         check(hasNote(notes, 67, beat), "each brushed chord should contain its fifth");
     }
+    // The layer keeps no undo history: the owner records each commit as one
+    // CommandHistory entry, so one commit carrying the whole gesture is what
+    // makes it one undo step (panel-level proof: ContractPianoRollPanelTest).
     check(commits == 1, "a chord brush gesture should commit once on release");
-
-    layer.undo();
-    check(layer.getNotes().empty(), "one undo should remove the complete chord brush gesture");
+    check(committed.size() == 6, "the single commit should carry the complete chord brush gesture");
 }
 
-void testRightDragEraseIsOneUndoableStroke() {
+void testRightDragEraseCommitsOnce() {
     PianoRollNoteLayer layer;
     layer.setBounds({0.0f, 0.0f, 800.0f, 3072.0f});
     layer.setSnap(SnapGrid::Beat);
@@ -114,21 +119,22 @@ void testRightDragEraseIsOneUndoableStroke() {
     layer.setNotes(notes);
 
     int commits = 0;
-    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> committed = notes;
+    layer.setOnNotesChanged([&commits, &committed](const std::vector<MidiNote>& n) {
+        ++commits;
+        committed = n;
+    });
     const float y = pitchRowCenter(60);
-    check(layer.onMouseEvent(mouseDown(10.0f, y, NUIMouseButton::Right)),
-          "erase stroke press should be handled");
+    check(layer.onMouseEvent(mouseDown(10.0f, y, NUIMouseButton::Right)), "erase stroke press should be handled");
     check(layer.onMouseEvent(mouseDrag(90.0f, y, NUIMouseButton::Right)),
           "erase stroke should consume the second note");
     check(layer.onMouseEvent(mouseDrag(170.0f, y, NUIMouseButton::Right)),
           "erase stroke should consume the third note");
-    check(layer.onMouseEvent(mouseUp(170.0f, y, NUIMouseButton::Right)),
-          "erase stroke release should be handled");
+    check(layer.onMouseEvent(mouseUp(170.0f, y, NUIMouseButton::Right)), "erase stroke release should be handled");
 
     check(layer.getNotes().empty(), "right-drag should erase every crossed note");
     check(commits == 1, "an erase stroke should commit once on release");
-    layer.undo();
-    check(layer.getNotes().size() == 3, "one undo should restore the complete erase stroke");
+    check(committed.empty(), "the single commit should carry the complete erase stroke");
 }
 
 void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
@@ -148,7 +154,11 @@ void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
     layer.setNotes({root, upper});
 
     int commits = 0;
-    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> committed;
+    layer.setOnNotesChanged([&commits, &committed](const std::vector<MidiNote>& n) {
+        ++commits;
+        committed = n;
+    });
 
     // The two selected notes span beats 0..4. Their shared handle sits at beat
     // 4, vertically centred on the selection frame; drag it to beat 8.
@@ -173,12 +183,9 @@ void testSelectionHandleStretchesPhraseTimingAsOneEdit() {
     check(std::abs(stretched[1].startBeat - 4.0) < 0.001 && std::abs(stretched[1].durationBeats - 4.0) < 0.001,
           "selection stretch should scale later starts and lengths proportionally");
     check(commits == 1, "selection stretch should commit once on release");
-
-    layer.undo();
-    const auto& restored = layer.getNotes();
-    check(std::abs(restored[0].durationBeats - 1.0) < 0.001 && std::abs(restored[1].startBeat - 2.0) < 0.001 &&
-              std::abs(restored[1].durationBeats - 2.0) < 0.001,
-          "one undo should restore the complete phrase timing");
+    check(committed.size() == 2 && std::abs(committed[0].durationBeats - 2.0) < 0.001 &&
+              std::abs(committed[1].startBeat - 4.0) < 0.001 && std::abs(committed[1].durationBeats - 4.0) < 0.001,
+          "the single commit should carry the complete phrase timing");
 }
 
 void testSubdivideSelectionUsesSnapAndPreservesNoteData() {
@@ -202,7 +209,11 @@ void testSubdivideSelectionUsesSnapAndPreservesNoteData() {
     layer.setNotes({selected, untouched});
 
     int commits = 0;
-    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> committed;
+    layer.setOnNotesChanged([&commits, &committed](const std::vector<MidiNote>& n) {
+        ++commits;
+        committed = n;
+    });
     check(layer.onKeyEvent(keyPress(NUIKeyCode::G, NUIModifiers::Ctrl | NUIModifiers::Shift)),
           "Ctrl+Shift+G should route to subdivision");
 
@@ -214,29 +225,20 @@ void testSubdivideSelectionUsesSnapAndPreservesNoteData() {
         });
         check(fragment != notes.end(), "subdivision should preserve each sequential segment start");
         if (fragment != notes.end()) {
-            check(std::abs(fragment->durationBeats - 0.25) < 0.001,
-                  "subdivision should use the current snap duration");
+            check(std::abs(fragment->durationBeats - 0.25) < 0.001, "subdivision should use the current snap duration");
             check(fragment->selected && std::abs(fragment->velocity - 0.61f) < 0.001f &&
                       std::abs(fragment->pan + 0.3f) < 0.001f && fragment->unitId == 42,
                   "subdivision should preserve selected-note expression and routing");
         }
     }
-    check(std::any_of(notes.begin(), notes.end(), [](const MidiNote& note) {
-              return note.pitch == 64 && !note.selected && std::abs(note.startBeat - 2.0) < 0.001 &&
-                     std::abs(note.durationBeats - 1.0) < 0.001;
-          }),
+    check(std::any_of(notes.begin(), notes.end(),
+                      [](const MidiNote& note) {
+                          return note.pitch == 64 && !note.selected && std::abs(note.startBeat - 2.0) < 0.001 &&
+                                 std::abs(note.durationBeats - 1.0) < 0.001;
+                      }),
           "subdivision should leave unselected notes unchanged");
     check(commits == 1, "subdivision should commit once");
-
-    layer.undo();
-    const auto& restored = layer.getNotes();
-    check(restored.size() == 2, "one undo should restore the original selected note");
-    const auto original = std::find_if(restored.begin(), restored.end(), [](const MidiNote& note) {
-        return note.pitch == 60;
-    });
-    check(original != restored.end() && std::abs(original->startBeat - 0.125) < 0.001 &&
-              std::abs(original->durationBeats - 0.75) < 0.001,
-          "undo should restore the original note timing");
+    check(committed.size() == 4, "the single commit should carry the complete subdivision");
 }
 
 void testSubdividePreservesPartialTailAndHonorsNoSnap() {
@@ -260,7 +262,7 @@ void testSubdividePreservesPartialTailAndHonorsNoSnap() {
     check(std::abs(subdivided.back().startBeat + subdivided.back().durationBeats - 1.6) < 0.001,
           "subdivision should preserve the selected note's original end");
 
-    layer.undo();
+    layer.setNotes({note});
     layer.setSnap(SnapGrid::None);
     int commits = 0;
     layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
@@ -270,14 +272,62 @@ void testSubdividePreservesPartialTailAndHonorsNoSnap() {
     check(commits == 0, "a no-snap subdivision should not create an edit");
 }
 
+NUIMouseEvent altWheel(float x, float y, float delta) {
+    NUIMouseEvent event;
+    event.type = NUIMouseEventType::Scroll;
+    event.position = {x, y};
+    event.wheelDelta = delta;
+    event.modifiers = NUIModifiers::Alt;
+    return event;
+}
+
+// An Alt+wheel velocity scrub is one edit: every notch commits (so the model
+// stays live), and every notch after the first is flagged as a continuation the
+// owner folds into the entry the first notch recorded. Any other commit ends it.
+void testAltWheelVelocityScrubIsOneContinuingEdit() {
+    PianoRollNoteLayer layer;
+    layer.setBounds({0.0f, 0.0f, 800.0f, 3072.0f});
+    MidiNote note;
+    note.pitch = 60;
+    note.startBeat = 0.0;
+    note.durationBeats = 1.0;
+    note.velocity = 0.5f;
+    layer.setNotes({note});
+
+    std::vector<bool> continuing;
+    layer.setOnNotesChanged(
+        [&layer, &continuing](const std::vector<MidiNote>&) { continuing.push_back(layer.isContinuingEdit()); });
+    const float y = pitchRowCenter(60);
+    for (int i = 0; i < 3; ++i) {
+        check(layer.onMouseEvent(altWheel(40.0f, y, 1.0f)), "Alt+wheel over a note should be handled");
+    }
+    check(continuing.size() == 3, "every scrub notch should commit");
+    check(continuing.size() == 3 && !continuing[0] && continuing[1] && continuing[2],
+          "the first notch starts the edit and later notches continue it");
+    check(!layer.isContinuingEdit(), "the continuation flag must not outlive the commit");
+
+    // Any other commit ends the scrub: the next notch starts a new edit.
+    check(layer.onKeyEvent(keyPress(NUIKeyCode::A, NUIModifiers::Ctrl)), "select all should be handled");
+    check(layer.onKeyEvent(keyPress(NUIKeyCode::Right)), "nudge should be handled");
+    check(layer.onMouseEvent(altWheel(120.0f, y, 1.0f)), "Alt+wheel over the moved note should be handled");
+    check(continuing.size() == 5 && !continuing[3] && !continuing[4],
+          "a scrub after another edit must start a new history entry");
+
+    // A reload (undo/redo or a pattern switch) also ends it.
+    layer.setNotes(layer.getNotes());
+    check(layer.onMouseEvent(altWheel(120.0f, y, 1.0f)), "Alt+wheel after a reload should be handled");
+    check(continuing.size() == 6 && !continuing[5], "a scrub after a reload must start a new history entry");
+}
+
 } // namespace
 
 int main() {
     testChordBrushPaintsCompleteTriadsAsOneEdit();
-    testRightDragEraseIsOneUndoableStroke();
+    testRightDragEraseCommitsOnce();
     testSelectionHandleStretchesPhraseTimingAsOneEdit();
     testSubdivideSelectionUsesSnapAndPreservesNoteData();
     testSubdividePreservesPartialTailAndHonorsNoSnap();
+    testAltWheelVelocityScrubIsOneContinuingEdit();
 
     if (g_failures == 0) {
         std::cout << "Piano Roll stroke interaction tests passed\n";
