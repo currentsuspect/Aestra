@@ -1359,7 +1359,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     std::unordered_set<uint64_t> allPatternIds;
     std::unordered_set<uint64_t> allUnitIds;
-    std::unordered_set<uint32_t> allSourceIds;
+    std::unordered_set<uint64_t> allSourceIds;
     std::unordered_map<uint64_t, std::string> patternNames;
     std::unordered_set<uint64_t> unloadablePatternIds;
     std::unordered_set<uint64_t> recoverableClipPatternIds;
@@ -1369,7 +1369,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
         for (size_t i = 0; i < sj.size(); ++i) {
-            uint32_t id = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+            // Source IDs are 64-bit (ClipSourceID); JSON numbers are exact to 2^53-1 (F20).
+            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, 9007199254740991.0));
             if (id != 0) allSourceIds.insert(id);
         }
     }
@@ -1383,8 +1384,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
                 const std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
                 if (type == "audio") {
-                    const uint32_t sourceId = static_cast<uint32_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    const uint64_t sourceId = static_cast<uint64_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, 9007199254740991.0));
                     if (sourceId == 0 || !allSourceIds.count(sourceId)) {
                         unloadablePatternIds.insert(id);
                     }
@@ -1620,14 +1621,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         playlist.setBPM(result.tempo);
     
         // 2. Load Sources (and decode audio files)
-        std::unordered_map<uint32_t, ClipSourceID> idMap;
+        std::unordered_map<uint64_t, ClipSourceID> idMap;
         if (root.has("sources")) {
             const JSON& sj = root["sources"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
             Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
         #endif
             for (size_t i = 0; i < sj.size(); ++i) {
-                uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, 9007199254740991.0));
                 std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
@@ -1725,8 +1726,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
     
                 if (type == "audio") {
-                    uint32_t oldSrcId = static_cast<uint32_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    uint64_t oldSrcId = static_cast<uint64_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, 9007199254740991.0));
                     if (idMap.count(oldSrcId)) {
                         AudioSlicePayload payload;
                         payload.audioSourceId = idMap[oldSrcId];

@@ -387,17 +387,6 @@ private:
 };
 
 
-// -----------------------------------------------------------------------------
-// Simple Undo Command
-// -----------------------------------------------------------------------------
-struct PianoRollCommand {
-    /** @brief Human-readable description for the undo stack. */
-    std::string description;
-    /** @brief Note state before the edit. */
-    std::vector<MidiNote> notesBefore;
-    /** @brief Note state after the edit. */
-    std::vector<MidiNote> notesAfter;
-};
 
 class NUIPlatformBridge;
 
@@ -454,12 +443,12 @@ public:
     /** @brief Check if snap-to-scale is currently active. */
     bool getSnapToScale() const { return snapToScale_; }
     
-    /** @brief Push an undo command onto the local history stack. */
-    void pushUndo(const std::string& desc, const std::vector<MidiNote>& oldNotes, const std::vector<MidiNote>& newNotes);
-    /** @brief Undo the last local note edit. */
-    void undo();
-    /** @brief Redo the last undone local note edit. */
-    void redo();
+    /**
+     * @brief True only while committing a continuation of the previous edit
+     *        (an Alt+wheel velocity scrub), so the owner can fold it into the
+     *        history entry it already recorded instead of adding a new one.
+     */
+    bool isContinuingEdit() const { return continuingEdit_; }
 
     /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb);
@@ -525,9 +514,15 @@ public:
     /** @brief Snap the starts of the selected notes to the current snap grid. */
     void quantizeSelectedNotes();
 
-    /** @brief Record an undo step for an edit applied externally (e.g. velocity lane). */
+    /**
+     * @brief Commit an edit applied externally (e.g. the velocity lane) as one step.
+     *
+     * The layer keeps no undo history (the owner's CommandHistory is the only
+     * one); @p before and @p description are retained for call-site clarity.
+     */
     void pushExternalEdit(const std::vector<MidiNote>& before, const std::string& description) {
-        pushUndo(description, before, notes_);
+        (void)before;
+        (void)description;
         // External edits must reach the model like every other gesture: without
         // commitNotes() the onNotesChanged_ chain never runs, so PatternManager
         // keeps the old value until an unrelated committing event flushes it.
@@ -575,9 +570,9 @@ private:
     // Tool
     PianoRollTool tool_ = PianoRollTool::Pencil;
     
-    // Undo Stack
-    std::vector<PianoRollCommand> undoStack_;
-    std::vector<PianoRollCommand> redoStack_;
+    // No undo stack: CommandHistory (via the owning panel) is the only history.
+    bool continuingEdit_ = false;
+    bool lastCommitWasVelocityScrub_ = false;
     
     // Note Memory (Buffer)
     double lastNoteDuration_ = 1.0; // Default 1 beat
@@ -794,6 +789,8 @@ public:
     // API
     void setNotes(const std::vector<MidiNote>& notes);
     const std::vector<MidiNote>& getNotes() const;
+    /** @brief True while the note layer commits a continuation of the previous edit. */
+    bool isContinuingEdit() const { return m_notes && m_notes->isContinuingEdit(); }
     void setPatternName(const std::string& name);
     void setPatternChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);
     void setUnitChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);

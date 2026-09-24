@@ -161,7 +161,6 @@ void PianoRollNoteLayer::connectSelectedNotes() {
         if (!n.isDeleted) starts.push_back(n.startBeat);
     }
 
-    auto oldNotes = notes_;
     bool changed = false;
     for (int idx : selected) {
         const double start = notes_[idx].startBeat;
@@ -174,7 +173,6 @@ void PianoRollNoteLayer::connectSelectedNotes() {
     }
 
     if (changed) {
-        pushUndo("Connect", oldNotes, notes_);
         commitNotes();
         repaint();
     }
@@ -184,7 +182,6 @@ void PianoRollNoteLayer::quantizeSelectedNotes() {
     double snapDur = MusicTheory::getSnapDuration(snap_);
     if (snap_ == SnapGrid::None || snapDur <= 0.0001) snapDur = 0.25; // sensible 1/16 default
 
-    auto oldNotes = notes_;
     bool changed = false;
     for (auto& n : notes_) {
         if (!n.selected || n.isDeleted) continue;
@@ -195,7 +192,6 @@ void PianoRollNoteLayer::quantizeSelectedNotes() {
         }
     }
     if (changed) {
-        pushUndo("Quantize", oldNotes, notes_);
         commitNotes();
         repaint();
     }
@@ -209,7 +205,6 @@ void PianoRollNoteLayer::glueSelectedNotes() {
     }
     if (selected.size() < 2) return;
 
-    auto oldNotes = notes_;
     std::vector<MidiNote> merged;      // rebuilt selected notes
     std::vector<bool> consumed(notes_.size(), false);
 
@@ -249,7 +244,6 @@ void PianoRollNoteLayer::glueSelectedNotes() {
     for (auto& m : merged) rebuilt.push_back(m);
     notes_ = std::move(rebuilt);
 
-    pushUndo("Glue", oldNotes, notes_);
     commitNotes();
     repaint();
 }
@@ -259,7 +253,6 @@ void PianoRollNoteLayer::subdivideSelectedNotes() {
     const double snapDuration = MusicTheory::getSnapDuration(snap_);
     if (!std::isfinite(snapDuration) || snapDuration <= kSubdivisionEpsilon) return;
 
-    auto oldNotes = notes_;
     std::vector<MidiNote> rebuilt;
     rebuilt.reserve(notes_.size());
     bool changed = false;
@@ -296,7 +289,6 @@ void PianoRollNoteLayer::subdivideSelectedNotes() {
     if (!changed) return;
 
     notes_ = std::move(rebuilt);
-    pushUndo("Subdivide", oldNotes, notes_);
     commitNotes();
     repaint();
 }
@@ -315,11 +307,9 @@ void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     std::sort(selected.begin(), selected.end(),
               [&](int a, int b) { return notes_[a].pitch < notes_[b].pitch; });
 
-    auto oldNotes = notes_;
     for (size_t k = 0; k < selected.size(); ++k) {
         notes_[selected[k]].startBeat = std::max(0.0, baseStart + static_cast<double>(k) * spreadBeats);
     }
-    pushUndo("Strum", oldNotes, notes_);
     commitNotes();
     repaint();
 }
@@ -330,7 +320,6 @@ void PianoRollNoteLayer::humanizeSelectedVelocities() {
     static std::mt19937 rng{std::random_device{}()};
     std::uniform_real_distribution<float> jitter(-0.08f, 0.08f);
 
-    auto oldNotes = notes_;
     bool changed = false;
     for (auto& n : notes_) {
         if (n.selected && !n.isDeleted) {
@@ -339,7 +328,6 @@ void PianoRollNoteLayer::humanizeSelectedVelocities() {
         }
     }
     if (!changed) return;
-    pushUndo("Humanize", oldNotes, notes_);
     commitNotes();
     repaint();
 }
@@ -385,18 +373,10 @@ void PianoRollNoteLayer::closeNoteProperties(bool accept) {
     if (propNoteIndex_ < 0) return;
     if (!accept) {
         notes_ = propUndoSnapshot_;
-    } else if (propNoteIndex_ < static_cast<int>(notes_.size())) {
-        const auto& n = notes_[propNoteIndex_];
-        const auto& o = propOriginalNote_;
-        const bool changed = n.pitch != o.pitch ||
-                             std::abs(n.startBeat - o.startBeat) > 1e-9 ||
-                             std::abs(n.durationBeats - o.durationBeats) > 1e-9 ||
-                             std::abs(n.velocity - o.velocity) > 1e-6f ||
-                             std::abs(n.pan - o.pan) > 1e-6f;
-        if (changed) {
-            pushUndo("Note Properties", propUndoSnapshot_, notes_);
-        }
     }
+    // No history bookkeeping here: the commit below reaches the panel, which
+    // records one CommandHistory entry for the whole popup edit (and none when
+    // nothing changed, because its diff is empty).
     propNoteIndex_ = -1;
     propDragField_ = -1;
     propUndoSnapshot_.clear();
@@ -1036,7 +1016,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // the same gesture made scrolling feel unpredictable.
     if (event.wheelDelta != 0.0f && (event.modifiers & NUIModifiers::Alt) && hoveredNoteIndex_ >= 0 &&
         hoveredNoteIndex_ < static_cast<int>(notes_.size()) && !notes_[hoveredNoteIndex_].isDeleted) {
-        auto oldNotes = notes_;
         const float delta = event.wheelDelta * 0.04f; // ~5 MIDI steps per notch
         const bool editSelection = notes_[hoveredNoteIndex_].selected;
         for (auto& n : notes_) {
@@ -1047,13 +1026,15 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         }
         lastNoteVelocity_ = notes_[hoveredNoteIndex_].velocity; // adopt for new notes
         velocityBubbleIndex_ = hoveredNoteIndex_;
-        // Coalesce a continuous scrub into one undo step instead of one per notch.
-        if (!undoStack_.empty() && undoStack_.back().description == "Velocity") {
-            undoStack_.back().notesAfter = notes_;
-        } else {
-            pushUndo("Velocity", oldNotes, notes_);
-        }
+        // Coalesce a continuous scrub into one undo step instead of one per notch:
+        // every notch after the first is a continuation, which the panel folds
+        // into the history entry the first notch recorded. Any other commit (or
+        // a reload) in between starts a new entry.
+        const bool continuing = lastCommitWasVelocityScrub_;
+        continuingEdit_ = continuing;
         commitNotes();
+        continuingEdit_ = false;
+        lastCommitWasVelocityScrub_ = true;
         repaint();
         return true;
     }
@@ -1075,7 +1056,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (event.released && state_ == State::Erasing) {
             if (eraseStrokeChanged_) {
-                pushUndo("Erase Stroke", dragStartNotes_, notes_);
                 commitNotes();
             }
             state_ = State::None;
@@ -1153,7 +1133,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             if (clickedIndex != -1) {
                  openNoteProperties(clickedIndex);
             } else {
-                 auto oldNotes = notes_;
                  // Create New Note
                  const double beat = placementBeat;
                  const int pitch = placementPitch;
@@ -1172,7 +1151,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                  }
                  
                  notes_.push_back(newNote);
-                 pushUndo("Add Note", oldNotes, notes_);
                  commitNotes();
                  repaint();
             }
@@ -1196,9 +1174,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // 1. Eraser Tool
         if (tool_ == GlobalTool::Eraser) {
             if (clickedIndex != -1) {
-                auto oldNotes = notes_;
                 notes_.erase(notes_.begin() + clickedIndex);
-                pushUndo("Erase", oldNotes, notes_);
                 commitNotes();
                 repaint();
             }
@@ -1230,7 +1206,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // (discrete — no drag-to-lengthen; the stamped chord lands selected so
         // it can be resized or strummed as a unit right after).
         if (intentToPaint && chordMode_) {
-            auto oldNotes = notes_;
             if (!(event.modifiers & NUIModifiers::Shift)) {
                 for (auto& note : notes_) note.selected = false;
             }
@@ -1264,7 +1239,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 }
                 auditionPitch_ = rootPitch;
             }
-            pushUndo("Add Chord", oldNotes, notes_);
             commitNotes();
             repaint();
             return true;
@@ -1643,12 +1617,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 for (const auto& n : notes_) { if (n.selected) { lastNoteDuration_ = n.durationBeats; break; } }
             }
 
-            const std::string description = state_ == State::CopyDragging
-                                                ? "Alt+Drag Copy"
-                                                : (state_ == State::StretchingSelection ? "Stretch Selection" : "Edit");
             const bool shouldCommit = state_ != State::StretchingSelection || m_selectionStretchChanged;
-            if (shouldCommit)
-                pushUndo(description, dragStartNotes_, notes_);
             state_ = State::None;
             paintingNoteIndex_ = -1;
             copyDragIndices_.clear();
@@ -1687,16 +1656,9 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
     }
 
     if (event.pressed) {
-        // Undo / Redo
-        if (ctrl && event.keyCode == NUIKeyCode::Z) {
-            bool shift = (event.modifiers & NUIModifiers::Shift);
-            if (shift) redo(); else undo();
-            return true;
-        }
-        else if (ctrl && event.keyCode == NUIKeyCode::Y) {
-            redo();
-            return true;
-        }
+        // Undo / Redo are NOT handled here: there is exactly one undo history
+        // (CommandHistory). Leaving Ctrl+Z/Y unconsumed lets the app route them
+        // to it (ownership contract F1/F2).
 
         // Ctrl+L: elongate selected notes to connect to the next note (legato),
         // or out to the next snap/beat boundary when nothing follows.
@@ -1731,7 +1693,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                 notes_.end());
 
             if (notes_.size() != oldNotes.size()) {
-                pushUndo("Delete", oldNotes, notes_);
                 commitNotes();
                 repaint();
             }
@@ -1749,7 +1710,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             // Spec 5: Paste at playhead position
             if (s_noteClipboard.empty()) return true;
 
-            auto oldNotes = notes_; // Snapshot
 
             // Deselect current
             for (auto& n : notes_) n.selected = false;
@@ -1767,7 +1727,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                 n.isDeleted = false;
                 notes_.push_back(n);
             }
-            pushUndo("Paste", oldNotes, notes_);
             commitNotes();
             repaint();
             return true;
@@ -1805,7 +1764,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                     }
                 }
                 
-                pushUndo("Duplicate", oldNotes, notes_);
                 commitNotes();
                 repaint();
                 return true;
@@ -1840,7 +1798,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                 bool shift = (event.modifiers & NUIModifiers::Shift);
 
                 if (event.keyCode == NUIKeyCode::Left) {
-                    auto oldNotes = notes_;
                     if (shift) {
                         // Shrink: reduce duration of selected notes
                         for (auto& n : notes_) {
@@ -1856,13 +1813,11 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                             }
                         }
                     }
-                    pushUndo(shift ? "Resize Left" : "Nudge Left", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
                 }
                 else if (event.keyCode == NUIKeyCode::Right) {
-                    auto oldNotes = notes_;
                     if (shift) {
                         // Extend: increase duration of selected notes
                         for (auto& n : notes_) {
@@ -1878,13 +1833,11 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                             }
                         }
                     }
-                    pushUndo(shift ? "Resize Right" : "Nudge Right", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
                 }
                 else if (event.keyCode == NUIKeyCode::Up) {
-                    auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
                             if (shift) {
@@ -1896,13 +1849,11 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                             }
                         }
                     }
-                    pushUndo(shift ? "Octave Up" : "Transpose Up", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
                 }
                 else if (event.keyCode == NUIKeyCode::Down) {
-                    auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
                             if (shift) {
@@ -1914,7 +1865,6 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                             }
                         }
                     }
-                    pushUndo(shift ? "Octave Down" : "Transpose Down", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
@@ -1932,69 +1882,8 @@ void PianoRollNoteLayer::setTool(PianoRollTool tool) {
     repaint();
 }
 
-void PianoRollNoteLayer::pushUndo(const std::string& desc, const std::vector<MidiNote>& oldN, const std::vector<MidiNote>& newN) {
-    PianoRollCommand cmd;
-    cmd.description = desc;
-    cmd.notesBefore = oldN;
-    cmd.notesAfter = newN;
-    undoStack_.push_back(cmd);
-    redoStack_.clear();
-
-    // Enforce Limits (Count & Memory)
-    // 1. Hard count limit
-    if (undoStack_.size() > 50) {
-        undoStack_.erase(undoStack_.begin());
-    }
-
-    // 2. Memory Cap (100MB) - "Cockroach Chrysalis"
-    // Calculate total size and evict from front (LRU)
-    size_t totalBytes = 0;
-    const size_t kMaxBytes = 100 * 1024 * 1024; // 100MB
-
-    // Reverse iterate to count from newest (keep these)
-    // Actually simpler to just calc total and pop front.
-    for (const auto& c : undoStack_) {
-        totalBytes += c.description.capacity();
-        totalBytes += c.notesBefore.capacity() * sizeof(MidiNote);
-        totalBytes += c.notesAfter.capacity() * sizeof(MidiNote);
-    }
-
-    while (totalBytes > kMaxBytes && !undoStack_.empty()) {
-        const auto& c = undoStack_.front();
-        size_t cmdSize = c.description.capacity() + 
-                         c.notesBefore.capacity() * sizeof(MidiNote) + 
-                         c.notesAfter.capacity() * sizeof(MidiNote);
-        
-        if (totalBytes >= cmdSize) totalBytes -= cmdSize; 
-        else totalBytes = 0;
-
-        undoStack_.erase(undoStack_.begin());
-    }
-}
-
-void PianoRollNoteLayer::undo() {
-    if (undoStack_.empty()) return;
-    auto cmd = undoStack_.back();
-    undoStack_.pop_back();
-    redoStack_.push_back(cmd);
-    
-    notes_ = cmd.notesBefore;
-    commitNotes();
-    repaint();
-}
-
-void PianoRollNoteLayer::redo() {
-    if (redoStack_.empty()) return;
-    auto cmd = redoStack_.back();
-    redoStack_.pop_back();
-    undoStack_.push_back(cmd);
-    
-    notes_ = cmd.notesAfter;
-    commitNotes();
-    repaint();
-}
-
 void PianoRollNoteLayer::commitNotes() {
+    lastCommitWasVelocityScrub_ = false; // the scrub path re-arms it after its commit
     // Sort logic to ensure efficient culling
     std::sort(notes_.begin(), notes_.end(), [](const MidiNote& a, const MidiNote& b) {
         return a.startBeat < b.startBeat;
@@ -2007,6 +1896,7 @@ void PianoRollNoteLayer::commitNotes() {
 
 void PianoRollNoteLayer::setNotes(const std::vector<MidiNote>& notes) {
     notes_ = notes;
+    lastCommitWasVelocityScrub_ = false;
     // Ensure sorted as well
     std::sort(notes_.begin(), notes_.end(), [](const MidiNote& a, const MidiNote& b) {
         return a.startBeat < b.startBeat;

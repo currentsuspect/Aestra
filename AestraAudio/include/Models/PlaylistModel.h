@@ -401,7 +401,7 @@ public:
         std::shared_lock<std::shared_mutex> lock(m_mutex);
         for (const auto& lane : m_lanes) {
             for (const auto& clip : lane.clips) {
-                if (clip.sourceId == patternId.value)
+                if (clip.patternId == patternId)
                     return true;
             }
         }
@@ -550,7 +550,7 @@ public:
             newClip.patternId = clip->patternId;
         }
         newClip.colorRGBA = clip->colorRGBA;
-        newClip.sourceId = clip->sourceId;
+        newClip.sourceId = newClip.patternId.value; // legacy mirror of the referent; never read (F8/F9)
         // A rebased pattern starts at its own origin; the shared-pattern
         // fallback keeps the region-shifted offset (engine filter semantics).
         newClip.sourceOffset = rebased ? 0.0 : (clip->sourceOffset + (splitBeat - clip->startBeat));
