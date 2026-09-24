@@ -539,7 +539,7 @@ void TrackManagerUI::layoutTracks() {
         // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid
         // must stay globally aligned across lanes (a row-x indent would shift
         // clip snapping); nesting is expressed in the chrome instead.
-        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
+        float trackWidth = timelineTrackRowWidth(bounds.width);
         trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
 

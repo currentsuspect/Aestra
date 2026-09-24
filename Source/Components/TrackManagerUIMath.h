@@ -63,6 +63,17 @@ inline float timelineGridEndX(float basisOriginX, float boundsWidth) {
     return basisOriginX + boundsWidth - kTimelineScrollbarWidth;
 }
 
+/**
+ * @brief Width of a track row: the whole plane, up to the scrollbar.
+ *
+ * Rows used to stop 5px short of timelineGridEndX() while the plane's gridlines ran on to the
+ * scrollbar, and clips painted a further 5px short of the row. The result was a strip at the
+ * right edge where clips never reached (SPEC 3 §2.3). A row ends exactly where the grid does.
+ */
+inline float timelineTrackRowWidth(float boundsWidth) {
+    return std::max(0.0f, timelineGridEndX(0.0f, boundsWidth));
+}
+
 /** @brief Resolve the first track-row pixel in the caller's stated y basis. */
 inline float timelineTrackAreaTopY(float basisOriginY) {
     return basisOriginY + kTimelineTimeBandHeight;
