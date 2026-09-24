@@ -35,6 +35,7 @@ struct TooltipState {
     const void* owner = nullptr;
     bool active = false;
     bool immediate = false;
+    bool forced = false;  ///< A live readout (force=true): exempt from gesture dismissal.
     float alpha = 0.0f;
     float delayTimer = 0.0f;
     float dismissGraceTimer = 0.0f;
@@ -201,7 +202,7 @@ private:
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
     static bool s_cursorCaptureActive;
-    static bool s_pointerButtonHeld;
+    static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -238,8 +239,10 @@ public:
     /** @brief Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip. */
     static void notePointerGesture(const NUIMouseEvent& event);
     /** @brief Forget a held button (window focus lost: its release may never arrive). */
-    static void resetPointerGestureState() { s_pointerButtonHeld = false; }
-    static bool isPointerButtonHeld() { return s_pointerButtonHeld; }
+    static void resetPointerGestureState() { s_pointerButtonsHeld = 0; }
+    static bool isPointerButtonHeld() { return s_pointerButtonsHeld != 0; }
+    /** @brief After a scroll has been dispatched: a hover tooltip its target re-showed goes too. */
+    static void dismissHoverTooltipAfterScroll();
     static const TooltipState& getGlobalTooltipState() { return s_tooltipState; }
     static void setCursorCaptureActive(bool active);
     static bool isCursorCaptureActive() { return s_cursorCaptureActive; }

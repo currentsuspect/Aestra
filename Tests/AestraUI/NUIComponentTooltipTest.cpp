@@ -269,6 +269,75 @@ void testTooltipSitsBelowItsControl() {
           "a control at the top edge gets the same below placement as every other (no flip)");
 }
 
+// Review (#965): a target may re-show its hover tooltip for an in-bounds scroll. Dismissing only
+// before dispatch let it restart; the dispatch path dismisses after the target too.
+class ScrollReshows : public NUIComponent {
+public:
+    bool forced = false;
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        if (event.wheelDelta != 0.0f) {
+            showRemoteTooltip(forced ? "Value 42" : "Scroll to adjust", NUIRect(10.0f, 10.0f, 60.0f, 20.0f), this,
+                              forced);
+        }
+        return true;
+    }
+};
+
+void testAScrollTheTargetReshowsStillDismisses() {
+    resetTooltip();
+    ScrollReshows target;
+    NUIComponent::dispatchMouseEvent(&target, pointerEvent(false, false, 1.0f));
+    check(!NUIComponent::getGlobalTooltipState().active, "a hover tooltip re-shown by the scroll target is dismissed");
+
+    target.forced = true;
+    NUIComponent::dispatchMouseEvent(&target, pointerEvent(false, false, 1.0f));
+    check(NUIComponent::getGlobalTooltipState().active, "a forced readout shown for the scroll survives it");
+    resetTooltip();
+}
+
+// Review (#965): bounds are window-absolute. A nested control's tooltip anchors to its own bounds,
+// not to its bounds plus every ancestor's position again.
+void testNestedControlAnchorsToItsOwnBounds() {
+    resetTooltip();
+    auto panel = std::make_shared<NUIComponent>();
+    auto button = std::make_shared<NUIComponent>();
+    panel->setBounds(NUIRect(100.0f, 50.0f, 400.0f, 300.0f));
+    button->setBounds(NUIRect(120.0f, 60.0f, 40.0f, 20.0f));
+    panel->addChild(button);
+    button->setTooltip("Nested");
+    button->onMouseEnter();
+    const auto& state = NUIComponent::getGlobalTooltipState();
+    check(state.anchor.x == 120.0f && state.anchor.y == 60.0f && state.anchor.width == 40.0f,
+          "the tooltip anchors to the control where it is drawn and hit-tested");
+    button->onMouseLeave();
+    resetTooltip();
+}
+
+// Review (#965): releasing one button while another still drags is still a drag.
+void testEachHeldButtonIsTrackedUntilItsRelease() {
+    resetTooltip();
+    int owner = 0;
+    auto press = [](NUIMouseButton b) {
+        NUIMouseEvent e = pointerEvent(true, false);
+        e.button = b;
+        return e;
+    };
+    auto release = [](NUIMouseButton b) {
+        NUIMouseEvent e = pointerEvent(false, true);
+        e.button = b;
+        return e;
+    };
+    NUIComponent::notePointerGesture(press(NUIMouseButton::Left));
+    NUIComponent::notePointerGesture(press(NUIMouseButton::Right));
+    NUIComponent::notePointerGesture(release(NUIMouseButton::Right));
+    check(NUIComponent::isPointerButtonHeld(), "Left is still down after Right's release");
+    NUIComponent::showRemoteTooltip("Hover", {10.0f, 10.0f}, &owner);
+    check(!NUIComponent::getGlobalTooltipState().active, "so hover tooltips stay down for the Left drag");
+    NUIComponent::notePointerGesture(release(NUIMouseButton::Left));
+    check(!NUIComponent::isPointerButtonHeld(), "all released");
+    resetTooltip();
+}
+
 } // namespace
 
 int main() {
@@ -288,6 +357,9 @@ int main() {
     testFocusLossForgetsAHeldButton();
     testHidingAPanelTakesItsChildsTooltip();
     testTooltipSitsBelowItsControl();
+    testAScrollTheTargetReshowsStillDismisses();
+    testNestedControlAnchorsToItsOwnBounds();
+    testEachHeldButtonIsTrackedUntilItsRelease();
 
     resetTooltip();
     if (g_failures != 0) {

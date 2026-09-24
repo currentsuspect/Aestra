@@ -22,7 +22,7 @@ namespace {
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
 bool NUIComponent::s_cursorCaptureActive = false;
-bool NUIComponent::s_pointerButtonHeld = false;
+unsigned NUIComponent::s_pointerButtonsHeld = 0;
 
 
 
@@ -289,7 +289,13 @@ bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent&
     } guard;
 
     notePointerGesture(event);
-    return target->onMouseEvent(event);
+    const bool handled = target->onMouseEvent(event);
+    // A target may re-show its hover tooltip for an in-bounds scroll (the playback-time display
+    // does); dismiss after dispatch too, so a scroll never restarts one (review, #965).
+    if (event.wheelDelta != 0.0f) {
+        dismissHoverTooltipAfterScroll();
+    }
+    return handled;
 }
 
 bool NUIComponent::dispatchKeyEvent(NUIComponent* target, const NUIKeyEvent& event) {
@@ -661,7 +667,7 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anc
 
     // Hover tooltips stay down for the length of a gesture: a cursor capture, or any held
     // button (a drag). Forced readouts are the drag's own value display and still show.
-    if (!force && (s_cursorCaptureActive || s_pointerButtonHeld))
+    if (!force && (s_cursorCaptureActive || s_pointerButtonsHeld != 0))
         return;
 
     const NUIPoint anchorPoint{anchor.x, anchor.bottom()};
@@ -675,6 +681,7 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anc
             s_tooltipState.position = anchorPoint;
             s_tooltipState.anchor = anchor;
             s_tooltipState.immediate = true;
+            s_tooltipState.forced = true;
             s_tooltipState.delayTimer = kTooltipDelaySeconds;
         }
         return;
@@ -695,6 +702,7 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anc
         s_tooltipState.owner = owner;
         s_tooltipState.active = true;
         s_tooltipState.immediate = force || handOff;
+        s_tooltipState.forced = force;
         s_tooltipState.delayTimer = 0.0f;
         if (!handOff) {
             s_tooltipState.alpha = 0.0f;
@@ -705,6 +713,7 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anc
         s_tooltipState.position = anchorPoint;
         s_tooltipState.anchor = anchor;
         s_tooltipState.immediate = true;
+        s_tooltipState.forced = true;
         s_tooltipState.delayTimer = kTooltipDelaySeconds;
     }
 }
@@ -716,8 +725,10 @@ NUIRect NUIComponent::pointerTooltipAnchor(const NUIPoint& point) {
 }
 
 NUIRect NUIComponent::globalTooltipAnchor() const {
-    const NUIPoint topLeft = localToGlobal({0.0f, 0.0f});
-    return {topLeft.x, topLeft.y, bounds_.width, bounds_.height};
+    // Bounds are window-absolute here: components render and hit-test at bounds_ as-is.
+    // localToGlobal() adds every ancestor's position again, which displaced the tooltips of
+    // nested controls (review, #965).
+    return bounds_;
 }
 
 bool NUIComponent::subtreeContains(const void* candidate) const {
@@ -733,14 +744,23 @@ bool NUIComponent::subtreeContains(const void* candidate) const {
 }
 
 void NUIComponent::notePointerGesture(const NUIMouseEvent& event) {
+    // Each button is tracked on its own: releasing Right while Left still drags is still a drag
+    // (review, #965).
+    const unsigned bit = 1u << static_cast<unsigned>(event.button);
     if (event.pressed) {
-        s_pointerButtonHeld = true;
+        s_pointerButtonsHeld |= bit;
         hideRemoteTooltip(); // a press is a decision: the explanation is no longer wanted
     } else if (event.released) {
-        s_pointerButtonHeld = false;
+        s_pointerButtonsHeld &= ~bit;
     }
     if (event.wheelDelta != 0.0f) {
         hideRemoteTooltip(); // a scroll moves what the tooltip was pointing at (the BPM case)
+    }
+}
+
+void NUIComponent::dismissHoverTooltipAfterScroll() {
+    if (s_tooltipState.active && !s_tooltipState.forced) {
+        hideRemoteTooltip();
     }
 }
 
@@ -761,6 +781,7 @@ void NUIComponent::hideRemoteTooltip(const void* owner) {
     s_tooltipState.active = false;
     s_tooltipState.owner = nullptr;
     s_tooltipState.immediate = false;
+    s_tooltipState.forced = false;
     s_tooltipState.alpha = 0.0f;
     s_tooltipState.delayTimer = 0.0f;
     s_tooltipState.dismissGraceTimer = 0.0f;
@@ -782,6 +803,7 @@ void NUIComponent::updateGlobalTooltip(double deltaTime) {
             s_tooltipState.alpha = 0.0f;
             s_tooltipState.owner = nullptr;
             s_tooltipState.immediate = false;
+            s_tooltipState.forced = false;
             s_tooltipState.delayTimer = 0.0f;
             s_tooltipState.dismissGraceTimer = 0.0f;
         }
