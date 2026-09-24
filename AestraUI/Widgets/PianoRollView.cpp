@@ -99,7 +99,10 @@ PianoRollView::PianoRollView()
         return step > 0.0 ? std::round(beat / step) * step : beat;
     };
     m_ruler->onLoopZoneDrawn = [this](double start, double end) {
-        applyLoopZone(std::make_pair(start, end), true);
+        // Clamped to the pattern, like the scrub: past its end there is only silence to loop. A
+        // zone entirely past the end becomes empty, and applyLoopZone drops it.
+        const double limit = std::max(0.0, m_totalDurationBeats);
+        applyLoopZone(std::make_pair(std::clamp(start, 0.0, limit), std::clamp(end, 0.0, limit)), true);
     };
     m_notes->setOnEmptyGridPress([this]() {
         if (m_loopZone) {

@@ -4,6 +4,8 @@
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -112,7 +114,7 @@ public:
 
     /** Focus entered Arsenal. The engine arms the pattern loop. TrackManager joins on play (see the table). */
     void enterArsenal(double patternLengthBeats) {
-        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(patternLengthBeats), false);
+        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(m_arsenalPattern, patternLengthBeats), false);
         setUi(true);
         m_context = PlaybackContext::Arsenal;
     }
@@ -120,11 +122,12 @@ public:
     /** Play pressed in Arsenal. Resumes from the cued position unless startSeconds >= 0. */
     void startArsenalPlayback(PatternID pattern, double patternLengthBeats, double startSeconds = -1.0) {
         // Published before play() pushes its transport command, so both land in one drain.
-        // A piano-roll zone shortens the loop to the zone (TrackManager::arsenalLoopLengthBeats).
-        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
+        // A piano-roll zone on this pattern shortens the loop to the zone (TrackManager::arsenalLoopLengthBeats).
+        m_arsenalPattern = pattern;
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(pattern, patternLengthBeats);
         publishEngineContext(true, loopBeats, m_engineAudition);
         m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
-        m_trackManager.playPatternInArsenal(pattern, startSeconds);
+        m_trackManager.playPatternInArsenal(pattern, startSeconds, /*useLoopZone=*/true);
         m_context = PlaybackContext::Arsenal;
     }
 
@@ -136,7 +139,7 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(m_arsenalPattern, patternLengthBeats);
         publishEngineContext(true, loopBeats, m_engineAudition);
         m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
     }
@@ -154,29 +157,51 @@ public:
         if (m_context != PlaybackContext::Arsenal) {
             return;
         }
-        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(patternLengthBeats), m_engineAudition);
+        publishEngineContext(true, m_trackManager.arsenalLoopLengthBeats(m_arsenalPattern, patternLengthBeats),
+                             m_engineAudition);
     }
 
     /**
      * @brief A piano-roll ruler zone: pattern playback loops only that range (SPEC 3 §5.2).
      *
-     * Kept whatever the focus; it shapes playback only in Arsenal. There, the loop length is
-     * republished at once, and if the pattern is playing it restarts at the zone's top so the
-     * new range is heard immediately. Clearing the zone returns to the whole-pattern loop.
-     * @param pattern The pattern the piano roll is editing (the one Arsenal plays).
+     * Kept whatever the focus, and only for @p pattern; it shapes playback only in Arsenal. There,
+     * the loop length is republished at once, and if the pattern is playing with a different range
+     * it restarts at the loop's top so the new range is heard immediately. Clearing the zone
+     * returns to the whole-pattern loop.
+     * @param pattern The pattern the piano roll is editing, which is the one Arsenal plays.
+     * @param zone The range; its pattern is set to @p pattern. nullopt clears the zone.
      */
     void setArsenalLoopZone(PatternID pattern, std::optional<TrackManager::ArsenalLoopZone> zone,
                             double patternLengthBeats) {
+        if (zone) {
+            zone->pattern = pattern;
+        }
         m_trackManager.setArsenalLoopZone(zone);
-        if (m_context != PlaybackContext::Arsenal) {
+        if (pattern.isValid()) {
+            m_arsenalPattern = pattern;
+        }
+        reapplyArsenalLoop(patternLengthBeats);
+    }
+
+    /**
+     * @brief Arm or disarm recording (TrackManager::record) and keep the Arsenal loop consistent.
+     *
+     * An armed record ignores the loop zone (TrackManager::activeArsenalLoopZone). So in Arsenal
+     * the loop is re-applied at once, not left at the zone's length until the next play, and a
+     * pattern already playing is rescheduled at the same pattern position (no jump). Arming
+     * reschedules BEFORE record(): a capture session takes its start beat from the transport at
+     * arm time, and that must already be the whole-pattern transport, not the zone-relative one.
+     */
+    void setRecordArmed(bool armed, double patternLengthBeats) {
+        if (armed == m_trackManager.isRecordArmed()) {
             return;
         }
-        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(patternLengthBeats);
-        // Context first, then any transport command, so both land in one drain (PR 3).
-        publishEngineContext(true, loopBeats, m_engineAudition);
-        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
-        if (m_trackManager.isPlaying() && m_trackManager.isPatternMode()) {
-            m_trackManager.playPatternInArsenal(pattern, 0.0);
+        if (armed) {
+            reapplyArsenalLoop(patternLengthBeats, /*keepPatternPosition=*/true, /*zoneAllowed=*/false);
+            m_trackManager.record();
+        } else {
+            m_trackManager.record();
+            reapplyArsenalLoop(patternLengthBeats, /*keepPatternPosition=*/true);
         }
     }
 
@@ -256,6 +281,51 @@ public:
     void refreshUiForFocus(bool arsenalFocused) { setUi(arsenalFocused); }
 
 private:
+    /**
+     * In Arsenal: publish the loop length the zone implies for the Arsenal pattern (context first,
+     * so a restart's transport command lands in the same drain, PR 3), and if the pattern is
+     * playing with a different range than it was scheduled with, reschedule it: at the loop's top,
+     * or, with @p keepPatternPosition, at the transport position that keeps the same pattern beat.
+     * @p zoneAllowed false applies no zone (arming a record, before TrackManager knows it).
+     */
+    void reapplyArsenalLoop(double patternLengthBeats, bool keepPatternPosition = false, bool zoneAllowed = true) {
+        if (m_context != PlaybackContext::Arsenal) {
+            return;
+        }
+        const auto wanted = zoneAllowed ? m_trackManager.activeArsenalLoopZone(m_arsenalPattern)
+                                        : std::optional<TrackManager::ArsenalLoopZone>{};
+        const double loopBeats = wanted ? wanted->endBeat - wanted->startBeat : patternLengthBeats;
+        publishEngineContext(true, loopBeats, m_engineAudition);
+        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
+        if (!m_trackManager.isPlaying() || !m_trackManager.isPatternMode() || !m_arsenalPattern.isValid()) {
+            return;
+        }
+        const auto scheduled = m_trackManager.scheduledArsenalLoopZone();
+        const bool same = scheduled.has_value() == wanted.has_value() &&
+                          (!scheduled || (scheduled->pattern == wanted->pattern &&
+                                          scheduled->startBeat == wanted->startBeat &&
+                                          scheduled->endBeat == wanted->endBeat));
+        if (same) {
+            return;
+        }
+        double restartSeconds = 0.0;
+        if (keepPatternPosition) {
+            const double bpm = std::max(1.0, m_trackManager.getTimelineClock().getCurrentTempo());
+            const double oldStart = scheduled ? scheduled->startBeat : 0.0;
+            const double oldLength =
+                std::max(1e-6, scheduled ? scheduled->endBeat - scheduled->startBeat : patternLengthBeats);
+            double transportBeat = std::fmod(std::max(0.0, m_trackManager.getPosition()) * bpm / 60.0, oldLength);
+            const double patternBeat = transportBeat + oldStart;
+            const double newStart = wanted ? wanted->startBeat : 0.0;
+            transportBeat = patternBeat - newStart;
+            if (transportBeat < 0.0 || transportBeat >= loopBeats) {
+                transportBeat = 0.0; // outside the new loop: start at its top
+            }
+            restartSeconds = transportBeat * 60.0 / bpm;
+        }
+        m_trackManager.playPatternInArsenal(m_arsenalPattern, restartSeconds, zoneAllowed);
+    }
+
     // The engine's neutral pattern length when pattern mode is off, as every call site passed.
     static constexpr double kTimelineLengthBeats = 4.0;
 
@@ -284,6 +354,9 @@ private:
     bool m_enginePattern = false;
     double m_engineLength = kTimelineLengthBeats;
     bool m_engineAudition = false;
+    // The pattern Arsenal plays (last started, or the piano roll's when it set a zone). Loop-zone
+    // lookups use it, so a zone drawn on one pattern never shapes another.
+    PatternID m_arsenalPattern{};
     PlaybackContext m_context = PlaybackContext::Timeline;
 };
 

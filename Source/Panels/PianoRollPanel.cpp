@@ -174,7 +174,7 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         if (!m_playbackContext || !m_trackManager || !m_currentPatternId.isValid()) return;
         std::optional<TrackManager::ArsenalLoopZone> arsenalZone;
         if (zone) {
-            arsenalZone = TrackManager::ArsenalLoopZone{zone->first, zone->second};
+            arsenalZone = TrackManager::ArsenalLoopZone{m_currentPatternId, zone->first, zone->second};
         }
         double patternLength = 8.0;
         if (auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId)) {
@@ -189,9 +189,12 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         double positionSeconds = 0.0;
         if (m_trackManager->isPatternMode()) {
             const double bpm = std::max(1.0, m_trackManager->getTimelineClock().getCurrentTempo());
-            // Inside a loop zone the transport runs from the zone's start (beat 0 = zone start).
+            // Inside a loop zone the transport runs from the zone's start (beat 0 = zone start):
+            // the zone this playback was scheduled with, or, stopped, the one the next play uses.
             double transportBeat = beat;
-            if (const auto zone = m_trackManager->activeArsenalLoopZone()) {
+            const auto zone = m_trackManager->isPlaying() ? m_trackManager->scheduledArsenalLoopZone()
+                                                          : m_trackManager->activeArsenalLoopZone(m_currentPatternId);
+            if (zone) {
                 transportBeat = std::clamp(beat - zone->startBeat, 0.0, zone->endBeat - zone->startBeat);
             }
             positionSeconds = transportBeat * (60.0 / bpm);
@@ -295,10 +298,16 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
     
     if (pattern && pattern->isMidi()) {
         // The loop zone belongs to the pattern it was drawn on: switching patterns ends it.
+        // TrackManager also scopes it to that pattern, so this keeps the ruler honest; the old
+        // pattern's length is passed because that is the loop the cleared zone was shaping.
         if (m_currentPatternId != patternId && m_pianoRoll->getLoopZone()) {
             m_pianoRoll->setLoopZone(std::nullopt);
             if (m_playbackContext) {
-                m_playbackContext->setArsenalLoopZone(patternId, std::nullopt, std::max(0.25, pattern->lengthBeats));
+                double oldLength = std::max(0.25, pattern->lengthBeats);
+                if (auto* oldPattern = pm.getPattern(m_currentPatternId)) {
+                    oldLength = std::max(0.25, oldPattern->lengthBeats);
+                }
+                m_playbackContext->setArsenalLoopZone(m_currentPatternId, std::nullopt, oldLength);
             }
         }
         m_currentPatternId = patternId;
@@ -637,7 +646,8 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                         // zone's start (SPEC 3 §5.2); the editor shows pattern beats.
                         double loopStart = 0.0;
                         double loopLength = patternLength;
-                        if (const auto zone = m_trackManager->activeArsenalLoopZone()) {
+                        const auto zone = m_trackManager->scheduledArsenalLoopZone();
+                        if (zone && zone->pattern == m_currentPatternId) {
                             loopStart = zone->startBeat;
                             loopLength = std::max(0.25, zone->endBeat - zone->startBeat);
                         }

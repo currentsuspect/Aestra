@@ -566,6 +566,15 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
     view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
     ASSERT(!view.getLoopZone(), "a Select-tool press on empty grid clears the zone");
+
+    // A drag past the pattern end is clamped to it: past the end there is only silence to loop
+    // (review, #970). The pattern here is 16 beats.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Right, xAt(12.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, xAt(20.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Right, xAt(20.0), y));
+    ASSERT(view.getLoopZone().has_value() && std::abs(view.getLoopZone()->first - 12.0) < 1e-6 &&
+               std::abs(view.getLoopZone()->second - 16.0) < 1e-6,
+           "a zone dragged past the pattern end stops at the end: [12, 16)");
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 
