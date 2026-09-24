@@ -250,6 +250,17 @@ private:
     
     // Multi-clip bounds for hit testing (maps ClipInstanceID to its rendered bounds)
     std::map<ClipInstanceID, AestraUI::NUIRect> m_allClipBounds;
+    // The clip-menu (hamburger) glyph as painted, per clip. Press AND hover hit-test this one
+    // rect, so the affordance answers where it is drawn (SPEC 3 §3.3).
+    std::map<ClipInstanceID, AestraUI::NUIRect> m_clipMenuGlyphRects;
+    ClipInstanceID m_hoveredClipMenuId;  // the clip whose menu glyph is under the pointer
+    bool m_clipMenuCursorClaimed = false; // hand the pointing-hand cursor back once on leaving
+    /** The clip-menu glyph's generous hit zone (the painted glyph, inflated). */
+    static AestraUI::NUIRect clipMenuHitRect(const AestraUI::NUIRect& glyph) {
+        return {glyph.x - 4.0f, glyph.y - 3.0f, glyph.width + 8.0f, glyph.height + 6.0f};
+    }
+    /** The clip whose menu glyph contains @p point, or an invalid id. */
+    ClipInstanceID clipMenuAt(const AestraUI::NUIPoint& point) const;
     ClipInstanceID m_activeClipId;  // Currently clicked/dragged clip id
     ClipInstanceID m_lastClickedClipId;
     long long m_lastClipClickTimeMs = 0;

@@ -1627,8 +1627,15 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     const AestraUI::NUIRect burgerRect(insetClippedClipBounds.x + 3.0f, insetClippedClipBounds.y + 2.0f,
                                              13.0f, 12.0f);
                     if (burgerRect.width > 0.0f && insetClippedClipBounds.width > 20.0f) {
+                        m_clipMenuGlyphRects[clip.id] = burgerRect;
                         const bool selectedClip = isClipHighlighted(clip.id);
                         const bool hot = m_hoveredClipId == clip.id || selectedClip;
+                        // Hovering the glyph itself lights it: the affordance says "click me" where
+                        // it is drawn (it gave no feedback at all, SPEC 3 §3.3).
+                        if (m_hoveredClipMenuId == clip.id) {
+                            renderer.fillRoundedRect(clipMenuHitRect(burgerRect), 3.0f,
+                                                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.16f));
+                        }
                         const AestraUI::NUIColor identity =
                             isPattern ? patternClipIdentity(clip) : resolveClipDisplayColor(clip);
                         const auto lineColor =
@@ -1884,6 +1891,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
 
     // Render Clips (Heavy part)
     m_allClipBounds.clear();
+    m_clipMenuGlyphRects.clear();
     // Use stored modId for caching check if needed later, but here we just draw
     float clipOpacity = (m_playlistMode == PlaylistMode::Automation) ? 0.3f : 1.0f;
     renderer.setOpacity(clipOpacity);
@@ -2451,10 +2459,19 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         TrimEdge newHoverEdge = TrimEdge::None;
         FadeHandle newHoverFade = FadeHandle::None;
 
+        // The menu glyph outranks the trim edge it overlaps, exactly as the press does: hovering it
+        // used to show the TRIM cursor on its left half and nothing on its centre, while a click
+        // anywhere on it opened the menu (SPEC 3 §3.3).
+        const ClipInstanceID previousMenuHover = m_hoveredClipMenuId;
+        m_hoveredClipMenuId = clipMenuAt(event.position);
+
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (!clipBounds.contains(event.position)) continue;
             
             m_hoveredClipId = clipId;
+            if (m_hoveredClipMenuId == clipId) {
+                break; // no fade or trim under the menu glyph
+            }
 
             // V8-W3: the fade band is tested BEFORE the trim edges. Both live at
             // the clip's corners, so without an explicit order the full-height
@@ -2491,8 +2508,25 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // A fade hit keeps the clip hovered: drawClipFades lights an unset
         // grip only while its clip is hot, so clearing it here left the grip
         // invisible exactly when the pointer was on it.
-        if (newHoverEdge == TrimEdge::None && newHoverFade == FadeHandle::None) {
+        if (newHoverEdge == TrimEdge::None && newHoverFade == FadeHandle::None && !m_hoveredClipMenuId.isValid()) {
             m_hoveredClipId = ClipInstanceID{};
+        }
+
+        // Pointing hand over the menu glyph: set while over it, handed back once on leaving.
+        if (m_platformBridge) {
+            if (m_hoveredClipMenuId.isValid()) {
+                m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hand);
+                m_clipMenuCursorClaimed = true;
+            } else if (m_clipMenuCursorClaimed) {
+                m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+                m_clipMenuCursorClaimed = false;
+            }
+        }
+        if (previousMenuHover != m_hoveredClipMenuId) {
+            repaint();
+            if (m_onCacheInvalidationCallback) {
+                m_onCacheInvalidationCallback();
+            }
         }
 
         m_hoverFadeHandle = newHoverFade;
@@ -3130,11 +3164,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 // the same visible-width condition as the rendered glyph, so
                 // narrow/partially-clipped clips keep drag + editor gestures.
                 if (clickedClipBounds.width > 20.0f) {
-                    const auto& clipBounds = m_allClipBounds[clickedClipId];
-                    const AestraUI::NUIRect burgerRect(clipBounds.x + 3.0f - 4.0f, clipBounds.y + 2.0f - 3.0f,
-                                             13.0f + 8.0f, 12.0f + 6.0f);
+                    // The painted glyph's rect, the same one hover uses. This used the full clip
+                    // bounds, which drift from the glyph when a clip is scrolled off the left.
                     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
-                        burgerRect.contains(event.position)) {
+                        clipMenuAt(event.position) == clickedClipId) {
                         m_activeClipId = clickedClipId;
                         // Clip gestures select the clip only (owner direction
                         // 2026-09-19). See the note above the clip branch.
@@ -3574,5 +3607,15 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     }
 }
 
+ClipInstanceID TrackUIComponent::clipMenuAt(const AestraUI::NUIPoint& point) const {
+    for (const auto& [clipId, glyph] : m_clipMenuGlyphRects) {
+        if (clipMenuHitRect(glyph).contains(point)) {
+            return clipId;
+        }
+    }
+    return ClipInstanceID{};
+}
+
 } // namespace Audio
 } // namespace Aestra
+
