@@ -4,6 +4,7 @@
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
+#include "../Support/NullRenderer.h"
 #include <cmath>
 #include <string>
 #include <cassert>
@@ -11,6 +12,7 @@
 #include <optional>
 #include <utility>
 #include <limits>
+#include <vector>
 
 using namespace AestraUI;
 
@@ -451,6 +453,67 @@ static void test_grid_subdivision_matches_snap() {
 // ---------------------------------------------------------------------------
 // Test: grid tiers never advertise positions the snap does not allow
 // ---------------------------------------------------------------------------
+// Owner report 2026-09-24: "the grid on timeline doesn't respect snap". The tiers were PRESENT
+// (the test above) but not VISIBLE: at a 1/4 snap the snap lines were drawn at the decorative
+// subdivision alpha, RGB 2 on the timeline's black bed, so 1/4 looked identical to Beat. A tier
+// that exists because of the snap now gets a visible floor. Uses the timeline plane's own style.
+static void test_snap_tiers_are_visible_not_just_present() {
+    const TimelineGridStyle plane{0.179f, 0.057f, 0.019f, 0.0f};
+    constexpr float WIDE_SPACING_PX = 40.0f; // spacing past the zoom fade: the tier is fully faded in
+
+    const float quarter = timelineSnapTierAlpha(plane, 0.25, WIDE_SPACING_PX);
+    ASSERT(quarter >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "a 1/4 snap's lines are drawn at a visible level (at least 3/4 of the beat tier)");
+    ASSERT(quarter < plane.beatLineAlpha, "and still below the beat tier, keeping the hierarchy");
+    ASSERT(quarter > plane.subdivisionLineAlpha * 1.5f,
+           "clearly brighter than the decorative whisper it used to use (so this is not vacuous)");
+    ASSERT(timelineSnapTierAlpha(plane, 0.5, WIDE_SPACING_PX) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "the half-beat tier under a 1/2 snap is visible too");
+    ASSERT(std::abs(timelineSnapTierAlpha(plane, 0.0, WIDE_SPACING_PX) - plane.subdivisionLineAlpha) < 1e-6f,
+           "with no snap the subdivisions stay decorative");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, 4.0f) == 0.0f, "lines closer than 4 px are still dropped");
+    ASSERT(timelineSnapTierFade(10.0f) > 0.5f && timelineGridLevelFade(10.0f) == 0.0f,
+           "at ~10 px (a beat at default zoom) snap lines show where decorative tiers stay hidden");
+
+    // At the default timeline zoom (~10 px per beat) a 1/4 snap must not look like a Beat snap
+    // (review, #973): its half-beat tier (5 px) is drawn at the snap floor, the quarter tier
+    // (2.5 px) is too dense and stays hidden, and a Beat snap draws no half-beat tier at all.
+    constexpr float DEFAULT_PX_PER_BEAT = 10.0f;
+    ASSERT(timelineGridTierAlignedToSnap(0.5, 0.25) &&
+               timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.5f) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "default zoom, 1/4 snap: the half-beat lines are drawn at the snap floor");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.25f) == 0.0f,
+           "default zoom, 1/4 snap: the 2.5 px quarter lines stay hidden");
+    ASSERT(!timelineGridTierAlignedToSnap(0.5, 1.0), "default zoom, Beat snap: no half-beat tier, so the two differ");
+
+    // The same, through the real renderer (review, #973): record every vertical line it draws for
+    // one bar at the default zoom, under a 1/4 snap and under a Beat snap.
+    struct LineRecorder : Aestra::Testing::NullRenderer {
+        std::vector<float> xs;
+        void drawLine(const NUIPoint& a, const NUIPoint&, float, const NUIColor& c) override {
+            if (c.a > 0.001f) xs.push_back(a.x);
+        }
+        bool drew(float x) const {
+            for (const float v : xs) {
+                if (std::abs(v - x) < 0.01f) return true;
+            }
+            return false;
+        }
+    };
+    const NUIRect bed(0.0f, 0.0f, 40.0f, 100.0f); // one 4-beat bar at 10 px per beat
+    LineRecorder quarterSnap;
+    renderTimelineGrid(quarterSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 0.25);
+    ASSERT(quarterSnap.drew(10.0f) && quarterSnap.drew(5.0f) && quarterSnap.drew(15.0f),
+           "renderer, default zoom, 1/4 snap: beat and half-beat lines are drawn");
+    ASSERT(!quarterSnap.drew(2.5f) && !quarterSnap.drew(7.5f),
+           "renderer, default zoom, 1/4 snap: the 2.5 px quarter lines are not");
+    LineRecorder beatSnap;
+    renderTimelineGrid(beatSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 1.0);
+    ASSERT(beatSnap.drew(10.0f) && !beatSnap.drew(5.0f),
+           "renderer, default zoom, Beat snap: beat lines only, so it differs from 1/4");
+    PASS("snap tiers are visible, not just present");
+}
+
 static void test_grid_tiers_follow_snap() {
     // Without snap info (timeline contract) every tier stays visible.
     ASSERT(timelineGridTierAlignedToSnap(1.0, 0.0), "no snap keeps the beat tier");
@@ -782,6 +845,7 @@ int main() {
     test_ctrl_wheel_zoom_uses_grid_local_anchor();
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
+    test_snap_tiers_are_visible_not_just_present();
     test_scroll_domain_floor_and_growth();
     test_minimap_drag_released_outside_the_editor_ends();
     test_ruler_draws_and_clears_a_loop_zone();
