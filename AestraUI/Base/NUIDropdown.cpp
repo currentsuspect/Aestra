@@ -30,7 +30,7 @@ NUIDropdown::NUIDropdown()
         auto& mgr = NUIThemeManager::getInstance();
         const auto& props = mgr.getCurrentTheme();
         backgroundColor_ = props.surfaceTertiary; // keep in sync with refreshThemeColors()
-        hoverColor_ = props.buttonBgHover;
+        hoverColor_ = props.hover; // list-row overlay on the popup surface (see refreshThemeColors)
         selectedColor_ = props.selected;
         borderColor_ = props.border;
         textColor_ = props.textPrimary;
@@ -57,7 +57,9 @@ void NUIDropdown::refreshThemeColors() {
         }
     };
     assignIfChanged(backgroundColor_, props.surfaceTertiary, customBackground_);
-    assignIfChanged(hoverColor_, props.buttonBgHover, customHover_);
+    // List rows sit on surfaceTertiary; buttonBgHover is a button fill for darker surfaces and was
+    // darker than the list (RGB 23 vs 25), so hover was invisible. The overlay tint reads in both themes.
+    assignIfChanged(hoverColor_, props.hover, customHover_);
     assignIfChanged(selectedColor_, props.selected, customSelected_);
     assignIfChanged(borderColor_, props.borderSubtle, customBorder_);
     assignIfChanged(textColor_, props.textPrimary, customText_);
