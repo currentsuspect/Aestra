@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
+#include "../Core/NUIHoverCursorClaim.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -98,6 +99,7 @@ private:
 
     // Interaction
     bool isDragging_ = false;
+    NUIHoverCursorClaim m_cursorClaim; // hands the cursor back once, only if this set it (SPEC 3 §3.4)
     bool isResizingL_ = false;
     bool isResizingR_ = false;
     NUIPoint dragStartPos_;
