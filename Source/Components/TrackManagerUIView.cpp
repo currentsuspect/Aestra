@@ -3,6 +3,8 @@
 // Split out of the former monolithic TrackManagerUI.cpp — bodies moved verbatim.
 #include "TrackManagerUI.h"
 
+#include <cstring>
+
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
@@ -377,6 +379,34 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     model.showMarkers = false;
     model.showDiagnostics = false;
     model.showPlayhead = !m_patternMode; // Hide playhead in Arsenal Pattern Mode
+
+    // Each lane's clip colour, exactly as the lane row paints it, indexed like the spans'
+    // trackIndex (the lane order). A lane with no clips gets a transparent entry (palette fallback).
+    m_minimapLaneColors.clear();
+    uint64_t laneColorsHash = 1469598103934665603ull; // FNV-1a over the colour bits
+    const auto& minimapLaneIds = playlist.getLaneIDs();
+    for (size_t i = 0; i < minimapLaneIds.size(); ++i) {
+        AestraUI::NUIColor colour(0.0f, 0.0f, 0.0f, 0.0f);
+        const auto* lane = playlist.getLane(minimapLaneIds[i]);
+        if (lane && !lane->clips.empty()) {
+            // Rows are matched by lane id, not position: a lane can own secondary rows.
+            for (const auto& row : m_trackUIComponents) {
+                if (row && row->getLaneId() == minimapLaneIds[i]) {
+                    colour = row->resolveClipDisplayColor(lane->clips.front());
+                    break;
+                }
+            }
+        }
+        m_minimapLaneColors.push_back(colour);
+        for (const float channel : {colour.r, colour.g, colour.b, colour.a}) {
+            uint32_t bits = 0;
+            std::memcpy(&bits, &channel, sizeof(bits));
+            laneColorsHash = (laneColorsHash ^ bits) * 1099511628211ull;
+        }
+    }
+    model.laneColors = m_minimapLaneColors.data();
+    model.laneColorCount = m_minimapLaneColors.size();
+    model.laneColorsHash = laneColorsHash;
 
     m_timelineMinimap->setModel(model);
 }

@@ -167,6 +167,8 @@ public:
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
     const std::map<ClipInstanceID, AestraUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
+    /** @brief The colour this row paints @p clip in (its routed channel's colour, or its own). */
+    AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
 
     // Loading state for visual feedback
     void setLoading(bool loading, float progress = 0.0f) { 
@@ -395,7 +397,7 @@ private:
     void generateWaveformCache(int width, int height);
 
     // Shared clip display color (bright track palette / channel / clip fallback)
-    AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
+
 
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,

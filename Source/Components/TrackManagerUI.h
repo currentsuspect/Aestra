@@ -412,6 +412,7 @@ private:
     // Timeline minimap state (beats-domain)
     ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
     ::AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
+    std::vector<::AestraUI::NUIColor> m_minimapLaneColors; // each lane's clip display colour, by lane index
     ::AestraUI::TimelineMinimapMode m_minimapMode{::AestraUI::TimelineMinimapMode::Clips};
     ::AestraUI::TimelineMinimapAggregation m_minimapAggregation{::AestraUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
