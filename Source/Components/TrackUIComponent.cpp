@@ -1848,16 +1848,11 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
              }
         }
 
-        // Render Control Area Background with a soft vertical elevation gradient
-        // (state color stays the base; the gradient just adds depth). This runs
-        // inside the playlist FBO cache, so the extra fills cost nothing per frame.
+        // Flat chrome, like every other surface. A 0 -> 7% black "elevation" gradient used to sit
+        // on top: invisible on near-black (under one RGB step), but on the light theme's white
+        // chrome it became a 252 -> 238 glossy bevel on every header, a look from an earlier
+        // iteration that nothing else in the app shares (owner, 2026-09-24).
         renderer.fillRect(controlBounds, baseControlColor);
-        // Elevation via shade ONLY — no light component at all. Even ~1% white
-        // reads as a sheen on near-black (and this pipeline amplifies low-alpha
-        // fills), so depth comes purely from the darker bottom.
-        renderer.fillRectGradient(controlBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
-                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.070f),
-                                  /*vertical=*/true);
         // Separator Line between Controls and Timeline (single, quiet boundary)
         renderer.drawLine(
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.y),
