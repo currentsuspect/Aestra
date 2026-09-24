@@ -193,7 +193,7 @@ void AestraLimitEditor::drawGrMeter(NUIRenderer& renderer) {
 
     // Background
     renderer.fillRoundedRect(b, 6.0f, meterBg());
-    renderer.strokeRoundedRect(b, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
+    renderer.strokeRoundedRect(b, 6.0f, 1.0f, editorInk(0.06f));
 
     // Fill bar (right-to-left for GR)
     const float grNorm = std::clamp(m_grDisplayDb / 24.0f, 0.0f, 1.0f);
@@ -216,7 +216,7 @@ void AestraLimitEditor::drawGrMeter(NUIRenderer& renderer) {
         // Top specular
         renderer.drawLine({fillRect.x + 4.0f, fillRect.y + 1.0f},
                           {fillRect.right() - 4.0f, fillRect.y + 1.0f},
-                          1.0f, NUIColor(1, 1, 1, 0.15f));
+                          1.0f, editorInk(0.15f));
     }
 
     // GR label
@@ -236,7 +236,7 @@ void AestraLimitEditor::drawGrMeter(NUIRenderer& renderer) {
         const float t = static_cast<float>(i) / static_cast<float>(kTicks);
         const float x = b.x + t * b.width;
         const float tickH = (i == 0 || i == kTicks) ? 6.0f : 4.0f;
-        renderer.drawLine({x, b.bottom() - tickH}, {x, b.bottom()}, 1.0f, NUIColor(1, 1, 1, 0.10f));
+        renderer.drawLine({x, b.bottom() - tickH}, {x, b.bottom()}, 1.0f, editorInk(0.10f));
 
         if (i < kTicks && i > 0) {
             char tickBuf[8]{};
@@ -269,7 +269,7 @@ void AestraLimitEditor::drawKnob(NUIRenderer& renderer, const KnobControl& contr
 
     // Body
     renderer.fillCircle({cx, cy}, r, bgDark());
-    renderer.strokeCircle({cx, cy}, r + 2.5f, 1.5f, NUIColor(1, 1, 1, 0.07f));
+    renderer.strokeCircle({cx, cy}, r + 2.5f, 1.5f, editorInk(0.07f));
 
     // Arc
     const float start = kPi * 0.75f;
@@ -293,7 +293,7 @@ void AestraLimitEditor::drawKnob(NUIRenderer& renderer, const KnobControl& contr
     const float labelY = control.isPrimary ? knobRect.y - 18.0f : control.bounds.y + 4.0f;
     renderer.drawTextCentered(control.label,
                               {control.bounds.x, labelY, control.bounds.width, 12.0f},
-                              9.0f, NUIColor(1, 1, 1, 0.50f));
+                              9.0f, editorInk(0.50f));
 
     // Value
     const float valY = control.isPrimary
@@ -301,7 +301,7 @@ void AestraLimitEditor::drawKnob(NUIRenderer& renderer, const KnobControl& contr
         : knobRect.bottom() + 4.0f;
     const NUIColor valColor = control.isPrimary
         ? NUIColor(0.85f, 0.65f, 0.20f, 1.0f)
-        : NUIColor(1, 1, 1, 0.85f);
+        : editorInk(0.85f);
     renderer.drawTextCentered(valueText(control.paramId),
                               {control.bounds.x, valY, control.bounds.width, 14.0f},
                               11.0f, valColor);
@@ -316,9 +316,9 @@ void AestraLimitEditor::drawPill(NUIRenderer& renderer, NUIRect rect,
         renderer.fillRoundedRect(rect, 5.0f, accent.withAlpha(0.75f));
         renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},
                           {rect.x + rect.width - 5.0f, rect.y + 1.0f},
-                          1.0f, NUIColor(1, 1, 1, 0.18f));
+                          1.0f, editorInk(0.18f));
         renderer.strokeRoundedRect(rect, 5.0f, 1.0f, accent);
-        renderer.drawTextCentered(label, rect, 9.5f, NUIColor(1, 1, 1, 0.97f));
+        renderer.drawTextCentered(label, rect, 9.5f, editorInk(0.97f));
     } else {
         const NUIColor bg = hovered ? editorNeutral(0.041f, 0.90f)
                                     : editorNeutral(0.022f, 0.90f);
@@ -326,10 +326,10 @@ void AestraLimitEditor::drawPill(NUIRenderer& renderer, NUIRect rect,
         renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},
                           {rect.x + rect.width - 5.0f, rect.y + 1.0f},
                           0.5f, NUIColor(0, 0, 0, 0.25f));
-        const NUIColor border = hovered ? NUIColor(1, 1, 1, 0.16f) : NUIColor(1, 1, 1, 0.08f);
+        const NUIColor border = hovered ? editorInk(0.16f) : editorInk(0.08f);
         renderer.strokeRoundedRect(rect, 5.0f, 1.0f, border);
         renderer.drawTextCentered(label, rect, 9.0f,
-                                  hovered ? NUIColor(1, 1, 1, 0.72f) : NUIColor(1, 1, 1, 0.40f));
+                                  hovered ? editorInk(0.72f) : editorInk(0.40f));
     }
 }
 
@@ -337,7 +337,7 @@ void AestraLimitEditor::drawMeterBar(NUIRenderer& renderer, NUIRect rect,
                                       float norm, const char* label,
                                       const char* value, NUIColor color) {
     renderer.fillRoundedRect(rect, 5.0f, meterBg());
-    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
+    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, editorInk(0.06f));
 
     const NUISize valSize = renderer.measureText(value, 8.0f);
     const float valX = rect.right() - valSize.width - 10.0f;
