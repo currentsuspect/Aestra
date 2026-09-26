@@ -226,7 +226,11 @@ private:
     // style. A style without a glyph draws the arrow.
     std::array<std::shared_ptr<AestraUI::NUIIcon>, AestraUI::kNUICursorStyleCount> m_cursorIcons{};
     bool m_cursorsBuiltForDark = true; // polarity the cursor glyphs were built for
-    AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
+    /** Combines the pointer position's panel cursor with the widgets' and drag-and-drop's claims,
+     *  per frame, after the widgets have handled the latest move (see the mouse-move handler). */
+    void resolveActiveCursorStyle();
+    AestraUI::NUICursorStyle m_panelCursorStyle{AestraUI::NUICursorStyle::Arrow}; // set per mouse move
+    AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow}; // the drawn glyph
     bool m_cachedNativeCursorHidden{false};
 
     // Input State

@@ -267,29 +267,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             m_content->getTrackManagerUI()->setWindowPointerPosition(static_cast<float>(x), static_cast<float>(y));
         }
 
+        // Only the position-dependent part is resolved here. The widgets' own cursors are set while
+        // THIS move is dispatched to them, below, so combining them here drew the previous move's
+        // cursor: a single jump onto the play button drew the arrow, and a jump off it left the
+        // hand behind, each until the next move. resolveActiveCursorStyle() combines per frame.
         if (m_content) {
-            m_activeCursorStyle = m_content->getPanelResizeCursorStyle(
+            m_panelCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
             );
         } else {
-            m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
-        }
-
-        // Let per-component cursor overrides (e.g. piano roll smart cursor) take precedence
-        if (m_window) {
-            auto bridgeStyle = m_window->getCursorStyle();
-            if (bridgeStyle != AestraUI::NUICursorStyle::Arrow &&
-                bridgeStyle != AestraUI::NUICursorStyle::Hidden) {
-                m_activeCursorStyle = bridgeStyle;
-            }
-        }
-
-        // A drag-and-drop in flight (a file from the browser, a sample onto a
-        // lane) is something being carried: the closed hand, wherever the pointer
-        // travels. The source only set the open hand on hover, and nothing else
-        // owns the cursor between drag start and drop.
-        if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-            m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
+            m_panelCursorStyle = AestraUI::NUICursorStyle::Arrow;
         }
         
         // RecoveryDialog is modal - consume mouse move when visible
@@ -937,6 +924,8 @@ void AestraWindowManager::resolveCursorState() {
         m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
     }
 
+    resolveActiveCursorStyle();
+
     const AestraUI::NUICursorStyle style = m_window->getCursorStyle();
     bool trackManagerHasCustomCursor = false;
     if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
@@ -953,6 +942,24 @@ void AestraWindowManager::resolveCursorState() {
     if (hideNative != m_cachedNativeCursorHidden) {
         m_cachedNativeCursorHidden = hideNative;
         m_window->setCursorVisible(!hideNative);
+    }
+}
+
+void AestraWindowManager::resolveActiveCursorStyle() {
+    m_activeCursorStyle = m_panelCursorStyle;
+
+    // Per-component cursor overrides (e.g. the piano roll's smart cursor) take precedence.
+    const auto bridgeStyle = m_window->getCursorStyle();
+    if (bridgeStyle != AestraUI::NUICursorStyle::Arrow && bridgeStyle != AestraUI::NUICursorStyle::Hidden) {
+        m_activeCursorStyle = bridgeStyle;
+    }
+
+    // A drag-and-drop in flight (a file from the browser, a sample onto a
+    // lane) is something being carried: the closed hand, wherever the pointer
+    // travels. The source only set the open hand on hover, and nothing else
+    // owns the cursor between drag start and drop.
+    if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+        m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
     }
 }
 
