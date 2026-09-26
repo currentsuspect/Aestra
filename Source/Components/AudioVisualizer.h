@@ -135,6 +135,7 @@ private:
     
     // Animation
     float animationTime_;
+    bool lastWaveformSilent_ = false; // the previous waveform block was pure silence
     float peakDecayTime_;
     float smoothingFactor_;  // Exponential smoothing (0.0 = instant, 1.0 = slow)
 
