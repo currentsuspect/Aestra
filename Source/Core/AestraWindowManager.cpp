@@ -942,6 +942,12 @@ void AestraWindowManager::resolveCursorState() {
         m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
         if (m_window) {
             m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+            // Native-cursor mode: the timeline hides the OS cursor while its tool cursor is active
+            // (setOnCursorVisibilityChanged). Show it again, or the dialog has no pointer at all.
+            // Custom-cursor mode manages native visibility below, in the hideNative sync.
+            if (!m_useCustomCursor) {
+                m_window->setCursorVisible(true);
+            }
         }
     }
     m_modalWasOpen = modalOpen;
