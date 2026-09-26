@@ -140,7 +140,8 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     drawWindowControls(renderer);
 
     const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
-    const auto muted = themeManager.getColor("textSecondary").withAlpha(0.58f);
+    // A tier colour, not an alpha: textSecondary x 0.58 was 3.2:1 on light, below the 4.5 floor.
+    const auto muted = themeManager.getColor("textSecondary");
     const auto accent = themeManager.getColor("accentPrimary");
     const auto verifiedAccent = themeManager.getColor("success");
     const float userFont = props.fontSizeXS; // 12.0
