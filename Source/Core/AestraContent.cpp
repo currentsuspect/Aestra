@@ -1892,6 +1892,30 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         }
     };
 
+    // Skip drawing the timeline while an opaque panel covers all of it (SPEC 3 §4): an open
+    // piano roll over the timeline made every frame pay for a full timeline nobody could see
+    // (measured 20 -> 9 ms per playing frame when it isn't drawn). A panel counts only when it
+    // is visible, not minimized and its rect contains the timeline's. Both bounds are
+    // window-absolute, so they compare directly.
+    if (m_trackManagerUI) {
+        bool occluded = false;
+        const auto timeline = m_trackManagerUI->getBounds();
+        if (m_overlayLayer && m_overlayLayer->isVisible() && timeline.width > 0.0f && timeline.height > 0.0f) {
+            for (const auto& child : m_overlayLayer->getChildren()) {
+                const auto* panel = dynamic_cast<const Aestra::Audio::WindowPanel*>(child.get());
+                if (!panel || !panel->isVisible() || panel->isMinimized()) continue;
+                const auto p = panel->getBounds();
+                constexpr float kEps = 0.5f;
+                if (p.x <= timeline.x + kEps && p.y <= timeline.y + kEps && p.right() >= timeline.right() - kEps &&
+                    p.bottom() >= timeline.bottom() - kEps) {
+                    occluded = true;
+                    break;
+                }
+            }
+        }
+        m_trackManagerUI->setRenderOccluded(occluded);
+    }
+
     if (m_workspaceLayer && m_workspaceLayer->isVisible()) {
         m_workspaceLayer->onRender(renderer);
     }

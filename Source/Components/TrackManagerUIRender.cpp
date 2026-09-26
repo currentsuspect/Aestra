@@ -62,6 +62,10 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         }
     }
 
+    // Fully covered by an opaque panel (AestraContent decides per frame): nothing to see.
+    if (m_renderOccluded)
+        return;
+
     AestraUI::NUIRect bounds = getBounds();
 
     // Normal rendering with FBO CACHING for massive FPS boost! 🚀
