@@ -723,6 +723,15 @@ public:
     void setScrollX(float scrollX);
     /** @brief Set the bar signature so the lane grid matches the ruler/note grid. */
     void setBeatsPerBar(int bpb) { beatsPerBar_ = std::max(1, bpb); repaint(); }
+    /**
+     * @brief The width of the label sidebar, which must equal the view's key lane.
+     *
+     * The lane's beat 0 sits at the sidebar's right edge, so this is what lines
+     * its stems and grid up with the notes above. It was a hard-coded 76 after the
+     * key lane shrank to 58 (spec 2 §6), which drew every stem 18 px right of its
+     * note and turned a click on a beat-0 stem into a Velocity/Pan flip.
+     */
+    void setSidebarWidth(float width) { sidebarWidth_ = std::max(0.0f, width); repaint(); }
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;
@@ -731,6 +740,7 @@ private:
     float pixelsPerBeat_;
     float scrollX_;
     int beatsPerBar_ = 4;
+    float sidebarWidth_ = 58.0f; // PianoRollView keeps it equal to its key lane
     LaneMode laneMode_ = LaneMode::Velocity; // Toggled by clicking the lane's sidebar
 
     // Interaction

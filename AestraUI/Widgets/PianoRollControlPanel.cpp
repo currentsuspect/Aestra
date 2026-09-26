@@ -49,7 +49,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
     // CRITICAL FIX: Ignore events outside bounds unless we are already dragging
     if (!b.contains(event.position) && !isDragging_) return false;
 
-    constexpr float sidebarW = 76.0f;
+    const float sidebarW = sidebarWidth_; // the view's key-lane width: stems sit under their notes
     // Note Layer Interaction (Velocity)
     // We assume clicks in content area are for velocity
     // COPIED FROM OLD LOGIC
@@ -180,7 +180,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.right(), b.y), 1.0f, border);
     
     // Sidebar Area (Left)
-    constexpr float sidebarW = 76.0f;
+    const float sidebarW = sidebarWidth_; // the view's key-lane width: stems sit under their notes
     NUIRect sidebarRect(b.x, b.y, sidebarW, b.height);
     
     renderer.fillRect(sidebarRect, themeManager.getColor("backgroundPrimary").withAlpha(0.72f));
@@ -205,7 +205,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                       NUIPoint(b.x + (sidebarW - panDim.width) * 0.5f, b.y + 31.0f),
                       labelSize,
                       panMode ? activeColor : inactiveColor);
-    const char* rangeText = panMode ? "L - C - R" : "MIDI 0 - 127";
+    // Short enough for the 58 px key lane: "MIDI 0 - 127" was 61 px and ran into the lane.
+    const char* rangeText = panMode ? "L - C - R" : "0 - 127";
     const auto rangeDim = renderer.measureText(rangeText, 8.0f);
     renderer.drawText(rangeText,
                       NUIPoint(b.x + (sidebarW - rangeDim.width) * 0.5f, b.y + 49.0f),
