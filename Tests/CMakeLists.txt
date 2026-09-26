@@ -3501,3 +3501,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ExportDialogPreferencesTest.c
     set_tests_properties(ExportDialogPreferencesTest PROPERTIES
         LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# SPEC 3 §4: the adaptive-FPS governor falls idle after input instead of latching active.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(AdaptiveFPSIdleTest AestraUI_Core)
+    add_executable(AdaptiveFPSIdleTest AestraUI/AdaptiveFPSIdleTest.cpp)
+    target_link_libraries(AdaptiveFPSIdleTest PRIVATE AestraUI_Core)
+    target_include_directories(AdaptiveFPSIdleTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI)
+    add_test(NAME AdaptiveFPSIdleTest COMMAND AdaptiveFPSIdleTest)
+    set_tests_properties(AdaptiveFPSIdleTest PROPERTIES LABELS "ui;perf;contract:application")
+endif()

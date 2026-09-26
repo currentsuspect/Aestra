@@ -69,12 +69,16 @@ void NUICustomTitleBar::createIcons() {
     exportButtonRect_ = NUIRect(0, 0, 28.0f, 28.0f);
 }
 
+// Setters invalidate only on a real change: the window manager re-applies window state
+// every frame, and one unconditional setDirty here kept the idle app redrawing (SPEC 3 §4).
 void NUICustomTitleBar::setMaximized(bool maximized) {
+    if (isMaximized_ == maximized) return;
     isMaximized_ = maximized;
     setDirty(true);
 }
 
 void NUICustomTitleBar::setTitle(const std::string& title) {
+    if (title_ == title) return;
     title_ = title;
     setDirty(true);
 }
@@ -90,6 +94,7 @@ void NUICustomTitleBar::setMembershipBadge(const std::string& tier, const std::s
 }
 
 void NUICustomTitleBar::setHeight(float height) {
+    if (height_ == height) return;
     height_ = height;
     setSize(getBounds().width, height);
     updateButtonRects();
@@ -97,12 +102,14 @@ void NUICustomTitleBar::setHeight(float height) {
 }
 
 void NUICustomTitleBar::setExportProgress(float progress) {
+    if (exportProgress_ == progress && exportAnimating_ == (progress < 0.0f)) return;
     exportProgress_ = progress;
     exportAnimating_ = (progress < 0.0f);
     setDirty(true);
 }
 
 void NUICustomTitleBar::setExporting(bool exporting) {
+    if (isExporting_ == exporting) return;
     isExporting_ = exporting;
     if (!exporting) {
         exportProgress_ = 0.0f;

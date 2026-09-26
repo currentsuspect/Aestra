@@ -38,7 +38,7 @@ public:
 
     /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
-    void setHoveredKey(int pitch) { hoveredKey_ = pitch; repaint(); }
+    void setHoveredKey(int pitch) { const auto next = pitch; if (hoveredKey_ == next) return; hoveredKey_ = next; repaint(); }
 
     /** @brief Set callback for note preview (pitch, velocity). Called when user clicks a key. */
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
@@ -133,9 +133,9 @@ public:
     /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb); // REORDERED
     /** @brief Set the current bar signature in beats per bar. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = bpb; if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
     /** @brief Set the playhead beat for ruler rendering. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
     // Callback: delta (wheel), mouseX (local)
     std::function<void(float delta, float mouseX)> onZoomRequested; // ADDED
@@ -203,6 +203,7 @@ public:
     struct PatternChoice {
         int value = 0;
         std::string label;
+        bool operator==(const PatternChoice& o) const { return value == o.value && label == o.label; }
     };
 
     /** @brief Create the internal piano-roll toolbar. */
@@ -302,6 +303,12 @@ private:
     std::function<void()> onCenterOnPlayhead_;
     bool m_updatingPatternDropdown = false;
     bool m_updatingUnitDropdown = false;
+    // Last applied switcher contents: re-applying the same list every frame cleared and
+    // re-added every item and kept the UI redrawing at idle (SPEC 3 §4).
+    std::vector<PatternChoice> m_appliedPatternChoices;
+    int m_appliedPatternSelection = -2;
+    std::vector<PatternChoice> m_appliedUnitChoices;
+    int m_appliedUnitSelection = -2;
     bool m_updatingSnapDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
     int m_rootKey = 0;
@@ -340,9 +347,9 @@ public:
     /** @brief Set the vertical scroll offset. */
     void setScrollOffsetY(float offset);
     /** @brief Set the playhead beat rendered on the grid. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
-    void setTotalDurationBeats(double beats) { totalDurationBeats_ = std::max(0.0, beats); repaint(); }
-    void setHoveredPitch(int pitch) { hoveredPitch_ = pitch; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
+    void setTotalDurationBeats(double beats) { const auto next = std::max(0.0, beats); if (totalDurationBeats_ == next) return; totalDurationBeats_ = next; repaint(); }
+    void setHoveredPitch(int pitch) { const auto next = pitch; if (hoveredPitch_ == next) return; hoveredPitch_ = next; repaint(); }
     /** @brief The ruler loop zone, drawn as a band across the grid (SPEC 3 §5.2). */
     void setLoopZone(bool active, double startBeat, double endBeat) {
         loopZoneActive_ = active;
@@ -352,15 +359,15 @@ public:
     }
     
     /** @brief Set the bar signature in beats per bar. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = bpb; if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
 
     /** @brief Set the musical root key used for scale highlighting. */
-    void setRootKey(int root) { rootKey_ = root; repaint(); }
+    void setRootKey(int root) { const auto next = root; if (rootKey_ == next) return; rootKey_ = next; repaint(); }
     /** @brief Set the active scale type used for scale highlighting. */
-    void setScaleType(ScaleType type) { scaleType_ = type; repaint(); }
+    void setScaleType(ScaleType type) { const auto next = type; if (scaleType_ == next) return; scaleType_ = next; repaint(); }
     
     /** @brief Set the active snap grid. */
-    void setSnap(SnapGrid snap) { snap_ = snap; repaint(); }
+    void setSnap(SnapGrid snap) { const auto next = snap; if (snap_ == next) return; snap_ = next; repaint(); }
 
     /** @brief Beat span the grid renders subdivisions at for the active snap. */
     double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
@@ -476,7 +483,7 @@ public:
     void updateEdgeScrolling(float mouseX, float mouseY, const NUIRect& bounds, std::function<void()> syncCallback = nullptr);
     
     /** @brief Set the current playhead beat used for rendering. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
     /** @brief Set whether transport is playing, so sounding notes can light up. */
     void setPlaying(bool playing) { isPlaying_ = playing; }
@@ -722,7 +729,7 @@ public:
     void setPixelsPerBeat(float ppb);
     void setScrollX(float scrollX);
     /** @brief Set the bar signature so the lane grid matches the ruler/note grid. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = std::max(1, bpb); repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = std::max(1, bpb); if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;

@@ -31,6 +31,8 @@ set(AESTRAUI_CORE_SOURCES
     Core/NUIThemeSystem.cpp
     Core/NUIAdaptiveFPS.h
     Core/NUIAdaptiveFPS.cpp
+    Core/NUIPerfProbe.h
+    Core/NUIPerfProbe.cpp
     Core/NUIFrameProfiler.h
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h

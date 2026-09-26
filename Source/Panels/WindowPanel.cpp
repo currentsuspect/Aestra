@@ -486,7 +486,10 @@ void WindowPanel::layoutContent() {
     if (m_titleBarAccessory) {
         const float buttonsWidth = buttonSize * 3.0f + buttonPadding * 4.0f;
         const float accessoryX = m_accessoryTitleZone;
-        const float accessoryW = std::max(0.0f, panelWidth - accessoryX - buttonsWidth);
+        // Whole pixels: onResize() below takes ints, and NUIComponent::onResize re-applies the
+        // truncated size. A fractional width flipped the toolbar between the two every layout
+        // pass (916.56 <-> 916), so the piano roll never went idle (SPEC 3 §4).
+        const float accessoryW = std::floor(std::max(0.0f, panelWidth - accessoryX - buttonsWidth));
         const float accessoryH = std::min(m_accessoryHeight, m_titleBarHeight);
         const float accessoryY = (m_titleBarHeight - accessoryH) * 0.5f;
         const NUILocalRect accessoryRect(accessoryX, accessoryY, accessoryW, accessoryH);

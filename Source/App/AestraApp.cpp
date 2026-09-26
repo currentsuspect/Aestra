@@ -7,6 +7,7 @@
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
+#include "../AestraUI/Core/NUIPerfProbe.h"
 
 #include <cstdlib>
 #include "../AestraCore/include/AestraFile.h"
@@ -37,6 +38,8 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <cstdio>
+#include <vector>
 #include "../Core/AudioSettingsStore.h"
 #include "../Core/DockedRailWidths.h"
 #include "../Core/LegacyMixerSettingsImport.h"
@@ -1481,6 +1484,15 @@ void AestraApp::run() {
         }).detach();
     }
 
+    // Opt-in frame-work report (SPEC 3 §4): AESTRA_FRAME_STATS=1 logs, once a second, how long
+    // each presented frame's WORK took (events + update + render + swap, before the pacing
+    // sleep). UnifiedProfiler's totalTimeMs includes that sleep, so it cannot show a dropped
+    // frame; this can. Off by default: no cost unless the variable is set.
+    const bool frameStatsEnabled = std::getenv("AESTRA_FRAME_STATS") != nullptr;
+    std::vector<double> frameWorkMs;
+    auto frameStatsWindowStart = std::chrono::steady_clock::now();
+    auto frameWorkStart = frameStatsWindowStart;
+
     while (m_running && m_windowManager->processEvents()) {
         // Worker → UI hop (native dialogs/decode off the UI thread); pumped
         // before UI update so a completed relink lands this frame.
@@ -1586,6 +1598,36 @@ void AestraApp::run() {
             m_windowManager->swapBuffers();
             m_lastPresentedFrame = std::chrono::steady_clock::now();
         }
+        if (frameStatsEnabled) {
+            const auto now = std::chrono::steady_clock::now();
+            if (presentThisFrame) {
+                frameWorkMs.push_back(std::chrono::duration<double, std::milli>(now - frameWorkStart).count());
+            }
+            if (now - frameStatsWindowStart >= std::chrono::seconds(1)) {
+                if (!frameWorkMs.empty()) {
+                    std::sort(frameWorkMs.begin(), frameWorkMs.end());
+                    double sum = 0.0;
+                    for (const double ms : frameWorkMs) sum += ms;
+                    const auto over = [&](double budget) {
+                        return std::count_if(frameWorkMs.begin(), frameWorkMs.end(),
+                                             [budget](double ms) { return ms > budget; });
+                    };
+                    char line[256];
+                    std::snprintf(line, sizeof(line),
+                                  "[FrameStats] frames=%zu work avg=%.2fms p95=%.2fms max=%.2fms over16.7=%ld over33=%ld",
+                                  frameWorkMs.size(), sum / static_cast<double>(frameWorkMs.size()),
+                                  frameWorkMs[(frameWorkMs.size() * 95) / 100], frameWorkMs.back(),
+                                  static_cast<long>(over(16.7)), static_cast<long>(over(33.3)));
+                    Log::info(line);
+                    if (AestraUI::PerfProbe::enabled()) {
+                        std::istringstream report(AestraUI::PerfProbe::takeReport(frameWorkMs.size()));
+                        for (std::string detail; std::getline(report, detail);) Log::info(detail);
+                    }
+                }
+                frameWorkMs.clear();
+                frameStatsWindowStart = now;
+            }
+        }
         if (sleepTime > 0.0) {
              if (auto fps = m_windowManager->getAdaptiveFPS()) {
                  fps->sleep(sleepTime);
@@ -1595,47 +1637,53 @@ void AestraApp::run() {
          }
 
         UnifiedProfiler::getInstance().endFrame();
+        frameWorkStart = std::chrono::steady_clock::now();
     }
 }
 
 bool AestraApp::shouldRenderThisFrame() {
+    // AESTRA_FRAME_STATS=2 records why each frame was presented ([FrameWhy]).
+    const auto present = [](const char* reason) {
+        if (AestraUI::PerfProbe::enabled()) AestraUI::PerfProbe::recordPresentReason(reason);
+        return true;
+    };
     // Conservative v1 gate: render unless EVERY skip condition holds
     // (dirty == false && realtime_visuals == false && input_recent == false).
 
     // Pending invalidation — any component's setDirty(true) propagates here.
     auto* root = m_windowManager->getRootComponent();
     if (!root || root->isDirty())
-        return true;
+        return present("dirty");
 
     // Input recency — the adaptive FPS governor already tracks this (fed by
     // mouse/key callbacks); align with its idle timeout.
     auto* fps = m_windowManager->getAdaptiveFPS();
     if (!fps || fps->getIdleTime() < 2.0)
-        return true;
+        return present("input");
 
     // Realtime visuals — transport (playhead/meters), record-arm input
     // monitoring, file preview, and Audition playback.
     if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
-        return true;
+        return present("transport");
     }
     if (m_content) {
         if (auto tm = m_content->getTrackManager()) {
             if (tm->isPlaying() || tm->isRecordArmed())
-                return true;
+                return present("playing or armed");
         }
         if (m_content->hasRealtimePlaybackVisuals())
-            return true;
+            return present("realtime visuals");
     }
 
     // Overlays that animate or need fresh samples (HUD, dialogs, menus).
     if (m_windowManager->requiresContinuousRender())
-        return true;
+        return present("overlay");
 
     // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
     // unsignaled change still surface within ~300 ms.
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
-    return sinceLastPresent >= 0.3;
+    return sinceLastPresent >= 0.3 && present("heartbeat");
 }
 
 void AestraApp::startMuseSocketIfConfigured() {

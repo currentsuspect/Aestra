@@ -146,7 +146,9 @@ void AudioVisualizer::onUpdate(double deltaTime) {
     const float holdDecaySec = 0.4f;
     const float holdDecayCoeff = std::exp(-dt / holdDecaySec);
 
-    float leftHold = leftPeakHold_.load();
+    const float leftHoldPrev = leftPeakHold_.load();
+    const float rightHoldPrev = rightPeakHold_.load();
+    float leftHold = leftHoldPrev;
     if (leftPeakCurrent >= leftHold) {
         leftHold = leftPeakCurrent;
         leftPeakHoldTimer_ = 0.0f;
@@ -158,7 +160,7 @@ void AudioVisualizer::onUpdate(double deltaTime) {
     }
     leftPeakHold_.store(leftHold);
 
-    float rightHold = rightPeakHold_.load();
+    float rightHold = rightHoldPrev;
     if (rightPeakCurrent >= rightHold) {
         rightHold = rightPeakCurrent;
         rightPeakHoldTimer_ = 0.0f;
@@ -184,8 +186,24 @@ void AudioVisualizer::onUpdate(double deltaTime) {
     } else {
         rightClipIndicator_ *= clipDecayCoeff;
     }
+    // A decayed flash is gone; stop the exponential tail from keeping the meter "moving".
+    if (leftClipIndicator_ < 1e-3f) leftClipIndicator_ = 0.0f;
+    if (rightClipIndicator_ < 1e-3f) rightClipIndicator_ = 0.0f;
 
-    setDirty(true);
+    // Redraw only while something on the meter moves or there is signal (SPEC 3 §4). This
+    // was an unconditional setDirty every frame for every visualizer, which alone kept the
+    // idle app presenting ~50 frames a second. At silence the ballistics settle and the
+    // meter goes quiet; the colour-cycling decorations pause with it.
+    constexpr float kMoved = 1e-5f;
+    constexpr float kSignal = 1e-4f;
+    const bool moved = std::abs(leftPeakNew - leftPeakPrev) > kMoved || std::abs(rightPeakNew - rightPeakPrev) > kMoved ||
+                       std::abs(leftRMSNew - leftRMSPrev) > kMoved || std::abs(rightRMSNew - rightRMSPrev) > kMoved ||
+                       std::abs(leftHold - leftHoldPrev) > kMoved || std::abs(rightHold - rightHoldPrev) > kMoved ||
+                       leftClipIndicator_ > 0.0f || rightClipIndicator_ > 0.0f;
+    const bool signal = std::max({leftPeakCurrent, rightPeakCurrent, leftRMSCurrent, rightRMSCurrent}) > kSignal;
+    if (moved || signal) {
+        setDirty(true);
+    }
 }
 
 void AudioVisualizer::onResize(int width, int height) {
@@ -241,6 +259,11 @@ void AudioVisualizer::setPeakLevels(float leftPeak, float rightPeak, float leftR
     if (leftRMS < 0.0f) leftRMS = leftPeak;
     if (rightRMS < 0.0f) rightRMS = rightPeak;
 
+    // Fed every frame, silence included: identical levels change nothing on screen, so they
+    // must not invalidate (SPEC 3 §4). onUpdate still redraws while the ballistics move.
+    const bool unchanged = leftPeak_.load() == leftPeak && rightPeak_.load() == rightPeak &&
+                           leftRMS_.load() == leftRMS && rightRMS_.load() == rightRMS;
+
     leftPeak_.store(leftPeak);
     rightPeak_.store(rightPeak);
     leftRMS_.store(leftRMS);
@@ -249,7 +272,9 @@ void AudioVisualizer::setPeakLevels(float leftPeak, float rightPeak, float leftR
     leftPeakHold_.store(std::max(leftPeakHold_.load(), leftPeak));
     rightPeakHold_.store(std::max(rightPeakHold_.load(), rightPeak));
 
-    setDirty(true);
+    if (!unchanged) {
+        setDirty(true);
+    }
 }
 
 void AudioVisualizer::setInterleavedWaveform(const float* interleavedStereo, size_t numFrames) {
@@ -291,7 +316,15 @@ void AudioVisualizer::setInterleavedWaveform(const float* interleavedStereo, siz
         rightRMS_.store(rmsR);
     }
 
-    setDirty(true);
+    // A block of silence after silence draws the same flat line (SPEC 3 §4). Below -100 dB
+    // counts as silence: a live output history carries denormals, never bit-exact zero.
+    constexpr float kSilence = 1e-5f;
+    const bool silent = peakL < kSilence && peakR < kSilence;
+    const bool stillSilent = silent && lastWaveformSilent_;
+    lastWaveformSilent_ = silent;
+    if (!stillSilent) {
+        setDirty(true);
+    }
 }
 
 void AudioVisualizer::setAudioManager(Aestra::Audio::AudioDeviceManager* manager) {
@@ -337,6 +370,8 @@ void AudioVisualizer::setArrangementWaveform(std::shared_ptr<Aestra::Audio::Wave
 }
 
 void AudioVisualizer::setTransportPosition(double seconds) {
+    // Polled every frame; a stopped transport must not keep the UI redrawing (SPEC 3 §4).
+    if (transportPosition_.load(std::memory_order_relaxed) == seconds) return;
     transportPosition_.store(seconds, std::memory_order_relaxed);
     setDirty(true);
 }

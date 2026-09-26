@@ -1,9 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIComponent.h"
+#include "NUIPerfProbe.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -61,6 +63,14 @@ void NUIComponent::onUpdate(double deltaTime) {
 }
 
 void NUIComponent::onResize(int width, int height) {
+    // setBounds() calls this with its own size truncated to ints. Re-applying that truncated
+    // size snapped every fractional-width component to the integer below, inside the same
+    // call; the parent then set the fraction again next frame. That flip (146.56 <-> 146) was
+    // a real change every frame, so the UI never went idle (SPEC 3 §4). Only an int size that
+    // actually differs from ours is a resize.
+    if (static_cast<int>(bounds_.width) == width && static_cast<int>(bounds_.height) == height) {
+        return;
+    }
     setBounds(bounds_.x, bounds_.y, static_cast<float>(width), static_cast<float>(height));
 }
 
@@ -524,17 +534,29 @@ void NUIComponent::setHovered(bool hovered) {
     }
 }
 
+namespace {
+thread_local int t_dirtyDepth = 0; // > 0 while propagating to parents (perf probe)
+thread_local double t_renderInnerMs = 0.0; // children's render time inside the current child
+} // namespace
+
 void NUIComponent::setDirty(bool dirty) {
     dirty_ = dirty;
-    
+    if (dirty && t_dirtyDepth == 0 && PerfProbe::enabled()) {
+        PerfProbe::recordDirtyOrigin(*this, parent_);
+    }
+
     // Propagate to parent
     if (dirty && parent_) {
+        ++t_dirtyDepth;
         parent_->setDirty(true);
+        --t_dirtyDepth;
     }
 }
 
 void NUIComponent::setOpacity(float opacity) {
-    opacity_ = std::max(0.0f, std::min(1.0f, opacity));
+    const float next = std::max(0.0f, std::min(1.0f, opacity));
+    if (opacity_ == next) return; // invalidate only on a change (SPEC 3 §4)
+    opacity_ = next;
     setDirty();
 }
 
@@ -596,10 +618,22 @@ void NUIComponent::onThemeChanged(const NUIThemeProperties& theme) {
 // for a paint/update loop.
 
 void NUIComponent::renderChildren(NUIRenderer& renderer) {
+    const bool probe = PerfProbe::enabled();
     for (size_t i = 0; i < children_.size(); ++i) {
         auto child = children_[i];
         if (child && child->isVisible()) {
+            if (!probe) {
+                child->onRender(renderer);
+                continue;
+            }
+            // Self time: this child's render minus its own children's (they record themselves).
+            const double outerInner = t_renderInnerMs;
+            t_renderInnerMs = 0.0;
+            const auto t0 = std::chrono::steady_clock::now();
             child->onRender(renderer);
+            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            PerfProbe::recordRenderSelf(*child, ms - t_renderInnerMs);
+            t_renderInnerMs = outerInner + ms;
         }
     }
 }

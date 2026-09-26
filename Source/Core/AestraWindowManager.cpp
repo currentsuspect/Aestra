@@ -17,8 +17,10 @@
 #include "../AestraUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUICursorRegistry.h"
+#include "../AestraUI/Core/NUIPerfProbe.h"
 #include "../AestraCore/include/AestraLog.h"
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 
@@ -825,7 +827,12 @@ bool AestraWindowManager::isFullScreen() const {
 }
 
 void AestraWindowManager::swapBuffers() {
+    const auto swapStart = std::chrono::steady_clock::now();
     if (m_window) m_window->swapBuffers();
+    if (AestraUI::PerfProbe::enabled()) {
+        AestraUI::PerfProbe::recordPhase(AestraUI::PerfProbe::Phase::Swap,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - swapStart).count());
+    }
 }
 
 void AestraWindowManager::beginFrame() {
@@ -880,7 +887,14 @@ void AestraWindowManager::render() {
     } else {
         m_confirmationDialogRaised = false;
     }
+    // AESTRA_FRAME_STATS=2: widget tree / submit / swap per frame ([Phase]).
+    const bool probe = AestraUI::PerfProbe::enabled();
+    const auto treeStart = std::chrono::steady_clock::now();
     m_rootComponent->onRender(*m_renderer);
+    if (probe) {
+        AestraUI::PerfProbe::recordPhase(AestraUI::PerfProbe::Phase::Tree,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - treeStart).count());
+    }
     NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
 
     // Render RecoveryDialog on top of everything if visible
@@ -917,7 +931,12 @@ void AestraWindowManager::render() {
         }
     }
 
+    const auto submitStart = std::chrono::steady_clock::now();
     m_renderer->endFrame();
+    if (probe) {
+        AestraUI::PerfProbe::recordPhase(AestraUI::PerfProbe::Phase::Submit,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - submitStart).count());
+    }
 }
 
 // ==============================
