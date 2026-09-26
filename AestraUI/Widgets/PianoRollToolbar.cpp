@@ -497,7 +497,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
         renderer.drawText(lengthLabel,
                           NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
-                                   pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),
+                                   std::round(renderer.calculateOpticalTextY(pillRect, lengthFontSize))),
                           lengthFontSize,
                           themeManager.getColor("textPrimary").withAlpha(0.82f));
         currentX += pillW + buttonSpacing;

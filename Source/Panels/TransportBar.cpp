@@ -780,7 +780,8 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 
             const float textX = labelIconRect.x + TRANSPORT_LABEL_ICON_SIZE + TRANSPORT_LABEL_ICON_GAP;
             renderer.drawText(label,
-                              {textX, renderer.calculateTextY(buttonRect, TRANSPORT_LABEL_FONT_SIZE)},
+                              // Caps: centred by cap height, level with the icon (SPEC 3 §3.2).
+                              {textX, std::round(renderer.calculateOpticalTextY(buttonRect, TRANSPORT_LABEL_FONT_SIZE))},
                               TRANSPORT_LABEL_FONT_SIZE, labelColor);
             return;
         }

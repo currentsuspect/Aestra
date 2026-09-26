@@ -50,15 +50,12 @@ float editorContentX(const NUIRect& b) { return b.x + 18.0f + presetColumnWidth(
 float rightColWidth(float editorWidth) { return std::clamp(editorWidth * 0.29f, 196.0f, 238.0f); }
 
 // Top-left Y that optically centres a single line of text (by cap height) on
-// centreY. drawText() offsets the passed Y by the font ascent to reach the
-// baseline, so we place the baseline at centreY + capHeight/2 then back the
-// ascent out. This tracks adjacent circles/knobs far better than calculateTextY,
-// which centres the whole line box (ascent + descent + gap) and leaves label
-// text sitting low against a geometric centre.
+// centreY. Tracks adjacent circles/knobs far better than calculateTextY, which
+// centres the whole line box and leaves label text sitting low against a
+// geometric centre. Now the shared renderer helper, with the font's real cap
+// height instead of a guessed 0.70 (SPEC 3 §3.2).
 float opticalTextY(NUIRenderer& renderer, float centreY, float fontSize) {
-    const auto metrics = renderer.getFontMetrics(fontSize);
-    const float capHeight = fontSize * 0.70f;
-    return centreY + capHeight * 0.5f - metrics.ascent;
+    return renderer.calculateOpticalTextY(centreY, fontSize);
 }
 
 std::string fitVerbText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
