@@ -89,8 +89,10 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                           1.0f, colors.cornerSeparator);
     }
 
-    const TimelineSummarySnapshot snap = model.summary ? TimelineSummarySnapshot{model.summary->summary, model.summary->version}
-                                                       : TimelineSummarySnapshot{};
+    const TimelineSummarySnapshot snap =
+        model.summary
+            ? TimelineSummarySnapshot{model.summary->summary, model.summary->version, model.summary->rebuildGeneration}
+            : TimelineSummarySnapshot{};
     const TimelineSummary* s = snap.summary;
     if (!s || s->bucketCount == 0 || s->buckets.empty()) {
         return;

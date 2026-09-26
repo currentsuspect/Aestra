@@ -324,7 +324,6 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
         // immediately. Hold them back until the summary catches up, or a reorder/delete would pair
         // the old lane presence at index i with the new lane's colour for a frame or two.
         m_minimapLaneColorsPending = true;
-        m_minimapLaneColorsBaseVersion = m_timelineSummaryCache.getSnapshot().version;
 
         std::vector<AestraUI::TimelineMinimapClipSpan> spans;
 
@@ -349,12 +348,15 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
             }
         }
 
-        m_timelineSummaryCache.requestRebuild(std::move(spans), m_minimapDomainStartBeat, m_minimapDomainEndBeat);
+        m_minimapLaneColorsGeneration =
+            m_timelineSummaryCache.requestRebuild(std::move(spans), m_minimapDomainStartBeat, m_minimapDomainEndBeat);
         m_minimapNeedsRebuild = false;
     }
 
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
-    if (m_minimapLaneColorsPending && m_timelineSummarySnapshot.version > m_minimapLaneColorsBaseVersion) {
+    // Match the exact rebuild: an older rebuild already taken by the worker can still publish
+    // after this request, and its summary has the old lane order.
+    if (m_minimapLaneColorsPending && m_timelineSummarySnapshot.rebuildGeneration == m_minimapLaneColorsGeneration) {
         m_minimapLaneColorsPending = false;
     }
 

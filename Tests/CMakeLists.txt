@@ -2032,6 +2032,20 @@ target_include_directories(SafeClampFloatTest PRIVATE
 add_test(NAME SafeClampFloatTest COMMAND SafeClampFloatTest)
 set_tests_properties(SafeClampFloatTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
 
+# TimelineSummaryCache rebuild generations (#978): the minimap holds lane colours
+# back until the summary for the exact rebuild it requested is published.
+# Widget-free: the cache has no UI dependencies.
+add_executable(TimelineSummaryCacheGenerationTest
+    AestraUI/TimelineSummaryCacheGenerationTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+)
+target_include_directories(TimelineSummaryCacheGenerationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+target_link_libraries(TimelineSummaryCacheGenerationTest PRIVATE Threads::Threads)
+add_test(NAME TimelineSummaryCacheGenerationTest COMMAND TimelineSummaryCacheGenerationTest)
+set_tests_properties(TimelineSummaryCacheGenerationTest PROPERTIES LABELS "ui;timeline;minimap;regression;contract:application")
+
 # Mixer plugin dropdown catalog contract: metadata-driven mixer-insert
 # filtering and grouping (header-only policy, no widget link).
 add_executable(MixerPluginListPolicyTest AestraUI/MixerPluginListPolicyTest.cpp)
