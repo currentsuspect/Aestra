@@ -204,6 +204,8 @@ private:
 
     bool m_running;
     bool m_pendingClose{false};
+    int m_exitSignal{0};                  // the SIGTERM/SIGINT that ended the run loop, or 0
+    bool m_keepSessionForRecovery{false}; // signal exit + emergency autosave written: keep the crash flag
     Aestra::ProjectDocumentState m_documentState;
 
     // Auto-save
