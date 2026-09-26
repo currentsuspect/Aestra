@@ -271,14 +271,9 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // Panel edges and the browser splitter used to resolve through the dialog, so the pointer
         // over Settings > Appearance showed the browser splitter's resize arrow (owner: "a global
         // issue where the cursor sometimes disappears or forgets to change state").
+        // (The one-time hand-back to Arrow when a modal opens lives in resolveCursorState(), which
+        // runs every frame: a modal opened from the keyboard produces no mouse move.)
         const bool modalOpen = isModalDialogOpen();
-        if (modalOpen && !m_modalWasOpen && m_window) {
-            // Content widgets stop receiving moves while a modal blocks them, so whatever they
-            // last set (resize, hand) would stick over the dialog. Hand it back once, on open.
-            m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
-        }
-        m_modalWasOpen = modalOpen;
-
         if (m_content && !modalOpen) {
             m_activeCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
@@ -918,9 +913,10 @@ void AestraWindowManager::render() {
         m_renderer->clearClipRect();
 
         // An active drag-and-drop shows the closed hand; no tool cursor claims it.
+        // A modal owns the cursor: the timeline's tool-cursor claim does not reach through it.
         bool trackManagerHasCustomCursor = false;
-        if (m_content && m_content->getTrackManagerUI() &&
-            !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+        if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging() &&
+            !isModalDialogOpen()) {
             trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
         }
 
@@ -937,6 +933,19 @@ void AestraWindowManager::render() {
 // ==============================
 
 void AestraWindowManager::resolveCursorState() {
+    // A modal covers the content, and the content stops receiving moves while it is open, so
+    // whatever it last set (resize, hand) would stick over the dialog. Hand the cursor back to
+    // Arrow once, on open. This runs every frame, so a modal opened from the keyboard with the
+    // pointer still is covered too, and it runs before the native-cursor early return.
+    const bool modalOpen = isModalDialogOpen();
+    if (modalOpen && !m_modalWasOpen) {
+        m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
+        if (m_window) {
+            m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+        }
+    }
+    m_modalWasOpen = modalOpen;
+
     if (!m_useCustomCursor || !m_window) {
         return;
     }
@@ -951,7 +960,8 @@ void AestraWindowManager::resolveCursorState() {
 
     const AestraUI::NUICursorStyle style = m_window->getCursorStyle();
     bool trackManagerHasCustomCursor = false;
-    if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+    if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging() &&
+        !modalOpen) {
         trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
     }
 
