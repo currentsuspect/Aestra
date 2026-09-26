@@ -7,6 +7,7 @@
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
+#include "../AestraUI/Core/NUIPerfProbe.h"
 
 #include <cstdlib>
 #include "../AestraCore/include/AestraFile.h"
@@ -1618,6 +1619,10 @@ void AestraApp::run() {
                                   frameWorkMs[(frameWorkMs.size() * 95) / 100], frameWorkMs.back(),
                                   static_cast<long>(over(16.7)), static_cast<long>(over(33.3)));
                     Log::info(line);
+                    if (AestraUI::PerfProbe::enabled()) {
+                        std::istringstream report(AestraUI::PerfProbe::takeReport(frameWorkMs.size()));
+                        for (std::string detail; std::getline(report, detail);) Log::info(detail);
+                    }
                 }
                 frameWorkMs.clear();
                 frameStatsWindowStart = now;
@@ -1637,43 +1642,48 @@ void AestraApp::run() {
 }
 
 bool AestraApp::shouldRenderThisFrame() {
+    // AESTRA_FRAME_STATS=2 records why each frame was presented ([FrameWhy]).
+    const auto present = [](const char* reason) {
+        if (AestraUI::PerfProbe::enabled()) AestraUI::PerfProbe::recordPresentReason(reason);
+        return true;
+    };
     // Conservative v1 gate: render unless EVERY skip condition holds
     // (dirty == false && realtime_visuals == false && input_recent == false).
 
     // Pending invalidation — any component's setDirty(true) propagates here.
     auto* root = m_windowManager->getRootComponent();
     if (!root || root->isDirty())
-        return true;
+        return present("dirty");
 
     // Input recency — the adaptive FPS governor already tracks this (fed by
     // mouse/key callbacks); align with its idle timeout.
     auto* fps = m_windowManager->getAdaptiveFPS();
     if (!fps || fps->getIdleTime() < 2.0)
-        return true;
+        return present("input");
 
     // Realtime visuals — transport (playhead/meters), record-arm input
     // monitoring, file preview, and Audition playback.
     if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
-        return true;
+        return present("transport");
     }
     if (m_content) {
         if (auto tm = m_content->getTrackManager()) {
             if (tm->isPlaying() || tm->isRecordArmed())
-                return true;
+                return present("playing or armed");
         }
         if (m_content->hasRealtimePlaybackVisuals())
-            return true;
+            return present("realtime visuals");
     }
 
     // Overlays that animate or need fresh samples (HUD, dialogs, menus).
     if (m_windowManager->requiresContinuousRender())
-        return true;
+        return present("overlay");
 
     // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
     // unsignaled change still surface within ~300 ms.
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
-    return sinceLastPresent >= 0.3;
+    return sinceLastPresent >= 0.3 && present("heartbeat");
 }
 
 void AestraApp::startMuseSocketIfConfigured() {
