@@ -1714,6 +1714,7 @@ public:
         // Arsenal playback is over: drop its instances rather than rewinding them, so
         // nothing carries into whatever plays next.
         m_patternPlaybackEngine.clearScheduledInstances();
+        m_scheduledArsenalPattern = PatternID{};
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -1988,6 +1989,13 @@ public:
      *        preview or a render plays the whole pattern even when a zone exists.
      */
     std::optional<ArsenalLoopZone> scheduledArsenalLoopZone() const { return m_scheduledArsenalLoopZone; }
+    /**
+     * @brief The pattern Arsenal playback last scheduled; invalid once it stops (main thread).
+     *
+     * Lets the piano roll ask "is THIS pattern playing?" without reading the scheduler,
+     * whose lock the audio thread takes (the piano roll's playback keys, SPEC 3 §5.1).
+     */
+    PatternID scheduledArsenalPattern() const { return m_scheduledArsenalPattern; }
 
     /**
      * @brief Start Arsenal playback for the supplied pattern.
@@ -2031,6 +2039,7 @@ public:
         }
 
         pushTransportCommand(1.0f, startSeconds);
+        m_scheduledArsenalPattern = pid;
         m_scheduledArsenalLoopZone = useLoopZone ? activeArsenalLoopZone(pid) : std::nullopt;
         if (const auto zone = m_scheduledArsenalLoopZone) {
             // The scheduler plays pattern beat b at startBeat + b, and only beats inside the
@@ -2750,6 +2759,7 @@ private:
     std::unordered_map<ClipInstanceID, uint32_t> m_timelineSlots;
     std::optional<ArsenalLoopZone> m_arsenalLoopZone; // main thread (see setArsenalLoopZone)
     std::optional<ArsenalLoopZone> m_scheduledArsenalLoopZone; // main thread (see playPatternInArsenal)
+    PatternID m_scheduledArsenalPattern;                       // main thread (see playPatternInArsenal)
     // What those slots play, as scheduled (see getScheduledTimelineInstances).
     std::vector<MidiClipPlaybackInstance> m_scheduledTimelineInstances;
     std::atomic<bool> m_hasDisplayPositionOverride{false};
