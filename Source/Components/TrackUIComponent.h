@@ -396,9 +396,6 @@ private:
 
     void generateWaveformCache(int width, int height);
 
-    // Shared clip display color (bright track palette / channel / clip fallback)
-
-
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
                              const std::vector<Aestra::Audio::WaveformPeak>& peaks,
