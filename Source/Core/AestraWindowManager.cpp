@@ -957,8 +957,12 @@ void AestraWindowManager::resolveCursorState() {
 }
 
 void AestraWindowManager::initializeCustomCursors() {
-    const auto mk = [](AestraUI::NUICursorStyle style) {
-        return std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(style));
+    // Glyphs are built for the current surface polarity (inverted on dark themes, see
+    // nuiCursorSvgForSurface); renderCustomCursor rebuilds them if the theme flips.
+    m_cursorsBuiltForDark = !AestraUI::editorLightUi();
+    const bool dark = m_cursorsBuiltForDark;
+    const auto mk = [dark](AestraUI::NUICursorStyle style) {
+        return std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvgForSurface(style, dark));
     };
 
     // Canonical cursor artwork comes from NUICursorRegistry — the single
@@ -983,6 +987,11 @@ void AestraWindowManager::renderCustomCursor() {
     // Skip rendering custom cursor when hidden style is active
     if (m_window && m_window->getCursorStyle() == AestraUI::NUICursorStyle::Hidden) {
         return;
+    }
+
+    // The theme can flip polarity at runtime (Settings > Appearance): rebuild the glyphs then.
+    if (m_cursorsBuiltForDark == AestraUI::editorLightUi()) {
+        initializeCustomCursors();
     }
 
     // Each glyph is offset so its hotspot (NUICursorRegistry) sits on the pointer.

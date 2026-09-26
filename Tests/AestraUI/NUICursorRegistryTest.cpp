@@ -72,12 +72,31 @@ void testHotspotsSitInsideTheirGlyphs() {
           "and the pencil outline is drawn from that tip");
 }
 
+// Owner, 2026-09-24: the cursor "looks good in light mode but small in dark, and hard to drive".
+// On dark surfaces the glyph inverts so its outline, the part that contrasts with the surface,
+// stays the silhouette.
+void testGlyphsInvertOnDarkSurfaces() {
+    const std::string light = nuiCursorSvgForSurface(NUICursorStyle::Arrow, false);
+    const std::string dark = nuiCursorSvgForSurface(NUICursorStyle::Arrow, true);
+    check(light == nuiCursorSvg(NUICursorStyle::Arrow), "on light surfaces the glyph is unchanged");
+    check(light.find("fill=\"#fff\" stroke=\"#141416\"") != std::string::npos,
+          "light: white fill, near-black outline (so the check below is not vacuous)");
+    check(dark.find("fill=\"#141416\" stroke=\"#fff\"") != std::string::npos,
+          "dark: near-black fill, white outline, so the outline stays the visible edge");
+    check(dark.find("fill=\"#fff\" stroke=\"#141416\"") == std::string::npos, "and nothing is left un-swapped");
+    check(dark.find("M2 2 L2 17.6") != std::string::npos, "the shape (and so the hotspot) is untouched");
+    const std::string eraser = nuiCursorSvgForSurface(NUICursorStyle::Eraser, true);
+    check(eraser.find("fill=\"#fff\" fill-opacity=\"0.55\"") != std::string::npos,
+          "the eraser's working-end band inverts too");
+}
+
 } // namespace
 
 int main() {
     testEveryRequestableStyleHasAGlyph();
     testToolCursorsExist();
     testHotspotsSitInsideTheirGlyphs();
+    testGlyphsInvertOnDarkSurfaces();
     if (g_failures == 0) {
         std::cout << "Cursor registry tests passed\n";
         return 0;
