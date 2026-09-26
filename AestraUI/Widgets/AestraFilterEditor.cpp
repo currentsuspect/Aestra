@@ -329,7 +329,7 @@ void AestraFilterEditor::drawMixSlider(NUIRenderer& renderer) {
     renderer.strokeRoundedRect(m_mixRect, 10.0f, 1.0f, accent().withAlpha(m_draggingMix ? 0.62f : 0.34f));
     renderer.drawText("Mix", {m_mixRect.x + 14.0f, m_mixRect.y + 11.0f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.95f));
-    renderer.fillRoundedRect(track, 4.0f, NUIColor(1, 1, 1, 0.10f));
+    renderer.fillRoundedRect(track, 4.0f, editorInk(0.10f));
     renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 4.0f, accent().withAlpha(0.92f));
     const NUIPoint thumb{track.x + track.width * mix, track.center().y};
     renderer.fillCircle(thumb, 10.0f, accent().withAlpha(0.18f));

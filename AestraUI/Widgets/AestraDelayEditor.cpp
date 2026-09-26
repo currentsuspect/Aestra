@@ -437,7 +437,7 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, fl
     // Slider bounds are already absolute (set in layoutControls).
     NUIRect knobRect = k.slider ? k.slider->getBounds() : NUIRect();
     renderer.fillRoundedRect(bounds, 10.0f, cardBg());
-    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, NUIColor(1, 1, 1, 0.10f));
+    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, editorInk(0.10f));
 
     const float cx = knobRect.center().x;
     const float cy = knobRect.center().y;
@@ -475,7 +475,7 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.95f));
-    renderer.fillRoundedRect(track, 3.0f, NUIColor(1, 1, 1, 0.10f));
+    renderer.fillRoundedRect(track, 3.0f, editorInk(0.10f));
     renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 3.0f, accent().withAlpha(0.92f));
     renderer.fillCircle({track.x + track.width * mix, track.center().y}, 9.0f, theme.getColor("textPrimary"));
     const std::string pctStr = std::to_string(static_cast<int>(std::round(mix * 100.0f))) + "%";
