@@ -71,7 +71,10 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     gridStyle.barLineAlpha = 0.148f;         // was 0.02
     gridStyle.beatLineAlpha = 0.057f;        // was 0.005
     gridStyle.subdivisionLineAlpha = 0.023f; // was 0.002
-    gridStyle.zebraAlpha = 0.066f;           // was 0.006
+    // No bar zebra (SPEC 3 §5.1, owner): at 0.066 every other bar read as a band of near
+    // black (bed RGB 0-4 against 15-19) in which the beat lines vanished. The timeline gets
+    // by with lines alone, and at matching line alphas so does this.
+    gridStyle.zebraAlpha = 0.0f;
     renderTimelineGrid(renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
                        gridStyle, getSnapSubdivisionBeats());
 
