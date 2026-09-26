@@ -2110,6 +2110,16 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
             metrics.ascent = atlas.ascent * scale;
             metrics.descent = atlas.descent * scale;
             metrics.lineHeight = atlas.lineHeight * scale;
+            // The cap height is read from the 'H' already in this atlas: its top bearing is
+            // the cap line above the baseline. Read-only; nothing is rasterised for it.
+            if (atlas.cache) {
+                if (const auto it = atlas.cache->find(static_cast<uint32_t>('H')); it != atlas.cache->end()) {
+                    metrics.capHeight = static_cast<float>(it->second.bearingY) * scale;
+                }
+            }
+            if (metrics.capHeight <= 0.0f) {
+                metrics.capHeight = fontSize * 0.7f;
+            }
             return metrics;
         }
         return metrics;
@@ -2119,6 +2129,7 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
     metrics.ascent = fontSize * 0.8f;
     metrics.descent = fontSize * 0.2f;
     metrics.lineHeight = metrics.ascent + metrics.descent;
+    metrics.capHeight = fontSize * 0.7f;
     return metrics;
 }
 

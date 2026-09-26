@@ -3487,3 +3487,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ExportDialogPreferencesTest.c
     set_tests_properties(ExportDialogPreferencesTest PROPERTIES
         LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# SPEC 3 §3.2: the renderer's text-centring contract (drawText takes the line box's top;
+# calculateOpticalTextY centres the cap band on the requested centre).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TextCentringTest AestraUI_Core)
+    add_executable(TextCentringTest AestraUI/TextCentringTest.cpp)
+    target_link_libraries(TextCentringTest PRIVATE AestraUI_Core)
+    target_include_directories(TextCentringTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME TextCentringTest COMMAND TextCentringTest)
+    set_tests_properties(TextCentringTest PROPERTIES LABELS "ui;text;contract:application")
+endif()

@@ -2247,9 +2247,13 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
             numberText = std::to_string(trackNumber);
         }
+        // Centred on the name's row by cap height (SPEC 3 §3.2). It was `nameBounds.y + 2`,
+        // which happened to land it on the name's baseline, 1.5 px below its centre.
+        const float numberFontSize = themeManager.getFontSize("xs");
         renderer.drawText(numberText,
-                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-                          themeManager.getFontSize("xs"),
+                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f,
+                                             std::round(renderer.calculateOpticalTextY(nameBounds, numberFontSize))),
+                          numberFontSize,
                           themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.58f : 0.36f));
     }
 }
