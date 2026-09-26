@@ -104,6 +104,11 @@ struct NUIColor {
     NUIColor() = default;
     NUIColor(float r, float g, float b, float a = 1.0f)
         : r(r), g(g), b(b), a(a) {}
+
+    // Exact equality: lets setters skip a no-op invalidation (re-setting the same colour
+    // every frame kept the whole UI redrawing at idle, SPEC 3 §4).
+    bool operator==(const NUIColor& o) const { return r == o.r && g == o.g && b == o.b && a == o.a; }
+    bool operator!=(const NUIColor& o) const { return !(*this == o); }
     
     // Create from hex (e.g., 0xa855f7)
     static NUIColor fromHex(uint32_t hex, float alpha = 1.0f) {

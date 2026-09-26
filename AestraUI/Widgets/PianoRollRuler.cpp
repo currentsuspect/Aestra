@@ -188,7 +188,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
 
     renderer.clearClipRect();
 }
-void PianoRollRuler::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
-void PianoRollRuler::setScrollX(float scrollX) { scrollX_ = scrollX; repaint(); }
+void PianoRollRuler::setPixelsPerBeat(float ppb) { const auto next = std::max(10.0f, ppb); if (pixelsPerBeat_ == next) return; pixelsPerBeat_ = next; repaint(); }
+void PianoRollRuler::setScrollX(float scrollX) { const auto next = scrollX; if (scrollX_ == next) return; scrollX_ = next; repaint(); }
 
 } // namespace AestraUI

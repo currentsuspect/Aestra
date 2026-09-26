@@ -390,9 +390,8 @@ void UIMixerInspector::rebuildInsertRack(const Aestra::ChannelViewModel* channel
             info.isEmpty = true;
             info.name = "Empty";
         }
-        m_effectRack->setSlot(static_cast<int>(i), info);
+        m_effectRack->setSlot(static_cast<int>(i), info); // repaints only a slot that changed
     }
-    m_effectRack->repaint();
 }
 
 void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channel)

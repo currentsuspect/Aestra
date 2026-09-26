@@ -534,7 +534,9 @@ void NUIComponent::setDirty(bool dirty) {
 }
 
 void NUIComponent::setOpacity(float opacity) {
-    opacity_ = std::max(0.0f, std::min(1.0f, opacity));
+    const float next = std::max(0.0f, std::min(1.0f, opacity));
+    if (opacity_ == next) return; // invalidate only on a change (SPEC 3 §4)
+    opacity_ = next;
     setDirty();
 }
 

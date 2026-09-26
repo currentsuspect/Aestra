@@ -130,14 +130,18 @@ void NUILabel::setText(const std::string& text)
     }
 }
 
+// Setters invalidate only on a real change (like setText): re-applying the same value
+// from a render/update path every frame kept the UI redrawing at idle (SPEC 3 §4).
 void NUILabel::setFont(std::shared_ptr<NUIFont> font)
 {
+    if (m_font == font) return;
     m_font = font;
     repaint();
 }
 
 void NUILabel::setTextColor(const NUIColor& color)
 {
+    if (customTextColor_ && textColor_ == color) return;
     textColor_ = color;
     customTextColor_ = true;
     repaint();
@@ -145,6 +149,7 @@ void NUILabel::setTextColor(const NUIColor& color)
 
 void NUILabel::setFontSize(float size)
 {
+    if (fontSize_ == size) return;
     fontSize_ = size;
     textSizeValid_ = false;
     repaint();
@@ -152,18 +157,21 @@ void NUILabel::setFontSize(float size)
 
 void NUILabel::setAlignment(Alignment alignment)
 {
+    if (alignment_ == alignment) return;
     alignment_ = alignment;
     repaint();
 }
 
 void NUILabel::setMultiline(bool multiline)
 {
+    if (multiline_ == multiline) return;
     multiline_ = multiline;
     repaint();
 }
 
 void NUILabel::setWordWrap(bool wordWrap)
 {
+    if (wordWrap_ == wordWrap) return;
     wordWrap_ = wordWrap;
     repaint();
 }
@@ -178,6 +186,7 @@ void NUILabel::setEllipsize(bool ellipsize)
 
 void NUILabel::setBackgroundColor(const NUIColor& color)
 {
+    if (customBackgroundColor_ && backgroundColor_ == color) return;
     backgroundColor_ = color;
     customBackgroundColor_ = true;
     repaint();
@@ -185,12 +194,14 @@ void NUILabel::setBackgroundColor(const NUIColor& color)
 
 void NUILabel::setBackgroundVisible(bool visible)
 {
+    if (backgroundVisible_ == visible) return;
     backgroundVisible_ = visible;
     repaint();
 }
 
 void NUILabel::setBorderColor(const NUIColor& color)
 {
+    if (customBorderColor_ && borderColor_ == color) return;
     borderColor_ = color;
     customBorderColor_ = true;
     repaint();
@@ -198,12 +209,14 @@ void NUILabel::setBorderColor(const NUIColor& color)
 
 void NUILabel::setBorderWidth(float width)
 {
+    if (borderWidth_ == width) return;
     borderWidth_ = width;
     repaint();
 }
 
 void NUILabel::setBorderVisible(bool visible)
 {
+    if (borderVisible_ == visible) return;
     borderVisible_ = visible;
     repaint();
 }

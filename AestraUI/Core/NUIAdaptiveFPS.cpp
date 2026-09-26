@@ -230,6 +230,18 @@ NUIAdaptiveFPS::Stats NUIAdaptiveFPS::getStats() const {
 // ============================================================================
 
 void NUIAdaptiveFPS::updateTargetFPS(double deltaTime) {
+    (void)deltaTime;
+    // Idle time is the time since the last activity, in every mode (SPEC 3 §4). It used to
+    // advance only while m_userActive was false, and m_userActive was only cleared once the
+    // idle time passed the timeout: after the first input the governor latched "active"
+    // forever, getIdleTime() stayed 0, and the render gate (AestraApp::shouldRenderThisFrame)
+    // presented every frame of an untouched app. Locked modes returned before updating it at all.
+    const auto now = std::chrono::high_resolution_clock::now();
+    const double sinceActivity = std::chrono::duration<double>(now - m_lastActivityTime).count();
+    m_userActive = sinceActivity < m_config.idleTimeout;
+    const bool continuous = m_animationActive || m_audioVisualizationActive;
+    m_idleTimer = continuous ? 0.0 : sinceActivity;
+
     // Handle locked modes
     if (m_mode == Mode::Locked30) {
         m_currentTargetFPS = m_config.fps30;
@@ -242,15 +254,8 @@ void NUIAdaptiveFPS::updateTargetFPS(double deltaTime) {
     // Auto mode: adaptive FPS
     m_framesSince60FPSChange++;
 
-    // Check for active conditions
-    bool shouldBoosted = m_userActive || m_animationActive || m_audioVisualizationActive;
-
-    // Update idle timer
-    if (!shouldBoosted) {
-        m_idleTimer += deltaTime;
-    } else {
-        m_idleTimer = 0.0;
-    }
+    // Check for active conditions (m_userActive and m_idleTimer are derived above)
+    bool shouldBoosted = m_userActive || continuous;
 
     // Determine target FPS
     double targetFPS = m_config.fps30;
@@ -269,11 +274,6 @@ void NUIAdaptiveFPS::updateTargetFPS(double deltaTime) {
 
     // Smooth transition to target FPS
     smoothTransition(targetFPS);
-
-    // Reset activity flag if idle timeout reached
-    if (m_idleTimer >= m_config.idleTimeout) {
-        m_userActive = false;
-    }
 
     m_wasActive = shouldBoosted;
 }

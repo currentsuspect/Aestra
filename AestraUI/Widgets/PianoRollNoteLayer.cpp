@@ -2014,15 +2014,42 @@ void PianoRollNoteLayer::setNotes(const std::vector<MidiNote>& notes) {
     repaint();
 }
 
+namespace {
+// What a ghost overlay draws. PianoRollPanel rebuilds the ghosts from every pattern on
+// every frame; re-setting identical ones must not force a repaint (SPEC 3 §4).
+bool sameGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& a,
+                       const std::vector<PianoRollNoteLayer::GhostPattern>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const auto& x = a[i];
+        const auto& y = b[i];
+        if (x.color != y.color || x.fillAlpha != y.fillAlpha || x.strokeAlpha != y.strokeAlpha ||
+            x.notes.size() != y.notes.size()) {
+            return false;
+        }
+        for (size_t n = 0; n < x.notes.size(); ++n) {
+            const auto& p = x.notes[n];
+            const auto& q = y.notes[n];
+            if (p.pitch != q.pitch || p.startBeat != q.startBeat || p.durationBeats != q.durationBeats ||
+                p.velocity != q.velocity || p.pan != q.pan || p.unitId != q.unitId || p.isDeleted != q.isDeleted) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+} // namespace
+
 void PianoRollNoteLayer::setGhostPatterns(const std::vector<GhostPattern>& ghosts) {
+    if (sameGhostPatterns(ghostPatterns_, ghosts)) return;
     ghostPatterns_ = ghosts;
     repaint();
 }
 
-void PianoRollNoteLayer::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
-void PianoRollNoteLayer::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
-void PianoRollNoteLayer::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
-void PianoRollNoteLayer::setScrollOffsetY(float offset) { scrollY_ = offset; repaint(); }
+void PianoRollNoteLayer::setPixelsPerBeat(float ppb) { const auto next = std::max(10.0f, ppb); if (pixelsPerBeat_ == next) return; pixelsPerBeat_ = next; repaint(); }
+void PianoRollNoteLayer::setKeyHeight(float height) { const auto next = std::max(8.0f, height); if (keyHeight_ == next) return; keyHeight_ = next; repaint(); }
+void PianoRollNoteLayer::setScrollOffsetX(float offset) { const auto next = offset; if (scrollX_ == next) return; scrollX_ = next; repaint(); }
+void PianoRollNoteLayer::setScrollOffsetY(float offset) { const auto next = offset; if (scrollY_ == next) return; scrollY_ = next; repaint(); }
 
 void PianoRollNoteLayer::updateEdgeScrolling(float mouseX, float mouseY, const NUIRect& bounds, std::function<void()> syncCallback) {
     if (state_ == State::None) {
