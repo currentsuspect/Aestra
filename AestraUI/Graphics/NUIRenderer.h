@@ -24,6 +24,8 @@ public:
         float ascent = 0.0f;
         float descent = 0.0f;
         float lineHeight = 0.0f;
+        /// Height of a capital above the baseline: what the eye centres caps and digits on.
+        float capHeight = 0.0f;
     };
 
     virtual ~NUIRenderer() = default;
@@ -253,6 +255,11 @@ public:
     
     /**
      * Draw text at the given position.
+     *
+     * @p position is the TOP-LEFT of the text's line box, not its baseline: the renderer
+     * adds the font's ascent itself. To centre a label in a rect, pass calculateTextY() (the
+     * line box, for mixed-case prose) or calculateOpticalTextY() (the cap height, for labels,
+     * caps and numbers). Hand-rolled `rect.y + N` offsets are how labels drift off-centre.
      */
     virtual void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) = 0;
     
@@ -277,13 +284,15 @@ public:
         metrics.ascent = fontSize * 0.8f;
         metrics.descent = fontSize * 0.2f;
         metrics.lineHeight = metrics.ascent + metrics.descent;
+        metrics.capHeight = fontSize * 0.7f;
         return metrics;
     }
     
     /**
-     * Calculate baseline-aligned Y position for vertically centered text.
-     * drawText() places text on its baseline, so this converts a centred rect into
-     * the baseline the glyph atlas expects.
+     * Calculate the BASELINE Y of text vertically centred in @p rect by its line box.
+     *
+     * This is a baseline, not a drawText() position: drawText() takes the top of the line
+     * box and adds the ascent itself, so passing this to it draws the text a full ascent low.
      * 
      * @param rect The rectangle to center text within
      * @param fontSize The font size
@@ -310,6 +319,28 @@ public:
         const FontMetrics metrics = getFontMetrics(fontSize);
         const float lineHeight = (metrics.lineHeight > 0.0f) ? metrics.lineHeight : fontSize;
         return rect.y + (rect.height - lineHeight) * 0.5f;
+    }
+
+    /**
+     * drawText() Y that centres the CAP HEIGHT on @p centreY (SPEC 3 §3.2).
+     *
+     * calculateTextY() centres the whole line box, which reserves room above the caps for
+     * ascenders and below the baseline for descenders. That is right for mixed-case prose,
+     * but caps and digits have neither, so line-box centring left labels such as
+     * "COUNT IN" and track numbers 1-1.5 px low next to their icons. This puts the band
+     * between the baseline and the cap line on the centre, which is what the eye reads.
+     *
+     * @return The top-left Y to pass to drawText().
+     */
+    float calculateOpticalTextY(float centreY, float fontSize) const {
+        const FontMetrics metrics = getFontMetrics(fontSize);
+        const float ascent = (metrics.ascent > 0.0f) ? metrics.ascent : (fontSize * 0.8f);
+        const float capHeight = (metrics.capHeight > 0.0f) ? metrics.capHeight : (fontSize * 0.7f);
+        return centreY + capHeight * 0.5f - ascent;
+    }
+    /** calculateOpticalTextY() on @p rect's vertical centre. */
+    float calculateOpticalTextY(const NUIRect& rect, float fontSize) const {
+        return calculateOpticalTextY(rect.y + rect.height * 0.5f, fontSize);
     }
     
     // ========================================================================
