@@ -320,6 +320,12 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     }
 
     if (m_minimapNeedsRebuild) {
+        // The rebuild publishes asynchronously, but the lane colours below follow the new lane order
+        // immediately. Hold them back until the summary catches up, or a reorder/delete would pair
+        // the old lane presence at index i with the new lane's colour for a frame or two.
+        m_minimapLaneColorsPending = true;
+        m_minimapLaneColorsBaseVersion = m_timelineSummaryCache.getSnapshot().version;
+
         std::vector<AestraUI::TimelineMinimapClipSpan> spans;
 
         const auto& laneIds = playlist.getLaneIDs();
@@ -348,6 +354,9 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     }
 
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
+    if (m_minimapLaneColorsPending && m_timelineSummarySnapshot.version > m_minimapLaneColorsBaseVersion) {
+        m_minimapLaneColorsPending = false;
+    }
 
     if (m_marquee.active()) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -412,9 +421,11 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
             laneColorsHash = (laneColorsHash ^ bits) * 1099511628211ull;
         }
     }
-    model.laneColors = m_minimapLaneColors.data();
-    model.laneColorCount = m_minimapLaneColors.size();
-    model.laneColorsHash = laneColorsHash;
+    // While pending, publish no colours: the renderer falls back to its palette for that short window.
+    const bool laneColorsMatchSummary = !m_minimapLaneColorsPending;
+    model.laneColors = laneColorsMatchSummary ? m_minimapLaneColors.data() : nullptr;
+    model.laneColorCount = laneColorsMatchSummary ? m_minimapLaneColors.size() : 0;
+    model.laneColorsHash = laneColorsMatchSummary ? laneColorsHash : 0;
 
     m_timelineMinimap->setModel(model);
 }
