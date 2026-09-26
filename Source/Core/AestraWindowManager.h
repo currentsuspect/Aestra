@@ -199,6 +199,9 @@ private:
     std::shared_ptr<AestraContent> m_content;
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
+    bool m_modalWasOpen = false; // for the one-time cursor hand-back when a modal opens
+    /** True while any modal dialog covers the content (it then owns the cursor, not the content). */
+    bool isModalDialogOpen() const;
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
     bool m_confirmationDialogRaised{false};
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
