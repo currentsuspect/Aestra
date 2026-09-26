@@ -61,6 +61,14 @@ void NUIComponent::onUpdate(double deltaTime) {
 }
 
 void NUIComponent::onResize(int width, int height) {
+    // setBounds() calls this with its own size truncated to ints. Re-applying that truncated
+    // size snapped every fractional-width component to the integer below, inside the same
+    // call; the parent then set the fraction again next frame. That flip (146.56 <-> 146) was
+    // a real change every frame, so the UI never went idle (SPEC 3 §4). Only an int size that
+    // actually differs from ours is a resize.
+    if (static_cast<int>(bounds_.width) == width && static_cast<int>(bounds_.height) == height) {
+        return;
+    }
     setBounds(bounds_.x, bounds_.y, static_cast<float>(width), static_cast<float>(height));
 }
 
