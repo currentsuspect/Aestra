@@ -5,6 +5,7 @@
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
 #include "../Core/NUIHoverCursorClaim.h"
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -52,11 +53,32 @@ public:
     /** @brief Forward isPlaying callback from PianoRollView. */
     void setIsPlayingFromParent(std::function<bool()> cb) { m_isPlayingCallback = std::move(cb); }
 
+    /**
+     * @brief The keys whose notes are under the playhead while this pattern plays (SPEC 3 §5.1).
+     *
+     * Drawn as a soft accent overlay with a lit tip, deliberately quieter than a key the user
+     * presses. A key that stops playing eases out over kPlayReleaseSeconds, so fast passages
+     * glide instead of strobing. An all-false set lets every key ease back to rest.
+     */
+    void setPlayingPitches(const std::array<bool, 128>& playing);
+    /** @brief True while @p pitch has a note under the playhead. */
+    bool isKeyPlaying(int pitch) const { return pitch >= 0 && pitch < 128 && playing_[pitch]; }
+    /** @brief How lit @p pitch is for playback: 1 while playing, easing to 0 after. */
+    float keyPlayLevel(int pitch) const { return pitch >= 0 && pitch < 128 ? playLevel_[pitch] : 0.0f; }
+
+    void onUpdate(double deltaTime) override;
+
+    /** Seconds a key takes to ease back to rest after its note stops playing. */
+    static constexpr float kPlayReleaseSeconds = 0.16f;
+
 private:
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
     int previewPitch_; // Currently playing preview note (-1 if none)
+    std::array<bool, 128> playing_{};    // a note of this pattern is under the playhead
+    std::array<float, 128> playLevel_{}; // 1 while playing, eases to 0 after
+    bool playAnimating_ = false;         // some key is still easing out
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<void(int pitch)> onHoveredKeyChanged_;
     std::function<bool()> m_isPlayingCallback;
@@ -800,6 +822,15 @@ public:
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     double getPlayheadBeat() const { return m_playheadBeat; }
+    /**
+     * @brief Whether this editor's pattern is the one playing (the panel decides, per frame).
+     *
+     * While true, setPlayheadBeat() lights the keys of the notes under the playhead; while
+     * false every key eases back to rest. Set it before setPlayheadBeat() each frame.
+     */
+    void setPlaybackKeysActive(bool active) { m_playbackKeysActive = active; }
+    /** @brief True while @p pitch's key shows a note under the playhead. */
+    bool isKeyPlaying(int pitch) const;
     void setTotalDurationBeats(double beats);
     void setLocalMinimapVisible(bool visible);
     void applyEdgeAutoScroll(float scrollX, float scrollY);
@@ -879,6 +910,7 @@ private:
     float m_targetScrollX;
     float m_targetScrollY;
     double m_playheadBeat = 0.0;
+    bool m_playbackKeysActive = false; // this pattern is playing: keys follow the playhead
     double m_totalDurationBeats = 400.0;
     double m_patternLengthBeats = 8.0;
     // Scrollable domain (bars the user can traverse), mirroring the Track

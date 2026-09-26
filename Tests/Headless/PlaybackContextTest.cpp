@@ -530,6 +530,22 @@ void testAZoneShapesOnlyItsPatternInArsenal() {
     check(insts.size() == 1 && insts[0].patternId == other, "clearing it leaves `other` playing too");
 }
 
+// The piano roll's playback keys ask TrackManager which pattern Arsenal scheduled, instead of
+// reading the scheduler (its lock is the audio thread's): it must name the playing pattern
+// and clear on stop (SPEC 3 §5.1).
+void testTheScheduledArsenalPatternIsKnownAndClearsOnStop() {
+    auto owned = makeFixture();
+    auto& f = *owned;
+    check(!f.tm.scheduledArsenalPattern().isValid(), "nothing scheduled before any Arsenal play");
+    f.ctx.enterArsenal(8.0);
+    f.ctx.startArsenalPlayback(f.pattern, 8.0, 0.0);
+    f.settle();
+    check(f.tm.scheduledArsenalPattern() == f.pattern, "Arsenal play names the pattern it scheduled");
+    f.tm.stopArsenalPlayback(true);
+    f.settle();
+    check(!f.tm.scheduledArsenalPattern().isValid(), "and stopping clears it");
+}
+
 int main() {
     testDocumentedTable();
     testEnteringTimelineOrAuditionClearsEveryPatternMirror();
@@ -546,6 +562,7 @@ int main() {
     testAnArmedRecordLoopsTheWholePattern();
     testArmingRecordWhilePlayingReschedulesTheWholePattern();
     testAZoneShapesOnlyItsPatternInArsenal();
+    testTheScheduledArsenalPatternIsKnownAndClearsOnStop();
 
     if (g_failures == 0) {
         std::cout << "Playback context tests passed\n";

@@ -5,6 +5,7 @@
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
+#include <array>
 #include <cmath>
 #include <string>
 #include <cassert>
@@ -701,6 +702,48 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 
+// SPEC 3 §5.1: while this pattern plays, the keys of the notes under the playhead light up;
+// they follow the playhead, go dark when another pattern plays, and ease out, not snap off.
+static void test_playback_lights_the_keys_under_the_playhead() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setTotalDurationBeats(8.0);
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [0, 1)
+    notes.push_back({64, 2.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [2, 3)
+    notes.push_back({67, 2.0, 1.0, 0.8f, 0.0f, 0, false, true, 1.0f});  // deleted: never lights
+    view.setNotes(notes);
+
+    view.setPlaybackKeysActive(true);
+    view.setPlayheadBeat(0.5);
+    ASSERT(view.isKeyPlaying(60) && !view.isKeyPlaying(64), "at beat 0.5 only C (60) is under the playhead");
+    view.setPlayheadBeat(1.5);
+    ASSERT(!view.isKeyPlaying(60) && !view.isKeyPlaying(64), "between notes, no key is playing");
+    view.setPlayheadBeat(2.5);
+    ASSERT(view.isKeyPlaying(64) && !view.isKeyPlaying(67), "at 2.5 E (64) plays; a deleted note never lights");
+    ASSERT(!view.isKeyPlaying(60), "and the end is exclusive: 60 ended at 1");
+
+    // The panel clears the flag when another pattern (or nothing) is playing.
+    view.setPlaybackKeysActive(false);
+    view.setPlayheadBeat(2.5);
+    ASSERT(!view.isKeyPlaying(64), "not this pattern playing: no key lights, even with a note under the playhead");
+
+    // Release eases out on the key lane itself.
+    PianoRollKeyLane keys;
+    std::array<bool, 128> on{};
+    on[60] = true;
+    keys.setPlayingPitches(on);
+    ASSERT(keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "a playing key is fully lit at once");
+    keys.setPlayingPitches(std::array<bool, 128>{});
+    ASSERT(!keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "when its note ends it does not snap off");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPlayLevel(60) - 0.5f) < 0.01f, "half way through the release, half lit");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds);
+    ASSERT(keys.keyPlayLevel(60) == 0.0f, "then at rest");
+    PASS("playback lights the keys under the playhead, only for this pattern, and eases them out");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -849,6 +892,7 @@ int main() {
     test_scroll_domain_floor_and_growth();
     test_minimap_drag_released_outside_the_editor_ends();
     test_ruler_draws_and_clears_a_loop_zone();
+    test_playback_lights_the_keys_under_the_playhead();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
