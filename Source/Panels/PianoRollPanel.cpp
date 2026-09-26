@@ -632,6 +632,7 @@ void PianoRollPanel::onUpdate(double deltaTime) {
         if (m_trackManager && m_pianoRoll) {
             double playheadBeat = 0.0;
             bool follow = false;
+            bool thisPatternPlaying = false; // lights the keys under the playhead (SPEC 3 §5.1)
 
             if (m_currentPatternId.isValid()) {
                 if (auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId)) {
@@ -659,6 +660,10 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                         // enabled "Follow playhead" — editing while playing
                         // must not yank the viewport back.
                         follow = m_followPlayhead && m_trackManager->isPlaying();
+                        // The transport is in pattern mode whichever pattern Arsenal plays; only
+                        // this editor's own pattern lights its keys.
+                        thisPatternPlaying = m_trackManager->isPlaying() &&
+                                             m_trackManager->scheduledArsenalPattern() == m_currentPatternId;
                     } else {
                         // Timeline playback. This editor's X axis is PATTERN-LOCAL beats and the
                         // transport reports ARRANGEMENT beats, so the playhead goes through the
@@ -676,12 +681,14 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                                     Aestra::Audio::patternLocalBeatAt(instances, m_currentPatternId, arrangementBeat)) {
                                 playheadBeat = *local;
                                 follow = m_followPlayhead;
+                                thisPatternPlaying = true;
                             }
                         }
                     }
                 }
             }
 
+            m_pianoRoll->setPlaybackKeysActive(thisPatternPlaying);
             m_pianoRoll->setPlayheadBeat(playheadBeat, follow);
             // Only force a redraw when the playhead is actually moving. Editing
             // gestures (placing/dragging notes, hover) trigger their own

@@ -60,6 +60,16 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
                                          : (accidental ? accidentalKey : naturalKey));
         renderer.strokeRoundedRect(keyRect, accidental ? 2.0f : 3.0f, 1.0f, separator);
 
+        // Playing (SPEC 3 §5.1): a note of this pattern is under the playhead. A soft accent
+        // wash and a lit tip toward the grid row, quieter than a key the user presses.
+        if (const float play = playLevel_[p]; play > 0.0f) {
+            const auto accent = themeManager.getColor("accentPrimary");
+            renderer.fillRoundedRect(keyRect, accidental ? 2.0f : 3.0f, accent.withAlpha(0.34f * play));
+            renderer.fillRoundedRect(NUIRect(keyRect.right() - 3.0f, keyRect.y + 1.0f, 2.0f, keyRect.height - 2.0f),
+                                     1.0f,
+                                     accent.lightened(0.2f).withAlpha(0.6f * play));
+        }
+
         if (!accidental) {
             renderer.drawLine(NUIPoint(keyRect.x, keyRect.bottom()),
                               NUIPoint(keyRect.right(), keyRect.bottom()),
@@ -138,6 +148,35 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     return NUIComponent::onMouseEvent(event);
+}
+
+void PianoRollKeyLane::setPlayingPitches(const std::array<bool, 128>& playing) {
+    bool changed = false;
+    for (int p = 0; p < 128; ++p) {
+        if (playing[p] == playing_[p]) continue;
+        playing_[p] = playing[p];
+        changed = true;
+        if (playing[p]) {
+            playLevel_[p] = 1.0f; // on at once; only the release eases
+        } else {
+            playAnimating_ = true;
+        }
+    }
+    if (changed) repaint();
+}
+
+void PianoRollKeyLane::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    if (!playAnimating_) return;
+    const float step = static_cast<float>(deltaTime) / kPlayReleaseSeconds;
+    bool stillEasing = false;
+    for (int p = 0; p < 128; ++p) {
+        if (playing_[p] || playLevel_[p] <= 0.0f) continue;
+        playLevel_[p] = std::max(0.0f, playLevel_[p] - step);
+        stillEasing = stillEasing || playLevel_[p] > 0.0f;
+    }
+    playAnimating_ = stillEasing;
+    repaint();
 }
 
 void PianoRollKeyLane::setKeyHeight(float height) {
