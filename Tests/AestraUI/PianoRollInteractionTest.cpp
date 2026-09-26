@@ -701,6 +701,66 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 
+
+// SPEC 3 §5.1: a key shows pressed while a note is pressed in the grid or the key itself is
+// clicked, follows a note dragged to a new row, and eases back out after release instead of
+// snapping. A real note layer and key lane, wired the way PianoRollView wires them.
+static void test_pressed_notes_press_their_keys() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Quarter);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+    PianoRollKeyLane keys;
+    keys.setBounds(NUIRect(0.0f, 0.0f, 58.0f, 128.0f * kKey));
+    keys.setKeyHeight(kKey);
+    keys.setVisible(true);
+    layer.setOnKeyPressChanged([&keys](int pitch, bool down) {
+        if (down) keys.pressKey(pitch); else keys.releaseKey(pitch);
+    });
+    auto rowY = [&](int pitch) { return (127.0f - static_cast<float>(pitch)) * kKey + kKey * 0.5f; };
+    auto event = [](NUIMouseEventType type, float x, float y) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.position = NUIPoint(x, y);
+        e.button = NUIMouseButton::Left;
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        return e;
+    };
+
+    ASSERT(!keys.isKeyHeld(60) && keys.keyPressLevel(60) == 0.0f, "at rest before any press");
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.1f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60) && keys.keyPressLevel(60) == 1.0f, "a pencil press in the grid presses its key at once");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.1f * kPpb, rowY(60)));
+    ASSERT(!keys.isKeyHeld(60), "release lets the key go");
+    ASSERT(keys.keyPressLevel(60) == 1.0f, "but it does not snap off: it eases out");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPressLevel(60) - 0.5f) < 0.01f, "half way through the release, half pressed");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds);
+    ASSERT(keys.keyPressLevel(60) == 0.0f, "and back at rest when the release is over");
+
+    // Grab that note and drag it two rows up: the key follows the note.
+    layer.setTool(GlobalTool::Pointer);
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.4f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60), "grabbing a note presses its key");
+    layer.onMouseEvent(event(NUIMouseEventType::Move, 0.4f * kPpb, rowY(62)));
+    ASSERT(keys.isKeyHeld(62) && !keys.isKeyHeld(60), "dragged to 62, key 62 is down and 60 came back up");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.4f * kPpb, rowY(62)));
+    ASSERT(!keys.isKeyHeld(62), "and release lets it go");
+
+    // The key itself: down on press, up on release.
+    keys.onMouseEvent(event(NUIMouseEventType::Down, 20.0f, rowY(64)));
+    ASSERT(keys.isKeyHeld(64) && keys.keyPressLevel(64) == 1.0f, "a click on a key presses it");
+    keys.onMouseEvent(event(NUIMouseEventType::Up, 20.0f, rowY(64)));
+    ASSERT(!keys.isKeyHeld(64), "and releasing lets it go");
+    PASS("pressed notes and keys show their keys pressed, and ease back out");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -849,6 +909,7 @@ int main() {
     test_scroll_domain_floor_and_growth();
     test_minimap_drag_released_outside_the_editor_ends();
     test_ruler_draws_and_clears_a_loop_zone();
+    test_pressed_notes_press_their_keys();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
