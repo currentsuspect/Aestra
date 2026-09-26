@@ -452,6 +452,7 @@ void PianoRollView::layoutChildren() {
     // 6. Control Panel (Bottom) - Spans Full Width (Keys + Content)
     // Ensures "Control" sidebar aligns with Keys
     m_controls->setBounds(NUIRect(b.x, b.y + topTotalH + contentH + hScrollH, b.width, m_controlPanelHeight));
+    m_controls->setSidebarWidth(m_keyLaneWidth); // its beat 0 must sit under the grid's
     
     updateScrollbars();
     syncChildren();

@@ -701,6 +701,51 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 
+// SPEC 3 §5.1: the velocity lane's beat 0 sits under the grid's. Its label sidebar was a
+// hard-coded 76 px after the key lane shrank to 58, so every stem drew 18 px right of its
+// note, a click on a note's own x missed it (the hit window is +-10 px), and a click on a
+// beat-0 stem landed in the "sidebar" and flipped Velocity/Pan instead of editing.
+static void test_velocity_lane_lines_up_with_the_grid() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setViewWindow(0.0, 16.0);
+
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 0
+    notes.push_back({64, 4.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 4
+    view.setNotes(notes);
+
+    const NUIRect grid = view.getGridBounds();
+    const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
+    // Near the top of the lane (the panel is the view's bottom 88 px; its value area
+    // runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
+    const float laneY = 600.0f - 8.0f - (88.0f - 28.0f) * 0.9f;
+    auto press = [&](float x) {
+        NUIMouseEvent down;
+        down.type = NUIMouseEventType::Down;
+        down.button = NUIMouseButton::Left;
+        down.position = {x, laneY};
+        down.pressed = true;
+        view.onMouseEvent(down);
+        NUIMouseEvent up = down;
+        up.type = NUIMouseEventType::Up;
+        up.pressed = false;
+        up.released = true;
+        view.onMouseEvent(up);
+    };
+
+    press(grid.x + static_cast<float>(4.0 * ppb));
+    ASSERT(view.getNotes()[1].velocity > 0.8f,
+           "a click on the lane at a note's own x (beat 4) edits that note's velocity");
+    press(grid.x + 1.0f);
+    ASSERT(view.getNotes()[0].velocity > 0.8f,
+           "a click on the beat-0 stem edits velocity, not the Velocity/Pan sidebar");
+    PASS("the velocity lane lines up with the grid");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -849,6 +894,7 @@ int main() {
     test_scroll_domain_floor_and_growth();
     test_minimap_drag_released_outside_the_editor_ends();
     test_ruler_draws_and_clears_a_loop_zone();
+    test_velocity_lane_lines_up_with_the_grid();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
