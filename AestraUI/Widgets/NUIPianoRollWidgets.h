@@ -5,6 +5,7 @@
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
 #include "../Core/NUIHoverCursorClaim.h"
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -52,11 +53,37 @@ public:
     /** @brief Forward isPlaying callback from PianoRollView. */
     void setIsPlayingFromParent(std::function<bool()> cb) { m_isPlayingCallback = std::move(cb); }
 
+    /**
+     * @brief Show a key as pressed (SPEC 3 §5.1): lit, sunk, glowing toward the grid.
+     *
+     * A key is pressed while it is held, by a click on the key itself or by a note pressed
+     * in the grid (PianoRollNoteLayer's key-press callback), and eases back out over
+     * kKeyReleaseSeconds after release, so a quick tap still reads. Visual only: whether
+     * it sounds is the audition path's business.
+     */
+    void pressKey(int pitch);
+    /** @brief Release a held key; it fades back out rather than snapping off. */
+    void releaseKey(int pitch);
+    /** @brief Release every held key. */
+    void releaseAllKeys();
+    /** @brief True while @p pitch is held down. */
+    bool isKeyHeld(int pitch) const { return pitch >= 0 && pitch < 128 && keyHeld_[pitch]; }
+    /** @brief How pressed @p pitch looks: 1 held, easing to 0 after release. */
+    float keyPressLevel(int pitch) const { return pitch >= 0 && pitch < 128 ? pressLevel_[pitch] : 0.0f; }
+
+    void onUpdate(double deltaTime) override;
+
+    /** Seconds a released key takes to ease back to rest. */
+    static constexpr float kKeyReleaseSeconds = 0.16f;
+
 private:
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
     int previewPitch_; // Currently playing preview note (-1 if none)
+    std::array<bool, 128> keyHeld_{};    // held by a key click or a pressed note
+    std::array<float, 128> pressLevel_{}; // 1 while held, eases to 0 after release
+    bool pressAnimating_ = false;        // some key is still easing out
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<void(int pitch)> onHoveredKeyChanged_;
     std::function<bool()> m_isPlayingCallback;
@@ -488,6 +515,12 @@ public:
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
         onPreviewNote_ = std::move(cb);
     }
+    /**
+     * @brief Called as notes are pressed and released in the grid, so the key lane can show
+     * those keys pressed (SPEC 3 §5.1). A drag onto a new pitch releases the old one; a
+     * chord press holds all of its pitches. Fired whether or not the audition sounds.
+     */
+    void setOnKeyPressChanged(std::function<void(int pitch, bool down)> cb) { onKeyPressChanged_ = std::move(cb); }
     /** @brief Set callback to check if transport is playing (suppresses audition). */
     void setIsPlayingCallback(std::function<bool()> cb) { isPlayingCallback_ = std::move(cb); }
 
@@ -570,6 +603,8 @@ private:
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<bool()> isPlayingCallback_;
     int auditionPitch_ = -1; // Pitch currently sounding from edit audition; -1 if none
+    std::function<void(int pitch, bool down)> onKeyPressChanged_;
+    std::vector<int> pressedPitches_; // keys shown pressed for the current gesture
     uint64_t defaultUnitId_ = 0;
 
     // Tool
@@ -693,8 +728,10 @@ private:
 
     // Edit audition — play the note under the cursor while placing/dragging it,
     // so pitch is audible before commit. Suppressed while the transport plays.
-    void auditionPitch(int pitch);
+    void auditionPitch(int pitch, bool addToPress = false); // addToPress: chord members stay pressed together
     void auditionStop();
+    void showKeyPressed(int pitch, bool addToPress);
+    void releasePressedKeys();
 
     // Paint-brush: stamp one snapped note at the cursor cell if empty, used for
     // Shift+pencil drag strokes. Chord mode stamps the active triad. Returns
