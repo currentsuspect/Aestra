@@ -29,6 +29,7 @@
 #include <memory>
 #include "Events/Connection.h"
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -413,6 +414,7 @@ private:
     ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
     ::AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
     std::vector<::AestraUI::NUIColor> m_minimapLaneColors; // each lane's clip display colour, by lane index
+    std::unordered_map<PlaylistLaneID, TrackUIComponent*> m_minimapRowByLane; // reused per update
     ::AestraUI::TimelineMinimapMode m_minimapMode{::AestraUI::TimelineMinimapMode::Clips};
     ::AestraUI::TimelineMinimapAggregation m_minimapAggregation{::AestraUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};

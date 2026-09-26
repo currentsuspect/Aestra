@@ -385,16 +385,24 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     m_minimapLaneColors.clear();
     uint64_t laneColorsHash = 1469598103934665603ull; // FNV-1a over the colour bits
     const auto& minimapLaneIds = playlist.getLaneIDs();
-    for (size_t i = 0; i < minimapLaneIds.size(); ++i) {
+    // Rows are matched by lane id, not position: a lane can own secondary rows. The first row
+    // for a lane wins, so emplace (which never overwrites) keeps that rule.
+    m_minimapRowByLane.clear();
+    for (const auto& row : m_trackUIComponents) {
+        if (row) {
+            m_minimapRowByLane.emplace(row->getLaneId(), row.get());
+        }
+    }
+    // The renderer only draws the first kTrackLaneCount lanes; resolving more is wasted work.
+    const size_t minimapLaneCount =
+        std::min(minimapLaneIds.size(), static_cast<size_t>(AestraUI::TimelineSummaryBucket::kTrackLaneCount));
+    for (size_t i = 0; i < minimapLaneCount; ++i) {
         AestraUI::NUIColor colour(0.0f, 0.0f, 0.0f, 0.0f);
         const auto* lane = playlist.getLane(minimapLaneIds[i]);
         if (lane && !lane->clips.empty()) {
-            // Rows are matched by lane id, not position: a lane can own secondary rows.
-            for (const auto& row : m_trackUIComponents) {
-                if (row && row->getLaneId() == minimapLaneIds[i]) {
-                    colour = row->resolveClipDisplayColor(lane->clips.front());
-                    break;
-                }
+            const auto rowIt = m_minimapRowByLane.find(minimapLaneIds[i]);
+            if (rowIt != m_minimapRowByLane.end()) {
+                colour = rowIt->second->resolveClipDisplayColor(lane->clips.front());
             }
         }
         m_minimapLaneColors.push_back(colour);
