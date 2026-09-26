@@ -7,6 +7,7 @@
 // app. A short timeout keeps this test to a few tens of milliseconds.
 
 #include "Core/NUIAdaptiveFPS.h"
+#include "Core/NUIComponent.h"
 
 #include <chrono>
 #include <iostream>
@@ -58,6 +59,18 @@ int main() {
         frame(fps);
     }
     check(fps.getIdleTime() >= 0.05, "and once it stops, it goes idle again");
+
+    // A component keeps a fractional size: setBounds() calls onResize() with the size truncated
+    // to ints, and the default onResize() used to re-apply that truncation, so 146.56 became 146
+    // inside the same call and the parent's next layout "changed" it back, every frame.
+    AestraUI::NUIComponent box;
+    box.setBounds(AestraUI::NUIRect(10.0f, 20.0f, 146.56f, 26.0f));
+    check(box.getBounds().width == 146.56f, "a fractional width survives setBounds (not truncated to 146)");
+    box.setDirty(false);
+    box.setBounds(AestraUI::NUIRect(10.0f, 20.0f, 146.56f, 26.0f));
+    check(!box.isDirty(), "re-applying the same bounds does not invalidate");
+    box.onResize(200, 40);
+    check(box.getBounds().width == 200.0f && box.getBounds().height == 40.0f, "a real onResize still resizes");
 
     if (g_failures == 0) {
         std::cout << "Adaptive FPS idle tests passed\n";
