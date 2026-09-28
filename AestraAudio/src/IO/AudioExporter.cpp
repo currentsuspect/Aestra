@@ -98,6 +98,13 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         return result;
     }
 
+    // Keep-length samplers play pre-rendered copies; an offline render must never fall back
+    // to resampling (the file would not match what the producer set), so wait for them.
+    if (!m_trackManager.prewarmSamplerKeepLength(true)) {
+        result.errorMessage = "Keep-length sampler renders did not finish in time";
+        return result;
+    }
+
     // Compute render duration from actual playlist
     double startBeat = 0.0;
     double durationBeats = computeRenderDurationBeats(config, startBeat);

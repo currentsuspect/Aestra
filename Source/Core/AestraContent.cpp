@@ -1116,6 +1116,8 @@ void AestraContent::setupPianoRollPanel() {
         }
     });
     m_pianoRollPanel->setOnPatternEdited([this](PatternID patternId) {
+        // Keep-length samplers render new pitches ahead of playback (non-blocking).
+        if (m_trackManager) m_trackManager->prewarmSamplerKeepLength(false);
         // Pattern already saved by PianoRollPanel before firing this callback.
         // Refresh every surface that can render the same pattern.
         if (m_sequencerPanel) {
@@ -1298,6 +1300,19 @@ void AestraContent::setupArsenalPanels() {
             return;
         }
         sampler->setCutSelfMode(cutSelf);
+    };
+    m_sampleEditorPanel->onKeepLengthPitchChanged = [this](bool keepLength) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setPitchMode(keepLength ? Aestra::Audio::Plugins::SamplerPlugin::PitchMode::KeepLength
+                                         : Aestra::Audio::Plugins::SamplerPlugin::PitchMode::Resample);
+        m_trackManager->prewarmSamplerKeepLength(false); // render the unit's notes before they play
     };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -1493,6 +1508,8 @@ void AestraContent::setupArsenalPanels() {
         }
     });
     m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
+        // Keep-length samplers render new pitches ahead of playback (non-blocking).
+        if (m_trackManager) m_trackManager->prewarmSamplerKeepLength(false);
         if (m_patternBrowser) {
             m_patternBrowser->refreshPatterns();
             m_patternBrowser->setSelectedPatternId(patternId, false);
@@ -4066,6 +4083,8 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
                 self->showToast("Couldn't load " + std::filesystem::path(samplePath).filename().string());
                 return;
             }
+            // A new sample invalidates keep-length renders: re-render the notes already written.
+            self->m_trackManager->prewarmSamplerKeepLength(false);
 
             if (self->m_sequencerPanel) {
                 self->m_sequencerPanel->setSelectedUnit(unitId);
@@ -4240,6 +4259,8 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
     m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
+    m_sampleEditorPanel->setKeepLengthPitch(sampler->getPitchMode() ==
+                                            Aestra::Audio::Plugins::SamplerPlugin::PitchMode::KeepLength);
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {

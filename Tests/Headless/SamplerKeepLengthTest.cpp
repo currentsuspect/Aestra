@@ -7,11 +7,13 @@
 //   2. Resample mode is unchanged (a -7 note still lasts ~1.5x as long);
 //   3. a pitch that isn't rendered yet plays resampled once, then keep-length;
 //   4. replacing the sample never plays a copy stretched from the old sample;
-//   5. the mode survives save/load, and state without it loads as Resample.
+//   5. the mode survives save/load, and state without it loads as Resample;
+//   6. the host prewarm (what export waits on) renders exactly each unit's own notes.
 // Drives SamplerPlugin directly; the render service runs on its own thread.
 
 #include "Plugin/PluginHost.h"
 #include "Plugin/SamplerPlugin.h"
+#include "Models/TrackManager.h"
 
 #include <algorithm>
 #include <chrono>
@@ -209,6 +211,32 @@ int main() {
                       c->getPitchMode() == SamplerPlugin::PitchMode::Resample,
                   "state without pitchMode loads as Resample");
         }
+    }
+
+    std::cout << "6. the host prewarm renders exactly the unit's notes (export waits on it)\n";
+    {
+        auto tm = std::make_unique<Aestra::Audio::TrackManager>(); // heap: large fixture
+        auto& units = tm->getUnitManager();
+        const auto keepUnit = units.createUnit("Keep", Aestra::Audio::UnitType::Sampler);
+        const auto otherUnit = units.createUnit("Other", Aestra::Audio::UnitType::Sampler);
+        auto sampler = makeSampler(source);
+        sampler->setPitchMode(SamplerPlugin::PitchMode::KeepLength);
+        std::shared_ptr<SamplerPlugin> shared(std::move(sampler));
+        units.attachPlugin(keepUnit, "com.Aestrastudios.sampler", shared);
+        Aestra::Audio::MidiPayload payload;
+        payload.notes.push_back(Aestra::Audio::MidiNote{kRoot - 7, 0.0, 1.0, 0.8f, 0.0f, keepUnit});
+        payload.notes.push_back(Aestra::Audio::MidiNote{kRoot + 5, 1.0, 1.0, 0.8f, 0.0f, keepUnit});
+        payload.notes.push_back(Aestra::Audio::MidiNote{kRoot - 5, 2.0, 1.0, 0.8f, 0.0f, otherUnit});
+        tm->getPatternManager().createMidiPattern("Keep notes", 4.0, payload);
+
+        check(tm->prewarmSamplerKeepLength(true), "prewarm (as export calls it) finishes");
+        const double own = halfLife(play(*shared, kRoot - 7));
+        check(std::abs(own / sourceHalfLife - 1.0) < 0.06,
+              "the unit's own note plays at the source's length (" + std::to_string(own) + " s)");
+        const double notOwn = halfLife(play(*shared, kRoot - 5));
+        check(notOwn > sourceHalfLife * 1.2,
+              "another unit's pitch was not rendered for this unit (first hit resampled: " + std::to_string(notOwn) +
+                  " s)");
     }
 
     std::cout << (failures == 0 ? "[PASS] SamplerKeepLengthTest\n"
