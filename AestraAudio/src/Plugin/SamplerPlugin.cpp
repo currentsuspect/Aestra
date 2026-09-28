@@ -8,6 +8,7 @@
 #include "DSP/Interpolators.h"
 
 #include <algorithm>
+#include <limits>
 #include <cctype>
 #include <cmath>
 #include <filesystem>
@@ -149,6 +150,14 @@ void SamplerPlugin::activate() {
     m_active = true;
     for (auto& v : m_voices)
         v.active = false;
+    m_owedNoteOffs.fill(0);
+}
+
+void SamplerPlugin::oweNoteOffIfHeld(const Voice& v) noexcept {
+    const bool held = v.active && v.stage != EnvStage::Release && v.stage != EnvStage::Off;
+    auto& owed = m_owedNoteOffs[static_cast<size_t>(v.note) & 0x7F];
+    if (held && owed < std::numeric_limits<uint16_t>::max())
+        ++owed;
 }
 
 void SamplerPlugin::deactivate() {
@@ -286,6 +295,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.currentGain = 0.0f;
             v.releaseGain = 0.0f;
         }
+        m_owedNoteOffs.fill(0);
     }
 
     // Thread-safe access to sample data
@@ -529,6 +539,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
             for (auto& v : m_voices) {
                 if (v.active) {
+                    oweNoteOffIfHeld(v);
                     v.active = false;
                     v.stage = EnvStage::Off;
                     v.stageTime = 0.0;
@@ -548,6 +559,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            oweNoteOffIfHeld(voice); // the previous note is still held but no longer owns the voice
+            voice.order = m_nextVoiceOrder++;
 
             voice.active = true;
             voice.note = note;
@@ -616,7 +629,9 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
+            oweNoteOffIfHeld(*freeVoice); // stealing a held note: its note-off must not end this one
         }
+        freeVoice->order = m_nextVoiceOrder++;
 
         freeVoice->active = true;
         freeVoice->note = note;
@@ -632,13 +647,26 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->stageTime = 0.0;
         freeVoice->currentGain = 0.0f;
     } else if (status == 0x80 || (status == 0x90 && velocity == 0)) { // Note Off
-        // ADSR-driven one-shot: note-off enters release so envelope fully shapes each hit.
+        // One note-off ends one note. A note-off owed by a note whose voice was
+        // taken early is consumed here instead of ending the note that took it.
+        auto& owed = m_owedNoteOffs[note & 0x7F];
+        if (owed > 0) {
+            --owed;
+            return;
+        }
+        // Otherwise release the oldest held voice of this pitch, so overlapping
+        // notes of the same pitch (every drum hit sits on the root) end in order.
+        Voice* oldest = nullptr;
         for (auto& v : m_voices) {
-            if (v.active && v.note == note && v.stage != EnvStage::Release) {
-                v.stage = EnvStage::Release;
-                v.stageTime = 0.0;
-                v.releaseGain = v.currentGain;
+            if (v.active && v.note == note && v.stage != EnvStage::Release && v.stage != EnvStage::Off &&
+                (!oldest || v.order < oldest->order)) {
+                oldest = &v;
             }
+        }
+        if (oldest) {
+            oldest->stage = EnvStage::Release;
+            oldest->stageTime = 0.0;
+            oldest->releaseGain = oldest->currentGain;
         }
     }
 }
