@@ -5,6 +5,8 @@
 // pushExternalEdit only pushed the layer-local undo step, so PatternManager
 // kept the old value until an unrelated committing event flushed it — the
 // "pan applies but nothing refreshes until I place another note" symptom.
+// The layer no longer keeps an undo history at all (ownership contract F1/F2):
+// the commit is the undo step, recorded by the owner's CommandHistory.
 
 #include "NUIPianoRollWidgets.h"
 
@@ -59,13 +61,17 @@ void testPushExternalEditFiresCommit() {
     check(std::fabs(committed[0].pan - (-0.5f)) < 0.0001f, "committed note must carry the edited pan");
 }
 
-void testPushExternalEditVelocityCommitsAndUndoes() {
+void testPushExternalEditVelocityCommitsOnce() {
     PianoRollNoteLayer layer;
     layer.setBounds({0.0f, 0.0f, 800.0f, 3072.0f});
     layer.setNotes({makeNote(62, 0.5)});
 
     int commits = 0;
-    layer.setOnNotesChanged([&commits](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> committed;
+    layer.setOnNotesChanged([&commits, &committed](const std::vector<MidiNote>& notes) {
+        ++commits;
+        committed = notes;
+    });
 
     const auto before = layer.getNotes();
     auto edited = before;
@@ -76,17 +82,15 @@ void testPushExternalEditVelocityCommitsAndUndoes() {
 
     check(commits == 1, "velocity lane edit must commit exactly once");
     check(layer.getNotes()[0].velocity == 0.25f, "committed velocity must be visible via getNotes()");
-
-    layer.undo();
-    check(commits == 2, "undo of an external edit must re-commit");
-    check(std::fabs(layer.getNotes()[0].velocity - 0.8f) < 0.0001f, "undo must restore the pre-edit velocity");
+    check(committed.size() == 1 && committed[0].velocity == 0.25f, "the commit must carry the edited velocity");
+    check(before[0].velocity == 0.8f, "the pre-edit snapshot the owner diffs against must be untouched");
 }
 
 } // namespace
 
 int main() {
     testPushExternalEditFiresCommit();
-    testPushExternalEditVelocityCommitsAndUndoes();
+    testPushExternalEditVelocityCommitsOnce();
 
     if (g_failures == 0) {
         std::cout << "PianoRollExternalEditCommitTest: all checks passed\n";

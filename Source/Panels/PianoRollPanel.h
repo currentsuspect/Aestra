@@ -16,6 +16,7 @@
 namespace Aestra {
 namespace Audio {
 class AudioEngine;
+class CommandTransaction;
 class PlaybackContextController;
 
 /**
@@ -130,6 +131,9 @@ private:
     // rendered as unit-colored ghosts, merged back verbatim on save.
     std::vector<MidiNote> m_otherUnitNotes;
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
+    // The history entry recorded for the last edit, so a continuing edit (Alt+wheel
+    // velocity scrub) can fold into it instead of adding one entry per notch.
+    std::shared_ptr<CommandTransaction> m_lastEditTransaction;
     bool m_switchingUnit{false};              // Guards setEditingUnit against save-echo recursion
     bool m_wasVisible{false};
     bool m_followPlayhead{false}; // Opt-in viewport tracking (0.7.0 triage)
