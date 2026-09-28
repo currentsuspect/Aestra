@@ -612,6 +612,60 @@ bool runIsolatedBounceExcludesMasterClips(const SessionConfig& cfg, const fs::pa
 
 } // namespace
 
+// -----------------------------------------------------------------------------
+// Case: an export's tail never replays the arrangement (#992)
+// -----------------------------------------------------------------------------
+// With the transport loop on over the song, rendering past the loop end (the
+// tail) wrapped back to the loop start and played the arrangement again. This
+// session has no effects, so its tail must be silence; the engine's loop setting
+// must be exactly as it was once the export returns.
+bool runTailIgnoresLoopCase(const std::shared_ptr<TrackManager>& tm, const SessionConfig& cfg,
+                            const fs::path& tempRoot, AudioExporter::RenderScope scope, const char* label) {
+    AudioEngine engine;
+    prepareEngine(engine, tm, cfg);
+    applyParams(engine);
+    warmupEngine(engine, cfg);
+    engine.setLoopRegion(0.0, kBeats);
+    engine.setLoopEnabled(true);
+
+    const fs::path outPath = tempRoot / (std::string("tail_ignores_loop_") + label + ".wav");
+    std::error_code ec;
+    fs::remove(outPath, ec);
+    AudioExporter exporter(engine, *tm);
+    AudioExporter::Config config;
+    config.outputPath = outPath.string();
+    config.scope = scope;
+    config.sampleRate = cfg.sampleRate;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.numChannels = 2;
+    config.tailSeconds = 2.0;
+    const auto result = exporter.render(config);
+    if (!result.success) {
+        std::cerr << label << ": export failed: " << result.errorMessage << "\n";
+        return false;
+    }
+    std::vector<float> decoded;
+    uint32_t sr = 0, ch = 0;
+    if (!decodeAudioFile(outPath.string(), decoded, sr, ch) || ch != 2) {
+        std::cerr << label << ": failed to decode " << outPath << "\n";
+        return false;
+    }
+    const size_t frames = decoded.size() / ch;
+    const size_t songEnd = static_cast<size_t>(sr) * kSeconds;
+    // The body is audible (precondition), so a silent tail is not a silent render.
+    const double bodyRms = rmsRange(decoded, sr / 10, songEnd - sr / 10, ch);
+    // Skip 50 ms past the song end for any edge ramp; the rest is pure tail.
+    const double tailRms = rmsRange(decoded, songEnd + sr / 20, frames, ch);
+    const double tailDb = 20.0 * std::log10(std::max(tailRms, 1e-15));
+    const bool loopRestored = engine.isLoopEnabled() && engine.getLoopEndBeat() == kBeats;
+
+    const bool pass = frames >= songEnd + sr && bodyRms > 0.05 && tailDb <= -100.0 && loopRestored;
+    std::cout << (pass ? "PASS" : "FAIL") << ": Export_Tail_Ignores_Loop (" << label << ") frames=" << frames
+              << " bodyRms=" << bodyRms << " tail=" << tailDb << " dBFS loopRestored=" << loopRestored
+              << (tailDb > -100.0 ? "  <-- the tail replayed the arrangement" : "") << "\n";
+    return pass;
+}
+
 int main() {
     std::cout << "=== Aestra Realtime/Export Parity Test ===\n\n";
     const fs::path tempRoot = fs::temp_directory_path() / "aestra_rt_export_parity";
@@ -636,6 +690,8 @@ int main() {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed)) ++failures;
     }
     if (!runIsolatedBounceExcludesMasterClips(cfg, tempRoot)) ++failures;
+    if (!runTailIgnoresLoopCase(tm, cfg, tempRoot, AudioExporter::RenderScope::FullSong, "full-song")) ++failures;
+    if (!runTailIgnoresLoopCase(tm, cfg, tempRoot, AudioExporter::RenderScope::LoopRegion, "loop-region")) ++failures;
     // Pitch cases (#746): pure pitch, pitch cancelling speed, and interplay.
     for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, -12.0f}, {0.5f, 7.0f}}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed, pitch)) ++failures;

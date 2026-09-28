@@ -217,6 +217,11 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // duck the exported file by the full configured attenuation
     // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
     const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
+    // The transport loop is a playback convenience: an export renders its range
+    // once. Left on, rendering past the loop end (the tail) wrapped back to the
+    // loop start and played the arrangement again (#992).
+    const bool wasLoopEnabled = m_engine.isLoopEnabled();
+    m_engine.setLoopEnabled(false);
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
     m_engine.setPreviewDuckingAttenuationDb(0.0f);
@@ -293,6 +298,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
     m_engine.setMetronomeEnabled(wasMetronomeEnabled);
     m_engine.setAuditionModeEnabled(wasAuditionEnabled);
+    m_engine.setLoopEnabled(wasLoopEnabled);
     // Restore the configured duck depth only; live playback re-smooths the
     // duck gain naturally from the current preview state.
     m_engine.setPreviewDuckingAttenuationDb(wasPreviewDuckDb);
