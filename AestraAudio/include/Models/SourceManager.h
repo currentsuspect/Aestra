@@ -62,8 +62,13 @@ public:
             return it->second;
         }
 
+        // Projects store ids as JSON numbers, exact only up to 2^53-1. Restoring an
+        // id near that edge would push nextId past it, and the next new source would
+        // save an id no load can read back. Above 2^52 the loader's idMap assigns a
+        // fresh id instead, which leaves ~2^52 ids of headroom before the edge.
+        constexpr uint64_t kMaxRestorableId = uint64_t{1} << 52;
         ClipSourceID id{};
-        if (requestedId.isValid() && requestedId.value != std::numeric_limits<uint64_t>::max()
+        if (requestedId.isValid() && requestedId.value <= kMaxRestorableId
             && m_sources.find(requestedId.value) == m_sources.end()) {
             id = requestedId;
             if (requestedId.value >= nextId) {

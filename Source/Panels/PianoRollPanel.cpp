@@ -446,9 +446,13 @@ void PianoRollPanel::savePattern() {
         for (const auto& note : currentNotes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
-        // Keep patterns musical in whole bars and let note content drive the
-        // default loop size on add/delete.
+        // Keep patterns musical in whole bars. A note edit only ever grows the
+        // pattern to fit its notes; shrinking is the length control's job (owner
+        // ruling, #981), so an explicitly sized pattern keeps its length.
         newLengthBeats = quantizePatternLengthBeats(longestBeat, beatsPerBar());
+        if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
+            newLengthBeats = std::max(newLengthBeats, storedPattern->lengthBeats);
+        }
     } else if (const auto* storedPattern = pm.getPattern(m_currentPatternId)) {
         // Nothing changed: adopt the stored length instead of rewriting it, so an
         // explicit length set via the bars control survives a unit switch.

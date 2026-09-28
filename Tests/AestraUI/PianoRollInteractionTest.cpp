@@ -882,8 +882,60 @@ static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
     PASS("Alt+drag copy is one gesture and moves only the clone");
 }
 
+// Review, #981 round 2: mid copy-drag the clones sit unsorted at the end of the notes, so the
+// renderer's "first note past the view ends the scan" skipped a visible clone whenever an
+// off-screen note came before it. The clone must be drawn while it is being dragged.
+class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
+public:
+    std::vector<NUIRect> strokes;
+    void strokeRoundedRect(const NUIRect& r, float, float, const NUIColor&) override { strokes.push_back(r); }
+};
+
+static void test_alt_drag_clone_is_drawn_while_dragging() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey)); // 20 beats visible
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 30.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}}); // B is off-screen
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    move.position = NUIPoint(3.5f * kPpb, y); // clone to beat 3
+    layer.onMouseEvent(move);
+
+    NoteBodyRecorder rec;
+    layer.onRender(rec); // still mid-drag: no release yet
+    const bool cloneDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - (3.0f * kPpb + 1.0f)) < 1.5f;
+    });
+    const bool originalDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - 1.0f) < 1.5f;
+    });
+    ASSERT(originalDrawn, "precondition: the original note is drawn (" + std::to_string(rec.strokes.size()) +
+                              " note bodies drawn)");
+    ASSERT(cloneDrawn, "the clone being dragged is drawn even though an off-screen note precedes it");
+    PASS("the Alt+drag clone is drawn while dragging");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
+
+    test_alt_drag_clone_is_drawn_while_dragging();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
 

@@ -608,11 +608,17 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     }
     
     const double visibleEndBeat = (scrollX_ + b.width) / pixelsPerBeat_;
+    // notes_ is sorted by start, so the first note past the view ends the scan,
+    // except mid copy-drag: the clones sit unsorted at the end until release.
+    const bool sortedByStart = state_ != State::CopyDragging;
 
     for (size_t noteIndex = 0; noteIndex < notes_.size(); ++noteIndex) {
         const auto& n = notes_[noteIndex];
-        if (n.startBeat > visibleEndBeat) break;
-        
+        if (n.startBeat > visibleEndBeat) {
+            if (sortedByStart) break;
+            continue;
+        }
+
         float x = snapRectX(beatToScreenX(n.startBeat, pixelsPerBeat_, scrollX_, b.x));
         float y = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
         float w = std::max(1.0f, std::round(static_cast<float>(n.durationBeats * pixelsPerBeat_)));
