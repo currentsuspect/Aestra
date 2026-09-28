@@ -66,9 +66,9 @@ public:
         // id near that edge would push nextId past it, and the next new source would
         // save an id no load can read back. Above 2^52 the loader's idMap assigns a
         // fresh id instead, which leaves ~2^52 ids of headroom before the edge.
-        constexpr uint64_t kMaxRestorableId = uint64_t{1} << 52;
+        constexpr uint64_t MAX_RESTORABLE_SOURCE_ID = uint64_t{1} << 52;
         ClipSourceID id{};
-        if (requestedId.isValid() && requestedId.value <= kMaxRestorableId
+        if (requestedId.isValid() && requestedId.value <= MAX_RESTORABLE_SOURCE_ID
             && m_sources.find(requestedId.value) == m_sources.end()) {
             id = requestedId;
             if (requestedId.value >= nextId) {

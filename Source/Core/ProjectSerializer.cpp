@@ -369,13 +369,13 @@ namespace {
     }
 
     // Source ids are 64-bit (ClipSourceID), but a JSON number is exact only up to 2^53-1 (F20).
-    constexpr double kMaxExactJsonId = 9007199254740991.0;
+    constexpr double MAX_EXACT_JSON_ID = 9007199254740991.0;
 
     // True when the id is present but past the exact range: clamping it would load
     // the project under a different identity, so the caller must refuse the file.
     bool idBeyondExactRange(const JSON& object, const char* key) {
         return object.has(key) && object[key].isNumber() && std::isfinite(object[key].asNumber()) &&
-               object[key].asNumber() > kMaxExactJsonId;
+               object[key].asNumber() > MAX_EXACT_JSON_ID;
     }
 
     std::string boundedStringOr(const JSON& object, const char* key, const std::string& fallback, size_t maxBytes) {
@@ -1384,7 +1384,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 Log::error("[ProjectLoad] " + result.errorMessage);
                 return result;
             }
-            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, kMaxExactJsonId));
+            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, MAX_EXACT_JSON_ID));
             if (id != 0) allSourceIds.insert(id);
         }
     }
@@ -1405,7 +1405,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         return result;
                     }
                     const uint64_t sourceId = static_cast<uint64_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, kMaxExactJsonId));
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, MAX_EXACT_JSON_ID));
                     if (sourceId == 0 || !allSourceIds.count(sourceId)) {
                         unloadablePatternIds.insert(id);
                     }
@@ -1648,7 +1648,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
         #endif
             for (size_t i = 0; i < sj.size(); ++i) {
-                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, kMaxExactJsonId));
+                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, MAX_EXACT_JSON_ID));
                 std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
@@ -1747,7 +1747,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
                 if (type == "audio") {
                     uint64_t oldSrcId = static_cast<uint64_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, kMaxExactJsonId));
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, MAX_EXACT_JSON_ID));
                     if (idMap.count(oldSrcId)) {
                         AudioSlicePayload payload;
                         payload.audioSourceId = idMap[oldSrcId];
