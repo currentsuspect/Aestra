@@ -22,6 +22,19 @@ uint8_t toMidiVelocity(float velocity) {
     return static_cast<uint8_t>(std::clamp<int>(static_cast<int>(std::lround(clamped)), 0, 127));
 }
 
+// One id per note occurrence: its instance, its ON frame (distinct per loop pass) and its
+// resolved pitch. The note-off is often scheduled in a later window than the note-on, so the
+// id must be recomputable from the occurrence alone. Never 0 (0 means "no id").
+uint32_t noteOccurrenceId(uint32_t instanceId, uint64_t noteFrame, uint8_t midiNote) {
+    uint64_t h = 0x9E3779B97F4A7C15ull ^ (static_cast<uint64_t>(instanceId) << 32) ^ midiNote;
+    h ^= noteFrame + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdull;
+    h ^= h >> 33;
+    const uint32_t id = static_cast<uint32_t>(h ^ (h >> 32));
+    return id != 0 ? id : 1u;
+}
+
 bool eventComesBefore(const ScheduledEvent& a, const ScheduledEvent& b) {
     if (a.sampleFrame != b.sampleFrame) {
         return a.sampleFrame < b.sampleFrame;
@@ -330,6 +343,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             off.data1 = gated.noteNumber;
             off.data2 = 0;
             off.priority = 0;
+            off.noteId = gated.noteId;
             deletedOffs.push_back(off);
             consumedGates.push_back(gateIndex);
         }
@@ -400,6 +414,8 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
+            const uint32_t noteId =
+                noteOccurrenceId(inst.instanceId, noteFrame, static_cast<uint8_t>(resolvedMidiNote));
             // A one-shot sample may continue to its natural endpoint when no
             // note gate is present, but a Piano Roll note still owns an ADSR
             // gate. Always emit its note-off so the sampler can enter release
@@ -447,10 +463,11 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 onEvent.data2 = toMidiVelocity(note.velocity);
                 onEvent.priority = 2;
+                onEvent.noteId = noteId;
                 m_scratchEvents.push_back(onEvent);
                 if (!suppressNoteOff) {
                     m_gatedNotes.push_back({inst.instanceId, note.unitId,
-                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame, noteId});
                 }
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
@@ -476,10 +493,11 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
                 resumeOnEvent.priority = 2;
+                resumeOnEvent.noteId = noteId;
                 m_scratchEvents.push_back(resumeOnEvent);
                 if (!suppressNoteOff) {
                     m_gatedNotes.push_back({inst.instanceId, note.unitId,
-                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame, noteId});
                 }
             }
 
@@ -493,6 +511,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 offEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 offEvent.data2 = 0;
                 offEvent.priority = 0;
+                offEvent.noteId = noteId;
                 m_scratchEvents.push_back(offEvent);
             }
         }
@@ -545,7 +564,7 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 
             if (target) {
                 uint8_t data[3] = {ev.statusByte, ev.data1, ev.data2};
-                target->addEvent(static_cast<uint32_t>(offset), data, 3);
+                target->addEvent(static_cast<uint32_t>(offset), data, 3, ev.noteId);
                 m_processedCounter.fetch_add(1, std::memory_order_relaxed);
             }
         }

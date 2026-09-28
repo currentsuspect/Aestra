@@ -1463,11 +1463,16 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             // length, and release remembered the sum, so every drag-painted note
             // came out longer than the one before it.)
             const float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
-            if (std::abs(dx) < 3.0f) return true;
-            double cell = MusicTheory::getSnapDuration(snap_);
-            if (snap_ == SnapGrid::None || cell <= 0.0001) cell = 0.125;
-            const double pointerBeat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
-            const double newDur = std::max(cell, snapToGrid(pointerBeat - paintStartBeat_));
+            double newDur = lastNoteDuration_; // back within the click zone: the click length again
+            if (std::abs(dx) >= 3.0f) {
+                double cell = MusicTheory::getSnapDuration(snap_);
+                if (snap_ == SnapGrid::None || cell <= 0.0001) cell = 0.125;
+                // Pointer in content space from the CURRENT scroll: edge-scrolling above may
+                // have moved scrollX_ since localX was computed.
+                const float pointerX = event.position.x - b.x + scrollX_;
+                const double pointerBeat = std::max(0.0, static_cast<double>(pointerX / pixelsPerBeat_));
+                newDur = std::max(cell, snapToGrid(pointerBeat - paintStartBeat_));
+            }
 
             notes_[paintingNoteIndex_].durationBeats = newDur;
             repaint();

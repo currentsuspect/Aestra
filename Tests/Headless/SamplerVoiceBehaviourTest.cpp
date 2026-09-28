@@ -54,6 +54,7 @@ struct Midi {
     uint32_t frame;
     uint8_t status;
     uint8_t note;
+    uint32_t id = 0; // the scheduler's note id (0 = live MIDI, no id)
 };
 
 uint32_t ms(double t) { return static_cast<uint32_t>(t * kEngineRate / 1000.0); }
@@ -68,7 +69,7 @@ std::vector<float> render(SamplerPlugin& s, uint32_t frames, const std::vector<M
         for (const auto& e : events) {
             if (e.frame >= start && e.frame < start + n) {
                 const uint8_t d[3] = {e.status, e.note, static_cast<uint8_t>(e.status == kNoteOn ? kVelocity : 0)};
-                midi.addEvent(e.frame - start, d, 3);
+                midi.addEvent(e.frame - start, d, 3, e.id);
             }
         }
         s.process(nullptr, ch, 0, 2, n, &midi, nullptr);
@@ -129,9 +130,11 @@ std::unique_ptr<SamplerPlugin> makeSampler(std::vector<float> mono, uint32_t sou
 }
 
 // A holds 0-2 s, B (same pitch) holds 1-3 s: B must sound until its own note-off.
-void sameNoteOverlap(SamplerPlugin& s, const char* mode) {
-    const auto x = render(s, ms(3500), {{0, kNoteOn, kRoot}, {ms(1000), kNoteOn, kRoot},
-                                        {ms(2000), kNoteOff, kRoot}, {ms(3000), kNoteOff, kRoot}});
+// Scheduled notes carry ids (A=1, B=2); `live` sends none, like a MIDI keyboard.
+void sameNoteOverlap(SamplerPlugin& s, const char* mode, bool live = false) {
+    const uint32_t a = live ? 0 : 1, b = live ? 0 : 2;
+    const auto x = render(s, ms(3500), {{0, kNoteOn, kRoot, a}, {ms(1000), kNoteOn, kRoot, b},
+                                        {ms(2000), kNoteOff, kRoot, a}, {ms(3000), kNoteOff, kRoot, b}});
     check(peak(x, ms(1100), ms(1900)) > kAudible, std::string(mode) + ": precondition, B sounds once started");
     check(peak(x, ms(2100), ms(2900)) > kAudible,
           std::string(mode) + ": A's note-off leaves B sounding (B is held until 3 s); got peak " +
@@ -194,6 +197,43 @@ int main() {
         auto s = makeSampler(sine(4.0, hz, kEngineRate), kEngineRate);
         s->setMaxVoices(1); // B has to steal A's voice
         sameNoteOverlap(*s, "poly, voice stolen");
+    }
+
+    {
+        auto s = makeSampler(sine(4.0, hz, kEngineRate), kEngineRate);
+        sameNoteOverlap(*s, "poly, live MIDI (no ids)", true);
+    }
+
+    std::cout << "3b. note identity edge cases\n";
+    {   // Nested under cut-self: A 0-3 s, B 1-2 s. B chokes A; B's own note-off ends B at 2 s.
+        auto s = makeSampler(sine(4.0, hz, kEngineRate), kEngineRate);
+        s->setCutSelfMode(true);
+        const auto x = render(*s, ms(3500), {{0, kNoteOn, kRoot, 1}, {ms(1000), kNoteOn, kRoot, 2},
+                                             {ms(2000), kNoteOff, kRoot, 2}, {ms(3000), kNoteOff, kRoot, 1}});
+        check(peak(x, ms(1100), ms(1900)) > kAudible, "cut-self nested: B sounds");
+        check(peak(x, ms(2100), ms(3500)) < kSilence,
+              "cut-self nested: B ends at its own note-off (2 s), not A's (3 s)");
+    }
+    {   // The sample runs out while its note is still held: A (0-1.5 s) ends at 0.8 s; B starts at
+        // 1.0 s. A's late note-off at 1.5 s must not end B (held to 2.5 s; its sample lasts to 1.8 s).
+        auto s = makeSampler(sine(0.8, hz, kEngineRate), kEngineRate);
+        const auto x = render(*s, ms(2600), {{0, kNoteOn, kRoot, 1}, {ms(1000), kNoteOn, kRoot, 2},
+                                             {ms(1500), kNoteOff, kRoot, 1}, {ms(2500), kNoteOff, kRoot, 2}});
+        check(peak(x, ms(1550), ms(1750)) > kAudible,
+              "expired note's late note-off leaves the newer same-pitch note sounding (peak " +
+                  std::to_string(peak(x, ms(1550), ms(1750))) + ")");
+    }
+    {   // An 808 slide never sends the old note's note-off. A later note on that pitch must still
+        // stop at its own note-off: nothing left over from the slide may swallow it.
+        auto s = makeSampler(sine(4.0, hz, kEngineRate), kEngineRate);
+        s->setMonoMode(true);
+        const auto x = render(*s, ms(3500), {{0, kNoteOn, kRoot, 1},                 // no note-off (slide)
+                                             {ms(500), kNoteOn, kRoot + 2, 2},       // slides into D
+                                             {ms(1500), kNoteOff, kRoot + 2, 2},
+                                             {ms(2000), kNoteOn, kRoot, 3},          // C again, later
+                                             {ms(2500), kNoteOff, kRoot, 3}});
+        check(peak(x, ms(2100), ms(2400)) > kAudible, "after a slide: the later C sounds");
+        check(peak(x, ms(2600), ms(3500)) < kSilence, "after a slide: the later C stops at its own note-off");
     }
 
     std::cout << "4. a square envelope stops the sound where the note ends\n";

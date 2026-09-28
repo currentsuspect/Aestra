@@ -981,6 +981,32 @@ static void test_drag_painted_notes_keep_the_dragged_length() {
     paint(60, 4.1f, 4.1f); // a plain click reuses the last painted length
     ASSERT(std::abs(lengthAt(60) - 2.0) < 1e-9,
            "a click places the remembered 2-beat length; got " + std::to_string(lengthAt(60)));
+
+    // Drag out to 4 beats, then back to the start: the note returns to the click length (2),
+    // not the last dragged length (review, #1001).
+    {
+        const int pitch = 55;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(8.1f * kPpb, y);
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.position = NUIPoint(12.0f * kPpb, y);
+        layer.onMouseEvent(move);
+        move.position = NUIPoint(8.1f * kPpb, y); // back to where it started
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 2.0) < 1e-9,
+               "dragging back to the start restores the click length; got " + std::to_string(lengthAt(pitch)));
+    }
     PASS("drag-painted notes keep the dragged length");
 }
 
