@@ -930,6 +930,8 @@ static void test_alt_drag_clone_is_drawn_while_dragging() {
                               " note bodies drawn)");
     ASSERT(cloneDrawn, "the clone being dragged is drawn even though an off-screen note precedes it");
     PASS("the Alt+drag clone is drawn while dragging");
+}
+
 // Drag-painting sets a note's length from its start to the pointer. It used to add the drag to
 // the remembered length (and remember the sum), so equal ~2-beat drags painted 3, 5, 7 beats.
 static void test_drag_painted_notes_keep_the_dragged_length() {
