@@ -341,7 +341,8 @@ private:
         uint8_t noteNumber;
         uint16_t channelIdx;
         uint64_t offFrame;
-        uint32_t noteId; // the id its note-on carried; a released-early off must carry it too
+        uint32_t noteId;    // the id its voice was started with; every note-off for it carries this
+        uint32_t currentId; // the id the scheduler computes for the note now (changes when edited)
     };
 
     // Gated-note registry (control thread only; refilled/pruned in refillWindow).

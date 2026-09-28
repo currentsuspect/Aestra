@@ -1009,6 +1009,31 @@ static void test_drag_painted_notes_keep_the_dragged_length() {
         ASSERT(std::abs(lengthAt(pitch) - 2.0) < 1e-9,
                "dragging back to the start restores the click length; got " + std::to_string(lengthAt(pitch)));
     }
+
+    // Alt fine-drag keeps a sub-cell length (review, #1001): 0.3 beats under Beat snap, not a
+    // whole 1-beat cell.
+    {
+        const int pitch = 50;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(12.0f * kPpb, y); // snapped start: beat 12
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.modifiers = NUIModifiers::Alt;
+        move.position = NUIPoint(12.3f * kPpb, y);
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 0.3) < 0.01,
+               "an Alt fine-drag keeps its sub-cell length; got " + std::to_string(lengthAt(pitch)));
+    }
     PASS("drag-painted notes keep the dragged length");
 }
 

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <algorithm>
 #include <vector>
 
 using namespace Aestra::Audio;
@@ -185,6 +186,46 @@ int main() {
         if (offA->id != onA->id || offB->id != onB->id) {
             std::cerr << "note identity: a note-off does not carry its own note's id (A " << onA->id << "/"
                       << offA->id << ", B " << onB->id << "/" << offB->id << ")\n";
+            return 1;
+        }
+    }
+
+    // A stacked layer: two notes of one pitch starting together, different lengths (beats 0-1
+    // and 0-2). Each must get its own id, or the shorter one's note-off ends the longer voice.
+    {
+        PatternManager layerPatterns;
+        const UnitID layerUnit = unitManager.createUnit("Layer Unit", UnitType::Sampler);
+        PatternID layerId = layerPatterns.createPattern();
+        auto* layer = layerPatterns.getPattern(layerId);
+        layer->type = PatternSource::Type::Midi;
+        layer->lengthBeats = 8.0;
+        layer->payload = MidiPayload{};
+        auto& layerNotes = std::get<MidiPayload>(layer->payload).notes;
+        layerNotes.push_back(MidiNote{pitch, 0.0, 1.0, 1.0f, 0.0f, layerUnit});
+        layerNotes.push_back(MidiNote{pitch, 0.0, 2.0, 1.0f, 0.0f, layerUnit});
+        clock.setTempo(120.0);
+        PatternPlaybackEngine layerPlayback(&clock, &layerPatterns, &unitManager);
+        layerPlayback.schedulePatternInstance(layerId, 0.0, 4);
+        layerPlayback.refillWindow(0, sampleRate, sampleRate * 4);
+        std::vector<uint32_t> onIds, offIdsShort, offIdsLong;
+        for (uint64_t frame = 0; frame < 72000; frame += 128) {
+            MidiBuffer buffer;
+            PatternPlaybackEngine::UnitMidiRoute r{layerUnit, &buffer};
+            layerPlayback.processAudio(frame, 128, &r, 1);
+            for (size_t i = 0; i < buffer.getEventCount(); ++i) {
+                const auto& e = buffer.getEvent(i);
+                const uint64_t at = frame + e.sampleOffset;
+                if ((e.data[0] & 0xF0) == 0x90 && at == 0) onIds.push_back(e.noteId);
+                if ((e.data[0] & 0xF0) == 0x80 && at == 24000) offIdsShort.push_back(e.noteId);
+                if ((e.data[0] & 0xF0) == 0x80 && at == 48000) offIdsLong.push_back(e.noteId);
+            }
+        }
+        const bool distinct = onIds.size() == 2 && onIds[0] != onIds[1] && onIds[0] != 0 && onIds[1] != 0;
+        const auto isOn = [&](uint32_t id) { return std::find(onIds.begin(), onIds.end(), id) != onIds.end(); };
+        if (!distinct || offIdsShort.size() != 1 || offIdsLong.size() != 1 || !isOn(offIdsShort[0]) ||
+            !isOn(offIdsLong[0]) || offIdsShort[0] == offIdsLong[0]) {
+            std::cerr << "note identity: a stacked layer (same pitch and start, different lengths) must get "
+                         "distinct ids, one per note-off\n";
             return 1;
         }
     }

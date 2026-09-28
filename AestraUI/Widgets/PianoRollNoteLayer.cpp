@@ -1466,7 +1466,9 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             double newDur = lastNoteDuration_; // back within the click zone: the click length again
             if (std::abs(dx) >= 3.0f) {
                 double cell = MusicTheory::getSnapDuration(snap_);
-                if (snap_ == SnapGrid::None || cell <= 0.0001) cell = 0.125;
+                // Alt fine-drag places freely (snapToGrid passes through), so its floor is the
+                // fine minimum, not a whole grid cell.
+                if (snap_ == SnapGrid::None || cell <= 0.0001 || fineDrag_) cell = 0.125;
                 // Pointer in content space from the CURRENT scroll: edge-scrolling above may
                 // have moved scrollX_ since localX was computed.
                 const float pointerX = event.position.x - b.x + scrollX_;
