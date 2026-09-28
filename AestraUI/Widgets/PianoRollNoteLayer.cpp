@@ -1321,6 +1321,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 dragStartNotes_ = notes_;
 
                 state_ = State::CopyDragging;
+                copyDragCommitted_ = false;
                 dragStartPos_ = event.position;
                 dragStartScrollX_ = scrollX_;
                 dragStartScrollY_ = scrollY_;
@@ -1588,7 +1589,17 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                     notes_[idx].pitch = snapPitchToScale(newPitch);
                 }
             }
-            commitNotes();
+            // The copy stays live while dragging, but the whole drag is one
+            // gesture: every commit after its first continues that entry.
+            // Not commitNotes(): its sort would move the clones out from under
+            // copyDragIndices_, and the next frame would drag a different note.
+            // The owner's diff matches notes by value, so order doesn't matter
+            // to it; the release commit sorts once the indices are done with.
+            continuingEdit_ = copyDragCommitted_;
+            lastCommitWasVelocityScrub_ = false;
+            if (onNotesChanged_) onNotesChanged_(notes_);
+            continuingEdit_ = false;
+            copyDragCommitted_ = true;
             repaint();
             return true;
         }
@@ -1618,14 +1629,19 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             }
 
             const bool shouldCommit = state_ != State::StretchingSelection || m_selectionStretchChanged;
+            const bool continuesCopyDrag = state_ == State::CopyDragging && copyDragCommitted_;
+            copyDragCommitted_ = false;
             state_ = State::None;
             paintingNoteIndex_ = -1;
             copyDragIndices_.clear();
             m_hoverOnSelectionStretch = false;
             m_selectionStretchChanged = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
-            if (shouldCommit)
+            if (shouldCommit) {
+                continuingEdit_ = continuesCopyDrag;
                 commitNotes();
+                continuingEdit_ = false;
+            }
             repaint();
             return true;
         }

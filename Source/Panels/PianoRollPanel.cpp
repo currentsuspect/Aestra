@@ -429,6 +429,11 @@ void PianoRollPanel::savePattern() {
     // grouping for move/resize inference.
     NoteDiffResult diff = diffNotes(m_notesBeforeEdit, currentNotes);
 
+    // Only a continuation may reuse the last entry. A fresh commit forgets it even
+    // when its diff is empty (a scrub's clamped first notch), or the gesture's
+    // next notch would fold into an older, unrelated entry.
+    if (!m_pianoRoll->isContinuingEdit()) m_lastEditTransaction.reset();
+
     // Only a real note edit may drive the pattern length. savePattern() also runs
     // when nothing was edited — setEditingUnit() commits pending edits before every
     // unit switch — and recomputing the length there rewrote the user's pattern:

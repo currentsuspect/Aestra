@@ -5,6 +5,7 @@
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <cassert>
@@ -818,8 +819,73 @@ static void test_bar_snap_double_click_does_not_duplicate() {
     PASS("a bar-snap double-click does not duplicate the note it just placed");
 }
 
+// Review, #981: Alt+drag copy commits live every frame. Without the layer's own undo stack each
+// of those commits became its own CommandHistory entry, so one copy gesture needed several
+// Ctrl+Z. Every commit after the gesture's first must be flagged as a continuation.
+// The live commit also sorts notes_, which moved the clone out from under copyDragIndices_:
+// later frames then dragged a different note (here B), so the gesture destroyed a note.
+static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    // A at beat 0 (pitch 60) and B at beat 4 (pitch 64): after A's clone is committed once,
+    // sorting places it before B, so the clone's original index now holds B.
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 4.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}});
+
+    int commits = 0;
+    int newEntries = 0; // commits the owner records as a new history entry
+    layer.setOnNotesChanged([&](const std::vector<MidiNote>&) {
+        ++commits;
+        if (!layer.isContinuingEdit()) ++newEntries;
+    });
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    for (float beat : {1.5f, 2.5f, 3.5f}) { // clone ends at beat 3 (A's start 0 + 3 beats)
+        move.position = NUIPoint(beat * kPpb, y);
+        layer.onMouseEvent(move);
+    }
+    NUIMouseEvent release = move;
+    release.type = NUIMouseEventType::Up;
+    release.button = NUIMouseButton::Left;
+    release.released = true;
+    layer.onMouseEvent(release);
+
+    ASSERT(commits >= 2, "the copy drag commits live (precondition), got " + std::to_string(commits) + " commits");
+    ASSERT(newEntries == 1, "one Alt+drag copy is one history entry, got " + std::to_string(newEntries));
+
+    std::vector<std::pair<int, double>> live;
+    for (const auto& n : layer.getNotes())
+        if (!n.isDeleted) live.emplace_back(n.pitch, n.startBeat);
+    std::sort(live.begin(), live.end());
+    std::string got;
+    for (const auto& [p, b] : live) got += " (" + std::to_string(p) + "@" + std::to_string(b) + ")";
+    const std::vector<std::pair<int, double>> expected = {{60, 0.0}, {60, 3.0}, {64, 4.0}};
+    ASSERT(live == expected, "original A stays, its clone lands at beat 3, B is untouched; got" + got);
+    PASS("Alt+drag copy is one gesture and moves only the clone");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
+
+    test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
 
     test_deleted_notes_ignored();
     test_pencil_places_in_the_cell_under_the_pointer();

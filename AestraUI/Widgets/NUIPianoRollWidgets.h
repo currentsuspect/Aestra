@@ -573,6 +573,7 @@ private:
     // No undo stack: CommandHistory (via the owning panel) is the only history.
     bool continuingEdit_ = false;
     bool lastCommitWasVelocityScrub_ = false;
+    bool copyDragCommitted_ = false; // the current Alt+drag copy has recorded its history entry
     
     // Note Memory (Buffer)
     double lastNoteDuration_ = 1.0; // Default 1 beat

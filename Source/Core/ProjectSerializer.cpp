@@ -368,6 +368,16 @@ namespace {
         return std::clamp(object[key].asNumber(), minValue, maxValue);
     }
 
+    // Source ids are 64-bit (ClipSourceID), but a JSON number is exact only up to 2^53-1 (F20).
+    constexpr double kMaxExactJsonId = 9007199254740991.0;
+
+    // True when the id is present but past the exact range: clamping it would load
+    // the project under a different identity, so the caller must refuse the file.
+    bool idBeyondExactRange(const JSON& object, const char* key) {
+        return object.has(key) && object[key].isNumber() && std::isfinite(object[key].asNumber()) &&
+               object[key].asNumber() > kMaxExactJsonId;
+    }
+
     std::string boundedStringOr(const JSON& object, const char* key, const std::string& fallback, size_t maxBytes) {
         if (!object.has(key) || !object[key].isString()) {
             return fallback;
@@ -1369,8 +1379,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
         for (size_t i = 0; i < sj.size(); ++i) {
-            // Source IDs are 64-bit (ClipSourceID); JSON numbers are exact to 2^53-1 (F20).
-            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, 9007199254740991.0));
+            if (idBeyondExactRange(sj[i], "id")) {
+                result.errorMessage = "Invalid project file: a source id exceeds 2^53-1 and cannot be read exactly";
+                Log::error("[ProjectLoad] " + result.errorMessage);
+                return result;
+            }
+            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, kMaxExactJsonId));
             if (id != 0) allSourceIds.insert(id);
         }
     }
@@ -1384,8 +1398,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
                 const std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
                 if (type == "audio") {
+                    if (idBeyondExactRange(pj[i], "sourceId")) {
+                        result.errorMessage =
+                            "Invalid project file: an audio pattern's source id exceeds 2^53-1 and cannot be read exactly";
+                        Log::error("[ProjectLoad] " + result.errorMessage);
+                        return result;
+                    }
                     const uint64_t sourceId = static_cast<uint64_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, 9007199254740991.0));
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, kMaxExactJsonId));
                     if (sourceId == 0 || !allSourceIds.count(sourceId)) {
                         unloadablePatternIds.insert(id);
                     }
@@ -1628,7 +1648,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
         #endif
             for (size_t i = 0; i < sj.size(); ++i) {
-                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, 9007199254740991.0));
+                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, kMaxExactJsonId));
                 std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
@@ -1727,7 +1747,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     
                 if (type == "audio") {
                     uint64_t oldSrcId = static_cast<uint64_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, 9007199254740991.0));
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, kMaxExactJsonId));
                     if (idMap.count(oldSrcId)) {
                         AudioSlicePayload payload;
                         payload.audioSourceId = idMap[oldSrcId];

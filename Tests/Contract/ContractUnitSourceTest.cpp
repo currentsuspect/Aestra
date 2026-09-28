@@ -307,6 +307,35 @@ int sourceIdWidth() {
     // Windows the reloaded string differs from wav.string() but names the same file.
     v.check(src != nullptr && std::filesystem::path(src->getFilePath()) == wav,
             "region's source id resolves to the same file");
+
+    // Review, #981: past 2^53-1 a JSON number is no longer an exact id. Clamping it
+    // would load the project under a different identity (and a later save would
+    // persist that), so the load must refuse, before touching the loaded project.
+    const auto projectPath = dir.path() / "project.aes";
+    std::string text;
+    {
+        std::ifstream in(projectPath, std::ios::binary);
+        text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    const std::string wideText = str(wide.value);
+    size_t replaced = 0;
+    for (size_t at = text.find(wideText); at != std::string::npos; at = text.find(wideText, at)) {
+        text.replace(at, wideText.size(), "9007199254740992"); // 2^53: first id JSON can't hold exactly
+        ++replaced;
+    }
+    contractSetup(replaced >= 2, "expected the source id and the region's sourceId in the file, replaced " +
+                                     str(replaced));
+    const auto tooWidePath = dir.path() / "too-wide.aes";
+    {
+        std::ofstream out(tooWidePath, std::ios::binary);
+        out << text;
+    }
+    const auto rejected = ProjectSerializer::load(tooWidePath.string(), reloaded);
+    v.check(!rejected.ok, "a source id past 2^53-1 fails the load instead of being clamped");
+    v.check(rejected.errorMessage.find("source id") != std::string::npos,
+            "the failure names the out-of-range source id (got: \"" + rejected.errorMessage + "\")");
+    v.check(reloaded->getSourceManager().getSource(wide) != nullptr,
+            "the refused load leaves the already-loaded project intact");
     return v.finish();
 }
 
