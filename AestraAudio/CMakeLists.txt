@@ -285,6 +285,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
+    src/Plugin/KeepLengthCache.cpp
     src/Plugin/EffectChain.cpp
     src/CommandManager.cpp
 )
@@ -509,6 +510,14 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
         ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio
     )
 endif()
+
+# Signalsmith Stretch + Linear (MIT, header-only; see External/signalsmith/VERSION.md).
+# Include paths only: their own CMake is not used, so no per-arch flags (-mavx*) enter
+# the build. Private: only KeepLengthCache.cpp includes them.
+target_include_directories(AestraAudioCore PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/External/signalsmith/stretch/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/External/signalsmith/linear/include
+)
 
 # VST3 SDK includes (if available)
 if(AESTRA_HAS_VST3)

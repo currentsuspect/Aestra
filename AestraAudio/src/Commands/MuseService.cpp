@@ -2080,6 +2080,12 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             graphController.requestRebuild(GraphDirtyReason::TimelineChanged);
             graphController.drainIfDirty(static_cast<double>(sampleRate));
 
+            // Keep-length samplers play pre-rendered copies: never bounce the resampled fallback.
+            if (!m_trackManager->prewarmSamplerKeepLength(true)) {
+                return makeError(id, "execution_error", "keep-length sampler renders did not finish in time", verb)
+                    .toString();
+            }
+
             std::vector<float> rendered;
             rendered.reserve(static_cast<size_t>(totalFrames) * 2u);
             std::vector<float> block(static_cast<size_t>(kBlockFrames) * 2u, 0.0f);

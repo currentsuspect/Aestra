@@ -1985,6 +1985,10 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
         return result;
     }
+    // Keep-length samplers start rendering the loaded notes now, off the audio thread.
+    if (m_content && m_content->getTrackManager()) {
+        m_content->getTrackManager()->prewarmSamplerKeepLength(false);
+    }
 
     return applyLoadedProject(path, source, canonicalPath, std::move(result));
 }

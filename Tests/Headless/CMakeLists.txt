@@ -265,6 +265,26 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler Keep-Length Test: keep-length pitch mode (pitch without the resampling
+# speed change). Exact pitch + source decay, Resample unchanged, render fallback,
+# no stale buffers after a sample swap, save/load. Core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerKeepLengthTest
+        SamplerKeepLengthTest.cpp
+    )
+    target_link_libraries(SamplerKeepLengthTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerKeepLengthTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerKeepLengthTest COMMAND SamplerKeepLengthTest)
+    set_tests_properties(SamplerKeepLengthTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+        TIMEOUT 120
+    )
+endif()
+
 # Automation Playback Test — end-to-end regression: lane automation curves
 # must reach the engine (snapshot copy), evaluate in the beat domain across
 # tempo changes, and follow UI point drags. Core-linked, every CI lane.
