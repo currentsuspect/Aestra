@@ -300,10 +300,13 @@ set_target_properties(Aestra PROPERTIES
 
 # Deploy the tracked desktop font bundle beside the executable. Main.cpp
 # resolves AestraAssets/fonts relative to the executable, so this keeps the
-# intended Geist/Manrope rendering independent of the process working directory
+# intended Archivo rendering (Geist/Manrope as fallbacks) independent of the process working directory
 # and works for external build trees as well as packaged desktop layouts.
 set(AESTRA_DESKTOP_FONT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/AestraAssets/fonts")
 set(AESTRA_DESKTOP_FONT_FILES
+	Archivo/Archivo-Bold.ttf
+	Archivo/Archivo-Medium.ttf
+	Archivo/Archivo-Regular.ttf
 	Geist/Geist-Bold.ttf
 	Geist/Geist-Medium.ttf
 	Geist/Geist-Regular.ttf

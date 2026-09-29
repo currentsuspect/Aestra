@@ -1486,6 +1486,10 @@ void AestraApp::run() {
         // before UI update so a completed relink lands this frame.
         drainMainThreadTasks();
 
+        // The title bar's Saved/Unsaved lamp follows the project's modified
+        // flag; the title bar ignores repeats, so this repaints only on a flip.
+        pushProjectStatus();
+
         UnifiedProfiler::getInstance().beginFrame();
         m_windowManager->beginFrame(); // Start timing
 
@@ -2542,6 +2546,13 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
 
 void AestraApp::updateWindowTitle() {
     m_windowManager->setWindowTitle(m_documentState.windowTitle());
+    pushProjectStatus();
+}
+
+void AestraApp::pushProjectStatus() {
+    if (!m_windowManager) return;
+    const bool modified = m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified();
+    m_windowManager->setProjectStatus(m_documentState.displayName(), modified, m_documentState.statusNote());
 }
 
 void AestraApp::startExport() {

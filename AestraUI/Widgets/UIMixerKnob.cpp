@@ -247,10 +247,12 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     // White pointer for contrast
     renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
 
-    // 5. Context label: hidden by default to reduce persistent text.
-    if (LABEL_H > 0.0f && hovered) {
+    // 5. Label: always shown. Three identical unlabelled knobs made the row a
+    // guessing game; the word sits quiet and brightens under the pointer.
+    if (LABEL_H > 0.0f) {
         NUIRect labelRect{b.x, b.y + knobAreaH, b.width, LABEL_H};
-        renderer.drawTextCentered(label(), labelRect, 8.0f, m_textSecondary.withAlpha(0.74f));
+        renderer.drawTextCentered(label(), labelRect, 8.0f,
+                                  hovered ? m_textSecondary : m_textSecondary.withAlpha(0.62f));
     }
 
     if (m_dragging) {

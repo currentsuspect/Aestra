@@ -5,6 +5,7 @@
  */
 
 #include "TransportInfoContainer.h"
+#include "TransportModuleStyle.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>
@@ -115,7 +116,7 @@ void BPMDisplay::openBPMEditor() {
     // readout — see UIMixerFader). Size to the font and bottom-align over the
     // value so the digits stay where they were; the transient field may cover
     // the micro label above, same tradeoff the fader makes.
-    const float valueBottom = bounds.y + 9.0f + 19.0f;
+    const float valueBottom = bounds.bottom();
     const float editH =
         std::ceil(AestraUI::NUIThemeManager::getInstance().getFontSize("m") * 1.9f) + 4.0f;
     input->setBounds(AestraUI::NUIRect(bounds.x, valueBottom - editH, bounds.width, editH));
@@ -182,17 +183,20 @@ void BPMDisplay::closeBPMEditor() {
     setDirty(true);
 }
 
+// The step arrows own the display's right-hand column: up in the top half,
+// down in the bottom. onRender draws them in exactly these rects and keeps the
+// value and its suffix out of the column, so every hit zone is visible.
 AestraUI::NUIRect BPMDisplay::getUpArrowBounds() const {
-    if (m_cachedUpArrowBounds.width > 0) return m_cachedUpArrowBounds;
-    // Fallback if not rendered yet
-    AestraUI::NUIRect bounds = getBounds();
-    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y, 12, 12);
+    const AestraUI::NUIRect bounds = getBounds();
+    const float half = bounds.height * 0.5f;
+    return AestraUI::NUIRect(bounds.right() - kArrowColumnWidth, bounds.y, kArrowColumnWidth, half - 1.0f);
 }
 
 AestraUI::NUIRect BPMDisplay::getDownArrowBounds() const {
-    if (m_cachedDownArrowBounds.width > 0) return m_cachedDownArrowBounds;
-    AestraUI::NUIRect bounds = getBounds();
-    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y + 15, 12, 12);
+    const AestraUI::NUIRect bounds = getBounds();
+    const float half = bounds.height * 0.5f;
+    return AestraUI::NUIRect(bounds.right() - kArrowColumnWidth, bounds.y + half + 1.0f, kArrowColumnWidth,
+                             half - 1.0f);
 }
 
 void BPMDisplay::onUpdate(double deltaTime) {
@@ -235,19 +239,40 @@ void BPMDisplay::onUpdate(double deltaTime) {
 void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    // Small "BPM" label above the value
-    renderer.drawTextCentered("BPM", {bounds.x, bounds.y, bounds.width, 10.0f},
-                                themeManager.getFontSize("micro"),
-                                themeManager.getColor("textSecondary").withAlpha(0.75f));
+    // The TEMPO module label names this reading, so the unit rides as a quiet
+    // suffix after the value instead of a micro label stacked above it.
     // While the inline editor is open it draws the value itself; drawing the
     // label underneath would double-print it.
     if (!m_editInput) {
+        constexpr float kValueSize = 18.0f;
+        constexpr float kUnitSize = 9.0f;
         std::stringstream ss;
         ss << std::fixed << std::setprecision(2) << m_displayBPM;
+        const std::string value = ss.str();
         AestraUI::NUIColor bpmColor =
-            m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
-        renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
-                                  themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
+            m_isHovered ? themeManager.getColor("secondary") : themeManager.getColor("textPrimary");
+        const float valueY = renderer.calculateTextY(bounds, kValueSize);
+        renderer.drawText(value, {bounds.x, valueY}, kValueSize, bpmColor);
+        const float valueW = renderer.measureText(value, kValueSize).width;
+        const AestraUI::NUIRect unitRect(bounds.x + valueW + 4.0f, bounds.y + 3.0f, 30.0f, bounds.height);
+        // The suffix is dropped rather than drawn into the arrow column.
+        const float arrowLeft = bounds.right() - kArrowColumnWidth;
+        if (unitRect.x + renderer.measureText("BPM", kUnitSize).width <= arrowLeft - 2.0f) {
+            renderer.drawText("BPM", {unitRect.x, renderer.calculateTextY(unitRect, kUnitSize)}, kUnitSize,
+                              themeManager.getColor("textMuted"));
+        }
+
+        const auto chevron = [&](const AestraUI::NUIRect& r, bool up, bool hot) {
+            const float cx = r.x + r.width * 0.5f;
+            const float cy = r.y + r.height * 0.5f;
+            const float dy = up ? 1.5f : -1.5f;
+            const AestraUI::NUIColor ink =
+                hot ? themeManager.getColor("textPrimary") : themeManager.getColor("textMuted");
+            const AestraUI::NUIPoint pts[3] = {{cx - 3.5f, cy + dy}, {cx, cy - dy}, {cx + 3.5f, cy + dy}};
+            renderer.drawPolyline(pts, 3, 1.4f, ink);
+        };
+        chevron(getUpArrowBounds(), true, m_upArrowHovered || m_upArrowPressed);
+        chevron(getDownArrowBounds(), false, m_downArrowHovered || m_downArrowPressed);
     }
     // The inline editor is a child: without this it exists, takes focus and
     // suppresses the label, but never paints (invisible-field defect).
@@ -385,6 +410,20 @@ std::string TimerDisplay::formatTime(double seconds) {
     return ss.str();
 }
 
+std::string TimerDisplay::formatBarBeatSixteenth(double beats, int beatsPerBar) {
+    const int bpb = std::max(1, beatsPerBar);
+    // A hair of tolerance so an exact downbeat computed as 3.9999999 reads as
+    // the next bar, not as the last sixteenth of this one.
+    const double clamped = std::max(0.0, beats) + 1e-7;
+    const long long sixteenths = static_cast<long long>(std::floor(clamped * 4.0));
+    const long long perBar = static_cast<long long>(bpb) * 4;
+    const long long bar = sixteenths / perBar;
+    const long long inBar = sixteenths % perBar;
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%lld.%lld.%lld", bar + 1, inBar / 4 + 1, inBar % 4 + 1);
+    return std::string(buf);
+}
+
 std::string TimerDisplay::formatMusical(double beats, int beatsPerBar) {
     const int bpb = std::max(1, beatsPerBar);
     const double clamped = std::max(0.0, beats);
@@ -401,15 +440,45 @@ std::string TimerDisplay::formatMusical(double beats, int beatsPerBar) {
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    // Time is transport information, not a standalone button. A near-invisible
-    // tonal well keeps it aligned with BPM/time signature without a third box.
-    renderer.fillRoundedRect(bounds, themeManager.getRadius("s"),
-                             themeManager.getColor("surfaceRaised").withAlpha(0.045f));
-    std::string timeText = (m_displayMode == DisplayMode::Musical)
-                                 ? formatMusical(m_positionBeats, m_beatsPerBar)
-                                 : formatTime(m_currentTime);
-    renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
-                              themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));
+    // The large reading is the one you use while playing; the other rides
+    // beside it, small, so both are always on screen. Clicking swaps them.
+    constexpr float kPrimarySize = 21.0f;
+    constexpr float kSecondarySize = 11.0f;
+    const bool musical = (m_displayMode == DisplayMode::Musical);
+    const std::string primary =
+        musical ? formatBarBeatSixteenth(m_positionBeats, m_beatsPerBar) : formatTime(m_currentTime);
+    const std::string secondary =
+        musical ? formatTime(m_currentTime) : formatBarBeatSixteenth(m_positionBeats, m_beatsPerBar);
+
+    const AestraUI::NUIColor ink = themeManager.getColor("textPrimary");
+    const AestraUI::NUIColor separatorInk = themeManager.getColor("textDisabled");
+    const float y = renderer.calculateTextY(bounds, kPrimarySize);
+    float x = bounds.x;
+    // Separators are drawn a step dimmer so the numbers read as numbers.
+    std::string run;
+    const auto flush = [&]() {
+        if (run.empty()) return;
+        renderer.drawText(run, {x, y}, kPrimarySize, ink);
+        x += renderer.measureText(run, kPrimarySize).width;
+        run.clear();
+    };
+    for (const char c : primary) {
+        if (c == '.' || c == ':') {
+            flush();
+            const std::string sep(1, c);
+            renderer.drawText(sep, {x, y}, kPrimarySize, separatorInk);
+            x += renderer.measureText(sep, kPrimarySize).width;
+        } else {
+            run.push_back(c);
+        }
+    }
+    flush();
+
+    const AestraUI::NUIRect secondaryRect(x + 9.0f, bounds.y + 3.0f, bounds.right() - x - 9.0f, bounds.height);
+    if (renderer.measureText(secondary, kSecondarySize).width <= secondaryRect.width) {
+        renderer.drawText(secondary, {secondaryRect.x, renderer.calculateTextY(secondaryRect, kSecondarySize)},
+                          kSecondarySize, themeManager.getColor("textSecondary"));
+    }
 }
 
 bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -427,7 +496,7 @@ bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_tapArmed = false;
             return true;
         }
-        AestraUI::NUIComponent::showRemoteTooltip("Playback time — click to toggle bars/beats", getBounds(), this);
+        AestraUI::NUIComponent::showRemoteTooltip("Position — click to swap bars and clock time", getBounds(), this);
         return false;
     }
     m_tapArmed = false;
@@ -477,10 +546,10 @@ std::string TimeSignatureDisplay::getDisplayText() const {
 void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("secondary") : themeManager.getColor("textSecondary");
     std::string text = getDisplayText();
-    renderer.drawTextCentered(text, {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
-                              themeManager.getFontSize("xl"), textColor.withAlpha(0.95f));
+    constexpr float kMeterSize = 13.0f;
+    renderer.drawText(text, {bounds.x, renderer.calculateTextY(bounds, kMeterSize)}, kMeterSize, textColor);
 }
 
 
@@ -534,39 +603,32 @@ TransportInfoContainer::TransportInfoContainer()
 }
 
 void TransportInfoContainer::layoutComponents() {
-    AestraUI::NUIRect bounds = getBounds();
-    
-    // Expanded Layout: [TimeSig 50px] [BPM 90px] [Timer 80px] = ~220px
-    
-    float padding = 4.0f; // Increased padding
-    float contentHeight = 28.0f;
-    float yPos = bounds.y + (bounds.height - contentHeight) / 2.0f;
-    
-    float currentX = bounds.x;
-    
-    // 1. Time Signature (Left)
-    float timeSigWidth = 50.0f; // Increased
-    if (m_timeSignatureDisplay) {
-        m_timeSignatureDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), timeSigWidth, contentHeight));
-    }
-    currentX += timeSigWidth + padding;
-    
-    // 2. BPM (Center/Next)
-    float bpmWidth = 90.0f; // Increased from 70
-    if (m_bpmDisplay) {
-        m_bpmDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), bpmWidth, contentHeight));
-    }
-    currentX += bpmWidth + padding;
+    namespace TM = TransportModule;
+    const AestraUI::NUIRect bounds = getBounds();
 
-    // 3. Timer (Right)
-    float timerWidth = 76.0f; // Increased from 65
+    // POSITION | TEMPO. Each display owns only its module's content line; the
+    // caps labels above are painted by this container.
+    const float posX = std::floor(bounds.x + TM::kPadX);
     if (m_timerDisplay) {
-        m_timerDisplay->setBounds(AestraUI::NUIRect(std::floor(currentX), std::floor(yPos), timerWidth, contentHeight));
+        m_timerDisplay->setBounds(TM::contentRect(posX, kPositionModuleWidth - TM::kPadX * 1.5f, bounds.y));
+    }
+
+    const float tempoX = std::floor(bounds.x + kPositionModuleWidth + TM::kPadX);
+    constexpr float kBPMWidth = 88.0f;
+    if (m_bpmDisplay) {
+        m_bpmDisplay->setBounds(TM::contentRect(tempoX, kBPMWidth, bounds.y));
+    }
+    if (m_timeSignatureDisplay) {
+        m_timeSignatureDisplay->setBounds(TM::contentRect(tempoX + kBPMWidth + 6.0f, 32.0f, bounds.y));
     }
 }
 
 void TransportInfoContainer::onRender(AestraUI::NUIRenderer& renderer) {
-    // No background rendering - just render children
+    namespace TM = TransportModule;
+    const AestraUI::NUIRect bounds = getBounds();
+    TM::drawLabel(renderer, "POSITION", bounds.x + TM::kPadX, bounds.y);
+    TM::drawDivider(renderer, bounds.x + kPositionModuleWidth, bounds.y, bounds.height);
+    TM::drawLabel(renderer, "TEMPO", bounds.x + kPositionModuleWidth + TM::kPadX, bounds.y);
     renderChildren(renderer);
 }
 
