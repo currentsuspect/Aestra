@@ -290,13 +290,18 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     bool sourcesSilenced = false;
 
     while (framesRemaining > 0 && !shouldCancel()) {
-        if (!sourcesSilenced && m_engine.getGlobalSamplePos() >= rangeEndSample) {
+        const uint64_t position = m_engine.getGlobalSamplePos();
+        // Clamp the block so it stops exactly at the range end. Without this the
+        // swap happens a whole block late and a clip starting at the boundary
+        // bleeds up to RENDER_BLOCK_FRAMES of audio into the tail.
+        uint64_t blockLimit = std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining);
+        if (!sourcesSilenced && position < rangeEndSample) {
+            blockLimit = std::min<uint64_t>(blockLimit, rangeEndSample - position);
+        } else if (!sourcesSilenced) {
             m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager, /*includeClips=*/false));
             sourcesSilenced = true;
         }
-
-        uint32_t framesThisBlock = static_cast<uint32_t>(
-            std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
+        uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);

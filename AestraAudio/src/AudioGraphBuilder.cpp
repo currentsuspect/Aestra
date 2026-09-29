@@ -166,13 +166,18 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
     const auto& sources = trackManager.getSourceManager();
 
     auto snapshot = playlist.buildRuntimeSnapshot(patterns, sources);
-    if (snapshot && includeClips) {
+    if (snapshot) {
+        // Control values are not clip data: AudioEngine converts samples to beats
+        // with graph.bpm and evaluates TrackRenderState::automationCurves, so a
+        // clip-free tail must keep both or it loses automation and falls back to
+        // the default tempo.
+        graph.bpm = snapshot->bpm;
         uint64_t maxEndSample = 0;
         double projectSampleRate = playlist.getProjectSampleRate();
 
         // Playlist lanes are arrangement-only. Audio patterns carry their own
         // stable mixer destination, so moving a clip between lanes cannot reroute it.
-        for (size_t laneIdx = 0; laneIdx < snapshot->lanes.size(); ++laneIdx) {
+        for (size_t laneIdx = 0; includeClips && laneIdx < snapshot->lanes.size(); ++laneIdx) {
             // Non-const: automationCurves below is genuinely moved out of the
             // snapshot (std::move through a const ref silently copies).
             auto& laneInfo = snapshot->lanes[laneIdx];
@@ -203,10 +208,13 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
                     }
                 }
             }
+        }
 
-            // Automation is displayed on Playlist lanes but targets an
-            // explicit stable mixer insert. A lane may host curves for
-            // multiple inserts without owning any of them.
+        // Automation is control data, not clip data: a clip-free tail still has
+        // to follow it, so this runs whether or not clips are included. Curves are
+        // displayed on Playlist lanes but target an explicit stable mixer insert,
+        // so a lane may host curves for multiple inserts without owning any of them.
+        for (auto& laneInfo : snapshot->lanes) {
             for (auto& curve : laneInfo.automationCurves) {
                 const auto destination =
                     std::find_if(graph.tracks.begin(), graph.tracks.end(), [&curve](const TrackRenderState& track) {
@@ -218,8 +226,9 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
             }
         }
 
-        graph.timelineEndSample = maxEndSample;
-        graph.bpm = snapshot->bpm;
+        if (includeClips) {
+            graph.timelineEndSample = maxEndSample;
+        }
     }
 
     finalizeAudioGraphRouting(graph);

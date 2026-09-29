@@ -719,7 +719,10 @@ bool runTailExcludesLaterClipCase(const SessionConfig& cfg, const fs::path& temp
     const size_t songEnd = static_cast<size_t>(sr) * kSeconds;
     // Body is audible, so a silent tail is a silent render and not a silent song.
     const double bodyRms = rmsRange(decoded, sr / 10, songEnd - sr / 10, ch);
-    const double tailRms = rmsRange(decoded, songEnd + sr / 20, frames, ch);
+    // The tail window starts AT the range end, not 50 ms in: a boundary-block leak
+    // renders at most RENDER_BLOCK_FRAMES (4096) frames past it, and a skipped
+    // 50 ms head would hide exactly that.
+    const double tailRms = rmsRange(decoded, songEnd, frames, ch);
     const double tailDb = 20.0 * std::log10(std::max(tailRms, 1e-15));
 
     const bool pass = frames >= songEnd + sr && bodyRms > 0.05 && tailDb <= -100.0;
