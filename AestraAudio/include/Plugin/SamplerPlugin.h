@@ -143,6 +143,8 @@ private:
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;
         float releaseGain = 0.0f; // Gain at start of release
+        uint64_t order = 0;       // Trigger order: an id-less note-off ends the oldest held voice of its pitch
+        uint32_t noteId = 0;      // The scheduler's note identity (0 = none, e.g. live MIDI)
     };
 
     static constexpr int kMaxVoices = 32;
@@ -152,6 +154,13 @@ private:
     // aftertouch (0xA0, note, 0..127) just before the matching note-on, which
     // consumes and re-centres its slot. Audio-thread only — no atomics needed.
     std::array<uint8_t, 128> m_pendingNotePan{};
+
+    // Note ownership. A scheduled note-off carries its note's id and ends exactly the
+    // voice that note started; if that voice is already gone (choked, stolen, taken over
+    // in mono, or its sample ran out) the note-off does nothing. Live MIDI has no id:
+    // it ends the oldest held voice of its pitch (exact, since a key can't be pressed
+    // twice without being released). Audio-thread only.
+    uint64_t m_nextVoiceOrder = 1;
 
     // Helpers
     void handleMidiEvent(const MidiBuffer::Event& event, double baseRate,

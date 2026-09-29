@@ -245,6 +245,26 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler Voice Behaviour Test: layering one-shots. Pitching (incl. a 44.1 kHz
+# file on a 48 kHz engine and chords), one note-off per note for same-pitch
+# overlaps in poly/cut-self/mono, and a square envelope leaves no tail.
+# Drives SamplerPlugin directly; core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerVoiceBehaviourTest
+        SamplerVoiceBehaviourTest.cpp
+    )
+    target_link_libraries(SamplerVoiceBehaviourTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerVoiceBehaviourTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerVoiceBehaviourTest COMMAND SamplerVoiceBehaviourTest)
+    set_tests_properties(SamplerVoiceBehaviourTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Automation Playback Test — end-to-end regression: lane automation curves
 # must reach the engine (snapshot copy), evaluate in the beat domain across
 # tempo changes, and follow UI point drags. Core-linked, every CI lane.
