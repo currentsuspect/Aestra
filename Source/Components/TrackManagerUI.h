@@ -66,6 +66,14 @@ enum class PlaylistTool {
  */
 class TrackManagerUI : public ::AestraUI::NUIComponent, public ::AestraUI::IDropTarget {
 public:
+    /**
+     * @brief Skip drawing while an opaque panel fully covers the timeline (SPEC 3 §4).
+     *
+     * State work in onRender (lazy track refresh, solo propagation) still runs; only the
+     * drawing, which nobody can see, is skipped. Measured: the timeline under an open piano
+     * roll cost 5-7 ms of CPU plus its GPU fill every frame.
+     */
+    void setRenderOccluded(bool occluded) { m_renderOccluded = occluded; }
     TrackManagerUI(std::shared_ptr<TrackManager> trackManager);
     ~TrackManagerUI() override;
     void onThemeChanged(const ::AestraUI::NUIThemeProperties& theme) override {
@@ -377,6 +385,7 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
     bool m_needsTrackRefresh = true; // Lazy-init: defer refreshTracks() from ctor to first render
+    bool m_renderOccluded = false;   // an opaque panel covers the whole timeline: draw nothing
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
