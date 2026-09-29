@@ -159,6 +159,8 @@ private:
      *  as the on-disk keeper (used after a successful Open, where the document
      *  path has already moved to the newly loaded project). */
     void cleanupUnreferencedRecordings(const std::string& keeperProjectPath = "");
+    /** @brief Push the project name and saved state to the title bar. */
+    void pushProjectStatus();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

@@ -121,6 +121,7 @@ public:
 
     /** @brief Update the native window title. */
     void setWindowTitle(const std::string& title);
+    void setProjectStatus(const std::string& name, bool modified, const std::string& note);
     /** @brief Toggle fullscreen mode. */
     void toggleFullScreen();
     /** @brief Check whether the native window is fullscreen. */

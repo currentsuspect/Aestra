@@ -62,5 +62,18 @@ int main() {
     require(!state.requiresSaveAs(), "reviewed Save As target should become canonical");
 
     std::cout << "[PASS] ProjectDocumentStateTest\n";
+    // Title-bar identity: the file's stem, and a note only when the document
+    // is in a condition worth stating instead of Saved/Unsaved.
+    ProjectDocumentState named;
+    named.startUntitled("/app-data/autosave.aes");
+    require(named.displayName() == "Untitled", "untitled project must display as Untitled");
+    require(named.statusNote().empty(), "an ordinary untitled project needs no note");
+    named.openCanonical("/music/Personal Jesus.aes");
+    require(named.displayName() == "Personal Jesus", "display name must be the file stem");
+    named.openCanonical("C:\\Songs\\beat.v2.aes");
+    require(named.displayName() == "beat.v2", "only the last extension is dropped, on either slash");
+    named.recoverFrom("/app-data/autosave.aes", "/music/song.aes");
+    require(named.statusNote() == "Recovered", "a recovered project must say so");
+
     return 0;
 }

@@ -782,6 +782,12 @@ bool AestraWindowManager::isMenuOpen() const {
     return m_activeMenu && m_activeMenu->isVisible();
 }
 
+void AestraWindowManager::setProjectStatus(const std::string& name, bool modified, const std::string& note) {
+    if (m_customWindow && m_customWindow->getTitleBar()) {
+        m_customWindow->getTitleBar()->setProjectStatus(name, modified, note);
+    }
+}
+
 void AestraWindowManager::setWindowTitle(const std::string& title) {
     if (m_customWindow) m_customWindow->setTitle(title);
 }

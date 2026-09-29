@@ -82,9 +82,6 @@ const AestraUI::NUISVGDocument* trackControlIcon(const char* svg) {
 }
 
 using AestraUI::kMonitorIconSvg;
-using AestraUI::kMuteIconSvg;
-using AestraUI::kRecordIconSvg;
-using AestraUI::kSoloIconSvg;
 using AestraUI::kLaneStackIconSvg;
 using AestraUI::kChevronUpSvg;
 using AestraUI::kChevronDownSvg;
@@ -2141,67 +2138,44 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     if (lane) {
-        // Track M/S/R glyphs render bright white idle (owner direction:
-        // legibility over idle hierarchy). Active states keep their colored
-        // pills; hovered steps to full white; deliberately inactive/disabled
-        // controls elsewhere are untouched.
-        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 1.0f : 0.95f);
-        const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
-        const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
-        const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);
+        // M / S / R are lettered keys: always visible, so a row's state reads
+        // without hovering, and each active state takes its theme colour
+        // (muted, soloed, armed) as a solid fill. The hit target stays the
+        // full 24 px button; only the drawn key is smaller.
+        const auto keyInk = themeManager.getColor("textSecondary");
+        const auto keyInkHover = themeManager.getColor("textPrimary");
+        const auto keyBorder = themeManager.getColor("border");
+        const auto keyBorderHover = themeManager.getColor("borderStrong");
+        const auto onActive = themeManager.getColor("backgroundPrimary");
 
-        const auto drawButtonShell = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
-                                         bool active,
-                                         AestraUI::NUIColor activeColor) {
-            if (!button) {
+        const auto drawKey = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* letter,
+                                 bool active, AestraUI::NUIColor activeColor) {
+            if (!button || !button->isVisible()) {
                 return;
             }
-            const auto rect = button->getBounds();
+            const auto hit = button->getBounds();
+            constexpr float kKeyW = 19.0f;
+            constexpr float kKeyH = 18.0f;
+            const AestraUI::NUIRect key(std::round(hit.x + (hit.width - kKeyW) * 0.5f),
+                                        std::round(hit.y + (hit.height - kKeyH) * 0.5f), kKeyW, kKeyH);
             const bool hovered = button->isHovered() && button->isEnabled();
-            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.070f : 0.0f);
-            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.30f : 0.0f);
             if (active) {
-                bg = activeColor.withAlpha(0.18f);
-                border = activeColor.withAlpha(0.55f);
+                renderer.fillRoundedRect(key, 3.0f, activeColor);
+            } else {
+                if (hovered) renderer.fillRoundedRect(key, 3.0f, themeManager.getColor("surfaceRaised"));
+                renderer.strokeRoundedRect(key, 3.0f, 1.0f, hovered ? keyBorderHover : keyBorder);
             }
-            const float pillRadius = rect.height * 0.5f;
-            if (hovered || active) {
-                renderer.fillRoundedRect(rect, pillRadius, bg);
-                renderer.strokeRoundedRect(rect, pillRadius, 1.0f, border);
-            }
-            if (active) {
-                renderer.strokeRoundedRect(rect, pillRadius, 1.0f, activeColor.withAlpha(0.45f));
-            }
+            constexpr float kLetterSize = 9.5f;
+            renderer.drawTextCentered(letter, key, kLetterSize, active ? onActive : (hovered ? keyInkHover : keyInk));
         };
 
-        const auto drawControlIcon = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
-                                         const char* iconSvg,
-                                         AestraUI::NUIColor color,
-                                         bool active,
-                                         AestraUI::NUIColor activeColor) {
-            if (!button) {
-                return;
-            }
-            drawButtonShell(button, active, activeColor);
-            const auto* doc = trackControlIcon(iconSvg);
-            if (!doc) {
-                return;
-            }
-            const auto rect = button->getBounds();
-            const float iconSize = 11.0f;
-            const AestraUI::NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
-                                             std::round(rect.y + (rect.height - iconSize) * 0.5f),
-                                             iconSize, iconSize);
-            AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect, color);
-        };
-
-        drawControlIcon(m_muteButton, kMuteIconSvg, lane->muted ? muteActive : textIdle, lane->muted, muteActive);
-        drawControlIcon(m_soloButton, kSoloIconSvg, lane->solo ? soloActive : textIdle, lane->solo, soloActive);
+        drawKey(m_muteButton, "M", lane->muted, themeManager.getColor("muted"));
+        drawKey(m_soloButton, "S", lane->solo, themeManager.getColor("soloed"));
         // Record arm is track-exclusive (FD-14): nested lane rows carry M/S only.
         if (!m_isNestedLane) {
             auto* armTrack = m_trackManager ? m_trackManager->getTrackForLane(m_laneId) : nullptr;
             const bool isArmed = armTrack && armTrack->armed;
-            drawControlIcon(m_recordButton, kRecordIconSvg, isArmed ? recordActive : textIdle, isArmed, recordActive);
+            drawKey(m_recordButton, "R", isArmed, themeManager.getColor("armed"));
         }
     }
 

@@ -181,6 +181,45 @@ static int parseBpmFromFilename(const std::string& name) {
     return 0;
 }
 
+// When every file in a folder starts with the same "<pack> - " prefix (sample
+// packs name stems this way), the prefix repeats on every row and pushes the
+// part that differs into the ellipsis. The folder already names the pack, so
+// rows drop the shared prefix. Display only: search, drag, tooltips and paths
+// keep the full name. Returns parent path -> prefix length to drop.
+template <typename View>
+std::unordered_map<std::string, size_t> sharedDisplayPrefixes(const View& view) {
+    std::unordered_map<std::string, std::vector<const std::string*>> byParent;
+    for (const auto* item : view) {
+        if (!item || item->isDirectory || item->isPlaceholder) continue;
+        const size_t slash = item->path.find_last_of("/\\");
+        byParent[slash == std::string::npos ? std::string() : item->path.substr(0, slash)].push_back(&item->name);
+    }
+    std::unordered_map<std::string, size_t> out;
+    for (const auto& [parent, names] : byParent) {
+        if (names.size() < 3) continue;  // two files sharing words is coincidence, not a pack
+        std::string prefix = *names.front();
+        for (const auto* n : names) {
+            size_t k = 0;
+            while (k < prefix.size() && k < n->size() && prefix[k] == (*n)[k]) ++k;
+            prefix.resize(k);
+        }
+        // Cut back to a deliberate separator so a prefix never ends mid-word.
+        size_t cut = std::string::npos;
+        for (const char* sep : {" - ", " \xE2\x80\x93 ", "_"}) {
+            const size_t at = prefix.rfind(sep);
+            if (at != std::string::npos && at > 0) {
+                const size_t end = at + std::char_traits<char>::length(sep);
+                if (cut == std::string::npos || end > cut) cut = end;
+            }
+        }
+        if (cut == std::string::npos) continue;
+        bool keepsAName = true;
+        for (const auto* n : names) keepsAName = keepsAName && n->size() > cut;
+        if (keepsAName) out[parent] = cut;
+    }
+    return out;
+}
+
 std::string ellipsizeEnd(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     if (text.empty()) return text;
     if (maxWidth <= 0.0f) return "";
@@ -438,14 +477,14 @@ FileBrowser::FileBrowser()
     folderIcon_ = std::make_shared<NUIIcon>();
     // Single solid folder. The old version drew a second, opacity-0.8 path that
     // the solid one covered completely — invisible work on every rasterization.
-    const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
+    const char* folderSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z"/></svg>)";
     folderIcon_->loadSVG(folderSvg);
     folderIcon_->setIconSize(20, 20);
     folderIcon_->setColor(themeManager.getColor("textSecondary"));
 
     // File Icon (Generic) -> unknownFileIcon_
     unknownFileIcon_ = std::make_shared<NUIIcon>();
-    const char* fileSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>)";
+    const char* fileSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6 2.5H14.2L19.5 7.8V20.1A1.4 1.4 0 0 1 18.1 21.5H6A1.4 1.4 0 0 1 4.6 20.1V3.9A1.4 1.4 0 0 1 6 2.5Z M13.6 3.9V8.4H18.1Z"/></svg>)";
     unknownFileIcon_->loadSVG(fileSvg);
     unknownFileIcon_->setIconSize(20, 20);
     // Increased visibility for dark theme
@@ -453,7 +492,7 @@ FileBrowser::FileBrowser()
 
     // Generic Audio Icon -> audioFileIcon_ (Standard Music Note)
     audioFileIcon_ = std::make_shared<NUIIcon>();
-    const char* audioSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>)";
+    const char* audioSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.4" cy="16.8" r="3.9"/><path d="M10.4 3.2h2.1v13.6h-2.1z"/><path d="M12.5 3.2c3.5 1.2 5.5 3.1 5.7 6.1-1.2-2.3-3.1-3.4-5.7-3.7z"/></svg>)";
     audioFileIcon_->loadSVG(audioSvg);
     audioFileIcon_->setIconSize(20, 20);
     audioFileIcon_->setColor(themeManager.getColor("textSecondary"));
@@ -495,7 +534,7 @@ FileBrowser::FileBrowser()
     // (evenodd, so the background shows through). Deliberately not another
     // waveform; the browser already has two, and a third would not be told
     // apart at 20px. The cut-out is one shape, so the holes cannot cancel.
-    const char* oggSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.6 3.6H19.4A3 3 0 0 1 22.4 6.6V17.4A3 3 0 0 1 19.4 20.4H4.6A3 3 0 0 1 1.6 17.4V6.6A3 3 0 0 1 4.6 3.6ZM9.6 7.6V16.4L17 12Z"/></svg>)";
+    const char* oggSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.6 4H19.4A2.6 2.6 0 0 1 22 6.6V17.4A2.6 2.6 0 0 1 19.4 20H4.6A2.6 2.6 0 0 1 2 17.4V6.6A2.6 2.6 0 0 1 4.6 4Z M4.6 6.2V17.8H19.4V6.2Z"/><g fill="currentColor"><rect x="6.6" y="10.4" width="1.9" height="3.2" rx=".95"/><rect x="9.6" y="8.4" width="1.9" height="7.2" rx=".95"/><rect x="12.6" y="9.6" width="1.9" height="4.8" rx=".95"/><rect x="15.6" y="10.8" width="1.9" height="2.4" rx=".95"/></g></svg>)";
     oggFileIcon_->loadSVG(oggSvg);
     oggFileIcon_->setIconSize(20, 20);
     oggFileIcon_->setColor(themeManager.getColor("textSecondary"));
@@ -514,7 +553,7 @@ FileBrowser::FileBrowser()
     projectFileIcon_ = std::make_shared<NUIIcon>();
     // Project — an arrangement: a card with track lanes cut out of it. The old
     // glyph was an abstract diamond that could have meant anything.
-    const char* projectSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.7 4H19.3A2.2 2.2 0 0 1 21.5 6.2V17.8A2.2 2.2 0 0 1 19.3 20H4.7A2.2 2.2 0 0 1 2.5 17.8V6.2A2.2 2.2 0 0 1 4.7 4ZM5.6 7.4H18.4V9.6H5.6ZM5.6 10.9H15.1V13.1H5.6ZM5.6 14.4H17.1V16.6H5.6Z"/></svg>)";
+    const char* projectSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5 2.5H19A2.5 2.5 0 0 1 21.5 5V19A2.5 2.5 0 0 1 19 21.5H5A2.5 2.5 0 0 1 2.5 19V5A2.5 2.5 0 0 1 5 2.5Z M12 6.14L13.64 10.83L18.6 10.94L14.35 13.52Q11.55 16.7 7.62 18.27L9.35 13.94L5.4 10.94L10.36 10.83Z M14.96 14.37L16.08 18.7L11.05 17.71Q13.22 16.35 14.96 14.37Z"/></svg>)";
     projectFileIcon_->loadSVG(projectSvg);
     projectFileIcon_->setIconSize(20, 20);
     projectFileIcon_->setColor(themeManager.getColor("accentPrimary"));
@@ -527,7 +566,7 @@ FileBrowser::FileBrowser()
 
     // Chevron Right (Collapsed)
     chevronIcon_ = std::make_shared<NUIIcon>();
-    const char* chevronSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>)";
+    const char* chevronSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.3 5.4 16 12l-6.7 6.6-1.7-1.7 4.9-4.9-4.9-4.9z"/></svg>)";
     chevronIcon_->loadSVG(chevronSvg);
     chevronIcon_->setIconSize(16, 16);
     chevronIcon_->setColor(themeManager.getColor("textSecondary"));
@@ -1139,9 +1178,10 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
         switch (action) {
             case BrowserNavAction::Favorites:
-                // Filled star: a thin stroked outline aliased badly at 16px (sharp
-                // points), looking rough next to the crisp filled colour dots.
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.5l2.7 5.47 6.05.88-4.38 4.27 1.03 6.02L12 17.28l-5.4 2.84 1.03-6.02L3.25 9.85l6.05-.88L12 3.5z"/></svg>)");
+                // The Aestra spark (the brand's five-point star with its cut), solid:
+                // a thin stroked outline aliased badly at 16px, and a stock star
+                // said nothing about whose favourites these are.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.9L14.65 9.46L22.65 9.64L15.79 13.8Q11.28 18.94 4.93 21.47L7.72 14.49L1.35 9.64L9.35 9.46Z"/><path d="M16.77 15.18L18.58 22.16L10.47 20.56Q13.97 18.37 16.77 15.18Z"/></svg>)");
                 break;
             case BrowserNavAction::Purple:
                 renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
@@ -1204,27 +1244,29 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                 drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="9" width="2.2" height="6" rx="1.1"/><rect x="6.8" y="5.4" width="2.2" height="13.2" rx="1.1"/><rect x="11.2" y="7.8" width="2.2" height="8.4" rx="1.1"/><rect x="15.6" y="4" width="2.2" height="16" rx="1.1"/><rect x="20" y="8.6" width="2.2" height="6.8" rx="1.1"/></svg>)");
                 break;
             case BrowserNavAction::Packs:
-                // A wrapped box — ribbon both ways. The old isometric cube
-                // needed three strokes to imply a top face and read as a
-                // scribble at this size. The ribbon is one cross-shaped subpath
-                // rather than two crossing bars: under evenodd, overlapping
-                // holes cancel and would leave the crossing filled in.
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><circle cx="10.1" cy="3.9" r="1.9" fill="currentColor"/><circle cx="13.9" cy="3.9" r="1.9" fill="currentColor"/><path fill="currentColor" fill-rule="evenodd" d="M4 5.4H20A1.9 1.9 0 0 1 21.9 7.3V17.9A1.9 1.9 0 0 1 20 19.8H4A1.9 1.9 0 0 1 2.1 17.9V7.3A1.9 1.9 0 0 1 4 5.4Z M10.9 5.4H13.1V11.5H21.9V13.7H13.1V19.8H10.9V13.7H2.1V11.5H10.9Z"/></svg>)");
+                // Stacked sample cards, the front one carrying a waveform: a
+                // pack is a set of sounds. (It was a gift box, which said
+                // "present", and before that an isometric cube that read as a
+                // scribble.) Every strip is at least 2.5 units tall so nothing
+                // drops below a pixel at 16 px.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M7.4 1.9H16.6A1.3 1.3 0 0 1 17.9 3.2V4.4H6.1V3.2A1.3 1.3 0 0 1 7.4 1.9Z M5.4 5.4H18.6A1.3 1.3 0 0 1 19.9 6.7V7.9H4.1V6.7A1.3 1.3 0 0 1 5.4 5.4Z M4.2 9.2H19.8A1.7 1.7 0 0 1 21.5 10.9V19.3A1.7 1.7 0 0 1 19.8 21H4.2A1.7 1.7 0 0 1 2.5 19.3V10.9A1.7 1.7 0 0 1 4.2 9.2Z M6.4 13.9H8V16.1H6.4Z M9.6 12.3H11.2V17.7H9.6Z M12.8 13.2H14.4V16.8H12.8Z M16 12.8H17.6V17.2H16Z"/></svg>)");
                 break;
             case BrowserNavAction::UserLibrary:
-                // Solid figure.
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="7.6" r="4"/><path d="M12 13c-4 0-6.9 2.4-8 6.4a1 1 0 0 0 1 1.3h14a1 1 0 0 0 1-1.3c-1.1-4-4-6.4-8-6.4z"/></svg>)");
+                // You, knocked out of the same tile the project file uses: the
+                // library that belongs to this person.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5 2.5H19A2.5 2.5 0 0 1 21.5 5V19A2.5 2.5 0 0 1 19 21.5H5A2.5 2.5 0 0 1 2.5 19V5A2.5 2.5 0 0 1 5 2.5Z M12 5.6A3.3 3.3 0 1 0 12.01 5.6Z M5.6 19.4C6.3 15.9 8.8 13.9 12 13.9S17.7 15.9 18.4 19.4Z"/></svg>)");
                 break;
             case BrowserNavAction::CurrentProject:
             case BrowserNavAction::CustomPlace:
-                // Same solid folder the file list uses.
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)");
+                // Same folder the file list uses: the cut front lip is what keeps
+                // it from reading as the stock Material folder.
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z"/></svg>)");
                 break;
             case BrowserNavAction::AddFolder:
                 // Folder with the plus cut out. The plus is one cross-shaped
                 // subpath, not two overlapping bars — under evenodd, overlapping
                 // holes cancel and would leave a filled square at the crossing.
-                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z M11.15 9.6H12.85V12.15H15.4V13.85H12.85V16.4H11.15V13.85H8.6V12.15H11.15Z"/></svg>)");
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z M11.2 12.9H12.8V14.6H14.5V16.2H12.8V17.9H11.2V16.2H9.5V14.6H11.2Z"/></svg>)");
                 break;
             default:
                 // Generic list card.
@@ -3110,6 +3152,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const auto& themeProps = themeManager.getCurrentTheme();
     const float labelFont = themeProps.fontSizeS;
     const float rowIndentStep = 18.0f;
+    const auto sharedPrefixes = sharedDisplayPrefixes(view);
 
     for (int i = firstVisibleIndex; i < lastVisibleIndex; ++i) {
         const float itemY = listClip.y + (i * itemHeight) - scrollOffset_;
@@ -3172,11 +3215,21 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
         const float maxTextWidth = std::max(0.0f, itemRect.right() - contentX - 12.0f);
         std::string displayName = item->name;
+        bool prefixDropped = false;
+        if (!item->isDirectory && !sharedPrefixes.empty()) {
+            const size_t slash = item->path.find_last_of("/\\");
+            const auto it = sharedPrefixes.find(slash == std::string::npos ? std::string() : item->path.substr(0, slash));
+            if (it != sharedPrefixes.end() && it->second < displayName.size()) {
+                displayName.erase(0, it->second);
+                prefixDropped = true;
+            }
+        }
         if (renderer.measureText(displayName, labelFont).width > maxTextWidth) {
             displayName = ellipsizeEnd(renderer, displayName, labelFont, maxTextWidth);
             item->isTruncated = true;
         } else {
-            item->isTruncated = false;
+            // A dropped prefix counts as truncation, so hovering still shows the full name.
+            item->isTruncated = prefixDropped;
         }
 
         const NUIColor itemTextColor = item->isPlaceholder

@@ -69,6 +69,24 @@ public:
     bool isRecovered() const { return m_sourceKind == SourceKind::Recovery; }
     bool isSnapshotRestore() const { return m_sourceKind == SourceKind::Snapshot; }
 
+    /** @brief The project as people name it: the file's stem, or "Untitled". */
+    std::string displayName() const {
+        if (m_canonicalPath.empty()) return "Untitled";
+        const size_t slash = m_canonicalPath.find_last_of("/\\");
+        std::string name = slash == std::string::npos ? m_canonicalPath : m_canonicalPath.substr(slash + 1);
+        const size_t dot = name.find_last_of('.');
+        if (dot != std::string::npos && dot > 0) name.erase(dot);
+        return name;
+    }
+
+    /** @brief A document condition worth stating instead of Saved/Unsaved, or empty. */
+    std::string statusNote() const {
+        if (m_overwriteProtected) return "Integrity warning";
+        if (isRecovered()) return "Recovered";
+        if (isSnapshotRestore()) return "Snapshot";
+        return {};
+    }
+
     std::string windowTitle() const {
         std::string title = m_canonicalPath.empty() ? "Untitled - Aestra" : m_canonicalPath + " - Aestra";
         if (isRecovered()) {
