@@ -183,17 +183,20 @@ void BPMDisplay::closeBPMEditor() {
     setDirty(true);
 }
 
+// The step arrows own the display's right-hand column: up in the top half,
+// down in the bottom. onRender draws them in exactly these rects and keeps the
+// value and its suffix out of the column, so every hit zone is visible.
 AestraUI::NUIRect BPMDisplay::getUpArrowBounds() const {
-    if (m_cachedUpArrowBounds.width > 0) return m_cachedUpArrowBounds;
-    // Fallback if not rendered yet
-    AestraUI::NUIRect bounds = getBounds();
-    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y, 12, 12);
+    const AestraUI::NUIRect bounds = getBounds();
+    const float half = bounds.height * 0.5f;
+    return AestraUI::NUIRect(bounds.right() - kArrowColumnWidth, bounds.y, kArrowColumnWidth, half - 1.0f);
 }
 
 AestraUI::NUIRect BPMDisplay::getDownArrowBounds() const {
-    if (m_cachedDownArrowBounds.width > 0) return m_cachedDownArrowBounds;
-    AestraUI::NUIRect bounds = getBounds();
-    return AestraUI::NUIRect(bounds.x + bounds.width - 20, bounds.y + 15, 12, 12);
+    const AestraUI::NUIRect bounds = getBounds();
+    const float half = bounds.height * 0.5f;
+    return AestraUI::NUIRect(bounds.right() - kArrowColumnWidth, bounds.y + half + 1.0f, kArrowColumnWidth,
+                             half - 1.0f);
 }
 
 void BPMDisplay::onUpdate(double deltaTime) {
@@ -252,8 +255,24 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         renderer.drawText(value, {bounds.x, valueY}, kValueSize, bpmColor);
         const float valueW = renderer.measureText(value, kValueSize).width;
         const AestraUI::NUIRect unitRect(bounds.x + valueW + 4.0f, bounds.y + 3.0f, 30.0f, bounds.height);
-        renderer.drawText("BPM", {unitRect.x, renderer.calculateTextY(unitRect, kUnitSize)}, kUnitSize,
-                          themeManager.getColor("textMuted"));
+        // The suffix is dropped rather than drawn into the arrow column.
+        const float arrowLeft = bounds.right() - kArrowColumnWidth;
+        if (unitRect.x + renderer.measureText("BPM", kUnitSize).width <= arrowLeft - 2.0f) {
+            renderer.drawText("BPM", {unitRect.x, renderer.calculateTextY(unitRect, kUnitSize)}, kUnitSize,
+                              themeManager.getColor("textMuted"));
+        }
+
+        const auto chevron = [&](const AestraUI::NUIRect& r, bool up, bool hot) {
+            const float cx = r.x + r.width * 0.5f;
+            const float cy = r.y + r.height * 0.5f;
+            const float dy = up ? 1.5f : -1.5f;
+            const AestraUI::NUIColor ink =
+                hot ? themeManager.getColor("textPrimary") : themeManager.getColor("textMuted");
+            const AestraUI::NUIPoint pts[3] = {{cx - 3.5f, cy + dy}, {cx, cy - dy}, {cx + 3.5f, cy + dy}};
+            renderer.drawPolyline(pts, 3, 1.4f, ink);
+        };
+        chevron(getUpArrowBounds(), true, m_upArrowHovered || m_upArrowPressed);
+        chevron(getDownArrowBounds(), false, m_downArrowHovered || m_downArrowPressed);
     }
     // The inline editor is a child: without this it exists, takes focus and
     // suppresses the label, but never paints (invisible-field defect).
@@ -456,7 +475,7 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     flush();
 
     const AestraUI::NUIRect secondaryRect(x + 9.0f, bounds.y + 3.0f, bounds.right() - x - 9.0f, bounds.height);
-    if (secondaryRect.width > 24.0f) {
+    if (renderer.measureText(secondary, kSecondarySize).width <= secondaryRect.width) {
         renderer.drawText(secondary, {secondaryRect.x, renderer.calculateTextY(secondaryRect, kSecondarySize)},
                           kSecondarySize, themeManager.getColor("textSecondary"));
     }

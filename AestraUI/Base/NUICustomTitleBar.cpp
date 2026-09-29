@@ -220,9 +220,9 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
             const float nameX = showState ? fullX : nameOnlyX;
             renderer.drawText(projectName_, {nameX, textY}, userFont, text);
             if (showState) {
-                const NUIColor lamp = !projectNote_.empty() ? themeManager.getColor("warning")
-                                      : projectModified_  ? themeManager.getColor("warning")
-                                                          : themeManager.getColor("success");
+                const NUIColor lamp = (!projectNote_.empty() || projectModified_)
+                                          ? themeManager.getColor("warning")
+                                          : themeManager.getColor("success");
                 const float lampX = nameX + nameW + kInnerGap;
                 renderer.fillCircle({lampX + kLamp * 0.5f, bounds.y + height_ * 0.5f}, kLamp * 0.5f, lamp);
                 renderer.drawText(state, {lampX + kLamp + 5.0f, textY}, userFont, muted);

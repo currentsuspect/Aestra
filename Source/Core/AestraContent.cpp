@@ -2090,8 +2090,10 @@ void AestraContent::onResize(int width, int height) {
         const float outputChrome = TM::kPadX + layout.panelMargin;
         const float fullModules = TransportBar::requiredWidth(true, true, true);
         const float leanModules = TransportBar::requiredWidth(true, false, false);
-        const bool showScope = m_waveformVisualizer && width >= fullModules + outputChrome + waveformWidth + gap + meterWidth;
-        const bool showMeter = m_audioVisualizer && width >= leanModules + outputChrome + meterWidth;
+        // Audition hides the transport bar, and these belong to it.
+        const bool showScope = !isAuditionMode && m_waveformVisualizer &&
+                               width >= fullModules + outputChrome + waveformWidth + gap + meterWidth;
+        const bool showMeter = !isAuditionMode && m_audioVisualizer && width >= leanModules + outputChrome + meterWidth;
         if (m_waveformVisualizer) m_waveformVisualizer->setVisible(showScope);
         if (m_audioVisualizer) m_audioVisualizer->setVisible(showMeter);
 

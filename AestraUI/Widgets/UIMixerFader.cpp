@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <iterator>
 #include <exception>
 #include <locale>
 #include <sstream>
@@ -161,6 +162,7 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
     }
 
     float placed[16];
+    static_assert(std::size(SCALE_TICKS) <= std::size(placed), "every scale label needs a slot");
     int placedCount = 0;
     const auto fits = [&](float y) {
         for (int i = 0; i < placedCount; ++i) {
@@ -193,7 +195,8 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
         // At rest the major marks stay labelled, so the scale reads as a scale;
         // a lone "0" read as a stray glyph. The full ladder appears on the
         // master, on hover and while dragging.
-        const bool major = db == 6.0f || db == -12.0f || db == -24.0f || db == -48.0f;
+        const auto near = [db](float mark) { return std::abs(db - mark) < 0.01f; };
+        const bool major = near(6.0f) || near(-12.0f) || near(-24.0f) || near(-48.0f);
         if (!showLabels && !major) continue;
         drawLabel(db);
     }

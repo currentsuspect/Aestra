@@ -2550,6 +2550,7 @@ void AestraApp::updateWindowTitle() {
 }
 
 void AestraApp::pushProjectStatus() {
+    if (!m_windowManager) return;
     const bool modified = m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified();
     m_windowManager->setProjectStatus(m_documentState.displayName(), modified, m_documentState.statusNote());
 }

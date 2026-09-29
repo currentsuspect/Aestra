@@ -74,8 +74,7 @@ private:
     float m_holdDelay;           // Initial delay before repeat
     
     // Cached bounds for dynamic centering
-    AestraUI::NUIRect m_cachedUpArrowBounds;
-    AestraUI::NUIRect m_cachedDownArrowBounds;
+    static constexpr float kArrowColumnWidth = 10.0f;
     
     AestraUI::NUIRect getUpArrowBounds() const;
     AestraUI::NUIRect getDownArrowBounds() const;
