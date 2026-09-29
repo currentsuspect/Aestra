@@ -666,6 +666,69 @@ bool runTailIgnoresLoopCase(const std::shared_ptr<TrackManager>& tm, const Sessi
     return pass;
 }
 
+// -----------------------------------------------------------------------------
+// Case: a clip starting after the range end never reaches the tail (#992)
+// -----------------------------------------------------------------------------
+// The tail exists to render effect decay past the range end, not arrangement
+// audio. Disabling the loop stops the tail wrapping to the loop start, but with
+// the transport advancing linearly a clip that starts after the range end is
+// still fed into the tail. This case puts a loud clip at 4 s — past the 2 s
+// range, inside the 4 s tail window — and requires the export to end in silence.
+bool runTailExcludesLaterClipCase(const SessionConfig& cfg, const fs::path& tempRoot) {
+    const uint32_t rangeFrames = cfg.sampleRate * kSeconds;
+    // 4 s total: the 2 s range plus a 2 s tail that spans the later clip.
+    const uint32_t totalFrames = cfg.sampleRate * 2 * kSeconds;
+
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+    addAudioTrack(*tm, "RangeBody", makeSine(440.0, 0.30f, rangeFrames, cfg.sampleRate), rangeFrames, cfg);
+    // Starts at 2 s, i.e. exactly at the range end: audible in the tail if the
+    // exporter keeps feeding playlist sources past the range.
+    addAudioTrackAtBeat(*tm, "AfterRange", makeSine(880.0, 0.50f, rangeFrames, cfg.sampleRate), rangeFrames,
+                        cfg, static_cast<double>(rangeFrames) / cfg.sampleRate * (cfg.bpm / 60.0));
+
+    AudioEngine engine;
+    prepareEngine(engine, tm, cfg);
+    warmupEngine(engine, cfg);
+    engine.setLoopRegion(0.0, kBeats);
+    engine.setLoopEnabled(true);
+
+    const fs::path outPath = tempRoot / "tail_excludes_later_clip.wav";
+    std::error_code ec;
+    fs::remove(outPath, ec);
+    AudioExporter exporter(engine, *tm);
+    AudioExporter::Config config;
+    config.outputPath = outPath.string();
+    config.scope = AudioExporter::RenderScope::LoopRegion;
+    config.sampleRate = cfg.sampleRate;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.numChannels = 2;
+    config.tailSeconds = 2.0;
+    const auto result = exporter.render(config);
+    if (!result.success) {
+        std::cerr << "tail-excludes-later-clip: export failed: " << result.errorMessage << "\n";
+        return false;
+    }
+    std::vector<float> decoded;
+    uint32_t sr = 0, ch = 0;
+    if (!decodeAudioFile(outPath.string(), decoded, sr, ch) || ch != 2) {
+        std::cerr << "tail-excludes-later-clip: failed to decode " << outPath << "\n";
+        return false;
+    }
+    const size_t frames = decoded.size() / ch;
+    const size_t songEnd = static_cast<size_t>(sr) * kSeconds;
+    // Body is audible, so a silent tail is a silent render and not a silent song.
+    const double bodyRms = rmsRange(decoded, sr / 10, songEnd - sr / 10, ch);
+    const double tailRms = rmsRange(decoded, songEnd + sr / 20, frames, ch);
+    const double tailDb = 20.0 * std::log10(std::max(tailRms, 1e-15));
+
+    const bool pass = frames >= songEnd + sr && bodyRms > 0.05 && tailDb <= -100.0;
+    std::cout << (pass ? "PASS" : "FAIL") << ": Export_Tail_Excludes_Later_Clip frames=" << frames
+              << " bodyRms=" << bodyRms << " tail=" << tailDb << " dBFS"
+              << (tailDb > -100.0 ? "  <-- a clip after the range end reached the tail" : "") << "\n";
+    return pass;
+}
+
 int main() {
     std::cout << "=== Aestra Realtime/Export Parity Test ===\n\n";
     const fs::path tempRoot = fs::temp_directory_path() / "aestra_rt_export_parity";
@@ -692,6 +755,7 @@ int main() {
     if (!runIsolatedBounceExcludesMasterClips(cfg, tempRoot)) ++failures;
     if (!runTailIgnoresLoopCase(tm, cfg, tempRoot, AudioExporter::RenderScope::FullSong, "full-song")) ++failures;
     if (!runTailIgnoresLoopCase(tm, cfg, tempRoot, AudioExporter::RenderScope::LoopRegion, "loop-region")) ++failures;
+    if (!runTailExcludesLaterClipCase(cfg, tempRoot)) ++failures;
     // Pitch cases (#746): pure pitch, pitch cancelling speed, and interplay.
     for (const auto& [speed, pitch] : {std::pair{1.0f, 12.0f}, {2.0f, -12.0f}, {0.5f, 7.0f}}) {
         if (!runIsolatedSpeedParityCase(cfg, tempRoot, speed, pitch)) ++failures;

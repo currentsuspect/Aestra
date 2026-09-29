@@ -19,8 +19,11 @@ public:
      * @brief Build a render graph from the current TrackManager state.
      *
      * @param trackManager Source track manager (UI/engine thread)
+     * @param includeClips When false the graph carries the full mixer topology
+     *        and effect chains but no playlist clips, so sources are silent while
+     *        effects keep processing their decay. Used by the export tail (#992).
      */
-    static AudioGraph buildFromTrackManager(TrackManager& trackManager);
+    static AudioGraph buildFromTrackManager(TrackManager& trackManager, bool includeClips = true);
 };
 
 } // namespace Audio

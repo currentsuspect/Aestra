@@ -121,7 +121,7 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
     }
 }
 
-AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {
+AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, bool includeClips) {
     // Phase 4 (F1): apply finished anti-alias prefilter results and queue missing
     // work for downsampled clips BEFORE the snapshot resolves clip buffers, so this
     // build picks up every copy that is ready (never blocks; fallback = original).
@@ -166,7 +166,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
     const auto& sources = trackManager.getSourceManager();
 
     auto snapshot = playlist.buildRuntimeSnapshot(patterns, sources);
-    if (snapshot) {
+    if (snapshot && includeClips) {
         uint64_t maxEndSample = 0;
         double projectSampleRate = playlist.getProjectSampleRate();
 
