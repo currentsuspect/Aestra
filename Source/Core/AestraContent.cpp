@@ -5,6 +5,7 @@
  */
 
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
+#include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
 
 namespace {
@@ -2074,41 +2075,40 @@ void AestraContent::onResize(int width, int height) {
     }
 
     if (m_audioVisualizer || m_waveformVisualizer) {
+        // The OUTPUT module: scope + meter on the transport's shared content
+        // line, named and divided by the bar like every other module.
+        namespace TM = TransportModule;
         const float meterWidth = 60.0f;
         const float waveformWidth = 150.0f;
-        const float visualizerHeight = 40.0f;
         const float gap = 6.0f;
-        float vuY = (transportHeight - visualizerHeight) / 2.0f;
+        const float vuY = TM::kContentTop;
+        const float visualizerHeight = TM::kContentHeight;
 
-        float totalWidth = meterWidth;
-        if (m_waveformVisualizer)
-            totalWidth += waveformWidth + gap;
+        // Collapse order across the whole row: the scope waveform goes first so
+        // everything else keeps fitting; then the bar sheds keys and panels on
+        // its own; then the meter; the record aids go last.
+        const float outputChrome = TM::kPadX + layout.panelMargin;
+        const float fullModules = TransportBar::requiredWidth(true, true, true);
+        const float leanModules = TransportBar::requiredWidth(true, false, false);
+        const bool showScope = m_waveformVisualizer && width >= fullModules + outputChrome + waveformWidth + gap + meterWidth;
+        const bool showMeter = m_audioVisualizer && width >= leanModules + outputChrome + meterWidth;
+        if (m_waveformVisualizer) m_waveformVisualizer->setVisible(showScope);
+        if (m_audioVisualizer) m_audioVisualizer->setVisible(showMeter);
 
-        // The scope + meter overlay the right of the transport row. They only clear
-        // the centre-anchored transport island near full width; on a narrow window
-        // they'd sit on top of the view buttons. Treat them as secondary chrome:
-        // hide them below that width and drop the reserve so the transport island
-        // reclaims the whole row. (The threshold leaves room for the full island.)
-        constexpr float kVisualizerMinWidth = 1230.0f;
-        const bool showVisualizers = width >= kVisualizerMinWidth;
-        if (m_waveformVisualizer) m_waveformVisualizer->setVisible(showVisualizers);
-        if (m_audioVisualizer) m_audioVisualizer->setVisible(showVisualizers);
-
-        if (!showVisualizers) {
+        const float totalWidth = (showScope ? waveformWidth + gap : 0.0f) + (showMeter ? meterWidth : 0.0f);
+        if (totalWidth <= 0.0f) {
             if (m_transportBar) m_transportBar->setRightReservedWidth(0.0f);
         } else {
             float xStart = width - totalWidth - layout.panelMargin;
             if (m_transportBar) {
-                // Visualizers overlay the transport row; reserve their width so the
-                // bar's KEYS status pill hides instead of rendering underneath them.
-                m_transportBar->setRightReservedWidth(totalWidth + layout.panelMargin + gap);
+                m_transportBar->setRightReservedWidth(totalWidth + outputChrome);
             }
-            if (m_waveformVisualizer) {
+            if (showScope) {
                 m_waveformVisualizer->setBounds(
                     AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
                 xStart += waveformWidth + gap;
             }
-            if (m_audioVisualizer) {
+            if (showMeter) {
                 m_audioVisualizer->setBounds(
                     AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
             }
