@@ -12,6 +12,7 @@
 #pragma once
 
 #include "DSP/Oversampler.h"
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -27,7 +28,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraSat : public IPluginInstance {
+class AestraSat : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x53415431; // 'SAT1'
     static constexpr uint32_t kOsFactor = 4;
@@ -49,15 +50,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         for (auto& os : m_oversampler) {
             os.prepare(kOsFactor);
         }
@@ -82,7 +75,7 @@ public:
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
             // The plugin always reports the oversampler latency, so internal
             // bypass must delay by the same amount (through the same ring,
             // which keeps advancing) or this slot lands ~30 samples early
@@ -108,7 +101,7 @@ public:
         const bool stereo = channels >= 2;
         const auto mode = static_cast<Mode>(std::min<uint32_t>(
             kModeCount - 1,
-            static_cast<uint32_t>(m_params[kMode].load(std::memory_order_relaxed) * static_cast<float>(kModeCount - 1) +
+            static_cast<uint32_t>(paramValue(kMode) * static_cast<float>(kModeCount - 1) +
                                   0.5f)));
 
         float blockInputPeak = 0.0f;
@@ -179,32 +172,21 @@ public:
         m_outputLevel.store(blockOutputPeak, std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: this is the whole plugin-side surface now.
+    // Storage, the non-finite and range guards, getParameters() and the state
+    // blob come from InternalPluginBase.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kDrive, "Drive", "DRV", "dB", 0.25f, 0.0f, 1.0f, true},
+        {kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1},
+        {kTone, "Tone", "TON", "Hz", 1.0f, 0.0f, 1.0f, true},
+        {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
-            return;
-        if (!std::isfinite(value))
-            return; // NaN survives clamp (comparisons are false) and would poison smoothing
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kDrive, "Drive", "DRV", "dB", 0.25f, 0.0f, 1.0f, true},
-            {kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1},
-            {kTone, "Tone", "TON", "Hz", 1.0f, 0.0f, 1.0f, true},
-            {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -247,57 +229,12 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagic;
-            uint32_t version = 1;
-            float params[kParamCount] = {};
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return {data, data + sizeof(blob)};
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        if (magic != kStateMagic)
-            return false;
-        struct Blob {
-            uint32_t magic;
-            uint32_t version;
-            float params[kParamCount];
-        };
-        if (state.size() < sizeof(Blob))
-            return false;
-        Blob blob{};
-        std::memcpy(&blob, state.data(), sizeof(blob));
-        if (blob.version < 1 || blob.version > 1)
-            return false;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob.params[i]);
-        }
-        return true;
-    }
-
     bool hasEditor() const override { return true; }
-    bool openEditor(void*) override { return false; }
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
     std::pair<int, int> getEditorSize() const override { return {480, 300}; }
-    bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return DSP::Oversampler::kReportedLatency; }
     uint32_t getTailSamples() const override { return 0; }
-    WatchdogStats getWatchdogStats() const override { return {}; }
-    void resetWatchdog() override {}
-    bool isBypassedByWatchdog() const override { return false; }
-    bool isCrashed() const override { return false; }
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
@@ -432,8 +369,6 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
 
     std::array<DSP::Oversampler, 2> m_oversampler;
     std::array<std::array<float, kDryDelayLen>, 2> m_dryDelay{};

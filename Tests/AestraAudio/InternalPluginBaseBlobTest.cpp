@@ -12,6 +12,9 @@
 // BEFORE and AFTER it inherits the base, by generating the expected layout from
 // the plugin's own table rather than from a hardcoded number that drifts.
 
+#include "Plugin/AestraFilter.h"
+#include "Plugin/AestraLFO.h"
+#include "Plugin/AestraOTT.h"
 #include "Plugin/AestraSat.h"
 #include "Plugin/AestraTransient.h"
 
@@ -116,6 +119,52 @@ int main() {
         loaded.initialize(96000.0, 128);
         check(std::abs(loaded.getParameter(Plugins::AestraTransient::kMix) - 0.4f) < 1e-6f,
               "re-initialize preserves loaded project state");
+    }
+
+    // --- Batch 2: Filter (9), OTT (10), LFO (9) -------------------------
+    // Same guarantee, more plugins: the blob must stay byte-identical to what
+    // each of these shipped, because a migrated plugin that changes a single
+    // byte invalidates every saved project using it.
+    {
+        Plugins::AestraFilter f;
+        f.initialize(48000.0, 256);
+        f.setParameter(Plugins::AestraFilter::kCutoff, 0.42f);
+        const auto state = f.saveState();
+        check(state.size() == 8 + 9 * 4, "Filter blob is 44 bytes (magic+version+9 floats)");
+        std::vector<float> expected(9);
+        for (uint32_t i = 0; i < 9; ++i)
+            expected[i] = f.getParameter(i);
+        check(state == legacyBlob(f.kStateMagic, expected), "Filter blob is byte-identical to the legacy layout");
+    }
+    {
+        Plugins::AestraOTT ott;
+        ott.initialize(48000.0, 256);
+        ott.setParameter(Plugins::AestraOTT::kDepth, 0.33f);
+        const auto state = ott.saveState();
+        check(state.size() == 8 + 10 * 4, "OTT blob is 48 bytes (magic+version+10 floats)");
+        std::vector<float> expected(10);
+        for (uint32_t i = 0; i < 10; ++i)
+            expected[i] = ott.getParameter(i);
+        check(state == legacyBlob(ott.kStateMagic, expected), "OTT blob is byte-identical to the legacy layout");
+    }
+    {
+        Plugins::AestraLFO lfo;
+        lfo.initialize(48000.0, 256);
+        lfo.setParameter(Plugins::AestraLFO::kDepth, 0.77f);
+        const auto state = lfo.saveState();
+        check(state.size() == 8 + 9 * 4, "LFO blob is 44 bytes (magic+version+9 floats)");
+        std::vector<float> expected(9);
+        for (uint32_t i = 0; i < 9; ++i)
+            expected[i] = lfo.getParameter(i);
+        check(state == legacyBlob(lfo.kStateMagic, expected), "LFO blob is byte-identical to the legacy layout");
+
+        // A stepped enum must still read back as the option it names. The
+        // migration rewrote parameter reads wholesale, and "> 0.5f" on a
+        // stepped parameter means "is this option selected", not "bypassed" —
+        // so the Sync parameter gets an explicit check.
+        lfo.setParameter(Plugins::AestraLFO::kSyncMode, 1.0f);
+        check(std::abs(lfo.getParameter(Plugins::AestraLFO::kSyncMode) - 1.0f) < 1e-6f,
+              "LFO Sync Mode reads back as selected, not as bypass");
     }
 
     if (failures > 0) {
