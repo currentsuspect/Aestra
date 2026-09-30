@@ -516,6 +516,65 @@ com.Aestrastudios.verb
 com.Aestrastudios.delay
 ```
 
+### Adding a built-in effect
+
+A built-in plugin is now **DSP + a ParamSpec table + one registration line**.
+`AestraAudio/include/Plugin/InternalPluginBase.h` owns the parameter array, the
+clamp and non-finite guards, `getParameters()`, the state blob, and the
+editor and watchdog stubs. `AestraSat.h` is the reference implementation.
+
+```cpp
+class AestraFoo : public InternalPluginBase {
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kDrive, "Drive", "DRV", "dB", 0.25f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
+    // ... initialize() calling seedDefaultsOnce(), and process()
+};
+```
+
+Register it in `AestraAudio/src/Plugin/BuiltInPlugins.cpp`. The plugin ID is
+permanent; choose it once.
+
+Rules for the rest:
+
+* Call `seedDefaultsOnce()` from `initialize()`. The base gates it to the first
+  initialize, so a re-prepare preserves the user's parameters and loaded state.
+  A plugin that skips it starts with every parameter at `0.0f`.
+* Read parameters with `paramValue(id)` and `isBypassed()`; do not reach for the
+  storage directly.
+* Override `getParameterDisplay()` only when labels are in musician units.
+  Override `onParameterChanged()` only to invalidate derived state.
+* **The inherited state blob is `{magic, version=1, params[count]}` sized by
+  `paramSpecCount()` — byte-identical to what the older plugins shipped.** That
+  is what makes inheriting it safe. If your blob needs fields beyond the
+  parameters, keep your own `saveState()`/`loadState()` and do not inherit.
+  `AestraEQ` is the worked example, and it carries eight blob versions; a
+  ParamSpec table does not remove that debt.
+* **Bypass must be a pure delay of `getLatencySamples()`.** `EffectChain::getTotalLatency()`
+  counts plugin latency and cannot see the plugin's own Bypass knob, so a
+  straight copy in bypass places the plugin early against everything downstream
+  in a delay-compensated chain. `AestraSat` shows the pattern.
+* Report the latency the path **actually** delays, not the one you intended.
+  An impulse probe is how you check.
+
+Generic contracts need no tests of their own: `PluginConformanceSweepTest` loops
+`InternalPluginRegistry`, so registering a plugin gets it 11 contracts —
+prepare matrix, silence in/silence out, hostile input, parameter table,
+non-finite rejection, state round-trip, garbage state, latency stability,
+bypass alignment, zero steady-state allocations, reset idempotence. **Write
+tests only for what is specific to the plugin** (its material lab, its quality
+measurements), and append the new target to the end of
+`Tests/cmake/PluginTests.cmake`, which is append-only so parallel branches do not
+collide on it.
+
+`.claude/` is gitignored in this repository, which is why this section lives
+here rather than in a skill file: an agent that checks out Aestra gets AGENTS.md
+and nothing else.
+
 ---
 
 ## 20. Export/Bounce Rules
