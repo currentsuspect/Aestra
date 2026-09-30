@@ -814,8 +814,13 @@ float SamplerPlugin::getParameter(uint32_t id) const {
 }
 
 void SamplerPlugin::setParameter(uint32_t id, float value) {
-    if (id < kParamCount)
-        m_params[id].store(value);
+    if (id >= kParamCount)
+        return;
+    if (!std::isfinite(value))
+        return; // NaN would poison the envelope smoothers
+    // No range clamp here: Attack/Decay/Release are declared 0-2 and 0-5, not
+    // 0-1, so a blanket clamp would halve the sampler's envelope ranges.
+    m_params[id].store(value);
 }
 
 std::string SamplerPlugin::getParameterDisplay(uint32_t id) const {

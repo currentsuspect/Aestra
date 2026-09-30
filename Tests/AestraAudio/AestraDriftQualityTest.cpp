@@ -232,23 +232,50 @@ bool testSampleRateExtremes() {
     return ok;
 }
 
+// Bypass must be a pure delay of exactly getLatencySamples(), not a
+// sample-exact copy. EffectChain::getTotalLatency() counts this plugin's
+// latency whenever the slot is not host-bypassed and it cannot see the
+// plugin's own Bypass knob, so a straight copy placed Drift's reported
+// latency (up to ~964 samples) early against everything downstream in a
+// delay-compensated chain. The priming block is silent so the expected output
+// is exactly "input delayed by the reported latency".
 bool testBypassParity() {
     AestraDrift drift;
-    drift.initialize(48000.0, 257u);
+    drift.initialize(48000.0, 2048u);
     drift.activate();
     drift.setParameter(AestraDrift::kBypass, 1.0f);
-    std::vector<float> inputL(257);
-    std::vector<float> inputR(257);
-    std::vector<float> outputL(257, std::numeric_limits<float>::quiet_NaN());
-    std::vector<float> outputR(257, std::numeric_limits<float>::quiet_NaN());
+
+    constexpr uint32_t kFrames = 2048;
+    const std::vector<float> silence(kFrames, 0.0f);
+    {
+        std::vector<float> outL(kFrames, 0.0f), outR(kFrames, 0.0f);
+        const float* inputs[] = {silence.data(), silence.data()};
+        float* outs[] = {outL.data(), outR.data()};
+        drift.process(inputs, outs, 2u, 2u, kFrames);
+    }
+
+    const uint32_t latency = drift.getLatencySamples();
+    std::vector<float> inputL(kFrames);
+    std::vector<float> inputR(kFrames);
+    std::vector<float> outputL(kFrames, std::numeric_limits<float>::quiet_NaN());
+    std::vector<float> outputR(kFrames, std::numeric_limits<float>::quiet_NaN());
     for (size_t i = 0; i < inputL.size(); ++i) {
         inputL[i] = static_cast<float>(i) / static_cast<float>(inputL.size());
         inputR[i] = -inputL[i];
     }
     const float* inputs[] = {inputL.data(), inputR.data()};
     float* outputs[] = {outputL.data(), outputR.data()};
-    drift.process(inputs, outputs, 2u, 2u, static_cast<uint32_t>(inputL.size()));
-    return require(outputL == inputL && outputR == inputR, "bypass is not sample-exact");
+    drift.process(inputs, outputs, 2u, 2u, kFrames);
+
+    for (size_t i = 0; i < inputL.size(); ++i) {
+        const float expectL = (i >= latency) ? inputL[i - latency] : 0.0f;
+        const float expectR = (i >= latency) ? inputR[i - latency] : 0.0f;
+        if (std::fabs(outputL[i] - expectL) > 1e-6f)
+            return require(false, "bypassed left channel is not the input delayed by the reported latency");
+        if (std::fabs(outputR[i] - expectR) > 1e-6f)
+            return require(false, "bypassed right channel is not the input delayed by the reported latency");
+    }
+    return require(true, "bypass is not latency-aligned");
 }
 
 bool testCenteredStereoSpread() {

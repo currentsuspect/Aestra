@@ -709,6 +709,7 @@ public:
 
     void setParameter(uint32_t id, float value) {
         if (id >= kParamCount) return;
+        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the parameter smoothers
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
         markDirtyForParam(id);
     }

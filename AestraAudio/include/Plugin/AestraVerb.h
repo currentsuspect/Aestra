@@ -861,6 +861,7 @@ public:
 
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount) return;
+        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the parameter smoothers
         const float clamped = std::clamp(value, 0.0f, 1.0f);
         m_params[id].store(clamped, std::memory_order_relaxed);
         if (!m_active.load(std::memory_order_relaxed)) {
