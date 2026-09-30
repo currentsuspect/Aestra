@@ -1191,6 +1191,21 @@ void AestraApp::restoreUIState(const UIState& uiState) {
         // Library state (favorites, places, collections, sort, library root) is
         // the browser's own file; where it was looking is restored from UIState below.
         fileBrowser->initLibraryState(resolveAppDataFilePath("Aestra", "browser_library.json"));
+        // "Current Project" lists the audio the project has loaded (clip and
+        // recording sources). Weak: the browser must not keep the model alive.
+        std::weak_ptr<Aestra::Audio::TrackManager> weakTracks = m_content->getTrackManager();
+        fileBrowser->setProjectFilesProvider([weakTracks]() {
+            std::vector<std::string> paths;
+            if (auto tracks = weakTracks.lock()) {
+                const auto& sources = tracks->getSourceManager();
+                for (const auto id : sources.getAllSourceIDs()) {
+                    if (const auto* source = sources.getSource(id); source && !source->getFilePath().empty()) {
+                        paths.push_back(source->getFilePath());
+                    }
+                }
+            }
+            return paths;
+        });
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);

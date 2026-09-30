@@ -1238,21 +1238,13 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                 // said nothing about whose favourites these are.
                 drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.9L14.65 9.46L22.65 9.64L15.79 13.8Q11.28 18.94 4.93 21.47L7.72 14.49L1.35 9.64L9.35 9.46Z"/><path d="M16.77 15.18L18.58 22.16L10.47 20.56Q13.97 18.37 16.77 15.18Z"/></svg>)");
                 break;
-            case BrowserNavAction::Purple:
+            case BrowserNavAction::Collection:
                 renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
-                                         NUIColor::fromHex(0x7c3aed, selected ? 0.98f : 0.82f));
+                                         collectionColor(label).withAlpha(selected ? 0.98f : 0.82f));
                 break;
-            case BrowserNavAction::CollectionDrums:
-                renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
-                                         NUIColor::fromHex(0xf97316, selected ? 0.98f : 0.82f));
-                break;
-            case BrowserNavAction::CollectionInstruments:
-                renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
-                                         NUIColor::fromHex(0x22c55e, selected ? 0.98f : 0.82f));
-                break;
-            case BrowserNavAction::Vocals:
-                renderer.fillRoundedRect({cx - 4.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f,
-                                         NUIColor::fromHex(0x3b82f6, selected ? 0.98f : 0.82f));
+            case BrowserNavAction::AddCollection:
+                // A plus in a dashed-feeling ring: one cross subpath (evenodd rule).
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" d="M11 6.5H13V11H17.5V13H13V17.5H11V13H6.5V11H11Z"/></svg>)");
                 break;
             // The rail rasterizes every glyph at exactly 16x16 (see setBounds
             // above). These were all 1.8px stroked outlines, several of them
@@ -1354,9 +1346,13 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         const bool isPlaceRow = action == BrowserNavAction::CustomPlace || action == BrowserNavAction::SystemPlace;
         const bool placeActive = activeNavAction_ == BrowserNavAction::CustomPlace ||
                                  activeNavAction_ == BrowserNavAction::SystemPlace;
-        const bool selected = isPlaceRow ? (placeActive && !isShowingListing() && !path.empty() &&
-                                            mapKeyForPath(activeNavPath_) == mapKeyForPath(path))
-                                         : activeNavAction_ == action;
+        bool selected = activeNavAction_ == action;
+        if (isPlaceRow) {
+            selected = placeActive && !isShowingListing() && !path.empty() &&
+                       mapKeyForPath(activeNavPath_) == mapKeyForPath(path);
+        } else if (action == BrowserNavAction::Collection) {
+            selected = listingKind_ == ListingKind::Collection && listingTag_ == path;
+        }
         if (selected) {
             renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
             renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f}, 1.0f,
@@ -1395,10 +1391,21 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     drawSection("Collections");
     y += 2.0f; // small gap so first nav row aligns with first file row
     drawRow(BrowserNavAction::Favorites, "Favorites", static_cast<int>(favoritesPaths_.size()));
-    drawRow(BrowserNavAction::Purple, "Purple", collectionCount("Purple"));
-    drawRow(BrowserNavAction::CollectionDrums, "Drums", collectionCount("Drums"));
-    drawRow(BrowserNavAction::CollectionInstruments, "Instruments", collectionCount("Instruments"));
-    drawRow(BrowserNavAction::Vocals, "Vocals", collectionCount("Vocals"));
+    for (const auto& name : collections_) {
+        drawRow(BrowserNavAction::Collection, name, collectionCount(name), name);
+    }
+    drawRow(BrowserNavAction::AddCollection, "+ New Collection");
+    // The inline rename editor sits over its collection's row (rows move with
+    // the nav scroll, so it is re-placed on every nav paint).
+    if (navEditor_) {
+        for (const auto& hit : navHits_) {
+            if (hit.action == BrowserNavAction::Collection && hit.path == navEditorTarget_) {
+                navEditor_->setBounds(NUIRect(hit.bounds.x + 28.0f, hit.bounds.y + 3.0f,
+                                              std::max(40.0f, hit.bounds.width - 34.0f), hit.bounds.height - 6.0f));
+                break;
+            }
+        }
+    }
     drawDivider();
     drawSection("Places");
     drawRow(BrowserNavAction::Packs, "Packs");
@@ -1653,6 +1660,11 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
 
 void FileBrowser::onRender(NUIRenderer& renderer) {
     AESTRA_ZONE("FileBrowser_Render");
+
+    // Rename editors that finished last frame: safe to detach now, outside
+    // their own callbacks and outside any child iteration.
+    for (auto& retired : retiredNavEditors_) removeChild(retired);
+    retiredNavEditors_.clear();
 
     if (!isVisible()) return;
 
@@ -2715,10 +2727,9 @@ void FileBrowser::setCurrentPath(const std::string& path) {
     listingKind_ = ListingKind::None;
     listingTitle_.clear();
     listingTag_.clear();
-    if (wasListing && (activeNavAction_ == BrowserNavAction::Favorites || activeNavAction_ == BrowserNavAction::Purple ||
-                       activeNavAction_ == BrowserNavAction::CollectionDrums ||
-                       activeNavAction_ == BrowserNavAction::CollectionInstruments ||
-                       activeNavAction_ == BrowserNavAction::Vocals)) {
+    if (wasListing && (activeNavAction_ == BrowserNavAction::Favorites ||
+                       activeNavAction_ == BrowserNavAction::Collection ||
+                       activeNavAction_ == BrowserNavAction::CurrentProject)) {
         // Leaving a list for a folder: light that folder's place row, if any.
         activeNavAction_ = BrowserNavAction::CustomPlace;
         activeNavPath_ = targetPath;
@@ -2974,6 +2985,195 @@ void FileBrowser::setLibraryRoot(const std::string& path) {
 }
 
 // -----------------------------------------------------------------------------
+// User collections
+// -----------------------------------------------------------------------------
+
+namespace {
+std::string trimName(const std::string& raw) {
+    const auto b = raw.find_first_not_of(" \t\r\n");
+    if (b == std::string::npos) return {};
+    const auto e = raw.find_last_not_of(" \t\r\n");
+    return raw.substr(b, e - b + 1);
+}
+} // namespace
+
+NUIColor FileBrowser::collectionColor(const std::string& name) const {
+    static constexpr uint32_t kPalette[] = {0x7c3aed, 0xf97316, 0x22c55e, 0x3b82f6,
+                                            0xec4899, 0x14b8a6, 0xeab308, 0xef4444};
+    const auto it = std::find(collections_.begin(), collections_.end(), name);
+    if (it == collections_.end()) return NUIColor(0.42f, 0.42f, 0.42f, 1.0f); // a plain tag
+    const size_t index = static_cast<size_t>(it - collections_.begin());
+    return NUIColor::fromHex(kPalette[index % (sizeof(kPalette) / sizeof(kPalette[0]))]);
+}
+
+bool FileBrowser::createCollection(const std::string& rawName) {
+    const std::string name = trimName(rawName);
+    if (name.empty() || std::find(collections_.begin(), collections_.end(), name) != collections_.end()) {
+        return false;
+    }
+    collections_.push_back(name);
+    persistState();
+    invalidateCache();
+    return true;
+}
+
+std::string FileBrowser::createUntitledCollection() {
+    std::string name = "New Collection";
+    for (int n = 2; std::find(collections_.begin(), collections_.end(), name) != collections_.end(); ++n) {
+        name = "New Collection " + std::to_string(n);
+    }
+    createCollection(name);
+    return name;
+}
+
+bool FileBrowser::renameCollection(const std::string& from, const std::string& rawTo) {
+    const std::string to = trimName(rawTo);
+    auto it = std::find(collections_.begin(), collections_.end(), from);
+    if (it == collections_.end() || to.empty() || to == from ||
+        std::find(collections_.begin(), collections_.end(), to) != collections_.end()) {
+        return false;
+    }
+    *it = to;
+    // The collection IS the tag: every member follows the new name.
+    for (auto& [pathKey, tags] : tagsByPath_) {
+        const bool hadOld = std::find(tags.begin(), tags.end(), from) != tags.end();
+        if (!hadOld) continue;
+        tags.erase(std::remove(tags.begin(), tags.end(), from), tags.end());
+        if (std::find(tags.begin(), tags.end(), to) == tags.end()) tags.push_back(to);
+    }
+    if (activeTagFilter_ == from) activeTagFilter_ = to;
+    if (listingKind_ == ListingKind::Collection && listingTag_ == from) {
+        listingTag_ = to;
+        listingTitle_ = to;
+    }
+    persistState();
+    invalidateCache();
+    return true;
+}
+
+void FileBrowser::deleteCollection(const std::string& name) {
+    auto it = std::find(collections_.begin(), collections_.end(), name);
+    if (it == collections_.end()) return;
+    collections_.erase(it);
+    for (auto tagIt = tagsByPath_.begin(); tagIt != tagsByPath_.end();) {
+        auto& tags = tagIt->second;
+        tags.erase(std::remove(tags.begin(), tags.end(), name), tags.end());
+        tagIt = tags.empty() ? tagsByPath_.erase(tagIt) : std::next(tagIt);
+    }
+    if (activeTagFilter_ == name) activeTagFilter_.clear();
+    persistState();
+    if (listingKind_ == ListingKind::Collection && listingTag_ == name) {
+        exitListing();
+    }
+    invalidateCache();
+}
+
+void FileBrowser::beginCollectionRename(const std::string& name) {
+    if (name.empty() || std::find(collections_.begin(), collections_.end(), name) == collections_.end()) return;
+    if (navEditor_) finishCollectionRename(true);
+
+    auto& themeManager = NUIThemeManager::getInstance();
+    auto editor = std::make_shared<NUITextInput>();
+    editor->setMaxLength(48);
+    editor->setText(name);
+    editor->setTextColor(themeManager.getColor("textPrimary"));
+    editor->setBackgroundColor(themeManager.getColor("backgroundPrimary"));
+    editor->setJustification(NUITextInput::Justification::Left);
+    editor->setPadding(4.0f);
+    editor->setBorderRadius(4.0f);
+    editor->setOnReturnKey([this]() { finishCollectionRename(true); });
+    editor->setOnEscapeKey([this]() { finishCollectionRename(false); });
+    editor->setOnFocusLost([this]() { finishCollectionRename(true); });
+    navEditorTarget_ = name;
+    navEditor_ = editor;
+    addChild(editor);
+    // House order for a transient editor: focus, caret at end, then select-all
+    // so typing replaces the name.
+    editor->setFocused(true);
+    editor->setCaretPosition(static_cast<int>(name.size()));
+    editor->selectAll();
+    invalidateCache(); // the nav paint places the editor over the row
+}
+
+void FileBrowser::finishCollectionRename(bool accept) {
+    if (!navEditor_) return; // re-entry: unfocusing below fires onFocusLost again
+    std::shared_ptr<NUITextInput> editor = std::move(navEditor_);
+    navEditor_.reset();
+    const std::string target = std::move(navEditorTarget_);
+    navEditorTarget_.clear();
+    const std::string text = editor->getText();
+
+    editor->setVisible(false);
+    if (editor->isFocused()) editor->setFocused(false);
+    // Still executing inside one of its callbacks: detach and free it later.
+    retiredNavEditors_.push_back(std::move(editor));
+
+    if (accept) renameCollection(target, text);
+    invalidateCache();
+}
+
+void FileBrowser::showCollectionContextMenu(const std::string& name, const NUIPoint& position) {
+    if (!popupMenu_) return;
+    popupMenu_->clear();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
+
+    popupMenu_->addItem("Open", [this, name]() {
+        activeNavAction_ = BrowserNavAction::Collection;
+        showCollection(name);
+    });
+    popupMenu_->addItem("Rename...", [this, name]() { beginCollectionRename(name); });
+    popupMenu_->addSeparator();
+    int members = 0;
+    for (const auto& [_, tags] : tagsByPath_) {
+        if (std::find(tags.begin(), tags.end(), name) != tags.end()) ++members;
+    }
+    // Deleting a collection only ungroups: no file is touched. Say so.
+    const std::string label = members > 0 ? "Delete Collection (ungroups " + std::to_string(members) +
+                                                (members == 1 ? " item)" : " items)")
+                                          : "Delete Collection";
+    popupMenu_->addItem(label, [this, name]() { deleteCollection(name); });
+
+    attachAndShowPopupMenu(this, popupMenu_, position);
+    invalidateCache();
+}
+
+void FileBrowser::addTaggingSubmenus(const std::string& path) {
+    auto collectionsMenu = std::make_shared<NUIContextMenu>();
+    for (const auto& name : collections_) {
+        collectionsMenu->addCheckbox(name, hasTag(path, name), [this, path, name](bool) { toggleTag(path, name); });
+    }
+    if (!collections_.empty()) collectionsMenu->addSeparator();
+    collectionsMenu->addItem("New Collection...", [this, path]() {
+        const std::string name = createUntitledCollection();
+        toggleTag(path, name);
+        beginCollectionRename(name);
+    });
+    popupMenu_->addSubmenu("Add to Collection", collectionsMenu);
+
+    // Plain tags: the presets plus any tag already in use that is not a collection.
+    std::vector<std::string> tags = {"Bass", "Vocal", "FX", "Loops", "One-shots", "Synth", "Pads", "Ambience"};
+    for (const auto& t : getAllTagsSorted()) {
+        if (std::find(collections_.begin(), collections_.end(), t) != collections_.end()) continue;
+        if (std::find(tags.begin(), tags.end(), t) == tags.end()) tags.push_back(t);
+    }
+    auto tagsMenu = std::make_shared<NUIContextMenu>();
+    for (const auto& tag : tags) {
+        tagsMenu->addCheckbox(tag, hasTag(path, tag), [this, path, tag](bool) { toggleTag(path, tag); });
+    }
+    popupMenu_->addSubmenu("Tags", tagsMenu);
+}
+
+void FileBrowser::showCurrentProject() {
+    std::vector<std::string> paths;
+    if (projectFilesProvider_) paths = projectFilesProvider_();
+    std::sort(paths.begin(), paths.end());
+    paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+    activeNavAction_ = BrowserNavAction::CurrentProject;
+    beginListing(ListingKind::Project, "Current Project", std::move(paths));
+}
+
+// -----------------------------------------------------------------------------
 // Listing views (Favorites / Collections)
 // -----------------------------------------------------------------------------
 
@@ -3054,6 +3254,7 @@ void FileBrowser::reissueListing() {
     switch (listingKind_) {
         case ListingKind::Favorites: showFavorites(); break;
         case ListingKind::Collection: showCollection(listingTag_); break;
+        case ListingKind::Project: showCurrentProject(); break;
         case ListingKind::None: return;
     }
 
@@ -3408,6 +3609,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         } else if (listingKind_ == ListingKind::Collection) {
             drawListEmptyState(renderer, listClip, folderIcon_, "Nothing in " + listingTitle_ + " yet",
                                "Right-click any sound or folder and choose Add to Collection");
+        } else if (listingKind_ == ListingKind::Project) {
+            drawListEmptyState(renderer, listClip, folderIcon_, "No audio in this project yet",
+                               "Sounds you bring into the arrangement are listed here");
         } else if (!currentPath_.empty() && !rootPath_.empty() &&
                    normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_) &&
                    isPathUnderRoot(currentPath_, rootPath_)) {
@@ -3545,18 +3749,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                 const float tagDotStartX = contentX + renderer.measureText(displayName, labelFont).width + 8.0f;
                 float dotX = tagDotStartX;
                 const float rowCenterY = itemRect.y + itemRect.height * 0.5f;
-                static const std::unordered_map<std::string, NUIColor> kTagColors = {
-                    {"Purple", NUIColor(0.486f, 0.227f, 0.929f, 1.0f)},
-                    {"Drums", NUIColor(0.961f, 0.620f, 0.043f, 1.0f)},
-                    {"Instruments", NUIColor(0.204f, 0.835f, 0.600f, 1.0f)},
-                    {"Vocals", NUIColor(0.957f, 0.447f, 0.714f, 1.0f)},
-                    {"Effects", NUIColor(0.376f, 0.647f, 0.980f, 1.0f)},
-                    {"Clips", NUIColor(0.984f, 0.741f, 0.141f, 1.0f)},
-                };
                 for (const auto& tag : tagIt->second) {
-                    NUIColor dotColor = NUIColor(0.42f, 0.42f, 0.42f, 1.0f);
-                    auto cit = kTagColors.find(tag);
-                    if (cit != kTagColors.end()) dotColor = cit->second;
+                    const NUIColor dotColor = collectionColor(tag);
                     renderer.fillRoundedRect({dotX, rowCenterY - 4.0f, 8.0f, 8.0f}, 4.0f, dotColor);
                     dotX += 10.0f;
                     if (dotX > tagDotStartX + 34.0f) break;
@@ -3895,25 +4089,7 @@ void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& posi
 		                                if (isPlace(path)) removePlace(path);
 		                                else addPlace(path);
 		                            });
-		        {
-		            auto collectionsMenu = std::make_shared<NUIContextMenu>();
-            static const std::vector<std::string> kCollections = {"Purple", "Drums", "Instruments", "Vocals", "Effects", "Clips"};
-            for (const auto& tag : kCollections) {
-                collectionsMenu->addCheckbox(tag, hasTag(item.path, tag),
-                                             [this, path = item.path, tag](bool) { toggleTag(path, tag); });
-            }
-            popupMenu_->addSubmenu("Add to Collection", collectionsMenu);
-        }
-        {
-            auto tagsMenu = std::make_shared<NUIContextMenu>();
-            static const std::vector<std::string> kPresetTags = {
-                "Bass", "Vocal", "FX", "Loops", "One-shots", "Synth", "Pads", "Ambience"};
-            for (const auto& tag : kPresetTags) {
-                tagsMenu->addCheckbox(tag, hasTag(item.path, tag),
-                                      [this, path = item.path, tag](bool) { toggleTag(path, tag); });
-            }
-            popupMenu_->addSubmenu("Tags", tagsMenu);
-        }
+        addTaggingSubmenus(item.path);
         popupMenu_->addSeparator();
         popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
     } else {
@@ -3946,25 +4122,7 @@ void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& posi
 		            popupMenu_->addItem("Load", [this, path = item.path]() { openFile(path); });
 		        }
 
-		        {
-		            auto collectionsMenu = std::make_shared<NUIContextMenu>();
-            static const std::vector<std::string> kCollections = {"Purple", "Drums", "Instruments", "Vocals", "Effects", "Clips"};
-            for (const auto& tag : kCollections) {
-                collectionsMenu->addCheckbox(tag, hasTag(item.path, tag),
-                                             [this, path = item.path, tag](bool) { toggleTag(path, tag); });
-            }
-            popupMenu_->addSubmenu("Add to Collection", collectionsMenu);
-        }
-        {
-            auto tagsMenu = std::make_shared<NUIContextMenu>();
-            static const std::vector<std::string> kPresetTags = {
-                "Bass", "Vocal", "FX", "Loops", "One-shots", "Synth", "Pads", "Ambience"};
-            for (const auto& tag : kPresetTags) {
-                tagsMenu->addCheckbox(tag, hasTag(item.path, tag),
-                                      [this, path = item.path, tag](bool) { toggleTag(path, tag); });
-            }
-            popupMenu_->addSubmenu("Tags", tagsMenu);
-        }
+        addTaggingSubmenus(item.path);
 
 		        popupMenu_->addSeparator();
 		        popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
@@ -4174,6 +4332,9 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             case BrowserNavAction::AddFolder:
                 showAddFolderMenu();
                 return true;
+            case BrowserNavAction::Collection:
+                showCollectionContextMenu(hit.path, event.position);
+                return true;
             default:
                 return false;
         }
@@ -4205,27 +4366,31 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             activeQuickFilter_ = QuickFilter::All;
             showFavorites();
             break;
-        case BrowserNavAction::Purple:
+        case BrowserNavAction::Collection:
             activeQuickFilter_ = QuickFilter::All;
-            showCollection("Purple");
+            showCollection(navHits_[newHovered].path);
             break;
-        case BrowserNavAction::CollectionDrums:
-            activeQuickFilter_ = QuickFilter::All;
-            showCollection("Drums");
+        case BrowserNavAction::AddCollection:
+            activeNavAction_ = previousAction; // an action, not a destination
+            updateContentViews();
+            beginCollectionRename(createUntitledCollection());
             break;
-        case BrowserNavAction::CollectionInstruments:
-            activeQuickFilter_ = QuickFilter::All;
-            showCollection("Instruments");
-            break;
-        case BrowserNavAction::Vocals:
-            activeQuickFilter_ = QuickFilter::All;
-            showCollection("Vocals");
-            break;
+        // Sounds narrows whatever is on screen to audio. Samples is a place:
+        // the User Library folder for one-shots and loops, like Drums.
         case BrowserNavAction::Sounds:
-        case BrowserNavAction::Samples:
             activeTagFilter_.clear();
             setFilter(QuickFilter::Audio);
             break;
+        case BrowserNavAction::Samples: {
+            auto path = std::filesystem::path(rootPath_) / "User Library" / "Samples";
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
+            activeTagFilter_.clear();
+            activeQuickFilter_ = QuickFilter::Audio;
+            navigateTo(path.string());
+            applyFilter();
+            break;
+        }
         case BrowserNavAction::Drums: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Drums";
             std::filesystem::create_directories(path);
@@ -4271,11 +4436,9 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             break;
         }
         case BrowserNavAction::CurrentProject:
-            if (!rootPath_.empty()) {
-                navigateTo(rootPath_);
-            }
-            activeTagFilter_.clear();
-            setFilter(QuickFilter::All);
+            // The audio the open project uses — it used to open the library root.
+            activeQuickFilter_ = QuickFilter::All;
+            showCurrentProject();
             break;
         case BrowserNavAction::UserLibrary:
         case BrowserNavAction::Packs: {
@@ -4987,11 +5150,16 @@ bool FileBrowser::isSearchBoxFocused() const {
 }
 
 bool FileBrowser::blurSearchIfPressOutside(const NUIPoint& pos) {
+    bool cleared = false;
+    if (navEditor_ && !navEditor_->getBounds().contains(pos)) {
+        finishCollectionRename(true);
+        cleared = true;
+    }
     if (searchInput_ && searchInput_->isFocused() && !searchInput_->getBounds().contains(pos)) {
         searchInput_->setFocused(false);
-        return true;
+        cleared = true;
     }
-    return false;
+    return cleared;
 }
 
 // === PERSISTENT STATE SAVE/LOAD ===
@@ -5011,6 +5179,10 @@ bool FileBrowser::saveState(const std::string& filePath) const {
     Aestra::JSON favArr = Aestra::JSON::array();
     for (const auto& f : favoritesPaths_) favArr.push(Aestra::JSON(f));
     j.set("favorites", favArr);
+
+    Aestra::JSON collectionsArr = Aestra::JSON::array();
+    for (const auto& c : collections_) collectionsArr.push(Aestra::JSON(c));
+    j.set("collections", collectionsArr);
 
     Aestra::JSON placesArr = Aestra::JSON::array();
     for (const auto& p : customPlacePaths_) placesArr.push(Aestra::JSON(p));
@@ -5073,6 +5245,17 @@ bool FileBrowser::loadState(const std::string& filePath) {
             }
         }
     }
+
+    std::vector<std::string> collections;
+    if (readStrings("collections", collections)) {
+        collections_.clear();
+        for (auto& c : collections) {
+            const std::string name = trimName(c);
+            if (!name.empty() && std::find(collections_.begin(), collections_.end(), name) == collections_.end()) {
+                collections_.push_back(name);
+            }
+        }
+    } // absent (pre-v3 file): keep the default collections
 
     std::vector<std::string> places;
     if (readStrings("customPlaces", places)) {

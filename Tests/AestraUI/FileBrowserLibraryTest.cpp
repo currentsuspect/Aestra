@@ -248,7 +248,7 @@ void testCollectionListsTaggedItemsAnywhere() {
     // Tagged item lives outside the folder on screen: the old tag filter only
     // searched the current tree, so it could never appear.
     browser->toggleTag((box.home / "Music" / "pad.wav").string(), "Purple");
-    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::Purple), "Purple row is shown");
+    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::Collection, "Purple"), "Purple row is shown");
     CHECK(waitForScan(*browser), "collection listing finishes");
     CHECK(browser->isShowingListing() && browser->getListingTitle() == "Purple", "Purple collection is open");
     CHECK(listedNames(*browser) == std::vector<std::string>{"pad.wav"}, "tagged file from another folder is listed");
@@ -339,6 +339,87 @@ void testSortIsNaturalAndCaseInsensitive() {
     CHECK(order == expected, "name sort is natural and case-insensitive");
 }
 
+// Collections are the user's, not a hardcoded four: create, rename (members
+// follow), delete (members ungrouped, files untouched), and they persist.
+void testUserCollections() {
+    Sandbox box("usercollections");
+    const std::string statePath = (box.home / "browser_library.json").string();
+    const std::string kick = (box.home / "Downloads" / "kick.wav").string();
+    {
+        auto browser = makeBrowser();
+        CHECK(waitForScan(*browser), "initial scan finishes");
+        browser->setStatePath(statePath);
+        CHECK(browser->createCollection("Kicks"), "create a collection");
+        CHECK(!browser->createCollection("Kicks"), "names are unique");
+        CHECK(!browser->createCollection("   "), "blank names refused");
+        browser->toggleTag(kick, "Kicks");
+        CHECK(browser->renameCollection("Kicks", " 808s "), "rename");
+        CHECK(browser->hasTag(kick, "808s") && !browser->hasTag(kick, "Kicks"), "members follow a rename");
+        CHECK(!browser->renameCollection("808s", "Purple"), "rename onto an existing name refused");
+    }
+    auto restored = makeBrowser();
+    CHECK(waitForScan(*restored), "initial scan finishes");
+    CHECK(restored->loadState(statePath), "state loads");
+    const auto& names = restored->getCollections();
+    CHECK(std::find(names.begin(), names.end(), "808s") != names.end(), "a user collection survives restart");
+    CHECK(restored->hasTag(kick, "808s"), "its member survives restart");
+
+    restored->deleteCollection("808s");
+    CHECK(!restored->hasTag(kick, "808s"), "deleting ungroups the member");
+    CHECK(fs::exists(kick), "and leaves the file alone");
+    const auto& after = restored->getCollections();
+    CHECK(std::find(after.begin(), after.end(), "808s") == after.end(), "the collection is gone");
+}
+
+// "+ New Collection" creates one and opens the inline name editor; a click
+// elsewhere commits, and the editor is released on the next paint.
+void testNewCollectionRowOpensEditor() {
+    Sandbox box("newcollection");
+    auto browser = makeBrowser(1100.0f);
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::AddCollection), "+ New Collection row is shown");
+    const auto& names = browser->getCollections();
+    CHECK(std::find(names.begin(), names.end(), "New Collection") != names.end(), "a collection was created");
+    CHECK(browser->isRenamingCollection(), "its name editor is open");
+
+    browser->blurSearchIfPressOutside({-50.0f, -50.0f});
+    CHECK(!browser->isRenamingCollection(), "a click elsewhere commits the name");
+    Aestra::Testing::NullRenderer renderer;
+    browser->onRender(renderer); // releases the retired editor; must not crash
+    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::Collection, "New Collection"),
+          "the new collection has a nav row");
+}
+
+// Current Project used to open the library root. It lists the project's audio.
+void testCurrentProjectListsProjectAudio() {
+    Sandbox box("project");
+    auto browser = makeBrowser(1100.0f);
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    const std::string kick = (box.home / "Downloads" / "kick.wav").string();
+    const std::string pad = (box.home / "Music" / "pad.wav").string();
+    const std::string gone = (box.home / "Music" / "deleted.wav").string();
+    browser->setProjectFilesProvider([=]() { return std::vector<std::string>{pad, kick, gone, kick}; });
+
+    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::CurrentProject), "Current Project row is shown");
+    CHECK(waitForScan(*browser), "project listing finishes");
+    CHECK(browser->isShowingListing() && browser->getListingTitle() == "Current Project", "Current Project is a list");
+    CHECK(listedNames(*browser) == (std::vector<std::string>{"kick.wav", "pad.wav"}),
+          "the project's files, once each, missing ones left out");
+}
+
+// Samples used to be a second "Sounds" (an audio filter). It is a place now.
+void testSamplesIsAFolder() {
+    Sandbox box("samples");
+    touch(box.home / "Documents" / "Aestra" / "User Library" / "Samples" / "hat.wav");
+    auto browser = makeBrowser(1100.0f);
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    CHECK(clickNav(*browser, FileBrowser::BrowserNavAction::Samples), "Samples row is shown");
+    CHECK(waitForScan(*browser), "Samples scan finishes");
+    CHECK(canon(browser->getCurrentPath()) == canon(box.home / "Documents" / "Aestra" / "User Library" / "Samples"),
+          "Samples opens its folder");
+    CHECK(lists(*browser, "hat.wav"), "its sounds are listed");
+}
+
 } // namespace
 
 int main() {
@@ -353,6 +434,10 @@ int main() {
     testLibraryStateRoundTrip();
     testLegacySettingsImport();
     testSortIsNaturalAndCaseInsensitive();
+    testUserCollections();
+    testNewCollectionRowOpensEditor();
+    testCurrentProjectListsProjectAudio();
+    testSamplesIsAFolder();
 
     if (g_failures == 0) {
         std::printf("FileBrowserLibraryTest: all checks passed\n");

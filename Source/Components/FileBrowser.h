@@ -182,6 +182,23 @@ public:
     void toggleTag(const std::string& path, const std::string& tag);
     bool hasTag(const std::string& path, const std::string& tag) const;
 
+    // User collections: the named tags pinned to the navigation pane, in order.
+    const std::vector<std::string>& getCollections() const { return collections_; }
+    bool createCollection(const std::string& name);                        ///< false if empty or taken
+    bool renameCollection(const std::string& from, const std::string& to); ///< retags every member
+    void deleteCollection(const std::string& name);                        ///< untags members; files untouched
+    /// Open an inline name editor on the collection's nav row (Enter/click-away
+    /// commits, Esc cancels).
+    void beginCollectionRename(const std::string& name);
+    bool isRenamingCollection() const { return navEditor_ != nullptr; }
+
+    /// Current Project: supplies the audio files the open project uses. The app
+    /// wires it to the engine's source list; the browser stays engine-agnostic.
+    void setProjectFilesProvider(std::function<std::vector<std::string>()> provider) {
+        projectFilesProvider_ = std::move(provider);
+    }
+    void showCurrentProject();
+
     // Listing views: Favorites and Collections show a flat list of items gathered
     // from anywhere on disk instead of one directory's contents.
     void showFavorites();
@@ -244,10 +261,8 @@ public:
     // Navigation actions
     enum class BrowserNavAction {
         Favorites,
-        Purple,
-        CollectionDrums,
-        CollectionInstruments,
-        Vocals,
+        Collection,    // one row per user collection; BrowserNavHit::path is its name
+        AddCollection, // "+ New Collection"
         Sounds,
         Drums,
         Instruments,
@@ -430,12 +445,25 @@ public:
         void migrateLegacySettings(const std::string& filePath);
 
         // Listing views
-        enum class ListingKind { None, Favorites, Collection };
+        enum class ListingKind { None, Favorites, Collection, Project };
         void beginListing(ListingKind kind, const std::string& title, std::vector<std::string> paths);
         void reissueListing();
         void exitListing();
         std::vector<std::string> pathsWithTag(const std::string& tag) const;
         void showPlaceContextMenu(const BrowserNavHit& hit, const NUIPoint& position);
+        void showCollectionContextMenu(const std::string& name, const NUIPoint& position);
+        void addTaggingSubmenus(const std::string& path);
+        std::string createUntitledCollection();
+        void finishCollectionRename(bool accept);
+        NUIColor collectionColor(const std::string& name) const;
+        std::vector<std::string> collections_{"Purple", "Drums", "Instruments", "Vocals"};
+        std::function<std::vector<std::string>()> projectFilesProvider_;
+        // Inline collection-name editor. A finished editor is parked in
+        // retiredNavEditors_ and dropped on the next onRender(): it must never
+        // be freed or detached from inside its own callbacks.
+        std::shared_ptr<NUITextInput> navEditor_;
+        std::string navEditorTarget_;
+        std::vector<std::shared_ptr<NUITextInput>> retiredNavEditors_;
         void persistState();
         ListingKind listingKind_ = ListingKind::None;
         std::string listingTitle_;
