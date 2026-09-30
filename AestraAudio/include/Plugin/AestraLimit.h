@@ -80,6 +80,43 @@ public:
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
+    void pushLookaheadBypass(float inL, float inR, bool stereo, float& outL, float& outR) {
+        m_lookaheadBuf[0][m_writeCursor] = inL;
+        if (stereo)
+            m_lookaheadBuf[1][m_writeCursor] = inR;
+        m_writeCursor = (m_writeCursor + 1) % m_lookaheadSize;
+
+        const uint32_t readOffset = (m_writeCursor + m_lookaheadSize - m_lookaheadSamples) % m_lookaheadSize;
+        outL = m_lookaheadBuf[0][readOffset];
+        outR = stereo ? m_lookaheadBuf[1][readOffset] : outL;
+    }
+
+    // Bypass must delay by the same amount the plugin reports, or a host that
+    // compensates the chain against getLatencySamples() places this plugin
+    // m_lookaheadSamples early. Routing through the lookahead ring keeps the
+    // reported latency constant instead of changing it with the knob.
+    void bypassThroughLookahead(const float* const* inputs, float** outputs,
+                                uint32_t numInputChannels, uint32_t numOutputChannels,
+                                uint32_t numFrames) {
+        if (m_lookaheadSize == 0 || m_lookaheadSamples == 0) {
+            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            return;
+        }
+        const bool stereo = numInputChannels >= 2 && numOutputChannels >= 2;
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i));
+            const float inR = stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
+            float outL = 0.0f, outR = 0.0f;
+            pushLookaheadBypass(inL, inR, stereo, outL, outR);
+            if (outputs[0]) outputs[0][i] = outL;
+            if (stereo && outputs[1]) outputs[1][i] = outR;
+        }
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch])
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+        }
+    }
+
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
@@ -89,7 +126,7 @@ public:
 
         if (!m_active.load(std::memory_order_relaxed) ||
             m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
-            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            bypassThroughLookahead(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 
@@ -204,6 +241,7 @@ public:
 
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount) return;
+        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the parameter smoothers
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
     }
 
@@ -269,8 +307,13 @@ public:
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
+    // The lookahead ring reads the slot written one iteration ago, so the
+    // input reaching the VCA is m_lookaheadSamples - 1 old, not
+    // m_lookaheadSamples. Verified by impulse probe: it reported 96 while the
+    // first non-zero output landed on frame 95. Reporting the real figure is
+    // what lets a host delay-compensate the chain correctly.
     uint32_t getLatencySamples() const override {
-        return m_lookaheadSamples;
+        return m_lookaheadSamples > 0u ? m_lookaheadSamples - 1u : 0u;
     }
     uint32_t getTailSamples() const override { return 0; }
     WatchdogStats getWatchdogStats() const override { return {}; }

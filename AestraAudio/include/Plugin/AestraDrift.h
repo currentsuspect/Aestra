@@ -74,18 +74,62 @@ public:
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
-    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
-        (void)midiInput;
-        (void)midiOutput;
-
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+    // Bypass has to delay by the same amount getLatencySamples() reports.
+    // EffectChain::getTotalLatency() counts this plugin's latency whenever the
+    // slot is not host-bypassed, and it cannot see the plugin's own Bypass
+    // knob — so a straight copy here would place Drift m_latencySamples early
+    // against everything downstream in a delay-compensated chain. Routing
+    // through the grain ring keeps the reported latency constant instead of
+    // changing it with the knob, and keeps advancing so un-bypassing is
+    // seamless.
+    void bypassThroughGrainDelay(const float* const* inputs, float** outputs,
+                                 uint32_t numInputChannels, uint32_t numOutputChannels,
+                                 uint32_t numFrames) {
+        if (m_buffer.empty() || m_bufferR.empty() || m_latencySamples == 0) {
             for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
                 if (outputs[ch] && ch < numInputChannels && inputs[ch])
                     std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
                 else if (outputs[ch])
                     std::memset(outputs[ch], 0, numFrames * sizeof(float));
             }
+            return;
+        }
+
+        const bool stereo = numInputChannels >= 2 && numOutputChannels >= 2;
+        const int mask = m_bufferMask;
+        const int latency = static_cast<int>(m_latencySamples);
+        int writePos = m_writePos;
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            const float inL = (numInputChannels >= 1 && inputs[0]) ? inputs[0][i] : 0.0f;
+            const float inR = (stereo && inputs[1]) ? inputs[1][i] : inL;
+            m_buffer[writePos] = inL;
+            m_bufferR[writePos] = inR;
+            // Kept non-negative before the mask: bufferSize always exceeds
+            // m_latencySamples, so adding the ring length first is a plain
+            // modular read rather than a mask over a negative int.
+            const int readPos = (writePos + mask + 1 - latency) & mask;
+            if (outputs[0])
+                outputs[0][i] = m_buffer[readPos];
+            if (stereo && outputs[1])
+                outputs[1][i] = m_bufferR[readPos];
+            writePos = (writePos + 1) & mask;
+        }
+        m_writePos = writePos;
+
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch])
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+        }
+    }
+
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
+                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
+        (void)midiInput;
+        (void)midiOutput;
+
+        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+            bypassThroughGrainDelay(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 

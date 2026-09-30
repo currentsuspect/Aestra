@@ -322,3 +322,18 @@ target_include_directories(MasterEffectChainTest PRIVATE
 add_test(NAME MasterEffectChainTest COMMAND MasterEffectChainTest)
 set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence;contract:plugins")
 
+# Registry-driven conformance sweep — one contract, every built-in plugin. The
+# sweep reads InternalPluginRegistry, so a plugin gets its generic contract
+# coverage by being registered, with no test code of its own. This is the
+# family-wide sweep that PluginInitContractTest hand-lists (and therefore
+# silently skips EQ, Transient and the sampler for).
+add_executable(PluginConformanceSweepTest AestraAudio/PluginConformanceSweepTest.cpp)
+target_link_libraries(PluginConformanceSweepTest PRIVATE AestraAudio)
+target_include_directories(PluginConformanceSweepTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginConformanceSweepTest COMMAND PluginConformanceSweepTest)
+set_tests_properties(PluginConformanceSweepTest PROPERTIES LABELS "audio;plugins;registry;conformance;contract:plugins" TIMEOUT 300)
+
