@@ -89,6 +89,35 @@ int main() {
         check(state == legacyBlob(sat.kStateMagic, expected), "Sat blob is byte-identical to the legacy layout");
     }
 
+    // --- Defaults are seeded exactly once, on the first initialize -------
+    // The gate that enforces this moved into the base, so a migrated plugin
+    // cannot leave it out. A plugin that never seeded would come up with every
+    // parameter at 0.0f: Transient fully dry and 12 dB down.
+    {
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        check(std::abs(t.getParameter(Plugins::AestraTransient::kMix) - 1.0f) < 1e-6f,
+              "first initialize seeds Mix from the table default (1.0)");
+        check(std::abs(t.getParameter(Plugins::AestraTransient::kOutput) - 0.5f) < 1e-6f,
+              "first initialize seeds Output from the table default (0.5)");
+
+        // A re-prepare at another rate must NOT wipe the user's values — this
+        // is the #474 parameter-wipe bug the init contract exists to catch.
+        t.setParameter(Plugins::AestraTransient::kMix, 0.25f);
+        t.initialize(96000.0, 128);
+        check(std::abs(t.getParameter(Plugins::AestraTransient::kMix) - 0.25f) < 1e-6f,
+              "re-initialize preserves the user's parameters");
+
+        // A loaded value must survive a re-prepare too.
+        Plugins::AestraTransient loaded;
+        loaded.initialize(48000.0, 256);
+        check(loaded.loadState(legacyBlob(Plugins::AestraTransient::kStateMagic, {0.8f, 0.2f, 0.6f, 0.4f, 1.0f})),
+              "Transient accepts a hand-built legacy blob");
+        loaded.initialize(96000.0, 128);
+        check(std::abs(loaded.getParameter(Plugins::AestraTransient::kMix) - 0.4f) < 1e-6f,
+              "re-initialize preserves loaded project state");
+    }
+
     if (failures > 0) {
         std::cout << failures << " blob-layout check(s) failed\n";
         return 1;

@@ -74,16 +74,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        // The base seeds defaults on the first initialize of a fresh instance;
-        // a re-prepare (sample-rate/device change) must preserve the user's
-        // parameters and any loaded project state.
-        if (!m_paramsInitialized.exchange(true)) {
-            seedDefaults();
-        }
+        seedDefaultsOnce();
         resetRuntimeState();
         snapSmoothedParams();
         return true;
@@ -309,8 +300,7 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-
+    
     float m_fast = 0.0f;
     float m_slow = 0.0f;
     float m_gainSmoothed = 1.0f;

@@ -69,10 +69,15 @@ public:
     /// plugin's saved state apart from another's.
     virtual uint32_t stateMagic() const = 0;
 
-    /// Seeds storage with the table's defaults. The base calls this on the
-    /// first initialize only, so a re-prepare preserves the user's parameters
-    /// and any loaded project state.
-    virtual void seedDefaults() {
+    /// Writes the table's defaults into storage.
+    ///
+    /// The subclass calls this, exactly once, on the first initialize() of a
+    /// fresh instance — usually through seedDefaultsOnce(), which owns the
+    /// gate. The base never calls it on the subclass's behalf: initialize()
+    /// is not owned here, so a plugin that skipped the call would silently
+    /// start with every parameter at 0.0f (Transient would come up fully dry
+    /// and 12 dB down) rather than at its declared defaults.
+    void seedDefaults() {
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             const ParamSpec& spec = *p;
             m_params[spec.id].store(spec.defaultValue, std::memory_order_relaxed);
@@ -221,6 +226,18 @@ protected:
     static constexpr uint32_t kMaxSpecParams = 48;
     static constexpr uint32_t kStateVersion = 1;
 
+    /// Seeds defaults on the first initialize() of a fresh instance only.
+    ///
+    /// EffectChain::prepare() re-calls initialize() on the live instance during
+    /// sample-rate and device changes, and that must preserve the user's
+    /// parameters and any loaded project state — so the gate lives here rather
+    /// than in each plugin's initialize(), where ten more migrations would each
+    /// re-derive it.
+    void seedDefaultsOnce() {
+        if (!m_defaultsSeeded.exchange(true))
+            seedDefaults();
+    }
+
     /// Relaxed read for a plugin's own DSP. Storage lives in the base so the
     /// guard, the clamp and the blob stay in one place.
     float paramValue(uint32_t id) const { return m_params[id].load(std::memory_order_relaxed); }
@@ -273,6 +290,7 @@ private:
     }
 
     std::array<std::atomic<float>, kMaxSpecParams> m_params{};
+    std::atomic<bool> m_defaultsSeeded{false};
 };
 
 } // namespace Audio
