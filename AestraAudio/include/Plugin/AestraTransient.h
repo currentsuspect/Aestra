@@ -47,7 +47,17 @@ public:
         kParamCount,
     };
 
-    static const ParamSpec kSpecs[];
+    // inline, not a static member declared here and defined at the bottom of
+    // this header: this header is included by the DSP library and again by the
+    // editor, and an out-of-class definition has external linkage, so both TUs
+    // emitted a definition and the app link failed on a duplicate symbol.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kAttack, "Attack", "ATK", "", 0.5f, 0.0f, 1.0f, true},
+        {kSustain, "Sustain", "SUS", "", 0.5f, 0.0f, 1.0f, true},
+        {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
 
     // Detector time constants (seconds). Fixed by design: the workhorse brief
     // exposes only the two amounts, not the detector tuning.
@@ -319,14 +329,6 @@ private:
 
     std::atomic<float> m_inputLevel{0.0f};
     std::atomic<float> m_outputLevel{0.0f};
-};
-
-const ParamSpec AestraTransient::kSpecs[] = {
-    {kAttack, "Attack", "ATK", "", 0.5f, 0.0f, 1.0f, true},
-    {kSustain, "Sustain", "SUS", "", 0.5f, 0.0f, 1.0f, true},
-    {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-    {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-    {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
 };
 
 } // namespace Plugins
