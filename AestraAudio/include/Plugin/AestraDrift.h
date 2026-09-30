@@ -95,14 +95,18 @@ public:
             return;
         }
 
-        const bool stereo = numInputChannels >= 2 && numOutputChannels >= 2;
+        // Output side and input side are decided separately: a mono-in /
+        // stereo-out layout still has to fill outputs[1], and the wet path
+        // duplicates the left input into the right, so the bypass does too.
+        const bool stereoOut = numOutputChannels >= 2;
+        const bool hasRightInput = numInputChannels >= 2 && inputs[1] != nullptr;
         const int mask = m_bufferMask;
         const int latency = static_cast<int>(m_latencySamples);
         int writePos = m_writePos;
 
         for (uint32_t i = 0; i < numFrames; ++i) {
             const float inL = (numInputChannels >= 1 && inputs[0]) ? inputs[0][i] : 0.0f;
-            const float inR = (stereo && inputs[1]) ? inputs[1][i] : inL;
+            const float inR = hasRightInput ? inputs[1][i] : inL;
             m_buffer[writePos] = inL;
             m_bufferR[writePos] = inR;
             // Kept non-negative before the mask: bufferSize always exceeds
@@ -111,7 +115,7 @@ public:
             const int readPos = (writePos + mask + 1 - latency) & mask;
             if (outputs[0])
                 outputs[0][i] = m_buffer[readPos];
-            if (stereo && outputs[1])
+            if (stereoOut && outputs[1])
                 outputs[1][i] = m_bufferR[readPos];
             writePos = (writePos + 1) & mask;
         }

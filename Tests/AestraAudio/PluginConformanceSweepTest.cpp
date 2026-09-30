@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
@@ -299,12 +300,12 @@ void contractHostileInputStaysFinite(IPluginInstance& plugin, const PluginInfo& 
     const float cases[] = {nan, inf, -inf, denorm, -denorm, 10.0f, -10.0f};
     const char* names[] = {"NaN", "+inf", "-inf", "denormal", "-denormal", "+10.0", "-10.0"};
 
-    for (float v : cases) {
+    for (size_t k = 0; k < std::size(cases); ++k) {
         for (uint32_t i = 0; i < kBlock; ++i)
-            ch.setFrame(i, v);
+            ch.setFrame(i, cases[k]);
         processBlock(plugin, ch, kBlock);
         if (!ch.allFinite()) {
-            rep.fail("HostileInputStaysFinite", std::string("non-finite output from ") + names[&v - &cases[0]]);
+            rep.fail("HostileInputStaysFinite", std::string("non-finite output from ") + names[k]);
             return;
         }
     }

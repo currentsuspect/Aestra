@@ -102,14 +102,18 @@ public:
             copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
-        const bool stereo = numInputChannels >= 2 && numOutputChannels >= 2;
+        // Output side and input side are decided separately: a mono-in /
+        // stereo-out layout still has to fill outputs[1], which the previous
+        // straight copy zero-filled.
+        const bool stereoOut = numOutputChannels >= 2;
+        const bool hasRightInput = numInputChannels >= 2 && inputs[1] != nullptr;
         for (uint32_t i = 0; i < numFrames; ++i) {
             const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i));
-            const float inR = stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
+            const float inR = hasRightInput ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
             float outL = 0.0f, outR = 0.0f;
-            pushLookaheadBypass(inL, inR, stereo, outL, outR);
+            pushLookaheadBypass(inL, inR, stereoOut, outL, outR);
             if (outputs[0]) outputs[0][i] = outL;
-            if (stereo && outputs[1]) outputs[1][i] = outR;
+            if (stereoOut && outputs[1]) outputs[1][i] = outR;
         }
         for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
             if (outputs[ch])
