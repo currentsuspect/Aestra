@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -33,7 +34,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraTransient : public IPluginInstance {
+class AestraTransient : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x54524E31; // 'TRN1'
 
@@ -45,6 +46,8 @@ public:
         kBypass,
         kParamCount,
     };
+
+    static const ParamSpec kSpecs[];
 
     // Detector time constants (seconds). Fixed by design: the workhorse brief
     // exposes only the two amounts, not the detector tuning.
@@ -65,10 +68,11 @@ public:
         // instance. EffectChain::prepare() re-calls initialize() on the live
         // instance during sample-rate/device changes and must preserve the
         // user's current parameter values (and any loaded project state).
+        // The base seeds defaults on the first initialize of a fresh instance;
+        // a re-prepare (sample-rate/device change) must preserve the user's
+        // parameters and any loaded project state.
         if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
+            seedDefaults();
         }
         resetRuntimeState();
         snapSmoothedParams();
@@ -92,7 +96,7 @@ public:
         (void)midiOutput;
 
         // Zero reported latency means internal bypass is a plain copy.
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
             copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             m_wasBypassed = true;
             return;
@@ -178,31 +182,13 @@ public:
         m_outputLevel.store(blockOutputPeak, std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
-
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
-            return;
-        if (!std::isfinite(value))
-            return; // NaN survives clamp (comparisons are false) and would poison smoothing
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kAttack, "Attack", "ATK", "", 0.5f, 0.0f, 1.0f, true},
-            {kSustain, "Sustain", "SUS", "", 0.5f, 0.0f, 1.0f, true},
-            {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-        };
-    }
+    // The declarative table this migration is about: the plugin describes its
+    // parameters as data and inherits storage, the guards, the parameter list
+    // and the state blob. Same literal the class used to build by hand in
+    // getParameters(), now as a ParamSpec table.
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -232,63 +218,12 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagic;
-            uint32_t version = 1;
-            float params[kParamCount] = {};
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return {data, data + sizeof(blob)};
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        if (magic != kStateMagic)
-            return false;
-        struct Blob {
-            uint32_t magic;
-            uint32_t version;
-            float params[kParamCount];
-        };
-        if (state.size() < sizeof(Blob))
-            return false;
-        Blob blob{};
-        std::memcpy(&blob, state.data(), sizeof(blob));
-        if (blob.version < 1 || blob.version > 1)
-            return false;
-        // Reject the whole blob before touching any parameter: a corrupt
-        // value must not leave the instance half-updated (AGENTS.md §12).
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            if (!std::isfinite(blob.params[i]))
-                return false;
-        }
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob.params[i]);
-        }
-        return true;
-    }
-
+    // The base returns false/0 for these; this plugin does ship an editor.
     bool hasEditor() const override { return true; }
-    bool openEditor(void*) override { return false; }
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
     std::pair<int, int> getEditorSize() const override { return {560, 360}; }
-    bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
-    uint32_t getTailSamples() const override { return 0; }
-    WatchdogStats getWatchdogStats() const override { return {}; }
-    void resetWatchdog() override {}
-    bool isBypassedByWatchdog() const override { return false; }
-    bool isCrashed() const override { return false; }
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
@@ -365,7 +300,6 @@ private:
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
     std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
 
     float m_fast = 0.0f;
     float m_slow = 0.0f;
@@ -385,6 +319,14 @@ private:
 
     std::atomic<float> m_inputLevel{0.0f};
     std::atomic<float> m_outputLevel{0.0f};
+};
+
+const ParamSpec AestraTransient::kSpecs[] = {
+    {kAttack, "Attack", "ATK", "", 0.5f, 0.0f, 1.0f, true},
+    {kSustain, "Sustain", "SUS", "", 0.5f, 0.0f, 1.0f, true},
+    {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+    {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+    {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
 };
 
 } // namespace Plugins

@@ -337,3 +337,15 @@ target_include_directories(PluginConformanceSweepTest PRIVATE
 add_test(NAME PluginConformanceSweepTest COMMAND PluginConformanceSweepTest)
 set_tests_properties(PluginConformanceSweepTest PROPERTIES LABELS "audio;plugins;registry;conformance;contract:plugins" TIMEOUT 300)
 
+# The base class must not change a byte of any plugin's saved state: every
+# built-in shipped {magic, version, params[count]}, and a migrated plugin has
+# to produce the identical blob or every saved project breaks (AGENTS.md §12).
+add_executable(InternalPluginBaseBlobTest AestraAudio/InternalPluginBaseBlobTest.cpp)
+target_link_libraries(InternalPluginBaseBlobTest PRIVATE AestraAudio)
+target_include_directories(InternalPluginBaseBlobTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME InternalPluginBaseBlobTest COMMAND InternalPluginBaseBlobTest)
+set_tests_properties(InternalPluginBaseBlobTest PROPERTIES LABELS "audio;plugins;serialization;contract:durability" TIMEOUT 120)
