@@ -39,6 +39,7 @@
 #include <chrono>
 #include "../Core/AudioSettingsStore.h"
 #include "../Core/DockedRailWidths.h"
+#include "AestraJSONFile.h"
 #include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
@@ -1185,6 +1186,9 @@ void AestraApp::restoreUIState(const UIState& uiState) {
 
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
+        // Library state (favorites, places, collections, sort, library root) is
+        // the browser's own file; where it was looking is restored from UIState below.
+        fileBrowser->initLibraryState(resolveAppDataFilePath("Aestra", "browser_library.json"));
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);

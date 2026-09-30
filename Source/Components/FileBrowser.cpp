@@ -14,6 +14,7 @@
 #include "Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/AestraJSON.h"
+#include "../AestraPlat/include/AestraJSONFile.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -21,6 +22,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -47,13 +49,12 @@ constexpr float BROWSER_NAV_ROW_H = 30.0f;
 constexpr float BROWSER_LIST_HEADER_H = 34.0f;
 constexpr float BROWSER_LIST_ROW_H = 30.0f;
 
-static std::string getSettingsPath() {
-    const char* home = getenv("HOME");
-    if (!home) home = "/tmp";
-    std::string dir = std::string(home) + "/.config/aestra";
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    return dir + "/browser_settings.json";
+// Where builds before the v3 library file kept browser settings. Read once, to
+// import places dropped onto the nav pane; never written again.
+std::string legacySettingsPath() {
+    const char* home = std::getenv("HOME");
+    if (!home || !*home) return {};
+    return (std::filesystem::path(home) / ".config" / "aestra" / "browser_settings.json").string();
 }
 
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
@@ -290,22 +291,19 @@ bool isPathUnderRoot(const std::filesystem::path& candidatePath, const std::file
     return candidate.compare(0, root.size(), root) == 0;
 }
 
-std::string resolveExistingDirectoryPath(const std::string& requestedPath, const std::string& rootPath) {
+// Resolve @p requestedPath to the nearest existing directory (walking up through
+// parents that were deleted or unmounted). @p fallbackRoot is used only when
+// nothing along that chain exists — it is a starting point, not a boundary:
+// the browser may show any folder the user can read.
+std::string resolveExistingDirectoryPath(const std::string& requestedPath, const std::string& fallbackRoot) {
     namespace fs = std::filesystem;
 
     std::error_code ec;
-    fs::path root = rootPath.empty() ? fs::path() : fs::path(rootPath);
+    fs::path root = fallbackRoot.empty() ? fs::path() : fs::path(fallbackRoot);
     fs::path candidate = requestedPath.empty() ? root : fs::path(requestedPath);
-
-    if (!root.empty() && !isPathUnderRoot(candidate, root)) {
-        candidate = root;
-    }
 
     while (!candidate.empty()) {
         if (fs::exists(candidate, ec) && fs::is_directory(candidate, ec)) {
-            if (!root.empty() && !isPathUnderRoot(candidate, root)) {
-                break;
-            }
             return canonicalOrNormalized(candidate).string();
         }
 
@@ -413,6 +411,8 @@ FileBrowser::FileBrowser()
          currentPath_ = rootPath_;
          Aestra::Log::warning("[FileBrowser] Failed to set default root, fallback to CWD: " + rootPath_);
     }
+
+    systemPlaces_ = BrowserLibrary::discoverSystemPlaces();
 
     // Initial scan happens in onUpdate/onResize or explicit load?
     // We usually wait for first render/update, but let's ensure it's validated.
@@ -673,7 +673,11 @@ void FileBrowser::scanWorkerLoop() {
         result.path = task.path;
         result.depth = task.depth;
         result.generation = task.generation;
-        result.items = scanDirectory(task.path, task.depth, task.showHidden, task.generation, result.error);
+        if (task.kind == ScanKind::Listing) {
+            result.items = scanListing(task.paths, task.generation);
+        } else {
+            result.items = scanDirectory(task.path, task.depth, task.showHidden, task.generation, result.error);
+        }
 
         {
             std::lock_guard<std::mutex> lock(scanMutex_);
@@ -788,6 +792,11 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
 
             FileItem item(name, entryPath, type, isDir, size, lastModified);
             item.depth = depth;
+            {
+                std::error_code timeEc;
+                const auto modified = entry.last_write_time(timeEc);
+                if (!timeEc) item.modifiedTime = static_cast<int64_t>(modified.time_since_epoch().count());
+            }
             if (!isDir && (type == FileType::AudioFile || type == FileType::MusicFile ||
                            type == FileType::WavFile || type == FileType::Mp3File ||
                            type == FileType::FlacFile)) {
@@ -800,6 +809,48 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
         Log::warning(std::string("[FileBrowser] Scan failed for ") + path + ": " + e.what());
     }
 
+    return items;
+}
+
+std::vector<FileItem> FileBrowser::scanListing(const std::vector<std::string>& paths, uint64_t generation) const {
+    namespace fs = std::filesystem;
+    std::vector<FileItem> items;
+    items.reserve(paths.size());
+    for (const auto& rawPath : paths) {
+        if (scanStop_.load(std::memory_order_acquire) ||
+            generation != scanGeneration_.load(std::memory_order_acquire)) {
+            break;
+        }
+        // Favorites and tags are stored as generic ('/') keys; hand the OS its
+        // native form so the row's path matches what a directory scan produces.
+        const fs::path path = fs::path(rawPath).make_preferred();
+        std::error_code ec;
+        const fs::file_status status = fs::status(path, ec);
+        if (ec || !fs::exists(status)) {
+            continue; // Moved or deleted since it was added: leave it out, keep the entry.
+        }
+        const bool isDir = fs::is_directory(status);
+
+        size_t size = 0;
+        if (!isDir) {
+            std::error_code sizeEc;
+            size = static_cast<size_t>(fs::file_size(path, sizeEc));
+            if (sizeEc) size = 0;
+        }
+
+        std::string name = path.filename().string();
+        if (name.empty()) name = path.string();
+        const FileType type = FileFilter::getType(path.string(), isDir);
+        FileItem item(name, path.string(), type, isDir, size, "");
+        std::error_code timeEc;
+        const auto modified = fs::last_write_time(path, timeEc);
+        if (!timeEc) item.modifiedTime = static_cast<int64_t>(modified.time_since_epoch().count());
+        if (!isDir && (type == FileType::AudioFile || type == FileType::MusicFile || type == FileType::WavFile ||
+                       type == FileType::Mp3File || type == FileType::FlacFile)) {
+            item.detectedBpm = parseBpmFromFilename(name);
+        }
+        items.push_back(std::move(item));
+    }
     return items;
 }
 
@@ -831,7 +882,7 @@ void FileBrowser::processScanResults() {
     for (auto& result : results) {
         if (result.generation != currentGen) continue;
 
-        if (result.kind == ScanKind::Root) {
+        if (result.kind == ScanKind::Root || result.kind == ScanKind::Listing) {
             scanningRoot_ = false;
             scanError_ = std::move(result.error);
 
@@ -977,7 +1028,10 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
     layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
     layout.upButton = NUIRect(layout.forwardButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
-    layout.sortButton = NUIRect(layout.listHeader.right() - 27.0f, chromeY, 22.0f, 24.0f);
+    // The sort control names its key ("Name", "Date", ...) once the list has
+    // room; narrower lists keep the bare glyph.
+    const float sortW = listW >= 300.0f ? 62.0f : 22.0f;
+    layout.sortButton = NUIRect(layout.listHeader.right() - 5.0f - sortW, chromeY, sortW, 24.0f);
     layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
     layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
                                std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
@@ -1157,14 +1211,15 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         y += 22.0f;
     };
 
-    auto drawIcon = [&](const NUIRect& rect, BrowserNavAction action, bool selected) {
+    auto drawIcon = [&](const NUIRect& rect, BrowserNavAction action, bool selected, const std::string& label) {
         const NUIColor iconColor = selected ? themeManager.getColor("textPrimary").withAlpha(0.86f) : muted.withAlpha(0.70f);
         const float cx = compact ? rect.x + rect.width * 0.5f : rect.x + 13.0f;
         const float cy = rect.y + rect.height * 0.5f;
 
         auto drawSvgIcon = [&](const char* svg) {
-            static std::unordered_map<int, std::shared_ptr<NUIIcon>> iconCache;
-            const int key = static_cast<int>(action);
+            // Keyed by the SVG literal: one action (SystemPlace) draws several glyphs.
+            static std::unordered_map<const char*, std::shared_ptr<NUIIcon>> iconCache;
+            const char* key = svg;
             auto it = iconCache.find(key);
             if (it == iconCache.end()) {
                 auto icon = std::make_shared<NUIIcon>(svg);
@@ -1262,6 +1317,25 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                 // it from reading as the stock Material folder.
                 drawSvgIcon(R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z"/></svg>)");
                 break;
+            case BrowserNavAction::SystemPlace: {
+                // Solid silhouettes, 16px house rules (evenodd cut-outs, no strokes).
+                static const char* kHomeSvg =
+                    R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2.6L22 11.2H19.2V20.6H4.8V11.2H2Z M10 14H14V20.6H10Z"/></svg>)";
+                static const char* kDownloadsSvg =
+                    R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.6 2.8H13.4V10.4H17.2L12 15.8L6.8 10.4H10.6Z"/><path d="M3 15.6H5.8V18.4H18.2V15.6H21V21.2H3Z"/></svg>)";
+                static const char* kDesktopSvg =
+                    R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M3.8 3.6H20.2A1.8 1.8 0 0 1 22 5.4V15.4A1.8 1.8 0 0 1 20.2 17.2H3.8A1.8 1.8 0 0 1 2 15.4V5.4A1.8 1.8 0 0 1 3.8 3.6Z M4.4 6H19.6V14.8H4.4Z M10.4 17.2H13.6V19H16.8V21H7.2V19H10.4Z"/></svg>)";
+                static const char* kMusicSvg =
+                    R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.4" cy="16.8" r="3.9"/><path d="M10.4 3.2h2.1v13.6h-2.1z"/><path d="M12.5 3.2c3.5 1.2 5.5 3.1 5.7 6.1-1.2-2.3-3.1-3.4-5.7-3.7z"/></svg>)";
+                static const char* kFolderSvg =
+                    R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z"/></svg>)";
+                if (label == "Home") drawSvgIcon(kHomeSvg);
+                else if (label == "Downloads") drawSvgIcon(kDownloadsSvg);
+                else if (label == "Desktop") drawSvgIcon(kDesktopSvg);
+                else if (label == "Music") drawSvgIcon(kMusicSvg);
+                else drawSvgIcon(kFolderSvg);
+                break;
+            }
             case BrowserNavAction::AddFolder:
                 // Folder with the plus cut out. The plus is one cross-shaped
                 // subpath, not two overlapping bars — under evenodd, overlapping
@@ -1277,15 +1351,19 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawRow = [&](BrowserNavAction action, const std::string& label, int count = -1, std::string path = {}) {
         NUIRect row(layout.navPane.x + 5.0f, y, std::max(0.0f, layout.navPane.width - 10.0f), BROWSER_NAV_ROW_H);
-        const bool selected =
-            activeNavAction_ == action && (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
+        const bool isPlaceRow = action == BrowserNavAction::CustomPlace || action == BrowserNavAction::SystemPlace;
+        const bool placeActive = activeNavAction_ == BrowserNavAction::CustomPlace ||
+                                 activeNavAction_ == BrowserNavAction::SystemPlace;
+        const bool selected = isPlaceRow ? (placeActive && !isShowingListing() && !path.empty() &&
+                                            mapKeyForPath(activeNavPath_) == mapKeyForPath(path))
+                                         : activeNavAction_ == action;
         if (selected) {
             renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
             renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f}, 1.0f,
                                      themeManager.getColor("accentPrimary").withAlpha(0.92f));
         }
         // Nav hover wash also lives in renderHoverOverlays(), outside the cache.
-        drawIcon(row, action, selected);
+        drawIcon(row, action, selected, label);
         if (!compact) {
             renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
                               themeProps.fontSizeS,
@@ -1322,16 +1400,6 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     drawRow(BrowserNavAction::CollectionInstruments, "Instruments", collectionCount("Instruments"));
     drawRow(BrowserNavAction::Vocals, "Vocals", collectionCount("Vocals"));
     drawDivider();
-    drawSection("Categories");
-    drawRow(BrowserNavAction::Sounds, "Sounds");
-    drawRow(BrowserNavAction::Drums, "Drums");
-    drawRow(BrowserNavAction::Instruments, "Instruments");
-    drawRow(BrowserNavAction::AudioEffects, "Effects");
-    drawRow(BrowserNavAction::Plugins, "Plugins");
-    drawRow(BrowserNavAction::Patterns, "Patterns");
-    drawRow(BrowserNavAction::Clips, "Clips");
-    drawRow(BrowserNavAction::Samples, "Samples");
-    drawDivider();
     drawSection("Places");
     drawRow(BrowserNavAction::Packs, "Packs");
     drawRow(BrowserNavAction::UserLibrary, "User Library");
@@ -1345,6 +1413,26 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         drawRow(BrowserNavAction::CustomPlace, label, -1, place);
     }
     drawRow(BrowserNavAction::AddFolder, "+ Add Folder...");
+
+    // Folders come before Categories: at ordinary window heights anything
+    // after the eight category rows is below the fold, and Places/Computer
+    // are how the user reaches their own sounds.
+    if (!systemPlaces_.empty()) {
+        drawSection("Computer");
+        for (const auto& place : systemPlaces_) {
+            drawRow(BrowserNavAction::SystemPlace, place.label, -1, place.path);
+        }
+    }
+    drawDivider();
+    drawSection("Categories");
+    drawRow(BrowserNavAction::Sounds, "Sounds");
+    drawRow(BrowserNavAction::Drums, "Drums");
+    drawRow(BrowserNavAction::Instruments, "Instruments");
+    drawRow(BrowserNavAction::AudioEffects, "Effects");
+    drawRow(BrowserNavAction::Plugins, "Plugins");
+    drawRow(BrowserNavAction::Patterns, "Patterns");
+    drawRow(BrowserNavAction::Clips, "Clips");
+    drawRow(BrowserNavAction::Samples, "Samples");
 
     // Drag-over visual for Places section
     if (m_isDragOverPlaces) {
@@ -1408,8 +1496,10 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     drawChevron(layout.forwardButton, true,
                 navHistoryIndex_ >= 0 && navHistoryIndex_ < static_cast<int>(navHistory_.size()) - 1);
 
-    const bool canNavigateUp = !currentPath_.empty() &&
-                               (rootPath_.empty() || mapKeyForPath(currentPath_) != mapKeyForPath(rootPath_));
+    const bool canNavigateUp = isShowingListing() ||
+                               (!currentPath_.empty() &&
+                                std::filesystem::path(currentPath_).parent_path() != std::filesystem::path(currentPath_) &&
+                                !std::filesystem::path(currentPath_).parent_path().empty());
     const float upCx = layout.upButton.x + layout.upButton.width * 0.5f;
     const float upCy = layout.upButton.y + layout.upButton.height * 0.5f;
     const NUIColor upColor = muted.withAlpha(canNavigateUp ? 0.78f : 0.24f);
@@ -1418,7 +1508,9 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     renderer.drawLine({upCx, upCy - 2.0f}, {upCx, upCy + 5.0f}, 1.5f, upColor);
 
     std::string location = "Library";
-    if (!currentPath_.empty()) {
+    if (isShowingListing()) {
+        location = listingTitle_;
+    } else if (!currentPath_.empty()) {
         std::filesystem::path p(currentPath_);
         location = p.filename().string();
         if (location.empty()) location = currentPath_;
@@ -1442,7 +1534,21 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     if (filterActive) renderer.fillCircle({layout.filterButton.right() - 5.0f, layout.filterButton.y + 5.0f}, 2.0f, accent);
 
     const NUIColor sortColor = muted.withAlpha(0.62f);
-    const float sortCx = layout.sortButton.x + layout.sortButton.width * 0.5f;
+    if (layout.sortButton.width > 30.0f) {
+        const char* sortLabel = "Name";
+        switch (sortMode_) {
+            case SortMode::Name: sortLabel = "Name"; break;
+            case SortMode::Type: sortLabel = "Type"; break;
+            case SortMode::Size: sortLabel = "Size"; break;
+            case SortMode::Modified: sortLabel = "Date"; break;
+        }
+        const NUIRect labelRect(layout.sortButton.x + 6.0f, layout.sortButton.y, layout.sortButton.width - 28.0f,
+                                layout.sortButton.height);
+        renderer.drawText(sortLabel,
+                          {labelRect.x, std::round(renderer.calculateTextY(labelRect, themeProps.fontSizeXS))},
+                          themeProps.fontSizeXS, muted.withAlpha(0.86f));
+    }
+    const float sortCx = layout.sortButton.right() - 11.0f;
     const float sortCy = layout.sortButton.y + layout.sortButton.height * 0.5f;
     renderer.drawLine({sortCx - 5.0f, sortCy - 4.0f}, {sortCx + 2.0f, sortCy - 4.0f}, 1.2f, sortColor);
     renderer.drawLine({sortCx - 5.0f, sortCy}, {sortCx, sortCy}, 1.2f, sortColor);
@@ -2564,18 +2670,20 @@ bool FileBrowser::isPointOverPlacesSection(float x, float y) const {
 }
 
 void FileBrowser::onDropFileToPlaces(const std::string& path) {
-    if (path.empty()) return;
+    addPlace(path);
+}
 
+void FileBrowser::initLibraryState(const std::string& statePath) {
+    statePath_ = statePath;
     std::error_code ec;
-    if (!std::filesystem::is_directory(path, ec)) return;
-
-    const std::string key = canonicalOrNormalized(std::filesystem::path(path)).string();
-    if (key.empty()) return;
-    if (std::find(customPlacePaths_.begin(), customPlacePaths_.end(), key) != customPlacePaths_.end()) return;
-
-    customPlacePaths_.push_back(key);
-    saveState(getSettingsPath());
-    invalidateCache();
+    if (!statePath.empty() && std::filesystem::exists(statePath, ec)) {
+        loadState(statePath);
+        return;
+    }
+    const std::string legacy = legacySettingsPath();
+    if (!legacy.empty() && std::filesystem::exists(legacy, ec) && loadState(legacy)) {
+        persistState(); // carry the import forward into the new file
+    }
 }
 void FileBrowser::setCurrentPath(const std::string& path) {
     const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
@@ -2593,7 +2701,22 @@ void FileBrowser::setCurrentPath(const std::string& path) {
         return;
     }
 
-    if (currentPath_ == targetPath) {
+    // A listing (Favorites / Collection) sits on top of currentPath_, so going
+    // "to" the folder it was opened from is still a real navigation.
+    const bool wasListing = isShowingListing();
+    listingKind_ = ListingKind::None;
+    listingTitle_.clear();
+    listingTag_.clear();
+    if (wasListing && (activeNavAction_ == BrowserNavAction::Favorites || activeNavAction_ == BrowserNavAction::Purple ||
+                       activeNavAction_ == BrowserNavAction::CollectionDrums ||
+                       activeNavAction_ == BrowserNavAction::CollectionInstruments ||
+                       activeNavAction_ == BrowserNavAction::Vocals)) {
+        // Leaving a list for a folder: light that folder's place row, if any.
+        activeNavAction_ = BrowserNavAction::CustomPlace;
+        activeNavPath_ = targetPath;
+    }
+
+    if (currentPath_ == targetPath && !wasListing) {
         return;
     }
 
@@ -2675,6 +2798,11 @@ void FileBrowser::refresh() {
     hoveredIndex_ = -1;
     hoveredBreadcrumbIndex_ = -1;
 
+    if (isShowingListing()) {
+        reissueListing();
+        return;
+    }
+
     const std::string resolvedPath = resolveExistingDirectoryPath(currentPath_, rootPath_);
     if (resolvedPath.empty()) {
         return;
@@ -2695,17 +2823,15 @@ void FileBrowser::refresh() {
 }
 
 void FileBrowser::navigateUp() {
+    if (isShowingListing()) {
+        // Up out of Favorites / a collection returns to the folder underneath.
+        exitListing();
+        return;
+    }
+
     std::filesystem::path current(currentPath_);
     std::filesystem::path parent = current.parent_path();
     if (parent.empty() || parent == current) return;
-
-    if (!rootPath_.empty()) {
-        const std::filesystem::path root(rootPath_);
-        if (!isPathUnderRoot(parent, root)) {
-            setCurrentPath(root.string());
-            return;
-        }
-    }
 
     setCurrentPath(parent.string());
 }
@@ -2784,12 +2910,161 @@ void FileBrowser::addToFavorites(const std::string& path) {
     if (key.empty()) return;
     if (std::find(favoritesPaths_.begin(), favoritesPaths_.end(), key) != favoritesPaths_.end()) return;
     favoritesPaths_.push_back(key);
+    persistState();
+    if (listingKind_ == ListingKind::Favorites) reissueListing();
 }
 
 void FileBrowser::removeFromFavorites(const std::string& path) {
     const std::string key = mapKeyForPath(path);
     auto it = std::remove(favoritesPaths_.begin(), favoritesPaths_.end(), key);
+    if (it == favoritesPaths_.end()) return;
     favoritesPaths_.erase(it, favoritesPaths_.end());
+    persistState();
+    if (listingKind_ == ListingKind::Favorites) reissueListing();
+}
+
+// -----------------------------------------------------------------------------
+// Places
+// -----------------------------------------------------------------------------
+
+void FileBrowser::addPlace(const std::string& path) {
+    if (path.empty()) return;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(path, ec)) return;
+
+    const std::string key = canonicalOrNormalized(std::filesystem::path(path)).string();
+    if (key.empty() || isPlace(key)) return;
+
+    customPlacePaths_.push_back(key);
+    persistState();
+    invalidateCache();
+}
+
+void FileBrowser::removePlace(const std::string& path) {
+    const std::string key = mapKeyForPath(canonicalOrNormalized(std::filesystem::path(path)).string());
+    auto it = std::remove_if(customPlacePaths_.begin(), customPlacePaths_.end(),
+                             [&](const std::string& place) { return mapKeyForPath(place) == key; });
+    if (it == customPlacePaths_.end()) return;
+    customPlacePaths_.erase(it, customPlacePaths_.end());
+    persistState();
+    invalidateCache();
+}
+
+bool FileBrowser::isPlace(const std::string& path) const {
+    if (path.empty()) return false;
+    const std::string key = mapKeyForPath(canonicalOrNormalized(std::filesystem::path(path)).string());
+    return std::any_of(customPlacePaths_.begin(), customPlacePaths_.end(),
+                       [&](const std::string& place) { return mapKeyForPath(place) == key; });
+}
+
+void FileBrowser::setLibraryRoot(const std::string& path) {
+    std::error_code ec;
+    if (path.empty() || !std::filesystem::is_directory(path, ec)) return;
+    rootPath_ = canonicalOrNormalized(std::filesystem::path(path)).string();
+    persistState();
+    invalidateCache();
+}
+
+// -----------------------------------------------------------------------------
+// Listing views (Favorites / Collections)
+// -----------------------------------------------------------------------------
+
+std::vector<std::string> FileBrowser::pathsWithTag(const std::string& tag) const {
+    std::vector<std::string> paths;
+    for (const auto& [pathKey, tags] : tagsByPath_) {
+        if (std::find(tags.begin(), tags.end(), tag) != tags.end()) paths.push_back(pathKey);
+    }
+    // tagsByPath_ is unordered; give the scan a stable input order.
+    std::sort(paths.begin(), paths.end());
+    return paths;
+}
+
+void FileBrowser::showFavorites() {
+    beginListing(ListingKind::Favorites, "Favorites", favoritesPaths_);
+}
+
+void FileBrowser::showCollection(const std::string& tag) {
+    if (tag.empty()) return;
+    listingTag_ = tag;
+    beginListing(ListingKind::Collection, tag, pathsWithTag(tag));
+}
+
+void FileBrowser::beginListing(ListingKind kind, const std::string& title, std::vector<std::string> paths) {
+    if (kind != ListingKind::Collection) listingTag_.clear();
+    listingKind_ = kind;
+    listingTitle_ = title;
+    // The listing already IS the collection; a tag filter on top would only
+    // hide the children of tagged folders the user expands.
+    activeTagFilter_.clear();
+
+    rootItems_.clear();
+    displayItems_.clear();
+    cachedView_.clear();
+    filteredFiles_.clear();
+    selectedFile_ = nullptr;
+    selectedIndex_ = -1;
+    selectedIndices_.clear();
+    lastShiftSelectIndex_ = -1;
+    hoveredIndex_ = -1;
+    dragPotential_ = false;
+    dragSourceIndex_ = -1;
+    scanError_.clear();
+    targetScrollOffset_ = 0.0f;
+    scrollOffset_ = 0.0f;
+    scrollVelocity_ = 0.0f;
+
+    scanGeneration_.fetch_add(1, std::memory_order_acq_rel);
+    {
+        std::lock_guard<std::mutex> lock(scanMutex_);
+        scanTasks_.clear();
+        scanResults_.clear();
+    }
+
+    scanningRoot_ = true;
+    ensureScanWorker();
+    ScanTask task;
+    task.kind = ScanKind::Listing;
+    task.paths = std::move(paths);
+    task.generation = scanGeneration_.load(std::memory_order_acquire);
+    {
+        std::lock_guard<std::mutex> lock(scanMutex_);
+        scanTasks_.push_back(std::move(task));
+    }
+    scanCv_.notify_one();
+
+    updateScrollbarVisibility();
+    viewDirty_ = true;
+    invalidateCache();
+}
+
+void FileBrowser::reissueListing() {
+    // Keep the scroll position and selection across a live update (e.g. the
+    // user unfavorites one row while looking at Favorites).
+    const float keepScroll = targetScrollOffset_;
+    std::string keepSelection = selectedFile_ ? selectedFile_->path : std::string();
+
+    switch (listingKind_) {
+        case ListingKind::Favorites: showFavorites(); break;
+        case ListingKind::Collection: showCollection(listingTag_); break;
+        case ListingKind::None: return;
+    }
+
+    pendingSelectionPath_ = std::move(keepSelection);
+    targetScrollOffset_ = keepScroll;
+    scrollOffset_ = keepScroll;
+}
+
+void FileBrowser::exitListing() {
+    if (!isShowingListing()) return;
+    // setCurrentPath() clears the listing, treats the same path as a real
+    // navigation, and moves the nav highlight to the folder's place row.
+    setCurrentPath(currentPath_);
+    updateContentViews();
+}
+
+bool FileBrowser::isScanPending() const {
+    std::lock_guard<std::mutex> lock(scanMutex_);
+    return scanningRoot_ || !scanTasks_.empty() || !scanResults_.empty();
 }
 
 bool FileBrowser::isFavorite(const std::string& path) const {
@@ -2854,6 +3129,7 @@ void FileBrowser::setSortMode(SortMode mode) {
         }
     }
 
+    persistState();
     invalidateCache();
 }
 
@@ -2905,6 +3181,7 @@ void FileBrowser::setSortAscending(bool ascending) {
         }
     }
 
+    persistState();
     invalidateCache();
 }
 
@@ -3017,9 +3294,12 @@ void FileBrowser::toggleFolder(const FileItem* item) {
         return a.isDirectory > b.isDirectory; // folders first
     }
 
+	    // Natural, case-insensitive: "kick 2" < "Kick 10" < "snare". Names that
+	    // only differ in case fall through to the path so the order is total.
 	    const auto tieBreak = [&]() {
-	        if (a.name != b.name) {
-	            return sortAscending_ ? (a.name < b.name) : (a.name > b.name);
+	        const int byName = BrowserLibrary::naturalCompare(a.name, b.name);
+	        if (byName != 0) {
+	            return sortAscending_ ? (byName < 0) : (byName > 0);
 	        }
 	        return a.path < b.path;
 	    };
@@ -3034,8 +3314,8 @@ void FileBrowser::toggleFolder(const FileItem* item) {
 	            if (a.size != b.size) return sortAscending_ ? (a.size < b.size) : (a.size > b.size);
 	            return tieBreak();
 	        case SortMode::Modified:
-	            if (a.lastModified != b.lastModified) {
-	                return sortAscending_ ? (a.lastModified < b.lastModified) : (a.lastModified > b.lastModified);
+	            if (a.modifiedTime != b.modifiedTime) {
+	                return sortAscending_ ? (a.modifiedTime < b.modifiedTime) : (a.modifiedTime > b.modifiedTime);
 	            }
 	            return tieBreak();
 	    }
@@ -3114,8 +3394,15 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         } else if (isFilterActive()) {
             drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
                                "Press Esc to clear the search and filters");
+        } else if (listingKind_ == ListingKind::Favorites) {
+            drawListEmptyState(renderer, listClip, folderIcon_, "No favorites yet",
+                               "Right-click any sound or folder and choose Add to Favorites");
+        } else if (listingKind_ == ListingKind::Collection) {
+            drawListEmptyState(renderer, listClip, folderIcon_, "Nothing in " + listingTitle_ + " yet",
+                               "Right-click any sound or folder and choose Add to Collection");
         } else if (!currentPath_.empty() && !rootPath_.empty() &&
-                   normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_)) {
+                   normalizedPathForCompare(currentPath_) != normalizedPathForCompare(rootPath_) &&
+                   isPathUnderRoot(currentPath_, rootPath_)) {
             // Both paths must be real: setCurrentPath() clears currentPath_ when a path
             // fails to resolve, and that is not a subfolder — telling the user to "go up"
             // out of a folder they are not in would be worse than the generic copy.
@@ -3329,9 +3616,11 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		    if (tags.empty()) {
 		        tagsByPath_.erase(key);
 		    }
+		    persistState();
 
-		    // Refresh filtered view if active.
-		    if (isFilterActive()) {
+		    if (listingKind_ == ListingKind::Collection && listingTag_ == tag) {
+		        reissueListing(); // an untagged row leaves the open collection
+		    } else if (isFilterActive()) {
 		        applyFilter();
 		    } else {
 		        invalidateCache();
@@ -3393,6 +3682,8 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		        popupMenu_->addSeparator();
 		        popupMenu_->addItem("Clear Favorites", [this]() {
 		            favoritesPaths_.clear();
+		            persistState();
+		            if (listingKind_ == ListingKind::Favorites) reissueListing();
 		            invalidateCache();
 		        });
 		    }
@@ -3404,39 +3695,70 @@ const float menuX = lastMousePos_.x;
 }
 
 void FileBrowser::showAddFolderMenu() {
-		    if (!popupMenu_) return;
+    if (!popupMenu_) return;
 
-		    popupMenu_->clear();
-		    popupMenuTargetPath_.clear();
-		    popupMenuTargetIsDirectory_ = false;
+    popupMenu_->clear();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
 
-		    popupMenu_->addItem("Add Current Folder to Places", [this]() {
-		        const std::string key = canonicalOrNormalized(std::filesystem::path(currentPath_)).string();
-		        if (!key.empty() && std::find(customPlacePaths_.begin(), customPlacePaths_.end(), key) == customPlacePaths_.end()) {
-		            customPlacePaths_.push_back(key);
-		        }
-		        invalidateCache();
-		    });
-		    popupMenu_->addItem(isFavorite(currentPath_) ? "Unfavorite Current Folder" : "Favorite Current Folder",
-		                        [this]() { toggleFavorite(currentPath_); });
+    popupMenu_->addItem("Choose a Folder...", [this]() {
+        auto* utils = Aestra::Platform::getUtils();
+        if (!utils) return;
+        const std::string chosen = utils->selectFolderDialog("Add a Folder to Places");
+        if (chosen.empty()) return;
+        addPlace(chosen);
+        navigateTo(chosen);
+        activeNavAction_ = BrowserNavAction::CustomPlace;
+        activeNavPath_ = currentPath_;
+        invalidateCache();
+    });
 
-		    if (!customPlacePaths_.empty()) {
-		        popupMenu_->addSeparator();
-		        popupMenu_->addItem("Remove Current Folder from Places", [this]() {
-		            const std::string key = canonicalOrNormalized(std::filesystem::path(currentPath_)).string();
-		            auto it = std::remove(customPlacePaths_.begin(), customPlacePaths_.end(), key);
-		            customPlacePaths_.erase(it, customPlacePaths_.end());
-		            invalidateCache();
-		        });
-		        popupMenu_->addItem("Clear Custom Places", [this]() {
-		            customPlacePaths_.clear();
-		            invalidateCache();
-		        });
-		    }
+    // "Current folder" is meaningless while a Favorites / Collection list is up.
+    if (!isShowingListing() && !currentPath_.empty()) {
+        std::string name = std::filesystem::path(currentPath_).filename().string();
+        if (name.empty()) name = currentPath_;
+        if (isPlace(currentPath_)) {
+            popupMenu_->addItem("Remove \"" + name + "\" from Places", [this]() { removePlace(currentPath_); });
+        } else {
+            popupMenu_->addItem("Add \"" + name + "\" to Places", [this]() { addPlace(currentPath_); });
+        }
+        popupMenu_->addItem(isFavorite(currentPath_) ? "Remove \"" + name + "\" from Favorites"
+                                                     : "Add \"" + name + "\" to Favorites",
+                            [this]() { toggleFavorite(currentPath_); });
+    }
 
-		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(lastMousePos_.x, lastMousePos_.y + 6.0f));
-		    invalidateCache();
-		}
+    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(lastMousePos_.x, lastMousePos_.y + 6.0f));
+    invalidateCache();
+}
+
+void FileBrowser::showPlaceContextMenu(const BrowserNavHit& hit, const NUIPoint& position) {
+    if (!popupMenu_ || hit.path.empty()) return;
+
+    popupMenu_->clear();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
+
+    const std::string path = hit.path;
+    popupMenu_->addItem("Open", [this, path]() {
+        navigateTo(path);
+        activeNavAction_ = BrowserNavAction::CustomPlace;
+        activeNavPath_ = currentPath_;
+        invalidateCache();
+    });
+    popupMenu_->addItem(isFavorite(path) ? "Remove from Favorites" : "Add to Favorites",
+                        [this, path]() { toggleFavorite(path); });
+    if (hit.action == BrowserNavAction::CustomPlace) {
+        popupMenu_->addSeparator();
+        popupMenu_->addItem("Remove from Places", [this, path]() { removePlace(path); });
+    }
+    popupMenu_->addSeparator();
+    popupMenu_->addItem("Copy Path", [path]() {
+        if (auto* utils = Aestra::Platform::getUtils()) utils->setClipboardText(path);
+    });
+
+    attachAndShowPopupMenu(this, popupMenu_, position);
+    invalidateCache();
+}
 
 void FileBrowser::showSortMenu() {
     if (!popupMenu_) return;
@@ -3448,7 +3770,7 @@ void FileBrowser::showSortMenu() {
     popupMenu_->addRadioItem("Name", "sort_mode", sortMode_ == SortMode::Name, [this]() { setSortMode(SortMode::Name); });
     popupMenu_->addRadioItem("Type", "sort_mode", sortMode_ == SortMode::Type, [this]() { setSortMode(SortMode::Type); });
     popupMenu_->addRadioItem("Size", "sort_mode", sortMode_ == SortMode::Size, [this]() { setSortMode(SortMode::Size); });
-    popupMenu_->addRadioItem("Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
+    popupMenu_->addRadioItem("Date Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
     popupMenu_->addSeparator();
     popupMenu_->addCheckbox("Ascending", sortAscending_, [this](bool checked) { setSortAscending(checked); });
 
@@ -3552,22 +3874,24 @@ void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& posi
 
 		    if (item.isDirectory) {
 		        popupMenu_->addItem("Open", [this, path = item.path]() { openFolder(path); });
-		        popupMenu_->addItem("Set as Root", [this, path = item.path]() {
-		            rootPath_ = canonicalOrNormalized(std::filesystem::path(path)).string();
-		            setCurrentPath(rootPath_);
-		        });
-	        if (!rootPath_.empty()) {
-	            popupMenu_->addItem("Clear Root", [this]() {
-	                rootPath_.clear();
-	                updateBreadcrumbs();
-	                invalidateCache();
-	            });
-	        }
-	        popupMenu_->addSeparator();
+		        if (isShowingListing()) {
+		            popupMenu_->addItem("Show in Enclosing Folder", [this, path = item.path]() {
+		                const std::filesystem::path parent = std::filesystem::path(path).parent_path();
+		                if (parent.empty()) return;
+		                setCurrentPath(parent.string());
+		                pendingSelectionPath_ = path;
+		            });
+		        }
+		        popupMenu_->addSeparator();
 
 		        const bool fav = isFavorite(item.path);
 		        popupMenu_->addItem(fav ? "Remove from Favorites" : "Add to Favorites",
 		                            [this, path = item.path]() { toggleFavorite(path); invalidateCache(); });
+		        popupMenu_->addItem(isPlace(item.path) ? "Remove from Places" : "Add to Places",
+		                            [this, path = item.path]() {
+		                                if (isPlace(path)) removePlace(path);
+		                                else addPlace(path);
+		                            });
 		        {
 		            auto collectionsMenu = std::make_shared<NUIContextMenu>();
             static const std::vector<std::string> kCollections = {"Purple", "Drums", "Instruments", "Vocals", "Effects", "Clips"};
@@ -3591,18 +3915,22 @@ void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& posi
         popupMenu_->addItem("Copy Path", [path = item.path, copyToClipboard]() { copyToClipboard(path); });
     } else {
 	        // Navigate to containing folder
-	        popupMenu_->addItem("Show in Browser", [this, path = item.path]() {
+	        popupMenu_->addItem("Show in Enclosing Folder", [this, path = item.path]() {
 	            std::filesystem::path p(path);
 	            std::filesystem::path parent = p.parent_path();
 	            if (!parent.empty()) {
 	                setCurrentPath(parent.string());
-	                selectFile(path);
+	                // The folder scan is asynchronous: select once its rows exist.
+	                pendingSelectionPath_ = path;
 	            }
 	        });
 
 	        const bool isAudio =
 	            item.type == FileType::AudioFile || item.type == FileType::MusicFile ||
 	            item.type == FileType::WavFile || item.type == FileType::Mp3File || item.type == FileType::FlacFile;
+
+		        popupMenu_->addItem(isFavorite(item.path) ? "Remove from Favorites" : "Add to Favorites",
+		                            [this, path = item.path]() { toggleFavorite(path); });
 
 		        if (isAudio) {
 		            popupMenu_->addSeparator();
@@ -3829,6 +4157,25 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         NUIComponent::hideRemoteTooltip(this);
     }
 
+    if (event.pressed && event.button == NUIMouseButton::Right && newHovered >= 0 &&
+        newHovered < static_cast<int>(navHits_.size())) {
+        const BrowserNavHit hit = navHits_[newHovered];
+        switch (hit.action) {
+            case BrowserNavAction::CustomPlace:
+            case BrowserNavAction::SystemPlace:
+                showPlaceContextMenu(hit, event.position);
+                return true;
+            case BrowserNavAction::Favorites:
+                showFavoritesMenu(); // quick-jump list + Clear
+                return true;
+            case BrowserNavAction::AddFolder:
+                showAddFolderMenu();
+                return true;
+            default:
+                return false;
+        }
+    }
+
     if (!event.pressed || event.button != NUIMouseButton::Left || newHovered < 0 ||
         newHovered >= static_cast<int>(navHits_.size())) {
         return false;
@@ -3849,28 +4196,27 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     };
 
     switch (action) {
+        // Favorites and Collections list their items from wherever they live,
+        // not just the ones inside the folder currently on screen.
         case BrowserNavAction::Favorites:
-            showFavoritesMenu();
+            activeQuickFilter_ = QuickFilter::All;
+            showFavorites();
             break;
         case BrowserNavAction::Purple:
-            activeTagFilter_ = "Purple";
             activeQuickFilter_ = QuickFilter::All;
-            applyFilter();
+            showCollection("Purple");
             break;
         case BrowserNavAction::CollectionDrums:
-            activeTagFilter_ = "Drums";
             activeQuickFilter_ = QuickFilter::All;
-            applyFilter();
+            showCollection("Drums");
             break;
         case BrowserNavAction::CollectionInstruments:
-            activeTagFilter_ = "Instruments";
             activeQuickFilter_ = QuickFilter::All;
-            applyFilter();
+            showCollection("Instruments");
             break;
         case BrowserNavAction::Vocals:
-            activeTagFilter_ = "Vocals";
             activeQuickFilter_ = QuickFilter::All;
-            applyFilter();
+            showCollection("Vocals");
             break;
         case BrowserNavAction::Sounds:
         case BrowserNavAction::Samples:
@@ -3880,7 +4226,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         case BrowserNavAction::Drums: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Drums";
             std::filesystem::create_directories(path);
-            activeTagFilter_ = "Drums";
+            activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::Audio;
             activeNavAction_ = BrowserNavAction::Drums;
             navigateTo(path.string());
@@ -3890,7 +4236,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         case BrowserNavAction::Instruments: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Instruments";
             std::filesystem::create_directories(path);
-            activeTagFilter_ = "Instruments";
+            activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::Instruments;
             navigateTo(path.string());
@@ -3900,7 +4246,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         case BrowserNavAction::AudioEffects: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Effects";
             std::filesystem::create_directories(path);
-            activeTagFilter_ = "Effects";
+            activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::AudioEffects;
             navigateTo(path.string());
@@ -3914,7 +4260,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         case BrowserNavAction::Clips: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Clips";
             std::filesystem::create_directories(path);
-            activeTagFilter_ = "Clips";
+            activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::Clips;
             navigateTo(path.string());
@@ -3940,6 +4286,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             break;
         }
         case BrowserNavAction::CustomPlace:
+        case BrowserNavAction::SystemPlace:
             if (!navHits_[newHovered].path.empty()) {
                 navigateTo(navHits_[newHovered].path);
             }
@@ -4646,238 +4993,131 @@ bool FileBrowser::blurSearchIfPressOutside(const NUIPoint& pos) {
 
 // === PERSISTENT STATE SAVE/LOAD ===
 
-void FileBrowser::saveState(const std::string& filePath) {
+// Library state file. Version 3 holds only what the user curated; v2 files
+// (browser_settings.json) also carried view state, which is ignored here
+// because UIState owns where the browser is looking.
+bool FileBrowser::saveState(const std::string& filePath) const {
+    if (filePath.empty()) return false;
+
     Aestra::JSON j = Aestra::JSON::object();
-    j.set("version", Aestra::JSON(2.0));
-    j.set("currentPath", Aestra::JSON(currentPath_));
+    j.set("version", Aestra::JSON(3.0));
     j.set("rootPath", Aestra::JSON(rootPath_));
-    j.set("scrollOffset", Aestra::JSON(static_cast<double>(scrollOffset_)));
     j.set("sortMode", Aestra::JSON(static_cast<double>(sortMode_)));
     j.set("sortAscending", Aestra::JSON(sortAscending_));
 
-    // Expanded folders
-    Aestra::JSON expandedArr = Aestra::JSON::array();
-    std::function<void(const FileItem&)> collectExpanded = [&](const FileItem& item) {
-        if (item.isDirectory && item.isExpanded) {
-            expandedArr.push(Aestra::JSON(item.path));
-        }
-        for (const auto& child : item.children) {
-            collectExpanded(child);
-        }
-    };
-    for (const auto& item : rootItems_) {
-        collectExpanded(item);
-    }
-    j.set("expandedFolders", expandedArr);
-
-    // Favorites
     Aestra::JSON favArr = Aestra::JSON::array();
-    for (const auto& f : favoritesPaths_) {
-        favArr.push(Aestra::JSON(f));
-    }
+    for (const auto& f : favoritesPaths_) favArr.push(Aestra::JSON(f));
     j.set("favorites", favArr);
 
-    // Custom places
     Aestra::JSON placesArr = Aestra::JSON::array();
-    for (const auto& p : customPlacePaths_) {
-        placesArr.push(Aestra::JSON(p));
-    }
+    for (const auto& p : customPlacePaths_) placesArr.push(Aestra::JSON(p));
     j.set("customPlaces", placesArr);
 
-    // Tag filter
-    j.set("tagFilter", Aestra::JSON(activeTagFilter_));
-
-    // Tags by path
     Aestra::JSON tagsObj = Aestra::JSON::object();
     for (const auto& [pathKey, tags] : tagsByPath_) {
         if (pathKey.empty() || tags.empty()) continue;
         Aestra::JSON tagArr = Aestra::JSON::array();
-        for (const auto& t : tags) {
-            tagArr.push(Aestra::JSON(t));
-        }
+        for (const auto& t : tags) tagArr.push(Aestra::JSON(t));
         tagsObj.set(pathKey, tagArr);
     }
     j.set("tagsByPath", tagsObj);
 
-    std::ofstream file(filePath);
-    if (file.is_open()) {
-        file << j.toString(2);
-        file.close();
-        Aestra::Log::info("[FileBrowser] State saved to: " + filePath);
-    } else {
-        Aestra::Log::warning("[FileBrowser] Failed to save state to: " + filePath);
+    if (!Aestra::writeJSONAtomic(filePath, j)) {
+        Aestra::Log::warning("[FileBrowser] Failed to save library state to: " + filePath);
+        return false;
     }
+    return true;
 }
 
-void FileBrowser::loadState(const std::string& filePath) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        Aestra::Log::info("[FileBrowser] No saved state found at: " + filePath);
-        return;
+void FileBrowser::persistState() {
+    if (!statePath_.empty()) saveState(statePath_);
+}
+
+bool FileBrowser::loadState(const std::string& filePath) {
+    std::optional<Aestra::JSON> parsed = Aestra::readJSONStrict(filePath);
+    if (!parsed) {
+        // v1 wrote "key=value|value" lines. Import its lists; anything else
+        // unreadable means "no saved library", never an error.
+        std::ifstream legacy(filePath);
+        std::string content((std::istreambuf_iterator<char>(legacy)), std::istreambuf_iterator<char>());
+        if (content.find("currentPath=") != std::string::npos && content.find('{') == std::string::npos) {
+            migrateLegacySettings(filePath);
+            return true;
+        }
+        return false;
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
+    // Non-const on purpose: AestraJSON's const asArray()/asObject() return empty stubs.
+    Aestra::JSON& j = *parsed;
+    if (!j.isObject()) return false;
 
-    if (content.empty()) return;
+    const auto readStrings = [&](const char* key, std::vector<std::string>& out) {
+        if (!j.has(key) || !j[key].isArray()) return false;
+        out.clear();
+        for (auto& v : j[key].asArray()) {
+            if (v.isString() && !v.asString().empty()) out.push_back(v.asString());
+        }
+        return true;
+    };
 
-    // Check if this is legacy pipe-separated format
-    if (content.find("currentPath=") != std::string::npos && content.find('{') == std::string::npos) {
-        migrateLegacySettings(filePath);
-        // Re-read as JSON after migration
-        std::ifstream file2(filePath);
-        if (!file2.is_open()) return;
-        content = std::string((std::istreambuf_iterator<char>(file2)), std::istreambuf_iterator<char>());
+    std::vector<std::string> favorites;
+    if (readStrings("favorites", favorites)) {
+        favoritesPaths_.clear();
+        for (const auto& f : favorites) {
+            const std::string key = mapKeyForPath(f);
+            if (std::find(favoritesPaths_.begin(), favoritesPaths_.end(), key) == favoritesPaths_.end()) {
+                favoritesPaths_.push_back(key);
+            }
+        }
     }
 
-    Aestra::JSON j;
-    try {
-        j = Aestra::JSON::parse(content);
-    } catch (...) {
-        Aestra::Log::warning("[FileBrowser] Failed to parse state JSON");
-        return;
+    std::vector<std::string> places;
+    if (readStrings("customPlaces", places)) {
+        customPlacePaths_.clear();
+        for (const auto& p : places) {
+            // Keep places that are offline right now (unplugged drive): they
+            // come back when the drive does. Only de-duplicate.
+            if (!isPlace(p)) customPlacePaths_.push_back(p);
+        }
     }
 
-    if (!j.isObject()) return;
+    if (j.has("tagsByPath") && j["tagsByPath"].isObject()) {
+        tagsByPath_.clear();
+        for (auto& [pathKey, val] : j["tagsByPath"].asObject()) {
+            if (pathKey.empty() || !val.isArray()) continue;
+            std::vector<std::string> tags;
+            for (auto& t : val.asArray()) {
+                if (t.isString() && !t.asString().empty()) tags.push_back(t.asString());
+            }
+            if (!tags.empty()) tagsByPath_[mapKeyForPath(pathKey)] = std::move(tags);
+        }
+    }
 
-    std::string loadedCurrentPath;
-    std::string loadedRootPath;
-    float loadedScrollOffset = 0.0f;
-    bool hasScrollOffset = false;
-    SortMode loadedSortMode = sortMode_;
-    bool hasSortMode = false;
-    bool loadedSortAscending = sortAscending_;
-    bool hasSortAscending = false;
-    std::vector<std::string> expandedFolders;
-    std::vector<std::string> loadedFavorites;
-    bool hasFavorites = false;
-    std::vector<std::string> loadedCustomPlaces;
-    bool hasCustomPlaces = false;
-    std::string loadedTagFilter;
-    bool hasTagFilter = false;
-    std::unordered_map<std::string, std::vector<std::string>> loadedTagsByPath;
-    bool hasTags = false;
-
-    if (j.has("currentPath") && j["currentPath"].isString()) {
-        loadedCurrentPath = j["currentPath"].asString();
-    }
-    if (j.has("rootPath") && j["rootPath"].isString()) {
-        loadedRootPath = j["rootPath"].asString();
-    }
-    if (j.has("scrollOffset") && j["scrollOffset"].isNumber()) {
-        loadedScrollOffset = static_cast<float>(j["scrollOffset"].asNumber());
-        hasScrollOffset = true;
-    }
     if (j.has("sortMode") && j["sortMode"].isNumber()) {
-        loadedSortMode = static_cast<SortMode>(static_cast<int>(j["sortMode"].asNumber()));
-        hasSortMode = true;
+        const int mode = static_cast<int>(j["sortMode"].asNumber());
+        if (mode >= static_cast<int>(SortMode::Name) && mode <= static_cast<int>(SortMode::Modified)) {
+            sortMode_ = static_cast<SortMode>(mode);
+        }
     }
     if (j.has("sortAscending") && j["sortAscending"].isBool()) {
-        loadedSortAscending = j["sortAscending"].asBool();
-        hasSortAscending = true;
+        sortAscending_ = j["sortAscending"].asBool();
     }
-    if (j.has("expandedFolders") && j["expandedFolders"].isArray()) {
-        auto arr = j["expandedFolders"].asArray();
-        for (size_t i = 0; i < arr.size(); ++i) {
-            if (arr[i].isString()) expandedFolders.push_back(arr[i].asString());
-        }
-    }
-    if (j.has("favorites") && j["favorites"].isArray()) {
-        hasFavorites = true;
-        auto arr = j["favorites"].asArray();
-        for (size_t i = 0; i < arr.size(); ++i) {
-            if (arr[i].isString()) loadedFavorites.push_back(arr[i].asString());
-        }
-    }
-    if (j.has("customPlaces") && j["customPlaces"].isArray()) {
-        hasCustomPlaces = true;
-        auto arr = j["customPlaces"].asArray();
-        for (size_t i = 0; i < arr.size(); ++i) {
-            if (arr[i].isString()) loadedCustomPlaces.push_back(arr[i].asString());
-        }
-    }
-    if (j.has("tagFilter") && j["tagFilter"].isString()) {
-        hasTagFilter = true;
-        loadedTagFilter = j["tagFilter"].asString();
-    }
-    if (j.has("tagsByPath") && j["tagsByPath"].isObject()) {
-        hasTags = true;
-        auto obj = j["tagsByPath"].asObject();
-        for (const auto& [pathKey, val] : obj) {
-            if (!val.isArray()) continue;
-            auto arr = val.asArray();
-            std::vector<std::string> tags;
-            for (size_t i = 0; i < arr.size(); ++i) {
-                if (arr[i].isString()) tags.push_back(arr[i].asString());
-            }
-            if (!tags.empty()) loadedTagsByPath[pathKey] = std::move(tags);
+
+    if (j.has("rootPath") && j["rootPath"].isString()) {
+        const std::string loadedRoot = j["rootPath"].asString();
+        std::error_code ec;
+        if (!loadedRoot.empty() && std::filesystem::is_directory(loadedRoot, ec)) {
+            rootPath_ = canonicalOrNormalized(std::filesystem::path(loadedRoot)).string();
         }
     }
 
-    // Apply settings in safe order
-    std::error_code rootEc;
-    if (!loadedRootPath.empty() &&
-        std::filesystem::exists(loadedRootPath, rootEc) &&
-        std::filesystem::is_directory(loadedRootPath, rootEc)) {
-        rootPath_ = canonicalOrNormalized(std::filesystem::path(loadedRootPath)).string();
-    } else {
-        rootPath_.clear();
-    }
-
-    if (hasSortMode) sortMode_ = loadedSortMode;
-    if (hasSortAscending) sortAscending_ = loadedSortAscending;
-    if (hasFavorites) favoritesPaths_ = std::move(loadedFavorites);
-    if (hasCustomPlaces) customPlacePaths_ = std::move(loadedCustomPlaces);
-    if (hasTags) tagsByPath_ = std::move(loadedTagsByPath);
-    if (hasTagFilter) activeTagFilter_ = std::move(loadedTagFilter);
-
-    if (loadedCurrentPath.empty() && !rootPath_.empty()) {
-        loadedCurrentPath = rootPath_;
-    }
-    if (!loadedCurrentPath.empty()) {
-        setCurrentPath(loadedCurrentPath);
-    } else {
-        loadDirectoryContents();
-        updateBreadcrumbs();
-    }
-
-    // Re-expand saved folders
-    std::function<void(FileItem&)> expandSaved = [&](FileItem& item) {
-        if (item.isDirectory) {
-            for (const auto& expandedPath : expandedFolders) {
-                if (item.path == expandedPath) {
-                    if (!item.hasLoadedChildren) {
-                        loadFolderContents(&item);
-                    }
-                    item.isExpanded = true;
-                    break;
-                }
-            }
-            for (auto& child : item.children) {
-                expandSaved(child);
-            }
-        }
-    };
-    for (auto& item : rootItems_) {
-        expandSaved(item);
-    }
-
+    sortFiles();
     updateDisplayList();
-    if (isFilterActive()) {
-        applyFilter();
-    }
-
-    if (hasScrollOffset) {
-        const auto& view = getActiveView();
-        auto& themeManager = NUIThemeManager::getInstance();
-        float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-        float maxScroll = std::max(0.0f, static_cast<float>(view.size()) * itemHeight - scrollbarTrackHeight_);
-        scrollOffset_ = std::max(0.0f, std::min(loadedScrollOffset, maxScroll));
-        targetScrollOffset_ = scrollOffset_;
-        lastRenderedOffset_ = scrollOffset_;
-        updateScrollbarVisibility();
-    }
-    Aestra::Log::info("[FileBrowser] State loaded from: " + filePath);
+    if (isFilterActive()) applyFilter();
+    viewDirty_ = true;
+    invalidateCache();
+    Aestra::Log::info("[FileBrowser] Library state loaded from: " + filePath);
+    return true;
 }
 
 void FileBrowser::migrateLegacySettings(const std::string& filePath) {
@@ -4897,10 +5137,9 @@ void FileBrowser::migrateLegacySettings(const std::string& filePath) {
             std::stringstream ss(val);
             std::string token;
             while (std::getline(ss, token, '|'))
-                if (!token.empty()) favoritesPaths_.push_back(token);
+                if (!token.empty()) favoritesPaths_.push_back(mapKeyForPath(token));
         }
     }
-    saveState(filePath);
 }
 
 // Issue #120: Get list of currently expanded folder paths for UIState persistence

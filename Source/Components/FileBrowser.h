@@ -4,11 +4,13 @@
 #include "../AestraUI/Core/NUIComponent.h"
 #include "NUIIcon.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
+#include "BrowserLibrary.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <functional>
 #include <array>
+#include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
@@ -63,6 +65,7 @@ struct FileItem {
     bool isDirectory;
     size_t size;
     std::string lastModified;
+    int64_t modifiedTime = 0; // filesystem clock ticks; 0 = unknown. Sort key only.
     
     // Tree view support
     bool isExpanded = false;
@@ -160,16 +163,51 @@ public:
     void setPreviewPanelVisible(bool visible);
     bool isPreviewPanelVisible() const { return previewPanelVisible_; }
     
-    // Favorites
+    // Favorites (files or folders, anywhere on disk)
     void addToFavorites(const std::string& path);
     void removeFromFavorites(const std::string& path);
     bool isFavorite(const std::string& path) const;
     void toggleFavorite(const std::string& path);
     const std::vector<std::string>& getFavorites() const { return favoritesPaths_; }
-    
-    // Persistent state (save/load expanded folders, scroll position, last path)
-    void saveState(const std::string& filePath);
-    void loadState(const std::string& filePath);
+
+    // Places: user-added folders shown in the navigation pane. Any directory
+    // qualifies — the library root is a starting point, not a boundary.
+    void addPlace(const std::string& path);
+    void removePlace(const std::string& path);
+    bool isPlace(const std::string& path) const;
+    const std::vector<std::string>& getPlaces() const { return customPlacePaths_; }
+
+    // Collections (tags). A collection view lists every tagged item, wherever it lives.
+    void toggleTag(const std::string& path, const std::string& tag);
+    bool hasTag(const std::string& path, const std::string& tag) const;
+
+    // Listing views: Favorites and Collections show a flat list of items gathered
+    // from anywhere on disk instead of one directory's contents.
+    void showFavorites();
+    void showCollection(const std::string& tag);
+    bool isShowingListing() const { return listingKind_ != ListingKind::None; }
+    const std::string& getListingTitle() const { return listingTitle_; }
+
+    /// Library root: the folder the Library categories (User Library, Packs, ...)
+    /// live under, and where the browser starts. It does not restrict navigation.
+    const std::string& getLibraryRoot() const { return rootPath_; }
+    void setLibraryRoot(const std::string& path);
+
+    // Persistent library state: favorites, places, collections, sort, library root.
+    // Where the browser is looking (last path, expanded folders) is UIState's job.
+    // Once a state path is set, every library change is written back to it.
+    bool saveState(const std::string& filePath) const;
+    bool loadState(const std::string& filePath);
+    void setStatePath(const std::string& filePath) { statePath_ = filePath; }
+    /// App startup: adopt @p statePath as the autosave target and load it, or,
+    /// on first run, import the pre-v3 ~/.config/aestra/browser_settings.json.
+    void initLibraryState(const std::string& statePath);
+    const std::string& getStatePath() const { return statePath_; }
+
+    /// Pump background scan results into the model. onUpdate() does this every
+    /// frame; exposed so headless callers (tests) can drive the browser.
+    void pollScanResults() { processScanResults(); }
+    bool isScanPending() const;
     
     // Issue #120: Get/set expanded folders for UIState persistence
     std::vector<std::string> getExpandedFolders() const;
@@ -179,6 +217,8 @@ public:
     const std::string& getCurrentPath() const { return currentPath_; }
     const FileItem* getSelectedFile() const { return selectedFile_; }
     const std::vector<const FileItem*>& getFiles() const { return displayItems_; }
+    /// The rows actually on screen: getFiles() after search, quick and tag filters.
+    const std::vector<const FileItem*>& getVisibleFiles() const { return getActiveView(); }
     
     // Sorting
     enum class SortMode {
@@ -197,6 +237,8 @@ public:
     
     void setSortMode(SortMode mode);
     void setSortAscending(bool ascending);
+    SortMode getSortMode() const { return sortMode_; }
+    bool isSortAscending() const { return sortAscending_; }
 
     // Navigation actions
     enum class BrowserNavAction {
@@ -217,7 +259,8 @@ public:
         UserLibrary,
         CurrentProject,
         CustomPlace,
-        AddFolder
+        AddFolder,
+        SystemPlace
     };
 
     struct BrowserNavHit {
@@ -244,6 +287,9 @@ public:
     };
 
     BrowserLayout computeBrowserLayout() const;
+
+    /// Navigation rows as laid out by the last paint (bounds are screen space).
+    const std::vector<BrowserNavHit>& getNavHits() const { return navHits_; }
 
     /// True when the search field is empty (or absent) — the search row's
     /// trailing clear button exists only when there is a query to clear.
@@ -282,10 +328,13 @@ public:
 	    void loadFolderContents(FileItem* item);
 
         // Async scanning (prevents UI stalls on large directories)
-        enum class ScanKind { Root, Folder };
+        // Listing: stat an explicit list of paths (Favorites / Collections)
+        // instead of iterating a directory. Same generation guard as Root.
+        enum class ScanKind { Root, Folder, Listing };
         struct ScanTask {
             ScanKind kind;
             std::string path;
+            std::vector<std::string> paths; // Listing only
             int depth = 0;
             bool showHidden = false;
             uint64_t generation = 0;
@@ -305,11 +354,12 @@ public:
         void processScanResults();
         std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden,
                                             uint64_t generation, std::string& error) const;
+        std::vector<FileItem> scanListing(const std::vector<std::string>& paths, uint64_t generation) const;
         FileItem* findItemByPath(const std::string& path);
         void scanWorkerLoop();
 
         std::thread scanWorker_;
-        std::mutex scanMutex_;
+        mutable std::mutex scanMutex_;
         std::condition_variable scanCv_;
         std::deque<ScanTask> scanTasks_;
         std::deque<ScanResult> scanResults_;
@@ -368,8 +418,6 @@ public:
 	    void showItemContextMenu(const FileItem& item, const NUIPoint& position);
 	    void showHiddenBreadcrumbMenu(const std::vector<std::string>& hiddenPaths, const NUIPoint& position);
 	    void hidePopupMenu();
-	    void toggleTag(const std::string& path, const std::string& tag);
-	    bool hasTag(const std::string& path, const std::string& tag) const;
 	    std::vector<std::string> getAllTagsSorted() const;
 	    void pushToHistory(const std::string& path);
 	    void navigateBack();
@@ -377,8 +425,22 @@ public:
         void clearActiveFilters();
         std::string getQuickFilterLabel() const;
 
-        // Legacy settings migration (v1 pipe-separated → v2 JSON)
+        // Legacy settings migration (v1 pipe-separated → in-memory lists)
         void migrateLegacySettings(const std::string& filePath);
+
+        // Listing views
+        enum class ListingKind { None, Favorites, Collection };
+        void beginListing(ListingKind kind, const std::string& title, std::vector<std::string> paths);
+        void reissueListing();
+        void exitListing();
+        std::vector<std::string> pathsWithTag(const std::string& tag) const;
+        void showPlaceContextMenu(const BrowserNavHit& hit, const NUIPoint& position);
+        void persistState();
+        ListingKind listingKind_ = ListingKind::None;
+        std::string listingTitle_;
+        std::string listingTag_;
+        std::string statePath_;
+        std::vector<BrowserLibrary::SystemPlace> systemPlaces_;
 
         // Auto-preview + keyboard helpers
         void tryAutoPreview();
