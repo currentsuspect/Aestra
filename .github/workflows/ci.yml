@@ -949,9 +949,24 @@ jobs:
           if-no-files-found: ignore
 
   tsan-linux:
-    name: ThreadSanitizer (TSan, advisory)
+    # Required, and deliberately NOT scope-gated (P6).
+    #
+    # This lane was advisory with a classify-scope step, which made it cheap: a
+    # change the classifier judged irrelevant skipped the build. But a skipped
+    # step still leaves the JOB reporting success, so promoting it to required
+    # unchanged would buy a green tick on exactly the PRs least likely to
+    # contain a race — a no-op gate, which is worse than an advisory one because
+    # people stop reading it. That is the failure mode the contract-coverage
+    # job's comment calls "reportable-sometimes ... false green rather than a
+    # block".
+    #
+    # So the classifier is gone and this lane runs on every PR. The runner cost
+    # is real and was accepted deliberately: the lane was green on 30
+    # consecutive develop runs before promotion, and the two audio-thread
+    # races another project shipped through an equivalent gap are the reason it
+    # is worth having.
+    name: ThreadSanitizer (TSan)
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
     steps:
@@ -960,41 +975,25 @@ jobs:
           submodules: false
           persist-credentials: false
 
-      # --- Lane selection (#620) ---------------------------------------------
-      # Advisory lanes are not required contexts, but they are 38.8 of the 85
-      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
-      # the UI, so a docs-only or UI-only change cannot produce a finding here.
-      - name: Classify change scope
-        id: scope
-        uses: ./.github/actions/classify-scope
-        with:
-          lane: tsan
-          github-token: ${{ github.token }}
-
       - name: Setup sccache
-        if: steps.scope.outputs.run == 'true'
         uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
-        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
-        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
-        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
-        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
         run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always() && steps.scope.outputs.run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
