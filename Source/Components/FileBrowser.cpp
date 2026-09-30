@@ -1756,6 +1756,14 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 }
 
 void FileBrowser::onUpdate(double deltaTime) {
+    if (auto chosen = folderPicker_.takeResult(); chosen && !chosen->empty()) {
+        addPlace(*chosen);
+        navigateTo(*chosen);
+        activeNavAction_ = BrowserNavAction::CustomPlace;
+        activeNavPath_ = currentPath_;
+        invalidateCache();
+    }
+
 	    NUIComponent::onUpdate(deltaTime);
 
     // Apply any completed async directory scans (keeps UI responsive on huge folders).
@@ -3701,17 +3709,12 @@ void FileBrowser::showAddFolderMenu() {
     popupMenuTargetPath_.clear();
     popupMenuTargetIsDirectory_ = false;
 
-    popupMenu_->addItem("Choose a Folder...", [this]() {
-        auto* utils = Aestra::Platform::getUtils();
-        if (!utils) return;
-        const std::string chosen = utils->selectFolderDialog("Add a Folder to Places");
-        if (chosen.empty()) return;
-        addPlace(chosen);
-        navigateTo(chosen);
-        activeNavAction_ = BrowserNavAction::CustomPlace;
-        activeNavPath_ = currentPath_;
-        invalidateCache();
-    });
+    if (!folderPicker_.isPending()) {
+        popupMenu_->addItem("Choose a Folder...", [this]() {
+            folderPicker_.start(
+                [](Aestra::IPlatformUtils& utils) { return utils.selectFolderDialog("Add a Folder to Places"); });
+        });
+    }
 
     // "Current folder" is meaningless while a Favorites / Collection list is up.
     if (!isShowingListing() && !currentPath_.empty()) {

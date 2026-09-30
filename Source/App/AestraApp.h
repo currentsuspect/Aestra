@@ -5,6 +5,7 @@
 #include "../Core/UIState.h"
 #include "../Core/UISurfaceStore.h"
 #include "AestraAudioController.h"
+#include "AestraFileDialog.h"
 #include "AestraContent.h"
 #include "AestraWindowManager.h"
 #include "AutosaveManager.h"
@@ -122,8 +123,15 @@ private:
 
     // Project management
     void requestClose();
-    bool saveCurrentProject();
-    bool saveProjectAs();
+    /// Save, or Save As when the document has no path yet. Save As shows a
+    /// picker off the UI thread, so the outcome arrives through @p onDone
+    /// (true = written) on the UI thread, possibly frames later.
+    void saveCurrentProject(std::function<void(bool)> onDone = {});
+    void saveProjectAs(std::function<void(bool)> onDone = {});
+    /// Show a native picker without blocking the UI thread; @p onPicked runs on
+    /// the UI thread (empty = cancelled). One picker at a time: returns false,
+    /// without calling @p onPicked, if one is already open.
+    bool pickFileAsync(Aestra::FileDialogCall call, std::function<void(const std::string&)> onPicked);
     ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path,
                                                       ProjectLoadSource source = ProjectLoadSource::Canonical,
                                                       const std::string& canonicalPath = "");
@@ -189,6 +197,7 @@ private:
         std::vector<std::function<void()>> tasks;
         bool shuttingDown{false};
         std::atomic<bool> relinkInFlight{false};
+        std::atomic<bool> fileDialogInFlight{false};
     };
     std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();

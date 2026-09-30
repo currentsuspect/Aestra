@@ -3631,3 +3631,26 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(FileBrowserLibraryTest PROPERTIES
         LABELS "ui;filebrowser;persistence;regression;contract:application")
 endif()
+
+# XDG portal file chooser: filter translation and file:// URI decoding. The
+# D-Bus round trip needs a desktop session, so only the pure halves run here.
+# Compiled standalone (not via AestraPlat) so it runs even where SDL2, and so
+# the Linux platform layer, is absent.
+if(UNIX AND NOT APPLE)
+    add_executable(XdgPortalFileChooserTest
+        AestraPlat/XdgPortalFileChooserTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlat/src/Linux/XdgPortalFileChooser.cpp
+    )
+    target_link_libraries(XdgPortalFileChooserTest PRIVATE ${CMAKE_DL_LIBS})
+    add_test(NAME XdgPortalFileChooserTest COMMAND XdgPortalFileChooserTest)
+    set_tests_properties(XdgPortalFileChooserTest PROPERTIES LABELS "platform;dialog;regression")
+endif()
+
+# AestraFileDialog.h: pickers run off the UI thread and nothing ever waits for
+# them — not start(), not polling, not destroying the owner — and the worker
+# survives Platform::shutdown(). SDL runs with the dummy video driver.
+add_executable(AsyncFileDialogTest AestraPlat/AsyncFileDialogTest.cpp)
+target_link_libraries(AsyncFileDialogTest PRIVATE AestraPlat)
+target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraPlat/include)
+add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
+set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression" TIMEOUT 30)

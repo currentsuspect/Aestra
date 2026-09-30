@@ -4,6 +4,8 @@
 #include "../../../AestraCore/include/AestraLog.h"
 #include "PlatformWindowWin32.h"
 
+#include <shobjidl.h>
+
 #include <thread>
 
 namespace Aestra {
@@ -97,23 +99,79 @@ std::string PlatformUtilsWin32::saveFileDialog(const SaveFileDialogOptions& opti
     return "";
 }
 
+namespace {
+
+std::wstring widenUtf8(const std::string& s) {
+    if (s.empty()) return {};
+    const int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
+    std::wstring w(static_cast<size_t>(n), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), w.data(), n);
+    return w;
+}
+
+std::string narrowUtf8(const wchar_t* w) {
+    if (!w || !*w) return {};
+    const int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
+    if (n <= 1) return {};
+    std::string s(static_cast<size_t>(n - 1), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w, -1, s.data(), n, nullptr, nullptr);
+    return s;
+}
+
+} // namespace
+
+// The Vista+ common item dialog in folder mode: the same modern Explorer
+// window as Open/Save, Unicode throughout. (SHBrowseForFolderA was the XP-era
+// tree control and returned ANSI, mangling names outside the system codepage.)
 std::string PlatformUtilsWin32::selectFolderDialog(const std::string& title) const {
-    BROWSEINFOA bi = {};
-    char path[MAX_PATH];
+    const HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    const bool uninit = SUCCEEDED(init); // S_FALSE (already initialised) also needs balancing
 
-    bi.lpszTitle = title.c_str();
-    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-
-    LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
-    if (pidl != nullptr) {
-        if (SHGetPathFromIDListA(pidl, path)) {
-            CoTaskMemFree(pidl);
-            return std::string(path);
+    std::string result;
+    IFileOpenDialog* dialog = nullptr;
+    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)))) {
+        DWORD options = 0;
+        if (SUCCEEDED(dialog->GetOptions(&options))) {
+            dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
         }
-        CoTaskMemFree(pidl);
+        if (!title.empty()) {
+            const std::wstring wideTitle = widenUtf8(title);
+            dialog->SetTitle(wideTitle.c_str());
+        }
+        if (SUCCEEDED(dialog->Show(GetActiveWindow()))) {
+            IShellItem* item = nullptr;
+            if (SUCCEEDED(dialog->GetResult(&item))) {
+                PWSTR path = nullptr;
+                if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &path))) {
+                    result = narrowUtf8(path);
+                    CoTaskMemFree(path);
+                }
+                item->Release();
+            }
+        }
+        dialog->Release();
     }
 
-    return "";
+    if (uninit) CoUninitialize();
+    return result;
+}
+
+std::string PlatformUtilsWin32::getKnownFolderPath(KnownFolder folder) const {
+    const KNOWNFOLDERID* id = nullptr;
+    switch (folder) {
+        case KnownFolder::Desktop: id = &FOLDERID_Desktop; break;
+        case KnownFolder::Downloads: id = &FOLDERID_Downloads; break;
+        case KnownFolder::Documents: id = &FOLDERID_Documents; break;
+        case KnownFolder::Music: id = &FOLDERID_Music; break;
+    }
+    if (!id) return {};
+    PWSTR path = nullptr;
+    std::string result;
+    if (SUCCEEDED(SHGetKnownFolderPath(*id, KF_FLAG_DEFAULT, nullptr, &path))) {
+        result = narrowUtf8(path);
+    }
+    CoTaskMemFree(path); // required even on failure
+    return result;
 }
 
 // =============================================================================

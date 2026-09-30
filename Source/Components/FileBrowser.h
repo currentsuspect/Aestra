@@ -5,6 +5,7 @@
 #include "NUIIcon.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "BrowserLibrary.h"
+#include "AestraFileDialog.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -441,6 +442,9 @@ public:
         std::string listingTag_;
         std::string statePath_;
         std::vector<BrowserLibrary::SystemPlace> systemPlaces_;
+        // "+ Add Folder > Choose a Folder...": the native picker runs off the
+        // UI thread; onUpdate() collects the answer.
+        Aestra::PendingFileDialog folderPicker_;
 
         // Auto-preview + keyboard helpers
         void tryAutoPreview();

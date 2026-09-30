@@ -40,6 +40,7 @@
 #include "../Core/AudioSettingsStore.h"
 #include "../Core/DockedRailWidths.h"
 #include "AestraJSONFile.h"
+#include "AestraFileDialog.h"
 #include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
@@ -889,10 +890,11 @@ void AestraApp::buildMenuBar() {
         });
 
         menu->addItem("Open Project...", [this]() {
-            if (auto* utils = Aestra::Platform::getUtils()) {
-                const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
-                                                       sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
-                const std::string pickedPath = utils->openFileDialog("Open Project", filter);
+            const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
+                                                   sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+            pickFileAsync(
+                [filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Open Project", filter); },
+                [this](const std::string& pickedPath) {
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
                     // Old session's keeper path: captured BEFORE the load, so
                     // discarded-take cleanup (run only on a successful switch)
@@ -908,7 +910,7 @@ void AestraApp::buildMenuBar() {
                         Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
                     }
                 }
-            }
+            });
         });
 
         menu->addSeparator();
@@ -1911,11 +1913,15 @@ void AestraApp::requestClose() {
                  [this](Aestra::DialogResponse response) {
                      switch (response) {
                      case Aestra::DialogResponse::Save:
-                         if (saveCurrentProject()) {
-                             m_running = false;
-                         } else {
-                             m_pendingClose = false;
-                         }
+                         // Save As answers asynchronously; keep the close
+                         // pending until the save has actually landed.
+                         saveCurrentProject([this](bool saved) {
+                             if (saved) {
+                                 m_running = false;
+                             } else {
+                                 m_pendingClose = false;
+                             }
+                         });
                          break;
                      case Aestra::DialogResponse::DontSave: {
                          // User explicitly chose not to save — remove the autosave
@@ -1942,33 +1948,57 @@ void AestraApp::requestClose() {
                  });
 }
 
-bool AestraApp::saveCurrentProject() {
-    return m_documentState.requiresSaveAs() ? saveProjectAs() : saveProject();
+void AestraApp::saveCurrentProject(std::function<void(bool)> onDone) {
+    if (m_documentState.requiresSaveAs()) {
+        saveProjectAs(std::move(onDone));
+        return;
+    }
+    const bool ok = saveProject();
+    if (onDone) onDone(ok);
 }
 
-bool AestraApp::saveProjectAs() {
-    auto* utils = Aestra::Platform::getUtils();
-    if (!utils) {
-        Log::warning("Cannot save project: platform file dialog is unavailable");
-        return false;
-    }
-
+void AestraApp::saveProjectAs(std::function<void(bool)> onDone) {
     Aestra::IPlatformUtils::SaveFileDialogOptions options;
     options.title = "Save Project As";
     options.filter =
         std::string("Aestra Project\0*.aes\0All Files\0*.*\0", sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
     options.defaultPath = m_documentState.canonicalPath();
     options.defaultExtension = "aes";
-    const std::string pickedPath = utils->saveFileDialog(options);
-    if (pickedPath.empty()) {
+
+    const bool started = pickFileAsync(
+        [options](Aestra::IPlatformUtils& utils) { return utils.saveFileDialog(options); },
+        [this, onDone](const std::string& pickedPath) {
+            bool ok = false;
+            if (!pickedPath.empty()) {
+                ok = saveProjectToPath(pickedPath, true);
+                if (ok) Log::info("Project saved as: " + pickedPath);
+            }
+            if (onDone) onDone(ok);
+        });
+    if (!started) {
+        Log::warning("Cannot save project: a file picker is already open or the platform layer is unavailable");
+        if (onDone) onDone(false);
+    }
+}
+
+bool AestraApp::pickFileAsync(Aestra::FileDialogCall call, std::function<void(const std::string&)> onPicked) {
+    auto queue = m_mainThreadQueue;
+    if (!queue || queue->fileDialogInFlight.exchange(true)) {
         return false;
     }
-
-    const bool ok = saveProjectToPath(pickedPath, true);
-    if (ok) {
-        Log::info("Project saved as: " + pickedPath);
-    }
-    return ok;
+    // The worker never calls onPicked (which captures `this`): it only queues
+    // it, under the shutdown gate, for drainMainThreadTasks() on the UI thread.
+    const bool started = Aestra::runFileDialogDetached(
+        std::move(call), [queue, onPicked = std::move(onPicked)](std::string picked) mutable {
+            std::lock_guard<std::mutex> lock(queue->mutex);
+            if (queue->shuttingDown) return;
+            queue->tasks.push_back([queue, onPicked = std::move(onPicked), picked = std::move(picked)]() {
+                queue->fileDialogInFlight.store(false);
+                onPicked(picked);
+            });
+        });
+    if (!started) queue->fileDialogInFlight.store(false);
+    return started;
 }
 
 ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, ProjectLoadSource source,

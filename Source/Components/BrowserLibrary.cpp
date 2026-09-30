@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "BrowserLibrary.h"
 
+#include "AestraPlatform.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -117,11 +119,15 @@ std::vector<std::pair<std::string, std::string>> parseXdgUserDirs(const std::str
 }
 
 std::vector<SystemPlace> discoverSystemPlaces(const std::string& homeDir, const std::string& xdgUserDirs) {
+    return discoverSystemPlacesFrom(homeDir, parseXdgUserDirs(xdgUserDirs, homeDir));
+}
+
+std::vector<SystemPlace> discoverSystemPlacesFrom(const std::string& homeDir,
+                                                  const std::vector<std::pair<std::string, std::string>>& xdg) {
     std::vector<SystemPlace> places;
     if (homeDir.empty()) return places;
 
     const std::filesystem::path home(homeDir);
-    const auto xdg = parseXdgUserDirs(xdgUserDirs, homeDir);
     const auto xdgPath = [&](const char* key, const char* fallbackName) -> std::filesystem::path {
         for (const auto& [k, v] : xdg) {
             if (k == key) return std::filesystem::path(v);
@@ -155,7 +161,17 @@ std::vector<SystemPlace> discoverSystemPlaces(const std::string& homeDir, const 
 std::vector<SystemPlace> discoverSystemPlaces() {
 #if defined(_WIN32)
     const char* home = std::getenv("USERPROFILE");
-    return discoverSystemPlaces(home ? home : "", "");
+    std::vector<std::pair<std::string, std::string>> known;
+    if (auto* utils = Aestra::Platform::getUtils()) {
+        using KF = Aestra::IPlatformUtils::KnownFolder;
+        const std::pair<const char*, KF> folders[] = {
+            {"DESKTOP", KF::Desktop}, {"DOWNLOAD", KF::Downloads}, {"DOCUMENTS", KF::Documents}, {"MUSIC", KF::Music}};
+        for (const auto& [key, folder] : folders) {
+            std::string path = utils->getKnownFolderPath(folder);
+            if (!path.empty()) known.emplace_back(key, std::move(path));
+        }
+    }
+    return discoverSystemPlacesFrom(home ? home : "", known);
 #else
     const char* home = std::getenv("HOME");
     if (!home || !*home) return {};

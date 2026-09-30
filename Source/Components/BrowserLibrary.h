@@ -33,6 +33,12 @@ std::vector<std::pair<std::string, std::string>> parseXdgUserDirs(const std::str
 /// an earlier place is dropped.
 std::vector<SystemPlace> discoverSystemPlaces(const std::string& homeDir, const std::string& xdgUserDirs);
 
+/// Same, with folder locations already resolved as (key, path) pairs using the
+/// XDG keys DESKTOP / DOWNLOAD / DOCUMENTS / MUSIC — how Windows' known-folder
+/// answers (redirected or localised folders) reach the same rules.
+std::vector<SystemPlace> discoverSystemPlacesFrom(const std::string& homeDir,
+                                                  const std::vector<std::pair<std::string, std::string>>& folders);
+
 /// discoverSystemPlaces() for the current user, reading the environment and
 /// the XDG config directory.
 std::vector<SystemPlace> discoverSystemPlaces();

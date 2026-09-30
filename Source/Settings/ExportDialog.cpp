@@ -31,9 +31,9 @@ ExportDialog::~ExportDialog() {
     if (m_exportFuture.valid()) {
         m_exportFuture.wait();
     }
-    if (m_fileDialogFuture.valid()) {
-        m_fileDialogFuture.wait();
-    }
+    // An open Browse picker is not waited for: its worker owns its own state
+    // and the late result is dropped. Waiting here hung window close until
+    // the user dismissed the picker.
     restoreAudioStreamIfNeeded();
 }
 
@@ -191,12 +191,9 @@ void ExportDialog::onUpdate(double deltaTime) {
         applyExportResult(m_exportFuture.get());
     }
 
-    if (m_fileDialogFuture.valid() &&
-        m_fileDialogFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        const std::string pickedPath = m_fileDialogFuture.get();
-        m_fileDialogPending = false;
-        if (!pickedPath.empty()) {
-            m_outputPath = pickedPath;
+    if (auto pickedPath = m_fileDialog.takeResult()) {
+        if (!pickedPath->empty()) {
+            m_outputPath = *pickedPath;
         }
         setDirty(true);
     }
@@ -368,12 +365,12 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
                                                        m_outputFieldRect.y + 7.0f),
                       props.fontSizeS, theme.getColor("textPrimary"));
     {
-        bool hovered = !m_fileDialogPending && (m_hoveredButton == 3);
+        bool hovered = !m_fileDialog.isPending() && (m_hoveredButton == 3);
         AestraUI::NUIColor btnBg = hovered ? theme.getColor("hover") : fieldBg;
         renderer.fillRoundedRect(m_browseButtonRect, props.radiusM, btnBg);
         renderer.strokeRoundedRect(m_browseButtonRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
-        renderer.drawTextCentered(m_fileDialogPending ? "Waiting..." : "Browse", m_browseButtonRect, props.fontSizeS,
-                                  theme.getColor(m_fileDialogPending ? "textMuted" : "textPrimary"));
+        renderer.drawTextCentered(m_fileDialog.isPending() ? "Waiting..." : "Browse", m_browseButtonRect, props.fontSizeS,
+                                  theme.getColor(m_fileDialog.isPending() ? "textMuted" : "textPrimary"));
     }
     y += rowH + gap;
 
@@ -682,35 +679,18 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
     m_tailInputFocused = false;
 
     // Browse button
-    if (m_browseButtonRect.contains(pos) && !m_fileDialogPending) {
+    if (m_browseButtonRect.contains(pos) && !m_fileDialog.isPending()) {
         Aestra::IPlatformUtils::SaveFileDialogOptions options;
         options.title = "Export Audio";
         options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0",
                                      sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
         options.defaultPath = m_outputPath;
         options.defaultExtension = "wav";
-#if AESTRA_PLATFORM_LINUX
-        // Zenity is an external process. Waiting for it on the UI thread stops
-        // Wayland event dispatch and can trigger the compositor's hung-client
-        // dialog. Poll the result from onUpdate instead; no Aestra UI objects
-        // are touched by this worker.
-        m_fileDialogPending = true;
-        m_fileDialogFuture = std::async(std::launch::async, [options = std::move(options)]() {
-            if (auto* utils = Aestra::Platform::getUtils()) {
-                return utils->saveFileDialog(options);
-            }
-            return std::string{};
+        // Result arrives in onUpdate(); the UI keeps painting meanwhile.
+        m_fileDialog.start([options = std::move(options)](Aestra::IPlatformUtils& utils) {
+            return utils.saveFileDialog(options);
         });
         setDirty(true);
-#else
-        if (auto* utils = Aestra::Platform::getUtils()) {
-            const std::string pickedPath = utils->saveFileDialog(options);
-            if (!pickedPath.empty()) {
-                m_outputPath = pickedPath;
-                setDirty(true);
-            }
-        }
-#endif
         return;
     }
 
@@ -745,7 +725,7 @@ void ExportDialog::updateButtonHover(AestraUI::NUIPoint pos) {
     if (m_panelState == PanelState::Settings) {
         if (m_startButtonRect.contains(pos)) m_hoveredButton = 0;
         else if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
-        else if (!m_fileDialogPending && m_browseButtonRect.contains(pos)) m_hoveredButton = 3;
+        else if (!m_fileDialog.isPending() && m_browseButtonRect.contains(pos)) m_hoveredButton = 3;
     } else if (m_panelState == PanelState::Progress) {
         if (m_cancelButtonRect.contains(pos)) m_hoveredButton = 1;
     } else {
