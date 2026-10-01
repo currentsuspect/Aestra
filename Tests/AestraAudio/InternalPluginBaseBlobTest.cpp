@@ -12,6 +12,8 @@
 // BEFORE and AFTER it inherits the base, by generating the expected layout from
 // the plugin's own table rather than from a hardcoded number that drifts.
 
+#include "Plugin/AestraDelay.h"
+#include "Plugin/AestraDrift.h"
 #include "Plugin/AestraFilter.h"
 #include "Plugin/AestraLimit.h"
 #include "Plugin/AestraLFO.h"
@@ -229,6 +231,88 @@ int main() {
         check(reloaded.loadState(state), "canonical Verb blob loads");
         check(std::abs(reloaded.getParameter(Plugins::AestraVerb::kDecay) - 0.6789f) < 1e-6f,
               "Verb decay survives the round-trip");
+    }
+
+    // AestraDelay and AestraDrift. Both previously wrote version 3 and carried
+    // readers for their older layouts; under the reset those readers are gone
+    // and the base emits version 1, so neither blob is byte-identical to what
+    // shipped. What is pinned here is the NEW canonical contract, plus the fact
+    // that a pre-reset blob is now rejected outright rather than half-read -- a
+    // format that still quietly accepted v3 would mean the reset never happened.
+    {
+        Plugins::AestraDelay delay;
+        delay.initialize(48000.0, 256);
+        delay.setParameter(Plugins::AestraDelay::kTime, 0.375f);
+        delay.setParameter(Plugins::AestraDelay::kFeedback, 0.625f);
+        const auto state = delay.saveState();
+        check(state.size() == 8 + 13 * 4, "Delay blob is magic+version+13 floats");
+
+        uint32_t dmagic = 0;
+        uint32_t dversion = 0;
+        std::memcpy(&dmagic, state.data(), sizeof(dmagic));
+        std::memcpy(&dversion, state.data() + sizeof(uint32_t), sizeof(dversion));
+        check(dmagic == delay.kStateMagic, "Delay blob keeps its plugin magic ('DLY' v3 value)");
+        check(dversion == 1u, "Delay blob is written at the canonical base version 1");
+
+        std::vector<float> dexpected(13);
+        for (uint32_t i = 0; i < 13; ++i)
+            dexpected[i] = delay.getParameter(i);
+        check(state == legacyBlob(delay.kStateMagic, dexpected),
+              "Delay blob matches the canonical {magic, version=1, params[]} layout");
+
+        Plugins::AestraDelay dfresh;
+        dfresh.initialize(48000.0, 256);
+        auto dlegacy = legacyBlob(dfresh.kStateMagic, dexpected);
+        uint32_t three = 3u;
+        std::memcpy(dlegacy.data() + sizeof(uint32_t), &three, sizeof(three));
+        check(!dfresh.loadState(dlegacy), "a pre-reset Delay blob (version 3) is rejected, not half-read");
+
+        Plugins::AestraDelay dreload;
+        dreload.initialize(48000.0, 256);
+        check(dreload.loadState(state), "canonical Delay blob loads");
+        check(std::abs(dreload.getParameter(Plugins::AestraDelay::kTime) - 0.375f) < 1e-6f,
+              "Delay time survives the round-trip");
+
+        // The Division default is a computed expression (kDiv1_8 / 12.0f) that
+        // moved from a runtime local into the constexpr table. Prove it folded
+        // to the same value rather than trusting that it did.
+        check(std::abs(delay.getParameter(Plugins::AestraDelay::kNoteDivision) - 4.0f / 12.0f) < 1e-6f,
+              "Delay Division default folded to kDiv1_8/12 in the constexpr table");
+    }
+
+    {
+        Plugins::AestraDrift drift;
+        drift.initialize(48000.0, 256);
+        drift.setParameter(Plugins::AestraDrift::kPitch, 0.8125f);
+        drift.setParameter(Plugins::AestraDrift::kTexture, 0.4375f);
+        const auto state = drift.saveState();
+        check(state.size() == 8 + 10 * 4, "Drift blob is magic+version+10 floats");
+
+        uint32_t gmagic = 0;
+        uint32_t gversion = 0;
+        std::memcpy(&gmagic, state.data(), sizeof(gmagic));
+        std::memcpy(&gversion, state.data() + sizeof(uint32_t), sizeof(gversion));
+        check(gmagic == drift.kStateMagic, "Drift blob keeps its plugin magic");
+        check(gversion == 1u, "Drift blob is written at the canonical base version 1");
+
+        std::vector<float> gexpected(10);
+        for (uint32_t i = 0; i < 10; ++i)
+            gexpected[i] = drift.getParameter(i);
+        check(state == legacyBlob(drift.kStateMagic, gexpected),
+              "Drift blob matches the canonical {magic, version=1, params[]} layout");
+
+        Plugins::AestraDrift gfresh;
+        gfresh.initialize(48000.0, 256);
+        auto glegacy = legacyBlob(gfresh.kStateMagic, gexpected);
+        uint32_t gthree = 3u;
+        std::memcpy(glegacy.data() + sizeof(uint32_t), &gthree, sizeof(gthree));
+        check(!gfresh.loadState(glegacy), "a pre-reset Drift blob (version 3) is rejected, not half-read");
+
+        Plugins::AestraDrift greload;
+        greload.initialize(48000.0, 256);
+        check(greload.loadState(state), "canonical Drift blob loads");
+        check(std::abs(greload.getParameter(Plugins::AestraDrift::kPitch) - 0.8125f) < 1e-6f,
+              "Drift pitch survives the round-trip");
     }
 
     if (failures > 0) {

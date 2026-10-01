@@ -446,36 +446,45 @@ bool testFeedbackHighpassReducesLowFrequencyRepeats() {
     return true;
 }
 
-bool testVersion2StateLoadsWithNewDefaults() {
+// Inverted under the pre-user format reset (FD-24). This used to assert that a
+// V2 blob loads and that parameters added since V2 arrive at their defaults.
+// That migration path is deleted by decision, so the contract is now the
+// opposite: a pre-reset blob is REJECTED rather than half-read. Half-reading is
+// the failure worth guarding -- it silently loads a short parameter array and
+// leaves the rest at defaults with no error, which is indistinguishable from a
+// successful load.
+bool testPreResetStateIsRejected() {
     struct LegacyStateBlobV2 {
         uint32_t magic;
         uint32_t version;
         float params[11];
     } blob{};
 
-    blob.magic = AestraDelay::kStateMagicV2;
+    // The magic value is the plugin's own, taken literally: the constant was
+    // deleted with the reader that used it, and a test for a removed format
+    // should not depend on a symbol the production code no longer carries.
+    blob.magic = 0x444C5902; // 'DLY' v2
     blob.version = 2;
     blob.params[AestraDelay::kTime] = 0.2f;
     blob.params[AestraDelay::kFeedback] = 0.4f;
     blob.params[AestraDelay::kMix] = 0.7f;
-    blob.params[AestraDelay::kNoteDivision] = AestraDelay::noteDivisionParamFromIndex(AestraDelay::kDiv1_4);
 
     std::vector<uint8_t> state(sizeof(blob));
     std::memcpy(state.data(), &blob, sizeof(blob));
 
     AestraDelay delay;
     delay.initialize(48000.0, 512);
-    if (!delay.loadState(state)) {
-        std::cerr << "V2 state failed to load.\n";
+    if (delay.loadState(state)) {
+        std::cerr << "A pre-reset V2 blob was accepted. Under FD-24 it must be rejected, not half-read.\n";
         return false;
     }
-    if (std::abs(delay.getParameter(AestraDelay::kFeedbackHighpass) - 0.0f) > 1.0e-6f ||
-        std::abs(delay.getParameter(AestraDelay::kOutputTrim) - 0.5f) > 1.0e-6f ||
-        std::abs(delay.getParameter(AestraDelay::kMix) - 0.7f) > 1.0e-6f) {
-        std::cerr << "V2 migration defaults were not preserved. lowCut="
-                  << delay.getParameter(AestraDelay::kFeedbackHighpass)
-                  << " output=" << delay.getParameter(AestraDelay::kOutputTrim)
-                  << " mix=" << delay.getParameter(AestraDelay::kMix) << "\n";
+    // And the rejected load must leave the plugin at its declared defaults, not
+    // carrying the values that were in the rejected blob.
+    if (std::abs(delay.getParameter(AestraDelay::kTime) - 0.25f) > 1.0e-6f ||
+        std::abs(delay.getParameter(AestraDelay::kMix) - 1.0f) > 1.0e-6f) {
+        std::cerr << "A rejected blob still mutated parameters. time="
+                  << delay.getParameter(AestraDelay::kTime) << " mix=" << delay.getParameter(AestraDelay::kMix)
+                  << "\n";
         return false;
     }
     return true;
@@ -511,7 +520,7 @@ int main() {
         return 1;
     if (!testFeedbackHighpassReducesLowFrequencyRepeats())
         return 1;
-    if (!testVersion2StateLoadsWithNewDefaults())
+    if (!testPreResetStateIsRejected())
         return 1;
     std::cout << "All AestraDelay upgrade tests passed.\n";
     return 0;
