@@ -155,7 +155,6 @@ expect pass "clean annotated translation unit" "${WORK}/clean"
 # this and a derivation that follows includes fails it. The failing reason is
 # asserted too, so this cannot pass by failing for some unrelated reason.
 make_fixture "${WORK}/header_only" '
-extern void mix(float*, unsigned);
 void use(float* out, unsigned n) { mix(out, n); }'
 cat >"${WORK}/header_only/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
@@ -176,7 +175,6 @@ expect fail "violation reached through a header include" \
 
 # ── And a TU that includes an annotated header with no violation passes ───
 make_fixture "${WORK}/header_clean" '
-extern void mix(float*, unsigned);
 void use(float* out, unsigned n) { mix(out, n); }'
 cat >"${WORK}/header_clean/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
