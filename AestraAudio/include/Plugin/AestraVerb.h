@@ -293,7 +293,32 @@ public:
             m_smoothedParams[spec->id] = paramValue(spec->id);
         }
         prepareDelayLines(true);
+        resolveSimdCapabilities();
         return true;
+    }
+
+    /// Resolves CPU feature flags on the preparing thread and stores them as
+    /// plain members, so process() never has to ask.
+    ///
+    /// The #ifdefs mirror the ones guarding the call sites, which is what keeps
+    /// a non-x86 build unchanged: on ARM neither macro is defined, no SIMD path
+    /// is compiled, and these stay false.
+    ///
+    /// CPUID is a VM exit on virtualised hosts. Called from the audio thread it
+    /// was unbounded work inside a callback; called from here it is once, on a
+    /// thread with no deadline. Issue #1009.
+    void resolveSimdCapabilities() {
+        DSP::ReverbSIMD::resolveSimdCapabilities();
+#ifdef AESTRA_REVERB_HAS_AVX2
+        m_useAVX2 = DSP::ReverbSIMD::g_useAVX2;
+#else
+        m_useAVX2 = false;
+#endif
+#ifdef AESTRA_REVERB_HAS_SSE
+        m_useSSE = DSP::ReverbSIMD::g_useSSE41;
+#else
+        m_useSSE = false;
+#endif
     }
 
     void shutdown() override {}
@@ -492,9 +517,7 @@ public:
             AESTRA_PROFILE_STAGE(kLFOControl);
             if (controlCountdown == 0) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 =
-                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
-                if (useAVX2) {
+                if (m_useAVX2) {
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin.data(), lfoCos.data());
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin2.data(), lfoCos2.data());
                 } else
@@ -543,8 +566,7 @@ public:
             AESTRA_PROFILE_STAGE(kDiffuser);
             if (control.diffusionEnabled) {
 #ifdef AESTRA_REVERB_HAS_SSE
-                static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
-                if (useSSE) {
+                if (m_useSSE) {
                     DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
                                                          diffuserPtrsL.data(), diffuserPtrsR.data(),
                                                          diffuserPos.data(), diffuserMasks.data(),
@@ -567,9 +589,7 @@ public:
             // Vectorized LFO updates (sin/cos quadrature oscillators)
             if (control.modulationEnabled) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 =
-                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
-                if (useAVX2) {
+                if (m_useAVX2) {
                     // NOTE argument order: the kernels take (sinInc, cosInc).
                     // These were passed swapped, which rotated every LFO by
                     // ~pi/2 per sample: the "0.3 Hz" modulators actually ran
@@ -1820,6 +1840,23 @@ private:
 
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
+
+    // SIMD capability, resolved once on the preparing thread (see
+    // resolveSimdCapabilities). Plain bools rather than function-local statics:
+    // the statics carried a thread-safe-initialisation guard, and their
+    // initializer called CPUDetection::get() -- itself a guarded singleton whose
+    // constructor runs __cpuid/__cpidex/xgetbv. The first audio-thread pass
+    // through process() therefore took two guard variables and a CPUID, which is
+    // a VM exit on a virtualised host and unbounded work on the callback.
+    // initialize() already runs off the audio thread and is the established
+    // place for one-time setup. See issue #1009.
+    //
+    // These are written before the instance is published to the audio thread and
+    // only read afterwards, so a plain bool is sound: no concurrent write, so no
+    // atomic needed.
+    bool m_useAVX2 = false;
+    bool m_useSSE = false;
+
     std::atomic<bool> m_active{false};
     std::array<float, kParamCount> m_smoothedParams{};
 

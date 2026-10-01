@@ -1741,6 +1741,28 @@ add_test(NAME NoAudioEngineSingletonGuardSelfTest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
 set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
+# Zero-tolerance source guard: fails if any process() body reaches CPU feature
+# detection. CPUDetection::get() is a guarded singleton whose constructor runs
+# __cpuid/xgetbv — a VM exit on a virtualised host, on the callback, mid-render.
+# Issue #1009. Complements check-rt-effects.sh, which cannot see a plugin that is
+# not yet annotated.
+add_test(NAME NoRtThreadCpuDetectionGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection.cmake)
+set_tests_properties(NoRtThreadCpuDetectionGuard PROPERTIES LABELS "guard;architecture;realtime;contract:core" TIMEOUT 120)
+
+# Self-test: the guard must actually catch the defect. A textual tripwire that
+# cannot fail is worse than none, so each CPU token is injected into a fixture
+# process() body — including one buried mid-body, which is where all three
+# AestraVerb sites were — and benign resolve-in-initialize shapes must pass.
+add_test(NAME NoRtThreadCpuDetectionGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/guard_selftest_rt_cpu
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection_selftest.cmake)
+set_tests_properties(NoRtThreadCpuDetectionGuardSelfTest PROPERTIES LABELS "guard;architecture;realtime;contract:core" TIMEOUT 120)
+
 # V8-C14 step 4 surface-resolution ratchet: today's known R2/R4/R5/R6 violations
 # are pinned as a baseline table; the build fails if any count rises, if a pattern
 # spreads to a file outside the table, or if a count falls without the table being
