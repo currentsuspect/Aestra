@@ -63,6 +63,17 @@ make_fixture() {
 #define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
 ${body}
 EOF
+    # A header the unit includes, plus the -I that finds it, in EVERY fixture
+    # rather than only the header-only one — so the include graph is exercised
+    # by the whole suite and the header-only case is not a special path.
+    mkdir -p "${root}/AestraAudio/include"
+    cat >"${root}/AestraAudio/include/unit.h" <<'EOF'
+#pragma once
+void mix(float* out, unsigned n);
+EOF
+    if ! grep -q 'unit\.h' "${root}/AestraAudio/src/unit.cpp"; then
+        sed -i '1i #include "unit.h"' "${root}/AestraAudio/src/unit.cpp"
+    fi
     # Generated rather than heredoc'd. The command field has to survive two
     # decodings -- JSON, then shlex -- and hand-escaping through both in a
     # shell heredoc is how you end up testing your own escaping instead of the
@@ -78,7 +89,8 @@ src = f"{root}/AestraAudio/src/unit.cpp"
 # spaces. Splitting it on whitespace first would strip the very quotes this
 # fixture exists to carry, and the test would then pass for the wrong reason.
 flag = shlex.quote(os.environ["AESTRA_FIXTURE_FLAGS"])
-command = f'{os.environ["AESTRA_FIXTURE_CXX"]} -std=c++20 {flag} -c -o unit.o {src}'
+command = (f'{os.environ["AESTRA_FIXTURE_CXX"]} -std=c++20 {flag} '
+           f'-I {root}/AestraAudio/include -c -o unit.o {src}')
 with open(f"{root}/build/compile_commands.json", "w") as fh:
     json.dump([{"directory": root, "command": command, "file": src}], fh, indent=2)
 PY
@@ -127,6 +139,44 @@ void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
     for (unsigned i = 0; i < n; ++i) out[i] *= 0.5f;
 }'
 expect pass "clean annotated translation unit" "${WORK}/clean"
+
+# ── An annotation that lives only in a HEADER must still be checked ────────
+# This is the case the whole derivation change exists for. Every built-in
+# effect is header-only, so its AESTRA_RT_NONBLOCKING sits in a .h while the
+# translation unit that compiles it says nothing. The old rule --
+# grep --include='*.cpp' -- could not see those annotations at all, and the
+# gate reported three translation units while eleven headers carried them.
+#
+# Here the .cpp includes a header holding a *violating* annotation and does
+# not mention the macro itself, so a derivation that greps .cpp files passes
+# this and a derivation that follows includes fails it. The failing reason is
+# asserted too, so this cannot pass by failing for some unrelated reason.
+make_fixture "${WORK}/header_only" '
+void mix(float* out, unsigned n);'
+cat >"${WORK}/header_only/AestraAudio/include/unit.h" <<'EOF'
+#pragma once
+#define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
+inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
+    float* scratch = new float[n];
+    for (unsigned i = 0; i < n; ++i) out[i] = scratch[i];
+    delete[] scratch;
+}
+EOF
+expect fail "violation reached through a header include" \
+    "${WORK}/header_only" "function-effects"
+
+# ── And a TU that includes an annotated header with no violation passes ───
+make_fixture "${WORK}/header_clean" '
+void mix(float* out, unsigned n);'
+cat >"${WORK}/header_clean/AestraAudio/include/unit.h" <<'EOF'
+#pragma once
+#define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
+inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
+    for (unsigned i = 0; i < n; ++i) out[i] *= 0.5f;
+}
+EOF
+expect pass "clean annotation reached through a header include" \
+    "${WORK}/header_clean"
 
 # ── A flag whose value contains quotes must reach the compiler intact ───────
 # The unit reads the define, so if the flag were mangled in transit this fails

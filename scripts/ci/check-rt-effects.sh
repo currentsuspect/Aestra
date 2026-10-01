@@ -94,16 +94,154 @@ if ! grep -q "function-effects" "$probe_out"; then
 fi
 
 # The annotated translation units, derived from the annotations themselves.
+#
+# The set is "every .cpp that COMPILES annotated code", not "every .cpp that
+# mentions the macro". The distinction is not academic: every built-in effect
+# is header-only, so BuiltInPlugins.cpp includes a dozen headers carrying
+# AESTRA_RT_NONBLOCKING while itself never naming it. Under the older
+# --include='*.cpp' rule those annotations were invisible to this gate, which is
+# precisely the drift this script exists to prevent — it reported three
+# translation units while the audio tree had annotations in eleven headers.
+#
+# So the derivation walks the include graph: a .cpp is in the set when anything
+# it transitively includes mentions the macro. Quoted includes are resolved
+# against the including file's own directory and then against that
+# translation unit's -I paths, because that is what the compiler does.
+# Angle-bracket includes are skipped: they name system or vendored headers,
+# which are not this tree's annotations to gate.
+#
+# Python does the walking rather than shell. This file already depends on it to
+# extract compile arguments, and a transitive closure in bash is both slower and
+# far easier to get quietly wrong.
 mapfile -t ANNOTATED < <(
     cd "$REPO_ROOT" &&
-    grep -rl --include='*.cpp' 'AESTRA_RT_NONBLOCKING' \
-        AestraAudio/src Source 2>/dev/null | sort
+    python3 - "$DB" "$REPO_ROOT" AESTRA_RT_NONBLOCKING <<'PY'
+import json, os, re, shlex, sys
+
+db_path, root, macro = sys.argv[1], sys.argv[2], sys.argv[3]
+
+# -I roots per translation unit, so a quoted include resolves the way the
+# compiler will resolve it rather than by guessing at the layout.
+inc_dirs = {}
+try:
+    for entry in json.load(open(db_path)):
+        argv = shlex.split(entry.get("command") or "") if entry.get("command") \
+            else list(entry["arguments"])
+        dirs = []
+        for i, a in enumerate(argv):
+            if a == "-I" and i + 1 < len(argv):
+                dirs.append(os.path.abspath(argv[i + 1]))
+            elif a.startswith("-I") and len(a) > 2:
+                dirs.append(os.path.abspath(a[2:]))
+        inc_dirs[os.path.abspath(entry["file"])] = dirs
+except Exception:
+    pass  # No database is handled and reported by the caller, not here.
+
+INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+
+
+def mentions_macro(path):
+    try:
+        with open(path, "r", errors="replace") as fh:
+            return macro in fh.read()
+    except OSError:
+        return False
+
+
+def resolve(name, from_file):
+    base = os.path.dirname(from_file)
+    for cand in (os.path.join(base, name),):
+        if os.path.isfile(cand):
+            return os.path.abspath(cand)
+    for d in inc_dirs.get(os.path.abspath(from_file), []):
+        cand = os.path.join(d, name)
+        if os.path.isfile(cand):
+            return os.path.abspath(cand)
+    return None
+
+
+# Seeds: any file in the tree carrying an annotation, .h or .cpp.
+seeds = set()
+for dirpath, dirnames, filenames in os.walk(root):
+    dirnames[:] = [d for d in dirnames if d not in (".git", "build", "External", "external")]
+    for fn in filenames:
+        if fn.endswith((".h", ".hpp", ".cpp")):
+            p = os.path.join(dirpath, fn)
+            if mentions_macro(p):
+                seeds.add(os.path.abspath(p))
+
+# Candidates are the union of two sets, and both are needed.
+#
+#   1. Every translation unit in the compile database. These are what this
+#      configuration actually builds, and each is followed through the include
+#      graph -- that is how a header-only plugin is reached at all.
+#
+#   2. Every .cpp ON DISK that mentions the macro directly, whether or not this
+#      build compiles it. This is the old rule, kept deliberately: it is what
+#      makes the gate fail closed on an annotated unit that has no compile
+#      command instead of quietly dropping it. Dropping it would turn "this
+#      configuration does not build it" into a silent pass.
+#
+# A file in neither set is a TU this configuration does not build
+# (Source/App/AestraApp.cpp in a headless run), so there is nothing here that
+# could check it -- and it carries no annotation of its own.
+try:
+    db_entries = json.load(open(db_path))
+except Exception:
+    db_entries = []
+
+# An empty database is NOT an early exit. The on-disk set still applies, and
+# the caller then reports each annotated unit as "no compile command" -- which
+# is the fail-closed answer, and strictly better than aborting here with a
+# vaguer message. Bailing on an empty list would have turned the silent gap
+# this rule exists to close into a differently-worded pass.
+built = sorted({os.path.abspath(e["file"]) for e in db_entries if e.get("file")})
+
+on_disk = []
+for dirpath, dirnames, filenames in os.walk(root):
+    dirnames[:] = [d for d in dirnames if d not in (".git", "build", "External", "external")]
+    for fn in filenames:
+        if fn.endswith(".cpp"):
+            p = os.path.abspath(os.path.join(dirpath, fn))
+            if p in seeds:
+                on_disk.append(p)
+
+found = []
+for cpp in sorted(set(built) | set(on_disk)):
+    if cpp in seeds:
+        found.append(cpp)
+        continue
+    # Transitive closure with a visited set, so a diamond include does not loop
+    # and a cyclic #include (guarded, so legal) terminates.
+    seen, stack, hit = set(), [cpp], False
+    while stack and not hit:
+        cur = stack.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        if cur in seeds and cur != cpp:
+            hit = True
+            break
+        try:
+            text = open(cur, "r", errors="replace").read()
+        except OSError:
+            continue
+        for name in INCLUDE.findall(text):
+            nxt = resolve(name, cur)
+            if nxt and nxt not in seen:
+                stack.append(nxt)
+    if hit:
+        found.append(cpp)
+
+for path in sorted(set(found)):
+    print(os.path.relpath(path, root))
+PY
 )
 
 if [[ ${#ANNOTATED[@]} -eq 0 ]]; then
-    echo "FAIL: no translation unit carries AESTRA_RT_NONBLOCKING."
-    echo "      Either the annotations were removed or the macro was renamed."
-    echo "      An empty check must not report success."
+    echo "FAIL: no translation unit carries or reaches an AESTRA_RT_NONBLOCKING"
+    echo "      annotation. Either the annotations were removed or the macro was"
+    echo "      renamed. An empty check must not report success."
     exit 1
 fi
 
