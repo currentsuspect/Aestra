@@ -543,192 +543,6 @@ bool testSampleRateInit96000() {
     return report("Sample rate 96k init + process", ok && !hasNaNOrInf(output.data(), frames));
 }
 
-bool testStateV6Roundtrip() {
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-
-    // Set non-default values
-    eq.setParameter(AestraEQ::kParamHPFEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamHPFFreq, 0.5f);
-    eq.setParameter(AestraEQ::kParamHPFSlope, 0.667f);
-    eq.setParameter(AestraEQ::kParamLShEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamLShFreq, 0.3f);
-    eq.setParameter(AestraEQ::kParamLShGain, 0.7f);
-    eq.setParameter(AestraEQ::kParamLShQ, 0.2f);
-    eq.setParameter(AestraEQ::kParamBell1Enable, 0.0f);
-    eq.setParameter(AestraEQ::kParamBell2Freq, 0.8f);
-    eq.setParameter(AestraEQ::kParamBell2Type, 1.0f / 3.0f); // Notch
-    eq.setParameter(AestraEQ::kParamOutputGain, 0.75f);
-    eq.setParameter(AestraEQ::kParamPolarityInvert, 1.0f);
-    eq.setParameter(AestraEQ::kParamBell2StereoMode, 0.75f); // Mid
-    eq.setParameter(AestraEQ::kParamBypass, 0.0f);
-
-    auto state = eq.saveState();
-
-    AestraEQ eq2;
-    eq2.initialize(kSampleRate, kBlockSize);
-    bool loaded = eq2.loadState(state);
-
-    bool match = true;
-    match &= eq2.getParameter(AestraEQ::kParamHPFEnable) == 1.0f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamHPFFreq) - 0.5f) < 0.001f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamHPFSlope) - 0.667f) < 0.001f;
-    match &= eq2.getParameter(AestraEQ::kParamLShEnable) == 1.0f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamLShFreq) - 0.3f) < 0.001f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamLShGain) - 0.7f) < 0.001f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamLShQ) - 0.2f) < 0.001f;
-    match &= eq2.getParameter(AestraEQ::kParamBell1Enable) == 0.0f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamBell2Freq) - 0.8f) < 0.001f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamBell2Type) - (1.0f / 3.0f)) < 0.001f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamOutputGain) - 0.75f) < 0.001f;
-    match &= eq2.getParameter(AestraEQ::kParamPolarityInvert) == 1.0f;
-    match &= std::abs(eq2.getParameter(AestraEQ::kParamBell2StereoMode) - 0.75f) < 0.001f;
-
-    return report("State V6 roundtrip preserves stereo placement", loaded && match);
-}
-
-bool testLegacyV5StateLoadDefaultsStereoPlacement() {
-    EQStateBlobV5 v5{};
-    v5.magic = AestraEQ::kStateMagicV5;
-    v5.version = 5;
-    for (uint32_t i = 0; i < AestraEQ::kParamHPFStereoMode; ++i) {
-        v5.params[i] = 0.5f;
-    }
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&v5);
-    std::vector<uint8_t> state(data, data + sizeof(v5));
-
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    const bool loaded = eq.loadState(state);
-    bool defaults = true;
-    defaults &= eq.getParameter(AestraEQ::kParamHPFStereoMode) == 0.0f;
-    defaults &= eq.getParameter(AestraEQ::kParamLShStereoMode) == 0.0f;
-    defaults &= eq.getParameter(AestraEQ::kParamBell1StereoMode) == 0.0f;
-    defaults &= eq.getParameter(AestraEQ::kParamBell2StereoMode) == 0.0f;
-    defaults &= eq.getParameter(AestraEQ::kParamHShStereoMode) == 0.0f;
-    defaults &= eq.getParameter(AestraEQ::kParamLPFStereoMode) == 0.0f;
-    return report("Legacy V5 state loads with stereo placement defaults", loaded && defaults);
-}
-
-bool testLegacyV4StateLoadDefaultsPolarity() {
-    EQStateBlobV4 v4{};
-    v4.magic = AestraEQ::kStateMagicV4;
-    v4.version = 4;
-    for (uint32_t i = 0; i < AestraEQ::kParamPolarityInvert; ++i) {
-        v4.params[i] = 0.5f;
-    }
-    v4.params[AestraEQ::kParamOutputGain] = 0.75f;
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&v4);
-    std::vector<uint8_t> state(data, data + sizeof(v4));
-
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    const bool loaded = eq.loadState(state);
-    const bool polarityDefault = eq.getParameter(AestraEQ::kParamPolarityInvert) == 0.0f;
-    const bool outputPreserved = std::abs(eq.getParameter(AestraEQ::kParamOutputGain) - 0.75f) < 0.001f;
-    return report("Legacy V4 state loads with normal polarity", loaded && polarityDefault && outputPreserved);
-}
-
-bool testLegacyV3StateLoadDefaultsOutputGain() {
-    EQStateBlobV3 v3{};
-    v3.magic = AestraEQ::kStateMagicV3;
-    v3.version = 3;
-    for (uint32_t i = 0; i < AestraEQ::kParamOutputGain; ++i) {
-        v3.params[i] = 0.5f;
-    }
-    v3.params[AestraEQ::kParamBell1Type] = 1.0f;
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&v3);
-    std::vector<uint8_t> state(data, data + sizeof(v3));
-
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    const bool loaded = eq.loadState(state);
-    const bool defaults = std::abs(eq.getParameter(AestraEQ::kParamOutputGain) - 0.5f) < 0.001f;
-    const bool preserved = std::abs(eq.getParameter(AestraEQ::kParamBell1Type) - 1.0f) < 0.001f;
-    return report("Legacy V3 state loads with neutral output gain", loaded && defaults && preserved);
-}
-
-bool testLegacyV2StateLoadDefaultsNewTypes() {
-    EQStateBlobV2 v2{};
-    v2.magic = AestraEQ::kStateMagicV2;
-    v2.version = 2;
-    for (uint32_t i = 0; i < AestraEQ::kV1ParamCount; ++i) {
-        v2.params[i] = 0.5f;
-    }
-    v2.params[AestraEQ::kParamBell1Enable] = 1.0f;
-    v2.params[AestraEQ::kParamBell2Enable] = 1.0f;
-    v2.params[AestraEQ::kParamHPFSlope] = 0.0f; // legacy 12 dB/oct
-    v2.params[AestraEQ::kParamLPFSlope] = 1.0f; // legacy 48 dB/oct
-    v2.params[AestraEQ::kParamBypass] = 0.0f;
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&v2);
-    std::vector<uint8_t> state(data, data + sizeof(v2));
-
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    const bool loaded = eq.loadState(state);
-    const bool migrated = std::abs(eq.getParameter(AestraEQ::kParamHPFSlope) - (1.0f / 6.0f)) < 0.001f &&
-                          std::abs(eq.getParameter(AestraEQ::kParamLPFSlope) - (4.0f / 6.0f)) < 0.001f;
-    const bool defaults = eq.getParameter(AestraEQ::kParamBell1Type) == 0.0f &&
-                          eq.getParameter(AestraEQ::kParamBell2Type) == 0.0f &&
-                          std::abs(eq.getParameter(AestraEQ::kParamOutputGain) - 0.5f) < 0.001f &&
-                          eq.getParameter(AestraEQ::kParamPolarityInvert) == 0.0f;
-    return report("Legacy V2 state loads with Bell type defaults and migrated slopes", loaded && defaults && migrated);
-}
-
-bool testLegacyV1StateLoad() {
-    // Create a V1 state blob
-    EQStateBlobV1 v1{};
-    v1.magic = 0x45510001;
-    v1.version = 1;
-
-    // Set band 0 as LowCut at 200Hz
-    v1.enabled[0] = 1;
-    v1.types[0] = static_cast<uint8_t>(FilterType::LowCut);
-    v1.params[0] = 1.0f;        // enable
-    v1.params[1] = 1.0f / 7.0f; // type = LowCut
-    v1.params[2] = 0.5f;        // freq
-    v1.params[3] = 0.5f;        // gain
-    v1.params[4] = 0.0f;        // legacy 12 dB/oct slope
-
-    // Set band 2 as Bell
-    v1.enabled[2] = 1;
-    v1.types[2] = static_cast<uint8_t>(FilterType::Bell);
-    v1.params[10] = 1.0f;
-    v1.params[11] = 0.0f;
-    v1.params[12] = 0.6f;
-    v1.params[13] = 0.7f;
-    v1.params[14] = 0.3f;
-
-    // Bands 6-7 should be ignored
-    v1.enabled[6] = 1;
-    v1.types[6] = static_cast<uint8_t>(FilterType::Bell);
-    v1.enabled[7] = 1;
-    v1.types[7] = static_cast<uint8_t>(FilterType::Bell);
-
-    v1.params[40] = 0.0f; // bypass off
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&v1);
-    std::vector<uint8_t> state(data, data + sizeof(v1));
-
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    bool loaded = eq.loadState(state);
-
-    bool ok = true;
-    ok &= loaded;
-    ok &= eq.getParameter(AestraEQ::kParamHPFEnable) == 1.0f;
-    ok &= std::abs(eq.getParameter(AestraEQ::kParamHPFFreq) - 0.5f) < 0.001f;
-    ok &= std::abs(eq.getParameter(AestraEQ::kParamHPFSlope) - (1.0f / 6.0f)) < 0.001f;
-    ok &= eq.getParameter(AestraEQ::kParamBell1Enable) == 1.0f;
-    ok &= std::abs(eq.getParameter(AestraEQ::kParamBell1Freq) - 0.6f) < 0.001f;
-
-    return report("Legacy V1 state migration", ok);
-}
-
 bool testCorruptStateFails() {
     AestraEQ eq;
     eq.initialize(kSampleRate, kBlockSize);
@@ -1753,7 +1567,7 @@ bool testDynamicBandStateRoundTrip() {
 
     const auto a = restored.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slotA));
     const auto b = restored.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slotB));
-    const bool ok = loaded && state.size() == sizeof(EQStateBlobV8) &&
+    const bool ok = loaded && state.size() == sizeof(EQStateBlob) &&
                     std::abs(restored.getParameter(AestraEQ::kParamOutputGain) - 0.75f) < 0.001f &&
                     slotA == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
                     slotB == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) && a.enabled &&
@@ -1768,35 +1582,6 @@ bool testDynamicBandStateRoundTrip() {
                     std::abs(b.sidechainQNorm - 0.44f) < 0.001f && restored.getMagnitudeResponseDb(1000.0) > 8.0;
 
     return report("Dynamic band state round-trips in V8", ok);
-}
-
-bool testLegacyV7DynamicBandStateLoadsWithDynamicDefaults() {
-    EQStateBlobV7 blob{};
-    blob.magic = AestraEQ::kStateMagicV7;
-    blob.version = 7;
-    for (uint32_t i = 0; i < AestraEQ::kParamCount; ++i) {
-        blob.params[i] = AestraEQ::defaultParameterValue(i);
-    }
-    auto& saved = blob.dynamicBands[AestraEQ::kLegacyBandCount];
-    saved.enabled = 1u;
-    saved.typeNorm = 0.25f;
-    saved.stereoNorm = 0.75f;
-    saved.frequencyNorm = graphNormForHz(900.0f);
-    saved.gainNorm = 0.70f;
-    saved.qOrSlopeNorm = 0.33f;
-
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&blob);
-    const std::vector<uint8_t> state(bytes, bytes + sizeof(blob));
-
-    AestraEQ restored;
-    restored.initialize(kSampleRate, kBlockSize);
-    const bool loaded = restored.loadState(state);
-    const auto snapshot = restored.getDynamicBandSlotSnapshot(AestraEQ::kLegacyBandCount);
-    const bool ok = loaded && snapshot.enabled && !snapshot.dynamicEnabled && snapshot.sidechainLinked &&
-                    std::abs(snapshot.sidechainFrequencyNorm - snapshot.frequencyNorm) < 0.001f &&
-                    std::abs(snapshot.sidechainQNorm - snapshot.qOrSlopeNorm) < 0.001f;
-
-    return report("Legacy V7 dynamic band state loads with V8 dynamic defaults", ok);
 }
 
 bool testBandSoloIsRuntimeOnlyAndLimitsResponse() {
@@ -1977,7 +1762,7 @@ bool testAllDynamicBandStateRoundTrip() {
     restored.initialize(kSampleRate, kBlockSize);
     const bool loaded = restored.loadState(state);
 
-    bool slotsOk = created && loaded && state.size() == sizeof(EQStateBlobV8);
+    bool slotsOk = created && loaded && state.size() == sizeof(EQStateBlob);
     for (uint32_t slot = AestraEQ::kLegacyBandCount; slot < AestraEQ::kMaxDynamicBands; ++slot) {
         const auto expected = eq.getDynamicBandSlotSnapshot(slot);
         const auto actual = restored.getDynamicBandSlotSnapshot(slot);
@@ -1998,32 +1783,120 @@ bool testAllDynamicBandStateRoundTrip() {
     return report("All dynamic band state round-trips in V8", slotsOk);
 }
 
-bool testLegacyV6StateClearsDynamicSlots() {
-    AestraEQ eq;
-    eq.initialize(kSampleRate, kBlockSize);
-    const int32_t slot = eq.createDynamicBandAtGraphPoint(0.4f, 0.8f);
-
-    EQStateBlobV6 legacy{};
-    legacy.magic = AestraEQ::kStateMagicV6;
-    legacy.version = 6;
-    for (uint32_t i = 0; i < AestraEQ::kParamCount; ++i) {
-        legacy.params[i] = AestraEQ::defaultParameterValue(i);
-    }
-
-    const bool loaded = eq.loadState(toBytes(legacy));
-    const auto snapshot = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slot));
-    const bool ok = slot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) && loaded && !snapshot.enabled &&
-                    eq.findNextAvailableDynamicBandSlot() == slot;
-
-    return report("Legacy V6 state clears dynamic slots", ok);
-}
-
 bool testLatencyZero() {
     AestraEQ eq;
     return report("Latency is 0 samples", eq.getLatencySamples() == 0);
 }
 
 } // namespace
+
+
+bool testCanonicalStateRoundtripImpl() {
+    AestraEQ eq;
+    eq.initialize(kSampleRate, kBlockSize);
+    eq.setParameter(AestraEQ::kParamOutputGain, 0.375f);
+    eq.setParameter(AestraEQ::kParamBell1Gain, 0.625f);
+    eq.setParameter(AestraEQ::kParamBypass, 1.0f);
+    const auto state = eq.saveState();
+
+    uint32_t magic = 0;
+    uint32_t version = 0;
+    std::memcpy(&magic, state.data(), sizeof(magic));
+    std::memcpy(&version, state.data() + sizeof(uint32_t), sizeof(version));
+    if (magic != AestraEQ::kStateMagic) {
+        std::cerr << "canonical EQ blob magic changed\n";
+        return false;
+    }
+    if (version != 1u) {
+        std::cerr << "canonical EQ blob is not at version 1, got " << version << "\n";
+        return false;
+    }
+
+    AestraEQ restored;
+    restored.initialize(kSampleRate, kBlockSize);
+    if (!restored.loadState(state)) {
+        std::cerr << "canonical EQ blob did not load\n";
+        return false;
+    }
+    for (uint32_t i = 0; i < AestraEQ::kParamCount; ++i) {
+        if (std::fabs(restored.getParameter(i) - eq.getParameter(i)) > 1.0e-6f) {
+            std::cerr << "EQ parameter " << i << " failed the round-trip\n";
+            return false;
+        }
+    }
+    return true;
+}
+bool testCanonicalStateRoundtrip() { return report("Canonical state round-trip", testCanonicalStateRoundtripImpl()); }
+
+bool testPreResetBlobsAreRejectedImpl() {
+    AestraEQ pristine;
+    pristine.initialize(kSampleRate, kBlockSize);
+
+    AestraEQ source;
+    source.initialize(kSampleRate, kBlockSize);
+    source.setParameter(AestraEQ::kParamOutputGain, 0.375f);
+    const auto canonical = source.saveState();
+
+    for (uint32_t legacyVersion : {2u, 3u, 4u, 5u, 6u, 7u, 8u}) {
+        auto blob = canonical;
+        const uint32_t v = legacyVersion;
+        std::memcpy(blob.data() + sizeof(uint32_t), &v, sizeof(v));
+        AestraEQ eq;
+        eq.initialize(kSampleRate, kBlockSize);
+        if (eq.loadState(blob)) {
+            std::cerr << "pre-reset EQ blob (version " << legacyVersion << ") was accepted\n";
+            return false;
+        }
+        for (uint32_t i = 0; i < AestraEQ::kParamCount; ++i) {
+            if (std::fabs(eq.getParameter(i) - pristine.getParameter(i)) > 1.0e-6f) {
+                std::cerr << "a rejected version-" << legacyVersion << " blob still mutated parameter " << i
+                          << "\n";
+                return false;
+            }
+        }
+    }
+    return true;
+}
+bool testPreResetBlobsAreRejected() { return report("Pre-reset EQ blobs rejected, nothing mutated", testPreResetBlobsAreRejectedImpl()); }
+
+bool testParamSpecTableMatchesDefaultsImpl() {
+    const AestraEQ probe;
+    const auto& specs = AestraEQ::kSpecs;
+    const size_t count = sizeof(AestraEQ::kSpecs) / sizeof(AestraEQ::kSpecs[0]);
+    if (count != AestraEQ::kParamCount) {
+        std::cerr << "ParamSpec table has " << count << " rows, kParamCount is " << AestraEQ::kParamCount << "\n";
+        return false;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        const auto& spec = specs[i];
+        if (spec.id != i) {
+            std::cerr << "ParamSpec row " << i << " has id " << spec.id << "; rows must be dense and ordered\n";
+            return false;
+        }
+        const float expected = AestraEQ::defaultParameterValue(spec.id);
+        if (std::fabs(spec.defaultValue - expected) > 1.0e-6f) {
+            std::cerr << "ParamSpec row " << i << " default " << spec.defaultValue << " != defaultParameterValue "
+                      << expected << "\n";
+            return false;
+        }
+        // Every row is automatable, in 0..1, and not read-only: EQ's whole
+        // parameter surface is a set of user controls.
+        if (!spec.isAutomatable || spec.isReadOnly || spec.minValue != 0.0f || spec.maxValue != 1.0f) {
+            std::cerr << "ParamSpec row " << i << " is not an automatable 0..1 control\n";
+            return false;
+        }
+    }
+    // And exactly one row is the bypass knob, so isBypassed() finds it.
+    int bypassRows = 0;
+    for (size_t i = 0; i < count; ++i)
+        bypassRows += specs[i].isBypass ? 1 : 0;
+    if (bypassRows != 1) {
+        std::cerr << "expected exactly one bypass row, found " << bypassRows << "\n";
+        return false;
+    }
+    return true;
+}
+bool testParamSpecTableMatchesDefaults() { return report("ParamSpec table matches defaultParameterValue()", testParamSpecTableMatchesDefaultsImpl()); }
 
 int main() {
     std::cout << "=== Aestra EQ V1 Tests ===\n\n";
@@ -2055,14 +1928,12 @@ int main() {
     testDisabledDynamicBandsDoNotAlterOutput();
     testAllTwentyFourBandsActiveRemainFinite();
     testDynamicBandStateRoundTrip();
-    testLegacyV7DynamicBandStateLoadsWithDynamicDefaults();
     testBandSoloIsRuntimeOnlyAndLimitsResponse();
     testBandSoloAuditionsAffectedFrequencyRegion();
     testBandSoloUnsoloRebuildsWithoutParameterNudge();
     testClearingSoloedDynamicBandClearsSoloState();
     testDisablingSoloedDynamicBandClearsSoloState();
     testAllDynamicBandStateRoundTrip();
-    testLegacyV6StateClearsDynamicSlots();
     testLatencyZero();
     testBypassParity();
     testActiveMultichannelPassthroughAboveStereo();
@@ -2076,12 +1947,9 @@ int main() {
     testExtremeValuesNoNaN();
     testSampleRateInit44100();
     testSampleRateInit96000();
-    testStateV6Roundtrip();
-    testLegacyV5StateLoadDefaultsStereoPlacement();
-    testLegacyV4StateLoadDefaultsPolarity();
-    testLegacyV3StateLoadDefaultsOutputGain();
-    testLegacyV2StateLoadDefaultsNewTypes();
-    testLegacyV1StateLoad();
+    testCanonicalStateRoundtrip();
+    testPreResetBlobsAreRejected();
+    testParamSpecTableMatchesDefaults();
     testCorruptStateFails();
     testShortStateFails();
     testNaNInputRecovers();
@@ -2100,3 +1968,20 @@ int main() {
     std::cout << g_testsPassed << " passed, " << g_testsFailed << " failed.\n";
     return g_testsFailed > 0 ? 1 : 0;
 }
+
+// Replaces testStateV6Roundtrip, which round-tripped a v6 blob. Under the format
+// reset (FD-24) the plugin has ONE version, so this pins the canonical layout:
+// base header at version 1, the 33 parameters, then EQ's own dynamic-band tail.
+
+
+// The direction the seven deleted v1..v7 tests asserted the other way. Half-read
+// is the failure worth guarding: a blob of the right size and magic carrying an
+// old version number would be accepted as v1 and leave parameters wherever the
+// old layout happened to put them, with no error anywhere.
+
+
+// The 33 ParamSpec rows were extracted mechanically from the getParameters() this
+// plugin used to build, so they cannot have been mis-transcribed -- but
+// "extracted" is a claim about a one-time script, and defaultParameterValue() is
+// read by DSP paths throughout. This pins every row against it.
+
