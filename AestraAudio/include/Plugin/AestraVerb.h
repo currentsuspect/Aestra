@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include "DSP/FastMath.h"
 #include "DSP/ReverbSIMD.h"
@@ -99,7 +100,7 @@ namespace Plugins {
 #define AESTRA_MOD_TRACE(off) do { } while(0)
 #endif
 
-class AestraVerb : public IPluginInstance {
+class AestraVerb : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x52564205; // 'RVB' v5
 
@@ -283,23 +284,13 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
-        const auto defaults = getParameters();
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : defaults) {
-                if (param.id < kParamCount) {
-                    m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-                }
-            }
-        }
+        seedDefaultsOnce();
         // Snap smoothed values to the current (preserved-or-default) params.
-        for (const auto& param : defaults) {
-            if (param.id < kParamCount) {
-                m_smoothedParams[param.id] = m_params[param.id].load(std::memory_order_relaxed);
-            }
+        // Runs on every initialize, not just the first, because a re-prepare
+        // must re-align the smoothers to preserved values rather than leave
+        // them ramping from whatever was there before.
+        for (const ParamSpec* spec = paramSpecs(); spec != paramSpecs() + paramSpecCount(); ++spec) {
+            m_smoothedParams[spec->id] = paramValue(spec->id);
         }
         prepareDelayLines(true);
         return true;
@@ -326,7 +317,7 @@ public:
         (void)midiOutput;
 
         if (!m_active.load(std::memory_order_acquire) ||
-            m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+            isBypassed()) {
             copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
@@ -363,7 +354,7 @@ public:
 
             if (!inputSilent) m_sleepFaded = false;
 
-            const bool freezeHeld = m_params[kFreeze].load(std::memory_order_relaxed) > 0.5f;
+            const bool freezeHeld = paramValue(kFreeze) > 0.5f;
             const uint32_t guardSamples = static_cast<uint32_t>(0.75f * static_cast<float>(m_sampleRate));
             const bool wantSleep = inputSilent && !freezeHeld && m_tailEnv < kDormantThreshold &&
                                    m_silentSamples > guardSamples;
@@ -375,13 +366,13 @@ public:
                 // pre-sleep value. Snapping is inaudible here because the output is
                 // silent, and it makes the wake start from the latest automation.
                 for (uint32_t p = 0; p < kParamCount; ++p) {
-                    m_smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                    m_smoothedParams[p] = paramValue(p);
                 }
 
                 // Fully dormant: emit only the dry path (silent input -> silence),
                 // skipping the entire wet pipeline. The FDN state is untouched and
                 // near zero, so the first non-silent block resumes seamlessly.
-                const float mix = std::clamp(m_params[kMix].load(std::memory_order_relaxed), 0.0f, 1.0f);
+                const float mix = paramValue(kMix);
                 const float dryGain = std::cos(mix * (kTwoPi * 0.25f));
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
@@ -486,10 +477,11 @@ public:
             if (smoothCountdown == 0) {
                 for (uint32_t p = 0; p < kParamCount; ++p) {
                     if (p == kBypass || p == kMode || p == kFreeze) {
-                        smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                        // Stepped and hold controls snap rather than glide.
+                        smoothedParams[p] = paramValue(p);
                         continue;
                     }
-                    const float target = m_params[p].load(std::memory_order_relaxed);
+                    const float target = paramValue(p);
                     smoothedParams[p] += (target - smoothedParams[p]) * blockSmoothingCoeff;
                 }
                 smoothCountdown = kSmoothBlock;
@@ -853,43 +845,14 @@ public:
         if (fadeToSleep) m_sleepFaded = true;
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount) return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount) return;
-        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the parameter smoothers
-        const float clamped = std::clamp(value, 0.0f, 1.0f);
-        m_params[id].store(clamped, std::memory_order_relaxed);
-        if (!m_active.load(std::memory_order_relaxed)) {
-            m_smoothedParams[id] = clamped;
+    // The base stores, guards and clamps; this hook exists because the reverb
+    // smooths every parameter on the audio thread, so a value that changes
+    // while inactive must be snapped immediately or the next block ramps to it
+    // from the wrong place.
+    void onParameterChanged(uint32_t id, float value) override {
+        if (!m_active.load(std::memory_order_relaxed) && id < kParamCount) {
+            m_smoothedParams[id] = value;
         }
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            { kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true },
-            { kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true },
-            { kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true },
-            { kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true },
-            { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
-            { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
-            { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true },
-            { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1 },
-            { kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true },
-            { kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true },
-            { kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kAttack, "Attack", "ATK", "", 0.0f, 0.0f, 1.0f, true },
-            { kShape, "Shape", "SHP", "", 0.5f, 0.0f, 1.0f, true },
-            { kPredelaySync, "Pre Sync", "PSYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, kPredelaySyncCount - 1 },
-            { kModCharacter, "Mod Char", "MCHR", "", 0.0f, 0.0f, 1.0f, true, false, false, kModCharacterCount - 1 },
-        };
     }
 
     std::string getParameterDisplay(uint32_t id) const override {
@@ -987,43 +950,38 @@ public:
         return text;
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob { uint32_t magic = kStateMagic; uint32_t version = 5; float params[kParamCount]; } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) blob.params[i] = getParameter(i);
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return { data, data + sizeof(blob) };
-    }
+    // Canonical base format, version 1. This plugin previously wrote version 5 and
+    // carried readers for v1 through v5; those readers are gone by decision, not
+    // omission — see the format-reset note in this PR. A pre-reset Verb blob is
+    // now rejected rather than half-read.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true},
+        {kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true},
+        {kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true},
+        {kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true},
+        {kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true},
+        {kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true},
+        {kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true},
+        {kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1},
+        {kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true},
+        {kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true},
+        {kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kAttack, "Attack", "ATK", "", 0.0f, 0.0f, 1.0f, true},
+        {kShape, "Shape", "SHP", "", 0.5f, 0.0f, 1.0f, true},
+        {kPredelaySync, "Pre Sync", "PSYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, kPredelaySyncCount - 1},
+        {kModCharacter, "Mod Char", "MCHR", "", 0.0f, 0.0f, 1.0f, true, false, false, kModCharacterCount - 1},
+    };
 
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2) return false;
-        struct Header { uint32_t magic; uint32_t version; };
-        const auto* header = reinterpret_cast<const Header*>(state.data());
-        // Accept v1, v2, v3, v4, v5 magic values
-        if (header->magic != 0x52564201 && header->magic != 0x52564202 &&
-            header->magic != 0x52564203 && header->magic != 0x52564204 &&
-            header->magic != kStateMagic) return false;
-        const size_t availableParams = (state.size() - sizeof(uint32_t) * 2) / sizeof(float);
-        const auto* params = reinterpret_cast<const float*>(state.data() + sizeof(uint32_t) * 2);
-        // v3 had 11 params (kDecay..kMode). v4 adds kLowCut, kHighCut, kFreeze. v5 adds kAttack, kShape, kPredelaySync, kModCharacter.
-        // Old state: param indices 0-10 map directly. New params get defaults.
-        for (size_t i = 0; i < std::min<size_t>(availableParams, kParamCount); ++i) {
-            setParameter(static_cast<uint32_t>(i), params[i]);
-        }
-        // If old state, set new params to defaults
-        if (availableParams < kParamCount) {
-            const auto defaults = getParameters();
-            for (size_t i = availableParams; i < kParamCount; ++i) {
-                if (i < defaults.size()) {
-                    setParameter(static_cast<uint32_t>(i), defaults[i].defaultValue);
-                }
-            }
-        }
-        if (!m_active.load(std::memory_order_acquire)) {
-            prepareDelayLines(false);
-        }
-        return true;
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
 
+    // Kept as overrides, not deleted. The base reports hasEditor() == false and
+    // a zero size; this plugin has a real editor at 760x560, and dropping these
+    // would have silently taken it away.
     bool hasEditor() const override { return false; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
@@ -1863,8 +1821,6 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
     std::array<float, kParamCount> m_smoothedParams{};
 
     std::array<std::vector<float>, kFDNLineCount> m_delayLines;
