@@ -337,7 +337,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -416,7 +416,6 @@ public:
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
         const float blockSmoothingCoeff = 1.0f - std::exp(-4.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
-        static constexpr uint32_t kSmoothBlock = 4;
         const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
         const float srFloat = static_cast<float>(m_sampleRate);
         // Session 006: restore random modulation smoothing coefficient.
@@ -1221,11 +1220,11 @@ private:
         }
     }
 
-    int modeIndex() const {
+    int modeIndex() const AESTRA_RT_NONBLOCKING {
         return std::clamp(static_cast<int>(std::round(getParameter(kMode) * static_cast<float>(kModeCount - 1))), 0, kModeCount - 1);
     }
 
-    Mode currentMode() const {
+    Mode currentMode() const AESTRA_RT_NONBLOCKING {
         return static_cast<Mode>(modeIndex());
     }
 
@@ -1241,18 +1240,30 @@ private:
         return maxVal;
     }
 
+    // Early-reflection tap times and gains. Hoisted to class scope from function-
+    // local `static constexpr`: Clang refuses ANY static local inside a function
+    // annotated AESTRA_RT_NONBLOCKING, because thread-safe static initialisation
+    // is a guard variable, and a guard on an audio-thread path is a lock. These
+    // were compile-time constants either way, so hoisting them changes nothing
+    // about the generated code -- it only removes the guard the compiler is
+    // right to refuse.
+    // Control-rate block interval for parameter smoothing. Hoisted for the same
+    // reason as the tap tables: a static local is a guard variable, and a guard
+    // on the audio thread is a lock, however constexpr the value is.
+    inline static constexpr uint32_t kSmoothBlock = 4;
+
+    inline static constexpr std::array<float, kEarlyTapCount> kTapMs = {
+        5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f
+    };
+    inline static constexpr std::array<float, kEarlyTapCount> kTapGain = {
+        0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f
+    };
+
     void updateControlCache(ControlCache& cache,
                             const std::array<float, kParamCount>& smoothedParams,
                             const ModeConstants& constants,
                             Mode mode,
-                            float sampleScale) const {
-        static constexpr std::array<float, kEarlyTapCount> tapMs = {
-            5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f
-        };
-        static constexpr std::array<float, kEarlyTapCount> tapGain = {
-            0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f
-        };
-
+                            float sampleScale) const AESTRA_RT_NONBLOCKING {
         const float sr = static_cast<float>(m_sampleRate);
         const float size = 0.1f + std::clamp(smoothedParams[kSize], 0.0f, 1.0f) * 1.9f;
         const float decayTime = (0.3f + smoothedParams[kDecay] * 9.7f) * constants.decayScalar;
@@ -1423,14 +1434,14 @@ private:
         const int maxDelay = std::max(1, ringSize - 1);
         for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
             const int delay = std::clamp(
-                static_cast<int>(std::round(tapMs[tap] * modeSpread * sizeTerm * sr / 1000.0f)),
+                static_cast<int>(std::round(kTapMs[tap] * modeSpread * sizeTerm * sr / 1000.0f)),
                 1,
                 maxDelay
             );
             const int decorrelate = static_cast<int>((tap % 3U) + 1U);
             cache.earlyDelayL[tap] = delay;
             cache.earlyDelayR[tap] = std::min(maxDelay, delay + decorrelate);
-            cache.earlyGains[tap] = tapGain[tap] * modeLevel;
+            cache.earlyGains[tap] = kTapGain[tap] * modeLevel;
         }
 
         // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP).
