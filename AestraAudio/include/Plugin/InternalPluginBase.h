@@ -2,6 +2,7 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "RealtimeThreadGuard.h"
 
 #include <array>
 #include <atomic>
@@ -60,10 +61,10 @@ public:
     // ==================================================================
 
     /// The plugin's parameter table. Must outlive the instance.
-    virtual const ParamSpec* paramSpecs() const = 0;
+    virtual const ParamSpec* paramSpecs() const AESTRA_RT_NONBLOCKING = 0;
 
     /// Number of rows in paramSpecs().
-    virtual uint32_t paramSpecCount() const = 0;
+    virtual uint32_t paramSpecCount() const AESTRA_RT_NONBLOCKING = 0;
 
     /// Magic for the state blob. Stable across releases: it is what tells this
     /// plugin's saved state apart from another's.
@@ -115,7 +116,7 @@ public:
 
     uint32_t getParameterCount() const override { return paramSpecCount(); }
 
-    float getParameter(uint32_t id) const override {
+    float getParameter(uint32_t id) const AESTRA_RT_NONBLOCKING override {
         if (id >= kMaxSpecParams)
             return 0.0f;
         return m_params[id].load(std::memory_order_relaxed);
@@ -240,17 +241,17 @@ protected:
 
     /// Relaxed read for a plugin's own DSP. Storage lives in the base so the
     /// guard, the clamp and the blob stay in one place.
-    float paramValue(uint32_t id) const { return m_params[id].load(std::memory_order_relaxed); }
+    float paramValue(uint32_t id) const AESTRA_RT_NONBLOCKING { return m_params[id].load(std::memory_order_relaxed); }
 
     /// The bypass knob, read the way every plugin reads it.
-    bool isBypassed() const {
+    bool isBypassed() const AESTRA_RT_NONBLOCKING {
         const ParamSpec* spec = findBypassSpec();
         return spec ? m_params[spec->id].load(std::memory_order_relaxed) > 0.5f : false;
     }
 
 private:
-    const ParamSpec* specsBegin() const { return paramSpecs(); }
-    const ParamSpec* specsEnd() const { return paramSpecs() + paramSpecCount(); }
+    const ParamSpec* specsBegin() const AESTRA_RT_NONBLOCKING { return paramSpecs(); }
+    const ParamSpec* specsEnd() const AESTRA_RT_NONBLOCKING { return paramSpecs() + paramSpecCount(); }
 
     static constexpr size_t blobSize(uint32_t count) { return sizeof(uint32_t) * 2 + sizeof(float) * count; }
 
@@ -273,7 +274,7 @@ private:
         return reinterpret_cast<const float*>(blob + sizeof(uint32_t) * 2);
     }
 
-    const ParamSpec* findSpec(uint32_t id) const {
+    const ParamSpec* findSpec(uint32_t id) const AESTRA_RT_NONBLOCKING {
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             if (p->id == id)
                 return p;
@@ -281,7 +282,7 @@ private:
         return nullptr;
     }
 
-    const ParamSpec* findBypassSpec() const {
+    const ParamSpec* findBypassSpec() const AESTRA_RT_NONBLOCKING {
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             if (p->isBypass)
                 return p;

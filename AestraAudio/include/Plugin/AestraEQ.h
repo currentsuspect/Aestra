@@ -895,7 +895,7 @@ bool loadState(const std::vector<uint8_t>& state) {
 
     WatchdogStats getWatchdogStats() const { return {}; }
     void resetWatchdog() {}
-    bool isBypassedByWatchdog() const { return false; }
+    bool isBypassedByWatchdog() const override { return false; }
     bool isCrashed() const { return false; }
 
     void setInfo(const PluginInfo& info) { m_info = info; }
