@@ -155,7 +155,8 @@ expect pass "clean annotated translation unit" "${WORK}/clean"
 # this and a derivation that follows includes fails it. The failing reason is
 # asserted too, so this cannot pass by failing for some unrelated reason.
 make_fixture "${WORK}/header_only" '
-void mix(float* out, unsigned n);'
+extern void mix(float*, unsigned);
+void use(float* out, unsigned n) { mix(out, n); }'
 cat >"${WORK}/header_only/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
 #define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
@@ -164,7 +165,7 @@ cat >"${WORK}/header_only/AestraAudio/include/unit.h" <<'EOF'
 // mentions -Wfunction-effects too -- so a test asserting that substring would
 // have passed for a reason that has nothing to do with the check.
 void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING;
-inline void mix(float* out, unsigned n) {
+inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
     float* scratch = new float[n];
     for (unsigned i = 0; i < n; ++i) out[i] = scratch[i];
     delete[] scratch;
@@ -175,12 +176,13 @@ expect fail "violation reached through a header include" \
 
 # ── And a TU that includes an annotated header with no violation passes ───
 make_fixture "${WORK}/header_clean" '
-void mix(float* out, unsigned n);'
+extern void mix(float*, unsigned);
+void use(float* out, unsigned n) { mix(out, n); }'
 cat >"${WORK}/header_clean/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
 #define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
 void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING;
-inline void mix(float* out, unsigned n) {
+inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
     for (unsigned i = 0; i < n; ++i) out[i] *= 0.5f;
 }
 EOF
