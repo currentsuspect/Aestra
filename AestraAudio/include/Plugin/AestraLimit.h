@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -117,7 +118,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -331,13 +332,18 @@ private:
         m_longEma  = m_alphaLong  * inputSq + (1.0f - m_alphaLong)  * m_longEma;
     }
 
-    void computeAutoReleaseMs() {
-        const float density = (m_longEma > 1e-10f) ? (m_shortEma / m_longEma) : 0.0f;
+    // Density thresholds for the auto-release curve. Hoisted to class scope from
+    // function-local `static constexpr`: Clang refuses any static local inside a
+    // function annotated AESTRA_RT_NONBLOCKING, because thread-safe static
+    // initialisation is a guard variable and a guard on an audio-thread path is a
+    // lock. Same values, same generated code.
+    inline static constexpr float kDenseThresh  = 0.7f;
+    inline static constexpr float kSparseThresh = 0.3f;
+    inline static constexpr float kReleaseMaxMs = 300.0f;
+    inline static constexpr float kReleaseMinMs = 60.0f;
 
-        static constexpr float kDenseThresh  = 0.7f;
-        static constexpr float kSparseThresh = 0.3f;
-        static constexpr float kReleaseMaxMs = 300.0f;
-        static constexpr float kReleaseMinMs = 60.0f;
+    void computeAutoReleaseMs() AESTRA_RT_NONBLOCKING {
+        const float density = (m_longEma > 1e-10f) ? (m_shortEma / m_longEma) : 0.0f;
 
         if (density >= kDenseThresh) {
             m_autoReleaseMs = kReleaseMaxMs;

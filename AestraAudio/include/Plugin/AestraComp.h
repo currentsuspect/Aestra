@@ -6,6 +6,7 @@
 #pragma once
 
 #include "DSP/Oversampler.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 
@@ -128,7 +129,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -458,9 +459,19 @@ private:
     /// VCA) at the detector rate. With oversampling Off this is called once per
     /// input sample and matches the pre-oversampling implementation exactly;
     /// with 2x/4x it is called once per subsample.
+    // Optical-mode detector constants. Hoisted to class scope from
+    // function-local `static constexpr` inside processCore(): Clang refuses any
+    // static local in a function annotated AESTRA_RT_NONBLOCKING, because
+    // thread-safe static initialisation is a guard variable and a guard on an
+    // audio-thread path is a lock. The old code declared kOpticalEnvelopeRef
+    // TWICE, once per branch; both were 0.1f, so there is now one declaration.
+    inline static constexpr float kOpticalWindowMin = 0.005f;
+    inline static constexpr float kOpticalWindowMax = 0.030f;
+    inline static constexpr float kOpticalEnvelopeRef = 0.1f;
+
     void processCore(float inL, float inR, float attackCoeff, float releaseCoeff, float thresholdDb, float ratio,
                      float kneeDb, float makeupLinear, float& env, float& hpfXL, float& hpfYL, float& hpfXR,
-                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR) {
+                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR)  AESTRA_RT_NONBLOCKING {
         float detInputL, detInputR;
         if (m_mode == kModeClassic) {
             detInputL = m_feedbackL;
@@ -484,9 +495,6 @@ private:
         const float powerInstant = (detL * detL + detR * detR) * 0.5f;
         float sampleRmsCoeff;
         if (m_mode == kModeOptical) {
-            static constexpr float kOpticalWindowMin = 0.005f;
-            static constexpr float kOpticalWindowMax = 0.030f;
-            static constexpr float kOpticalEnvelopeRef = 0.1f;
             float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
             float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
             // Gate exp() — only recompute when window changes by >0.5ms
@@ -504,7 +512,6 @@ private:
 
         float aCoeff, rCoeff;
         if (m_mode == kModeOptical) {
-            static constexpr float kOpticalEnvelopeRef = 0.1f;
             float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
             aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
             rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
