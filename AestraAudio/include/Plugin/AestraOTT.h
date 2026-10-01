@@ -22,6 +22,7 @@
 #pragma once
 
 #include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -85,7 +86,7 @@ public:
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
+                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -360,10 +361,15 @@ private:
         return c;
     }
 
-    void updateTimeCoeffs(float sr) {
-        // Base times per band (ms): lows breathe slower, highs snap faster.
-        static constexpr float kAttackMs[kBandCount] = {24.0f, 10.0f, 3.0f};
-        static constexpr float kReleaseMs[kBandCount] = {240.0f, 120.0f, 60.0f};
+    // Base times per band (ms): lows breathe slower, highs snap faster. Hoisted
+    // to class scope from function-local `static constexpr`: Clang refuses any
+    // static local inside a function annotated AESTRA_RT_NONBLOCKING, because
+    // thread-safe static initialisation is a guard variable and a guard on an
+    // audio-thread path is a lock. Same values, same code generated.
+    inline static constexpr float kAttackMs[kBandCount] = {24.0f, 10.0f, 3.0f};
+    inline static constexpr float kReleaseMs[kBandCount] = {240.0f, 120.0f, 60.0f};
+
+    void updateTimeCoeffs(float sr) AESTRA_RT_NONBLOCKING {
         const float mult = timeMultFromNorm(m_timeCached);
         for (uint32_t b = 0; b < kBandCount; ++b) {
             m_attackCoeff[b] = 1.0f - std::exp(-1.0f / (kAttackMs[b] * mult * 0.001f * sr));
