@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include <algorithm>
 #include <array>
@@ -236,62 +237,7 @@ struct EQBand {
 // State Blobs
 // ============================================================================
 
-struct EQStateBlobV1 {
-    uint32_t magic;
-    uint32_t version;
-    float params[41];
-    uint8_t enabled[8];
-    uint8_t types[8];
-};
-
-struct EQStateBlobV2 {
-    uint32_t magic;
-    uint32_t version;
-    float params[23]; // kV1ParamCount
-};
-
-struct EQStateBlobV3 {
-    uint32_t magic;
-    uint32_t version;
-    float params[25]; // V3 param count
-};
-
-struct EQStateBlobV4 {
-    uint32_t magic;
-    uint32_t version;
-    float params[26]; // V4 param count
-};
-
-struct EQStateBlobV5 {
-    uint32_t magic;
-    uint32_t version;
-    float params[27]; // V5 param count
-};
-
-struct EQStateBlobV6 {
-    uint32_t magic;
-    uint32_t version;
-    float params[33]; // V6 param count
-};
-
-struct EQDynamicBandStateV7 {
-    uint8_t enabled;
-    uint8_t reserved[3];
-    float typeNorm;
-    float stereoNorm;
-    float frequencyNorm;
-    float gainNorm;
-    float qOrSlopeNorm;
-};
-
-struct EQStateBlobV7 {
-    uint32_t magic;
-    uint32_t version;
-    float params[33]; // V6/V7 public param count
-    EQDynamicBandStateV7 dynamicBands[24];
-};
-
-struct EQDynamicBandStateV8 {
+struct EQDynamicBandState {
     uint8_t enabled;
     uint8_t dynamicEnabled;
     uint8_t sidechainLinked;
@@ -311,31 +257,27 @@ struct EQDynamicBandStateV8 {
     float sidechainQNorm;
 };
 
-struct EQStateBlobV8 {
+struct EQStateBlob {
     uint32_t magic;
     uint32_t version;
     float params[33]; // V6/V7/V8 public param count
-    EQDynamicBandStateV8 dynamicBands[24];
+    EQDynamicBandState dynamicBands[24];
 };
 
 // ============================================================================
 // Aestra EQ V1 — 6-band fixed-type parametric equalizer
 // ============================================================================
 
-class AestraEQ : public IPluginInstance {
+class AestraEQ : public InternalPluginBase {
 public:
     static constexpr uint32_t kNumBands = 8;         // Legacy state/editor compatibility count
     static constexpr uint32_t kV1BandCount = 6;      // V1 public band count
     static constexpr uint32_t kLegacyBandCount = kV1BandCount;
     static constexpr uint32_t kMaxDynamicBands = 24; // Target advanced EQ slot count
-    static constexpr uint32_t kStateMagicV1 = 0x45510001;
-    static constexpr uint32_t kStateMagicV2 = 0x45510002;
-    static constexpr uint32_t kStateMagicV3 = 0x45510003;
-    static constexpr uint32_t kStateMagicV4 = 0x45510004;
-    static constexpr uint32_t kStateMagicV5 = 0x45510005;
-    static constexpr uint32_t kStateMagicV6 = 0x45510006;
-    static constexpr uint32_t kStateMagicV7 = 0x45510007;
-    static constexpr uint32_t kStateMagicV8 = 0x45510008;
+    // Canonical magic, carrying the V8 value: the reset renumbers the version
+    // field, not the magic, so a pre-reset EQ blob is still recognisably this
+    // plugin's and is rejected on version rather than on magic.
+    static constexpr uint32_t kStateMagic = 0x45510008; // 'EQ' v8 value, now version 1
     static constexpr uint32_t kAnalyzerWindowSize = 1024;
     static constexpr uint32_t kAnalyzerSourceCount = 2;
     static constexpr uint32_t kAnalyzerStereoModeCount = 5;
@@ -556,9 +498,17 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) {
         m_sampleRate = sampleRate;
         m_maxBlockSize = maxBlockSize;
+        // First initialize of a fresh instance only. EffectChain::prepare()
+        // re-calls initialize() on the live instance during sample-rate and
+        // device changes, and that must preserve the user's parameters and any
+        // loaded project state.
+        seedDefaultsOnce();
         computeSmoothingCoeff();
+        // The snap below runs on EVERY initialize, not just the first: a
+        // re-prepare must re-align the smoothers to preserved values rather than
+        // leave them ramping from whatever was there before.
         for (uint32_t i = 0; i < kParamCount; ++i) {
-            m_smoothed[i].store(m_params[i].load(std::memory_order_relaxed), std::memory_order_relaxed);
+            m_smoothed[i].store(paramValue(i), std::memory_order_relaxed);
         }
         snapDynamicBandSmoothing();
         snapBandTypes();
@@ -590,7 +540,7 @@ public:
             return;
         }
 
-        if (m_params[kParamBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (isBypassed()) {
             copyOrSilence(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             publishAnalyzerFrame(AnalyzerSource::Pre, inputs, numInputChannels, numFrames);
             publishAnalyzerFrame(AnalyzerSource::Post, outputs, std::min(numInputChannels, numOutputChannels), numFrames);
@@ -661,120 +611,70 @@ public:
     }
 
     // ---- Parameters (normalized 0-1) ----
-    uint32_t getParameterCount() const { return kParamCount; }
+    //
+    // The 33 rows below were MECHANICALLY EXTRACTED from the getParameters()
+    // this plugin used to build with 33 push_back calls plus a separate
+    // defaultParameterValue() switch -- not transcribed by hand. Two sources
+    // existed and disagreed nowhere only because nobody had checked; a
+    // hand-written table is exactly how one of them would have drifted.
+    // EQStateTableTest pins all 33 rows against defaultParameterValue().
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kParamHPFEnable, "High-Pass Enable", "HP On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamHPFFreq, "High-Pass Frequency", "HP Freq", "Hz", 0.392f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamHPFSlope, "High-Pass Slope", "HP Slp", "dB/oct", 0.333f, 0.0f, 1.0f, true, false, false, 6},
+        {kParamLShEnable, "Low Shelf Enable", "LS On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamLShFreq, "Low Shelf Frequency", "LS Freq", "Hz", 0.370f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamLShGain, "Low Shelf Gain", "LS Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamLShQ, "Low Shelf Q", "LS Q", "", 0.061f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell1Enable, "Bell 1 Enable", "B1 On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamBell1Freq, "Bell 1 Frequency", "B1 Freq", "Hz", 0.430f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell1Gain, "Bell 1 Gain", "B1 Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell1Q, "Bell 1 Q", "B1 Q", "", 0.091f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell2Enable, "Bell 2 Enable", "B2 On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamBell2Freq, "Bell 2 Frequency", "B2 Freq", "Hz", 0.607f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell2Gain, "Bell 2 Gain", "B2 Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamBell2Q, "Bell 2 Q", "B2 Q", "", 0.091f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamHShEnable, "High Shelf Enable", "HS On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamHShFreq, "High Shelf Frequency", "HS Freq", "Hz", 0.765f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamHShGain, "High Shelf Gain", "HS Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamHShQ, "High Shelf Q", "HS Q", "", 0.061f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamLPFEnable, "Low-Pass Enable", "LP On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamLPFFreq, "Low-Pass Frequency", "LP Freq", "Hz", 0.926f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamLPFSlope, "Low-Pass Slope", "LP Slp", "dB/oct", 0.166f, 0.0f, 1.0f, true, false, false, 6},
+        {kParamBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kParamBell1Type, "Bell 1 Type", "B1 Type", "", 0.0f, 0.0f, 1.0f, true, false, false, 3},
+        {kParamBell2Type, "Bell 2 Type", "B2 Type", "", 0.0f, 0.0f, 1.0f, true, false, false, 3},
+        {kParamOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0},
+        {kParamPolarityInvert, "Polarity Invert", "POL", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kParamHPFStereoMode, "High-Pass Stereo Placement", "HP Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+        {kParamLShStereoMode, "Low Shelf Stereo Placement", "LS Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+        {kParamBell1StereoMode, "Bell 1 Stereo Placement", "B1 Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+        {kParamBell2StereoMode, "Bell 2 Stereo Placement", "B2 Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+        {kParamHShStereoMode, "High Shelf Stereo Placement", "HS Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+        {kParamLPFStereoMode, "Low-Pass Stereo Placement", "LP Mode", "", 0.0f, 0.0f, 1.0f, true, false, false, 4},
+    };
 
-    float getParameter(uint32_t id) const {
-        if (id >= kParamCount) return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
+    // Default for a parameter id, read from the table above. This used to be a
+    // separate 33-case switch beside a separate getParameters() that called it --
+    // two sources for one number. It is now derived, so the table and every
+    // default-reading DSP path cannot disagree. EQStateTableTest pins all 33.
     static float defaultParameterValue(uint32_t id) {
-        switch (id) {
-        case kParamHPFEnable: return 0.0f;
-        case kParamHPFFreq: return 0.392f;       // 80 Hz
-        case kParamHPFSlope: return 0.333f;      // 24 dB/oct
-        case kParamLShEnable: return 0.0f;
-        case kParamLShFreq: return 0.370f;       // 200 Hz
-        case kParamLShGain: return 0.5f;         // 0 dB
-        case kParamLShQ: return 0.061f;          // 0.707
-        case kParamBell1Enable: return 0.0f;
-        case kParamBell1Freq: return 0.430f;     // 500 Hz
-        case kParamBell1Gain: return 0.5f;       // 0 dB
-        case kParamBell1Q: return 0.091f;        // 1.0
-        case kParamBell2Enable: return 0.0f;
-        case kParamBell2Freq: return 0.607f;     // 2000 Hz
-        case kParamBell2Gain: return 0.5f;       // 0 dB
-        case kParamBell2Q: return 0.091f;        // 1.0
-        case kParamHShEnable: return 0.0f;
-        case kParamHShFreq: return 0.765f;       // 8000 Hz
-        case kParamHShGain: return 0.5f;         // 0 dB
-        case kParamHShQ: return 0.061f;          // 0.707
-        case kParamLPFEnable: return 0.0f;
-        case kParamLPFFreq: return 0.926f;       // 18000 Hz
-        case kParamLPFSlope: return 0.166f;      // 12 dB/oct
-        case kParamBypass: return 0.0f;
-        case kParamBell1Type: return 0.0f;       // Bell
-        case kParamBell2Type: return 0.0f;       // Bell
-        case kParamOutputGain: return 0.5f;      // 0 dB
-        case kParamPolarityInvert: return 0.0f;
-        case kParamHPFStereoMode:
-        case kParamLShStereoMode:
-        case kParamBell1StereoMode:
-        case kParamBell2StereoMode:
-        case kParamHShStereoMode:
-        case kParamLPFStereoMode: return 0.0f;   // Stereo
-        default: return 0.0f;
+        for (const ParamSpec& spec : kSpecs) {
+            if (spec.id == id)
+                return spec.defaultValue;
         }
+        return 0.0f;
     }
 
-    void setParameter(uint32_t id, float value) {
-        if (id >= kParamCount) return;
-        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the parameter smoothers
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
+
+    // The base's setParameter does the storage, the non-finite rejection and the
+    // clamp. This carries what EQ did on top: every parameter invalidates
+    // smoothed targets and some invalidate filter coefficients.
+    void onParameterChanged(uint32_t id, float value) override {
         markDirtyForParam(id);
-    }
-
-    std::vector<PluginParameter> getParameters() const {
-        std::vector<PluginParameter> params;
-        params.reserve(kParamCount);
-
-        // Band 1 — High-Pass
-        params.push_back({kParamHPFEnable, "High-Pass Enable", "HP On", "", defaultParameterValue(kParamHPFEnable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamHPFFreq,   "High-Pass Frequency", "HP Freq", "Hz", defaultParameterValue(kParamHPFFreq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back(
-            {kParamHPFSlope, "High-Pass Slope", "HP Slp", "dB/oct", defaultParameterValue(kParamHPFSlope), 0.0f, 1.0f, true, false, false, 6}
-        );
-
-        // Band 2 — Low Shelf
-        params.push_back({kParamLShEnable, "Low Shelf Enable", "LS On", "", defaultParameterValue(kParamLShEnable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamLShFreq,   "Low Shelf Frequency", "LS Freq", "Hz", defaultParameterValue(kParamLShFreq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamLShGain,   "Low Shelf Gain", "LS Gain", "dB", defaultParameterValue(kParamLShGain), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamLShQ,      "Low Shelf Q", "LS Q", "", defaultParameterValue(kParamLShQ), 0.0f, 1.0f, true, false, false, 0});
-
-        // Band 3 — Bell 1
-        params.push_back({kParamBell1Enable, "Bell 1 Enable", "B1 On", "", defaultParameterValue(kParamBell1Enable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamBell1Freq,   "Bell 1 Frequency", "B1 Freq", "Hz", defaultParameterValue(kParamBell1Freq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamBell1Gain,   "Bell 1 Gain", "B1 Gain", "dB", defaultParameterValue(kParamBell1Gain), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamBell1Q,      "Bell 1 Q", "B1 Q", "", defaultParameterValue(kParamBell1Q), 0.0f, 1.0f, true, false, false, 0});
-
-        // Band 4 — Bell 2
-        params.push_back({kParamBell2Enable, "Bell 2 Enable", "B2 On", "", defaultParameterValue(kParamBell2Enable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamBell2Freq,   "Bell 2 Frequency", "B2 Freq", "Hz", defaultParameterValue(kParamBell2Freq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamBell2Gain,   "Bell 2 Gain", "B2 Gain", "dB", defaultParameterValue(kParamBell2Gain), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamBell2Q,      "Bell 2 Q", "B2 Q", "", defaultParameterValue(kParamBell2Q), 0.0f, 1.0f, true, false, false, 0});
-
-        // Band 5 — High Shelf
-        params.push_back({kParamHShEnable, "High Shelf Enable", "HS On", "", defaultParameterValue(kParamHShEnable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamHShFreq,   "High Shelf Frequency", "HS Freq", "Hz", defaultParameterValue(kParamHShFreq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamHShGain,   "High Shelf Gain", "HS Gain", "dB", defaultParameterValue(kParamHShGain), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamHShQ,      "High Shelf Q", "HS Q", "", defaultParameterValue(kParamHShQ), 0.0f, 1.0f, true, false, false, 0});
-
-        // Band 6 — Low-Pass
-        params.push_back({kParamLPFEnable, "Low-Pass Enable", "LP On", "", defaultParameterValue(kParamLPFEnable), 0.0f, 1.0f, true, false, false, 1});
-        params.push_back({kParamLPFFreq,   "Low-Pass Frequency", "LP Freq", "Hz", defaultParameterValue(kParamLPFFreq), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back(
-            {kParamLPFSlope, "Low-Pass Slope", "LP Slp", "dB/oct", defaultParameterValue(kParamLPFSlope), 0.0f, 1.0f, true, false, false, 6}
-        );
-
-        // Master bypass
-        params.push_back({kParamBypass, "Bypass", "BYP", "", defaultParameterValue(kParamBypass), 0.0f, 1.0f, true, true, false, 1});
-
-        // Surgical modes for the two fully parametric bands. Added after the original V1 IDs.
-        params.push_back({kParamBell1Type, "Bell 1 Type", "B1 Type", "", defaultParameterValue(kParamBell1Type), 0.0f, 1.0f, true, false, false, 3});
-        params.push_back({kParamBell2Type, "Bell 2 Type", "B2 Type", "", defaultParameterValue(kParamBell2Type), 0.0f, 1.0f, true, false, false, 3});
-
-        // Output stage
-        params.push_back({kParamOutputGain, "Output Gain", "OUT", "dB", defaultParameterValue(kParamOutputGain), 0.0f, 1.0f, true, false, false, 0});
-        params.push_back({kParamPolarityInvert, "Polarity Invert", "POL", "", defaultParameterValue(kParamPolarityInvert), 0.0f, 1.0f, true, false, false, 1});
-
-        params.push_back({kParamHPFStereoMode, "High-Pass Stereo Placement", "HP Mode", "", defaultParameterValue(kParamHPFStereoMode), 0.0f, 1.0f, true, false, false, 4});
-        params.push_back({kParamLShStereoMode, "Low Shelf Stereo Placement", "LS Mode", "", defaultParameterValue(kParamLShStereoMode), 0.0f, 1.0f, true, false, false, 4});
-        params.push_back({kParamBell1StereoMode, "Bell 1 Stereo Placement", "B1 Mode", "", defaultParameterValue(kParamBell1StereoMode), 0.0f, 1.0f, true, false, false, 4});
-        params.push_back({kParamBell2StereoMode, "Bell 2 Stereo Placement", "B2 Mode", "", defaultParameterValue(kParamBell2StereoMode), 0.0f, 1.0f, true, false, false, 4});
-        params.push_back({kParamHShStereoMode, "High Shelf Stereo Placement", "HS Mode", "", defaultParameterValue(kParamHShStereoMode), 0.0f, 1.0f, true, false, false, 4});
-        params.push_back({kParamLPFStereoMode, "Low-Pass Stereo Placement", "LP Mode", "", defaultParameterValue(kParamLPFStereoMode), 0.0f, 1.0f, true, false, false, 4});
-
-        return params;
     }
 
     std::string getParameterDisplay(uint32_t id) const {
@@ -819,9 +719,9 @@ public:
 
     // ---- State (V8 primary, V7/V6/V5/V4/V3/V2/V1 migration) ----
     std::vector<uint8_t> saveState() const {
-        EQStateBlobV8 blob{};
-        blob.magic = kStateMagicV8;
-        blob.version = 8;
+        EQStateBlob blob{};
+        blob.magic = kStateMagic;
+        blob.version = 1;
         for (uint32_t i = 0; i < kParamCount; ++i) {
             blob.params[i] = getParameter(i);
         }
@@ -849,162 +749,64 @@ public:
         return std::vector<uint8_t>(data, data + sizeof(blob));
     }
 
-    bool loadState(const std::vector<uint8_t>& state) {
-        if (state.size() >= sizeof(EQStateBlobV8)) {
-            const auto* v8 = reinterpret_cast<const EQStateBlobV8*>(state.data());
-            if (v8->magic == kStateMagicV8 && v8->version == 8) {
-                for (uint32_t i = 0; i < kParamCount; ++i) {
-                    setParameter(i, std::clamp(v8->params[i], 0.0f, 1.0f));
-                }
-                resetDynamicBandSlots();
-                for (uint32_t slot = kLegacyBandCount; slot < kMaxDynamicBands; ++slot) {
-                    const auto& saved = v8->dynamicBands[slot];
-                    if (saved.enabled == 0u) {
-                        continue;
-                    }
-                    auto defaults = dynamicBandSlotDefaults(slot);
-                    defaults.enabled = true;
-                    defaults.type = dynamicTypeParamToFilterType(std::clamp(saved.typeNorm, 0.0f, 1.0f));
-                    defaults.stereoMode = stereoModeFromParam(std::clamp(saved.stereoNorm, 0.0f, 1.0f));
-                    defaults.frequencyNorm = std::clamp(saved.frequencyNorm, 0.0f, 1.0f);
-                    defaults.gainNorm = std::clamp(saved.gainNorm, 0.0f, 1.0f);
-                    defaults.qOrSlopeNorm = std::clamp(saved.qOrSlopeNorm, 0.0f, 1.0f);
-                    defaults.dynamicEnabled = saved.dynamicEnabled != 0u;
-                    defaults.targetGainNorm = std::clamp(saved.targetGainNorm, 0.0f, 1.0f);
-                    defaults.thresholdNorm = std::clamp(saved.thresholdNorm, 0.0f, 1.0f);
-                    defaults.kneeNorm = std::clamp(saved.kneeNorm, 0.0f, 1.0f);
-                    defaults.attackNorm = std::clamp(saved.attackNorm, 0.0f, 1.0f);
-                    defaults.releaseNorm = std::clamp(saved.releaseNorm, 0.0f, 1.0f);
-                    defaults.sidechainLinked = saved.sidechainLinked != 0u;
-                    defaults.sidechainType =
-                        dynamicTypeParamToFilterType(std::clamp(saved.sidechainTypeNorm, 0.0f, 1.0f));
-                    defaults.sidechainFrequencyNorm = std::clamp(saved.sidechainFrequencyNorm, 0.0f, 1.0f);
-                    defaults.sidechainQNorm = std::clamp(saved.sidechainQNorm, 0.0f, 1.0f);
-                    setDynamicBandSlot(slot, defaults);
-                }
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
+// Canonical layout, deliberately boring and deliberately ONE owner boundary:
+//
+//     [base header][params[33]][dynamicBands[24]]
+//
+// The base owns the header and the parameters. EQ owns the dynamic-band tail,
+// because that is live feature state -- per-band enabled, threshold, knee,
+// attack, release and sidechain -- and not a version museum. FD-24 records the
+// decision, including the alternative that was rejected: promoting ~408 dynamic
+// fields into ParamSpec rows to reach "zero overrides" would change the meaning
+// of the parameter system and get redesigned anyway.
+//
+// The v1..v7 readers are gone by decision. A pre-reset blob is rejected rather
+// than half-read.
+bool loadState(const std::vector<uint8_t>& state) {
+        if (state.size() < sizeof(EQStateBlob)) {
+            return false;
+        }
+        const auto* blob = reinterpret_cast<const EQStateBlob*>(state.data());
+        if (blob->magic != kStateMagic || blob->version != 1u) {
+            return false;
         }
 
-        if (state.size() >= sizeof(EQStateBlobV7)) {
-            const auto* v7 = reinterpret_cast<const EQStateBlobV7*>(state.data());
-            if (v7->magic == kStateMagicV7 && v7->version == 7) {
-                for (uint32_t i = 0; i < kParamCount; ++i) {
-                    setParameter(i, std::clamp(v7->params[i], 0.0f, 1.0f));
-                }
-                resetDynamicBandSlots();
-                for (uint32_t slot = kLegacyBandCount; slot < kMaxDynamicBands; ++slot) {
-                    const auto& saved = v7->dynamicBands[slot];
-                    if (saved.enabled == 0u) {
-                        continue;
-                    }
-                    auto defaults = dynamicBandSlotDefaults(slot);
-                    defaults.enabled = true;
-                    defaults.type = dynamicTypeParamToFilterType(std::clamp(saved.typeNorm, 0.0f, 1.0f));
-                    defaults.stereoMode = stereoModeFromParam(std::clamp(saved.stereoNorm, 0.0f, 1.0f));
-                    defaults.frequencyNorm = std::clamp(saved.frequencyNorm, 0.0f, 1.0f);
-                    defaults.gainNorm = std::clamp(saved.gainNorm, 0.0f, 1.0f);
-                    defaults.qOrSlopeNorm = std::clamp(saved.qOrSlopeNorm, 0.0f, 1.0f);
-                    setDynamicBandSlot(slot, defaults);
-                }
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
+        for (uint32_t i = 0; i < kParamCount; ++i) {
+            setParameter(i, std::clamp(blob->params[i], 0.0f, 1.0f));
         }
 
-        if (state.size() >= sizeof(EQStateBlobV6)) {
-            const auto* v6 = reinterpret_cast<const EQStateBlobV6*>(state.data());
-            if (v6->magic == kStateMagicV6 && v6->version == 6) {
-                for (uint32_t i = 0; i < kParamCount; ++i) {
-                    setParameter(i, std::clamp(v6->params[i], 0.0f, 1.0f));
-                }
-                resetDynamicBandSlots();
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
+        resetDynamicBandSlots();
+        for (uint32_t slot = kLegacyBandCount; slot < kMaxDynamicBands; ++slot) {
+            const auto& saved = blob->dynamicBands[slot];
+            if (saved.enabled == 0u) {
+                continue;
             }
+            auto defaults = dynamicBandSlotDefaults(slot);
+            defaults.enabled = true;
+            defaults.type = dynamicTypeParamToFilterType(std::clamp(saved.typeNorm, 0.0f, 1.0f));
+            defaults.stereoMode = stereoModeFromParam(std::clamp(saved.stereoNorm, 0.0f, 1.0f));
+            defaults.frequencyNorm = std::clamp(saved.frequencyNorm, 0.0f, 1.0f);
+            defaults.gainNorm = std::clamp(saved.gainNorm, 0.0f, 1.0f);
+            defaults.qOrSlopeNorm = std::clamp(saved.qOrSlopeNorm, 0.0f, 1.0f);
+            defaults.dynamicEnabled = saved.dynamicEnabled != 0u;
+            defaults.targetGainNorm = std::clamp(saved.targetGainNorm, 0.0f, 1.0f);
+            defaults.thresholdNorm = std::clamp(saved.thresholdNorm, 0.0f, 1.0f);
+            defaults.kneeNorm = std::clamp(saved.kneeNorm, 0.0f, 1.0f);
+            defaults.attackNorm = std::clamp(saved.attackNorm, 0.0f, 1.0f);
+            defaults.releaseNorm = std::clamp(saved.releaseNorm, 0.0f, 1.0f);
+            defaults.sidechainLinked = saved.sidechainLinked != 0u;
+            defaults.sidechainType =
+                dynamicTypeParamToFilterType(std::clamp(saved.sidechainTypeNorm, 0.0f, 1.0f));
+            defaults.sidechainFrequencyNorm = std::clamp(saved.sidechainFrequencyNorm, 0.0f, 1.0f);
+            defaults.sidechainQNorm = std::clamp(saved.sidechainQNorm, 0.0f, 1.0f);
+            setDynamicBandSlot(slot, defaults);
         }
-
-        if (state.size() >= sizeof(EQStateBlobV5)) {
-            const auto* v5 = reinterpret_cast<const EQStateBlobV5*>(state.data());
-            if (v5->magic == kStateMagicV5 && v5->version == 5) {
-                for (uint32_t i = 0; i < kParamHPFStereoMode; ++i) {
-                    setParameter(i, std::clamp(v5->params[i], 0.0f, 1.0f));
-                }
-                defaultStereoPlacementParams();
-                resetDynamicBandSlots();
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
-        }
-
-        if (state.size() >= sizeof(EQStateBlobV4)) {
-            const auto* v4 = reinterpret_cast<const EQStateBlobV4*>(state.data());
-            if (v4->magic == kStateMagicV4 && v4->version == 4) {
-                for (uint32_t i = 0; i < kParamPolarityInvert; ++i) {
-                    setParameter(i, std::clamp(v4->params[i], 0.0f, 1.0f));
-                }
-                setParameter(kParamPolarityInvert, 0.0f);
-                defaultStereoPlacementParams();
-                resetDynamicBandSlots();
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
-        }
-
-        if (state.size() >= sizeof(EQStateBlobV3)) {
-            const auto* v3 = reinterpret_cast<const EQStateBlobV3*>(state.data());
-            if (v3->magic == kStateMagicV3 && v3->version == 3) {
-                for (uint32_t i = 0; i < kParamOutputGain; ++i) {
-                    setParameter(i, std::clamp(v3->params[i], 0.0f, 1.0f));
-                }
-                setParameter(kParamOutputGain, 0.5f);
-                setParameter(kParamPolarityInvert, 0.0f);
-                defaultStereoPlacementParams();
-                resetDynamicBandSlots();
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
-        }
-
-        if (state.size() >= sizeof(EQStateBlobV2)) {
-            const auto* v2 = reinterpret_cast<const EQStateBlobV2*>(state.data());
-            if (v2->magic == kStateMagicV2 && v2->version == 2) {
-                for (uint32_t i = 0; i < kV1ParamCount; ++i) {
-                    const float value = (i == kParamHPFSlope || i == kParamLPFSlope)
-                        ? legacySlopeNormToExtended(v2->params[i])
-                        : std::clamp(v2->params[i], 0.0f, 1.0f);
-                    setParameter(i, value);
-                }
-                setParameter(kParamBell1Type, 0.0f);
-                setParameter(kParamBell2Type, 0.0f);
-                setParameter(kParamOutputGain, 0.5f);
-                setParameter(kParamPolarityInvert, 0.0f);
-                defaultStereoPlacementParams();
-                resetDynamicBandSlots();
-                m_soloBand.store(-1, std::memory_order_release);
-                m_filtersDirty.store(true, std::memory_order_release);
-                return true;
-            }
-        }
-
-        if (state.size() >= sizeof(EQStateBlobV1)) {
-            const auto* v1 = reinterpret_cast<const EQStateBlobV1*>(state.data());
-            if (v1->magic == kStateMagicV1) {
-                return migrateV1State(v1);
-            }
-        }
-
-        return false;
+        m_soloBand.store(-1, std::memory_order_release);
+        m_filtersDirty.store(true, std::memory_order_release);
+        return true;
     }
 
-    // ---- Editor ----
+
     bool hasEditor() const { return true; }
     bool openEditor(void*) { return false; }
     void closeEditor() {}
@@ -1017,7 +819,7 @@ public:
     uint32_t getTailSamples() const { return 64; }
     double getAnalyzerSampleRate() const { return m_sampleRate; }
     double getMagnitudeResponseDb(double frequencyHz) const {
-        if (m_params[kParamBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (isBypassed()) {
             return 0.0;
         }
 
@@ -1388,9 +1190,8 @@ private:
 
     // ---- Default initialization ----
     void initDefaults() {
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            m_params[i].store(defaultParameterValue(i), std::memory_order_relaxed);
-        }
+        // The ParamSpec table is the single source of defaults now.
+        seedDefaults();
 
         for (auto& s : m_smoothed) s.store(0.0f, std::memory_order_relaxed);
         for (uint32_t slot = 0; slot < kMaxDynamicBands; ++slot) {
@@ -2151,7 +1952,7 @@ private:
         bool changed = false;
         for (uint32_t i = 0; i < kParamCount; ++i) {
             if (i == kParamBypass) continue;
-            const float target = m_params[i].load(std::memory_order_relaxed);
+            const float target = paramValue(i);
             if (i == kParamBell1Type || i == kParamBell2Type || i == kParamPolarityInvert ||
                 (i >= kParamHPFStereoMode && i <= kParamLPFStereoMode)) {
                 const float current = m_smoothed[i].load(std::memory_order_relaxed);
@@ -2418,70 +2219,6 @@ private:
         }
     }
 
-    // ---- State migration ----
-    bool migrateV1State(const EQStateBlobV1* v1) {
-        static constexpr FilterType v1BandTargetTypes[] = {
-            FilterType::LowCut, FilterType::LowShelf, FilterType::Bell,
-            FilterType::Bell, FilterType::HighShelf, FilterType::HighCut
-        };
-
-        for (uint32_t band = 0; band < kV1BandCount; ++band) {
-            const uint32_t v1Base = band * kLegacyBandStride;
-            const bool v1Enabled = v1->enabled[band] != 0;
-            const uint32_t v1Type = v1->types[band];
-
-            setParameter(bandV1EnableId(band), v1Enabled ? 1.0f : 0.0f);
-
-            if (v1Type == static_cast<uint32_t>(v1BandTargetTypes[band])) {
-                if (v1Base + 4 < kLegacyParamCount) {
-                    setParameter(bandV1FreqId(band), std::clamp(v1->params[v1Base + 2], 0.0f, 1.0f));
-                    if (bandUsesGain(band)) {
-                        setParameter(bandV1GainId(band), std::clamp(v1->params[v1Base + 3], 0.0f, 1.0f));
-                    }
-                    const float qOrSlope = v1->params[v1Base + 4];
-                    setParameter(bandV1QId(band),
-                                 bandUsesSlope(band) ? legacySlopeNormToExtended(qOrSlope)
-                                                     : std::clamp(qOrSlope, 0.0f, 1.0f));
-                }
-            } else {
-                // Type mismatch — load defaults for this band
-                const auto params = getParameters();
-                for (const auto& p : params) {
-                    if (p.id == bandV1FreqId(band)) {
-                        setParameter(bandV1FreqId(band), p.defaultValue);
-                        break;
-                    }
-                }
-                if (bandUsesGain(band)) {
-                    for (const auto& p : params) {
-                        if (p.id == bandV1GainId(band)) {
-                            setParameter(bandV1GainId(band), p.defaultValue);
-                            break;
-                        }
-                    }
-                }
-                for (const auto& p : params) {
-                    if (p.id == bandV1QId(band)) {
-                        setParameter(bandV1QId(band), p.defaultValue);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (kLegacyParamCount > 40) {
-            setParameter(kParamBypass, v1->params[40] > 0.5f ? 1.0f : 0.0f);
-        }
-        setParameter(kParamBell1Type, 0.0f);
-        setParameter(kParamBell2Type, 0.0f);
-        setParameter(kParamOutputGain, 0.5f);
-        setParameter(kParamPolarityInvert, 0.0f);
-        defaultStereoPlacementParams();
-        resetDynamicBandSlots();
-
-        m_filtersDirty.store(true, std::memory_order_release);
-        return true;
-    }
 
     // ---- Analyzer ----
     static constexpr uint32_t analyzerSourceIndex(AnalyzerSource source) {
@@ -2543,7 +2280,6 @@ private:
     std::atomic<bool> m_filtersDirty{true};
     std::atomic<float> m_smoothingCoeff{0.001f};
 
-    std::array<std::atomic<float>, kParamCount> m_params{};
     std::array<std::atomic<float>, kParamCount> m_smoothed{};
     std::array<std::atomic<bool>, kMaxDynamicBands> m_bandEnabled{};
     std::array<std::atomic<uint32_t>, kMaxDynamicBands> m_bandStages{};
