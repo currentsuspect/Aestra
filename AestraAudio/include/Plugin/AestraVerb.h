@@ -5,7 +5,6 @@
 
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
-#include "RealtimeThreadGuard.h"
 #include "DSP/FastMath.h"
 #include "DSP/ReverbSIMD.h"
 #include <algorithm>
@@ -338,7 +337,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
+                 MidiBuffer* midiOutput = nullptr) override {
         (void)midiInput;
         (void)midiOutput;
 
