@@ -148,12 +148,19 @@ def mentions_macro(path):
         return False
 
 
-def resolve(name, from_file):
-    base = os.path.dirname(from_file)
-    for cand in (os.path.join(base, name),):
-        if os.path.isfile(cand):
-            return os.path.abspath(cand)
-    for d in inc_dirs.get(os.path.abspath(from_file), []):
+def resolve(name, from_file, tu_dirs):
+    """Resolve a quoted include the way the compiler will.
+
+    tu_dirs are the ORIGINAL translation unit's -I paths, and they are
+    threaded through every level of the walk on purpose. inc_dirs is keyed by
+    translation unit, so a nested header has no entry of its own -- a header
+    included only via the TU's -I paths (AestraSat.h reaching DSP/Oversampler.h
+    through -IAestraAudio/include) would otherwise resolve against nothing and
+    be silently skipped, which is the failure this whole derivation exists to
+    prevent. The including file's own directory still wins, exactly as the
+    compiler's quoted-include lookup does.
+    """
+    for d in [os.path.dirname(from_file), *tu_dirs]:
         cand = os.path.join(d, name)
         if os.path.isfile(cand):
             return os.path.abspath(cand)
@@ -212,7 +219,10 @@ for cpp in sorted(set(built) | set(on_disk)):
         found.append(cpp)
         continue
     # Transitive closure with a visited set, so a diamond include does not loop
-    # and a cyclic #include (guarded, so legal) terminates.
+    # and a cyclic #include (guarded, so legal) terminates. tu_dirs is fixed for
+    # the whole walk: it is this TU's include path, and every nested header
+    # resolves against it, not against an entry of its own.
+    tu_dirs = inc_dirs.get(cpp, [])
     seen, stack, hit = set(), [cpp], False
     while stack and not hit:
         cur = stack.pop()
@@ -227,7 +237,7 @@ for cpp in sorted(set(built) | set(on_disk)):
         except OSError:
             continue
         for name in INCLUDE.findall(text):
-            nxt = resolve(name, cur)
+            nxt = resolve(name, cur, tu_dirs)
             if nxt and nxt not in seen:
                 stack.append(nxt)
     if hit:
