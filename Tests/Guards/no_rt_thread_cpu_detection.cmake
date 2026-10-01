@@ -78,21 +78,34 @@ foreach(dir ${scan_dirs})
         # only matches the exact name "process" would have passed a header whose
         # second audio entry point ran CPUID — and the self-test caught exactly
         # that. Prefix-anchored, case-sensitive, whitespace tolerant.
-        string(REGEX MATCHALL "void[ \t\n]+process[A-Za-z0-9_]*[ \t\n]*\\(" open_spans "${contents}")
+        string(REGEX MATCHALL "void[ \t\n]+(([A-Za-z_][A-Za-z0-9_]*[ \t\n]*::[ \t\n]*)*process[A-Za-z0-9_]*)[ \t\n]*\\(" open_spans "${contents}")
         if(NOT open_spans)
             continue()
         endif()
 
         list(LENGTH open_spans n_spans)
         math(EXPR last "${n_spans} - 1")
+        # Each match is located in the REMAINDER of the file, not the whole file.
+        # string(FIND) on the full contents always returns the FIRST occurrence,
+        # so two identical signatures -- the common case, since every plugin
+        # spells its entry point `void process(` -- both resolved to the same
+        # offset, and a CPU query in the second body was never examined. This
+        # walks an advancing suffix instead and carries the absolute offset.
+        set(_search_from 0)
         foreach(i RANGE 0 ${last})
             list(GET open_spans ${i} _match)
 
-            # Byte offset just past the '(' this match ends on.
-            string(FIND "${contents}" "${_match}" _at)
-            math(EXPR _body_start "${_at} + 0")
+            string(LENGTH "${_search_from}" _from_len)
+            string(SUBSTRING "${contents}" ${_search_from} -1 _rest)
+            string(FIND "${_rest}" "${_match}" _rel)
+            if(_rel EQUAL -1)
+                continue()
+            endif()
             string(LENGTH "${_match}" _mlen)
+            math(EXPR _at "${_search_from} + ${_rel}")
             math(EXPR _paren "${_at} + ${_mlen} - 1")
+            # Resume after this match so the next identical signature is found.
+            math(EXPR _search_from "${_paren} + 1")
 
             # Walk forward to the matching close brace of the body.
             set(_depth 0)
@@ -124,10 +137,15 @@ foreach(dir ${scan_dirs})
             list(LENGTH _newlines _line)
             math(EXPR _line "${_line} + 1")
 
+            # Recover the function's name from the match so a qualified
+            # definition is reported as Foo::process, not a bare process().
+            string(REGEX REPLACE "^[ \t\n]*void[ \t\n]*" "" _fn "${_match}")
+            string(REGEX REPLACE "[ \t\n]*\\($" "" _fn "${_fn}")
+
             foreach(tok ${cpu_tokens})
                 if(_body MATCHES "${tok}")
                     list(APPEND violations
-                        "${rel}:${_line} — process() body references '${tok}'")
+                        "${rel}:${_line} — ${_fnname}() body references '${tok}'")
                 endif()
             endforeach()
         endforeach()

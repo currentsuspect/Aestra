@@ -150,6 +150,62 @@ public:
 ")
 expect_guard("getXCR0 in process()" "${WORK_DIR}/static_local" "fail")
 
+# Out-of-line qualified definition: `void Foo::process(...)` in a .cpp, which
+# the earlier regex could not match because it required `process` to follow the
+# return type directly. Reproduced before the fix -- the guard reported clean on
+# a file that ran CPUID on the audio thread.
+file(REMOVE_RECURSE "${WORK_DIR}/qualified")
+file(MAKE_DIRECTORY "${WORK_DIR}/qualified/AestraAudio/include/Plugin")
+file(MAKE_DIRECTORY "${WORK_DIR}/qualified/AestraAudio/src")
+file(WRITE "${WORK_DIR}/qualified/AestraAudio/include/Plugin/Foo.h"
+"#pragma once
+namespace Aestra { namespace Audio {
+class Foo { public: void process(float* out, unsigned n); };
+}}
+")
+file(WRITE "${WORK_DIR}/qualified/AestraAudio/src/Foo.cpp"
+"#include \"Plugin/Foo.h\"
+void Aestra::Audio::Foo::process(float* out, unsigned n) {
+    static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+    out[0] = useAVX2 ? 1.0f : 0.0f;
+}
+")
+expect_guard("qualified out-of-line definition in a .cpp" "${WORK_DIR}/qualified" "fail")
+
+# Two classes with identical `void process(` signatures, violation only in the
+# second. The earlier offset walk resolved every match to the FIRST occurrence,
+# so a clean first body hid a CPUID in the second. This is the common shape,
+# not an exotic one: every plugin spells its entry point the same way.
+file(REMOVE_RECURSE "${WORK_DIR}/duplicate")
+file(MAKE_DIRECTORY "${WORK_DIR}/duplicate/AestraAudio/include/Plugin")
+file(MAKE_DIRECTORY "${WORK_DIR}/duplicate/AestraAudio/src")
+file(WRITE "${WORK_DIR}/duplicate/AestraAudio/include/Plugin/Foo.h"
+"#pragma once
+class A { public: void process(float* out, unsigned n); };
+class B { public: void process(float* out, unsigned n); };
+")
+file(WRITE "${WORK_DIR}/duplicate/AestraAudio/src/Foo.cpp"
+"#include \"Plugin/Foo.h\"
+void A::process(float* out, unsigned n) { out[0] *= 2.0f; }
+void B::process(float* out, unsigned n) {
+    static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+    out[1] = useAVX2 ? 1.0f : 0.0f;
+}
+")
+expect_guard("duplicate signature, violation only in the second body" "${WORK_DIR}/duplicate" "fail")
+
+# The converse: the FIRST of two identical signatures carries the violation, so
+# a fix that only ever examined match #2 would be caught too.
+file(WRITE "${WORK_DIR}/duplicate/AestraAudio/src/Foo.cpp"
+"#include \"Plugin/Foo.h\"
+void A::process(float* out, unsigned n) {
+    static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
+    out[0] = useSSE ? 1.0f : 0.0f;
+}
+void B::process(float* out, unsigned n) { out[1] *= 2.0f; }
+")
+expect_guard("duplicate signature, violation in the first body" "${WORK_DIR}/duplicate" "fail")
+
 # ── Correct shapes: must pass ─────────────────────────────────────────────
 
 # The fix as shipped in AestraVerb: resolved in initialize(), read as a member.
