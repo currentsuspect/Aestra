@@ -13,10 +13,12 @@
 // the plugin's own table rather than from a hardcoded number that drifts.
 
 #include "Plugin/AestraFilter.h"
+#include "Plugin/AestraLimit.h"
 #include "Plugin/AestraLFO.h"
 #include "Plugin/AestraOTT.h"
 #include "Plugin/AestraSat.h"
 #include "Plugin/AestraTransient.h"
+#include "Plugin/AestraVerb.h"
 
 #include <cstdint>
 #include <cstring>
@@ -165,6 +167,68 @@ int main() {
         lfo.setParameter(Plugins::AestraLFO::kSyncMode, 1.0f);
         check(std::abs(lfo.getParameter(Plugins::AestraLFO::kSyncMode) - 1.0f) < 1e-6f,
               "LFO Sync Mode reads back as selected, not as bypass");
+    }
+
+    // AestraLimit. Byte-identity here is a real constraint rather than a
+    // courtesy: its blob is exactly {magic, version, params[4]} at 24 bytes,
+    // which is what the base emits for the same magic and row count. If this
+    // check ever fails, the migration changed a saved project's bytes.
+    {
+        Plugins::AestraLimit limit;
+        limit.initialize(48000.0, 256);
+        limit.setParameter(Plugins::AestraLimit::kCeiling, 0.8123f);
+        limit.setParameter(Plugins::AestraLimit::kRelease, 0.4456f);
+        const auto state = limit.saveState();
+        check(state.size() == 8 + 4 * 4, "Limit blob is 24 bytes (magic+version+4 floats)");
+        std::vector<float> expected(4);
+        for (uint32_t i = 0; i < 4; ++i)
+            expected[i] = limit.getParameter(i);
+        check(state == legacyBlob(limit.kStateMagic, expected), "Limit blob is byte-identical to the legacy layout");
+    }
+
+    // AestraVerb. This plugin wrote version 5 and carried readers for v1..v5.
+    // Under the pre-user format reset those readers are gone and the base emits
+    // version 1, so the blob is NOT byte-identical to what shipped before. What
+    // is pinned here is the NEW canonical contract, plus the fact that a
+    // pre-reset blob is now rejected outright rather than half-read: a format
+    // that silently accepted v5 would mean the reset never happened.
+    {
+        Plugins::AestraVerb verb;
+        verb.initialize(48000.0, 256);
+        verb.setParameter(Plugins::AestraVerb::kDecay, 0.6789f);
+        verb.setParameter(Plugins::AestraVerb::kMix, 0.3210f);
+        const auto state = verb.saveState();
+        check(state.size() == 8 + Plugins::AestraVerb::kParamCount * 4,
+              "Verb blob is magic+version+one float per parameter");
+
+        uint32_t writtenMagic = 0;
+        uint32_t writtenVersion = 0;
+        std::memcpy(&writtenMagic, state.data(), sizeof(writtenMagic));
+        std::memcpy(&writtenVersion, state.data() + sizeof(uint32_t), sizeof(writtenVersion));
+        check(writtenMagic == verb.kStateMagic, "Verb blob keeps its plugin magic");
+        check(writtenVersion == 1u, "Verb blob is written at the canonical base version 1");
+
+        std::vector<float> expected(Plugins::AestraVerb::kParamCount);
+        for (uint32_t i = 0; i < Plugins::AestraVerb::kParamCount; ++i)
+            expected[i] = verb.getParameter(i);
+        check(state == legacyBlob(verb.kStateMagic, expected),
+              "Verb blob matches the canonical {magic, version=1, params[]} layout");
+
+        // The pre-reset shape: same magic and size, version 5. Must be rejected,
+        // not silently interpreted as v1 parameters.
+        Plugins::AestraVerb fresh;
+        fresh.initialize(48000.0, 256);
+        auto legacy = legacyBlob(fresh.kStateMagic, expected);
+        uint32_t five = 5u;
+        std::memcpy(legacy.data() + sizeof(uint32_t), &five, sizeof(five));
+        check(!fresh.loadState(legacy), "a pre-reset Verb blob (version 5) is rejected, not half-read");
+
+        // And the canonical blob round-trips.
+        Plugins::AestraVerb reloaded;
+        reloaded.initialize(48000.0, 256);
+        check(reloaded.loadState(state), "canonical Verb blob loads");
+        check(std::abs(reloaded.getParameter(Plugins::AestraVerb::kDecay) - 0.6789f) < 1e-6f,
+              "Verb decay survives the round-trip");
     }
 
     if (failures > 0) {
