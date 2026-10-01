@@ -69,7 +69,10 @@ EOF
     mkdir -p "${root}/AestraAudio/include"
     cat >"${root}/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
-void mix(float* out, unsigned n);
+// Deliberately declares nothing. The .cpp below defines mix, and a bare
+// declaration beside a definition that carries AESTRA_RT_NONBLOCKING is an
+// attribute-mismatch error rather than a check -- which would have made these
+// fixtures fail for a reason unrelated to the gate.
 EOF
     if ! grep -q 'unit\.h' "${root}/AestraAudio/src/unit.cpp"; then
         sed -i '1i #include "unit.h"' "${root}/AestraAudio/src/unit.cpp"
@@ -156,7 +159,12 @@ void mix(float* out, unsigned n);'
 cat >"${WORK}/header_only/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
 #define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
-inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
+// Attribute on the declaration, which is where RealtimeThreadGuard.h says it
+// belongs; repeating it on the definition is a mismatch, and a mismatch
+// mentions -Wfunction-effects too -- so a test asserting that substring would
+// have passed for a reason that has nothing to do with the check.
+void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING;
+inline void mix(float* out, unsigned n) {
     float* scratch = new float[n];
     for (unsigned i = 0; i < n; ++i) out[i] = scratch[i];
     delete[] scratch;
@@ -171,7 +179,8 @@ void mix(float* out, unsigned n);'
 cat >"${WORK}/header_clean/AestraAudio/include/unit.h" <<'EOF'
 #pragma once
 #define AESTRA_RT_NONBLOCKING [[clang::nonblocking]]
-inline void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING {
+void mix(float* out, unsigned n) AESTRA_RT_NONBLOCKING;
+inline void mix(float* out, unsigned n) {
     for (unsigned i = 0; i < n; ++i) out[i] *= 0.5f;
 }
 EOF
