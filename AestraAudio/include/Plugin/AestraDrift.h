@@ -121,8 +121,9 @@ public:
         }
     }
 
-    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
+                 uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 

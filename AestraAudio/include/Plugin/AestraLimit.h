@@ -337,21 +337,21 @@ private:
     // function annotated AESTRA_RT_NONBLOCKING, because thread-safe static
     // initialisation is a guard variable and a guard on an audio-thread path is a
     // lock. Same values, same generated code.
-    inline static constexpr float kDenseThresh  = 0.7f;
-    inline static constexpr float kSparseThresh = 0.3f;
-    inline static constexpr float kReleaseMaxMs = 300.0f;
-    inline static constexpr float kReleaseMinMs = 60.0f;
+    inline static constexpr float K_DENSE_THRESH  = 0.7f;
+    inline static constexpr float K_SPARSE_THRESH = 0.3f;
+    inline static constexpr float K_RELEASE_MAX_MS = 300.0f;
+    inline static constexpr float K_RELEASE_MIN_MS = 60.0f;
 
     void computeAutoReleaseMs() AESTRA_RT_NONBLOCKING {
         const float density = (m_longEma > 1e-10f) ? (m_shortEma / m_longEma) : 0.0f;
 
-        if (density >= kDenseThresh) {
-            m_autoReleaseMs = kReleaseMaxMs;
-        } else if (density <= kSparseThresh) {
-            m_autoReleaseMs = kReleaseMinMs;
+        if (density >= K_DENSE_THRESH) {
+            m_autoReleaseMs = K_RELEASE_MAX_MS;
+        } else if (density <= K_SPARSE_THRESH) {
+            m_autoReleaseMs = K_RELEASE_MIN_MS;
         } else {
-            const float t = (density - kSparseThresh) / (kDenseThresh - kSparseThresh);
-            m_autoReleaseMs = kReleaseMinMs + t * (kReleaseMaxMs - kReleaseMinMs);
+            const float t = (density - K_SPARSE_THRESH) / (K_DENSE_THRESH - K_SPARSE_THRESH);
+            m_autoReleaseMs = K_RELEASE_MIN_MS + t * (K_RELEASE_MAX_MS - K_RELEASE_MIN_MS);
         }
     }
 

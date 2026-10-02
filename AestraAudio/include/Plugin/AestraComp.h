@@ -463,11 +463,11 @@ private:
     // function-local `static constexpr` inside processCore(): Clang refuses any
     // static local in a function annotated AESTRA_RT_NONBLOCKING, because
     // thread-safe static initialisation is a guard variable and a guard on an
-    // audio-thread path is a lock. The old code declared kOpticalEnvelopeRef
+    // audio-thread path is a lock. The old code declared K_OPTICAL_ENVELOPE_REF
     // TWICE, once per branch; both were 0.1f, so there is now one declaration.
-    inline static constexpr float kOpticalWindowMin = 0.005f;
-    inline static constexpr float kOpticalWindowMax = 0.030f;
-    inline static constexpr float kOpticalEnvelopeRef = 0.1f;
+    inline static constexpr float K_OPTICAL_WINDOW_MIN = 0.005f;
+    inline static constexpr float K_OPTICAL_WINDOW_MAX = 0.030f;
+    inline static constexpr float K_OPTICAL_ENVELOPE_REF = 0.1f;
 
     void processCore(float inL, float inR, float attackCoeff, float releaseCoeff, float thresholdDb, float ratio,
                      float kneeDb, float makeupLinear, float& env, float& hpfXL, float& hpfYL, float& hpfXR,
@@ -495,8 +495,8 @@ private:
         const float powerInstant = (detL * detL + detR * detR) * 0.5f;
         float sampleRmsCoeff;
         if (m_mode == kModeOptical) {
-            float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
-            float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
+            float t = std::clamp(m_rmsEnvelope / K_OPTICAL_ENVELOPE_REF, 0.0f, 1.0f);
+            float window = K_OPTICAL_WINDOW_MAX - t * (K_OPTICAL_WINDOW_MAX - K_OPTICAL_WINDOW_MIN);
             // Gate exp() — only recompute when window changes by >0.5ms
             if (std::abs(window - m_prevOpticalWindow) > 0.0005f || m_prevOpticalWindow < 0.0f) {
                 m_prevOpticalWindow = window;
@@ -512,7 +512,7 @@ private:
 
         float aCoeff, rCoeff;
         if (m_mode == kModeOptical) {
-            float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+            float grNorm = std::clamp(m_rmsEnvelope / K_OPTICAL_ENVELOPE_REF, 0.0f, 1.0f);
             aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
             rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
         } else {
