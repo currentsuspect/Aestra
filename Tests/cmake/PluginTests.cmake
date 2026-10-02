@@ -369,3 +369,23 @@ add_test(NAME EffectChainUnreadablePluginStateTest COMMAND EffectChainUnreadable
 set_tests_properties(EffectChainUnreadablePluginStateTest PROPERTIES
     LABELS "audio;plugins;persistence;regression;contract:durability"
     TIMEOUT 120)
+
+# #1015 — the state-load policy is two decisions, not one. An out-of-range
+# value clamps (ambiguous: it may be a legitimate value from a build whose range
+# was wider, and nothing forces a range change to bump kStateVersion); a
+# non-finite value rejects the whole blob (unambiguous corruption). One test file
+# pins both, because the damaging regression is one half drifting into the other
+# -- NaN clamped into range is a plausible number nobody chose.
+add_executable(InternalPluginBaseStatePolicyTest
+    AestraAudio/InternalPluginBaseStatePolicyTest.cpp
+)
+target_link_libraries(InternalPluginBaseStatePolicyTest PRIVATE AestraAudio)
+target_include_directories(InternalPluginBaseStatePolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME InternalPluginBaseStatePolicyTest COMMAND InternalPluginBaseStatePolicyTest)
+set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
+    LABELS "audio;plugins;serialization;contract:durability"
+    TIMEOUT 120)
