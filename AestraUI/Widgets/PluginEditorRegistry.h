@@ -90,7 +90,20 @@ struct PluginEditorRegistration {
  * position -- a plugin id that somehow collided with the sentinel could not
  * become the catch-all by accident.
  */
-inline constexpr std::array<PluginEditorRegistration, 12> pluginEditorRegistry{{
+/// How many rows the registry has, premium or not.
+///
+/// A named constant rather than a literal at the array, because the rumble row is
+/// behind an #ifdef: a hardcoded size compiled the default build and broke the
+/// premium one with thirteen rows in twelve slots. This counts the same condition
+/// CMake sets, so the two cannot disagree.
+inline constexpr size_t kPluginEditorCount =
+#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
+    13;
+#else
+    12;
+#endif
+
+inline constexpr std::array<PluginEditorRegistration, kPluginEditorCount> pluginEditorRegistry{{
     {"", "GenericPluginEditor"},
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
     {"com.Aestrastudios.rumble", "RumblePluginEditor"},
