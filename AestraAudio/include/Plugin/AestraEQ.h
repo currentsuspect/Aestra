@@ -258,10 +258,26 @@ struct EQDynamicBandState {
     float sidechainQNorm;
 };
 
+/// One keyed parameter entry: the id travels with the value, so a parameter's
+/// identity does not depend on its position in the table or in the blob.
+struct EQKeyedParam {
+    uint32_t id;
+    float value;
+};
+
+/// The keyed v2 layout with the dynamic-band tail appended:
+///
+///     [magic][version=2][paramCount=33][(id, value) * 33][dynamicBands[24]]
+///
+/// — the base's v2 header and param section, followed by the live state the base
+/// has no business owning. Deliberately boring, and deliberately NOT the base's
+/// own saveState(): the tail is 24 band records the parameter system has no
+/// vocabulary for. See the comment on loadState().
 struct EQStateBlob {
     uint32_t magic;
     uint32_t version;
-    float params[33]; // V6/V7/V8 public param count
+    uint32_t paramCount;
+    EQKeyedParam params[33]; // V6/V7/V8 public param count
     EQDynamicBandState dynamicBands[24];
 };
 
@@ -275,10 +291,10 @@ public:
     static constexpr uint32_t kV1BandCount = 6;      // V1 public band count
     static constexpr uint32_t kLegacyBandCount = kV1BandCount;
     static constexpr uint32_t kMaxDynamicBands = 24; // Target advanced EQ slot count
-    // Canonical magic, carrying the V8 value: the reset renumbers the version
-    // field, not the magic, so a pre-reset EQ blob is still recognisably this
-    // plugin's and is rejected on version rather than on magic.
-    static constexpr uint32_t kStateMagic = 0x45510008; // 'EQ' v8 value, now version 1
+    // Canonical magic, carrying the V8 value: each format change renumbers the
+    // version field, not the magic, so a pre-reset EQ blob is still recognisably
+    // this plugin's and is rejected on version rather than on magic.
+    static constexpr uint32_t kStateMagic = 0x45510008; // 'EQ' v8 value, now keyed v2
     static constexpr uint32_t kAnalyzerWindowSize = 1024;
     static constexpr uint32_t kAnalyzerSourceCount = 2;
     static constexpr uint32_t kAnalyzerStereoModeCount = 5;
@@ -729,9 +745,11 @@ public:
     std::vector<uint8_t> saveState() const {
         EQStateBlob blob{};
         blob.magic = kStateMagic;
-        blob.version = 1;
+        blob.version = 2;
+        blob.paramCount = kParamCount;
         for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
+            blob.params[i].id = i;
+            blob.params[i].value = getParameter(i);
         }
         for (uint32_t slot = 0; slot < kMaxDynamicBands; ++slot) {
             const auto snapshot = getDynamicBandSlotSnapshot(slot);
@@ -775,12 +793,42 @@ bool loadState(const std::vector<uint8_t>& state) {
             return false;
         }
         const auto* blob = reinterpret_cast<const EQStateBlob*>(state.data());
-        if (blob->magic != kStateMagic || blob->version != 1u) {
+        // Version first, and the v1 check is exact. A v1 blob is a DIFFERENT
+        // struct size, so sizeof(EQStateBlob) already rejects most of them — but
+        // not all, and a blob that passed on size alone would have its param
+        // floats read as (id, value) pairs and restore garbage silently.
+        if (blob->magic != kStateMagic || blob->version != 2u) {
+            return false;
+        }
+        if (blob->paramCount > kParamCount) {
             return false;
         }
 
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, std::clamp(blob->params[i], 0.0f, 1.0f));
+        // Apply by id, not by position. An id the table does not have is
+        // ignored (a removed parameter); an id the table has but the blob does
+        // not keeps its default (an added one). Both are what make a changing
+        // parameter table safe, and both are why this cannot be a loop over
+        // `i` any more.
+        //
+        // TWO PASSES, and the first one is not optional. Classifying inline and
+        // applying in the same loop means a NaN in entry 5 returns false with
+        // entries 0-4 already written — the exact half-updated instance
+        // AGENTS.md §12 forbids, and the thing InternalPluginBase's two-pass
+        // structure exists to prevent. CodeRabbit caught this on the first
+        // review of #1024; the comment here had claimed "reject before anything
+        // is written" while the code did the opposite.
+        for (uint32_t i = 0; i < blob->paramCount; ++i) {
+            const uint32_t id = blob->params[i].id;
+            if (id >= kParamCount)
+                continue; // unknown to this table: a removed parameter, or junk
+            if (!std::isfinite(blob->params[i].value))
+                return false;
+        }
+        for (uint32_t i = 0; i < blob->paramCount; ++i) {
+            const uint32_t id = blob->params[i].id;
+            if (id >= kParamCount)
+                continue;
+            setParameter(id, std::clamp(blob->params[i].value, 0.0f, 1.0f));
         }
 
         resetDynamicBandSlots();
