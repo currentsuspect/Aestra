@@ -203,16 +203,38 @@ int main() {
     // ---------------------------------------------------------------------
     // Header failures are unchanged: a wrong version or magic never reaches the
     // parameter loop at all, so the FD-24 reset behaviour is untouched.
+    //
+    // Offsets matter and are easy to get wrong: the header is two uint32s, so
+    // the magic occupies bytes 0-3 and the version bytes 4-7. This originally
+    // poked byte 3 and called it the version -- that is the magic's high byte,
+    // so the case silently duplicated the magic test below and version
+    // rejection was never exercised at all. Another test that quietly stops
+    // testing its own subject.
     // ---------------------------------------------------------------------
     {
         Fixture fx;
-        fx.blob[3] = 0x7f; // corrupt the version byte
+        const uint32_t badVersion = 0xFFFFFFFFu;
+        std::memcpy(fx.blob.data() + sizeof(uint32_t), &badVersion, sizeof(badVersion));
         AestraSat restored;
         restored.initialize(48000.0, 256);
-        check(!restored.loadState(fx.blob), "a bad version still rejects regardless of param values");
+        restored.setParameter(AestraSat::kMix, Fixture::kSavedMix);
+        check(!restored.loadState(fx.blob), "a bad version rejects regardless of param values");
+        check(std::fabs(restored.getParameter(AestraSat::kMix) - Fixture::kSavedMix) < 1e-6f,
+              "a bad version leaves parameters untouched");
 
+        // Prove the version field really is where the comment says it is: patch
+        // that one field back and the very same blob must now load. Without
+        // this, the case above could pass for any reason at all.
+        const uint32_t goodVersion = 1; // InternalPluginBase::kStateVersion
+        std::memcpy(fx.blob.data() + sizeof(uint32_t), &goodVersion, sizeof(goodVersion));
+        check(restored.loadState(fx.blob),
+              "restoring only the version byte makes the same blob load, so that field is the version");
+    }
+
+    {
         Fixture fx2;
-        fx2.blob[0] ^= 0xFF; // corrupt the magic
+        const uint32_t badMagic = 0xDEADBEEFu;
+        std::memcpy(fx2.blob.data(), &badMagic, sizeof(badMagic));
         AestraSat fx2restored;
         fx2restored.initialize(48000.0, 256);
         check(!fx2restored.loadState(fx2.blob), "a bad magic still rejects regardless of param values");
