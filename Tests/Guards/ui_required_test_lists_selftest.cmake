@@ -37,15 +37,39 @@ set(failures 0)
 function(write_tree cmake_list build_list run_list)
     set(extra_ui_tests "")
     set(tests_outside_ui "")
+    # ARGV is 0-based and ARGC is the COUNT, so the optional arguments are ARGV3
+    # through ARGV(ARGC-1). The first draft iterated RANGE 3 ${ARGC} and read
+    # index _i-1, which walked one past the end AND shifted every read down by one
+    # -- so `run_list` was consumed as an extra argument. CodeRabbit caught it.
+    #
+    # The fixtures still produced their expected results afterwards, because the
+    # guard's regex reads only the first name before '|' and that name was already
+    # required. Passing for the wrong reason is the failure mode worth designing
+    # against, hence the assertion below.
     if(ARGC GREATER 3)
-        math(EXPR _first_extra "3")
-        foreach(_i RANGE ${_first_extra} ${ARGC})
-            math(EXPR _prev "${_i} - 1")
-            list(GET ARGV ${_prev} _arg)
+        math(EXPR _last_arg "${ARGC} - 1")
+        foreach(_i RANGE 3 ${_last_arg})
+            set(_arg "${ARGV${_i}}")
             if(_arg MATCHES "^outside:")
                 string(REGEX REPLACE "^outside:" "" _arg "${_arg}")
                 list(APPEND tests_outside_ui "${_arg}")
             else()
+                # A name containing '|' or a space is a run_list or a cmake_list
+                # that leaked in through an index error, not a test name. Without
+                # this the malformed fixture is written, the guard reads only the
+                # part before the '|', finds it already required, and the fixture
+                # passes while testing nothing it claims.
+                #
+                # Both tests are plain character classes with no backslash, because
+                # an attempted "[|\\n]" matched ordinary letters -- the escape
+                # sequence does not survive CMake's argument parsing into REGEX the
+                # way the same string survives in Python.
+                if(_arg MATCHES "[|]" OR _arg MATCHES " ")
+                    message(FATAL_ERROR
+                        "write_tree: optional argument '${_arg}' is not a single test name.\n"
+                        "It looks like a run_list leaked through an index error. Refusing to write a "
+                        "fixture that would pass for the wrong reason.")
+                endif()
                 list(APPEND extra_ui_tests "${_arg}")
             endif()
         endforeach()
