@@ -3542,3 +3542,33 @@ add_test(NAME PanelDescriptorRegistryTest COMMAND PanelDescriptorRegistryTest)
 set_tests_properties(PanelDescriptorRegistryTest PROPERTIES
     LABELS "ui;panels;contract:application;regression"
     TIMEOUT 120)
+# P4: the editor dispatch registry. NOT behind aestra_require_ui_targets — this
+# test checks the registry's ids and factories, which needs no window, no
+# platform bridge and no live plugin instance. Gating it behind the UI target set
+# would mean a dispatch table is only guarded in the one lane CI runs least.
+# The registry's ids and lookups are header-inline, so this links no .cpp at all.
+# Linking PluginEditorRegistry.cpp would pull in all eleven editor constructors
+# and the NUI widget stack, for a test that only inspects a list of strings.
+add_executable(PluginEditorRegistryTest
+    AestraUI/PluginEditorRegistryTest.cpp
+)
+# AestraUI_Core's own public include directories, reproduced rather than linked:
+# linking it would drag thorvg and the whole widget stack into a test that only
+# needs to resolve headers. Reproducing the list is the lesser evil and is
+# checked against AestraUI_Core's own list in this comment rather than trusted.
+target_include_directories(PluginEditorRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraUI
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+    ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME PluginEditorRegistryTest COMMAND PluginEditorRegistryTest)
+set_tests_properties(PluginEditorRegistryTest PROPERTIES
+    LABELS "ui;plugins;contract:application;regression"
+    TIMEOUT 120)
