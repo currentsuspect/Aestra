@@ -35,6 +35,10 @@ void NUIIcon::onRender(NUIRenderer& renderer) {
 }
 
 void NUIIcon::loadSVG(const std::string& svgContent) {
+    // Re-loading the same artwork (a widget re-applying its icon every frame) must neither
+    // re-parse nor invalidate (SPEC 3 §4).
+    if (svgDoc_ && svgContent == loadedSvgContent_) return;
+    loadedSvgContent_ = svgContent;
     svgDoc_ = NUISVGParser::parse(svgContent);
     updateBounds();
     setDirty(true);
@@ -51,7 +55,12 @@ void NUIIcon::setIconSize(NUIIconSize size) {
     setIconSize(s, s);
 }
 
+// Setters invalidate only on a real change. Widgets re-apply icon colours and sizes from
+// their render/update paths every frame; an unconditional setDirty there re-dirtied the
+// root during render, so the app never went idle: ~4,100 icon invalidations a second
+// with nothing changing (SPEC 3 §4).
 void NUIIcon::setIconSize(float width, float height) {
+    if (iconWidth_ == width && iconHeight_ == height) return;
     iconWidth_ = width;
     iconHeight_ = height;
     updateBounds();
@@ -59,6 +68,7 @@ void NUIIcon::setIconSize(float width, float height) {
 }
 
 void NUIIcon::setColor(const NUIColor& color) {
+    if (hasCustomColor_ && themeColorName_.empty() && color_ == color) return;
     color_ = color;
     hasCustomColor_ = true;
     themeColorName_.clear();
@@ -67,13 +77,16 @@ void NUIIcon::setColor(const NUIColor& color) {
 
 void NUIIcon::setColorFromTheme(const std::string& colorName) {
     auto& themeManager = NUIThemeManager::getInstance();
-    color_ = themeManager.getColor(colorName);
+    const NUIColor resolved = themeManager.getColor(colorName);
+    if (hasCustomColor_ && themeColorName_ == colorName && color_ == resolved) return;
+    color_ = resolved;
     hasCustomColor_ = true;
     themeColorName_ = colorName;
     setDirty(true);
 }
 
 void NUIIcon::clearColor() {
+    if (!hasCustomColor_ && themeColorName_.empty()) return;
     hasCustomColor_ = false;
     themeColorName_.clear();
     setDirty(true);
