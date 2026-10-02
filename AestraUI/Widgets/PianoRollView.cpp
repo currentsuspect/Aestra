@@ -49,6 +49,15 @@ PianoRollView::PianoRollView()
     m_keys->setOnHoveredKeyChanged([this](int pitch) {
         if (m_grid) m_grid->setHoveredPitch(pitch);
     });
+    // A note pressed in the grid presses its key (SPEC 3 §5.1).
+    m_notes->setOnKeyPressChanged([this](int pitch, bool down) {
+        if (!m_keys) return;
+        if (down) {
+            m_keys->pressKey(pitch);
+        } else {
+            m_keys->releaseKey(pitch);
+        }
+    });
     
     // Toolbar
     m_toolbar = std::make_shared<PianoRollToolbar>();
