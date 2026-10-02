@@ -3523,3 +3523,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ExportDialogPreferencesTest.c
     set_tests_properties(ExportDialogPreferencesTest PROPERTIES
         LABELS "serialization;preferences;regression;contract:durability")
 endif()
+
+# P5: the floating-panel registry guard. Deliberately NOT behind
+# aestra_require_ui_targets — it includes only FloatingPanelDescriptors.h,
+# which has no UI dependency, because AESTRA_HEADLESS_ONLY builds skip the UI
+# targets and a registry guard that only runs in a lane most of CI skips would
+# be a guard that mostly does not run. Adding a ViewType with no registry row
+# must fail here, in the headless lane.
+add_executable(PanelDescriptorRegistryTest
+    AestraUI/PanelDescriptorRegistryTest.cpp
+)
+target_include_directories(PanelDescriptorRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME PanelDescriptorRegistryTest COMMAND PanelDescriptorRegistryTest)
+set_tests_properties(PanelDescriptorRegistryTest PROPERTIES
+    LABELS "ui;panels;contract:application;regression"
+    TIMEOUT 120)

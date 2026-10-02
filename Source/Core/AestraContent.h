@@ -314,6 +314,19 @@ public:
 
     /** @brief The panel owned for a floating view, or nullptr for other views. */
     std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+
+    // One accessor per floating panel, existing so the descriptor table can name
+    // a panel without friendship or type erasure. The five members are distinct
+    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, AestraHistoryPanel,
+    // TakesPanel), so they cannot share a member pointer; a pointer-to-member-
+    // function is compile-checked, allocates nothing and carries no std::any or
+    // std::function through the frame loop. Each is the upcast panelForView()
+    // already performed inside its switch arm.
+    std::shared_ptr<Aestra::Audio::WindowPanel> mixerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> pianoRollWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> sequencerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> historyWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> takesWindowFor() const;
     /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
     Aestra::UISurfaceStoreFile* surfaceStore() const;
     /**
