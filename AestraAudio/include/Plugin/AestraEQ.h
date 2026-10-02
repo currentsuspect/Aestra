@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "RealtimeThreadGuard.h"
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include <algorithm>
@@ -393,22 +394,29 @@ public:
         float sidechainQNorm = 0.091f;
     };
 
-    static LegacyBandSlot legacyBandSlot(uint32_t band) {
-        static constexpr LegacyBandSlot slots[kLegacyBandCount] = {
-            {"HP", "Cut", kParamHPFEnable, kParamHPFFreq, 0, kParamHPFSlope, 0, kParamHPFStereoMode,
-             FilterType::LowCut, true},
-            {"LS", "Shelf", kParamLShEnable, kParamLShFreq, kParamLShGain, kParamLShQ, 0, kParamLShStereoMode,
-             FilterType::LowShelf, false},
-            {"B1", "Bell", kParamBell1Enable, kParamBell1Freq, kParamBell1Gain, kParamBell1Q, kParamBell1Type,
-             kParamBell1StereoMode, FilterType::Bell, false},
-            {"B2", "Bell", kParamBell2Enable, kParamBell2Freq, kParamBell2Gain, kParamBell2Q, kParamBell2Type,
-             kParamBell2StereoMode, FilterType::Bell, false},
-            {"HS", "Shelf", kParamHShEnable, kParamHShFreq, kParamHShGain, kParamHShQ, 0, kParamHShStereoMode,
-             FilterType::HighShelf, false},
-            {"LP", "Cut", kParamLPFEnable, kParamLPFFreq, 0, kParamLPFSlope, 0, kParamLPFStereoMode,
-             FilterType::HighCut, true},
-        };
-        return slots[std::min(band, kLegacyBandCount - 1)];
+    // Legacy band layout: the six pre-1.0 bands in wire order. Hoisted to class
+    // scope from function-local `static constexpr` inside legacyBandSlot():
+    // Clang refuses ANY static local in a function annotated AESTRA_RT_NONBLOCKING,
+    // because thread-safe static initialisation is a guard variable, and a guard
+    // on an audio-thread path is a lock -- however constexpr the value. Same
+    // values, same generated code, minus the guard.
+    inline static constexpr LegacyBandSlot K_LEGACY_BAND_SLOTS[kLegacyBandCount] = {
+        {"HP", "Cut", kParamHPFEnable, kParamHPFFreq, 0, kParamHPFSlope, 0, kParamHPFStereoMode,
+         FilterType::LowCut, true},
+        {"LS", "Shelf", kParamLShEnable, kParamLShFreq, kParamLShGain, kParamLShQ, 0, kParamLShStereoMode,
+         FilterType::LowShelf, false},
+        {"B1", "Bell", kParamBell1Enable, kParamBell1Freq, kParamBell1Gain, kParamBell1Q, kParamBell1Type,
+         kParamBell1StereoMode, FilterType::Bell, false},
+        {"B2", "Bell", kParamBell2Enable, kParamBell2Freq, kParamBell2Gain, kParamBell2Q, kParamBell2Type,
+         kParamBell2StereoMode, FilterType::Bell, false},
+        {"HS", "Shelf", kParamHShEnable, kParamHShFreq, kParamHShGain, kParamHShQ, 0, kParamHShStereoMode,
+         FilterType::HighShelf, false},
+        {"LP", "Cut", kParamLPFEnable, kParamLPFFreq, 0, kParamLPFSlope, 0, kParamLPFStereoMode,
+         FilterType::HighCut, true},
+    };
+
+    static LegacyBandSlot legacyBandSlot(uint32_t band) AESTRA_RT_NONBLOCKING {
+        return K_LEGACY_BAND_SLOTS[std::min(band, kLegacyBandCount - 1)];
     }
 
     static DynamicBandSlotDefaults dynamicBandSlotDefaults(uint32_t slot) {
@@ -525,7 +533,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING {
         (void)midiInput;
         (void)midiOutput;
 
@@ -1247,15 +1255,44 @@ private:
         return legacyBandSlot(band).defaultType;
     }
 
-    static FilterType typeParamToFilterType(float norm) {
+    // Discrete filter-type choice, indexed by the normalised type parameter.
+    // Hoisted to class scope from function-local `static constexpr` for the
+    // reason given above K_LEGACY_BAND_SLOTS: a static local in a nonblocking
+    // function is a guard variable, and a guard on an audio thread is a lock.
+    inline static constexpr FilterType K_TYPE_CHOICES[] = {
+        FilterType::Bell,
+        FilterType::Notch,
+        FilterType::BandPass,
+        FilterType::Tilt
+    };
+
+    // The dynamic band's type menu is a different, longer list -- 8 entries
+    // against the legacy band's 4. Kept separate rather than sharing a table,
+    // because the index scales differ (x3.0 vs x7.0) and the lengths differ.
+    inline static constexpr FilterType K_DYNAMIC_TYPE_CHOICES[] = {
+        FilterType::LowCut,
+        FilterType::LowShelf,
+        FilterType::Bell,
+        FilterType::Notch,
+        FilterType::BandPass,
+        FilterType::Tilt,
+        FilterType::HighShelf,
+        FilterType::HighCut,
+    };
+
+    inline static constexpr StereoMode K_STEREO_MODES[] = {
+        StereoMode::Stereo,
+        StereoMode::Left,
+        StereoMode::Right,
+        StereoMode::Mid,
+        StereoMode::Side
+    };
+
+    inline static constexpr uint32_t K_SLOPES_DB_PER_OCT[] = {6, 12, 24, 36, 48, 72, 96};
+
+    static FilterType typeParamToFilterType(float norm) AESTRA_RT_NONBLOCKING {
         const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(norm, 0.0f, 1.0f) * 3.0f));
-        static constexpr FilterType types[] = {
-            FilterType::Bell,
-            FilterType::Notch,
-            FilterType::BandPass,
-            FilterType::Tilt
-        };
-        return types[std::min(idx, 3u)];
+        return K_TYPE_CHOICES[std::min(idx, 3u)];
     }
 
     static float filterTypeToTypeParam(FilterType type) {
@@ -1268,19 +1305,9 @@ private:
         }
     }
 
-    static FilterType dynamicTypeParamToFilterType(float norm) {
+    static FilterType dynamicTypeParamToFilterType(float norm) AESTRA_RT_NONBLOCKING {
         const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(norm, 0.0f, 1.0f) * 7.0f));
-        static constexpr FilterType types[] = {
-            FilterType::LowCut,
-            FilterType::LowShelf,
-            FilterType::Bell,
-            FilterType::Notch,
-            FilterType::BandPass,
-            FilterType::Tilt,
-            FilterType::HighShelf,
-            FilterType::HighCut,
-        };
-        return types[std::min(idx, 7u)];
+        return K_DYNAMIC_TYPE_CHOICES[std::min(idx, 7u)];
     }
 
     static float dynamicFilterTypeToParam(FilterType type) {
@@ -1311,16 +1338,9 @@ private:
         }
     }
 
-    static StereoMode stereoModeFromParam(float norm) {
+    static StereoMode stereoModeFromParam(float norm) AESTRA_RT_NONBLOCKING {
         const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(norm, 0.0f, 1.0f) * 4.0f));
-        static constexpr StereoMode modes[] = {
-            StereoMode::Stereo,
-            StereoMode::Left,
-            StereoMode::Right,
-            StereoMode::Mid,
-            StereoMode::Side
-        };
-        return modes[std::min(idx, 4u)];
+        return K_STEREO_MODES[std::min(idx, 4u)];
     }
 
     static float stereoModeToParam(StereoMode mode) {
@@ -1609,11 +1629,10 @@ private:
         return 0.1f + std::clamp(norm, 0.0f, 1.0f) * 9.9f;
     }
 
-    static uint32_t slopeDbPerOct(float norm) {
-        static constexpr uint32_t slopes[] = {6, 12, 24, 36, 48, 72, 96};
+    static uint32_t slopeDbPerOct(float norm) AESTRA_RT_NONBLOCKING {
         const float clamped = std::clamp(norm, 0.0f, 1.0f);
         const uint32_t idx = static_cast<uint32_t>(std::round(clamped * 6.0f));
-        return slopes[std::min(idx, 6u)];
+        return K_SLOPES_DB_PER_OCT[std::min(idx, 6u)];
     }
 
     static uint32_t slopeStageCount(float norm) {
