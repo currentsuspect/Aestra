@@ -700,37 +700,6 @@ inline NUIRect NUIAbsoluteFromRelative(const NUIRect& relativeRect, const NUIRec
 }
 
 /**
- * @brief Calculate bounding rect that contains all given rects
- *
- * Useful for invalidation regions or container sizing.
- *
- * @param rects Vector of rects to union
- * @return NUIRect containing all input rects
- *
- * @example
- * std::vector<NUIRect> dirtyRects = {child1->getBounds(), child2->getBounds()};
- * NUIRect invalidationArea = NUIUnionRects(dirtyRects);
- * renderer.invalidateRegion(invalidationArea);
- */
-inline NUIRect NUIUnionRects(const std::vector<NUIRect>& rects) {
-    if (rects.empty()) return NUIRect(0, 0, 0, 0);
-    
-    float minX = rects[0].x;
-    float minY = rects[0].y;
-    float maxX = rects[0].x + rects[0].width;
-    float maxY = rects[0].y + rects[0].height;
-    
-    for (const auto& rect : rects) {
-        minX = std::min(minX, rect.x);
-        minY = std::min(minY, rect.y);
-        maxX = std::max(maxX, rect.x + rect.width);
-        maxY = std::max(maxY, rect.y + rect.height);
-    }
-    
-    return NUIRect(minX, minY, maxX - minX, maxY - minY);
-}
-
-/**
  * @brief Check if two rects intersect
  *
  * Useful for hit testing or invalidation optimization.
