@@ -133,12 +133,14 @@ public:
         std::vector<std::string> missingAssets;
         std::vector<MissingPlugin> missingPlugins;
 
-        /// Plugins that WERE installed but rejected their own saved state, so
-        /// the slot is running default parameters and the project's settings for
-        /// it were not applied. Distinct from missingPlugins, which means "not
-        /// installed" and loses nothing -- the record is preserved verbatim and
-        /// re-emitted on save. Here the settings are genuinely gone, which is
-        /// why it cannot ride on a log line (#1014).
+        /// Plugins that WERE installed but rejected their own saved state. The
+        /// slot is left EMPTY rather than run on defaults -- defaults would sound
+        /// plausible, so the user would not notice, and the next save would
+        /// overwrite their settings -- and the rejected blob is preserved
+        /// verbatim, so nothing is lost. Distinct from missingPlugins, which
+        /// means "not installed" at all. Neither loses data, but the diagnosis
+        /// and the fix are different, which is why they cannot share a list
+        /// (#1014).
         std::vector<MissingPlugin> unreadablePluginState;
 
         LoadIntegrity integrity{LoadIntegrity::Unchecked};

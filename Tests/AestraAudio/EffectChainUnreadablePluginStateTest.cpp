@@ -1,30 +1,32 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// A plugin that IS installed but rejects its own saved state must be reported
-// (#1014).
+// A plugin that IS installed but rejects its own saved state must be reported,
+// and its settings must survive (#1014).
 //
-// The two failure modes in EffectChain::loadState look identical from the
-// outside and are not the same event:
+// Two things used to go wrong at once, and the second is the serious one.
 //
-//   not installed        -> createInstanceById returns null. The slot keeps the
-//                           opaque record verbatim and re-emits it on save. The
-//                           project is intact; only the machine is short a
-//                           plugin. Already reported, as missingPlugins (#647).
+// Reported: the case only reached Aestra::Log::warning while the return value
+// still said "the blob parsed", so the project opened cleanly and nothing said
+// the settings had not been applied.
 //
-//   installed, state bad -> the slot goes LIVE, running DEFAULT parameters. The
-//                           settings in the project were not applied, and the
-//                           next save overwrites them. The project is damaged.
+// Destroyed: the slot stayed LIVE and ran with DEFAULT parameters. Defaults
+// sound plausible, so the user would not notice, and the next save wrote those
+// defaults over the project's settings. The loss was not merely unreported, it
+// was guaranteed on the first save.
 //
-// Before this fix the second case only reached Aestra::Log::warning, and the
-// return value still said "the blob parsed". The project opened cleanly and
-// nothing anywhere said the user's settings were gone. That is silent data loss
-// with a log line standing next to it, which is the worst of both.
+// The fix puts a rejected state on the same path as a missing plugin: the slot
+// ends up empty and the opaque blob is preserved verbatim, so the settings
+// survive the round trip. What differs is the diagnosis, which is why the
+// report keeps two lists -- telling a user to install a plugin they already
+// have is its own kind of wrong.
 //
 // This test deliberately uses a REAL built-in plugin, because the whole point is
 // the installed-but-rejecting branch: an unresolvable id takes the other path
 // and would make the test pass for the wrong reason. That is the mirror of
 // EffectChainMissingPluginTest, which deliberately depends on NO plugin being
-// installed. Neither test can substitute for the other.
+// installed. Neither test can substitute for the other, and neither skips: if
+// the plugin will not resolve this file FAILS, because a green run that never
+// entered the branch is a test that has stopped testing.
 
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginManager.h"
@@ -144,16 +146,21 @@ bool parseBlob(const std::vector<uint8_t>& blob, std::vector<SlotRecord>& out) {
 int main() {
     auto& manager = PluginManager::getInstance();
     if (!manager.initialize()) {
-        std::cerr << "[SKIP] PluginManager did not initialize; cannot prove the installed path\n";
-        return EXIT_SUCCESS;
+        // FAIL, not skip-as-pass. If the manager will not start, neither case
+        // below ran, and a CTest green here would mean this file has stopped
+        // guarding #1014 without anyone noticing (AGENTS.md §2: no misleading
+        // success paths). The built-ins are always present in core mode, so a
+        // failure here is a real problem, not an environment quirk.
+        std::cerr << "[FAIL] PluginManager did not initialize; the installed-but-rejecting branch\n"
+                     "       of #1014 was never exercised\n";
+        return EXIT_FAILURE;
     }
     if (manager.createInstanceById(kEqId) == nullptr) {
-        // An environment fact, not a regression. But it MUST NOT read as a pass:
-        // the branch under test was never entered, and the sibling test's
-        // skip-or-fail choice is deliberately different.
-        std::cerr << "[SKIP] " << kEqId << " does not resolve here, so the installed-but-rejecting\n"
-                     "       branch was never exercised. This run proves nothing about #1014.\n";
-        return EXIT_SUCCESS;
+        // Same reasoning. This used to return EXIT_SUCCESS with a SKIP message,
+        // which is a test that silently stops testing.
+        std::cerr << "[FAIL] " << kEqId << " does not resolve here, so the installed-but-rejecting\n"
+                     "       branch of #1014 was never exercised\n";
+        return EXIT_FAILURE;
     }
 
     // ---------------------------------------------------------------------
@@ -189,23 +196,23 @@ int main() {
         // plugin they already have.
         check(report.missingPlugins.empty(), "an installed plugin is never reported as missing");
 
-        // The slot is live and running defaults -- which is exactly why this
-        // has to be surfaced rather than logged.
+        // The slot goes EMPTY, not live-on-defaults. Running the plugin with
+        // defaults would sound plausible, so the user would not notice — and
+        // the next save would write those defaults over their settings. Leaving
+        // the slot empty is the only choice that preserves them.
         const EffectSlot* slot = chain.getSlot(0);
-        check(slot != nullptr && !slot->isEmpty(), "the slot is live, not empty");
-        check(slot != nullptr && !slot->hasMissingPlugin(), "the slot is not a placeholder");
-        check(chain.getMissingPluginCount() == 0, "the chain counts no placeholders");
+        check(slot != nullptr && slot->isEmpty(), "the slot is empty, not running on defaults");
+        check(slot != nullptr && slot->hasMissingPlugin(), "the slot holds a placeholder");
+        check(chain.getMissingPluginCount() == 1, "the chain counts the placeholder");
 
-        // The consequence, pinned rather than described: the rejected bytes are
-        // NOT preserved, because the live slot re-emits the plugin's own state.
-        // This is the data loss the report exists to warn about, so the test
-        // asserts that it really happens.
+        // The consequence, pinned rather than described: the rejected bytes
+        // come back out EXACTLY as they went in. That is the whole difference
+        // from the old behaviour, where the next save destroyed them.
         std::vector<SlotRecord> out;
-        check(parseBlob(chain.saveState(), out), "the damaged chain still saves and re-parses");
+        check(parseBlob(chain.saveState(), out), "the chain still saves and re-parses");
         if (!out.empty() && out[0].present) {
             check(out[0].id == kEqId, "the plugin id survives the save");
-            check(out[0].state != garbage, "the rejected bytes are not what gets written back");
-            check(!out[0].state.empty(), "the plugin's own state is written instead");
+            check(out[0].state == garbage, "the rejected state is preserved byte-for-byte");
         }
     }
 

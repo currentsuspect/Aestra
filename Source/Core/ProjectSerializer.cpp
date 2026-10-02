@@ -1985,8 +1985,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             ProjectLoadWarningCategory::EffectChain,
                             "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
                                 " plugin(s) on " + channelName +
-                                " could not read their saved settings and are running defaults."
-                                " Those settings were not applied.",
+                                " could not read their saved settings. Those slots are left empty rather than"
+                                " run on defaults, and their settings are preserved on save.",
                             "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
                         for (auto& id : loadReport.unreadableState) {
                             result.unreadablePluginState.push_back({std::move(id), channelName});
@@ -2021,8 +2021,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         warningLimiter.warning(
                             ProjectLoadWarningCategory::EffectChain,
                             "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
-                                " plugin(s) on Master could not read their saved settings and are"
-                                " running defaults. Those settings were not applied.",
+                                " plugin(s) on Master could not read their saved settings. Those slots are"
+                                " left empty rather than run on defaults, and their settings are preserved"
+                                " on save.",
                             "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
                         for (auto& id : loadReport.unreadableState) {
                             result.unreadablePluginState.push_back({std::move(id), "Master"});
@@ -2199,8 +2200,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                             ProjectLoadWarningCategory::EffectChain,
                                             "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
                                                 " plugin(s) on " + lane->name +
-                                                " could not read their saved settings and are running defaults."
-                                                " Those settings were not applied.",
+                                                " could not read their saved settings. Those slots are left"
+                                                " empty rather than run on defaults, and their settings are"
+                                                " preserved on save.",
                                             "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
                                         for (auto& id : loadReport.unreadableState) {
                                             result.unreadablePluginState.push_back({std::move(id), lane->name});

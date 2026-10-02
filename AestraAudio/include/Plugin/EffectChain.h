@@ -163,14 +163,17 @@ void reserveMintedPluginInstanceId(uint64_t seenId);
  */
 /// What a project load could not fully apply.
 ///
-/// Two lists, not one, because the two failures need different treatment and
-/// collapsing them loses that:
-///  - missingPlugins: the plugin is not installed. The slot keeps the opaque
-///    record and re-emits it on save, so nothing is lost and nothing to report.
+/// Two lists, not one, because the two failures need different diagnoses even
+/// though they recover the same way (#1014):
+///  - missingPlugins: the plugin is not installed on this machine.
 ///  - unreadableState: the plugin IS installed but rejected its own state blob.
-///    The slot is live and running DEFAULT parameters, and the user's settings
-///    for it are gone. That is a silent data loss unless it is reported, which
-///    is why it is a separate list rather than a log line (#1014).
+///
+/// Neither loses data. In both cases the slot ends up empty and the opaque
+/// record is stored exactly as it came off the wire, so the next save re-emits
+/// it unchanged and the settings survive until the project is loaded again.
+/// They are still separate lists: "install the plugin" and "this plugin could
+/// not read its state" are different messages, and a user who is told to install
+/// a plugin they already have has been told the wrong thing.
 struct LoadReport {
     std::vector<std::string> missingPlugins;
     std::vector<std::string> unreadableState;
