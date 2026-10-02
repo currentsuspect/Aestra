@@ -205,6 +205,41 @@ cmake -S . -B build-headless \
 cmake --build build-headless --parallel
 ```
 
+Correct for audio, DSP and plugin work, and it is what most changes need. It does
+**not** compile `Source/Core/` or `AestraUI/` — see the `AESTRA_CI` note in §8.
+
+### UI/App Build — required for `Source/` and `AestraUI/` changes
+
+```bash
+# Every UI-affecting flag is set EXPLICITLY, including to OFF. All three are
+# CACHE variables: reconfiguring an existing build-ui/ that was configured with
+# either flag keeps the cached value, and CMake then force-disables the UI again
+# with the Aestra target simply absent. Omitting a flag is not an instruction.
+cmake -S . -B build-ui \
+  -DAESTRA_CI=OFF \
+  -DAESTRA_HEADLESS_ONLY=OFF \
+  -DAESTRA_ENABLE_UI=ON \
+  -DAESTRA_ENABLE_TESTS=ON \
+  -DAESTRA_ALLOW_LICENSE_GATE_OFF=ON \
+  -DCMAKE_BUILD_TYPE=Release
+
+cmake --build build-ui --parallel
+```
+
+```bash
+# The single target that proves the app links. Cheaper than a full UI build and
+# catches the whole Source/ tree.
+cmake --build build-ui --target Aestra --parallel
+```
+
+> [!gotcha] Two builds, for two kinds of change
+> An agent that verifies UI work with the headless recipe has verified **nothing**,
+> because the file was never compiled. This is not a theoretical hazard: PR #1025
+> reached review with twelve compile errors in `Source/Core/AestraContent.cpp` and
+> every local build reported it clean. Run the headless build for the test suite,
+> and additionally run this one whenever the diff touches `Source/` or
+> `AestraUI/`.
+
 ### Preset Build
 
 ```bash
@@ -230,6 +265,23 @@ ctest --test-dir build --output-on-failure
 * GNU ld circular dependency fixes using linker groups must not be removed without validating Linux builds.
 * FreeType warning suppressions are intentional. Do not “clean them up” unless explicitly asked.
 * UI dependencies should not leak into headless builds.
+* **`AESTRA_CI=ON` force-disables the UI.** It sets `AESTRA_HEADLESS_ONLY=ON` with
+  `CACHE ... FORCE`, which sets `AESTRA_ENABLE_UI=OFF`. So
+  `-DAESTRA_CI=ON -DAESTRA_HEADLESS_ONLY=ON` is redundant *and* self-defeating if
+  you meant to build the app: the second flag looks like the only one that matters,
+  and the first silently forces it. Drop `AESTRA_CI` for UI work (§7).
+* **`AESTRAUI_ENABLE_PREMIUM_EDITORS` enables the premium editor sources.** When a
+  private plugin is present and the UI build is on, verify the premium editor with
+  `-DAESTRAUI_ENABLE_PREMIUM_EDITORS=ON`. It is a source-inclusion switch, so a
+  default-build pass says nothing about that configuration — and if any table is
+  conditionally populated, its declared size must be derived rather than written,
+  because a hardcoded size compiles the default build and breaks the premium one.
+* Agent scratch written into the source tree is gitignored: `msg*.txt` and
+  `commitmsg.txt`. `git add -A` skips ignored *untracked* files, so the rule
+  holds — but a file that is **already tracked** keeps being staged regardless.
+  If `git ls-files` lists one, `git rm --cached` it before trusting the ignore rule.
+  That was the actual cause of five stray commit messages in the repository: they
+  predated the rule.
 
 ---
 
