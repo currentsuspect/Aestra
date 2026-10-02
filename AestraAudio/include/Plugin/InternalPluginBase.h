@@ -4,6 +4,7 @@
 #include "PluginHost.h"
 #include "RealtimeThreadGuard.h"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -176,8 +177,35 @@ public:
         return blob;
     }
 
-    /// Rejects the whole blob before touching any parameter (AGENTS.md §12):
-    /// a corrupt blob must not leave the instance half-updated.
+    /// Validates the blob before touching any parameter, so a rejected load
+    /// leaves the instance exactly as it was (AGENTS.md §12: a corrupt blob must
+    /// not leave the instance half-updated).
+    ///
+    /// Two kinds of bad value are handled differently, on purpose (#1015):
+    ///
+    ///  - **Non-finite rejects the blob.** That is corruption, unambiguously: no
+    ///    build ever widens a parameter's range to include NaN, so there is no
+    ///    innocent version of it. This is the case §12's caution is about.
+    ///
+    ///  - **Out-of-range clamps.** It is either corruption or a legitimate value
+    ///    written by a build whose range for that parameter was wider. Nothing
+    ///    forces a range change to bump kStateVersion, so the second case is
+    ///    reachable today — a filter's top frequency tightened, say.
+    ///
+    /// This is not a new policy. setParameter() above has always done exactly
+    /// this: reject non-finite, clamp the rest. loadState was the inconsistent
+    /// one, rejecting a whole blob where an interactive slider drag would have
+    /// clamped and carried on — so a project could lose every setting of a plugin
+    /// over one value the engine would have handled. The two paths now agree.
+    ///
+    /// std::clamp here rather than setParameter's std::min/std::max pair, and
+    /// that is not an inconsistency: the non-finite pass below has already
+    /// returned on NaN, and std::clamp(NaN, lo, hi) is NaN — which is exactly
+    /// why setParameter cannot use it.
+    ///
+    /// The classification pass completes before anything is written, so the
+    /// "not half-updated" guarantee is the two-pass STRUCTURE and does not
+    /// depend on how many parameters were bad.
     bool loadState(const std::vector<uint8_t>& state) override {
         const uint32_t count = paramSpecCount();
         if (state.size() < blobSize(count))
@@ -189,14 +217,12 @@ public:
         std::memcpy(loaded.data(), paramsIn(state.data()), sizeof(float) * count);
 
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
-            const ParamSpec& spec = *p;
-            const float value = loaded[spec.id];
-            if (!std::isfinite(value) || value < spec.minValue || value > spec.maxValue)
+            if (!std::isfinite(loaded[p->id]))
                 return false;
         }
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             const ParamSpec& spec = *p;
-            const float value = loaded[spec.id];
+            const float value = std::clamp(loaded[spec.id], spec.minValue, spec.maxValue);
             m_params[spec.id].store(value, std::memory_order_relaxed);
             onParameterChanged(spec.id, value);
         }
