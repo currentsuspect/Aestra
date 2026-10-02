@@ -7,6 +7,7 @@
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
 #include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
+#include "FloatingPanelDescriptors.h"
 
 namespace {
 // Frames (≈1s at 60fps) the app waits for the engine to actually start the
@@ -94,48 +95,81 @@ constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
 
 /**
- * Per-panel half of the V8-C14 step-5 migration. Sizes preserve the previous
- * first-open geometry (ViewState defaults for mixer/piano-roll/sequencer,
- * toggle literals for history/takes); anchors preserve the previous effective
- * placement (top-left of free space for the workspace trio, centred-x below
- * the transport bar for history/takes). Minimums are the previous
- * wireFloatingPanel floors (takes inherits the WindowPanel default).
+ * One floating panel: the shared geometry plus the panel that owns it.
+ *
+ * `windowFor` is a pointer-to-member-function, so geometry and panel ownership
+ * are described by the SAME row. Before this they were two switches over the
+ * same ViewType: adding a panel meant editing both, and missing the second
+ * compiled clean and returned nullptr at runtime.
+ *
+ * The geometry half lives in FloatingPanelDescriptors.h because it needs no UI
+ * and PanelDescriptorRegistryTest checks it headlessly. Only the accessor
+ * pairing lives here, because taking &AestraContent::mixerWindowFor needs the
+ * class complete. The two are cross-checked at build time: the kWindowFor table
+ * below is indexed by the same row order, and its size is asserted against
+ * kFloatingPanelGeometry.
  */
-struct FloatingPanelSpec {
-    ViewType view;
-    const char* storeKey;
-    double defaultWidth;
-    double defaultHeight;
-    double defaultAnchorX;
-    double defaultAnchorY;
-    double minWidth;
-    double minHeight;
+struct FloatingPanelDescriptor {
+    Content::FloatingPanelGeometry geometry;
+    std::shared_ptr<Audio::WindowPanel> (AestraContent::*windowFor)() const;
 };
 
-const FloatingPanelSpec& floatingPanelSpec(ViewType view) {
-    static const FloatingPanelSpec mixer{ViewType::Mixer, UISurfaceKeys::kPanelMixer, 800.0, 400.0, 0.0, 0.0, 560.0,
-                                         300.0};
-    static const FloatingPanelSpec pianoRoll{ViewType::PianoRoll, UISurfaceKeys::kPanelPianoRoll, 800.0, 450.0, 0.0,
-                                             0.0, 560.0, 280.0};
-    static const FloatingPanelSpec sequencer{ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0,
-                                             0.0, 520.0, 220.0};
-    static const FloatingPanelSpec history{ViewType::History, UISurfaceKeys::kPanelHistory, 280.0, 460.0, 0.5, 0.0,
-                                           240.0, 220.0};
-    static const FloatingPanelSpec takes{ViewType::Takes, UISurfaceKeys::kPanelTakes, 320.0, 480.0, 0.5, 0.0, 280.0,
-                                         180.0};
-    switch (view) {
-    case ViewType::PianoRoll:
-        return pianoRoll;
-    case ViewType::Sequencer:
-        return sequencer;
-    case ViewType::History:
-        return history;
-    case ViewType::Takes:
-        return takes;
-    case ViewType::Mixer:
-    default:
-        return mixer;
+/** The panel accessor for each geometry row, in the same order. */
+const std::array<std::shared_ptr<Audio::WindowPanel> (AestraContent::*)() const,
+                 Content::kFloatingPanelGeometry.size()>&
+floatingPanelWindowAccessors() {
+    static const std::array<std::shared_ptr<Audio::WindowPanel> (AestraContent::*)() const,
+                            Content::kFloatingPanelGeometry.size()> kWindowFor{{
+        &AestraContent::mixerWindowFor,
+        &AestraContent::sequencerWindowFor,
+        &AestraContent::pianoRollWindowFor,
+        &AestraContent::historyWindowFor,
+        &AestraContent::takesWindowFor,
+    }};
+    static_assert(kWindowFor.size() == Content::kFloatingPanelGeometry.size(),
+                  "every geometry row needs a panel accessor, or panelForView returns nothing");
+    return kWindowFor;
+}
+
+const std::array<FloatingPanelDescriptor, Content::kFloatingPanelGeometry.size()>&
+floatingPanelDescriptors() {
+    static const std::array<FloatingPanelDescriptor, Content::kFloatingPanelGeometry.size()> kDescriptors{{
+        {Content::kFloatingPanelGeometry[0], floatingPanelWindowAccessors()[0]},
+        {Content::kFloatingPanelGeometry[1], floatingPanelWindowAccessors()[1]},
+        {Content::kFloatingPanelGeometry[2], floatingPanelWindowAccessors()[2]},
+        {Content::kFloatingPanelGeometry[3], floatingPanelWindowAccessors()[3]},
+        {Content::kFloatingPanelGeometry[4], floatingPanelWindowAccessors()[4]},
+    }};
+    return kDescriptors;
+}
+
+/// The descriptor for @p view, or nullptr when the view is not a floating panel.
+///
+/// Returning nullptr rather than a default is the point. The old switch's
+/// `default:` arm returned the MIXER's geometry for anything unrecognised, which
+/// meant a caller asking for Playlist -- the workspace, not an overlay -- was
+/// silently handed the mixer's store key and size. Callers that need a fallback
+/// now have to say so, and the ones that did not have a fallback say nothing.
+const FloatingPanelDescriptor* floatingPanelDescriptor(ViewType view) {
+    for (const FloatingPanelDescriptor& d : floatingPanelDescriptors()) {
+        if (d.geometry.view == view)
+            return &d;
     }
+    return nullptr;
+}
+
+const Content::FloatingPanelGeometry& floatingPanelSpec(ViewType view) {
+    const FloatingPanelDescriptor* d = floatingPanelDescriptor(view);
+    if (!d) {
+        // A floating view with no descriptor is a registration bug, and the next
+        // panel that forgets one is exactly how it gets here. Log loudly and
+        // return the mixer's geometry rather than reading past the end: the
+        // fallback keeps the UI usable while naming the actual defect.
+        AESTRA_LOG_WARNING("No floating-panel descriptor for ViewType " +
+                           std::to_string(static_cast<int>(view)) + "; falling back to the mixer");
+        return floatingPanelDescriptors().front().geometry;
+    }
+    return d->geometry;
 }
 
 Layout::NUIWindowRect toWindowRect(const NUIRect& rect) {
@@ -248,7 +282,7 @@ AestraContent::~AestraContent() {
 }
 
 void AestraContent::wireFloatingPanel(const std::shared_ptr<Audio::WindowPanel>& panel, Audio::ViewType view) {
-    const FloatingPanelSpec& spec = floatingPanelSpec(view);
+    const Content::FloatingPanelGeometry& spec = floatingPanelSpec(view);
     panel->setOnMaximizeToggle([this, view](bool maximized) {
         UISurfaceGeometry prior = panelPreference(view);
         savePanelPreference(view, captureMaximizeToggle(prior, maximized, panelNowSeconds()));
@@ -275,21 +309,19 @@ void AestraContent::wireFloatingPanel(const std::shared_ptr<Audio::WindowPanel>&
 }
 
 std::shared_ptr<Audio::WindowPanel> AestraContent::panelForView(Audio::ViewType view) {
-    switch (view) {
-    case Audio::ViewType::Mixer:
-        return m_mixerPanel;
-    case Audio::ViewType::PianoRoll:
-        return m_pianoRollPanel;
-    case Audio::ViewType::Sequencer:
-        return m_sequencerPanel;
-    case Audio::ViewType::History:
-        return m_historyPanel;
-    case Audio::ViewType::Takes:
-        return m_takesPanel;
-    default:
-        return nullptr;
-    }
+    // The same row that carries the geometry carries the panel, so there is no
+    // second place to forget. A view with no descriptor is not a floating panel
+    // -- Playlist and anything a future ViewType adds are answered with nullptr,
+    // which is what the old `default:` arm did.
+    const FloatingPanelDescriptor* d = floatingPanelDescriptor(view);
+    return d ? (this->*(d->windowFor))() : nullptr;
 }
+
+std::shared_ptr<Audio::WindowPanel> AestraContent::mixerWindowFor() const { return m_mixerPanel; }
+std::shared_ptr<Audio::WindowPanel> AestraContent::pianoRollWindowFor() const { return m_pianoRollPanel; }
+std::shared_ptr<Audio::WindowPanel> AestraContent::sequencerWindowFor() const { return m_sequencerPanel; }
+std::shared_ptr<Audio::WindowPanel> AestraContent::historyWindowFor() const { return m_historyPanel; }
+std::shared_ptr<Audio::WindowPanel> AestraContent::takesWindowFor() const { return m_takesPanel; }
 
 Aestra::UISurfaceStoreFile* AestraContent::surfaceStore() const {
     auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>();
@@ -304,7 +336,7 @@ Aestra::UISurfaceStoreFile* AestraContent::surfaceStore() const {
 }
 
 Aestra::UISurfaceGeometry AestraContent::panelPreference(Audio::ViewType view) const {
-    const FloatingPanelSpec& spec = floatingPanelSpec(view);
+    const Content::FloatingPanelGeometry& spec = floatingPanelSpec(view);
     if (auto* store = surfaceStore()) {
         if (const auto stored = store->surfaceGeometry(spec.storeKey)) {
             return *stored;
@@ -324,7 +356,7 @@ AestraUI::NUIRect AestraContent::applyPanelPreference(Audio::ViewType view) {
     if (!panel) {
         return {};
     }
-    const FloatingPanelSpec& spec = floatingPanelSpec(view);
+    const Content::FloatingPanelGeometry& spec = floatingPanelSpec(view);
     const UISurfaceGeometry preference = panelPreference(view);
     const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());
     const Layout::NUISizeLimits limits{spec.minWidth, spec.minHeight};
@@ -1171,7 +1203,7 @@ void AestraContent::setupArsenalPanels() {
         if (prior.maximized) {
             return;
         }
-        const FloatingPanelSpec& spec = floatingPanelSpec(ViewType::Sequencer);
+        const Content::FloatingPanelGeometry& spec = floatingPanelSpec(ViewType::Sequencer);
         const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());
         const auto displayed = m_sequencerPanel->getBounds();
         // std::clamp requires lo <= hi: on short layouts the minimum floor
