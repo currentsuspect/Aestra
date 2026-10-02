@@ -22,6 +22,7 @@
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include "Plugin/AestraSat.h"
+#include "Plugin/AestraEQ.h"
 
 #include "KeyedBlobTestUtil.h"
 
@@ -54,9 +55,18 @@ void check(bool condition, const std::string& what) {
 /// `8 + 4 * id` arithmetic was correct for v1's positional layout and silently
 /// lands on an id field under v2, which is how this test came to report results
 /// for loads that never happened.
+///
+/// A missing entry COUNTS AS A FAILURE, not a printed warning. This harness
+/// aggregates through g_failures and returns EXIT_SUCCESS when it is zero, so an
+/// un-counted miss prints [FAIL] and still exits 0 -- CTest green, nothing
+/// tested. That is the misleading-success path AGENTS.md §2 names, and it is
+/// exactly the failure mode this file was rewritten to eliminate.
 void pokeFloat(std::vector<uint8_t>& blob, uint32_t paramId, float value) {
-    if (!AestraTestBlob::setValueForId(blob, paramId, value))
-        std::cerr << "[FAIL] blob has no entry for id " << paramId << "; the case cannot be exercised\n";
+    if (!AestraTestBlob::setValueForId(blob, paramId, value)) {
+        std::cerr << "[FAIL] blob has no entry for id " << paramId
+                  << "; the case cannot be exercised\n";
+        ++g_failures;
+    }
 }
 
 /// A freshly initialized instance and a blob carrying two known-good values, so
@@ -199,6 +209,76 @@ int main() {
         check(!accepted, "one infinite value rejects the blob even though the rest are fine");
         check(std::fabs(restored.getParameter(AestraSat::kMix) - 0.5f) < 1e-6f,
               "the good parameters in a rejected blob are not partially applied");
+    }
+
+    // ---------------------------------------------------------------------
+    // A rejected blob must leave EVERY parameter alone, including ones whose
+    // entries appear BEFORE the poisoned one. This is the half-updated instance
+    // AGENTS.md §12 forbids, and it is invisible unless the poisoned entry is
+    // deliberately LATE: with a single pass, entries 0..n-1 are applied and the
+    // function then returns false, so the caller is told "rejected" while most
+    // of the state has already moved. CodeRabbit found exactly this in
+    // AestraEQ's own reader on the first review of the keyed-v2 change.
+    // ---------------------------------------------------------------------
+    {
+        Fixture fx;
+        const uint32_t count = AestraTestBlob::readCount(fx.blob);
+        check(count == 6, "the fixture blob has the expected entry count");
+        // Poison the LAST entry so every earlier one is a candidate for a
+        // partial write.
+        pokeFloat(fx.blob, 5, std::numeric_limits<float>::quiet_NaN());
+
+        AestraSat restored;
+        restored.initialize(48000.0, 256);
+        restored.setParameter(AestraSat::kDrive, 0.90f);
+        restored.setParameter(AestraSat::kTone, 0.80f);
+        restored.setParameter(AestraSat::kOutput, 0.70f);
+        restored.setParameter(AestraSat::kMix, 0.60f);
+
+        check(!restored.loadState(fx.blob), "a late NaN still rejects the blob");
+        check(std::fabs(restored.getParameter(AestraSat::kDrive) - 0.90f) < 1e-6f,
+              "LATE POISON: the first parameter was NOT applied before the rejection");
+        check(std::fabs(restored.getParameter(AestraSat::kTone) - 0.80f) < 1e-6f,
+              "LATE POISON: the second parameter was NOT applied before the rejection");
+        check(std::fabs(restored.getParameter(AestraSat::kOutput) - 0.70f) < 1e-6f,
+              "LATE POISON: the third parameter was NOT applied before the rejection");
+        check(std::fabs(restored.getParameter(AestraSat::kMix) - 0.60f) < 1e-6f,
+              "LATE POISON: the fourth parameter was NOT applied before the rejection");
+    }
+
+    // ---------------------------------------------------------------------
+    // The same guarantee, for the ONE plugin that does not inherit the base's
+    // reader. AestraEQ keeps its own saveState/loadState for the dynamic-band
+    // tail, so it carries its own copy of the policy -- and CodeRabbit found it
+    // classifying and applying in a single pass, which meant a NaN in a late
+    // entry returned false with earlier entries already written. Testing only
+    // AestraSat would have missed that entirely, because the base's two-pass
+    // structure is a different function.
+    // ---------------------------------------------------------------------
+    {
+        Plugins::AestraEQ source;
+        source.initialize(48000.0, 256);
+        source.setParameter(Plugins::AestraEQ::kParamOutputGain, 0.375f);
+        source.setParameter(Plugins::AestraEQ::kParamBell1Gain, 0.625f);
+        auto blob = source.saveState();
+
+        // Poison the last keyed parameter entry.
+        const uint32_t count = AestraTestBlob::readCount(blob);
+        check(count == Plugins::AestraEQ::kParamCount, "EQ blob carries one keyed entry per parameter");
+        const uint32_t last = count - 1;
+        check(AestraTestBlob::setValueForId(blob, last, std::numeric_limits<float>::quiet_NaN()),
+              "EQ's last keyed entry was poisoned");
+
+        Plugins::AestraEQ restored;
+        restored.initialize(48000.0, 256);
+        restored.setParameter(Plugins::AestraEQ::kParamOutputGain, 0.9f);
+        restored.setParameter(Plugins::AestraEQ::kParamBell1Gain, 0.8f);
+
+        check(!restored.loadState(blob), "EQ rejects a blob with a late NaN");
+        check(std::fabs(restored.getParameter(Plugins::AestraEQ::kParamOutputGain) - 0.9f) < 1e-6f,
+              "EQ LATE POISON: an earlier parameter was NOT applied before the rejection");
+        check(std::fabs(restored.getParameter(Plugins::AestraEQ::kParamBell1Gain) - 0.8f) < 1e-6f,
+              "EQ LATE POISON: the first parameter was NOT applied before the rejection");
     }
 
     // ---------------------------------------------------------------------

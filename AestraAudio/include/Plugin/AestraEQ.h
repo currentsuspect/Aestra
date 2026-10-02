@@ -809,12 +809,25 @@ bool loadState(const std::vector<uint8_t>& state) {
         // not keeps its default (an added one). Both are what make a changing
         // parameter table safe, and both are why this cannot be a loop over
         // `i` any more.
+        //
+        // TWO PASSES, and the first one is not optional. Classifying inline and
+        // applying in the same loop means a NaN in entry 5 returns false with
+        // entries 0-4 already written — the exact half-updated instance
+        // AGENTS.md §12 forbids, and the thing InternalPluginBase's two-pass
+        // structure exists to prevent. CodeRabbit caught this on the first
+        // review of #1024; the comment here had claimed "reject before anything
+        // is written" while the code did the opposite.
         for (uint32_t i = 0; i < blob->paramCount; ++i) {
             const uint32_t id = blob->params[i].id;
             if (id >= kParamCount)
                 continue; // unknown to this table: a removed parameter, or junk
             if (!std::isfinite(blob->params[i].value))
-                return false; // corruption: reject before anything is written
+                return false;
+        }
+        for (uint32_t i = 0; i < blob->paramCount; ++i) {
+            const uint32_t id = blob->params[i].id;
+            if (id >= kParamCount)
+                continue;
             setParameter(id, std::clamp(blob->params[i].value, 0.0f, 1.0f));
         }
 
