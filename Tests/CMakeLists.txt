@@ -2909,6 +2909,9 @@ if(AESTRA_ENABLE_UI)
         EditorCloseDeferredTest
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
+        MixerDropdownKeyboardTest
+        BPMEditorPaintTest
+        TransportClockFormatTest
         PanelResizeLayoutTest
         UnitRowStepSelectionTest
         PluginRackBindingLifecycleTest
