@@ -132,6 +132,15 @@ public:
         std::string errorMessage;
         std::vector<std::string> missingAssets;
         std::vector<MissingPlugin> missingPlugins;
+
+        /// Plugins that WERE installed but rejected their own saved state, so
+        /// the slot is running default parameters and the project's settings for
+        /// it were not applied. Distinct from missingPlugins, which means "not
+        /// installed" and loses nothing -- the record is preserved verbatim and
+        /// re-emitted on save. Here the settings are genuinely gone, which is
+        /// why it cannot ride on a log line (#1014).
+        std::vector<MissingPlugin> unreadablePluginState;
+
         LoadIntegrity integrity{LoadIntegrity::Unchecked};
 
         std::optional<UIState> ui;

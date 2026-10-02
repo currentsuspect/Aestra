@@ -161,6 +161,21 @@ void reserveMintedPluginInstanceId(uint64_t seenId);
  *   chain.process(buffer, 2, numFrames);
  * @endcode
  */
+/// What a project load could not fully apply.
+///
+/// Two lists, not one, because the two failures need different treatment and
+/// collapsing them loses that:
+///  - missingPlugins: the plugin is not installed. The slot keeps the opaque
+///    record and re-emits it on save, so nothing is lost and nothing to report.
+///  - unreadableState: the plugin IS installed but rejected its own state blob.
+///    The slot is live and running DEFAULT parameters, and the user's settings
+///    for it are gone. That is a silent data loss unless it is reported, which
+///    is why it is a separate list rather than a log line (#1014).
+struct LoadReport {
+    std::vector<std::string> missingPlugins;
+    std::vector<std::string> unreadableState;
+};
+
 class EffectChain {
 public:
     static constexpr size_t MAX_SLOTS = 10;
@@ -390,12 +405,12 @@ public:
      *
      * @param state State data from saveState()
      * @param manager PluginManager for recreating instances
-     * @param outMissingPluginIds Optional; receives the id of every plugin that
-     *        could not be instantiated, in slot order. Not cleared on entry.
+     * @param outReport Optional; receives what the load could not fully apply.
+     *        Not cleared on entry.
      * @return true if the state blob was well-formed
      */
     bool loadState(const std::vector<uint8_t>& state, PluginManager& manager,
-                   std::vector<std::string>* outMissingPluginIds = nullptr);
+                   LoadReport* outReport = nullptr);
 
     /**
      * @brief Number of slots currently holding a missing-plugin placeholder.

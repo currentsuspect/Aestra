@@ -325,10 +325,10 @@ void testPlaceholderTargetStaysAttached() {
             const uint32_t stateLen = 0;
             put(&stateLen, sizeof(stateLen));
         }
-        std::vector<std::string> missing;
+        LoadReport missing;
         require(chain.loadState(blob, PluginManager::getInstance(), &missing),
                 "placeholder chain loads");
-        require(missing.size() == 1, "one placeholder created");
+        require(missing.missingPlugins.size() == 1, "one placeholder created");
     }
     require(chain.getSlotInstanceId(1) == 424242, "placeholder restored the wire identity");
 
@@ -342,7 +342,7 @@ void testPlaceholderTargetStaysAttached() {
 
     // Save/load keeps the placeholder and its identity; the curve stays attached.
     EffectChain reloaded;
-    std::vector<std::string> missing2;
+    LoadReport missing2;
     require(reloaded.loadState(chain.saveState(), PluginManager::getInstance(), &missing2),
             "resaved placeholder chain loads");
     require(reloaded.getSlotInstanceId(1) == 424242, "placeholder identity survived the round trip");

@@ -810,8 +810,7 @@ std::vector<uint8_t> EffectChain::saveState() const {
     return state;
 }
 
-bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager,
-                            std::vector<std::string>* outMissingPluginIds) {
+bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager, LoadReport* outReport) {
     if (reportRealtimeMisuse("EffectChain::loadState")) {
         return false;
     }
@@ -954,8 +953,18 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         if (instance) {
             instance->initialize(m_sampleRate, m_maxBlockSize);
             if (!instance->loadState(pluginState)) {
-                Aestra::Log::warning("[EffectChain] Failed to load state for plugin slot " + std::to_string(i) +
-                                     " — using default state");
+                // The plugin IS installed and the slot is about to run — with
+                // DEFAULT parameters, because the ones in the file were rejected.
+                // Logging alone is not enough: the project opens successfully
+                // and nothing tells the user their settings are gone (#1014).
+                // Report it so the project-load path can surface it, and say so
+                // plainly here for the headless/no-report paths.
+                if (outReport) {
+                    outReport->unreadableState.push_back(pluginId);
+                }
+                Aestra::Log::warning("[EffectChain] Plugin " + pluginId + " at slot " + std::to_string(i) +
+                                     " rejected its saved state and is running defaults — its settings from the"
+                                     " project were not applied");
             }
             instance->activate();
 
@@ -990,8 +999,8 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             m_slots[i].dryWetMix.store(dryWet);
             m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
 
-            if (outMissingPluginIds) {
-                outMissingPluginIds->push_back(pluginId);
+            if (outReport) {
+                outReport->missingPlugins.push_back(pluginId);
             }
             Aestra::Log::warning("[EffectChain] Plugin unavailable for slot " + std::to_string(i) + ": " + pluginId +
                                  " — slot state retained and will be preserved on save");
