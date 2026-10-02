@@ -349,3 +349,23 @@ target_include_directories(InternalPluginBaseBlobTest PRIVATE
 )
 add_test(NAME InternalPluginBaseBlobTest COMMAND InternalPluginBaseBlobTest)
 set_tests_properties(InternalPluginBaseBlobTest PROPERTIES LABELS "audio;plugins;serialization;contract:durability" TIMEOUT 120)
+
+# A plugin that IS installed but rejects its own saved state must be reported
+# (#1014). This is the mirror of EffectChainMissingPluginTest: that one depends
+# on NO plugin resolving so it can drive the placeholder path, and this one needs
+# a REAL built-in so it can drive the installed-but-rejecting path. The two
+# failure modes look identical from the outside and are not the same event —
+# the first loses nothing, the second loses the user's settings.
+add_executable(EffectChainUnreadablePluginStateTest
+    AestraAudio/EffectChainUnreadablePluginStateTest.cpp
+)
+target_link_libraries(EffectChainUnreadablePluginStateTest PRIVATE AestraAudio)
+target_include_directories(EffectChainUnreadablePluginStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainUnreadablePluginStateTest COMMAND EffectChainUnreadablePluginStateTest)
+set_tests_properties(EffectChainUnreadablePluginStateTest PROPERTIES
+    LABELS "audio;plugins;persistence;regression;contract:durability"
+    TIMEOUT 120)
