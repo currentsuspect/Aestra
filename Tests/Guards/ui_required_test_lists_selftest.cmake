@@ -23,18 +23,65 @@ set(failures 0)
 
 # Writes a fixture tree. Each list is passed as a ready-made string so a fixture
 # can express a divergence that a shared list could not.
+#
+# `extra_ui_tests` names add_test() calls placed inside the UI block but NOT in the
+# required list -- the shape of the defect check (4) exists to catch. Without it a
+# fixture tree contains no add_test() at all, and the guard's zero-derivation check
+# would reject every fixture for a reason unrelated to what each fixture tests.
+#
+# `tests_outside_ui` names add_test() calls placed OUTSIDE any UI block. They must be
+# ignored by check (4), which is one-directional: four Contract* tests are required
+# without being lexically inside a UI block, so requiring the converse would fail on
+# them and force an exception list, and a guard with an exception list gets switched
+# off.
 function(write_tree cmake_list build_list run_list)
+    set(extra_ui_tests "")
+    set(tests_outside_ui "")
+    if(ARGC GREATER 3)
+        math(EXPR _first_extra "3")
+        foreach(_i RANGE ${_first_extra} ${ARGC})
+            math(EXPR _prev "${_i} - 1")
+            list(GET ARGV ${_prev} _arg)
+            if(_arg MATCHES "^outside:")
+                string(REGEX REPLACE "^outside:" "" _arg "${_arg}")
+                list(APPEND tests_outside_ui "${_arg}")
+            else()
+                list(APPEND extra_ui_tests "${_arg}")
+            endif()
+        endforeach()
+    endif()
+
     file(REMOVE_RECURSE "${WORK_DIR}/tree")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/Tests")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/.github/workflows")
+
+    # One add_test() per required name, inside the UI block, exactly as a real tree
+    # declares them. Built by iterating rather than by string surgery so a name
+    # with odd whitespace cannot produce a malformed fixture.
+    set(add_lines "")
+    string(REPLACE "\n" ";" _raw_names "${cmake_list}")
+    foreach(_raw IN LISTS _raw_names)
+        string(STRIP "${_raw}" _n)
+        if(NOT _n STREQUAL "")
+            string(APPEND add_lines "    add_test(NAME ${_n} COMMAND ${_n})\n")
+        endif()
+    endforeach()
+    foreach(_n IN LISTS extra_ui_tests)
+        string(APPEND add_lines "    add_test(NAME ${_n} COMMAND ${_n})\n")
+    endforeach()
+
+    set(outside_lines "")
+    foreach(_n IN LISTS tests_outside_ui)
+        string(APPEND outside_lines "add_test(NAME ${_n} COMMAND ${_n})\n")
+    endforeach()
 
     file(WRITE "${WORK_DIR}/tree/Tests/CMakeLists.txt"
 "if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
 ${cmake_list}
     )
-endif()
-")
+${add_lines}endif()
+${outside_lines}")
 
     file(WRITE "${WORK_DIR}/tree/.github/workflows/ci.yml"
 "      - name: Build UI test targets
@@ -100,6 +147,26 @@ run_fixture("unreadable ci.yml UI steps" FAIL)
 # --- an empty list is not agreement -----------------------------------------
 write_tree("" "" "")
 run_fixture("all three empty" FAIL)
+
+# --- check (4): reality against the required list ----------------------------
+# These three lists can all AGREE and all be wrong together, because none of them
+# is derived from the tree. That is the hole closed on 2026-10-02, and it is what
+# let BPMEditorPaintTest, MixerDropdownKeyboardTest and TransportClockFormatTest
+# build, pass and gate nothing.
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "UnlistedUITest")
+run_fixture("UI test declared but absent from all three lists (gates nothing)" FAIL)
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "UnlistedUITest" "outside:AlphaTest")
+run_fixture("the same unlisted test, plus one outside the UI block (still FAIL)" FAIL)
+
+# The converse must NOT fail, or the guard is wrong in the other direction. Four
+# Contract* tests are required without living inside a UI block.
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "outside:ContractTest")
+run_fixture("an add_test outside the UI block is ignored (check 4 is one-directional)" PASS)
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}")
+run_fixture("every UI test is required (baseline still passes)" PASS)
 
 if(failures)
     message(FATAL_ERROR "ui_required_test_lists self-test failed")
