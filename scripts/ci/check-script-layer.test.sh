@@ -121,6 +121,35 @@ run_fixture "a .ps1 with no Python twin (external-tool wrapper)" PASS
 write_tree
 run_fixture "baseline still passes after the no-twin fixture" PASS
 
+# --- evasion routes CodeRabbit found in the first version -------------------
+# A per-line grep cannot see an invocation spread over a line continuation, and
+# the hook scan had lost the `bash`/`sh` arm that the workflow scan still had —
+# two copies of one rule, already drifted.
+write_tree 'jobs:
+  build:
+    steps:
+      - run: bash -c \\
+          powershell -File scripts/thing.ps1'
+run_fixture "invocation hidden across a line continuation" FAIL
+
+rm -f "$WORK/tree/.githooks/pre-push"
+printf '#!/bin/sh\nbash -c "pwsh ./scripts/thing.ps1"\n' > "$WORK/tree/.githooks/pre-push"
+run_fixture "a hook shelling out to pwsh via bash" FAIL
+
+# The first version only asked that SOME .py be named, so a wrapper delegating to
+# the wrong script passed. It now requires the matching twin.
+write_tree
+printf 'def other():\n    pass\n' > "$WORK/tree/scripts/other.py"
+printf '& python3 (Join-Path $PSScriptRoot "other.py") @args\n' > "$WORK/tree/scripts/thing.ps1"
+run_fixture "wrapper invokes a .py that is not its twin" FAIL
+
+# And a wrapper reaching Python through a single-quoted argument is still a
+# wrapper. The first version stripped every single-quoted line, which erased
+# exactly this case.
+write_tree
+printf "& python3 (Join-Path \$PSScriptRoot 'thing.py') @args\n" > "$WORK/tree/scripts/thing.ps1"
+run_fixture "wrapper delegates via a single-quoted argument" PASS
+
 # --- the git-hook branch, which the workflow fixtures do not reach ---------
 # The hook loop shares its pattern with the workflow loop but is separate code,
 # and a branch no fixture reaches is a branch no fixture proves.

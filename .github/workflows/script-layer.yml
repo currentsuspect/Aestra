@@ -53,9 +53,14 @@ jobs:
     name: Script layer (Python canonical)
     runs-on: ubuntu-latest
     steps:
+      # persist-credentials: false because this lane then RUNS contributor-controlled
+      # code — the self-test below is repo content. actions/checkout persists a token
+      # in .git/config by default, and nothing here needs authenticated Git
+      # operations. Same reason, and same setting, as ci.yml and nightly.yml.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
+          persist-credentials: false
 
       - name: Self-test the guard before trusting its verdict
         run: bash scripts/ci/check-script-layer.test.sh

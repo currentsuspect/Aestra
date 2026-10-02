@@ -22,22 +22,11 @@
 #      calling powershell -File silently overrides that sentence forever. Measured
 #      at 11887c8a: no workflow invokes one, so the rule holds today.
 #
-#   2. EVERY .ps1 WITH A .py TWIN MUST ACTUALLY INVOKE IT, IN LIVE CODE.
+#   2. EVERY .ps1 WITH A .py TWIN MUST INVOKE THAT TWIN, IN LIVE CODE.
 #      A .ps1 that stops delegating has become a second implementation while
 #      keeping a wrapper's filename, which is the exact failure mode C8 names.
 #
-# A SIZE PROXY WAS TRIED HERE AND REMOVED. The first draft also failed a .ps1 that
-# had grown at least as long as its Python twin, reasoning that a wrapper larger
-# than its twin is not a wrapper. It is a false positive waiting to happen: a
-# wrapper legitimately holds argument marshalling, and against a small script the
-# wrapper is easily the longer file. The selftest's own fixture — a two-line Python
-# and a two-line wrapper — failed on it. The threshold could have been tuned until
-# that fixture went green, which would have hidden the proxy's real problem rather
-# than fixed it, so the check went instead. C8's invariant is that the logic lives
-# in Python; delegation is what tests that. Size tests a proxy for it and gets
-# small scripts wrong.
-#
-# What this guard deliberately does NOT do:
+# WHAT THIS GUARD DELIBERATELY DOES NOT DO:
 #
 #   - It does not require every .ps1 to have a .py twin. Seven have none, and that
 #     is legitimate: generate-api-docs.ps1 wraps Doxygen, an external tool, and
@@ -46,9 +35,9 @@
 #     churn, not correctness.
 #   - It does not try to detect two PowerShell files doing one job. That was a real
 #     instance (add-submodules.ps1 and add_submodules.ps1, two generations of one
-#     helper committed together in 1abe9315) and it was resolved by deletion, not by
-#     a heuristic. A similarity detector for this would produce false positives on
-#     files that legitimately share a prefix.
+#     helper committed together in 1abe9315) and it was resolved by hand, not by a
+#     heuristic. A similarity detector for this would false-positive on files that
+#     legitimately share a prefix.
 #
 # Every path that cannot establish the invariant exits 1. A guard that reports
 # agreement it did not verify is worse than no guard, because it looks like coverage.
@@ -71,54 +60,74 @@ fail() {
 problems=()
 
 # ---------------------------------------------------------------------------
-# (1) No workflow step and no hook may invoke a .ps1 directly.
+# ONE scanner, used by both the workflow and the hook passes.
 #
-# Matched on an invocation, not on the word: a .ps1 named in a comment or in a
-# skip-selector is harmless, and flagging those would train people to ignore the
-# guard. The patterns below all require something to EXECUTE it.
+# The first draft wrote this pattern out twice, and the two copies had already
+# drifted by the time CodeRabbit read them: the workflow scan knew about `bash`
+# and `sh` invoking a .ps1, and the hook scan did not. Two copies of a rule is
+# the same duplication C8 exists to remove, one layer down. So there is one now.
+#
+# Two things are normalised before matching, and both were evasion routes in the
+# first version:
+#
+#   - Line continuations are joined. `run: bash -c \` followed by a line reading
+#     `powershell -File x.ps1` is the same invocation spread over two lines, and a
+#     per-line grep never sees it.
+#
+# ORDER MATTERS HERE, and getting it wrong is silent. Comments are stripped BEFORE
+# continuations are joined, never after. Joining first collapses the file to a
+# single line, so the first '#' deletes everything after it — which made all three
+# real wrappers look like second implementations until it was caught. Both normalisers
+# are correct alone; only this order is.
+#   - Comments are stripped, so a .ps1 named in documentation or in a skip-selector
+#     is not an invocation. Flagging prose would train people to ignore the guard.
 # ---------------------------------------------------------------------------
+scan_for_ps1_invocation() {
+    # $1 = file. Prints "lineno<TAB>text" per hit, or nothing.
+    sed 's/#.*$//' "$1" \
+        | sed ':a;N;$!ba;s/\n/ /g' \
+        | grep -nEi \
+            '(powershell|pwsh)[[:space:]].*\.ps1|(bash|sh)[[:space:]].*\.ps1|(^|[[:space:]])\./[^[:space:]]*\.ps1' \
+        || true
+}
+
 if [ -d "$WORKFLOWS_DIR" ]; then
     while IFS= read -r wf; do
         rel="${wf#"$REPO_ROOT"/}"
-        # Strip comments before matching, so the file's own documentation of the
-        # rule does not trip the rule.
-        body=$(sed 's/#.*$//' "$wf")
-
-        hits=$(printf '%s\n' "$body" | grep -nEi \
-            '(powershell|pwsh)[[:space:]].*\.ps1|(bash|sh)[[:space:]].*\.ps1|(^|[[:space:]])\./[^[:space:]]*\.ps1' \
-            || true)
-        if [ -n "$hits" ]; then
-            while IFS= read -r hit; do
-                problems+=("${rel}:${hit%%:*}  invokes a .ps1 directly; Python is the canonical layer (C8)")
-            done <<< "$hits"
-        fi
-    done < <(find "$WORKFLOWS_DIR" -name '*.yml' -o -name '*.yaml' | sort)
+        while IFS= read -r hit; do
+            problems+=("${rel}:${hit%%:*}  invokes a .ps1 directly; Python is canonical (C8)")
+        done < <(scan_for_ps1_invocation "$wf")
+    done < <(find "$WORKFLOWS_DIR" \( -name '*.yml' -o -name '*.yaml' \) | sort)
 fi
 
 if [ -d "$HOOKS_DIR" ]; then
     while IFS= read -r hook; do
         rel="${hook#"$REPO_ROOT"/}"
-        case "$hook" in *.ps1) problems+=("${rel}  is a PowerShell git hook; the hook must be Python or shell") ;;
+        case "$hook" in
+            *.ps1) problems+=("${rel}  is a PowerShell git hook; the hook must be Python or shell") ;;
         esac
-        body=$(sed 's/#.*$//' "$hook")
-        hits=$(printf '%s\n' "$body" | grep -nEi \
-            '(powershell|pwsh)[[:space:]].*\.ps1|(^|[[:space:]])\./[^[:space:]]*\.ps1' || true)
-        if [ -n "$hits" ]; then
-            while IFS= read -r hit; do
-                problems+=("${rel}:${hit%%:*}  invokes a .ps1 directly; Python is the canonical layer (C8)")
-            done <<< "$hits"
-        fi
+        while IFS= read -r hit; do
+            problems+=("${rel}:${hit%%:*}  invokes a .ps1 directly; Python is canonical (C8)")
+        done < <(scan_for_ps1_invocation "$hook")
     done < <(find "$HOOKS_DIR" -type f | sort)
 fi
 
 # ---------------------------------------------------------------------------
-# (2) A .ps1 with a .py twin must delegate to it and must be the smaller file.
+# (2) A .ps1 with a .py twin must delegate to THAT twin, in live code.
+#
+# The first draft stripped every single-quoted line before looking for the
+# invocation, on the theory that the delegate line was a quoted path. That also
+# erased any wrapper that reached Python through a single-quoted argument, so a
+# legitimate wrapper could be reported as a second implementation. Instead the
+# twin's own filename is required to appear — which is stricter AND does not need
+# the destructive strip.
 # ---------------------------------------------------------------------------
 mapfile -t ps1_files < <(find "$SCRIPTS_DIR" -name '*.ps1' | sort)
 if [ "${#ps1_files[@]}" -eq 0 ]; then
     fail "no .ps1 under ${SCRIPTS_DIR}; if all were removed, delete this guard rather than leaving it vacuous"
 fi
 
+n_twin=0
 for ps1 in "${ps1_files[@]}"; do
     base="$(basename "$ps1" .ps1)"
     # Normalise the separator, so add-submodules and add_submodules are recognised
@@ -132,20 +141,19 @@ for ps1 in "${ps1_files[@]}"; do
     done < <(find "$SCRIPTS_DIR" -name '*.py' | sort)
 
     [ -n "$twin" ] || continue   # no twin: wrapping an external tool is legitimate
+    n_twin=$((n_twin + 1))
 
     rel_ps1="${ps1#"$REPO_ROOT"/}"
     rel_py="${twin#"$REPO_ROOT"/}"
+    twin_name="$(basename "$twin")"
 
-    # Strip comments so a wrapper that NAMES its twin in a comment does not count
-    # as delegating. The invocation itself must be in live code.
-    body=$(sed 's/#.*$//' "$ps1" | sed "s/'.*'\$//")
+    # Comments stripped, continuations joined — same normalisation as the scanner,
+    # so a delegate reached through a line continuation still counts.
+    body=$(sed 's/#.*$//' "$ps1" | sed ':a;N;$!ba;s/\n/ /g')
 
-    if ! printf '%s\n' "$body" | grep -qEi '(python3?|py)[[:space:]].*\.py|\.py'; then
-        problems+=("${rel_ps1}  has Python twin ${rel_py} but never invokes it; "
-            "it is a second implementation")
-        continue
+    if ! printf '%s\n' "$body" | grep -qF "$twin_name"; then
+        problems+=("${rel_ps1}  has Python twin ${rel_py} but never names it; it is a second implementation")
     fi
-
 done
 
 if [ "${#problems[@]}" -gt 0 ]; then
@@ -157,16 +165,5 @@ if [ "${#problems[@]}" -gt 0 ]; then
     exit 1
 fi
 
-n_ps1_total="${#ps1_files[@]}"
-n_twin=0
-for ps1 in "${ps1_files[@]}"; do
-    base="$(basename "$ps1" .ps1)"
-    norm="$(printf '%s' "$base" | tr '-' '_' | tr '[:upper:]' '[:lower:]')"
-    while IFS= read -r candidate; do
-        cand_norm="$(basename "$candidate" .py | tr '-' '_' | tr '[:upper:]' '[:lower:]')"
-        [ "$cand_norm" = "$norm" ] && n_twin=$((n_twin + 1)) && break
-    done < <(find "$SCRIPTS_DIR" -name '*.py' | sort)
-done
-
 printf 'check-script-layer: OK — %d .ps1, %d with a Python twin, all thin wrappers. No CI calls a .ps1.\n' \
-    "$n_ps1_total" "$n_twin"
+    "${#ps1_files[@]}" "$n_twin"
