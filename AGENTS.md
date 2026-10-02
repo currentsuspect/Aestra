@@ -211,8 +211,14 @@ Correct for audio, DSP and plugin work, and it is what most changes need. It doe
 ### UI/App Build — required for `Source/` and `AestraUI/` changes
 
 ```bash
-# No AESTRA_CI and no AESTRA_HEADLESS_ONLY: both force-disable the UI.
+# Every UI-affecting flag is set EXPLICITLY, including to OFF. All three are
+# CACHE variables: reconfiguring an existing build-ui/ that was configured with
+# either flag keeps the cached value, and CMake then force-disables the UI again
+# with the Aestra target simply absent. Omitting a flag is not an instruction.
 cmake -S . -B build-ui \
+  -DAESTRA_CI=OFF \
+  -DAESTRA_HEADLESS_ONLY=OFF \
+  -DAESTRA_ENABLE_UI=ON \
   -DAESTRA_ENABLE_TESTS=ON \
   -DAESTRA_ALLOW_LICENSE_GATE_OFF=ON \
   -DCMAKE_BUILD_TYPE=Release
@@ -264,14 +270,18 @@ ctest --test-dir build --output-on-failure
   `-DAESTRA_CI=ON -DAESTRA_HEADLESS_ONLY=ON` is redundant *and* self-defeating if
   you meant to build the app: the second flag looks like the only one that matters,
   and the first silently forces it. Drop `AESTRA_CI` for UI work (§7).
-* **`AESTRAUI_ENABLE_PREMIUM_EDITORS` changes array sizes at compile time.** A
-  `#ifdef` inside a `std::array` initializer means the declared size must be
-  derived, not written — a hardcoded size compiles the default build and breaks the
-  premium one. Verify premium with `-DAESTRAUI_ENABLE_PREMIUM_EDITORS=ON` when a
-  private plugin is present.
+* **`AESTRAUI_ENABLE_PREMIUM_EDITORS` enables the premium editor sources.** When a
+  private plugin is present and the UI build is on, verify the premium editor with
+  `-DAESTRAUI_ENABLE_PREMIUM_EDITORS=ON`. It is a source-inclusion switch, so a
+  default-build pass says nothing about that configuration — and if any table is
+  conditionally populated, its declared size must be derived rather than written,
+  because a hardcoded size compiles the default build and breaks the premium one.
 * Agent scratch written into the source tree is gitignored: `msg*.txt` and
-  `commitmsg.txt`. `git add -A` sweeps the file you just wrote your commit message
-  into, so use `git commit -F` and delete the file, or it lands in the repository.
+  `commitmsg.txt`. `git add -A` skips ignored *untracked* files, so the rule
+  holds — but a file that is **already tracked** keeps being staged regardless.
+  If `git ls-files` lists one, `git rm --cached` it before trusting the ignore rule.
+  That was the actual cause of five stray commit messages in the repository: they
+  predated the rule.
 
 ---
 
