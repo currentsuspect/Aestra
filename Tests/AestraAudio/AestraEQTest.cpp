@@ -1807,9 +1807,27 @@ bool testCanonicalStateRoundtripImpl() {
         std::cerr << "canonical EQ blob magic changed\n";
         return false;
     }
-    if (version != 1u) {
-        std::cerr << "canonical EQ blob is not at version 1, got " << version << "\n";
+    if (version != 2u) {
+        std::cerr << "canonical EQ blob is not at the keyed version 2, got " << version << "\n";
         return false;
+    }
+    // The keyed param section must actually be keyed: count, then (id, value)
+    // pairs whose ids are the table's. If this regresses to a bare float array
+    // the round-trip above would still pass, because it reads by id.
+    uint32_t paramCount = 0;
+    std::memcpy(&paramCount, state.data() + sizeof(uint32_t) * 2, sizeof(paramCount));
+    if (paramCount != AestraEQ::kParamCount) {
+        std::cerr << "EQ keyed param count is " << paramCount << ", expected "
+                  << AestraEQ::kParamCount << "\n";
+        return false;
+    }
+    for (uint32_t i = 0; i < paramCount; ++i) {
+        uint32_t id = 0;
+        std::memcpy(&id, state.data() + sizeof(uint32_t) * 3 + sizeof(uint32_t) * 2 * i, sizeof(id));
+        if (id != i) {
+            std::cerr << "EQ keyed entry " << i << " carries id " << id << ", expected " << i << "\n";
+            return false;
+        }
     }
 
     AestraEQ restored;
@@ -1837,7 +1855,10 @@ bool testPreResetBlobsAreRejectedImpl() {
     source.setParameter(AestraEQ::kParamOutputGain, 0.375f);
     const auto canonical = source.saveState();
 
-    for (uint32_t legacyVersion : {2u, 3u, 4u, 5u, 6u, 7u, 8u}) {
+    // Every version that is NOT the current one. 2 is the current keyed version,
+    // so it is not in this list — a blob rewritten to 2 is a valid blob and MUST
+    // load. Including it would assert that the current format rejects itself.
+    for (uint32_t legacyVersion : {1u, 3u, 4u, 5u, 6u, 7u, 8u}) {
         auto blob = canonical;
         const uint32_t v = legacyVersion;
         std::memcpy(blob.data() + sizeof(uint32_t), &v, sizeof(v));

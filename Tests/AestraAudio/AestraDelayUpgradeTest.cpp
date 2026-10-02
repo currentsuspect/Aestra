@@ -3,6 +3,8 @@
 
 #include "Plugin/AestraDelay.h"
 
+#include "KeyedBlobTestUtil.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -332,8 +334,16 @@ bool testNonFiniteControlAndStateAreRejected() {
 
     auto state = delay.saveState();
     const float nanValue = std::nanf("");
-    constexpr size_t feedbackOffset = sizeof(uint32_t) * 2 + sizeof(float) * AestraDelay::kFeedback;
-    std::memcpy(state.data() + feedbackOffset, &nanValue, sizeof(nanValue));
+    // Find the entry by its id. The old `8 + 4 * id` offset was correct for v1's
+    // positional layout and, under the keyed v2 layout, silently lands on an
+    // entry's ID field instead of its value -- the reader then drops the
+    // out-of-range id, the load succeeds, and this test reports a failure for a
+    // load that was never poisoned. A test that cannot fail is worse than no
+    // test, so the id lookup is the point, not the tidiness.
+    if (!AestraTestBlob::setValueForId(state, AestraDelay::kFeedback, nanValue)) {
+        std::cerr << "Delay blob has no entry for kFeedback; the NaN case cannot be exercised.\n";
+        return false;
+    }
     delay.setParameter(AestraDelay::kTime, 0.73f);
     if (delay.loadState(state)) {
         std::cerr << "Delay accepted a state containing NaN.\n";

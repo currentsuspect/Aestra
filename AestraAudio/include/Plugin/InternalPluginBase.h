@@ -158,73 +158,143 @@ public:
     // State — owned here
     // ==================================================================
 
-    /// The blob is {magic, version, params[paramSpecCount()]} — exactly the
-    /// layout each plugin shipped before it inherited this, so migrating does
-    /// not change a single byte of saved project state. The array is sized by
-    /// the plugin's own count rather than by kMaxSpecParams: reserving the
-    /// ceiling here would inflate every migrated plugin's blob (Transient's
-    /// 28 bytes would become 200) and silently invalidate every project that
-    /// already has one.
+    /// The blob is keyed: {magic, version=2, count, (paramId, value) * count}.
+    ///
+    /// v1 was {magic, version=1, params[count]} — positional, with the array
+    /// index doubling as the parameter id. That is what P3 removes, and the
+    /// reason is not a size complaint. Under v1, three ordinary changes to a
+    /// parameter table behave completely differently:
+    ///
+    ///   add a parameter    the old blob is short, so it was rejected outright
+    ///                      and the plugin came back on defaults. Loud.
+    ///   remove one         the old blob is long; trailing bytes ignored. Silent
+    ///                      but harmless, provided the survivors held position.
+    ///   REORDER the table  old slot 0 is applied to whichever parameter now owns
+    ///                      id 0. SILENT AND WRONG, and every value is finite and
+    ///                      in range, so nothing rejects it and nothing warns.
+    ///
+    /// The third is the one that matters, and it is the one nobody had measured.
+    /// Keying by id makes parameter identity independent of table position, so
+    /// all three become safe: an id present in the blob but absent from the table
+    /// is ignored, an id in the table but absent from the blob keeps its default.
+    ///
+    /// v1 blobs are REJECTED, not read. They are a known historical format, and
+    /// the version check runs before the count is ever read — without that, a v1
+    /// blob's first parameter float would be parsed as the entry count and the
+    /// result would be a plausible-looking load of the wrong values. FD-24
+    /// records why there is nothing to preserve: no released project exists, and
+    /// every one of the legacy readers this codebase carried (EQ's 8 versions
+    /// and 7 readers, Comp's 7 filler indices, Verb's v1–v5) was archaeology by
+    /// the end of it. The cost is a version boundary; the benefit is that no
+    /// future developer inherits a compatibility surface they must keep testing.
     std::vector<uint8_t> saveState() const override {
         const uint32_t count = paramSpecCount();
-        std::vector<uint8_t> blob(blobSize(count));
+        std::vector<uint8_t> blob(keyedBlobSize(count));
         writeHeader(blob.data(), stateMagic(), kStateVersion);
-        float* params = paramsIn(blob.data());
+        const uint32_t entries = count;
+        std::memcpy(blob.data() + sizeof(uint32_t) * 2, &entries, sizeof(entries));
+        uint8_t* cursor = blob.data() + kKeyedHeaderSize;
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             const ParamSpec& spec = *p;
-            params[spec.id] = m_params[spec.id].load(std::memory_order_relaxed);
+            const uint32_t id = spec.id;
+            std::memcpy(cursor, &id, sizeof(id));
+            cursor += sizeof(id);
+            const float value = m_params[spec.id].load(std::memory_order_relaxed);
+            std::memcpy(cursor, &value, sizeof(value));
+            cursor += sizeof(value);
         }
         return blob;
     }
-
-    /// Validates the blob before touching any parameter, so a rejected load
-    /// leaves the instance exactly as it was (AGENTS.md §12: a corrupt blob must
-    /// not leave the instance half-updated).
+    /// Reads a keyed v2 blob, applying by id rather than by position.
     ///
-    /// Two kinds of bad value are handled differently, on purpose (#1015):
+    /// Two kinds of bad VALUE are handled differently, on purpose (#1015):
     ///
-    ///  - **Non-finite rejects the blob.** That is corruption, unambiguously: no
-    ///    build ever widens a parameter's range to include NaN, so there is no
-    ///    innocent version of it. This is the case §12's caution is about.
+    ///  - **Non-finite rejects the blob.** Corruption, unambiguously: no build
+    ///    widens a parameter's range to include NaN, so there is no innocent
+    ///    version of it. This is the case AGENTS.md §12's "a corrupt blob must
+    ///    not leave the instance half-updated" is about.
     ///
-    ///  - **Out-of-range clamps.** It is either corruption or a legitimate value
+    ///  - **Out-of-range clamps.** Either corruption, or a legitimate value
     ///    written by a build whose range for that parameter was wider. Nothing
-    ///    forces a range change to bump kStateVersion, so the second case is
-    ///    reachable today — a filter's top frequency tightened, say.
+    ///    forces a range change to bump kStateVersion, so that is reachable.
     ///
-    /// This is not a new policy. setParameter() above has always done exactly
-    /// this: reject non-finite, clamp the rest. loadState was the inconsistent
-    /// one, rejecting a whole blob where an interactive slider drag would have
-    /// clamped and carried on — so a project could lose every setting of a plugin
-    /// over one value the engine would have handled. The two paths now agree.
+    /// This is not a new policy: setParameter() above has always done exactly
+    /// this, reject non-finite and clamp the rest. loadState was the odd one
+    /// out, rejecting a whole blob where an interactive slider drag would have
+    /// clamped and carried on.
+    ///
+    /// An id the blob carries but the table does not is IGNORED, which is what
+    /// makes removing a parameter safe. An id the table carries but the blob does
+    /// not KEEPS ITS DEFAULT, which is what makes adding one safe. A blob id at or
+    /// beyond kMaxSpecParams is ignored rather than trusted, so a corrupt or
+    /// hostile id cannot index past m_params.
     ///
     /// std::clamp here rather than setParameter's std::min/std::max pair, and
-    /// that is not an inconsistency: the non-finite pass below has already
-    /// returned on NaN, and std::clamp(NaN, lo, hi) is NaN — which is exactly
-    /// why setParameter cannot use it.
+    /// that is not an inconsistency: the non-finite pass has already returned on
+    /// NaN, and std::clamp(NaN, lo, hi) is NaN — which is why setParameter
+    /// cannot use it.
     ///
     /// The classification pass completes before anything is written, so the
     /// "not half-updated" guarantee is the two-pass STRUCTURE and does not
     /// depend on how many parameters were bad.
     bool loadState(const std::vector<uint8_t>& state) override {
-        const uint32_t count = paramSpecCount();
-        if (state.size() < blobSize(count))
+        // Header first, and the version check BEFORE the count is read. A v1 blob
+        // is 8 + 4N bytes; read as v2, its first parameter's float bits would be
+        // parsed as the entry count and the load would look successful while
+        // restoring entirely the wrong values. That is the failure this format
+        // exists to prevent, so it has to be impossible rather than unlikely.
+        if (state.size() < kKeyedHeaderSize)
             return false;
+
         if (!headerMatches(state.data(), stateMagic(), kStateVersion))
             return false;
 
-        std::vector<float> loaded(count, 0.0f);
-        std::memcpy(loaded.data(), paramsIn(state.data()), sizeof(float) * count);
+        uint32_t count = 0;
+        std::memcpy(&count, state.data() + sizeof(uint32_t) * 2, sizeof(count));
+        if (count > kMaxSpecParams)
+            return false;
+        // Zero entries for a plugin that HAS parameters is not a shape any writer
+        // produces. It is exactly what a v1 blob whose first parameter is 0.0f
+        // looks like when misread: 0.0f's bits are 0x00000000, so the "count"
+        // parses as 0, which is inside kMaxSpecParams, and any blob of 12+ bytes
+        // satisfies keyedBlobSize(0). Every other guard passes. Refusing it here
+        // means the invariant does not depend SOLELY on the version check
+        // happening to run first.
+        if (count == 0 && paramSpecCount() > 0)
+            return false;
+        if (state.size() < keyedBlobSize(count))
+            return false;
 
-        for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
-            if (!std::isfinite(loaded[p->id]))
+        // Pass 1: classify. Nothing here touches a parameter, so a rejection
+        // anywhere in this loop leaves the instance exactly as it was.
+        std::vector<std::pair<uint32_t, float>> entries;
+        entries.reserve(count);
+        const uint8_t* cursor = state.data() + kKeyedHeaderSize;
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t id = 0;
+            float value = 0.0f;
+            std::memcpy(&id, cursor, sizeof(id));
+            cursor += sizeof(id);
+            std::memcpy(&value, cursor, sizeof(value));
+            cursor += sizeof(value);
+            if (id >= kMaxSpecParams)
+                continue; // unknown to this table: a removed parameter, or junk
+            const ParamSpec* spec = findSpec(id);
+            if (!spec || spec->isReadOnly)
+                continue;
+            if (!std::isfinite(value))
                 return false;
+            entries.emplace_back(id, value);
         }
-        for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
-            const ParamSpec& spec = *p;
-            const float value = std::clamp(loaded[spec.id], spec.minValue, spec.maxValue);
-            m_params[spec.id].store(value, std::memory_order_relaxed);
-            onParameterChanged(spec.id, value);
+
+        // Pass 2: apply.
+        for (const auto& entry : entries) {
+            const ParamSpec* spec = findSpec(entry.first);
+            if (!spec)
+                continue;
+            const float value = std::clamp(entry.second, spec->minValue, spec->maxValue);
+            m_params[entry.first].store(value, std::memory_order_relaxed);
+            onParameterChanged(entry.first, value);
         }
         return true;
     }
@@ -251,7 +321,13 @@ protected:
     /// Ceiling on a plugin's parameter count. The built-in tables run 5
     /// (Transient) to 33 (EQ); this is what the shared blob reserves.
     static constexpr uint32_t kMaxSpecParams = 48;
-    static constexpr uint32_t kStateVersion = 1;
+    /// v1 was positional and is no longer read. v2 is keyed: each entry carries
+    /// its own id, so parameter identity is independent of table order.
+    static constexpr uint32_t kStateVersion = 2;
+
+    /// v1's version number, named only so the reader's rejection is testable
+    /// against a blob built to the real v1 layout.
+    static constexpr uint32_t kStateVersionV1 = 1;
 
     /// Seeds defaults on the first initialize() of a fresh instance only.
     ///
@@ -279,7 +355,19 @@ private:
     const ParamSpec* specsBegin() const AESTRA_RT_NONBLOCKING { return paramSpecs(); }
     const ParamSpec* specsEnd() const AESTRA_RT_NONBLOCKING { return paramSpecs() + paramSpecCount(); }
 
-    static constexpr size_t blobSize(uint32_t count) { return sizeof(uint32_t) * 2 + sizeof(float) * count; }
+    /// v2 header: magic, version, count. The count is written explicitly rather
+    /// than implied by the blob's length, because a keyed blob's length depends
+    /// on how many entries the WRITER's table had — which is not necessarily the
+    /// reader's.
+    static constexpr size_t kKeyedHeaderSize = sizeof(uint32_t) * 3;
+    static constexpr size_t kKeyedEntrySize = sizeof(uint32_t) + sizeof(float);
+
+    static constexpr size_t keyedBlobSize(uint32_t count) { return kKeyedHeaderSize + kKeyedEntrySize * count; }
+
+    /// v1 was {magic, version, params[count]} — positional, 8 + 4N bytes. Kept
+    /// as a named constant only so the reader's rejection of it is explicit and
+    /// testable; nothing writes it. See saveState() for why there is no reader.
+    static constexpr size_t blobSizeV1(uint32_t count) { return sizeof(uint32_t) * 2 + sizeof(float) * count; }
 
     static void writeHeader(uint8_t* dst, uint32_t magic, uint32_t version) {
         std::memcpy(dst, &magic, sizeof(magic));
@@ -294,10 +382,13 @@ private:
         return blobMagic == magic && blobVersion == version;
     }
 
-    static float* paramsIn(uint8_t* blob) { return reinterpret_cast<float*>(blob + sizeof(uint32_t) * 2); }
+    /// v1 only. Kept so the blob test can construct a historical blob and prove
+    /// the v2 reader rejects it, rather than asserting rejection against a
+    /// hand-rolled byte pattern that could drift from the real v1 layout.
+    static uint32_t* paramsIn(uint8_t* blob) { return reinterpret_cast<uint32_t*>(blob + sizeof(uint32_t) * 2); }
 
-    static const float* paramsIn(const uint8_t* blob) {
-        return reinterpret_cast<const float*>(blob + sizeof(uint32_t) * 2);
+    static const uint32_t* paramsIn(const uint8_t* blob) {
+        return reinterpret_cast<const uint32_t*>(blob + sizeof(uint32_t) * 2);
     }
 
     const ParamSpec* findSpec(uint32_t id) const AESTRA_RT_NONBLOCKING {

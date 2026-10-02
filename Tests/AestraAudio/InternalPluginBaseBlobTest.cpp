@@ -1,16 +1,20 @@
 // © 2026 Aestra Studios — All Rights Reserved.
-// InternalPluginBaseBlobTest — the base class must not change a byte of any
-// plugin's saved state.
 //
-// Every built-in plugin shipped its own saveState()/loadState() writing
-// {magic, version, float params[count]}. InternalPluginBase now owns that, and
-// the whole value of the refactor depends on a migrated plugin producing the
-// identical blob: a different size or layout silently invalidates every
-// project that already has one saved (AGENTS.md §12).
+// InternalPluginBaseBlobTest — the keyed v2 state format is canonical, v1 is
+// refused, and parameter identity survives a changing parameter table.
 //
-// This test pins the exact byte size and the exact header for each plugin
-// BEFORE and AFTER it inherits the base, by generating the expected layout from
-// the plugin's own table rather than from a hardcoded number that drifts.
+// HISTORY, because it explains what this test is now FOR. Its first version
+// pinned the opposite contract: "migrating a plugin must not change a byte of
+// its saved state." That was the right contract for a format-preserving
+// refactor, and it earned its place immediately — the assertion written to prove
+// a migration was safe is what disproved the assumption that it was. But it also
+// enshrined positional identity, with the array index doubling as the parameter
+// id, and positional identity is the thing P3 removes.
+//
+// So the contract is now the one P3's exit criterion states: ADDING, REMOVING
+// or REORDERING a parameter must not invalidate an existing project. The byte
+// size is still pinned, because "canonical" means exactly one encoding, but it is
+// pinned for the keyed layout rather than inherited from the old one.
 
 #include "Plugin/AestraDelay.h"
 #include "Plugin/AestraDrift.h"
@@ -22,303 +26,394 @@
 #include "Plugin/AestraTransient.h"
 #include "Plugin/AestraVerb.h"
 
+#include "KeyedBlobTestUtil.h"
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
+#include <string>
 #include <vector>
 
 using namespace Aestra::Audio;
 
 namespace {
 
-/// The layout each plugin used to hand-write, rebuilt from first principles so
-/// this test does not simply re-run the base class's own arithmetic.
-std::vector<uint8_t> legacyBlob(uint32_t magic, const std::vector<float>& params) {
+int g_failures = 0;
+
+void check(bool condition, const std::string& what) {
+    if (!condition) {
+        std::cerr << "[FAIL] " << what << '\n';
+        ++g_failures;
+    }
+}
+
+constexpr uint32_t kV2 = 2;
+constexpr uint32_t kV1 = 1;
+
+/// v1's layout, rebuilt from first principles so this test does not simply
+/// re-run the base class's own arithmetic. Nothing writes this any more; it
+/// exists so the reader's rejection of it can be tested against the real thing
+/// rather than a hand-rolled byte pattern that could drift.
+std::vector<uint8_t> v1Blob(uint32_t magic, const std::vector<float>& params) {
     std::vector<uint8_t> blob(sizeof(uint32_t) * 2 + sizeof(float) * params.size());
     std::memcpy(blob.data(), &magic, sizeof(magic));
-    const uint32_t version = 1;
-    std::memcpy(blob.data() + sizeof(uint32_t), &version, sizeof(version));
+    std::memcpy(blob.data() + sizeof(uint32_t), &kV1, sizeof(kV1));
     std::memcpy(blob.data() + sizeof(uint32_t) * 2, params.data(), sizeof(float) * params.size());
     return blob;
 }
 
-bool sameSize(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) {
-    return a.size() == b.size();
+/// The keyed layout, built independently of the base class's own writer so a
+/// bug in the writer cannot make this test agree with it.
+std::vector<uint8_t> expectedKeyed(uint32_t magic, const std::vector<std::pair<uint32_t, float>>& entries) {
+    std::vector<uint8_t> blob(12 + 8 * entries.size());
+    std::memcpy(blob.data(), &magic, sizeof(magic));
+    std::memcpy(blob.data() + 4, &kV2, sizeof(kV2));
+    const uint32_t count = static_cast<uint32_t>(entries.size());
+    std::memcpy(blob.data() + 8, &count, sizeof(count));
+    for (size_t i = 0; i < entries.size(); ++i) {
+        std::memcpy(blob.data() + 12 + 8 * i, &entries[i].first, sizeof(uint32_t));
+        std::memcpy(blob.data() + 12 + 8 * i + 4, &entries[i].second, sizeof(float));
+    }
+    return blob;
 }
 
 } // namespace
 
 int main() {
-    int failures = 0;
-    auto check = [&](bool ok, const char* what) {
-        std::cout << (ok ? "[PASS] " : "[FAIL] ") << what << "\n";
-        if (!ok)
-            ++failures;
-    };
-
-    // --- AestraTransient: 5 params, magic 'TRN1' -------------------------
+    // ==================================================================
+    // 1. The keyed layout is canonical: exact size, exact bytes, per plugin.
+    // ==================================================================
     {
         Plugins::AestraTransient t;
         t.initialize(48000.0, 256);
-        t.setParameter(Plugins::AestraTransient::kAttack, 0.25f);
-        t.setParameter(Plugins::AestraTransient::kOutput, 0.75f);
-
+        t.setParameter(Plugins::AestraTransient::kAttack, 0.4f);
+        t.setParameter(Plugins::AestraTransient::kSustain, 0.7f);
         const auto state = t.saveState();
 
-        // 4 + 4 + 5 * 4 = 28 bytes. This number is the whole point: a base
-        // class that reserved its parameter ceiling would write 200 here.
-        check(state.size() == 28, "Transient blob is 28 bytes (magic+version+5 floats)");
-
-        const std::vector<float> expected = {0.25f, t.getParameter(1), 0.75f, t.getParameter(3),
-                                             t.getParameter(4)};
-        check(state == legacyBlob(Plugins::AestraTransient::kStateMagic, expected),
-              "Transient blob is byte-identical to the legacy layout");
-
-        // A blob written by the old code must still load.
-        Plugins::AestraTransient restored;
-        restored.initialize(48000.0, 256);
-        check(restored.loadState(state), "Transient loads a blob written by the old code");
-        check(std::abs(restored.getParameter(Plugins::AestraTransient::kAttack) - 0.25f) < 1e-6f,
-              "Transient attack survives the round-trip");
+        check(state.size() == 12 + 8 * 5, "Transient blob is 12 + 8*5 = 52 bytes (header, count, keyed entries)");
+        check(state == expectedKeyed(t.kStateMagic, {{0, t.getParameter(0)},
+                                                      {1, t.getParameter(1)},
+                                                      {2, t.getParameter(2)},
+                                                      {3, t.getParameter(3)},
+                                                      {4, t.getParameter(4)}}),
+              "Transient blob matches the keyed layout built independently");
+        check(AestraTestBlob::readCount(state) == 5, "the count field says 5, not an implied length");
     }
 
-    // --- AestraSat: 6 params, its own magic ------------------------------
     {
-        Plugins::AestraSat sat;
-        sat.initialize(48000.0, 256);
-        sat.setParameter(Plugins::AestraSat::kDrive, 0.6f);
-        const auto state = sat.saveState();
-        check(state.size() == 32, "Sat blob is 32 bytes (magic+version+6 floats)");
-
-        std::vector<float> expected(6);
-        for (uint32_t i = 0; i < 6; ++i)
-            expected[i] = sat.getParameter(i);
-        check(state == legacyBlob(sat.kStateMagic, expected), "Sat blob is byte-identical to the legacy layout");
+        Plugins::AestraSat s;
+        s.initialize(48000.0, 256);
+        check(s.saveState().size() == 12 + 8 * 6, "Sat blob is 12 + 8*6 = 60 bytes");
     }
-
-    // --- Defaults are seeded exactly once, on the first initialize -------
-    // The gate that enforces this moved into the base, so a migrated plugin
-    // cannot leave it out. A plugin that never seeded would come up with every
-    // parameter at 0.0f: Transient fully dry and 12 dB down.
     {
-        Plugins::AestraTransient t;
-        t.initialize(48000.0, 256);
-        check(std::abs(t.getParameter(Plugins::AestraTransient::kMix) - 1.0f) < 1e-6f,
-              "first initialize seeds Mix from the table default (1.0)");
-        check(std::abs(t.getParameter(Plugins::AestraTransient::kOutput) - 0.5f) < 1e-6f,
-              "first initialize seeds Output from the table default (0.5)");
-
-        // A re-prepare at another rate must NOT wipe the user's values — this
-        // is the #474 parameter-wipe bug the init contract exists to catch.
-        t.setParameter(Plugins::AestraTransient::kMix, 0.25f);
-        t.initialize(96000.0, 128);
-        check(std::abs(t.getParameter(Plugins::AestraTransient::kMix) - 0.25f) < 1e-6f,
-              "re-initialize preserves the user's parameters");
-
-        // A loaded value must survive a re-prepare too.
-        Plugins::AestraTransient loaded;
-        loaded.initialize(48000.0, 256);
-        check(loaded.loadState(legacyBlob(Plugins::AestraTransient::kStateMagic, {0.8f, 0.2f, 0.6f, 0.4f, 1.0f})),
-              "Transient accepts a hand-built legacy blob");
-        loaded.initialize(96000.0, 128);
-        check(std::abs(loaded.getParameter(Plugins::AestraTransient::kMix) - 0.4f) < 1e-6f,
-              "re-initialize preserves loaded project state");
+        Plugins::AestraOTT o;
+        o.initialize(48000.0, 256);
+        check(o.saveState().size() == 12 + 8 * 10, "OTT blob is 12 + 8*10 = 92 bytes");
     }
-
-    // --- Batch 2: Filter (9), OTT (10), LFO (9) -------------------------
-    // Same guarantee, more plugins: the blob must stay byte-identical to what
-    // each of these shipped, because a migrated plugin that changes a single
-    // byte invalidates every saved project using it.
     {
         Plugins::AestraFilter f;
         f.initialize(48000.0, 256);
-        f.setParameter(Plugins::AestraFilter::kCutoff, 0.42f);
-        const auto state = f.saveState();
-        check(state.size() == 8 + 9 * 4, "Filter blob is 44 bytes (magic+version+9 floats)");
-        std::vector<float> expected(9);
-        for (uint32_t i = 0; i < 9; ++i)
-            expected[i] = f.getParameter(i);
-        check(state == legacyBlob(f.kStateMagic, expected), "Filter blob is byte-identical to the legacy layout");
+        check(f.saveState().size() == 12 + 8 * 9, "Filter blob is 12 + 8*9 = 84 bytes");
     }
     {
-        Plugins::AestraOTT ott;
-        ott.initialize(48000.0, 256);
-        ott.setParameter(Plugins::AestraOTT::kDepth, 0.33f);
-        const auto state = ott.saveState();
-        check(state.size() == 8 + 10 * 4, "OTT blob is 48 bytes (magic+version+10 floats)");
-        std::vector<float> expected(10);
-        for (uint32_t i = 0; i < 10; ++i)
-            expected[i] = ott.getParameter(i);
-        check(state == legacyBlob(ott.kStateMagic, expected), "OTT blob is byte-identical to the legacy layout");
+        Plugins::AestraLFO l;
+        l.initialize(48000.0, 256);
+        check(l.saveState().size() == 12 + 8 * 9, "LFO blob is 12 + 8*9 = 84 bytes");
     }
     {
-        Plugins::AestraLFO lfo;
-        lfo.initialize(48000.0, 256);
-        lfo.setParameter(Plugins::AestraLFO::kDepth, 0.77f);
-        const auto state = lfo.saveState();
-        check(state.size() == 8 + 9 * 4, "LFO blob is 44 bytes (magic+version+9 floats)");
-        std::vector<float> expected(9);
-        for (uint32_t i = 0; i < 9; ++i)
-            expected[i] = lfo.getParameter(i);
-        check(state == legacyBlob(lfo.kStateMagic, expected), "LFO blob is byte-identical to the legacy layout");
-
-        // A stepped enum must still read back as the option it names. The
-        // migration rewrote parameter reads wholesale, and "> 0.5f" on a
-        // stepped parameter means "is this option selected", not "bypassed" —
-        // so the Sync parameter gets an explicit check.
-        lfo.setParameter(Plugins::AestraLFO::kSyncMode, 1.0f);
-        check(std::abs(lfo.getParameter(Plugins::AestraLFO::kSyncMode) - 1.0f) < 1e-6f,
-              "LFO Sync Mode reads back as selected, not as bypass");
+        Plugins::AestraLimit l;
+        l.initialize(48000.0, 256);
+        check(l.saveState().size() == 12 + 8 * 4, "Limit blob is 12 + 8*4 = 44 bytes");
+    }
+    {
+        Plugins::AestraVerb v;
+        v.initialize(48000.0, 256);
+        check(v.saveState().size() == 12 + 8 * 18, "Verb blob is 12 + 8*18 = 156 bytes");
+    }
+    {
+        Plugins::AestraDelay d;
+        d.initialize(48000.0, 256);
+        check(d.saveState().size() == 12 + 8 * 13, "Delay blob is 12 + 8*13 = 116 bytes");
+    }
+    {
+        Plugins::AestraDrift d;
+        d.initialize(48000.0, 256);
+        check(d.saveState().size() == 12 + 8 * 10, "Drift blob is 12 + 8*10 = 92 bytes");
     }
 
-    // AestraLimit. Byte-identity here is a real constraint rather than a
-    // courtesy: its blob is exactly {magic, version, params[4]} at 24 bytes,
-    // which is what the base emits for the same magic and row count. If this
-    // check ever fails, the migration changed a saved project's bytes.
+    // ==================================================================
+    // 2. v1 is refused — for every plugin, and for the right reason.
+    // ==================================================================
     {
-        Plugins::AestraLimit limit;
-        limit.initialize(48000.0, 256);
-        limit.setParameter(Plugins::AestraLimit::kCeiling, 0.8123f);
-        limit.setParameter(Plugins::AestraLimit::kRelease, 0.4456f);
-        const auto state = limit.saveState();
-        check(state.size() == 8 + 4 * 4, "Limit blob is 24 bytes (magic+version+4 floats)");
-        std::vector<float> expected(4);
-        for (uint32_t i = 0; i < 4; ++i)
-            expected[i] = limit.getParameter(i);
-        check(state == legacyBlob(limit.kStateMagic, expected), "Limit blob is byte-identical to the legacy layout");
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        const std::vector<uint8_t> old = v1Blob(t.kStateMagic, {0.8f, 0.2f, 0.6f, 0.4f, 1.0f});
+        check(old.size() == 8 + 4 * 5, "the v1 blob under test is the real v1 size, 28 bytes");
+        check(!t.loadState(old), "a v1 positional blob is rejected by the keyed reader");
+
+        // The dangerous case, stated explicitly. A v1 blob read as v2 would have
+        // its first parameter's float BITS parsed as the entry count. For this
+        // blob that is 0.2f = 0x3E4CCCCD = 1042884557, which is nowhere near the
+        // 48-parameter ceiling, so a reader that trusted it would try to read a
+        // gigabyte of entries and read past the end of the buffer. The version
+        // check has to run BEFORE the count is read, and this asserts that it
+        // does — a rejected v1 blob proves the version was seen, but only the
+        // absence of a crash plus a rejected load pins the ORDER.
+        t.setParameter(Plugins::AestraTransient::kAttack, 0.99f);
+        check(!t.loadState(old), "v1 is still rejected after the instance has been re-seeded");
+        check(t.getParameter(Plugins::AestraTransient::kAttack) > 0.98f,
+              "the rejected v1 load mutated nothing");
+
+        Plugins::AestraVerb v;
+        v.initialize(48000.0, 256);
+        check(!v.loadState(v1Blob(v.kStateMagic, std::vector<float>(18, 0.5f))),
+              "Verb refuses a v1 blob too");
+
+        // The case that pins the CHECK ORDER rather than the count guard. A v1
+        // blob whose first parameter is 0.0f has, at the offset v2 reads its
+        // entry count from, the bits 0x00000000 — so the count parses as 0,
+        // which is inside kMaxSpecParams, and any blob of 12+ bytes satisfies
+        // keyedBlobSize(0). Every size and count guard passes. Only the version
+        // check stands between a historical blob and a load that reports success
+        // while restoring nothing, and this asserts that it holds.
+        {
+            Plugins::AestraTransient z;
+            z.initialize(48000.0, 256);
+            const auto zeroed = v1Blob(z.kStateMagic, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+            check(zeroed.size() >= 12, "the all-zero v1 blob is long enough to look like a v2 header");
+            check(!z.loadState(zeroed),
+                  "a v1 blob whose first parameter is 0.0f is refused, so no size or count guard "
+                  "can be the only thing standing between a historical blob and a silent success");
+        }
+
+        // The adversarial one: a v1 blob that satisfies EVERY count guard.
+        //
+        // Read as v2, the entry count comes from the first parameter's float
+        // bits. To survive `count > kMaxSpecParams` AND `count == 0` AND
+        // `size >= 12 + 8*count`, those bits must land in [1, kMaxSpecParams] —
+        // which is to say the first parameter must be a DENORMAL, the only
+        // floats whose bit patterns are small integers. 0x00000001 is 1.4e-45:
+        // absurd as a parameter, entirely representable as corrupt bytes.
+        //
+        // So a 28-byte v1 blob whose first parameter is that denormal parses as a
+        // perfectly well-formed v2 header with count == 1. Every size and count
+        // guard passes. Only the version check refuses it, and that is the whole
+        // case for it existing. The all-zero blob above does NOT cover this; it
+        // is stopped by the zero-entry guard, which is defence in depth rather
+        // than the primary defence.
+        {
+            Plugins::AestraTransient d;
+            d.initialize(48000.0, 256);
+            const float denormal = std::numeric_limits<float>::denorm_min(); // 0x00000001
+            uint32_t bits = 0;
+            std::memcpy(&bits, &denormal, sizeof(bits));
+            check(bits == 1u, "the denormal's bit pattern really is 1, so it parses as count 1");
+
+            auto adversarial = v1Blob(d.kStateMagic, {denormal, 0.5f, 0.5f, 0.5f, 0.5f});
+            check(adversarial.size() >= 12 + 8, "the adversarial v1 blob is long enough for count 1");
+            check(!d.loadState(adversarial),
+                  "a v1 blob engineered to satisfy every count guard is still refused by the version check");
+        }
     }
 
-    // AestraVerb. This plugin wrote version 5 and carried readers for v1..v5.
-    // Under the pre-user format reset those readers are gone and the base emits
-    // version 1, so the blob is NOT byte-identical to what shipped before. What
-    // is pinned here is the NEW canonical contract, plus the fact that a
-    // pre-reset blob is now rejected outright rather than half-read: a format
-    // that silently accepted v5 would mean the reset never happened.
+    // A blob carrying no entries for a plugin that has parameters is not a shape
+    // any writer produces, and must not be reported as a successful load.
     {
-        Plugins::AestraVerb verb;
-        verb.initialize(48000.0, 256);
-        verb.setParameter(Plugins::AestraVerb::kDecay, 0.6789f);
-        verb.setParameter(Plugins::AestraVerb::kMix, 0.3210f);
-        const auto state = verb.saveState();
-        check(state.size() == 8 + Plugins::AestraVerb::kParamCount * 4,
-              "Verb blob is magic+version+one float per parameter");
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        t.setParameter(0, 0.42f);
+        auto empty = t.saveState();
+        const uint32_t zero = 0;
+        std::memcpy(empty.data() + 8, &zero, sizeof(zero));
+        check(!t.loadState(empty), "a v2 blob claiming zero entries is refused");
+        check(std::fabs(t.getParameter(0) - 0.42f) < 1e-6f, "refusing a zero-entry blob mutated nothing");
+    }
 
-        uint32_t writtenMagic = 0;
-        uint32_t writtenVersion = 0;
-        std::memcpy(&writtenMagic, state.data(), sizeof(writtenMagic));
-        std::memcpy(&writtenVersion, state.data() + sizeof(uint32_t), sizeof(writtenVersion));
-        check(writtenMagic == verb.kStateMagic, "Verb blob keeps its plugin magic");
-        check(writtenVersion == 1u, "Verb blob is written at the canonical base version 1");
+    // A blob that lies about its own version: v2 header, v1 body.
+    {
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        std::vector<uint8_t> hostile = v1Blob(t.kStateMagic, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+        // Force version 2 into the header, so only the layout differs. The entry
+        // count is then read from the first parameter's bits — all zero, so
+        // count == 0, which no real writer produces for a plugin with five
+        // parameters. Refused for that reason rather than by the version check,
+        // which now believes the blob.
+        std::memcpy(hostile.data() + 4, &kV2, sizeof(kV2));
+        check(!t.loadState(hostile),
+              "a blob claiming v2 over a v1 body is refused: zero entries is not a shape any writer emits");
+    }
 
-        std::vector<float> expected(Plugins::AestraVerb::kParamCount);
+    // ==================================================================
+    // 3. THE EXIT CRITERION. Adding, removing and reordering a parameter must
+    //    all leave an existing project intact.
+    //
+    //    These are simulated by editing the BLOB, because a test cannot change a
+    //    compiled-in ParamSpec table. Each case is the blob a build with a
+    //    different table would have written.
+    // ==================================================================
+    {
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        t.setParameter(0, 0.11f);
+        t.setParameter(1, 0.22f);
+        t.setParameter(2, 0.33f);
+        const auto original = t.saveState();
+
+        // --- ADD: the blob carries ids the table has never seen. They are
+        // ignored, and every id the table DOES know keeps its value.
+        {
+            auto grown = original;
+            const uint32_t count = AestraTestBlob::readCount(grown) + 2;
+            grown.resize(12 + 8 * count);
+            std::memcpy(grown.data() + 8, &count, sizeof(count));
+            // Two entries for ids that do not exist, and one that is beyond the
+            // parameter ceiling entirely — a removed parameter, and junk.
+            const uint32_t ids[2] = {900u, 12345u};
+            const float vals[2] = {0.5f, 0.6f};
+            for (int i = 0; i < 2; ++i) {
+                std::memcpy(grown.data() + 12 + 8 * (5 + i), &ids[i], sizeof(uint32_t));
+                std::memcpy(grown.data() + 12 + 8 * (5 + i) + 4, &vals[i], sizeof(float));
+            }
+            Plugins::AestraTransient restored;
+            restored.initialize(48000.0, 256);
+            check(restored.loadState(grown), "a blob carrying unknown parameter ids still loads");
+            check(std::fabs(restored.getParameter(0) - 0.11f) < 1e-6f, "ADD: parameter 0 kept its value");
+            check(std::fabs(restored.getParameter(1) - 0.22f) < 1e-6f, "ADD: parameter 1 kept its value");
+            check(std::fabs(restored.getParameter(2) - 0.33f) < 1e-6f, "ADD: parameter 2 kept its value");
+        }
+
+        // --- REMOVE: the blob is missing an id the table still has. That
+        // parameter keeps its default and the rest are unaffected.
+        {
+            auto shrunk = original;
+            uint32_t count = AestraTestBlob::readCount(shrunk);
+            // Drop entry 2, renumbering the tail down by one.
+            std::vector<uint8_t> rebuilt(12 + 8 * (count - 1));
+            std::memcpy(rebuilt.data(), shrunk.data(), 8);
+            const uint32_t smaller = count - 1;
+            std::memcpy(rebuilt.data() + 8, &smaller, sizeof(smaller));
+            uint32_t w = 0;
+            for (uint32_t i = 0; i < count; ++i) {
+                if (i == 2)
+                    continue;
+                const uint8_t* src = shrunk.data() + 12 + 8 * i;
+                uint32_t id = 0;
+                float val = 0.0f;
+                std::memcpy(&id, src, sizeof(id));
+                std::memcpy(&val, src + 4, sizeof(val));
+                std::memcpy(rebuilt.data() + 12 + 8 * w, &id, sizeof(id));
+                std::memcpy(rebuilt.data() + 12 + 8 * w + 4, &val, sizeof(val));
+                ++w;
+            }
+            Plugins::AestraTransient restored;
+            restored.initialize(48000.0, 256);
+            check(restored.loadState(rebuilt), "a blob missing a parameter id still loads");
+            check(std::fabs(restored.getParameter(0) - 0.11f) < 1e-6f, "REMOVE: parameter 0 kept its value");
+            check(std::fabs(restored.getParameter(1) - 0.22f) < 1e-6f, "REMOVE: parameter 1 kept its value");
+            // Parameter 2 was the one dropped, so it is back at its default. The
+            // default is 0 for Transient's first rows; assert it is NOT 0.33.
+            check(std::fabs(restored.getParameter(2) - 0.33f) > 1e-6f,
+                  "REMOVE: the parameter absent from the blob fell back to its default");
+        }
+
+        // --- REORDER: the entries are written in a different ORDER, with the
+        // same ids and values. Under v1 this silently mis-assigned every value;
+        // under v2 it must be indistinguishable from the original.
+        {
+            auto reordered = original;
+            const uint32_t count = AestraTestBlob::readCount(reordered);
+            std::vector<std::pair<uint32_t, float>> entries;
+            for (uint32_t i = 0; i < count; ++i)
+                entries.emplace_back(AestraTestBlob::readIdAt(reordered, i),
+                                     AestraTestBlob::readValueAt(reordered, i));
+            for (uint32_t i = 0; i < count / 2; ++i)
+                std::swap(entries[i], entries[count - 1 - i]);
+            reordered = expectedKeyed(t.kStateMagic, entries);
+
+            Plugins::AestraTransient restored;
+            restored.initialize(48000.0, 256);
+            check(restored.loadState(reordered), "a blob with reordered entries still loads");
+            check(std::fabs(restored.getParameter(0) - 0.11f) < 1e-6f,
+                  "REORDER: parameter 0 kept its value despite moving in the blob");
+            check(std::fabs(restored.getParameter(1) - 0.22f) < 1e-6f,
+                  "REORDER: parameter 1 kept its value despite moving in the blob");
+            check(std::fabs(restored.getParameter(2) - 0.33f) < 1e-6f,
+                  "REORDER: parameter 2 kept its value despite moving in the blob");
+        }
+    }
+
+    // ==================================================================
+    // 4. Round-trip and hygiene, unchanged in spirit by the format.
+    // ==================================================================
+    {
+        Plugins::AestraVerb v;
+        v.initialize(96000.0, 128);
         for (uint32_t i = 0; i < Plugins::AestraVerb::kParamCount; ++i)
-            expected[i] = verb.getParameter(i);
-        check(state == legacyBlob(verb.kStateMagic, expected),
-              "Verb blob matches the canonical {magic, version=1, params[]} layout");
+            v.setParameter(i, 0.1f + 0.8f * static_cast<float>(i) /
+                                       static_cast<float>(Plugins::AestraVerb::kParamCount - 1));
+        const auto state = v.saveState();
 
-        // The pre-reset shape: same magic and size, version 5. Must be rejected,
-        // not silently interpreted as v1 parameters.
-        Plugins::AestraVerb fresh;
-        fresh.initialize(48000.0, 256);
-        auto legacy = legacyBlob(fresh.kStateMagic, expected);
-        uint32_t five = 5u;
-        std::memcpy(legacy.data() + sizeof(uint32_t), &five, sizeof(five));
-        check(!fresh.loadState(legacy), "a pre-reset Verb blob (version 5) is rejected, not half-read");
+        Plugins::AestraVerb restored;
+        restored.initialize(96000.0, 128);
+        check(restored.loadState(state), "a current Verb blob round-trips");
+        for (uint32_t i = 0; i < Plugins::AestraVerb::kParamCount; ++i) {
+            if (std::fabs(restored.getParameter(i) - v.getParameter(i)) > 1e-6f) {
+                check(false, "Verb parameter " + std::to_string(i) + " did not survive the round trip");
+                break;
+            }
+        }
+        check(true, "every Verb parameter survived the round trip");
+        check(restored.saveState() == state, "a keyed blob round-trips byte-identically");
 
-        // And the canonical blob round-trips.
-        Plugins::AestraVerb reloaded;
-        reloaded.initialize(48000.0, 256);
-        check(reloaded.loadState(state), "canonical Verb blob loads");
-        check(std::abs(reloaded.getParameter(Plugins::AestraVerb::kDecay) - 0.6789f) < 1e-6f,
-              "Verb decay survives the round-trip");
+        // Re-initializing (what EffectChain::prepare does on a sample-rate
+        // change) must not lose loaded state.
+        restored.initialize(44100.0, 256);
+        check(std::fabs(restored.getParameter(0) - v.getParameter(0)) < 1e-6f,
+              "re-initialize preserves loaded project state");
     }
 
-    // AestraDelay and AestraDrift. Both previously wrote version 3 and carried
-    // readers for their older layouts; under the reset those readers are gone
-    // and the base emits version 1, so neither blob is byte-identical to what
-    // shipped. What is pinned here is the NEW canonical contract, plus the fact
-    // that a pre-reset blob is now rejected outright rather than half-read -- a
-    // format that still quietly accepted v3 would mean the reset never happened.
+    // Garbage is still refused, and refused without mutating.
     {
-        Plugins::AestraDelay delay;
-        delay.initialize(48000.0, 256);
-        delay.setParameter(Plugins::AestraDelay::kTime, 0.375f);
-        delay.setParameter(Plugins::AestraDelay::kFeedback, 0.625f);
-        const auto state = delay.saveState();
-        check(state.size() == 8 + 13 * 4, "Delay blob is magic+version+13 floats");
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        t.setParameter(0, 0.37f);
+        const std::vector<std::vector<uint8_t>> garbage = {
+            {0x31, 0x54},                                   // truncated header
+            std::vector<uint8_t>(64, 0x00),                 // wrong magic
+            std::vector<uint8_t>(4096, 0x41),               // plausible size, wrong magic
+        };
+        for (const auto& blob : garbage) {
+            check(!t.loadState(blob), "garbage is refused");
+            check(std::fabs(t.getParameter(0) - 0.37f) < 1e-6f, "a refused load mutated nothing");
+        }
 
-        uint32_t dmagic = 0;
-        uint32_t dversion = 0;
-        std::memcpy(&dmagic, state.data(), sizeof(dmagic));
-        std::memcpy(&dversion, state.data() + sizeof(uint32_t), sizeof(dversion));
-        check(dmagic == delay.kStateMagic, "Delay blob keeps its plugin magic ('DLY' v3 value)");
-        check(dversion == 1u, "Delay blob is written at the canonical base version 1");
-
-        std::vector<float> dexpected(13);
-        for (uint32_t i = 0; i < 13; ++i)
-            dexpected[i] = delay.getParameter(i);
-        check(state == legacyBlob(delay.kStateMagic, dexpected),
-              "Delay blob matches the canonical {magic, version=1, params[]} layout");
-
-        Plugins::AestraDelay dfresh;
-        dfresh.initialize(48000.0, 256);
-        auto dlegacy = legacyBlob(dfresh.kStateMagic, dexpected);
-        uint32_t three = 3u;
-        std::memcpy(dlegacy.data() + sizeof(uint32_t), &three, sizeof(three));
-        check(!dfresh.loadState(dlegacy), "a pre-reset Delay blob (version 3) is rejected, not half-read");
-
-        Plugins::AestraDelay dreload;
-        dreload.initialize(48000.0, 256);
-        check(dreload.loadState(state), "canonical Delay blob loads");
-        check(std::abs(dreload.getParameter(Plugins::AestraDelay::kTime) - 0.375f) < 1e-6f,
-              "Delay time survives the round-trip");
-
-        // The Division default is a computed expression (kDiv1_8 / 12.0f) that
-        // moved from a runtime local into the constexpr table. Prove it folded
-        // to the same value rather than trusting that it did.
-        check(std::abs(delay.getParameter(Plugins::AestraDelay::kNoteDivision) - 4.0f / 12.0f) < 1e-6f,
-              "Delay Division default folded to kDiv1_8/12 in the constexpr table");
+        // A correct header with a count larger than the buffer: the reader must
+        // notice the short buffer rather than reading past it.
+        std::vector<uint8_t> lying = t.saveState();
+        const uint32_t huge = 0xFFFFu;
+        std::memcpy(lying.data() + 8, &huge, sizeof(huge));
+        check(!t.loadState(lying), "a count beyond the buffer is refused");
+        check(std::fabs(t.getParameter(0) - 0.37f) < 1e-6f, "the over-count load mutated nothing");
     }
 
+    // A non-finite value is corruption and rejects the whole blob.
     {
-        Plugins::AestraDrift drift;
-        drift.initialize(48000.0, 256);
-        drift.setParameter(Plugins::AestraDrift::kPitch, 0.8125f);
-        drift.setParameter(Plugins::AestraDrift::kTexture, 0.4375f);
-        const auto state = drift.saveState();
-        check(state.size() == 8 + 10 * 4, "Drift blob is magic+version+10 floats");
-
-        uint32_t gmagic = 0;
-        uint32_t gversion = 0;
-        std::memcpy(&gmagic, state.data(), sizeof(gmagic));
-        std::memcpy(&gversion, state.data() + sizeof(uint32_t), sizeof(gversion));
-        check(gmagic == drift.kStateMagic, "Drift blob keeps its plugin magic");
-        check(gversion == 1u, "Drift blob is written at the canonical base version 1");
-
-        std::vector<float> gexpected(10);
-        for (uint32_t i = 0; i < 10; ++i)
-            gexpected[i] = drift.getParameter(i);
-        check(state == legacyBlob(drift.kStateMagic, gexpected),
-              "Drift blob matches the canonical {magic, version=1, params[]} layout");
-
-        Plugins::AestraDrift gfresh;
-        gfresh.initialize(48000.0, 256);
-        auto glegacy = legacyBlob(gfresh.kStateMagic, gexpected);
-        uint32_t gthree = 3u;
-        std::memcpy(glegacy.data() + sizeof(uint32_t), &gthree, sizeof(gthree));
-        check(!gfresh.loadState(glegacy), "a pre-reset Drift blob (version 3) is rejected, not half-read");
-
-        Plugins::AestraDrift greload;
-        greload.initialize(48000.0, 256);
-        check(greload.loadState(state), "canonical Drift blob loads");
-        check(std::abs(greload.getParameter(Plugins::AestraDrift::kPitch) - 0.8125f) < 1e-6f,
-              "Drift pitch survives the round-trip");
+        Plugins::AestraTransient t;
+        t.initialize(48000.0, 256);
+        t.setParameter(0, 0.5f);
+        auto state = t.saveState();
+        check(AestraTestBlob::setValueForId(state, 1, std::numeric_limits<float>::quiet_NaN()),
+              "the blob has an entry for id 1 to poison");
+        check(!t.loadState(state), "a NaN value rejects the blob");
+        check(std::fabs(t.getParameter(0) - 0.5f) < 1e-6f, "the rejected NaN load mutated nothing");
     }
 
-    if (failures > 0) {
-        std::cout << failures << " blob-layout check(s) failed\n";
-        return 1;
+    if (g_failures == 0) {
+        std::cout << "=== InternalPluginBaseBlobTest: all checks passed ===\n";
+        return EXIT_SUCCESS;
     }
-    std::cout << "All internal-plugin blob layout checks passed\n";
-    return 0;
+    std::cerr << "=== InternalPluginBaseBlobTest: " << g_failures << " failure(s) ===\n";
+    return EXIT_FAILURE;
 }

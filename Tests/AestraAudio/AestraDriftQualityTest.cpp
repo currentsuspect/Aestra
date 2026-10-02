@@ -397,7 +397,9 @@ bool testStateMigration() {
 
     uint32_t version = 0;
     std::memcpy(&version, state.data() + sizeof(uint32_t), sizeof(version));
-    ok &= require(version == 1u, "canonical Drift blob is not written at version 1");
+    // v2 since the keyed format landed: each entry carries its own id, so a
+    // parameter's identity no longer depends on its position in the table.
+    ok &= require(version == 2u, "canonical Drift blob is written at the keyed version 2");
 
     AestraDrift restored;
     restored.initialize(96000.0, 511);

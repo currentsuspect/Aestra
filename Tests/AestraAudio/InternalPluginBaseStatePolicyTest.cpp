@@ -23,7 +23,8 @@
 #include "Plugin/PluginHost.h"
 #include "Plugin/AestraSat.h"
 
-#include <cassert>
+#include "KeyedBlobTestUtil.h"
+
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -49,13 +50,13 @@ void check(bool condition, const std::string& what) {
 
 // Sat is the reference implementation (AGENTS.md §19) and has a wide, plain
 // range on kDrive, which makes it a clean probe for both directions.
-constexpr uint32_t kParamOffset = sizeof(uint32_t) * 2;
-static_assert(kParamOffset == 8, "header layout changed — update kParamOffset");
-
+/// Overwrite one parameter's value, finding its entry by id. The old
+/// `8 + 4 * id` arithmetic was correct for v1's positional layout and silently
+/// lands on an id field under v2, which is how this test came to report results
+/// for loads that never happened.
 void pokeFloat(std::vector<uint8_t>& blob, uint32_t paramId, float value) {
-    const size_t at = kParamOffset + sizeof(float) * paramId;
-    assert(at + sizeof(float) <= blob.size() && "pokeFloat out of bounds");
-    std::memcpy(blob.data() + at, &value, sizeof(float));
+    if (!AestraTestBlob::setValueForId(blob, paramId, value))
+        std::cerr << "[FAIL] blob has no entry for id " << paramId << "; the case cannot be exercised\n";
 }
 
 /// A freshly initialized instance and a blob carrying two known-good values, so
@@ -215,6 +216,7 @@ int main() {
         Fixture fx;
         const uint32_t badVersion = 0xFFFFFFFFu;
         std::memcpy(fx.blob.data() + sizeof(uint32_t), &badVersion, sizeof(badVersion));
+        // v2 == 2, so restoring the good version means writing 2, not 1.
         AestraSat restored;
         restored.initialize(48000.0, 256);
         restored.setParameter(AestraSat::kMix, Fixture::kSavedMix);
@@ -225,7 +227,7 @@ int main() {
         // Prove the version field really is where the comment says it is: patch
         // that one field back and the very same blob must now load. Without
         // this, the case above could pass for any reason at all.
-        const uint32_t goodVersion = 1; // InternalPluginBase::kStateVersion
+        const uint32_t goodVersion = 2; // InternalPluginBase::kStateVersion
         std::memcpy(fx.blob.data() + sizeof(uint32_t), &goodVersion, sizeof(goodVersion));
         check(restored.loadState(fx.blob),
               "restoring only the version byte makes the same blob load, so that field is the version");
