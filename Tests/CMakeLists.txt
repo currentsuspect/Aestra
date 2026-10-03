@@ -2342,6 +2342,22 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
+# AestraPanelWindow::handleKnobDrag(): the knob interaction the Sat, OTT, Filter
+# and LFO editors share. Press grabs, motion steps (clamped, Shift is fine),
+# release lets go, and a press away from every knob grabs nothing.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelWindowKnobDragTest AestraUI_Core AestraUI_Platform)
+    add_executable(PanelWindowKnobDragTest AestraUI/PanelWindowKnobDragTest.cpp)
+    target_link_libraries(PanelWindowKnobDragTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PanelWindowKnobDragTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PanelWindowKnobDragTest COMMAND PanelWindowKnobDragTest)
+    set_tests_properties(PanelWindowKnobDragTest PROPERTIES LABELS "ui;input;regression;contract:application")
+endif()
+
 # FD-16 seam test: persisted lane curves must reach ChannelViewModel through
 # MixerViewModel::syncFromEngine — the path the routing-map badge reads.
 if(AESTRA_ENABLE_UI)
@@ -2990,6 +3006,7 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollReachesGlobalUndoTest
         ContractPianoRollPasteTargetsEditingUnitTest
         FileBrowserLibraryTest
+        PanelWindowKnobDragTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})

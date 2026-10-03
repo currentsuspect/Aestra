@@ -49,6 +49,37 @@ float AestraPanelWindow::knobDragStep(const NUIMouseEvent& event, float rangePx)
     return (-event.delta.y / rangePx) * fine;
 }
 
+bool AestraPanelWindow::handleKnobDrag(const NUIMouseEvent& event, const KnobTarget* targets, size_t count,
+                                       float rangePx, const std::function<float(uint32_t)>& get,
+                                       const std::function<void(uint32_t, float)>& set) {
+    if (m_knobDragParam >= 0) {
+        if (event.released) {
+            endKnobCapture();
+            m_knobDragParam = -1;
+            return true;
+        }
+        if (event.button == NUIMouseButton::None) {
+            // Service-owned frame delta (up = increase), accumulated into the
+            // current value, so total travel matches an absolute mapping.
+            const uint32_t id = static_cast<uint32_t>(m_knobDragParam);
+            set(id, std::clamp(get(id) + knobDragStep(event, rangePx), 0.0f, 1.0f));
+            setDirty();
+            return true;
+        }
+    }
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        for (size_t i = 0; i < count; ++i) {
+            const NUIRect& r = targets[i].rect;
+            if (r.contains(event.position)) {
+                m_knobDragParam = static_cast<int>(targets[i].paramId);
+                beginKnobCapture({r.x + r.width * 0.5f, r.y + r.height * 0.5f}, event.position);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void AestraPanelWindow::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
