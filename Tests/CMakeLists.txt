@@ -2950,6 +2950,7 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollUndoStaysInPatternTest
         ContractPianoRollReachesGlobalUndoTest
         ContractPianoRollPasteTargetsEditingUnitTest
+        FileBrowserLibraryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
@@ -3607,6 +3608,9 @@ if(AESTRA_ENABLE_UI)
     add_executable(FileBrowserLibraryTest
         AestraUI/FileBrowserLibraryTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
     )
