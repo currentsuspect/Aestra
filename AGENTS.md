@@ -466,6 +466,15 @@ General CI rules:
 * Do not remove failing tests to make CI pass.
 * Do not convert real failures into advisory checks without explicit approval.
 
+### Budget gate (V8-G5 · FD-39)
+
+The "Linux (UI/App compile)" lane runs `scripts/ci/check-budgets.py`: the stripped
+app binary plus its assets, and `AestraHeadless` peak RSS for fixed offline scenarios,
+compared with `Tests/Guards/budget_baseline.txt`. It fails on a regression of more than
+10% or a cap breach, and warns on an improvement of more than 10% (lower the row to
+keep the win). A change that legitimately costs more raises its row in the same PR and
+says why. Timing budgets never block a PR (FD-39 tier 2 is nightly, tier 3 the release cut).
+
 All public CI builds should remain compatible with core/headless mode unless explicitly changed.
 
 ---

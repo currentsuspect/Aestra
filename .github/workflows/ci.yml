@@ -190,6 +190,24 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
 
+      # V8-G5 · FD-39 tier 1. AestraHeadless is the offline engine the budget gate
+      # measures; it is tiny next to the app, so building it here costs seconds.
+      - name: Build AestraHeadless (budget gate)
+        if: steps.scope.outputs.run == 'true'
+        run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target AestraHeadless --parallel 2
+
+      # FD-39 tier 1: deterministic budgets block the PR, timing never does (tier 2 is
+      # nightly, tier 3 is the release cut). Self-tests run first, so a broken gate is
+      # reported as a broken gate rather than as a budget violation. The gate fails only
+      # on a >10% regression or a cap breach; see scripts/ci/check-budgets.py.
+      - name: Budget gate self-tests
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/test-check-budgets.py
+
+      - name: Budget gate (V8-G5)
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/check-budgets.py --bin-dir build-app/bin
+
       - name: Build UI test targets
         if: steps.scope.outputs.run == 'true'
         # Bounded parallelism: an unbounded --parallel full build OOM'd the
