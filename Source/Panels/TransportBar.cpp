@@ -607,6 +607,10 @@ void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
         case Audio::ViewType::PianoRoll: m_pianoRollActive = active; break;
         // Timeline has no toolbar control to light up — the title-bar tab owns it.
         case Audio::ViewType::Playlist: break;
+        // History and Takes have no toolbar control either; Count is a sentinel.
+        case Audio::ViewType::History:
+        case Audio::ViewType::Takes:
+        case Audio::ViewType::Count: break;
     }
     setDirty(true);
 }
