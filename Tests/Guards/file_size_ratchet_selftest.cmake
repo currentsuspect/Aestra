@@ -7,7 +7,9 @@
 #              under External/; an oversized non-source file.
 #   MUST FAIL: a pinned file that grew; one that shrank but is still over the cap
 #              (stale row); one that fell to the cap; a pinned file that is gone;
-#              an unpinned file one line over the cap; a malformed baseline row.
+#              an unpinned file one line over the cap, including by a final line
+#              with no newline; a malformed row; a row pinning a non-source or
+#              vendored file.
 #
 # Required -D args:
 #   GUARD_SCRIPT  absolute path to the guard under test
@@ -124,6 +126,23 @@ expect_guard("unpinned header one line over the cap" "${WORK_DIR}/header" fail "
 make_fixture("${WORK_DIR}/malformed" 2000)
 file(APPEND "${WORK_DIR}/malformed/Tests/Guards/file_size_baseline.txt" "lots Source/Core/Other.cpp\n")
 expect_guard("malformed baseline row" "${WORK_DIR}/malformed" fail "malformed")
+
+make_fixture("${WORK_DIR}/unterminated" 2000)
+string(REPEAT "int x;\n" ${kCap} body)
+file(WRITE "${WORK_DIR}/unterminated/Source/Core/NoNewline.cpp" "${body}int last;")
+expect_guard("1501st line with no trailing newline still counts" "${WORK_DIR}/unterminated" fail
+             "NoNewline.cpp: 1501 lines")
+
+make_fixture("${WORK_DIR}/pin_non_source" 2000)
+write_lines("${WORK_DIR}/pin_non_source/Source/Core/notes.txt" 9000)
+file(APPEND "${WORK_DIR}/pin_non_source/Tests/Guards/file_size_baseline.txt" "9000 Source/Core/notes.txt\n")
+expect_guard("a row pinning a non-source file" "${WORK_DIR}/pin_non_source" fail "not a first-party source file")
+
+make_fixture("${WORK_DIR}/pin_external" 2000)
+write_lines("${WORK_DIR}/pin_external/AestraAudio/External/vendor/huge.cpp" 9000)
+file(APPEND "${WORK_DIR}/pin_external/Tests/Guards/file_size_baseline.txt"
+     "9000 AestraAudio/External/vendor/huge.cpp\n")
+expect_guard("a row pinning vendored code" "${WORK_DIR}/pin_external" fail "not a first-party source file")
 
 if(failures GREATER 0)
     message(FATAL_ERROR "FileSizeRatchetGuardSelfTest: ${failures} of ${checks} check(s) failed")

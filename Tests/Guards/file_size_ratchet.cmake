@@ -26,12 +26,14 @@
 #   - a pinned file no longer exists                    -> delete its row
 #   - an UNPINNED file exceeds the cap                  -> split it, or pin it
 #
-# Lines are newline characters, the same number `wc -l` prints, so the
-# baseline can be regenerated with:
+# A line is a newline, plus a non-empty final line that has none (otherwise a
+# 1,501-line file with no trailing newline would count as 1,500 and pass). The
+# baseline is regenerated with the same rule -- awk's NR counts that last line:
 #
 #   git ls-files Source AestraUI AestraAudio AestraCore AestraPlat AestraLicense \
 #     | grep -E '\.(cpp|h|hpp|mm|c)$' | grep -v '/External/' \
-#     | xargs wc -l | grep -v ' total$' | awk '$1 > 1500 {print $1, $2}' | sort -k2
+#     | while IFS= read -r f; do awk 'END { if (NR > 1500) print NR, FILENAME }' "$f"; done \
+#     | sort -k2
 #
 # Contract limits (deliberate): this bounds size, not coupling. A 1,400-line
 # file can still be a hub. It is the cheap half of the contract, and the half
@@ -64,6 +66,14 @@ function(count_lines path out)
     file(READ "${path}" contents)
     string(REGEX MATCHALL "\n" newlines "${contents}")
     list(LENGTH newlines n)
+    string(LENGTH "${contents}" len)
+    if(len GREATER 0)
+        math(EXPR last "${len} - 1")
+        string(SUBSTRING "${contents}" ${last} 1 last_char)
+        if(NOT last_char STREQUAL "\n")
+            math(EXPR n "${n} + 1") # an unterminated final line is still a line
+        endif()
+    endif()
     set(${out} ${n} PARENT_SCOPE)
 endfunction()
 
@@ -88,6 +98,20 @@ foreach(row ${rows})
     endif()
     set(expected "${CMAKE_MATCH_1}")
     set(rel "${CMAKE_MATCH_2}")
+    # A row may only pin a file the scan itself guards: a first-party source
+    # file under a scanned directory, not vendored code and not a non-source
+    # file. Anything else is a row that exempts nothing and must not exist.
+    set(in_scope FALSE)
+    foreach(dir ${scan_dirs})
+        if(rel MATCHES "^${dir}/")
+            set(in_scope TRUE)
+        endif()
+    endforeach()
+    if(NOT in_scope OR rel MATCHES "/External/" OR NOT rel MATCHES "\\.(cpp|h|hpp|mm|c)$")
+        list(APPEND violations
+            "${rel}: not a first-party source file this guard scans. Delete its row.")
+        continue()
+    endif()
     list(APPEND pinned_paths "${rel}")
     set(pinned_${rel} "${expected}")
 
