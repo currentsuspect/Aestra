@@ -53,7 +53,10 @@ bool AestraPanelWindow::handleKnobDrag(const NUIMouseEvent& event, const KnobTar
                                        float rangePx, const std::function<float(uint32_t)>& get,
                                        const std::function<void(uint32_t, float)>& set) {
     if (m_knobDragParam >= 0) {
-        if (event.released) {
+        // Only the button that grabbed the knob lets go of it. A synthetic
+        // release (focus loss, cancelled capture) always does, so nothing is
+        // left captured.
+        if (event.released && (event.button == NUIMouseButton::Left || event.synthetic)) {
             endKnobCapture();
             m_knobDragParam = -1;
             return true;

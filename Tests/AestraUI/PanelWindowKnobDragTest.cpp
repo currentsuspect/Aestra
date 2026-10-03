@@ -32,11 +32,11 @@ bool near(float a, float b) {
     return std::fabs(a - b) < 1.0e-5f;
 }
 
-constexpr float kRangePx = 160.0f;
+constexpr float RANGE_PX = 160.0f;
 
 class KnobProbe : public AestraPanelWindow {
 public:
-    float values[4] = {0.5f, 0.5f, 0.5f, 0.5f};
+    float m_values[4] = {0.5f, 0.5f, 0.5f, 0.5f};
 
     bool feed(const NUIMouseEvent& event) {
         const KnobTarget knobs[] = {
@@ -44,8 +44,8 @@ public:
             {{60.0f, 10.0f, 40.0f, 40.0f}, 3},
         };
         return handleKnobDrag(
-            event, knobs, std::size(knobs), kRangePx, [this](uint32_t id) { return values[id]; },
-            [this](uint32_t id, float v) { values[id] = v; });
+            event, knobs, std::size(knobs), RANGE_PX, [this](uint32_t id) { return m_values[id]; },
+            [this](uint32_t id, float v) { m_values[id] = v; });
     }
 
     int grabbed() const { return knobDragParam(); }
@@ -60,11 +60,11 @@ NUIMouseEvent press(float x, float y, NUIMouseButton button = NUIMouseButton::Le
     return e;
 }
 
-NUIMouseEvent release(float x, float y) {
+NUIMouseEvent release(float x, float y, NUIMouseButton button = NUIMouseButton::Left) {
     NUIMouseEvent e;
     e.type = NUIMouseEventType::Up;
     e.position = {x, y};
-    e.button = NUIMouseButton::Left;
+    e.button = button;
     e.released = true;
     return e;
 }
@@ -81,7 +81,7 @@ void testPressGrabsTheKnobUnderTheCursor() {
     KnobProbe p;
     check(p.feed(press(80.0f, 30.0f)), "a press on a knob is consumed");
     check(p.grabbed() == 3, "the press grabs that knob's parameter, not the first one");
-    check(near(p.values[3], 0.5f), "grabbing does not move the value");
+    check(near(p.m_values[3], 0.5f), "grabbing does not move the value");
 }
 
 void testMotionStepsTheGrabbedValue() {
@@ -89,26 +89,26 @@ void testMotionStepsTheGrabbedValue() {
     p.feed(press(80.0f, 30.0f));
     // Up 16 px over a 160 px range is +0.1 (screen y grows downward).
     check(p.feed(motion(-16.0f)), "motion while grabbed is consumed");
-    check(near(p.values[3], 0.6f), "16 px up over a 160 px range adds 0.1");
-    check(near(p.values[2], 0.5f), "the other knob is untouched");
+    check(near(p.m_values[3], 0.6f), "16 px up over a 160 px range adds 0.1");
+    check(near(p.m_values[2], 0.5f), "the other knob is untouched");
     p.feed(motion(16.0f));
-    check(near(p.values[3], 0.5f), "16 px down takes it back");
+    check(near(p.m_values[3], 0.5f), "16 px down takes it back");
 }
 
 void testShiftIsFine() {
     KnobProbe p;
     p.feed(press(80.0f, 30.0f));
     p.feed(motion(-16.0f, NUIModifiers::Shift));
-    check(near(p.values[3], 0.525f), "Shift drags at a quarter speed");
+    check(near(p.m_values[3], 0.525f), "Shift drags at a quarter speed");
 }
 
 void testValueIsClamped() {
     KnobProbe p;
     p.feed(press(30.0f, 30.0f));
     p.feed(motion(-1000.0f));
-    check(near(p.values[2], 1.0f), "a long drag up stops at 1");
+    check(near(p.m_values[2], 1.0f), "a long drag up stops at 1");
     p.feed(motion(5000.0f));
-    check(near(p.values[2], 0.0f), "a long drag down stops at 0");
+    check(near(p.m_values[2], 0.0f), "a long drag down stops at 0");
 }
 
 void testReleaseLetsGo() {
@@ -117,7 +117,23 @@ void testReleaseLetsGo() {
     check(p.feed(release(80.0f, 30.0f)), "the release that ends a drag is consumed");
     check(p.grabbed() == -1, "release lets go of the knob");
     check(!p.feed(motion(-16.0f)), "motion after release is not consumed");
-    check(near(p.values[3], 0.5f), "motion after release changes nothing");
+    check(near(p.m_values[3], 0.5f), "motion after release changes nothing");
+}
+
+// Only the grabbing button lets go. A right-button release mid-drag used to end
+// the drag, and later motion stopped moving the knob; a synthetic release
+// (focus loss, cancelled capture) must still end it.
+void testOtherButtonsDoNotLetGo() {
+    KnobProbe p;
+    p.feed(press(80.0f, 30.0f));
+    p.feed(release(80.0f, 30.0f, NUIMouseButton::Right));
+    check(p.grabbed() == 3, "a right-button release does not end a left-button drag");
+    p.feed(motion(-16.0f));
+    check(near(p.m_values[3], 0.6f), "and the drag keeps moving the knob");
+    NUIMouseEvent cancel = release(80.0f, 30.0f, NUIMouseButton::None);
+    cancel.synthetic = true;
+    p.feed(cancel);
+    check(p.grabbed() == -1, "a synthetic release always lets go");
 }
 
 void testPressesThatMustNotGrab() {
@@ -137,6 +153,7 @@ int main() {
     testShiftIsFine();
     testValueIsClamped();
     testReleaseLetsGo();
+    testOtherButtonsDoNotLetGo();
     testPressesThatMustNotGrab();
     if (g_failures == 0) {
         std::printf("PanelWindowKnobDragTest: all checks passed\n");
