@@ -399,6 +399,9 @@ std::optional<std::string> run(const Request& req) {
             api->message_iter_get_basic(&it, &handle);
             if (handle) handlePath = handle;
         }
+        // A reply with no request object confirms no dialog, and a Response on a
+        // path we cannot predict would never match: fall back instead of waiting.
+        if (handlePath.empty()) return std::nullopt;
     }
 
     // From here the dialog is on screen: every outcome is final (a result or a

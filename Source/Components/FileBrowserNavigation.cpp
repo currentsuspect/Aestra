@@ -548,7 +548,8 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         }
         case BrowserNavAction::Drums: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Drums";
-            std::filesystem::create_directories(path);
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
             activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::Audio;
             activeNavAction_ = BrowserNavAction::Drums;
@@ -558,7 +559,8 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         }
         case BrowserNavAction::Instruments: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Instruments";
-            std::filesystem::create_directories(path);
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
             activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::Instruments;
@@ -568,7 +570,8 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         }
         case BrowserNavAction::AudioEffects: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Effects";
-            std::filesystem::create_directories(path);
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
             activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::AudioEffects;
@@ -582,7 +585,8 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             break;
         case BrowserNavAction::Clips: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Clips";
-            std::filesystem::create_directories(path);
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
             activeTagFilter_.clear();
             activeQuickFilter_ = QuickFilter::All;
             activeNavAction_ = BrowserNavAction::Clips;

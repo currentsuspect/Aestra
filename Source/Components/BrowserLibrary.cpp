@@ -375,8 +375,11 @@ int parseBpmFromFilename(const std::string& name) {
         const int bpm = std::stoi(name.substr(start, end - start));
         if (bpm < 60 || bpm > 300) continue;
         // "bpm" nearby, before or after the number
-        const std::string context =
-            lowerCopy(name.substr(start > 4 ? start - 4 : 0, std::min(name.size() - start, end + 5)));
+        // Four characters either side: "bpm" belongs to this number only if it
+        // touches it, never to a later one ("Vintage 90 Kit 120bpm" is 120).
+        const size_t from = start > 4 ? start - 4 : 0;
+        const size_t to = std::min(name.size(), end + 4);
+        const std::string context = lowerCopy(name.substr(from, to - from));
         if (context.find("bpm") != std::string::npos) return bpm;
     }
     return 0;

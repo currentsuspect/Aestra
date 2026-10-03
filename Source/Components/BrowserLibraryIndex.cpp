@@ -93,7 +93,16 @@ void BrowserLibraryIndex::rebuild(std::vector<std::string> roots) {
         m_shared->currentStop = stop;
         m_shared->crawling.store(true);
     }
-    std::thread([shared = m_shared, stop, roots = std::move(roots)]() { crawl(shared, stop, roots); }).detach();
+    std::thread([shared = m_shared, stop, roots = std::move(roots)]() {
+        // An exception escaping a thread is std::terminate. One unrepresentable
+        // file name (std::system_error on Windows) must not end the app.
+        try {
+            crawl(shared, stop, roots);
+        } catch (...) {
+            std::lock_guard<std::mutex> lock(shared->mutex);
+            if (!stop->load()) shared->crawling.store(false);
+        }
+    }).detach();
 }
 
 BrowserLibraryIndex::Snapshot BrowserLibraryIndex::snapshot() const {

@@ -6,6 +6,7 @@
 
 #include <shobjidl.h>
 
+#include <cstdio>
 #include <thread>
 
 namespace Aestra {
@@ -118,6 +119,12 @@ std::string narrowUtf8(const wchar_t* w) {
     return s;
 }
 
+std::string hresultHex(HRESULT hr) {
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "0x%08lX", static_cast<unsigned long>(hr));
+    return buf;
+}
+
 } // namespace
 
 // The Vista+ common item dialog in folder mode: the same modern Explorer
@@ -126,10 +133,19 @@ std::string narrowUtf8(const wchar_t* w) {
 std::string PlatformUtilsWin32::selectFolderDialog(const std::string& title) const {
     const HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     const bool uninit = SUCCEEDED(init); // S_FALSE (already initialised) also needs balancing
+    if (init == RPC_E_CHANGED_MODE) {
+        // The thread is already MTA; the shell dialog wants STA and may not show.
+        Aestra::Log::warning("[Platform] Folder dialog on an MTA thread; the picker may fail");
+    }
 
     std::string result;
     IFileOpenDialog* dialog = nullptr;
-    if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)))) {
+    const HRESULT created =
+        CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog));
+    if (FAILED(created)) {
+        // A failure must not read as the user cancelling: say so.
+        Aestra::Log::warning("[Platform] Folder dialog could not be created: " + hresultHex(created));
+    } else {
         DWORD options = 0;
         if (SUCCEEDED(dialog->GetOptions(&options))) {
             dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
@@ -138,7 +154,11 @@ std::string PlatformUtilsWin32::selectFolderDialog(const std::string& title) con
             const std::wstring wideTitle = widenUtf8(title);
             dialog->SetTitle(wideTitle.c_str());
         }
-        if (SUCCEEDED(dialog->Show(GetActiveWindow()))) {
+        const HRESULT shown = dialog->Show(GetActiveWindow());
+        if (FAILED(shown) && shown != HRESULT_FROM_WIN32(ERROR_CANCELLED)) {
+            Aestra::Log::warning("[Platform] Folder dialog failed: " + hresultHex(shown));
+        }
+        if (SUCCEEDED(shown)) {
             IShellItem* item = nullptr;
             if (SUCCEEDED(dialog->GetResult(&item))) {
                 PWSTR path = nullptr;

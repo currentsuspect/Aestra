@@ -154,6 +154,7 @@ void testNaturalCompare() {
 }
 
 void testXdgParsing() {
+#if !defined(_WIN32) // XDG user-dirs is a POSIX contract; "/srv/music" is not absolute on Windows
     const std::string content = "# comment\n"
                                 "XDG_DOWNLOAD_DIR=\"$HOME/Incoming\"\n"
                                 "XDG_MUSIC_DIR=\"/srv/music\"\n"
@@ -164,6 +165,7 @@ void testXdgParsing() {
     CHECK(dirs.size() >= 1 && dirs[0].first == "DOWNLOAD" && dirs[0].second == "/home/me/Incoming",
           "$HOME expands in XDG_DOWNLOAD_DIR");
     CHECK(dirs.size() >= 2 && dirs[1].first == "MUSIC" && dirs[1].second == "/srv/music", "absolute XDG path kept");
+#endif
 }
 
 void testSystemPlaceDiscovery() {
@@ -524,6 +526,8 @@ void testNameFacts() {
     CHECK(parseKeyFromFilename("Kick A.wav").empty(), "a bare letter is not a key");
     CHECK(parseKeyFromFilename("Snare C 02.wav").empty(), "a bare C is not a key");
     CHECK(BrowserLibrary::parseBpmFromFilename("loop 128 BPM.wav") == 128, "filename BPM");
+    CHECK(BrowserLibrary::parseBpmFromFilename("Drum Loop Vintage 90 Kit 120bpm.wav") == 120,
+          "a later 'bpm' does not claim an earlier number");
 
     const auto q = BrowserLibrary::parseSearchQuery("Dark Pad bpm:90-100 len:<4 key:am foo:bar");
     CHECK(q.text == "dark pad foo:bar", "name text keeps plain words and unknown fields");
@@ -587,6 +591,31 @@ void testSearchReachesTheWholeLibrary() {
     CHECK(visibleNames(*browser).empty(), "This Folder scope does not reach it");
 }
 
+// Second and later launches: a state file exists, and loading it must still
+// start the library index, or whole-library search finds nothing.
+void testExistingStateStartsTheIndex() {
+    Sandbox box("statelaunch");
+    const std::string statePath = (box.home / "browser_library.json").string();
+    writeWav(box.home / "Samples" / "Deep" / "yak_tom.wav", 44100, 1, 0.1);
+    {
+        auto first = makeBrowser();
+        CHECK(waitForScan(*first), "initial scan finishes");
+        first->initLibraryState(statePath);
+        first->addPlace((box.home / "Samples").string());
+        CHECK(fs::exists(statePath), "first launch writes the state file");
+    }
+    auto again = makeBrowser();
+    CHECK(waitForScan(*again), "initial scan finishes");
+    again->initLibraryState(statePath);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (again->isLibraryIndexing() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    again->setSearchQuery("yak");
+    CHECK(visibleNames(*again) == std::vector<std::string>{"yak_tom.wav"},
+          "a launch with an existing state file still indexes the library");
+}
+
 // Overlapping roots are resolved once, up front: a root inside another, and the
 // same folder spelled twice, must not index a file twice. A sibling whose name
 // merely starts the same ("Samples2" next to "Samples") is NOT inside it.
@@ -639,6 +668,7 @@ int main() {
     testMetadataSearchAndSort();
     testSearchReachesTheWholeLibrary();
     testOverlappingRootsIndexOnce();
+    testExistingStateStartsTheIndex();
 
     if (g_failures == 0) {
         std::printf("FileBrowserLibraryTest: all checks passed\n");

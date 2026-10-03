@@ -72,7 +72,7 @@ void PlatformUtilsLinux::sleep(int milliseconds) const {
 }
 
 // Every picker below BLOCKS until the user answers; callers run them off the
-// UI thread (see Source/Core/AsyncFileDialog.h).
+// UI thread (see AestraPlat/include/AestraFileDialog.h).
 //
 // Order: the XDG Desktop Portal (the desktop's own dialog, no Aestra-side
 // knowledge of which one), then the first installed legacy picker. A cancel

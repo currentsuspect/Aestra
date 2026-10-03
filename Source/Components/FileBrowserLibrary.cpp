@@ -16,13 +16,13 @@ void FileBrowser::initLibraryState(const std::string& statePath) {
     std::error_code ec;
     if (!statePath.empty() && std::filesystem::exists(statePath, ec)) {
         loadState(statePath);
-        return;
+    } else {
+        const std::string legacy = legacySettingsPath();
+        if (!legacy.empty() && std::filesystem::exists(legacy, ec) && loadState(legacy)) {
+            persistState(); // carry the import forward into the new file
+        }
     }
-    const std::string legacy = legacySettingsPath();
-    if (!legacy.empty() && std::filesystem::exists(legacy, ec) && loadState(legacy)) {
-        persistState(); // carry the import forward into the new file
-    }
-    rescanLibrary(); // library-wide search; runs in the background
+    rescanLibrary(); // library-wide search; runs in the background, every launch
 }
 
 void FileBrowser::addToFavorites(const std::string& path) {
