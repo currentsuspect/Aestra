@@ -147,8 +147,12 @@ int main() {
     setenv("SDL_NO_SIGNAL_HANDLERS", "1", 1);
 #endif
     if (!Aestra::Platform::initialize()) {
-        std::fprintf(stderr, "AsyncFileDialogTest: platform layer unavailable\n");
-        return 1;
+        // A build with no platform backend (the LSan lane has no SDL2) cannot
+        // run a picker at all. That is SKIPPED, not failed and not passed: CTest
+        // reads 77 through SKIP_RETURN_CODE (Tests/CMakeLists.txt). Every lane
+        // that has the platform layer runs the real checks.
+        std::fprintf(stderr, "AsyncFileDialogTest: platform layer unavailable, skipping\n");
+        return 77;
     }
 #if !defined(_WIN32) // Windows runs the picker inline by design (see AestraFileDialog.h)
     testStartDoesNotBlockAndDeliversOnce();

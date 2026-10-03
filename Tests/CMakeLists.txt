@@ -3659,4 +3659,5 @@ add_executable(AsyncFileDialogTest AestraPlat/AsyncFileDialogTest.cpp)
 target_link_libraries(AsyncFileDialogTest PRIVATE AestraPlat)
 target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraPlat/include)
 add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
-set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30)
+set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
+    SKIP_RETURN_CODE 77)
