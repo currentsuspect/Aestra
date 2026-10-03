@@ -11,6 +11,7 @@
 #include <memory>
 #include <functional>
 #include <array>
+#include <string_view>
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
@@ -50,8 +51,21 @@ enum class FileType {
  * Smart File Filter - Whitelist approach
  */
 struct FileFilter {
-    static const std::unordered_set<std::string> audioExtensions;
-    static const std::unordered_set<std::string> projectExtensions;
+    // constexpr arrays, not std::unordered_set: BrowserLibraryIndex's crawl runs
+    // on a detached thread that may still be reading these while static
+    // destructors run at process exit. A trivially destructible table has no
+    // destructor to race. Lower-case, compared against a lower-cased extension.
+    static constexpr std::array<std::string_view, 11> audioExtensions{
+        ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".mp4", ".m4a", ".aac"};
+    static constexpr std::array<std::string_view, 2> projectExtensions{".madproj", ".Aestra"};
+
+    template <size_t N>
+    static bool contains(const std::array<std::string_view, N>& list, const std::string& ext) {
+        for (const std::string_view candidate : list)
+            if (candidate == ext)
+                return true;
+        return false;
+    }
 
     static bool isAllowed(const std::string& path);
     static FileType getType(const std::string& path, bool isDir);

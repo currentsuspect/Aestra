@@ -11,6 +11,7 @@
 #include "../Support/NullRenderer.h"
 
 #include "BrowserLibrary.h"
+#include "BrowserLibraryIndex.h"
 #include "FileBrowser.h"
 
 #include <algorithm>
@@ -586,6 +587,35 @@ void testSearchReachesTheWholeLibrary() {
     CHECK(visibleNames(*browser).empty(), "This Folder scope does not reach it");
 }
 
+// Overlapping roots are resolved once, up front: a root inside another, and the
+// same folder spelled twice, must not index a file twice. A sibling whose name
+// merely starts the same ("Samples2" next to "Samples") is NOT inside it.
+void testOverlappingRootsIndexOnce() {
+    Sandbox box("libraryoverlap");
+    const fs::path samples = box.home / "Samples";
+    writeWav(samples / "Deep" / "kick.wav", 44100, 1, 0.1);
+    writeWav(box.home / "Samples2" / "hat.wav", 44100, 1, 0.1);
+
+    AestraUI::BrowserLibraryIndex index;
+    index.rebuild({samples.string(), (samples / "Deep").string(), (samples / "." / "Deep" / "..").string(),
+                   (box.home / "Samples2").string()});
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (index.isCrawling() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(!index.isCrawling(), "overlap crawl finishes");
+    const auto snap = index.snapshot();
+    CHECK(snap != nullptr, "overlap crawl publishes");
+    std::vector<std::string> names;
+    if (snap) {
+        for (const auto& item : *snap)
+            names.push_back(item.name);
+    }
+    std::sort(names.begin(), names.end());
+    CHECK(names == (std::vector<std::string>{"hat.wav", "kick.wav"}),
+          "each file indexed exactly once across nested and duplicate roots; the Samples2 sibling is kept");
+}
+
 } // namespace
 
 int main() {
@@ -608,6 +638,7 @@ int main() {
     testNameFacts();
     testMetadataSearchAndSort();
     testSearchReachesTheWholeLibrary();
+    testOverlappingRootsIndexOnce();
 
     if (g_failures == 0) {
         std::printf("FileBrowserLibraryTest: all checks passed\n");

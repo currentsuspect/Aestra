@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <thread>
-#include <unordered_set>
 
 namespace AestraUI {
 
@@ -16,10 +15,51 @@ bool isAudioType(FileType type) {
            type == FileType::Mp3File || type == FileType::FlacFile || type == FileType::OggFile;
 }
 
-std::string identityKey(const std::filesystem::path& p) {
+std::filesystem::path canonicalOrNormal(const std::filesystem::path& p) {
     std::error_code ec;
     const auto canonical = std::filesystem::weakly_canonical(p, ec);
-    return (ec ? p.lexically_normal() : canonical).generic_string();
+    return ec ? p.lexically_normal() : canonical;
+}
+
+bool isSameOrInside(const std::filesystem::path& inner, const std::filesystem::path& outer) {
+    auto o = outer.begin();
+    auto i = inner.begin();
+    for (; o != outer.end(); ++o, ++i) {
+        if (o->empty())
+            break; // trailing separator
+        if (i == inner.end() || *i != *o)
+            return false;
+    }
+    return true;
+}
+
+// Overlapping roots (one inside another, or two spellings of one folder) are
+// resolved ONCE, here, instead of canonicalising every file found: realpath is
+// several syscalls, and a full library is 100k files. Directory symlinks are not
+// followed during the crawl, so two disjoint canonical roots cannot reach the
+// same file.
+std::vector<std::filesystem::path> distinctRoots(const std::vector<std::string>& roots) {
+    std::vector<std::filesystem::path> canon;
+    for (const auto& r : roots) {
+        std::error_code ec;
+        if (r.empty() || !std::filesystem::is_directory(r, ec))
+            continue;
+        canon.push_back(canonicalOrNormal(r));
+    }
+    std::vector<std::filesystem::path> out;
+    for (size_t i = 0; i < canon.size(); ++i) {
+        bool covered = false;
+        for (size_t j = 0; j < canon.size() && !covered; ++j) {
+            if (i == j)
+                continue;
+            // Inside another root, or an exact duplicate that a lower index keeps.
+            const bool inside = isSameOrInside(canon[i], canon[j]);
+            covered = inside && (canon[i] != canon[j] || j < i);
+        }
+        if (!covered)
+            out.push_back(canon[i]);
+    }
+    return out;
 }
 
 // Publish every this-many new entries while crawling, so search works early.
@@ -73,7 +113,6 @@ void BrowserLibraryIndex::crawl(const std::shared_ptr<Shared>& shared, const std
                                 const std::vector<std::string>& roots) {
     namespace fs = std::filesystem;
     std::vector<FileItem> entries;
-    std::unordered_set<std::string> seen; // overlapping roots index a file once
     size_t sincePublish = 0;
 
     const auto publish = [&](bool final) {
@@ -85,10 +124,9 @@ void BrowserLibraryIndex::crawl(const std::shared_ptr<Shared>& shared, const std
         if (final) shared->crawling.store(false);
     };
 
-    for (const auto& root : roots) {
+    for (const auto& root : distinctRoots(roots)) {
         if (stop->load() || entries.size() >= kMaxEntries) break;
         std::error_code ec;
-        if (root.empty() || !fs::is_directory(root, ec)) continue;
 
         // Default options: directory symlinks are not followed (no loops).
         fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, ec);
@@ -109,12 +147,17 @@ void BrowserLibraryIndex::crawl(const std::shared_ptr<Shared>& shared, const std
             }
             if (typeEc || !entry.is_regular_file(typeEc)) continue;
             const std::string path = entry.path().string();
-            if (!FileFilter::isAllowed(path)) continue;
-            if (!seen.insert(identityKey(entry.path())).second) continue;
+            // getType by extension, not isAllowed(): the entry is already known
+            // to be a regular file, and isAllowed() stats the path again to ask
+            // whether it is a directory -- one wasted syscall per file, 100k on
+            // a full library. For a file the two agree exactly: anything
+            // isAllowed() accepts maps to a known type.
+            const FileType type = FileFilter::getType(path, false);
+            if (type == FileType::Unknown) continue;
 
             std::error_code sizeEc;
             const auto size = entry.file_size(sizeEc);
-            FileItem item(name, path, FileFilter::getType(path, false), false, sizeEc ? 0 : static_cast<size_t>(size));
+            FileItem item(name, path, type, false, sizeEc ? 0 : static_cast<size_t>(size));
             std::error_code timeEc;
             const auto modified = entry.last_write_time(timeEc);
             if (!timeEc) item.modifiedTime = static_cast<int64_t>(modified.time_since_epoch().count());

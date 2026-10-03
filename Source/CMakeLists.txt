@@ -96,6 +96,10 @@ set(Aestra_SOURCES
 	Components/BrowserLibraryIndex.cpp
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
+	Components/FileBrowserNavigation.cpp
+	Components/FileBrowserLibrary.cpp
+	Components/FileBrowserScan.cpp
+	Components/FileBrowserInternal.h
 	Components/FilePreviewPanel.h
 	Components/FilePreviewPanel.cpp
 	Components/AudioVisualizer.h
