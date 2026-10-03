@@ -3608,6 +3608,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/FileBrowserLibraryTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
     )
     target_link_libraries(FileBrowserLibraryTest PRIVATE
         AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore AestraPlat)

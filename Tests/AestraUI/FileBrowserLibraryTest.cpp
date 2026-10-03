@@ -14,6 +14,8 @@
 #include "FileBrowser.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -420,6 +422,170 @@ void testSamplesIsAFolder() {
     CHECK(lists(*browser, "hat.wav"), "its sounds are listed");
 }
 
+// ---------------------------------------------------------------------------
+// Audio facts and library search (commit 4)
+// ---------------------------------------------------------------------------
+
+void putLE(std::string& b, uint32_t v, int n) {
+    for (int i = 0; i < n; ++i) b.push_back(static_cast<char>((v >> (8 * i)) & 0xFF));
+}
+void putBE(std::string& b, uint32_t v, int n) {
+    for (int i = n - 1; i >= 0; --i) b.push_back(static_cast<char>((v >> (8 * i)) & 0xFF));
+}
+
+// A 16-bit PCM WAV header describing @p seconds of audio. The data chunk is
+// declared but not written: the reader must not need the samples. @p tempo > 0
+// adds an ACID chunk with that tempo, placed after data (as loop tools do).
+void writeWav(const fs::path& p, uint32_t rate, uint16_t channels, double seconds, float tempo = 0.0f) {
+    fs::create_directories(p.parent_path());
+    const uint32_t blockAlign = channels * 2u;
+    const uint32_t dataBytes = static_cast<uint32_t>(seconds * rate) * blockAlign;
+    std::string b = "RIFF";
+    putLE(b, 36 + dataBytes, 4);
+    b += "WAVEfmt ";
+    putLE(b, 16, 4);
+    putLE(b, 1, 2);
+    putLE(b, channels, 2);
+    putLE(b, rate, 4);
+    putLE(b, rate * blockAlign, 4);
+    putLE(b, blockAlign, 2);
+    putLE(b, 16, 2);
+    b += "data";
+    putLE(b, dataBytes, 4);
+    b.append(dataBytes, '\0');
+    if (tempo > 0.0f) {
+        b += "acid";
+        putLE(b, 24, 4);
+        b.append(20, '\0');
+        uint32_t bits = 0;
+        std::memcpy(&bits, &tempo, sizeof(bits));
+        putLE(b, bits, 4);
+    }
+    std::ofstream(p, std::ios::binary) << b;
+}
+
+void writeAiff(const fs::path& p, uint16_t channels, uint32_t frames) {
+    std::string b = "FORM";
+    putBE(b, 4 + 8 + 18, 4);
+    b += "AIFFCOMM";
+    putBE(b, 18, 4);
+    putBE(b, channels, 2);
+    putBE(b, frames, 4);
+    putBE(b, 16, 2);
+    // 48000 as an 80-bit extended: exponent 16383+15, mantissa 48000 << 48.
+    putBE(b, 16383 + 15, 2);
+    putBE(b, 0xBB800000u, 4);
+    putBE(b, 0, 4);
+    std::ofstream(p, std::ios::binary) << b;
+}
+
+void writeFlac(const fs::path& p, uint32_t rate, uint16_t channels, uint64_t samples) {
+    std::string b = "fLaC";
+    b.push_back(static_cast<char>(0x80)); // last block, STREAMINFO
+    putBE(b, 34, 3);
+    b.append(10, '\0'); // block + frame sizes
+    const uint64_t packed = (uint64_t(rate) << 44) | (uint64_t(channels - 1) << 41) | (uint64_t(15) << 36) | samples;
+    for (int i = 7; i >= 0; --i) b.push_back(static_cast<char>((packed >> (8 * i)) & 0xFF));
+    b.append(16, '\0'); // MD5
+    std::ofstream(p, std::ios::binary) << b;
+}
+
+void testAudioHeaders() {
+    Sandbox box("headers");
+    BrowserLibrary::AudioInfo info;
+    writeWav(box.home / "loop.wav", 44100, 2, 2.0, 124.0f);
+    CHECK(BrowserLibrary::readAudioInfo((box.home / "loop.wav").string(), info), "WAV header reads");
+    CHECK(info.sampleRate == 44100 && info.channels == 2, "WAV rate/channels");
+    CHECK(std::abs(info.durationSec - 2.0) < 1e-6, "WAV length from the data chunk");
+    CHECK(std::abs(info.tempo - 124.0f) < 1e-3, "ACID tempo after the data chunk");
+
+    writeAiff(box.home / "pad.aif", 1, 96000);
+    info = {};
+    CHECK(BrowserLibrary::readAudioInfo((box.home / "pad.aif").string(), info), "AIFF header reads");
+    CHECK(info.sampleRate == 48000 && info.channels == 1 && std::abs(info.durationSec - 2.0) < 1e-6,
+          "AIFF 80-bit rate, frames, channels");
+
+    writeFlac(box.home / "hit.flac", 96000, 2, 48000);
+    info = {};
+    CHECK(BrowserLibrary::readAudioInfo((box.home / "hit.flac").string(), info), "FLAC STREAMINFO reads");
+    CHECK(info.sampleRate == 96000 && info.channels == 2 && std::abs(info.durationSec - 0.5) < 1e-6,
+          "FLAC rate, channels, length");
+
+    touch(box.home / "notaudio.wav");
+    CHECK(!BrowserLibrary::readAudioInfo((box.home / "notaudio.wav").string(), info), "a non-WAV .wav is refused");
+}
+
+void testNameFacts() {
+    using BrowserLibrary::parseKeyFromFilename;
+    CHECK(parseKeyFromFilename("Loop_Am_120bpm.wav") == "Am", "Am");
+    CHECK(parseKeyFromFilename("pad F#min.wav") == "F#m", "F#min -> F#m");
+    CHECK(parseKeyFromFilename("bass Ebmaj.wav") == "Eb", "Ebmaj -> Eb");
+    CHECK(parseKeyFromFilename("Kick A.wav").empty(), "a bare letter is not a key");
+    CHECK(parseKeyFromFilename("Snare C 02.wav").empty(), "a bare C is not a key");
+    CHECK(BrowserLibrary::parseBpmFromFilename("loop 128 BPM.wav") == 128, "filename BPM");
+
+    const auto q = BrowserLibrary::parseSearchQuery("Dark Pad bpm:90-100 len:<4 key:am foo:bar");
+    CHECK(q.text == "dark pad foo:bar", "name text keeps plain words and unknown fields");
+    CHECK(q.bpmMin == 90 && q.bpmMax == 100, "bpm range");
+    CHECK(q.lenMin < 0.0 && q.lenMax == 4.0, "len upper bound");
+    CHECK(q.key == "Am", "key normalised");
+    const auto shortHits = BrowserLibrary::parseSearchQuery("len:2");
+    CHECK(shortHits.lenMin < 0.0 && shortHits.lenMax == 2.0, "a bare length means up to");
+}
+
+std::vector<std::string> visibleNames(FileBrowser& b) {
+    std::vector<std::string> names;
+    for (const auto* item : b.getVisibleFiles()) names.push_back(item->name);
+    std::sort(names.begin(), names.end());
+    return names;
+}
+
+void testMetadataSearchAndSort() {
+    Sandbox box("metasearch");
+    const fs::path dir = box.home / "Documents" / "Aestra";
+    writeWav(dir / "loop_Am_120bpm.wav", 44100, 2, 4.0);
+    writeWav(dir / "kick.wav", 44100, 1, 0.3);
+    writeWav(dir / "pad_Dm.wav", 48000, 2, 8.0, 95.0f); // tempo only from ACID
+    auto browser = makeBrowser();
+    CHECK(waitForScan(*browser), "initial scan finishes");
+
+    browser->setSearchWholeLibrary(false);
+    browser->setSearchQuery("len:<1");
+    CHECK(visibleNames(*browser) == std::vector<std::string>{"kick.wav"}, "len:<1 finds the one-shot");
+    browser->setSearchQuery("bpm:90-100");
+    CHECK(visibleNames(*browser) == std::vector<std::string>{"pad_Dm.wav"}, "bpm from the ACID chunk is searchable");
+    browser->setSearchQuery("key:Am");
+    CHECK(visibleNames(*browser) == std::vector<std::string>{"loop_Am_120bpm.wav"}, "key from the filename");
+    browser->setSearchQuery("");
+
+    browser->setSortMode(FileBrowser::SortMode::Length);
+    std::vector<std::string> order;
+    for (const auto* item : browser->getVisibleFiles()) order.push_back(item->name);
+    CHECK(order == (std::vector<std::string>{"kick.wav", "loop_Am_120bpm.wav", "pad_Dm.wav"}), "sort by length");
+}
+
+// Search used to reach only folders already expanded on screen.
+void testSearchReachesTheWholeLibrary() {
+    Sandbox box("librarysearch");
+    const fs::path elsewhere = box.home / "Samples" / "Deep" / "Folder";
+    writeWav(elsewhere / "zebra_snare.wav", 44100, 1, 0.2);
+    auto browser = makeBrowser();
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    browser->addPlace((box.home / "Samples").string());
+    browser->rescanLibrary();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (browser->isLibraryIndexing() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(!browser->isLibraryIndexing(), "index finishes");
+
+    browser->setSearchQuery("zebra");
+    CHECK(visibleNames(*browser) == std::vector<std::string>{"zebra_snare.wav"},
+          "a file three folders deep in an unopened place is found");
+    browser->setSearchWholeLibrary(false);
+    CHECK(visibleNames(*browser).empty(), "This Folder scope does not reach it");
+}
+
 } // namespace
 
 int main() {
@@ -438,6 +604,10 @@ int main() {
     testNewCollectionRowOpensEditor();
     testCurrentProjectListsProjectAudio();
     testSamplesIsAFolder();
+    testAudioHeaders();
+    testNameFacts();
+    testMetadataSearchAndSort();
+    testSearchReachesTheWholeLibrary();
 
     if (g_failures == 0) {
         std::printf("FileBrowserLibraryTest: all checks passed\n");

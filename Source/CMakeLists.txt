@@ -92,6 +92,8 @@ set(Aestra_SOURCES
 	Components/TransportInfoContainer.cpp
 	Components/BrowserLibrary.h
 	Components/BrowserLibrary.cpp
+	Components/BrowserLibraryIndex.h
+	Components/BrowserLibraryIndex.cpp
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
 	Components/FilePreviewPanel.h

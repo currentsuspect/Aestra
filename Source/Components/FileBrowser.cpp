@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowser.h"
+#include "BrowserLibraryIndex.h"
 #include "NUIScrollbar.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
@@ -161,26 +162,6 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
     return prefix + kEllipsis + suffix;
 }
 
-static int parseBpmFromFilename(const std::string& name) {
-    // Matches: "kick_120bpm", "loop 128 BPM", "90bpm_hat", "140_bpm_loop"
-    for (size_t i = 0; i + 2 < name.size(); ++i) {
-        if (!std::isdigit(static_cast<unsigned char>(name[i]))) continue;
-        size_t start = i;
-        while (i < name.size() && std::isdigit(static_cast<unsigned char>(name[i]))) ++i;
-        size_t end = i;
-        if (end - start < 2 || end - start > 3) continue;
-        std::string numStr = name.substr(start, end - start);
-        int bpm = std::stoi(numStr);
-        if (bpm < 60 || bpm > 300) continue;
-        // Check for "bpm" nearby (before or after the number)
-        std::string context = name.substr(start > 4 ? start - 4 : 0,
-                                          std::min(name.size() - start, end + 5));
-        std::string lower;
-        for (char c : context) lower += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        if (lower.find("bpm") != std::string::npos) return bpm;
-    }
-    return 0;
-}
 
 // When every file in a folder starts with the same "<pack> - " prefix (sample
 // packs name stems this way), the prefix repeats on every row and pushes the
@@ -797,11 +778,7 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
                 const auto modified = entry.last_write_time(timeEc);
                 if (!timeEc) item.modifiedTime = static_cast<int64_t>(modified.time_since_epoch().count());
             }
-            if (!isDir && (type == FileType::AudioFile || type == FileType::MusicFile ||
-                           type == FileType::WavFile || type == FileType::Mp3File ||
-                           type == FileType::FlacFile)) {
-                item.detectedBpm = parseBpmFromFilename(name);
-            }
+            fillAudioFacts(item); // length/rate/channels/BPM/key; worker thread
             items.push_back(std::move(item));
         }
     } catch (const std::exception& e) {
@@ -845,10 +822,7 @@ std::vector<FileItem> FileBrowser::scanListing(const std::vector<std::string>& p
         std::error_code timeEc;
         const auto modified = fs::last_write_time(path, timeEc);
         if (!timeEc) item.modifiedTime = static_cast<int64_t>(modified.time_since_epoch().count());
-        if (!isDir && (type == FileType::AudioFile || type == FileType::MusicFile || type == FileType::WavFile ||
-                       type == FileType::Mp3File || type == FileType::FlacFile)) {
-            item.detectedBpm = parseBpmFromFilename(name);
-        }
+        fillAudioFacts(item);
         items.push_back(std::move(item));
     }
     return items;
@@ -1548,6 +1522,8 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
             case SortMode::Type: sortLabel = "Type"; break;
             case SortMode::Size: sortLabel = "Size"; break;
             case SortMode::Modified: sortLabel = "Date"; break;
+            case SortMode::Length: sortLabel = "Length"; break;
+            case SortMode::Bpm: sortLabel = "BPM"; break;
         }
         const NUIRect labelRect(layout.sortButton.x + 6.0f, layout.sortButton.y, layout.sortButton.width - 28.0f,
                                 layout.sortButton.height);
@@ -1768,6 +1744,19 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 }
 
 void FileBrowser::onUpdate(double deltaTime) {
+    if (libraryIndex_ && libraryIndex_->revision() != seenIndexRevision_) {
+        indexRefreshCooldown_ -= deltaTime;
+        if (indexRefreshCooldown_ <= 0.0) {
+            seenIndexRevision_ = libraryIndex_->revision();
+            indexRefreshCooldown_ = 0.3; // coalesce publishes during a crawl
+            if (searchWholeLibrary_ && !isShowingListing() && searchInput_ && !searchInput_->getText().empty()) {
+                const std::string keep = selectedFile_ ? selectedFile_->path : std::string();
+                applyFilter();
+                if (!keep.empty()) selectFile(keep);
+            }
+        }
+    }
+
     if (auto chosen = folderPicker_.takeResult(); chosen && !chosen->empty()) {
         addPlace(*chosen);
         navigateTo(*chosen);
@@ -2704,6 +2693,7 @@ void FileBrowser::initLibraryState(const std::string& statePath) {
     if (!legacy.empty() && std::filesystem::exists(legacy, ec) && loadState(legacy)) {
         persistState(); // carry the import forward into the new file
     }
+    rescanLibrary(); // library-wide search; runs in the background
 }
 void FileBrowser::setCurrentPath(const std::string& path) {
     const std::string targetPath = resolveExistingDirectoryPath(path, rootPath_);
@@ -2956,6 +2946,7 @@ void FileBrowser::addPlace(const std::string& path) {
 
     customPlacePaths_.push_back(key);
     persistState();
+    if (libraryIndex_) rescanLibrary();
     invalidateCache();
 }
 
@@ -2966,6 +2957,7 @@ void FileBrowser::removePlace(const std::string& path) {
     if (it == customPlacePaths_.end()) return;
     customPlacePaths_.erase(it, customPlacePaths_.end());
     persistState();
+    if (libraryIndex_) rescanLibrary();
     invalidateCache();
 }
 
@@ -2981,6 +2973,7 @@ void FileBrowser::setLibraryRoot(const std::string& path) {
     if (path.empty() || !std::filesystem::is_directory(path, ec)) return;
     rootPath_ = canonicalOrNormalized(std::filesystem::path(path)).string();
     persistState();
+    if (libraryIndex_) rescanLibrary();
     invalidateCache();
 }
 
@@ -3162,6 +3155,34 @@ void FileBrowser::addTaggingSubmenus(const std::string& path) {
         tagsMenu->addCheckbox(tag, hasTag(path, tag), [this, path, tag](bool) { toggleTag(path, tag); });
     }
     popupMenu_->addSubmenu("Tags", tagsMenu);
+}
+
+std::vector<std::string> FileBrowser::indexRoots() const {
+    std::vector<std::string> roots;
+    if (!rootPath_.empty()) roots.push_back(rootPath_);
+    for (const auto& place : customPlacePaths_) roots.push_back(place);
+    // Where downloaded and collected sounds usually live. Not Home, Desktop or
+    // Documents: too broad to crawl on every launch.
+    for (const auto& place : systemPlaces_) {
+        if (place.label == "Music" || place.label == "Downloads") roots.push_back(place.path);
+    }
+    return roots;
+}
+
+void FileBrowser::rescanLibrary() {
+    if (!libraryIndex_) libraryIndex_ = std::make_unique<BrowserLibraryIndex>();
+    libraryIndex_->rebuild(indexRoots());
+}
+
+bool FileBrowser::isLibraryIndexing() const {
+    return libraryIndex_ && libraryIndex_->isCrawling();
+}
+
+void FileBrowser::setSearchWholeLibrary(bool wholeLibrary) {
+    if (searchWholeLibrary_ == wholeLibrary) return;
+    searchWholeLibrary_ = wholeLibrary;
+    persistState();
+    if (isFilterActive()) applyFilter();
 }
 
 void FileBrowser::showCurrentProject() {
@@ -3522,6 +3543,16 @@ void FileBrowser::toggleFolder(const FileItem* item) {
 	        case SortMode::Size:
 	            if (a.size != b.size) return sortAscending_ ? (a.size < b.size) : (a.size > b.size);
 	            return tieBreak();
+	        case SortMode::Length:
+	            if (a.durationSec != b.durationSec) {
+	                return sortAscending_ ? (a.durationSec < b.durationSec) : (a.durationSec > b.durationSec);
+	            }
+	            return tieBreak();
+	        case SortMode::Bpm:
+	            if (a.detectedBpm != b.detectedBpm) {
+	                return sortAscending_ ? (a.detectedBpm < b.detectedBpm) : (a.detectedBpm > b.detectedBpm);
+	            }
+	            return tieBreak();
 	        case SortMode::Modified:
 	            if (a.modifiedTime != b.modifiedTime) {
 	                return sortAscending_ ? (a.modifiedTime < b.modifiedTime) : (a.modifiedTime > b.modifiedTime);
@@ -3602,7 +3633,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                                "Press F5 to retry, or choose another location");
         } else if (isFilterActive()) {
             drawListEmptyState(renderer, listClip, unknownFileIcon_, "No matches",
-                               "Press Esc to clear the search and filters");
+                               isLibraryIndexing() && searchWholeLibrary_
+                                   ? "Still indexing your library \xe2\x80\x94 results appear as it finds them"
+                                   : "Press Esc to clear the search and filters");
         } else if (listingKind_ == ListingKind::Favorites) {
             drawListEmptyState(renderer, listClip, folderIcon_, "No favorites yet",
                                "Right-click any sound or folder and choose Add to Favorites");
@@ -3737,6 +3770,25 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                                                       : item->isDirectory ? folderText : text;
         renderer.drawText(displayName, {contentX, std::round(renderer.calculateTextY(itemRect, labelFont))},
                           labelFont, itemTextColor);
+        float afterNameX = contentX + renderer.measureText(displayName, labelFont).width;
+
+        // A row from somewhere else (library search hit, Favorites, a
+        // collection) names its folder, dimmed, so same-named files stay
+        // tellable apart. Text, not a number column (see BPM note below).
+        if (!item->isPlaceholder && item->depth == 0 && (isShowingListing() || isFilterActive())) {
+            const std::filesystem::path parent = std::filesystem::path(item->path).parent_path();
+            if (isShowingListing() || mapKeyForPath(parent.string()) != mapKeyForPath(currentPath_)) {
+                const std::string folder = parent.filename().string();
+                const float hintFont = themeProps.fontSizeXS;
+                const float room = itemRect.right() - 12.0f - (afterNameX + 8.0f);
+                if (!folder.empty() && room > 40.0f) {
+                    const std::string hint = ellipsizeEnd(renderer, folder, hintFont, room);
+                    renderer.drawText(hint, {afterNameX + 8.0f, std::round(renderer.calculateTextY(itemRect, hintFont))},
+                                      hintFont, muted.withAlpha(0.62f));
+                    afterNameX += 8.0f + renderer.measureText(hint, hintFont).width;
+                }
+            }
+        }
 
         // BPM stays in metadata (search/drag) but is not shown as a row
         // column — owner direction: no number on the right of audio rows.
@@ -3746,7 +3798,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             const std::string key = mapKeyForPath(item->path);
             auto tagIt = tagsByPath_.find(key);
             if (tagIt != tagsByPath_.end() && !tagIt->second.empty()) {
-                const float tagDotStartX = contentX + renderer.measureText(displayName, labelFont).width + 8.0f;
+                const float tagDotStartX = afterNameX + 8.0f;
                 float dotX = tagDotStartX;
                 const float rowCenterY = itemRect.y + itemRect.height * 0.5f;
                 for (const auto& tag : tagIt->second) {
@@ -3968,6 +4020,8 @@ void FileBrowser::showSortMenu() {
     popupMenu_->addRadioItem("Type", "sort_mode", sortMode_ == SortMode::Type, [this]() { setSortMode(SortMode::Type); });
     popupMenu_->addRadioItem("Size", "sort_mode", sortMode_ == SortMode::Size, [this]() { setSortMode(SortMode::Size); });
     popupMenu_->addRadioItem("Date Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
+    popupMenu_->addRadioItem("Length", "sort_mode", sortMode_ == SortMode::Length, [this]() { setSortMode(SortMode::Length); });
+    popupMenu_->addRadioItem("BPM", "sort_mode", sortMode_ == SortMode::Bpm, [this]() { setSortMode(SortMode::Bpm); });
     popupMenu_->addSeparator();
     popupMenu_->addCheckbox("Ascending", sortAscending_, [this](bool checked) { setSortAscending(checked); });
 
@@ -3989,6 +4043,13 @@ void FileBrowser::showQuickFilterMenu() {
                     popupMenu_->addSeparator();
                 }
 
+		    popupMenu_->addRadioItem("Search Whole Library", "search_scope", searchWholeLibrary_,
+		                             [this]() { setSearchWholeLibrary(true); });
+		    popupMenu_->addRadioItem("Search This Folder", "search_scope", !searchWholeLibrary_,
+		                             [this]() { setSearchWholeLibrary(false); });
+		    popupMenu_->addItem(isLibraryIndexing() ? "Indexing Library..." : "Rescan Library",
+		                        [this]() { rescanLibrary(); });
+		    popupMenu_->addSeparator();
 		    popupMenu_->addRadioItem("All Files", "quick_filter", activeQuickFilter_ == QuickFilter::All, [this]() {
 		        activeQuickFilter_ = QuickFilter::All;
 		        applyFilter();
@@ -4626,12 +4687,15 @@ void FileBrowser::setPreviewPanelVisible(bool visible) {
 
 void FileBrowser::applyFilter() {
     filteredFiles_.clear();
-    std::string query = searchInput_ ? searchInput_->getText() : "";
-    const bool hasNameFilter = !query.empty();
+    searchResults_.clear();
+    const std::string rawQuery = searchInput_ ? searchInput_->getText() : "";
+    const BrowserLibrary::SearchQuery query = BrowserLibrary::parseSearchQuery(rawQuery);
+    const bool hasNameFilter = !query.text.empty();
+    const bool hasMetaFilter = query.hasMetadataFilter();
     const bool hasTagFilter = !activeTagFilter_.empty();
     const bool hasQuickFilter = activeQuickFilter_ != QuickFilter::All;
 
-    if (!hasNameFilter && !hasTagFilter && !hasQuickFilter) {
+    if (!hasNameFilter && !hasMetaFilter && !hasTagFilter && !hasQuickFilter) {
         // No filter active, display all root items
         updateDisplayList();
         selectedFile_ = nullptr;
@@ -4642,126 +4706,73 @@ void FileBrowser::applyFilter() {
         return;
     }
 
-    // Prepare search query
-    std::string needle = query;
-    std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c){ return std::tolower(c); });
-
-    // Hybrid Search Rules
-    bool isExtensionSearch = !needle.empty() && needle.front() == '.';
-    bool isSubstringSearch = !isExtensionSearch && needle.find('.') != std::string::npos;
-    bool isFuzzySearch = !isExtensionSearch && !isSubstringSearch;
-
-    // Flatten all items (including children) for comprehensive search
-    std::vector<const FileItem*> allItems;
-    std::function<void(const std::vector<FileItem>&)> gatherItems =
-        [&](const std::vector<FileItem>& items) {
-        for (const auto& item : items) {
-            allItems.push_back(&item);
-            if (item.isDirectory && item.hasLoadedChildren) {
-                gatherItems(item.children); // Recurse
+    // Score an item against every active filter; kNoMatch rejects it.
+    // bpm:/len:/key: only ever match audio whose fact is known.
+    const auto evaluate = [&](const FileItem& item) -> int {
+        int score = 0;
+        if (hasNameFilter) {
+            std::string hay = item.name;
+            std::transform(hay.begin(), hay.end(), hay.begin(), [](unsigned char c) { return std::tolower(c); });
+            score = BrowserLibrary::matchScore(query.text, hay);
+            if (score == BrowserLibrary::kNoMatch) return BrowserLibrary::kNoMatch;
+        }
+        if (hasMetaFilter) {
+            if (item.isDirectory) return BrowserLibrary::kNoMatch;
+            if (query.bpmMax > 0 && (item.detectedBpm < query.bpmMin || item.detectedBpm > query.bpmMax)) {
+                return BrowserLibrary::kNoMatch;
             }
+            const bool lengthFilter = query.lenMin >= 0.0 || query.lenMax >= 0.0;
+            if (lengthFilter && item.durationSec <= 0.0) return BrowserLibrary::kNoMatch;
+            if (query.lenMin >= 0.0 && item.durationSec < query.lenMin) return BrowserLibrary::kNoMatch;
+            if (query.lenMax >= 0.0 && item.durationSec > query.lenMax) return BrowserLibrary::kNoMatch;
+            if (!query.key.empty() && item.musicalKey != query.key) return BrowserLibrary::kNoMatch;
+        }
+        if (hasTagFilter && !hasTag(item.path, activeTagFilter_)) return BrowserLibrary::kNoMatch;
+        if (hasQuickFilter && !matchesQuickFilter(item)) return BrowserLibrary::kNoMatch;
+        return score;
+    };
+
+    // 1. What is loaded here (including expanded subfolders).
+    std::unordered_set<std::string> listedPaths;
+    std::function<void(const std::vector<FileItem>&)> gather = [&](const std::vector<FileItem>& items) {
+        for (const auto& item : items) {
+            const int score = evaluate(item);
+            if (score != BrowserLibrary::kNoMatch) {
+                item.searchScore = score;
+                filteredFiles_.push_back(&item);
+                listedPaths.insert(item.path);
+            }
+            if (item.isDirectory && item.hasLoadedChildren) gather(item.children);
         }
     };
-    gatherItems(rootItems_);
+    gather(rootItems_);
 
-    for (const auto* item : allItems) {
-        bool matchesSearch = true;
-        int score = 0;
-
-        if (hasNameFilter) {
-            std::string hay = item->name; // Search against name (basename)
-            std::transform(hay.begin(), hay.end(), hay.begin(), [](unsigned char c){ return std::tolower(c); });
-
-            if (isExtensionSearch) {
-                // Rule 1: Extension Match (ends_with)
-                if (hay.length() >= needle.length()) {
-                    matchesSearch = (hay.compare(hay.length() - needle.length(), needle.length(), needle) == 0);
-                    score = 1000; // High score for exact extension
-                } else {
-                    matchesSearch = false;
-                }
+    // 2. Everything else in the library, from the background index.
+    const bool searchLibrary = (hasNameFilter || hasMetaFilter) && searchWholeLibrary_ && !isShowingListing() &&
+                               libraryIndex_ != nullptr;
+    if (searchLibrary) {
+        if (const auto snapshot = libraryIndex_->snapshot()) {
+            std::vector<std::pair<int, size_t>> hits;
+            for (size_t i = 0; i < snapshot->size(); ++i) {
+                const FileItem& entry = (*snapshot)[i];
+                if (listedPaths.count(entry.path) != 0) continue;
+                const int score = evaluate(entry);
+                if (score != BrowserLibrary::kNoMatch) hits.emplace_back(score, i);
             }
-            else if (isSubstringSearch) {
-                // Rule 2: Substring-ish (all chars in order, contiguous ideally)
-                // For "kick.wav" seeking "kick.wav" -> exact substring
-                size_t foundPos = hay.find(needle);
-                matchesSearch = (foundPos != std::string::npos);
-                if (matchesSearch) {
-                    score = 500 - static_cast<int>(foundPos); // Prefer earlier matches
-                }
+            // Keep the best: a one-letter query must not build a 100k-row list.
+            constexpr size_t kMaxLibraryHits = 500;
+            if (hits.size() > kMaxLibraryHits) {
+                std::nth_element(hits.begin(), hits.begin() + kMaxLibraryHits, hits.end(),
+                                 [](const auto& a, const auto& b) { return a.first > b.first; });
+                hits.resize(kMaxLibraryHits);
             }
-            else {
-                // Rule 3: Fuzzy Subsequence with Scoring
-                // -1 gap, +10 start, +5 start of word, +5 contiguous
-                // Penalty: -len/10
-
-                size_t nIdx = 0;
-                size_t hIdx = 0;
-                int gapPenalty = 0;
-                int bonuses = 0;
-                int contiguousRun = 0;
-                bool firstCharMatched = false;
-
-                // Track start of match for scoring
-                int firstMatchIdx = -1;
-
-                while (nIdx < needle.length() && hIdx < hay.length()) {
-                    if (needle[nIdx] == hay[hIdx]) {
-                        if (firstMatchIdx == -1) firstMatchIdx = static_cast<int>(hIdx);
-
-                        // Start of string bonus
-                        if (hIdx == 0) bonuses += 10;
-
-                        // Start of word bonus (check prev char for separator)
-                        if (hIdx > 0) {
-                            char prev = hay[hIdx - 1];
-                            if (prev == '_' || prev == '-' || prev == ' ' || prev == '.') {
-                                bonuses += 5;
-                            }
-                        }
-
-                        // Contiguous bonus
-                        if (nIdx > 0 && hIdx > 0 && needle[nIdx-1] == hay[hIdx-1]) { // Logic check: actually just checking if we matched prev loop
-                            // This logic is slightly flawed for "contiguous in haystack", simplistic approach:
-                            contiguousRun++;
-                            if (contiguousRun > 0) bonuses += 5;
-                        } else {
-                            contiguousRun = 0;
-                        }
-
-                        nIdx++;
-                    } else {
-                         // Gap
-                         if (firstMatchIdx != -1) gapPenalty -= 1; // Only penalize gaps inside the match span?
-                         // Or simple: penalize every skipped char
-                    }
-                    hIdx++; // Always advance haystack
-                }
-
-                matchesSearch = (nIdx == needle.length()); // Found all chars
-
-                if (matchesSearch) {
-                    // Simple fuzzy score calculation re-pass or simplification
-                    // Since the above verification loop is greedy, it might not find optimal alignment.
-                    // For UI responsiveness, greedy is usually fine.
-
-                    // Add penalty for total length to prefer shorter files
-                    int lengthPenalty = static_cast<int>(hay.length()) / 10;
-
-                    score = bonuses + gapPenalty - lengthPenalty;
-                }
+            searchResults_.reserve(hits.size());
+            for (const auto& [score, index] : hits) {
+                searchResults_.push_back((*snapshot)[index]);
+                searchResults_.back().depth = 0;
+                searchResults_.back().searchScore = score;
             }
-        }
-
-        bool matchesTag = true;
-        if (matchesTag && hasTagFilter) {
-            matchesTag = hasTag(item->path, activeTagFilter_);
-        }
-        bool matchesType = !hasQuickFilter || matchesQuickFilter(*item);
-
-        if (matchesSearch && matchesTag && matchesType) {
-            item->searchScore = score;
-            filteredFiles_.push_back(item);
+            for (const auto& result : searchResults_) filteredFiles_.push_back(&result);
         }
     }
 
@@ -5175,6 +5186,7 @@ bool FileBrowser::saveState(const std::string& filePath) const {
     j.set("rootPath", Aestra::JSON(rootPath_));
     j.set("sortMode", Aestra::JSON(static_cast<double>(sortMode_)));
     j.set("sortAscending", Aestra::JSON(sortAscending_));
+    j.set("searchWholeLibrary", Aestra::JSON(searchWholeLibrary_));
 
     Aestra::JSON favArr = Aestra::JSON::array();
     for (const auto& f : favoritesPaths_) favArr.push(Aestra::JSON(f));
@@ -5281,12 +5293,15 @@ bool FileBrowser::loadState(const std::string& filePath) {
 
     if (j.has("sortMode") && j["sortMode"].isNumber()) {
         const int mode = static_cast<int>(j["sortMode"].asNumber());
-        if (mode >= static_cast<int>(SortMode::Name) && mode <= static_cast<int>(SortMode::Modified)) {
+        if (mode >= static_cast<int>(SortMode::Name) && mode <= static_cast<int>(SortMode::Bpm)) {
             sortMode_ = static_cast<SortMode>(mode);
         }
     }
     if (j.has("sortAscending") && j["sortAscending"].isBool()) {
         sortAscending_ = j["sortAscending"].asBool();
+    }
+    if (j.has("searchWholeLibrary") && j["searchWholeLibrary"].isBool()) {
+        searchWholeLibrary_ = j["searchWholeLibrary"].asBool();
     }
 
     if (j.has("rootPath") && j["rootPath"].isString()) {

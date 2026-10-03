@@ -23,6 +23,7 @@
 namespace AestraUI {
 
 class NUIContextMenu;
+class BrowserLibraryIndex;
 class NUITextInput;
 class NUIPlatformBridge;
 
@@ -82,7 +83,11 @@ struct FileItem {
     mutable bool cacheValid = false;
     mutable bool isTruncated = false;
     mutable int searchScore = 0;
-    int detectedBpm = 0;
+    int detectedBpm = 0;          // filename, else a WAV ACID tempo; 0 = unknown
+    double durationSec = 0.0;     // from the header; 0 = unknown
+    uint32_t sampleRate = 0;
+    uint16_t channels = 0;
+    std::string musicalKey;       // from the filename ("Am", "F#"); "" = unknown
 
     FileItem()
         : type(FileType::Unknown), isDirectory(false), size(0) {}
@@ -239,11 +244,14 @@ public:
     const std::vector<const FileItem*>& getVisibleFiles() const { return getActiveView(); }
     
     // Sorting
+    // Persisted as an integer: append only.
     enum class SortMode {
         Name,
         Type,
         Size,
-        Modified
+        Modified,
+        Length,
+        Bpm
     };
 
     enum class QuickFilter {
@@ -254,6 +262,13 @@ public:
     };
     
     void setSortMode(SortMode mode);
+
+    // Library-wide search: a background index of the library root, Places and
+    // Music/Downloads lets the search box reach folders that are not open.
+    void rescanLibrary();
+    bool isLibraryIndexing() const;
+    void setSearchWholeLibrary(bool wholeLibrary);
+    bool isSearchingWholeLibrary() const { return searchWholeLibrary_; }
     void setSortAscending(bool ascending);
     SortMode getSortMode() const { return sortMode_; }
     bool isSortAscending() const { return sortAscending_; }
@@ -470,6 +485,13 @@ public:
         std::string listingTag_;
         std::string statePath_;
         std::vector<BrowserLibrary::SystemPlace> systemPlaces_;
+        std::vector<std::string> indexRoots() const;
+        std::unique_ptr<BrowserLibraryIndex> libraryIndex_;
+        uint64_t seenIndexRevision_ = 0;
+        double indexRefreshCooldown_ = 0.0;
+        // Rows for library-wide search hits (the list holds pointers into it).
+        std::vector<FileItem> searchResults_;
+        bool searchWholeLibrary_ = true;
         // "+ Add Folder > Choose a Folder...": the native picker runs off the
         // UI thread; onUpdate() collects the answer.
         Aestra::PendingFileDialog folderPicker_;
