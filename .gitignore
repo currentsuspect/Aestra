@@ -231,3 +231,7 @@ labs/perf/
 # `git add -A` swept the file the heredoc had just written.
 /msg*.txt
 /commitmsg.txt
+/eqmsg.txt
+# One-off fix-up scripts written to the root mid-change (tmp_p5fix3.py rode in
+# with #1025 the same way).
+/tmp_*.py
