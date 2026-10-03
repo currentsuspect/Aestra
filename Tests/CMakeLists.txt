@@ -1787,6 +1787,27 @@ add_test(NAME UISurfaceResolutionGuardSelfTest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution_selftest.cmake)
 set_tests_properties(UISurfaceResolutionGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:application" TIMEOUT 120)
 
+# File-size ratchet: no first-party source file may pass 1500 lines, and the
+# files already over it are pinned in Tests/Guards/file_size_baseline.txt at
+# their exact count. They may shrink, never grow, and a shrink must lower the
+# row so the improvement is kept. The cheap half of keeping a hub from forming:
+# it bounds size, not coupling.
+add_test(NAME FileSizeRatchetGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet.cmake)
+set_tests_properties(FileSizeRatchetGuard PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
+
+# Self-test: the exact baseline and at-cap files pass; growth, a stale row, a
+# row for a file now under the cap, a missing pinned file, an unpinned file over
+# the cap and a malformed row each fail with their own message.
+add_test(NAME FileSizeRatchetGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/file_size_guard_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet_selftest.cmake)
+set_tests_properties(FileSizeRatchetGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
+
 # V8-G2 — the required-UI-test list must be identical in all three places it
 # lives: AESTRA_REQUIRED_UI_TESTS (fails configure), ci.yml's --target list
 # (decides what is BUILT) and ci.yml's -R selector (decides what is RUN).
