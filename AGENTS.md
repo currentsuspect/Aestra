@@ -310,6 +310,19 @@ Follow `.clang-format` and `.clang-tidy`.
 | Files            | `PascalCase.h/.cpp` | `AudioEngine.cpp`      |
 | Namespace        | `Aestra`            | `Aestra::AudioEngine`  |
 
+### File size
+
+No first-party source file may exceed **1500 lines**. The files already over it
+are pinned in `Tests/Guards/file_size_baseline.txt` at their exact count:
+
+* They may **shrink**, never grow. When one shrinks, lower its row in the same
+  PR, or `FileSizeRatchetGuard` fails it as stale.
+* A feature that would grow a pinned file goes into a new file instead. That is
+  the point: a hub such as `AestraContent.cpp` grows a few reasonable lines at a
+  time until no reviewer can say what a change to it touches.
+* Raising a row is the explicit exception. Do it in the PR that needs it, and say
+  why in the description.
+
 ---
 
 ## 10. Real-Time Audio Rules
