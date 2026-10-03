@@ -300,7 +300,7 @@ public:
     //    measurable: the transparent-path test (ratio 1:1 set after activate)
     //    reads -12.8 dB of error instead of -91 dB. Smooth glide is correct for
     //    a running compressor and wrong before the first block.
-    void onParameterChanged(uint32_t id, float value) override {
+    void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         if (id == kDetectorHPF) {
             m_detectorHPFDirty.store(true, std::memory_order_release);
         } else if (id == kOversampling) {
@@ -344,6 +344,7 @@ public:
 
     const ParamSpec* paramSpecs() const override { return kSpecs; }
     uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
     uint32_t stateMagic() const override { return kStateMagic; }
 
 

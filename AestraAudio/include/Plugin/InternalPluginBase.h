@@ -36,6 +36,81 @@ struct ParamSpec {
     uint32_t stepCount = 0;
 };
 
+/// Ceiling on a built-in's parameter count. The base's storage reserves this
+/// many slots and indexes them by ParamSpec::id, so every id must sit below it.
+inline constexpr uint32_t kMaxInternalPluginParams = 48;
+
+namespace ParamSpecCheck {
+
+/// The table's length agrees with the count the plugin reports. The base walks
+/// [paramSpecs(), paramSpecs() + paramSpecCount()), so a count larger than the
+/// table reads past its end -- an enum value added without a table row.
+template <size_t N>
+constexpr bool sizeMatches(const ParamSpec (&)[N], uint32_t declaredCount) {
+    return N == declaredCount && N <= kMaxInternalPluginParams;
+}
+
+/// Every id indexes the base's storage, so one at or past the ceiling writes
+/// out of bounds on the first seedDefaults().
+template <size_t N>
+constexpr bool idsInRange(const ParamSpec (&specs)[N]) {
+    for (size_t i = 0; i < N; ++i)
+        if (specs[i].id >= kMaxInternalPluginParams)
+            return false;
+    return true;
+}
+
+/// The keyed state blob identifies a parameter by id alone, so two rows sharing
+/// one would save twice and load into whichever findSpec() meets first.
+template <size_t N>
+constexpr bool idsUnique(const ParamSpec (&specs)[N]) {
+    for (size_t i = 0; i < N; ++i)
+        for (size_t j = 0; j < i; ++j)
+            if (specs[j].id == specs[i].id)
+                return false;
+    return true;
+}
+
+template <size_t N>
+constexpr bool defaultsInRange(const ParamSpec (&specs)[N]) {
+    for (size_t i = 0; i < N; ++i)
+        if (!(specs[i].minValue <= specs[i].defaultValue && specs[i].defaultValue <= specs[i].maxValue))
+            return false;
+    return true;
+}
+
+/// isBypassed() reads the first bypass row it finds; a second would be ignored.
+template <size_t N>
+constexpr bool atMostOneBypass(const ParamSpec (&specs)[N]) {
+    size_t rows = 0;
+    for (size_t i = 0; i < N; ++i)
+        if (specs[i].isBypass)
+            ++rows;
+    return rows <= 1;
+}
+
+} // namespace ParamSpecCheck
+
+} // namespace Audio
+} // namespace Aestra
+
+/// Compile-time validation of a built-in's ParamSpec table against the count it
+/// reports. Place it in the class body after paramSpecCount(). A table that
+/// fails any of these does not build, rather than reading or writing out of
+/// bounds the first time an instance is created.
+#define AESTRA_VALIDATE_PARAM_SPECS(specs, count)                                                                     \
+    static_assert(::Aestra::Audio::ParamSpecCheck::sizeMatches(specs, count),                                       \
+                  "ParamSpec table length must equal the reported parameter count, and fit the base's storage");   \
+    static_assert(::Aestra::Audio::ParamSpecCheck::idsInRange(specs),                                               \
+                  "every ParamSpec id must be below kMaxInternalPluginParams");                                     \
+    static_assert(::Aestra::Audio::ParamSpecCheck::idsUnique(specs), "ParamSpec ids must be unique");               \
+    static_assert(::Aestra::Audio::ParamSpecCheck::defaultsInRange(specs),                                          \
+                  "every ParamSpec default must lie within [minValue, maxValue]");                                  \
+    static_assert(::Aestra::Audio::ParamSpecCheck::atMostOneBypass(specs), "at most one ParamSpec row may be bypass")
+
+namespace Aestra {
+namespace Audio {
+
 /// Shared base for built-in effect plugins.
 ///
 /// It owns the parts of IPluginInstance that were identical in all twelve:
@@ -49,10 +124,12 @@ struct ParamSpec {
 /// third-party VST3/CLAP hosting — OutOfProcessPluginInstance keeps its own
 /// path — so nothing here changes a plugin boundary.
 ///
-/// State compatibility (AGENTS.md §11): the blob is the same {magic, version,
-/// params[]} layout plugins already ship, so migrating a plugin does not
-/// invalidate a saved project. A plugin whose blob carries extra fields
-/// overrides saveState()/loadState() instead.
+/// State (AGENTS.md §12): the base writes a keyed v2 blob, {magic, version=2,
+/// count, (id, value) * count}, and rejects v1 by decision -- FD-24 reset the
+/// format while no released project existed. See saveState(). A plugin whose
+/// blob carries extra fields (EQ's dynamic bands) overrides saveState()/
+/// loadState() instead. Each plugin's table is checked at compile time with
+/// AESTRA_VALIDATE_PARAM_SPECS.
 class InternalPluginBase : public IPluginInstance {
 public:
     ~InternalPluginBase() override = default;
@@ -89,7 +166,12 @@ public:
     /// Called after a parameter is stored, so a plugin can invalidate derived
     /// state (filter coefficients, oversampling config) or mirror the value
     /// into a smoothed copy. Not called for a rejected value.
-    virtual void onParameterChanged(uint32_t /*id*/, float /*value*/) {}
+    ///
+    /// Runs on the AUDIO THREAD: AudioEngine::renderTrack applies plugin-
+    /// parameter automation through setParameter() every block. An override
+    /// must stay non-blocking -- set a flag, store a value -- and must carry
+    /// AESTRA_RT_NONBLOCKING itself so the RT effect check can see its body.
+    virtual void onParameterChanged(uint32_t /*id*/, float /*value*/) AESTRA_RT_NONBLOCKING {}
 
     // ==================================================================
     // Parameters — owned here
@@ -126,7 +208,9 @@ public:
     /// A non-finite value is rejected outright, leaving the previous value in
     /// place. std::clamp(NaN, 0, 1) is NaN, so a clamp alone does not stop
     /// one, and a NaN parameter poisons the DSP for the life of the instance.
-    void setParameter(uint32_t id, float value) override {
+    ///
+    /// Audio-thread entry point: automation calls this from renderTrack.
+    void setParameter(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         if (id >= kMaxSpecParams)
             return;
         const ParamSpec* spec = findSpec(id);
@@ -320,7 +404,7 @@ public:
 protected:
     /// Ceiling on a plugin's parameter count. The built-in tables run 5
     /// (Transient) to 33 (EQ); this is what the shared blob reserves.
-    static constexpr uint32_t kMaxSpecParams = 48;
+    static constexpr uint32_t kMaxSpecParams = kMaxInternalPluginParams;
     /// v1 was positional and is no longer read. v2 is keyed: each entry carries
     /// its own id, so parameter identity is independent of table order.
     static constexpr uint32_t kStateVersion = 2;

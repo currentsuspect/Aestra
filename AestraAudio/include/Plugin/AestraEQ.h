@@ -273,13 +273,25 @@ struct EQKeyedParam {
 /// has no business owning. Deliberately boring, and deliberately NOT the base's
 /// own saveState(): the tail is 24 band records the parameter system has no
 /// vocabulary for. See the comment on loadState().
+///
+/// The struct is what THIS build writes. The reader does not overlay it: it walks
+/// the blob by byte offset using the writer's own paramCount, because a build
+/// with a different parameter count writes a different-sized param section and
+/// the band tail moves with it.
+inline constexpr uint32_t kEQParamCount = 33;       // AestraEQ::kParamCount
+inline constexpr uint32_t kEQMaxDynamicBands = 24;  // AestraEQ::kMaxDynamicBands
+
 struct EQStateBlob {
     uint32_t magic;
     uint32_t version;
     uint32_t paramCount;
-    EQKeyedParam params[33]; // V6/V7/V8 public param count
-    EQDynamicBandState dynamicBands[24];
+    EQKeyedParam params[kEQParamCount];
+    EQDynamicBandState dynamicBands[kEQMaxDynamicBands];
 };
+
+static_assert(sizeof(EQStateBlob) == sizeof(uint32_t) * 3 + sizeof(EQKeyedParam) * kEQParamCount +
+                                         sizeof(EQDynamicBandState) * kEQMaxDynamicBands,
+              "EQStateBlob must have no padding: loadState() reads it by byte offset");
 
 // ============================================================================
 // Aestra EQ V1 — 6-band fixed-type parametric equalizer
@@ -290,7 +302,7 @@ public:
     static constexpr uint32_t kNumBands = 8;         // Legacy state/editor compatibility count
     static constexpr uint32_t kV1BandCount = 6;      // V1 public band count
     static constexpr uint32_t kLegacyBandCount = kV1BandCount;
-    static constexpr uint32_t kMaxDynamicBands = 24; // Target advanced EQ slot count
+    static constexpr uint32_t kMaxDynamicBands = kEQMaxDynamicBands; // Target advanced EQ slot count
     // Canonical magic, carrying the V8 value: each format change renumbers the
     // version field, not the magic, so a pre-reset EQ blob is still recognisably
     // this plugin's and is rejected on version rather than on magic.
@@ -349,7 +361,7 @@ public:
     static constexpr uint32_t kParamHShStereoMode = 31;
     static constexpr uint32_t kParamLPFStereoMode = 32;
     static constexpr uint32_t kV1ParamCount      = 23;
-    static constexpr uint32_t kParamCount        = 33;
+    static constexpr uint32_t kParamCount        = kEQParamCount;
 
     // Legacy parameter count (for internal band mapping)
     static constexpr uint32_t kLegacyBandStride = 5;
@@ -692,12 +704,13 @@ public:
 
     const ParamSpec* paramSpecs() const override { return kSpecs; }
     uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
     uint32_t stateMagic() const override { return kStateMagic; }
 
     // The base's setParameter does the storage, the non-finite rejection and the
     // clamp. This carries what EQ did on top: every parameter invalidates
     // smoothed targets and some invalidate filter coefficients.
-    void onParameterChanged(uint32_t id, float value) override {
+    void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         markDirtyForParam(id);
     }
 
@@ -748,8 +761,8 @@ public:
         blob.version = 2;
         blob.paramCount = kParamCount;
         for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i].id = i;
-            blob.params[i].value = getParameter(i);
+            blob.params[i].id = kSpecs[i].id;
+            blob.params[i].value = getParameter(kSpecs[i].id);
         }
         for (uint32_t slot = 0; slot < kMaxDynamicBands; ++slot) {
             const auto snapshot = getDynamicBandSlotSnapshot(slot);
@@ -789,51 +802,59 @@ public:
 // The v1..v7 readers are gone by decision. A pre-reset blob is rejected rather
 // than half-read.
 bool loadState(const std::vector<uint8_t>& state) {
-        if (state.size() < sizeof(EQStateBlob)) {
+        // Walked by byte offset, never overlaid with EQStateBlob. The param
+        // section's length is the WRITER's paramCount, so the band tail sits at
+        // a different offset in a blob from a build with more or fewer
+        // parameters. Overlaying the struct read a removed parameter's blob as
+        // too short (rejected) and an added one's bands from the wrong bytes.
+        constexpr size_t kHeaderSize = sizeof(uint32_t) * 3;
+        if (state.size() < kHeaderSize) {
             return false;
         }
-        const auto* blob = reinterpret_cast<const EQStateBlob*>(state.data());
-        // Version first, and the v1 check is exact. A v1 blob is a DIFFERENT
-        // struct size, so sizeof(EQStateBlob) already rejects most of them — but
-        // not all, and a blob that passed on size alone would have its param
-        // floats read as (id, value) pairs and restore garbage silently.
-        if (blob->magic != kStateMagic || blob->version != 2u) {
+        uint32_t magic = 0;
+        uint32_t version = 0;
+        uint32_t count = 0;
+        std::memcpy(&magic, state.data(), sizeof(magic));
+        std::memcpy(&version, state.data() + sizeof(uint32_t), sizeof(version));
+        std::memcpy(&count, state.data() + sizeof(uint32_t) * 2, sizeof(count));
+        // Version first, and exact: a pre-reset blob is rejected rather than
+        // half-read (FD-24).
+        if (magic != kStateMagic || version != 2u) {
             return false;
         }
-        if (blob->paramCount > kParamCount) {
+        // Zero is no writer's shape, and the ceiling bounds the scratch below.
+        if (count == 0 || count > kMaxInternalPluginParams) {
+            return false;
+        }
+        const size_t bandsOffset = kHeaderSize + sizeof(EQKeyedParam) * count;
+        if (state.size() < bandsOffset + sizeof(EQDynamicBandState) * kMaxDynamicBands) {
             return false;
         }
 
         // Apply by id, not by position. An id the table does not have is
         // ignored (a removed parameter); an id the table has but the blob does
-        // not keeps its default (an added one). Both are what make a changing
-        // parameter table safe, and both are why this cannot be a loop over
-        // `i` any more.
+        // not keeps its default (an added one).
         //
-        // TWO PASSES, and the first one is not optional. Classifying inline and
-        // applying in the same loop means a NaN in entry 5 returns false with
-        // entries 0-4 already written — the exact half-updated instance
-        // AGENTS.md §12 forbids, and the thing InternalPluginBase's two-pass
-        // structure exists to prevent. CodeRabbit caught this on the first
-        // review of #1024; the comment here had claimed "reject before anything
-        // is written" while the code did the opposite.
-        for (uint32_t i = 0; i < blob->paramCount; ++i) {
-            const uint32_t id = blob->params[i].id;
-            if (id >= kParamCount)
+        // TWO PASSES, and the first one is not optional: a NaN in entry 5 must
+        // not leave entries 0-4 already written (AGENTS.md §12).
+        std::array<EQKeyedParam, kMaxInternalPluginParams> entries{};
+        for (uint32_t i = 0; i < count; ++i) {
+            std::memcpy(&entries[i], state.data() + kHeaderSize + sizeof(EQKeyedParam) * i, sizeof(EQKeyedParam));
+            if (entries[i].id >= kParamCount)
                 continue; // unknown to this table: a removed parameter, or junk
-            if (!std::isfinite(blob->params[i].value))
+            if (!std::isfinite(entries[i].value))
                 return false;
         }
-        for (uint32_t i = 0; i < blob->paramCount; ++i) {
-            const uint32_t id = blob->params[i].id;
-            if (id >= kParamCount)
+        for (uint32_t i = 0; i < count; ++i) {
+            if (entries[i].id >= kParamCount)
                 continue;
-            setParameter(id, std::clamp(blob->params[i].value, 0.0f, 1.0f));
+            setParameter(entries[i].id, std::clamp(entries[i].value, 0.0f, 1.0f));
         }
 
         resetDynamicBandSlots();
         for (uint32_t slot = kLegacyBandCount; slot < kMaxDynamicBands; ++slot) {
-            const auto& saved = blob->dynamicBands[slot];
+            EQDynamicBandState saved{};
+            std::memcpy(&saved, state.data() + bandsOffset + sizeof(EQDynamicBandState) * slot, sizeof(saved));
             if (saved.enabled == 0u) {
                 continue;
             }
@@ -1613,7 +1634,7 @@ private:
         }
     }
 
-    void markDirtyForParam(uint32_t id) {
+    void markDirtyForParam(uint32_t id) AESTRA_RT_NONBLOCKING {
         if (id == kParamBypass) return;
         if (parameterAffectsFilters(id)) {
             const uint32_t band = bandIndexForParam(id);

@@ -71,14 +71,15 @@ using PluginEditorFactory = std::function<std::shared_ptr<AestraPanelWindow>(
  * widget stack and thorvg into a test whose entire job is checking that eleven
  * strings are spelled correctly and resolve.
  *
- * So the id/name table is header-inline and the factory lookup lives in the .cpp,
- * scanning this same table. It cannot disagree with it: there is one table, and
- * the .cpp reads it rather than repeating it.
+ * So the id/name table is header-inline and the factories live in the .cpp,
+ * keyed by editorName. The .cpp stringises each factory's name from the editor
+ * type itself and static_asserts that its list and this table name the same set
+ * of editors, so neither list's order matters and a mismatch does not build.
  */
 struct PluginEditorRegistration {
     /// Permanent plugin id. Never a display name -- see AGENTS.md §19.
     const char* pluginId;
-    /// Short label for diagnostics, so a log line naming an editor is readable.
+    /// The editor's class name, exactly. The .cpp finds this row's factory by it.
     const char* editorName;
 };
 

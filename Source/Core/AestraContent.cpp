@@ -2433,6 +2433,8 @@ AestraContent::ViewOpenState AestraContent::getViewOpenState(Audio::ViewType vie
         state.visible = m_takesPanel && m_takesPanel->isVisible();
         state.requestedOpen = state.visible;
         break;
+    case Audio::ViewType::Count:
+        break; // a sentinel, not a view
     }
     return state;
 }

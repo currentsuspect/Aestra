@@ -1880,6 +1880,90 @@ bool testPreResetBlobsAreRejectedImpl() {
 }
 bool testPreResetBlobsAreRejected() { return report("Pre-reset EQ blobs rejected, nothing mutated", testPreResetBlobsAreRejectedImpl()); }
 
+// A blob written by a build with a different parameter count: the param section
+// is longer or shorter, so the dynamic-band tail sits at a different offset. The
+// reader must find it from the writer's paramCount, not from sizeof(EQStateBlob).
+std::vector<uint8_t> rewriteEQParamSection(const std::vector<uint8_t>& canonical, uint32_t dropId, bool appendUnknown) {
+    constexpr size_t kHeader = sizeof(uint32_t) * 3;
+    uint32_t count = 0;
+    std::memcpy(&count, canonical.data() + sizeof(uint32_t) * 2, sizeof(count));
+    const size_t entriesEnd = kHeader + sizeof(EQKeyedParam) * count;
+
+    std::vector<uint8_t> out(canonical.begin(), canonical.begin() + kHeader);
+    uint32_t written = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        EQKeyedParam entry{};
+        std::memcpy(&entry, canonical.data() + kHeader + sizeof(EQKeyedParam) * i, sizeof(entry));
+        if (entry.id == dropId)
+            continue;
+        const auto* bytes = reinterpret_cast<const uint8_t*>(&entry);
+        out.insert(out.end(), bytes, bytes + sizeof(entry));
+        ++written;
+    }
+    if (appendUnknown) {
+        const EQKeyedParam unknown{40u, 0.9f}; // an id this table does not have
+        const auto* bytes = reinterpret_cast<const uint8_t*>(&unknown);
+        out.insert(out.end(), bytes, bytes + sizeof(unknown));
+        ++written;
+    }
+    std::memcpy(out.data() + sizeof(uint32_t) * 2, &written, sizeof(written));
+    out.insert(out.end(), canonical.begin() + static_cast<std::ptrdiff_t>(entriesEnd), canonical.end());
+    return out;
+}
+
+bool testDifferentParamCountKeepsBandsImpl() {
+    AestraEQ source;
+    source.initialize(kSampleRate, kBlockSize);
+    source.setParameter(AestraEQ::kParamOutputGain, 0.375f);
+    source.setParameter(AestraEQ::kParamBell1Gain, 0.625f);
+    const uint32_t slot = AestraEQ::kLegacyBandCount + 3u;
+    if (!source.setDynamicBandSlot(slot, {true, FilterType::Bell, AestraEQ::StereoMode::Stereo, 0.42f, 0.71f,
+                                          0.33f, false})) {
+        std::cerr << "could not create the dynamic band under test\n";
+        return false;
+    }
+    const auto canonical = source.saveState();
+    AestraEQ pristine;
+    pristine.initialize(kSampleRate, kBlockSize);
+
+    struct Case {
+        const char* name;
+        uint32_t dropId;
+        bool appendUnknown;
+    };
+    for (const Case c : {Case{"one parameter fewer", AestraEQ::kParamOutputGain, false},
+                         Case{"one unknown parameter more", 0xFFFFFFFFu, true}}) {
+        const auto blob = rewriteEQParamSection(canonical, c.dropId, c.appendUnknown);
+        AestraEQ restored;
+        restored.initialize(kSampleRate, kBlockSize);
+        if (!restored.loadState(blob)) {
+            std::cerr << "EQ blob with " << c.name << " was rejected\n";
+            return false;
+        }
+        for (uint32_t id = 0; id < AestraEQ::kParamCount; ++id) {
+            const float expected = id == c.dropId ? pristine.getParameter(id) : source.getParameter(id);
+            if (std::fabs(restored.getParameter(id) - expected) > 1.0e-6f) {
+                std::cerr << "EQ blob with " << c.name << ": parameter " << id << " is " << restored.getParameter(id)
+                          << ", expected " << expected << "\n";
+                return false;
+            }
+        }
+        const auto expected = source.getDynamicBandSlotSnapshot(slot);
+        const auto actual = restored.getDynamicBandSlotSnapshot(slot);
+        if (!actual.enabled || actual.type != expected.type ||
+            std::abs(actual.frequencyNorm - expected.frequencyNorm) > 0.001f ||
+            std::abs(actual.gainNorm - expected.gainNorm) > 0.001f) {
+            std::cerr << "EQ blob with " << c.name << ": dynamic band " << slot << " was read from the wrong offset\n";
+            return false;
+        }
+    }
+    return true;
+}
+bool testDifferentParamCountKeepsBands() {
+    return report("Blob from a build with a different param count keeps params and bands",
+                  testDifferentParamCountKeepsBandsImpl());
+}
+
 bool testParamSpecTableMatchesDefaultsImpl() {
     const AestraEQ probe;
     const auto& specs = AestraEQ::kSpecs;
@@ -1970,6 +2054,7 @@ int main() {
     testSampleRateInit96000();
     testCanonicalStateRoundtrip();
     testPreResetBlobsAreRejected();
+    testDifferentParamCountKeepsBands();
     testParamSpecTableMatchesDefaults();
     testCorruptStateFails();
     testShortStateFails();

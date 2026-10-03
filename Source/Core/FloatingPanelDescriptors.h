@@ -23,6 +23,7 @@
 #include "ViewTypes.h"
 
 #include <array>
+#include <cstddef>
 
 namespace Aestra {
 namespace Content {
@@ -69,9 +70,10 @@ inline constexpr std::array<FloatingPanelGeometry, 5> kFloatingPanelGeometry{{
     {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 320.0, 480.0, 0.5, 0.0, 280.0, 180.0},
 }};
 
-/// The floating ViewTypes, in enum order. Derived from the enum rather than
-/// written out, so adding a ViewType makes this change and the test notices.
-inline constexpr std::array<Audio::ViewType, 6> kAllViewTypes{{
+/// Every ViewType, in enum order. Written out by hand, so the static_assert
+/// below holds it to the enum: the array is sized by ViewType::Count, and an
+/// entry left out reads as a value-initialized Mixer in the wrong position.
+inline constexpr std::array<Audio::ViewType, static_cast<size_t>(Audio::ViewType::Count)> kAllViewTypes{{
     Audio::ViewType::Mixer,
     Audio::ViewType::Sequencer,
     Audio::ViewType::PianoRoll,
@@ -79,6 +81,19 @@ inline constexpr std::array<Audio::ViewType, 6> kAllViewTypes{{
     Audio::ViewType::History,
     Audio::ViewType::Takes,
 }};
+
+// kAllViewTypes is what the registry guard iterates, so a view missing from it
+// is a view the guard never checks. This makes "every ViewType, in order" a
+// compile-time fact instead of a convention: a value added to the enum before
+// Count grows the array, and the list stops building until it is added here too.
+inline constexpr bool allViewTypesListedInOrder() {
+    for (size_t i = 0; i < kAllViewTypes.size(); ++i)
+        if (static_cast<size_t>(kAllViewTypes[i]) != i)
+            return false;
+    return true;
+}
+static_assert(allViewTypesListedInOrder(),
+              "kAllViewTypes must list every ViewType in enum order -- one was added to the enum but not here");
 
 /// The ViewType that is the workspace rather than an overlay.
 inline constexpr Audio::ViewType kWorkspaceView = Audio::ViewType::Playlist;

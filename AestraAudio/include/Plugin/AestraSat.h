@@ -187,6 +187,7 @@ public:
 
     const ParamSpec* paramSpecs() const override { return kSpecs; }
     uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
     uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {

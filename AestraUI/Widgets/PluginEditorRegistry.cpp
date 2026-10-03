@@ -6,6 +6,12 @@
 // linking this file. What lives here is the part that cannot be checked without a
 // live instance and a platform bridge: the lambdas that actually construct the
 // eleven editors.
+//
+// The factories are paired with registry rows BY EDITOR NAME, not by position.
+// The name comes from the editor's own type (#T below), so a factory cannot sit
+// under the wrong name, and the static_asserts check that the two lists name the
+// same set of editors. Reordering either list is harmless; a row with no factory,
+// or a factory with no row, does not build.
 
 #include "PluginEditorRegistry.h"
 
@@ -47,48 +53,100 @@ PluginEditorFactory factoryFor() {
     };
 }
 
-/// The factories, indexed to match `pluginEditorRegistry` in the header.
-///
-/// The static_assert is the load-bearing line: it ties the two tables together at
-/// compile time, so a row added to one without a factory in the other is a build
-/// failure rather than a null editor at runtime. Order is a human agreement
-/// between two arrays, which is the one thing in this file that cannot be checked
-/// by the compiler — so PluginEditorRegistryTest checks the id side, and this
-/// assert checks the size side. A future refactor should replace the pairing with
-/// a single table and accept the link cost, or put the factories in the header.
-const std::array<PluginEditorFactory, pluginEditorRegistry.size()>& pluginEditorFactories() {
-    static const std::array<PluginEditorFactory, pluginEditorRegistry.size()> kFactories{{
-        factoryFor<GenericPluginEditor>(),
+// Every editor type, once. Each entry's name is stringised from the type itself,
+// which is what ties a factory to its name.
+#define AESTRA_CORE_PLUGIN_EDITORS(X)                                                                                  \
+    X(GenericPluginEditor)                                                                                             \
+    X(AestraEQEditor)                                                                                                  \
+    X(AestraCompEditor)                                                                                                \
+    X(AestraVerbEditor)                                                                                                \
+    X(AestraDelayEditor)                                                                                               \
+    X(AestraDriftEditor)                                                                                               \
+    X(AestraLimitEditor)                                                                                               \
+    X(AestraSatEditor)                                                                                                 \
+    X(AestraFilterEditor)                                                                                              \
+    X(AestraOTTEditor)                                                                                                 \
+    X(AestraLFOEditor)                                                                                                 \
+    X(AestraTransientEditor)
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
-        factoryFor<RumblePluginEditor>(),
+#define AESTRA_PREMIUM_PLUGIN_EDITORS(X) X(RumblePluginEditor)
+#else
+#define AESTRA_PREMIUM_PLUGIN_EDITORS(X)
 #endif
-        factoryFor<AestraEQEditor>(),
-        factoryFor<AestraCompEditor>(),
-        factoryFor<AestraVerbEditor>(),
-        factoryFor<AestraDelayEditor>(),
-        factoryFor<AestraDriftEditor>(),
-        factoryFor<AestraLimitEditor>(),
-        factoryFor<AestraSatEditor>(),
-        factoryFor<AestraFilterEditor>(),
-        factoryFor<AestraOTTEditor>(),
-        factoryFor<AestraLFOEditor>(),
-        factoryFor<AestraTransientEditor>(),
-    }};
-    static_assert(kFactories.size() == pluginEditorRegistry.size(),
-                  "every registry row needs a factory, or pluginEditorFactoryFor returns a null editor");
+
+#define AESTRA_EDITOR_NAME(T) #T,
+constexpr const char* kEditorNames[] = {AESTRA_CORE_PLUGIN_EDITORS(AESTRA_EDITOR_NAME)
+                                            AESTRA_PREMIUM_PLUGIN_EDITORS(AESTRA_EDITOR_NAME)};
+#undef AESTRA_EDITOR_NAME
+
+constexpr bool sameName(const char* a, const char* b) {
+    while (*a != '\0' && *a == *b) {
+        ++a;
+        ++b;
+    }
+    return *a == *b;
+}
+
+constexpr bool isEditorName(const char* name) {
+    for (const char* candidate : kEditorNames)
+        if (sameName(candidate, name))
+            return true;
+    return false;
+}
+
+constexpr bool everyRowHasAFactory() {
+    for (const PluginEditorRegistration& r : pluginEditorRegistry)
+        if (!isEditorName(r.editorName))
+            return false;
+    return true;
+}
+
+constexpr bool everyFactoryHasARow() {
+    for (const char* name : kEditorNames) {
+        bool found = false;
+        for (const PluginEditorRegistration& r : pluginEditorRegistry)
+            found = found || sameName(r.editorName, name);
+        if (!found)
+            return false;
+    }
+    return true;
+}
+
+static_assert(everyRowHasAFactory(),
+              "a pluginEditorRegistry row names an editor with no factory -- add it to AESTRA_CORE_PLUGIN_EDITORS");
+static_assert(everyFactoryHasARow(), "an editor factory has no pluginEditorRegistry row");
+static_assert(sameName(pluginEditorRegistry.front().editorName, "GenericPluginEditor"),
+              "the first registry row is the generic fallback");
+
+struct NamedFactory {
+    const char* name;
+    PluginEditorFactory factory;
+};
+
+constexpr size_t kEditorCount = sizeof(kEditorNames) / sizeof(kEditorNames[0]);
+
+const std::array<NamedFactory, kEditorCount>& pluginEditorFactories() {
+#define AESTRA_EDITOR_FACTORY(T) NamedFactory{#T, factoryFor<T>()},
+    static const std::array<NamedFactory, kEditorCount> kFactories{
+        {AESTRA_CORE_PLUGIN_EDITORS(AESTRA_EDITOR_FACTORY) AESTRA_PREMIUM_PLUGIN_EDITORS(AESTRA_EDITOR_FACTORY)}};
+#undef AESTRA_EDITOR_FACTORY
     return kFactories;
+}
+
+const PluginEditorFactory& factoryNamed(const char* editorName) {
+    const auto& factories = pluginEditorFactories();
+    for (const NamedFactory& f : factories)
+        if (std::strcmp(f.name, editorName) == 0)
+            return f.factory;
+    // Unreachable: the static_asserts above prove every registry name has a
+    // factory. Kept as the generic editor rather than a null factory.
+    return factories.front().factory;
 }
 
 } // namespace
 
 const PluginEditorFactory& pluginEditorFactoryFor(const std::string& pluginId) {
-    const auto& registry = pluginEditorRegistry;
-    const auto& factories = pluginEditorFactories();
-    for (size_t i = 0; i < registry.size(); ++i) {
-        if (registry[i].pluginId[0] != '\0' && std::strcmp(registry[i].pluginId, pluginId.c_str()) == 0)
-            return factories[i];
-    }
-    return factories.front(); // the generic fallback
+    return factoryNamed(pluginEditorNameFor(pluginId));
 }
 
 } // namespace AestraUI
