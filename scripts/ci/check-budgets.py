@@ -60,8 +60,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 TOLERANCE_PCT = 10
+
+# Every child process gets a deadline: a hung measurement must fail the gate with a
+# message, never hang the CI step until the job-level timeout kills it silently.
+STRIP_TIMEOUT_S = 120
+SCENARIO_TIMEOUT_S = 300
 
 # name -> AestraHeadless arguments (paths relative to the repository root).
 SCENARIOS = {
@@ -132,21 +138,44 @@ def measure_bundle(bin_dir):
         raise GateError("cannot measure bundle_bytes: `strip` is not on PATH — an unstripped size would include debug info and mean nothing")
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "Aestra.stripped")
-        r = subprocess.run([strip, "--strip-unneeded", "-o", out, exe], capture_output=True, text=True)
+        try:
+            r = subprocess.run([strip, "--strip-unneeded", "-o", out, exe], capture_output=True, text=True,
+                               timeout=STRIP_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            raise GateError(f"cannot measure bundle_bytes: strip did not finish within {STRIP_TIMEOUT_S}s")
         if r.returncode != 0:
             raise GateError(f"cannot measure bundle_bytes: strip failed: {r.stderr.strip()}")
         return os.path.getsize(out) + tree_bytes(assets)
 
 
-def peak_rss_kb(cmd, cwd):
-    """Run cmd to completion and return its own peak RSS in KiB (Linux ru_maxrss units)."""
-    proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    _pid, status, usage = os.wait4(proc.pid, 0)
-    err = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
-    code = os.waitstatus_to_exitcode(status)
-    if code != 0:
-        tail = "\n".join(err.strip().splitlines()[-5:])
-        raise GateError(f"cannot measure {' '.join(cmd[1:])}: exited {code}\n{tail}")
+def peak_rss_kb(cmd, cwd, timeout_s=SCENARIO_TIMEOUT_S):
+    """Run cmd to completion and return its own peak RSS in KiB (Linux ru_maxrss units).
+
+    stderr goes to a temporary file, not a pipe: a child that writes more than a pipe
+    holds would block on the write while we block in wait4, and the gate would hang.
+    The wait polls wait4(WNOHANG) against a deadline, so the per-process rusage that
+    wait4 returns is kept, and a hung child is killed, reaped and reported.
+    """
+    with tempfile.TemporaryFile() as err_file:
+        proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL, stderr=err_file)
+        deadline = time.monotonic() + timeout_s
+        while True:
+            pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
+            if pid != 0:
+                break
+            if time.monotonic() > deadline:
+                proc.kill()
+                os.wait4(proc.pid, 0)
+                proc.returncode = -9  # reaped here; stop Popen's destructor waiting again
+                raise GateError(f"cannot measure {' '.join(cmd[1:])}: did not finish within {timeout_s}s (killed)")
+            time.sleep(0.05)
+        proc.returncode = os.waitstatus_to_exitcode(status)
+        code = proc.returncode
+        if code != 0:
+            err_file.seek(0)
+            err = err_file.read().decode(errors="replace")
+            tail = "\n".join(err.strip().splitlines()[-5:])
+            raise GateError(f"cannot measure {' '.join(cmd[1:])}: exited {code}\n{tail}")
     return int(usage.ru_maxrss if sys.platform.startswith("linux") else usage.ru_maxrss // 1024)
 
 

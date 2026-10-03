@@ -32,6 +32,7 @@ rss_kb.tone 20000 -
 
 FAILURES = []
 PASSES = 0
+CASE_TIMEOUT_S = 60  # judging injected numbers takes milliseconds; a hang is a failure
 
 
 def run(baseline_text, measured):
@@ -42,8 +43,11 @@ def run(baseline_text, measured):
             fh.write(baseline_text)
         with open(m, "w", encoding="utf-8") as fh:
             json.dump(measured, fh)
-        r = subprocess.run([sys.executable, GATE, "--baseline", b, "--measurements", m],
-                           capture_output=True, text=True)
+        try:
+            r = subprocess.run([sys.executable, GATE, "--baseline", b, "--measurements", m],
+                               capture_output=True, text=True, timeout=CASE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            return None, f"gate did not finish within {CASE_TIMEOUT_S}s"
         return r.returncode, r.stdout + r.stderr
 
 
