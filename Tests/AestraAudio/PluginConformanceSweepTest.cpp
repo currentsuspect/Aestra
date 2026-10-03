@@ -328,6 +328,18 @@ void contractParameterTable(IPluginInstance& plugin, const PluginInfo& info, Rep
         rep.fail("ParameterTable", "no parameters declared");
         return;
     }
+    // State is keyed by id, so two rows sharing one would save twice and load
+    // into whichever the plugin finds first. Built-ins on InternalPluginBase are
+    // also held to this at compile time (AESTRA_VALIDATE_PARAM_SPECS); this
+    // covers the ones that are not.
+    for (size_t i = 0; i < params.size(); ++i) {
+        for (size_t j = 0; j < i; ++j) {
+            if (params[j].id == params[i].id) {
+                rep.fail("ParameterTable", "parameter id " + std::to_string(params[i].id) + " is declared twice");
+                return;
+            }
+        }
+    }
 
     for (const auto& p : params) {
         if (p.name.empty()) {

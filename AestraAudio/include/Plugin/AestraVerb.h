@@ -868,7 +868,7 @@ public:
     // smooths every parameter on the audio thread, so a value that changes
     // while inactive must be snapped immediately or the next block ramps to it
     // from the wrong place.
-    void onParameterChanged(uint32_t id, float value) override {
+    void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         if (!m_active.load(std::memory_order_relaxed) && id < kParamCount) {
             m_smoothedParams[id] = value;
         }
@@ -987,7 +987,7 @@ public:
         {kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1},
         {kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true},
         {kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true},
-        {kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
         {kAttack, "Attack", "ATK", "", 0.0f, 0.0f, 1.0f, true},
         {kShape, "Shape", "SHP", "", 0.5f, 0.0f, 1.0f, true},
         {kPredelaySync, "Pre Sync", "PSYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, kPredelaySyncCount - 1},
@@ -996,6 +996,7 @@ public:
 
     const ParamSpec* paramSpecs() const override { return kSpecs; }
     uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
     uint32_t stateMagic() const override { return kStateMagic; }
 
     // Kept as overrides, not deleted. The base reports hasEditor() == false and
