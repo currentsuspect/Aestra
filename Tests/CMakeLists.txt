@@ -2914,6 +2914,45 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/Contract/ContractOwnershipTests.cmake)
 # V8-G3b (FD-19): the absence of failures is not the presence of coverage.
 # This list names every UI test that must be configured whenever
 # AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
+# The file browser's library: browsing outside the library root, system places,
+# Favorites and Collections as cross-folder listings, category folders without a
+# hidden tag filter, and the library state file (round trip + legacy import).
+# FileBrowser references the FBO render cache, hence AestraUI_OpenGL (see
+# ClipContextMenuReachabilityTest); the paint pass goes through NullRenderer.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(FileBrowserLibraryTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(FileBrowserLibraryTest
+        AestraUI/FileBrowserLibraryTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
+    )
+    target_link_libraries(FileBrowserLibraryTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore AestraPlat)
+    target_include_directories(FileBrowserLibraryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+    )
+    add_test(NAME FileBrowserLibraryTest COMMAND FileBrowserLibraryTest)
+    set_tests_properties(FileBrowserLibraryTest PROPERTIES
+        LABELS "ui;filebrowser;persistence;regression;contract:application")
+endif()
+
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
         NUIThemeConsistencyTest
@@ -2950,6 +2989,7 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollUndoStaysInPatternTest
         ContractPianoRollReachesGlobalUndoTest
         ContractPianoRollPasteTargetsEditingUnitTest
+        FileBrowserLibraryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
@@ -3596,3 +3636,28 @@ add_test(NAME PluginEditorRegistryTest COMMAND PluginEditorRegistryTest)
 set_tests_properties(PluginEditorRegistryTest PROPERTIES
     LABELS "ui;plugins;contract:application;regression"
     TIMEOUT 120)
+
+
+# XDG portal file chooser: filter translation and file:// URI decoding. The
+# D-Bus round trip needs a desktop session, so only the pure halves run here.
+# Compiled standalone (not via AestraPlat) so it runs even where SDL2, and so
+# the Linux platform layer, is absent.
+if(UNIX AND NOT APPLE)
+    add_executable(XdgPortalFileChooserTest
+        AestraPlat/XdgPortalFileChooserTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlat/src/Linux/XdgPortalFileChooser.cpp
+    )
+    target_link_libraries(XdgPortalFileChooserTest PRIVATE ${CMAKE_DL_LIBS})
+    add_test(NAME XdgPortalFileChooserTest COMMAND XdgPortalFileChooserTest)
+    set_tests_properties(XdgPortalFileChooserTest PROPERTIES LABELS "platform;dialog;regression;contract:application")
+endif()
+
+# AestraFileDialog.h: pickers run off the UI thread and nothing ever waits for
+# them — not start(), not polling, not destroying the owner — and the worker
+# survives Platform::shutdown(). SDL runs with the dummy video driver.
+add_executable(AsyncFileDialogTest AestraPlat/AsyncFileDialogTest.cpp)
+target_link_libraries(AsyncFileDialogTest PRIVATE AestraPlat)
+target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraPlat/include)
+add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
+set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
+    SKIP_RETURN_CODE 77)

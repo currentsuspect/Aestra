@@ -14,8 +14,8 @@
 2012 AestraUI/Widgets/PianoRollNoteLayer.cpp
 2733 AestraUI/Widgets/UIRoutingMap.cpp
 1947 AestraUI/Widgets/UnitRow.cpp
-2578 Source/App/AestraApp.cpp
-4980 Source/Components/FileBrowser.cpp
+2627 Source/App/AestraApp.cpp
+3954 Source/Components/FileBrowser.cpp
 1515 Source/Components/TrackManagerUIRender.cpp
 3611 Source/Components/TrackUIComponent.cpp
 4957 Source/Core/AestraContent.cpp

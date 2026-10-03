@@ -355,6 +355,14 @@ public:
     /** @brief Get the platform-specific application data directory for an app name. */
     virtual std::string
     getAppDataPath(const std::string& appName) const = 0; // Returns platform-specific app data directory
+
+    enum class KnownFolder { Desktop, Downloads, Documents, Music };
+    /**
+     * @brief Where the OS says a user folder really is (it may be redirected,
+     * localised or moved to another drive). Empty when the platform has no such
+     * registry; Linux answers through XDG user-dirs instead (BrowserLibrary).
+     */
+    virtual std::string getKnownFolderPath(KnownFolder /*folder*/) const { return {}; }
 };
 
 // =============================================================================
