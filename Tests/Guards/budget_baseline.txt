@@ -10,6 +10,6 @@
 # <metric> <baseline> <cap|->
 #   bundle_bytes   stripped Aestra binary + AestraAssets/ beside it; cap = FD-35's 50 MiB ceiling
 #   rss_kb.*       AestraHeadless peak RSS (KiB) for a fixed offline scenario, no audio device
-bundle_bytes 12259028 52428800
-rss_kb.stress 26400 -
-rss_kb.tone 22300 -
+bundle_bytes 10999908 52428800
+rss_kb.stress 28692 -
+rss_kb.tone 24744 -
