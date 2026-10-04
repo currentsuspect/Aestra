@@ -1,55 +1,25 @@
-# Support Aestra Studios
+# Support
 
-Thank you for considering supporting Aestra Studios! Your contribution helps us continue developing Aestra and keeping its core features free for everyone.
+## Getting help
 
-## Why Support Us?
+- **Something broke?** Start with the [Recovery Center](https://www.aestra.studio/recovery). It builds a bug report in the shape the maintainer uses, and walks you through rescuing a project that won't open.
+- **Reporting a bug yourself:** [open an issue](https://github.com/currentsuspect/Aestra/issues/new?template=bug_report.md). [docs/developer/bug-reports.md](docs/developer/bug-reports.md) says what a useful report contains.
+- **Building Aestra or understanding the code:** [docs/getting-started/building.md](docs/getting-started/building.md), [docs/technical/faq.md](docs/technical/faq.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+- **A security problem:** don't open a public issue. See [SECURITY.md](SECURITY.md).
+- **Anything else:** support@aestra.studio.
 
-Aestra is built with a vision to make professional music production accessible to everyone. Your support helps us:
+## Supporting the project
 
-- Keep the core software free and source-available
-- Develop new features and improvements
-- Provide better documentation and learning resources
-- Maintain our infrastructure and community spaces
+Aestra is free. The whole DAW has no export limit, no time limit and no watermark, and you don't need to pay to make music. What you make with it is yours.
 
-## Support Tiers
+Paying is optional. It's for the ecosystem around Aestra: extra plugins, new tools and the work behind them.
 
-### 🎵 Supporter ($3/month)
-- Thank-you shout-out on our Discord server
-- Your name in the credits page
-- Early access to beta releases
-- Access to supporter-only updates
+- **Supporter, $5 a month or $50 a year:** the Native Suite of extra plugins while you're subscribed, new plugins as they're released, development updates and a feedback channel. Planned, not built yet: Muse (help that runs on your machine) and hosting shared projects.
+- **Founder, $129 once:** a numbered digital card (500 ever), a plugin bundle you keep, 24 months of Supporter from public beta, and 25% off Supporter after that. Your name in the credits, if you want it.
 
-### 🎹 Pro ($8/month)
-- All Supporter benefits, plus:
-- Access to the development roadmap
-- Behind-the-scenes development updates
-- Direct input on feature prioritization
-- Exclusive developer Q&A sessions
-- Digital sticker pack
+Neither is on sale yet. To hear when they are, join the waitlist at [aestra.studio/pricing](https://www.aestra.studio/pricing).
 
-### 🎛️ Founder ($15/month)
-- All Pro benefits, plus:
-- Your name in the About box
-- Lifetime Aestra Muse credits when released
-- Priority support
-- Exclusive Founder role on Discord
-- Early access to all new features
-
-## How to Support
-
-Choose your preferred platform:
-
-- [Patreon](https://patreon.com/Aestra-daw)
-- [GitHub Sponsors](https://github.com/sponsors/currentsuspect)
-- [Ko-fi](https://ko-fi.com/Aestradaw)
-
-## Our Promise
-
-- **Transparency**: We'll regularly share updates on how funds are used
-- **No paywalls**: Core features will always be free
-- **Community-driven**: Your feedback directly influences development
-
-Thank you for being part of the Aestra community!
+The website is the source for prices and what's included, so if this page and the website disagree, the website is right.
 
 ---
-*Last updated: March 2026*
+*Last updated: October 2026*
