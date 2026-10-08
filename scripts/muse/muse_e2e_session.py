@@ -87,7 +87,7 @@ def build_session(sample, out):
     # verbs. Asserting they are UNKNOWN here is what keeps Slice B honest — when
     # project.save lands in the host it still will not appear in a headless
     # process, and this line is what says so.
-    for v in ("project_save", "project_open", "project_new"):
+    for v in ("project.save", "project.open", "project.new"):
         add("err", v)
 
     # --- transport ---------------------------------------------------------
@@ -160,7 +160,7 @@ def build_session(sample, out):
     add("ok", "get_routing_graph")
     add("ok", "get_latency_report")
     add("ok", "get_meters")
-    add("ok", "list_samples", {"dir": out})
+    add("ok", "list_samples", {"dir": os.path.dirname(sample)})
     add("ok", "get_project_load_report")
 
     # --- render and confirm ------------------------------------------------
@@ -218,7 +218,13 @@ def main():
     out = os.path.abspath(args.outdir)
     os.makedirs(out, exist_ok=True)
 
-    sample = write_sample_wav(os.path.join(out, "sample.wav"))
+    # The sample lives in its own directory, and list_samples is pointed at THAT.
+    # Pointed at the render directory instead, it would list every WAV a previous run
+    # left behind, and a rerun of the same binary would report a different answer --
+    # the worst kind of flake, because it looks like a behaviour change.
+    sample_dir = os.path.join(out, "samples")
+    os.makedirs(sample_dir, exist_ok=True)
+    sample = write_sample_wav(os.path.join(sample_dir, "sample.wav"))
     session = build_session(sample, out)
 
     with open(os.path.join(out, "session.jsonl"), "w", encoding="utf-8") as f:

@@ -504,6 +504,22 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
             against = args["against"].asString();
         }
 
+        // Hash the reference BEFORE rendering. If 'against' names the same file as
+        // 'file', the render overwrites it, and hashing afterwards would compare
+        // the new file against itself — matches_previous_render would then pass
+        // unconditionally, which is the one failure mode this verb must not have.
+        // Reading it first also keeps "render again to the same path and compare"
+        // working, which is the natural way an agent checks reproducibility.
+        std::string wantDigest;
+        if (!against.empty()) {
+            wantDigest = fnv1aFileDigest(against);
+            if (wantDigest.empty()) {
+                return makeError(id, "execution_error",
+                                 "could not digest '" + against + "' for comparison", verb)
+                    .toString();
+            }
+        }
+
         AudioExporter::Result exportResult;
         renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds,
                        exportResult);
@@ -556,25 +572,27 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
         result.set("frames", JSON(static_cast<double>(exportResult.framesRendered)));
         result.set("sampleRate", JSON(static_cast<double>(m_engine->getSampleRate())));
         result.set("peakDb", JSON(exportResult.peakDb));
-        result.set("maxTruePeakDbTtp", JSON(static_cast<double>(exportResult.maxTruePeakdBTP)));
+        // dBTP, so the key reads maxTruePeakDbTp — not maxTruePeakDbTtp.
+        result.set("maxTruePeakDbTp", JSON(static_cast<double>(exportResult.maxTruePeakdBTP)));
         result.set("truePeakCeilingExceeded", JSON(exportResult.truePeakCeilingExceeded));
 
         if (!against.empty()) {
             // Byte-for-byte reproducibility: an unchanged session must render
             // to an identical file. A digest is the only way to say that.
+            // wantDigest was taken BEFORE the render, so this cannot end up
+            // comparing the new file against itself.
             const std::string got = fnv1aFileDigest(exportResult.outputPath);
-            const std::string want = fnv1aFileDigest(against);
-            if (got.empty() || want.empty()) {
+            if (got.empty()) {
                 return makeError(id, "execution_error",
-                                 "could not digest '" +
-                                     (got.empty() ? exportResult.outputPath : against) +
+                                 "could not digest '" + exportResult.outputPath +
                                      "' for comparison", verb)
                     .toString();
             }
             result.set("digest", JSON(got));
             result.set("comparedWith", JSON(against));
-            addCheck("matches_previous_render", got == want,
-                     "identical bytes to " + against, got == want ? got : got + " != " + want);
+            addCheck("matches_previous_render", got == wantDigest,
+                     "identical bytes to " + against,
+                     got == wantDigest ? got : got + " != " + wantDigest);
         }
 
         result.set("checks", checks);

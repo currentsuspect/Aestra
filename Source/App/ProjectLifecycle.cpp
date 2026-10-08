@@ -130,6 +130,23 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
                     "pass an explicit 'path'");
             }
 
+            // A pathless save is Save, not Save As, so it inherits Save's refusal.
+            // requiresSaveAs() is true when the canonical file is empty OR when the
+            // project loaded with an integrity Mismatch and protectCanonicalFromOverwrite()
+            // was set — in which case the app deliberately refuses to overwrite the
+            // original on disk, because it is not the project that was just opened.
+            // Ordinary Save checks this in AestraApp::saveProject(); without the same
+            // check here the verb was SAFER for a human than for an agent, which is
+            // exactly backwards. An explicit 'path' is the Save As route and stays
+            // allowed: writing elsewhere cannot destroy the protected original.
+            if (!wantsPath && m_documentState.requiresSaveAs()) {
+                return HostVerbResult::failure(
+                    "save_as_required",
+                    "this project must not overwrite its canonical file "
+                    "(it loaded with an integrity mismatch, so the file on disk is not "
+                    "the project now open); pass an explicit 'path' to save elsewhere");
+            }
+
             // establishCanonical only when the caller named a path: re-saving in
             // place must not re-point the document at itself, which is the
             // caller's decision to make, not a side effect of a verb.
@@ -172,14 +189,24 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         path.description = "Path to an Aestra project file (.aes).";
         spec.args.push_back(path);
 
-        registerOrLog(std::move(spec), [this](const JSON& args) -> HostVerbResult {
+        registerOrLog(std::move(spec), [this, &service](const JSON& args) -> HostVerbResult {
             const std::string path = args["path"].asString();
 
             std::error_code ec;
             if (!std::filesystem::exists(path, ec)) {
-                return HostVerbResult::failure("no_such_file",
-                                               ec ? "could not read " + path + " (" + ec.message() + ")"
-                                                   : "no such project file: " + path);
+                // Record the attempt before returning. loadProjectFromPath() is what
+                // normally clears and publishes the report, and this branch never
+                // reaches it — so without this, get_project_load_report would go on
+                // describing some EARLIER load, and an agent that opened a typo'd path
+                // would be told the previous project's load had succeeded.
+                const std::string reason =
+                    ec ? "could not read " + path + " (" + ec.message() + ")"
+                       : "no such project file: " + path;
+                ProjectSerializer::LoadResult missing;
+                missing.errorMessage = reason;
+                service.setProjectLoadReport(
+                    makeMuseProjectLoadReport(missing, MuseProjectLoadOrigin::Canonical));
+                return HostVerbResult::failure("no_such_file", reason);
             }
 
             const auto result = openProjectFromPath(path);

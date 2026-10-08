@@ -133,10 +133,16 @@ bool hasCheck(JSON& response, const std::string& name) {
     return false;
 }
 
+// The path is JSON-encoded rather than interpolated. MuseService::handleRequest
+// parses this with JSON::parse, and a raw Windows path carries backslashes that are
+// invalid escapes — \t and \n would silently rewrite the path before the verb ever
+// sees it. MuseServiceTest says the same thing about its own fileRequest().
 std::string verifyRequest(double id, const std::string& file, const std::string& extraArgs) {
-    return "{\"id\": " + std::to_string(id) + ", \"verb\": \"verify_render\", \"args\": {\"file\": \"" +
-           file + "\"" + extraArgs + "}}";
+    return "{\"id\": " + std::to_string(id) + ", \"verb\": \"verify_render\", \"args\": {\"file\": " +
+           JSON(file).toString() + extraArgs + "}}";
 }
+
+std::string jsonString(const std::string& value) { return JSON(value).toString(); }
 
 } // namespace
 
@@ -271,7 +277,7 @@ int main() {
         check(r["result"]["peakDb"].asNumber() > -89.0, "the reported peak is a real level");
         check(checkPassed(r, "not_silent", true), "not_silent passes");
         check(checkPassed(r, "no_clipping", true), "no_clipping passes");
-        check(r["result"].has("maxTruePeakDbTtp"), "the true peak is reported alongside peakDb");
+        check(r["result"].has("maxTruePeakDbTp"), "the true peak is reported alongside peakDb");
         check(r["result"]["frames"].asNumber() > 0, "frames were rendered");
     }
 
@@ -296,9 +302,57 @@ int main() {
 
         JSON missing =
             call(service, verifyRequest(13, (dir / "d.wav").string(),
-                                        ", \"against\": \"" + (dir / "never.wav").string() + "\""));
+                                        ", \"against\": " +
+                                            jsonString((dir / "never.wav").string())));
         check(status(missing) != "ok",
               "comparing against a file that is not there is an error, not a pass");
+    }
+
+    // --- comparing a render against itself is not a pass --------------------
+    {
+        // Regression. The reference digest used to be taken AFTER the render, so
+        // naming the same path in both 'file' and 'against' meant the render
+        // overwrote the reference and the check then compared the new file with
+        // itself — matching unconditionally.
+        //
+        // Detecting it needs the two things at once: the same path for both keys,
+        // AND a session that changed since that path was written. With an unchanged
+        // session the comparison passes legitimately, before and after the fix, so
+        // such a test proves nothing.
+        const std::string reused = (dir / "reused.wav").string();
+        JSON first = call(service, verifyRequest(15, reused, ""));
+        check(status(first) == "ok" && verdictIs(first, "pass"),
+              "the reused path renders once and passes");
+
+        // Change the session so the next render of the same path cannot match.
+        {
+            JSON req = JSON::object();
+            req.set("id", JSON(16.0));
+            req.set("verb", str("add_note"));
+            JSON args = JSON::object();
+            args.set("pattern", JSON(1.0));
+            args.set("unit", JSON(1.0));
+            args.set("pitch", JSON(72.0));
+            args.set("start", JSON(0.5));
+            args.set("duration", JSON(0.25));
+            args.set("velocity", JSON(1.0));
+            req.set("args", args);
+            check(status(call(service, req.toString())) == "ok",
+                  "a note is added so the next render must differ");
+        }
+
+        JSON again = call(service, verifyRequest(17, reused,
+                                                 ", \"against\": " + jsonString(reused)));
+        check(status(again) == "ok", "same path for file and against is still allowed");
+        check(checkPassed(again, "matches_previous_render", false),
+              "a changed session re-rendered over its own reference FAILS the comparison");
+        check(verdictIs(again, "fail"), "and the verdict reflects that");
+
+        // And a genuinely unchanged re-render of the same path still passes, so the
+        // check above is not passing merely because same-path is always a failure.
+        JSON unchanged = call(service, verifyRequest(18, reused, ""));
+        check(status(unchanged) == "ok" && verdictIs(unchanged, "pass"),
+              "an unchanged re-render of the same path still passes");
     }
 
     // --- a failed check arrives as ok/fail, not as an error -----------------

@@ -15,6 +15,26 @@ import sys
 REPL = os.path.expanduser("~/Dev/Aestra-muse/build/ci/bin/MuseRepl")
 OUT = "/tmp/opencode/muse-verify"
 SAMPLE = f"{OUT}/sample.wav"
+SILENT = f"{OUT}/silent.wav"
+
+
+def write_silence_wav(path, rate=48000, frames=None):
+    """A valid WAV of digital silence.
+
+    The silence cases need a render that is silent for a reason the verb can see, not
+    for a reason #1040 introduces. Soloing a track to force silence makes these two
+    cases pass ONLY because the solo bug exists: when #1040 is fixed the render becomes
+    audible and the cases start failing even though verify_render is working. The C++
+    test uses per-unit gain for the same reason.
+    """
+    import wave
+    frames = rate if frames is None else frames
+    data = b"\x00\x00\x00\x00" * frames
+    with wave.open(path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(4)
+        w.setframerate(rate)
+        w.writeframes(data)
 
 
 def setup():
@@ -22,14 +42,16 @@ def setup():
     sys.path.insert(0, os.path.expanduser("~/Dev/Aestra-muse/scripts/muse"))
     from muse_e2e_session import write_sample_wav
     write_sample_wav(SAMPLE)
+    write_silence_wav(SILENT)
 
 
-def with_clip(extra):
-    return [
+def with_clip(extra, source=None):
+    base = [
         {"verb": "add_track", "args": {"name": "T"}},
         {"verb": "add_lane", "args": {"name": "L"}},
-        {"verb": "add_clip", "args": {"track": 0, "file": SAMPLE, "bar": 1}},
-    ] + extra
+        {"verb": "add_clip", "args": {"track": 0, "file": source or SAMPLE, "bar": 1}},
+    ]
+    return base + extra
 
 
 CASES = {
@@ -39,24 +61,21 @@ CASES = {
         lambda r: r["status"] == "ok" and r["result"]["verdict"] == "pass"
         and r["result"]["peakDb"] > -89,
     ),
-    # Soloed session: currently renders silent. The verdict must SAY so rather
-    # than hand back peakDb and leave the agent to notice.
-    "soloed_is_silent_and_fails": (
-        with_clip([
-            {"verb": "solo_track", "args": {"track": 0, "state": True}},
-            {"verb": "verify_render", "args": {"file": f"{OUT}/b.wav"}},
-        ]),
+    # A genuinely silent clip. NOT produced by soloing: that only renders silent
+    # because of #1040, so these two cases would start failing the day #1040 is fixed,
+    # while verify_render is behaving perfectly. The fixture is a silent WAV.
+    "silent_render_fails": (
+        with_clip([{"verb": "verify_render", "args": {"file": f"{OUT}/b.wav"}}],
+                  source=SILENT),
         lambda r: r["status"] == "ok" and r["result"]["verdict"] == "fail"
         and any(c["name"] == "not_silent" and not c["pass"] for c in r["result"]["checks"]),
     ),
     # A caller who wants a quiet render on purpose turns the check off, and the
     # silence stops being a failure.
     "silence_allowed_when_asked": (
-        with_clip([
-            {"verb": "solo_track", "args": {"track": 0, "state": True}},
-            {"verb": "verify_render",
-             "args": {"file": f"{OUT}/c.wav", "expect_not_silent": False}},
-        ]),
+        with_clip([{"verb": "verify_render",
+                    "args": {"file": f"{OUT}/c.wav", "expect_not_silent": False}}],
+                  source=SILENT),
         lambda r: r["status"] == "ok" and r["result"]["verdict"] == "pass"
         and not any(c["name"] == "not_silent" for c in r["result"]["checks"]),
     ),

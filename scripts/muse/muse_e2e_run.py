@@ -28,23 +28,35 @@ import subprocess
 import sys
 
 VOLATILE = {"executionMs"}
+
+# The error statuses MuseService actually emits. Anything else -- including a missing
+# "status" -- means a malformed response, not a refusal, and must not satisfy an "err"
+# expectation.
+ERROR_STATUSES = {"parse_error", "validation_error", "execution_error"}
 UUID_RE = re.compile(r"\b[0-9a-f]{32}\b")
 
 
 def scrub(value):
-    if isinstance(value, str):
-        return UUID_RE.sub("<uuid>", value)
-    return value
+    return UUID_RE.sub("<uuid>", value)
 
 
-def normalise(obj):
+# Only these keys hold a filesystem path. Reducing *any* slash-bearing string to its
+# basename also flattens the prose around it -- "permission denied: /tmp/a.wav" and
+# "invalid format: /tmp/a.wav" both become "a.wav", so a changed error would compare
+# equal. Normalising the path fields, and nothing else, keeps that visible.
+PATH_KEYS = {"file", "path", "against", "comparedWith", "samplePath"}
+
+
+def normalise(obj, key=None):
     if isinstance(obj, dict):
-        return {k: normalise(v) for k, v in obj.items() if k not in VOLATILE}
+        return {k: normalise(v, k) for k, v in obj.items() if k not in VOLATILE}
     if isinstance(obj, list):
-        return [normalise(v) for v in obj]
-    if isinstance(obj, str) and ("/" in obj or "\\" in obj):
-        return scrub(os.path.basename(obj))
-    return scrub(obj)
+        return [normalise(v, key) for v in obj]
+    if isinstance(obj, str):
+        if key in PATH_KEYS and ("/" in obj or "\\" in obj):
+            return scrub(os.path.basename(obj))
+        return scrub(obj)
+    return obj
 
 
 def run_session(repl, session_path, timeout=300):
@@ -118,8 +130,16 @@ def main():
             if exp == "ok" and status != "ok":
                 failures.append((rid, verb, exp,
                                  f"status={status} {resp.get('message', '')[:90]}"))
-            elif exp == "err" and status == "ok":
-                failures.append((rid, verb, exp, "unexpectedly succeeded"))
+            elif exp == "err":
+                # A missing status, or one this protocol does not define, is a
+                # malformed response -- it must not read as a correctly-refused verb,
+                # or a broken build reports "all expectations met".
+                if status == "ok":
+                    failures.append((rid, verb, exp, "unexpectedly succeeded"))
+                elif status not in ERROR_STATUSES:
+                    failures.append((rid, verb, exp,
+                                     f"status={status!r} is not a protocol error status "
+                                     f"(expected one of {sorted(ERROR_STATUSES)})"))
 
     ok = sum(1 for r in responses if r.get("status") == "ok")
     print(f"status: ok={ok} not-ok={len(responses) - ok}")
@@ -135,7 +155,18 @@ def main():
         if len(base) != len(responses):
             print(f"\nBASELINE DIFF: {len(base)} responses vs {len(responses)} now")
             return 1
-        diffs = [(b, n) for b, n in zip(base, responses) if b != n]
+        # Keyed by request id, not list position. The coverage check above deliberately
+        # allows responses in any order, so comparing by position would contradict that
+        # and fail on two builds that behaved identically.
+        base_by_id = {r.get("id"): r for r in base}
+        pairs = []
+        for n in responses:
+            b = base_by_id.get(n.get("id"))
+            if b is None:
+                print(f"\nBASELINE DIFF: no baseline response for id {n.get('id')}")
+                return 1
+            pairs.append((b, n))
+        diffs = [(b, n) for b, n in pairs if b != n]
         if diffs:
             print(f"\nBASELINE DIFF: {len(diffs)} response(s) differ")
             for b, n in diffs[:10]:
