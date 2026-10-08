@@ -218,9 +218,11 @@ inline bool queryTakesArgs(const std::string& verb) {
 // file, run a batch) rather than read state. render_pattern is not routed
 // through CommandHistory — a bounce is not an undoable project edit; batch
 // pushes one CommandTransaction so the whole group is a single undo step.
+// verify_render is here rather than in the grammar table for the same reason:
+// it renders, and a render is not an undoable project edit either.
 inline bool isActionVerb(const std::string& verb) {
     return verb == "render_pattern" || verb == "render_song" || verb == "batch" ||
-           verb == "undo" || verb == "redo";
+           verb == "undo" || verb == "redo" || verb == "verify_render";
 }
 
 inline bool isKnownVerb(const std::string& verb) {

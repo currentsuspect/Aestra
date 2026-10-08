@@ -11,6 +11,7 @@
 // and otherwise untouched. If you change a verb's behaviour, change it here.
 
 #include "Commands/MuseServiceInternal.h"
+#include "Commands/MuseFileDigest.h"
 #include "Core/AudioEngine.h"
 #include "Core/PlaybackGraphController.h"
 #include "IO/AudioExporter.h"
@@ -66,9 +67,11 @@ bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
 // Render the whole timeline through AudioExporter and report the measurements
 // the exporter already made.
 //
-// Lifted out of render_song's body unchanged, so that anything added later which
-// needs a render of its own measures the same thing render_song measures rather
-// than a second, subtly different copy of the same path. What it guarantees on every
+// Shared by render_song and verify_render so the two cannot drift: a verdict
+// computed from a different render path than the one the agent used to make the
+// file would be measuring something other than what it claims to confirm.
+//
+// The body is render_song's, lifted out unchanged. What it guarantees on every
 // exit path: transport stopped, pattern mode restored, slot map rebuilt for
 // tracks added since the engine was wired, and the audio graph drained — which
 // in the app happens continuously in AestraApp::run() and has to be done by
@@ -397,6 +400,194 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
         response.set("result", result);
         return finish(response);
     }
+    // --- verify_render -------------------------------------------------------
+    //
+    // The confirmation verb. render_song reports what came out; this one says
+    // whether that is acceptable, so an agent is not left eyeballing peakDb and
+    // deciding for itself whether -96 dBFS means "quiet" or "broken".
+    //
+    // It reports the exporter's OWN measurements rather than re-deriving them
+    // from the samples: peakDb and the true-peak ceiling are already computed
+    // during the render, and a second estimate of the same number would be a
+    // second thing that can be wrong.
+    if (verb == "verify_render") {
+        if (!m_trackManager || !m_engine) {
+            return makeError(id, "execution_error",
+                             "verify_render needs a track manager and an audio engine", verb)
+                .toString();
+        }
+        if (!request.has("args") || !request["args"].isObject()) {
+            return makeError(id, "validation_error",
+                             "verify_render requires args: {\"file\": <path>}", verb)
+                .toString();
+        }
+        JSON& args = request["args"];
+        for (auto& entry : args.asObject()) {
+            const std::string& key = entry.first;
+            const bool known = key == "file" || key == "tail" || key == "against" ||
+                               key == "expect_peak_min_db" || key == "expect_peak_max_db" ||
+                               key == "expect_not_silent" || key == "expect_no_clipping";
+            if (!known) {
+                return makeError(id, "validation_error", "unknown arg for verify_render: " + key,
+                                 verb)
+                    .toString();
+            }
+        }
+        if (!args.has("file") || !args["file"].isString() || args["file"].asString().empty()) {
+            return makeError(id, "validation_error", "arg 'file' must be a non-empty string",
+                             verb)
+                .toString();
+        }
+
+        double tailSeconds = 1.0;
+        if (args.has("tail")) {
+            if (!args["tail"].isNumber()) {
+                return makeError(id, "validation_error", "arg 'tail' must be a number", verb)
+                    .toString();
+            }
+            tailSeconds = args["tail"].asNumber();
+            if (!(tailSeconds >= 0.0 && tailSeconds <= 30.0)) {
+                return makeError(id, "validation_error", "arg 'tail' must be 0..30 seconds",
+                                 verb)
+                    .toString();
+            }
+        }
+
+        // Defaults chosen to catch the two failures that actually happen: a
+        // render that came out silent, and one that clipped. Both default on,
+        // because "did I hear anything" and "is it too loud" are questions with
+        // no comfortable answer when you have to guess. A caller who wants a
+        // quiet render on purpose turns the first off explicitly.
+        double peakMinDb = -89.0;
+        if (args.has("expect_peak_min_db")) {
+            if (!args["expect_peak_min_db"].isNumber()) {
+                return makeError(id, "validation_error",
+                                 "arg 'expect_peak_min_db' must be a number", verb)
+                    .toString();
+            }
+            peakMinDb = args["expect_peak_min_db"].asNumber();
+        }
+        double peakMaxDb = 0.0;
+        if (args.has("expect_peak_max_db")) {
+            if (!args["expect_peak_max_db"].isNumber()) {
+                return makeError(id, "validation_error",
+                                 "arg 'expect_peak_max_db' must be a number", verb)
+                    .toString();
+            }
+            peakMaxDb = args["expect_peak_max_db"].asNumber();
+        }
+        bool expectNotSilent = true;
+        if (args.has("expect_not_silent")) {
+            if (!args["expect_not_silent"].isBool()) {
+                return makeError(id, "validation_error",
+                                 "arg 'expect_not_silent' must be true or false", verb)
+                    .toString();
+            }
+            expectNotSilent = args["expect_not_silent"].asBool();
+        }
+        bool expectNoClipping = true;
+        if (args.has("expect_no_clipping")) {
+            if (!args["expect_no_clipping"].isBool()) {
+                return makeError(id, "validation_error",
+                                 "arg 'expect_no_clipping' must be true or false", verb)
+                    .toString();
+            }
+            expectNoClipping = args["expect_no_clipping"].asBool();
+        }
+        std::string against;
+        if (args.has("against")) {
+            if (!args["against"].isString() || args["against"].asString().empty()) {
+                return makeError(id, "validation_error",
+                                 "arg 'against' must be a non-empty string", verb)
+                    .toString();
+            }
+            against = args["against"].asString();
+        }
+
+        AudioExporter::Result exportResult;
+        renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds,
+                       exportResult);
+        if (!exportResult.success) {
+            // A render that could not happen is not a verdict, so it stays an
+            // error rather than becoming verdict:"fail".
+            return makeError(id, "execution_error", exportResult.errorMessage, verb).toString();
+        }
+
+        JSON checks = JSON::array();
+        bool allPassed = true;
+        const auto addCheck = [&](const char* name, bool passed, const std::string& expected,
+                                  const std::string& actual) {
+            JSON check = JSON::object();
+            check.set("name", JSON(std::string(name)));
+            check.set("pass", JSON(passed));
+            check.set("expected", JSON(expected));
+            check.set("actual", JSON(actual));
+            checks.push(check);
+            if (!passed) allPassed = false;
+        };
+        const auto fmt = [](double value, int places) {
+            char buf[48];
+            std::snprintf(buf, sizeof(buf), "%.*f", places, value);
+            return std::string(buf);
+        };
+
+        if (expectNotSilent) {
+            const bool silent = !(exportResult.peakDb > peakMinDb);
+            addCheck("not_silent", !silent,
+                     "peak above " + fmt(peakMinDb, 1) + " dBFS",
+                     "peak " + fmt(exportResult.peakDb, 2) + " dBFS");
+        }
+        {
+            const bool inRange = exportResult.peakDb <= peakMaxDb;
+            addCheck("peak_in_range", inRange,
+                     "peak at or below " + fmt(peakMaxDb, 1) + " dBFS",
+                     "peak " + fmt(exportResult.peakDb, 2) + " dBFS");
+        }
+        if (expectNoClipping) {
+            const bool clipped = exportResult.truePeakCeilingExceeded;
+            addCheck("no_clipping", !clipped, "true peak under the ceiling",
+                     fmt(static_cast<double>(exportResult.maxTruePeakdBTP), 2) + " dBTP" +
+                         (clipped ? " (ceiling exceeded)" : ""));
+        }
+
+        JSON result = JSON::object();
+        result.set("file", JSON(exportResult.outputPath));
+        result.set("durationSeconds", JSON(exportResult.durationSeconds));
+        result.set("frames", JSON(static_cast<double>(exportResult.framesRendered)));
+        result.set("sampleRate", JSON(static_cast<double>(m_engine->getSampleRate())));
+        result.set("peakDb", JSON(exportResult.peakDb));
+        result.set("maxTruePeakDbTtp", JSON(static_cast<double>(exportResult.maxTruePeakdBTP)));
+        result.set("truePeakCeilingExceeded", JSON(exportResult.truePeakCeilingExceeded));
+
+        if (!against.empty()) {
+            // Byte-for-byte reproducibility: an unchanged session must render
+            // to an identical file. A digest is the only way to say that.
+            const std::string got = fnv1aFileDigest(exportResult.outputPath);
+            const std::string want = fnv1aFileDigest(against);
+            if (got.empty() || want.empty()) {
+                return makeError(id, "execution_error",
+                                 "could not digest '" +
+                                     (got.empty() ? exportResult.outputPath : against) +
+                                     "' for comparison", verb)
+                    .toString();
+            }
+            result.set("digest", JSON(got));
+            result.set("comparedWith", JSON(against));
+            addCheck("matches_previous_render", got == want,
+                     "identical bytes to " + against, got == want ? got : got + " != " + want);
+        }
+
+        result.set("checks", checks);
+        result.set("verdict", JSON(std::string(allPassed ? "pass" : "fail")));
+
+        // status stays "ok" even when the verdict is "fail": the verb did its job
+        // and the thing it judged is wrong. Conflating the two would teach an
+        // agent to retry a failing render instead of fixing the mix.
+        JSON response = makeOk();
+        response.set("result", result);
+        return finish(response);
+    }
+
     // No verb matched. In the single-file version this fell out of the if-chain
     // into the next family's checks and eventually the mutation path, which is
     // exactly what nullopt asks handleRequest to do.

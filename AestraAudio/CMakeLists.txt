@@ -279,6 +279,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseServiceLibraryQueries.cpp
     src/Commands/MuseServiceHistory.cpp
     src/Commands/MuseServiceRender.cpp
+    src/Commands/MuseFileDigest.cpp
     src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing
