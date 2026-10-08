@@ -2,6 +2,7 @@
 #include "AestraApp.h"
 #include "MuseHostVerbs.h"
 #include "MuseProjectLoadReport.h"
+#include "ProjectLifecycle.h"
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
@@ -67,15 +68,6 @@ struct StartupTimer {
         Log::info(std::string("[Startup] ") + name + ": " + std::to_string(elapsed) + " ms");
     }
 };
-
-void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, const std::string& projectPath) {
-    if (!content) {
-        return;
-    }
-    if (auto trackManager = content->getTrackManager()) {
-        trackManager->setRecordingProjectPath(projectPath);
-    }
-}
 
 /** @brief True when @p filePath's text contains @p needle (generic path form).
  *
@@ -875,19 +867,7 @@ void AestraApp::buildMenuBar() {
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        menu->addItem("New Project", [this]() {
-            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
-            // Leave the old session: discards its unsaved/unreferenced takes.
-            cleanupUnreferencedRecordings();
-            if (m_content) m_content->resetToDefaultProject();
-            clearProjectLoadReport();
-            m_documentState.startUntitled(autosavePathOrEmpty());
-            reinitAutosaveManager();
-            syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
-            m_lastWindowTitle.clear();
-            updateWindowTitle();
-            Log::info("New project created");
-        });
+        menu->addItem("New Project", [this]() { createNewProject(); });
 
         menu->addItem("Open Project...", [this]() {
             const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
@@ -896,19 +876,7 @@ void AestraApp::buildMenuBar() {
                 [filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Open Project", filter); },
                 [this](const std::string& pickedPath) {
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
-                    // Old session's keeper path: captured BEFORE the load, so
-                    // discarded-take cleanup (run only on a successful switch)
-                    // keeps exactly the previous project's recordings.
-                    const std::string oldKeeperPath = m_documentState.canonicalPath();
-                    auto result = loadProjectFromPath(pickedPath);
-                    if (result.ok) {
-                        // Cleanup runs only after the transition SUCCEEDED: the
-                        // old session's redo history may still require its WAVs
-                        // if the new project failed to load.
-                        cleanupUnreferencedRecordings(oldKeeperPath);
-                    } else {
-                        Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
-                    }
+                    openProjectFromPath(pickedPath);
                 }
             });
         });
@@ -1695,7 +1663,7 @@ void AestraApp::startMuseSocketIfConfigured() {
     // false and refuse them with a reason rather than running host code on a
     // thread that does not own the state it touches.
     m_museService->setHostUiThreadAvailable(true);
-    registerMuseHostVerbs(*m_museService, *m_content);
+    registerMuseHostVerbs(*m_museService, *m_content, *this);
 
     m_museSocketServer = std::make_unique<Aestra::Audio::MuseSocketServer>();
     std::string error;

@@ -60,6 +60,22 @@ public:
         return m_audioController ? m_audioController->getEngine() : nullptr;
     }
 
+    /**
+     * @brief Register the project.* Muse host verbs (save, open, new).
+     *
+     * Defined in ProjectLifecycle.cpp, not here: the verbs need this class's
+     * private save/load path, and AestraApp.cpp is pinned at its exact line count
+     * by Tests/Guards/file_size_baseline.txt. A member function can be defined in
+     * any translation unit, so the capability surface lives in its own file and
+     * the menu items it replaced are gone from this one.
+     *
+     * These are host verbs rather than built-ins because ProjectSerializer lives
+     * in Source/ and AestraAudio must not depend upward. That also means they are
+     * genuinely absent from a headless MuseRepl: there is no application there to
+     * register them.
+     */
+    void registerMuseProjectVerbs(Aestra::Audio::MuseService& service);
+
     // Helpers exposed for easier refactoring.
     //
     // These return std::nullopt rather than a substitute path when the app-data
@@ -122,6 +138,11 @@ private:
     void applyPersistedEngineSettings(); // #649: startup owns DSP config, not the dialog
 
     // Project management
+    // New and Open are the bodies of what were inline File-menu lambdas; the
+    // menu items and the project.* Muse verbs both call these, so there is one
+    // implementation. Defined in ProjectLifecycle.cpp.
+    void createNewProject();
+    ProjectSerializer::LoadResult openProjectFromPath(const std::string& path);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a
     /// picker off the UI thread, so the outcome arrives through @p onDone
