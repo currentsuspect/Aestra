@@ -272,6 +272,13 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    # One translation unit per Muse verb family. MuseService.cpp is the
+    # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
+    src/Commands/MuseServiceQueries.cpp
+    src/Commands/MuseServiceRouting.cpp
+    src/Commands/MuseServiceLibraryQueries.cpp
+    src/Commands/MuseServiceHistory.cpp
+    src/Commands/MuseServiceRender.cpp
     src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing

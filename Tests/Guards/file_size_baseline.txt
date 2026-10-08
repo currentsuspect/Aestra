@@ -5,7 +5,6 @@
 2846 AestraAudio/include/Models/TrackManager.h
 2422 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
-2228 AestraAudio/src/Commands/MuseService.cpp
 4478 AestraAudio/src/Core/AudioEngine.cpp
 1724 AestraAudio/src/Plugin/AestraPluginHostMain.cpp
 3643 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
@@ -14,7 +13,7 @@
 2012 AestraUI/Widgets/PianoRollNoteLayer.cpp
 2733 AestraUI/Widgets/UIRoutingMap.cpp
 1947 AestraUI/Widgets/UnitRow.cpp
-2627 Source/App/AestraApp.cpp
+2595 Source/App/AestraApp.cpp
 3954 Source/Components/FileBrowser.cpp
 1515 Source/Components/TrackManagerUIRender.cpp
 3611 Source/Components/TrackUIComponent.cpp
