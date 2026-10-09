@@ -6,6 +6,7 @@
 // forward declaration inside namespace Aestra silently creates a second,
 // unrelated type and makes the name ambiguous wherever both are visible.
 class AestraContent;
+class AestraApp;
 
 namespace Aestra {
 
@@ -29,7 +30,12 @@ namespace Audio { class MuseService; }
  * headless processes, which have no UI thread to satisfy it with.
  *
  * @param content borrowed, must outlive the service.
+ * @param app borrowed, must outlive the service. Reached only to register the
+ *        project.* verbs, which need the application's private save/load path;
+ *        see ProjectLifecycle.cpp. AestraContent alone cannot save a project,
+ *        so without this the agent could edit a session it could never persist.
  */
-void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content);
+void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content,
+                           ::AestraApp& app);
 
 } // namespace Aestra

@@ -15,6 +15,8 @@ set(Aestra_SOURCES
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
+    App/ProjectLifecycle.h
+    App/ProjectLifecycle.cpp
 	
 	# Core
 	Core/AestraAudioController.h
