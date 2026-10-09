@@ -11,9 +11,13 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
-REPL = os.path.expanduser("~/Dev/Aestra-muse/build/ci/bin/MuseRepl")
-OUT = "/tmp/opencode/muse-verify"
+# Both default relative to this checkout, so the probe runs on any machine and in CI;
+# override with MUSE_REPL / MUSE_VERIFY_OUT.
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPL = os.environ.get("MUSE_REPL", os.path.join(HERE, "..", "..", "build", "ci", "bin", "MuseRepl"))
+OUT = os.environ.get("MUSE_VERIFY_OUT", os.path.join(tempfile.gettempdir(), "muse-verify"))
 SAMPLE = f"{OUT}/sample.wav"
 SILENT = f"{OUT}/silent.wav"
 
@@ -39,7 +43,7 @@ def write_silence_wav(path, rate=48000, frames=None):
 
 def setup():
     os.makedirs(OUT, exist_ok=True)
-    sys.path.insert(0, os.path.expanduser("~/Dev/Aestra-muse/scripts/muse"))
+    sys.path.insert(0, HERE)
     from muse_e2e_session import write_sample_wav
     write_sample_wav(SAMPLE)
     write_silence_wav(SILENT)
